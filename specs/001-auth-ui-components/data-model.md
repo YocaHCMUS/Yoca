@@ -27,23 +27,25 @@ interface AuthFormState {
   errors: Record<string, string>; // Field name → error message key
 
   // Authentication method
-  authMethod: 'email' | 'wallet' | 'google' | null;
+  authMethod: "email" | "wallet" | "google" | null;
 }
 
 interface AuthFormProps {
   onSubmit: (data: SignInData | SignUpData) => Promise<void>;
-  onAuthMethodChange?: (method: 'wallet' | 'google') => void;
-  onNavigate?: (path: '/signin' | '/signup') => void;
+  onAuthMethodChange?: (method: "wallet" | "google") => void;
+  onNavigate?: (path: "/signin" | "/signup") => void;
 }
 ```
 
 ### Validation Rules
 
 **Sign-In Form**:
+
 - `identifier`: Required, min 3 characters (can be email or username)
 - `password`: Required, min 8 characters
 
 **Sign-Up Form**:
+
 - `email`: Required, valid email format (RFC 5322), max 255 characters
 - `username`: Required, 3-20 alphanumeric + underscores, must start with letter
 - `password`: Required, min 8 characters, must contain uppercase, lowercase, and number
@@ -94,12 +96,12 @@ interface WalletConnectionState {
   publicKey: string | null; // Connected wallet address
 
   // Blockchain selection
-  blockchain: 'solana' | 'ethereum' | 'bitcoin';
+  blockchain: "solana" | "ethereum" | "bitcoin";
 }
 
 interface WalletModalProps {
   isOpen: boolean;
-  mode: 'signin' | 'signup';
+  mode: "signin" | "signup";
   onConnect: (publicKey: string, wallet: string) => Promise<void>;
   onClose: () => void;
 }
@@ -143,7 +145,7 @@ interface User {
   username: string;
   email: string | null; // Null if authenticated via wallet only
   walletAddress: string | null; // Null if authenticated via email only
-  authMethod: 'email' | 'wallet' | 'google';
+  authMethod: "email" | "wallet" | "google";
   profilePicture: string | null; // URL or null
   createdAt: Date;
 }
@@ -180,24 +182,24 @@ interface NavigationState {
   user: User | null;
 
   // Language
-  currentLanguage: 'en' | 'vi' | 'ja';
+  currentLanguage: "en" | "vi" | "ja";
   availableLanguages: Language[];
 
   // Theme
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
 
   // Navigation items
-  activeItem: 'market' | 'alert' | 'dashboard' | null;
+  activeItem: "market" | "alert" | "dashboard" | null;
 }
 
 interface Language {
-  code: 'en' | 'vi' | 'ja';
+  code: "en" | "vi" | "ja";
   name: string; // "English", "Tiếng Việt", "日本語"
   flag: string; // Emoji or icon
 }
 
 interface NavigationHeaderProps {
-  onLanguageChange: (language: 'en' | 'vi' | 'ja') => void;
+  onLanguageChange: (language: "en" | "vi" | "ja") => void;
   onThemeToggle: () => void;
   onSignOut: () => void;
 }
@@ -211,11 +213,13 @@ interface NavigationHeaderProps {
 ### State Transitions
 
 **Language Change**:
+
 ```
 User clicks language → Update i18n → Update localStorage → Re-render with new translations
 ```
 
 **Theme Toggle**:
+
 ```
 User clicks theme → Toggle theme → Update localStorage → Apply CSS classes → Re-render
 ```
@@ -305,16 +309,11 @@ interface ErrorResponse {
 ### Sign-In Schema
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 export const signInSchema = z.object({
-  identifier: z
-    .string()
-    .min(3, 'validation.identifierInvalid')
-    .max(255),
-  password: z
-    .string()
-    .min(1, 'validation.passwordRequired'),
+  identifier: z.string().min(3, "validation.identifierInvalid").max(255),
+  password: z.string().min(1, "validation.passwordRequired"),
 });
 
 export type SignInData = z.infer<typeof signInSchema>;
@@ -323,33 +322,33 @@ export type SignInData = z.infer<typeof signInSchema>;
 ### Sign-Up Schema
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
-export const signUpSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'validation.emailRequired')
-    .email('validation.invalidEmail')
-    .max(255),
-  username: z
-    .string()
-    .min(3, 'validation.usernameTooShort')
-    .max(20, 'validation.usernameTooLong')
-    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, 'validation.usernameInvalidChars'),
-  password: z
-    .string()
-    .min(8, 'validation.passwordTooShort')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-      'validation.passwordComplexity'
-    ),
-  confirmPassword: z
-    .string()
-    .min(1, 'validation.confirmPasswordRequired'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'validation.passwordsDoNotMatch',
-  path: ['confirmPassword'],
-});
+export const signUpSchema = z
+  .object({
+    email: z
+      .string()
+      .min(1, "validation.emailRequired")
+      .email("validation.invalidEmail")
+      .max(255),
+    username: z
+      .string()
+      .min(3, "validation.usernameTooShort")
+      .max(20, "validation.usernameTooLong")
+      .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "validation.usernameInvalidChars"),
+    password: z
+      .string()
+      .min(8, "validation.passwordTooShort")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+        "validation.passwordComplexity",
+      ),
+    confirmPassword: z.string().min(1, "validation.confirmPasswordRequired"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "validation.passwordsDoNotMatch",
+    path: ["confirmPassword"],
+  });
 
 export type SignUpData = z.infer<typeof signUpSchema>;
 ```
@@ -397,6 +396,7 @@ User clicks "Create account" OR User clicks "Sign up with wallet" OR User clicks
 **API Contracts**: 4 endpoints (sign-in, sign-up, wallet auth, Google auth)
 
 **Dependencies on Backend**:
+
 - POST `/api/auth/signin` (email authentication)
 - POST `/api/auth/signup` (user registration)
 - POST `/api/auth/wallet` (wallet authentication)

@@ -30,6 +30,7 @@ This feature provides a complete authentication system with the following compon
 - **Navigation Header**: Authenticated/unauthenticated state management with language and theme switching
 
 **Key Technologies**:
+
 - React 19 with TypeScript (strict mode)
 - Carbon Design System + Tailwind CSS
 - i18next for internationalization (English, Vietnamese, Japanese)
@@ -57,6 +58,7 @@ npm install
 ```
 
 Key packages installed:
+
 - `@solana/wallet-adapter-react`
 - `@solana/wallet-adapter-wallets`
 - `@solana/web3.js`
@@ -94,12 +96,12 @@ npm run dev:server  # Backend on http://localhost:3000
 **Basic Usage**:
 
 ```tsx
-import { SignInForm } from '@/components/auth';
+import { SignInForm } from "@/components/auth";
 
 function SignInPage() {
   const handleSignIn = async (data: SignInData) => {
     // Authentication logic handled by AuthContext
-    console.log('Sign in:', data);
+    console.log("Sign in:", data);
   };
 
   return (
@@ -114,10 +116,12 @@ function SignInPage() {
 ```
 
 **Props**:
+
 - `onSubmit: (data: SignInData) => Promise<void>` - Called when form is submitted
 - `onNavigate?: (path: '/signin' | '/signup') => void` - Optional navigation handler
 
 **Features**:
+
 - Validates email/username and password
 - Shows validation errors inline
 - Disables submit button during submission
@@ -135,11 +139,11 @@ function SignInPage() {
 **Basic Usage**:
 
 ```tsx
-import { SignUpForm } from '@/components/auth';
+import { SignUpForm } from "@/components/auth";
 
 function SignUpPage() {
   const handleSignUp = async (data: SignUpData) => {
-    console.log('Sign up:', data);
+    console.log("Sign up:", data);
   };
 
   return (
@@ -154,10 +158,12 @@ function SignUpPage() {
 ```
 
 **Props**:
+
 - `onSubmit: (data: SignUpData) => Promise<void>` - Called when form is submitted
 - `onNavigate?: (path: '/signin' | '/signup') => void` - Optional navigation handler
 
 **Features**:
+
 - Validates email, username, password, and password confirmation
 - Shows validation errors inline
 - Password strength indicator
@@ -175,23 +181,21 @@ function SignUpPage() {
 **Basic Usage**:
 
 ```tsx
-import { WalletModal } from '@/components/auth';
-import { useState } from 'react';
+import { WalletModal } from "@/components/auth";
+import { useState } from "react";
 
 function AuthPage() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const handleWalletConnect = async (publicKey: string, wallet: string) => {
-    console.log('Connected wallet:', wallet, publicKey);
+    console.log("Connected wallet:", wallet, publicKey);
     setIsWalletModalOpen(false);
   };
 
   return (
     <>
-      <button onClick={() => setIsWalletModalOpen(true)}>
-        Connect Wallet
-      </button>
-      
+      <button onClick={() => setIsWalletModalOpen(true)}>Connect Wallet</button>
+
       <WalletModal
         isOpen={isWalletModalOpen}
         mode="signin"
@@ -204,12 +208,14 @@ function AuthPage() {
 ```
 
 **Props**:
+
 - `isOpen: boolean` - Controls modal visibility
 - `mode: 'signin' | 'signup'` - Determines header text
 - `onConnect: (publicKey: string, wallet: string) => Promise<void>` - Called when wallet is connected
 - `onClose: () => void` - Called when modal is closed
 
 **Features**:
+
 - Auto-detects installed Solana wallets
 - Shows wallet installation links if no wallets detected
 - Marks first detected wallet as "Detected"
@@ -226,23 +232,21 @@ function AuthPage() {
 **Setup** (in `App.tsx` or main entry):
 
 ```tsx
-import { AuthProvider } from '@/contexts/AuthContext';
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import { WalletProvider } from '@solana/wallet-adapter-react';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { AuthProvider } from "@/contexts/AuthContext";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { WalletProvider } from "@solana/wallet-adapter-react";
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
 
-const wallets = [
-  new PhantomWalletAdapter(),
-  new SolflareWalletAdapter(),
-];
+const wallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
 
 function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <WalletProvider wallets={wallets} autoConnect={false}>
-        <AuthProvider>
-          {/* Your app components */}
-        </AuthProvider>
+        <AuthProvider>{/* Your app components */}</AuthProvider>
       </WalletProvider>
     </GoogleOAuthProvider>
   );
@@ -252,7 +256,7 @@ function App() {
 **Usage in Components**:
 
 ```tsx
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from "@/contexts/AuthContext";
 
 function Dashboard() {
   const { user, isAuthenticated, signOut } = useAuth();
@@ -271,6 +275,7 @@ function Dashboard() {
 ```
 
 **Available Methods**:
+
 - `user: User | null` - Current authenticated user
 - `isAuthenticated: boolean` - Authentication status
 - `isLoading: boolean` - Loading state
@@ -290,6 +295,7 @@ All authentication endpoints are documented in `contracts/auth-api.yaml` (OpenAP
 **Base URL**: `http://localhost:3000/api/auth`
 
 **Endpoints**:
+
 - `POST /signin` - Email/username authentication
 - `POST /signup` - User registration
 - `POST /wallet` - Wallet signature authentication
@@ -303,13 +309,13 @@ All authentication endpoints are documented in `contracts/auth-api.yaml` (OpenAP
 **Example Implementation**:
 
 ```typescript
-import { SignInData, SignUpData } from '@/components/auth/schemas';
+import { SignInData, SignUpData } from "@/components/auth/schemas";
 
 export const authService = {
   async signIn(data: SignInData): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/signin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -323,8 +329,8 @@ export const authService = {
 
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -355,6 +361,7 @@ export const authService = {
 **Location**: `client/src/i18n/config.ts`
 
 **Existing Translation Keys**:
+
 - `auth.*` - Authentication text (signIn, signUp, email, password, etc.)
 - `wallet.*` - Wallet connection text (connectWallet, detecting, retry, etc.)
 - `nav.*` - Navigation items (market, alert, dashboard, etc.)
@@ -364,16 +371,16 @@ export const authService = {
 ### Usage in Components
 
 ```tsx
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 
 function SignInForm() {
   const { t } = useTranslation();
 
   return (
     <form>
-      <h2>{t('auth.signIn')}</h2>
-      <input placeholder={t('auth.email')} />
-      <button>{t('common.submit')}</button>
+      <h2>{t("auth.signIn")}</h2>
+      <input placeholder={t("auth.email")} />
+      <button>{t("common.submit")}</button>
     </form>
   );
 }
@@ -389,7 +396,7 @@ const resources = {
     translation: {
       auth: {
         // ... existing keys
-        newKey: 'New English text',
+        newKey: "New English text",
       },
     },
   },
@@ -397,7 +404,7 @@ const resources = {
     translation: {
       auth: {
         // ... existing keys
-        newKey: 'Văn bản tiếng Việt',
+        newKey: "Văn bản tiếng Việt",
       },
     },
   },
@@ -405,7 +412,7 @@ const resources = {
     translation: {
       auth: {
         // ... existing keys
-        newKey: '日本語テキスト',
+        newKey: "日本語テキスト",
       },
     },
   },
@@ -415,7 +422,9 @@ const resources = {
 2. **Use in component**:
 
 ```tsx
-{t('auth.newKey')}
+{
+  t("auth.newKey");
+}
 ```
 
 ### Language Switching
@@ -423,7 +432,7 @@ const resources = {
 Language preference is automatically persisted to `localStorage`:
 
 ```tsx
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 
 function LanguageSelector() {
   const { i18n } = useTranslation();
@@ -452,28 +461,30 @@ function LanguageSelector() {
 **Example Test**:
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { signInSchema } from '../signInSchema';
+import { describe, it, expect } from "vitest";
+import { signInSchema } from "../signInSchema";
 
-describe('signInSchema', () => {
-  it('should validate valid sign-in data', () => {
+describe("signInSchema", () => {
+  it("should validate valid sign-in data", () => {
     const result = signInSchema.safeParse({
-      identifier: 'user@example.com',
-      password: 'SecurePass123',
+      identifier: "user@example.com",
+      password: "SecurePass123",
     });
-    
+
     expect(result.success).toBe(true);
   });
 
-  it('should reject short identifier', () => {
+  it("should reject short identifier", () => {
     const result = signInSchema.safeParse({
-      identifier: 'ab',
-      password: 'SecurePass123',
+      identifier: "ab",
+      password: "SecurePass123",
     });
-    
+
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain('validation.identifierInvalid');
+      expect(result.error.issues[0].message).toContain(
+        "validation.identifierInvalid",
+      );
     }
   });
 });
@@ -526,17 +537,17 @@ describe('SignInForm', () => {
 **Example Test**:
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('should sign in with valid credentials', async ({ page }) => {
-  await page.goto('/signin');
-  
-  await page.fill('[name="identifier"]', 'testuser@example.com');
-  await page.fill('[name="password"]', 'SecurePass123');
+test("should sign in with valid credentials", async ({ page }) => {
+  await page.goto("/signin");
+
+  await page.fill('[name="identifier"]', "testuser@example.com");
+  await page.fill('[name="password"]', "SecurePass123");
   await page.click('button:has-text("Sign in")');
-  
-  await expect(page).toHaveURL('/dashboard');
-  await expect(page.locator('text=Welcome, testuser')).toBeVisible();
+
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.locator("text=Welcome, testuser")).toBeVisible();
 });
 ```
 
@@ -557,6 +568,7 @@ npm run test:e2e
 **Symptom**: "No wallet detected" message even though wallet is installed
 
 **Solutions**:
+
 - Refresh the page after installing wallet extension
 - Check if wallet extension is enabled in browser settings
 - Try a different browser (some wallets are browser-specific)
@@ -567,6 +579,7 @@ npm run test:e2e
 **Symptom**: OAuth popup doesn't open or fails
 
 **Solutions**:
+
 - Verify `VITE_GOOGLE_CLIENT_ID` is set in `.env`
 - Check if popups are blocked by browser
 - Ensure Google OAuth is configured for `http://localhost:5173` in Google Cloud Console
@@ -577,6 +590,7 @@ npm run test:e2e
 **Symptom**: Form submits without showing validation errors
 
 **Solutions**:
+
 - Check if Zod schema is correctly imported in component
 - Verify `zodResolver` is passed to `useForm` hook
 - Ensure error messages are mapped to i18n keys
@@ -587,6 +601,7 @@ npm run test:e2e
 **Symptom**: Translation keys displayed instead of translated text (e.g., "auth.signIn")
 
 **Solutions**:
+
 - Verify key exists in all languages in `client/src/i18n/config.ts`
 - Check if `useTranslation` hook is called correctly
 - Ensure i18n is initialized before components render
@@ -597,12 +612,11 @@ npm run test:e2e
 **Symptom**: Initial bundle exceeds 500KB gzipped
 
 **Solutions**:
+
 - Check bundle analyzer: `npm run build && npm run analyze`
 - Lazy load wallet adapters:
   ```tsx
-  const wallets = useMemo(() => [
-    new PhantomWalletAdapter(),
-  ], []);
+  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
   ```
 - Split Carbon components by feature
 - Use dynamic imports for large dependencies
@@ -619,6 +633,7 @@ After familiarizing yourself with these components:
 4. **Review constitution principles**: `.specify/memory/constitution.md`
 
 **Questions or Issues?**
+
 - Check existing code in `client/src/components/auth/`
 - Review service implementations in `client/src/services/auth/`
 - Consult the data model: `specs/001-auth-ui-components/data-model.md`

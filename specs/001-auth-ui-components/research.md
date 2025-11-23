@@ -158,9 +158,19 @@ Share Zod validation schemas between frontend and backend using a **shared types
 - Define base schemas in `server/src/data/schema.ts`:
   ```typescript
   export const emailSchema = z.string().email().max(255);
-  export const usernameSchema = z.string().min(3).max(20).regex(/^[a-zA-Z][a-zA-Z0-9_]*$/);
-  export const passwordSchema = z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/);
-  export const walletAddressSchema = z.string().length(44).regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
+  export const usernameSchema = z
+    .string()
+    .min(3)
+    .max(20)
+    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/);
+  export const passwordSchema = z
+    .string()
+    .min(8)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/);
+  export const walletAddressSchema = z
+    .string()
+    .length(44)
+    .regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
   ```
 - Frontend imports and composes these into form schemas (`signInSchema.ts`, `signUpSchema.ts`)
 - Backend uses same schemas in validation middleware
@@ -175,13 +185,15 @@ Share Zod validation schemas between frontend and backend using a **shared types
 ### Key Patterns
 
 1. **Component Wrapping**: Wrap Carbon components in custom components to add Tailwind classes:
+
    ```tsx
    <TextInput {...carbonProps} className="custom-tailwind-classes" />
    ```
 
 2. **Theme Variables**: Use Carbon design tokens for colors, spacing, and typography:
+
    ```scss
-   @use '@carbon/react/scss/theme' as *;
+   @use "@carbon/react/scss/theme" as *;
    .custom-class {
      background: $layer-01;
      color: $text-primary;
@@ -189,6 +201,7 @@ Share Zod validation schemas between frontend and backend using a **shared types
    ```
 
 3. **Responsive Design**: Use Tailwind responsive utilities with Carbon grid:
+
    ```tsx
    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
    ```
@@ -210,18 +223,29 @@ Share Zod validation schemas between frontend and backend using a **shared types
 ### Key Patterns
 
 1. **Schema Integration**:
+
    ```tsx
-   const { register, handleSubmit, formState: { errors } } = useForm({
-     resolver: zodResolver(signInSchema)
+   const {
+     register,
+     handleSubmit,
+     formState: { errors },
+   } = useForm({
+     resolver: zodResolver(signInSchema),
    });
    ```
 
 2. **Error Display**: Map Zod errors to i18n keys:
+
    ```tsx
-   {errors.email && <ErrorText>{t(`validation.${errors.email.message}`)}</ErrorText>}
+   {
+     errors.email && (
+       <ErrorText>{t(`validation.${errors.email.message}`)}</ErrorText>
+     );
+   }
    ```
 
 3. **Async Validation**: Use `refine` for backend checks:
+
    ```typescript
    .refine(async (email) => !(await checkEmailExists(email)), {
      message: "validation.accountExists"
@@ -240,11 +264,11 @@ Share Zod validation schemas between frontend and backend using a **shared types
 
 ## Summary of Clarifications
 
-| Item | Original Status | Resolved To |
-|------|----------------|-------------|
-| Solana wallet packages | NEEDS CLARIFICATION | @solana/wallet-adapter-react ecosystem |
-| Google OAuth library | NEEDS CLARIFICATION | @react-oauth/google with backend validation |
-| E2E testing approach | NEEDS CLARIFICATION | Playwright with mocked wallet/OAuth |
+| Item                       | Original Status     | Resolved To                                     |
+| -------------------------- | ------------------- | ----------------------------------------------- |
+| Solana wallet packages     | NEEDS CLARIFICATION | @solana/wallet-adapter-react ecosystem          |
+| Google OAuth library       | NEEDS CLARIFICATION | @react-oauth/google with backend validation     |
+| E2E testing approach       | NEEDS CLARIFICATION | Playwright with mocked wallet/OAuth             |
 | Backend validation schemas | NEEDS CLARIFICATION | Shared Zod schemas in server/src/data/schema.ts |
 
 **All NEEDS CLARIFICATION items resolved. Ready for Phase 1 (Design & Contracts).**
