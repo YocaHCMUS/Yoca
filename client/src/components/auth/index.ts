@@ -4,4 +4,6 @@
  */
 
 export { SignInForm } from './SignInForm';
+export { SignUpForm } from './SignUpForm';
 export { signInSchema, type SignInFormData } from './schemas/signInSchema';
+export { signUpSchema, type SignUpFormData } from './schemas/signUpSchema';

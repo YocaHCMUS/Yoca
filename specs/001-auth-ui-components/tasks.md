@@ -83,18 +83,18 @@ This project uses monorepo structure with npm workspaces:
 
 ### Implementation for User Story 2
 
-- [ ] T023 [P] [US2] Create SignUpForm component in client/src/components/auth/SignUpForm.tsx
-- [ ] T024 [P] [US2] Create Zod validation schema for sign-up in client/src/components/auth/schemas/signUpSchema.ts
-- [ ] T025 [US2] Implement form state management with React Hook Form in SignUpForm.tsx
-- [ ] T026 [US2] Add Carbon TextInput components for email, username, password, retype password
-- [ ] T027 [US2] Add password match validation with custom error message
-- [ ] T028 [US2] Add email format validation with clear error messaging
-- [ ] T029 [US2] Implement "Create account" button with loading state
-- [ ] T030 [US2] Add "Already have an account?" navigation link to sign-in page
-- [ ] T031 [US2] Add Terms of Service and Privacy Policy links (placeholder hrefs)
-- [ ] T032 [US2] Style SignUpForm with Tailwind CSS utilities for layout and spacing
-- [ ] T033 [US2] Add form component styles in client/src/components/auth/SignUpForm.module.scss
-- [ ] T034 [US2] Create barrel export for auth components in client/src/components/auth/index.ts
+- [x] T023 [P] [US2] Create SignUpForm component in client/src/components/auth/SignUpForm.tsx
+- [x] T024 [P] [US2] Create Zod validation schema for sign-up in client/src/components/auth/schemas/signUpSchema.ts
+- [x] T025 [US2] Implement form state management with React Hook Form in SignUpForm.tsx
+- [x] T026 [US2] Add Carbon TextInput components for email, username, password, retype password
+- [x] T027 [US2] Add password match validation with custom error message
+- [x] T028 [US2] Add email format validation with clear error messaging
+- [x] T029 [US2] Implement "Create account" button with loading state
+- [x] T030 [US2] Add "Already have an account?" navigation link to sign-in page
+- [x] T031 [US2] Add Terms of Service and Privacy Policy links (placeholder hrefs)
+- [x] T032 [US2] Style SignUpForm with Tailwind CSS utilities for layout and spacing
+- [x] T033 [US2] Add form component styles in client/src/components/auth/SignUpForm.module.scss
+- [x] T034 [US2] Create barrel export for auth components in client/src/components/auth/index.ts
 
 **Checkpoint**: Sign-up form should be fully functional with all validation rules
 

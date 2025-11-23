@@ -18,6 +18,7 @@ const resources = {
         error: 'Error',
         success: 'Success',
         or: 'Or continue with',
+        and: 'and',
       },
       // Authentication
       auth: {
@@ -27,6 +28,7 @@ const resources = {
         email: 'Email',
         username: 'Username',
         password: 'Password',
+        confirmPassword: 'Confirm Password',
         retypePassword: 'Retype Password',
         forgotPassword: 'Forgot password?',
         alreadyHaveAccount: 'Already have an account?',
@@ -37,6 +39,9 @@ const resources = {
         continueWithWallet: 'Continue with a linked wallet',
         signUpWithWallet: 'Sign up with an existing wallet(s)',
         termsAndPrivacy: 'By signing up, you agree to our {{terms}} and {{privacy}}',
+        termsPrefix: 'By signing up, you agree to our',
+        termsOfService: 'Terms of Service',
+        privacyPolicy: 'Privacy Policy',
         terms: 'Terms of Service',
         privacy: 'Privacy Policy',
       },
@@ -66,12 +71,23 @@ const resources = {
       // Validation errors
       validation: {
         required: 'This field is required',
+        identifierRequired: 'Username or email is required',
+        identifierInvalid: 'Please enter a valid email or username (minimum 3 characters)',
+        emailRequired: 'Email is required',
         invalidEmail: 'Please enter a valid email address',
+        usernameRequired: 'Username is required',
+        usernameTooShort: 'Username must be at least 3 characters',
+        usernameTooLong: 'Username must be at most 20 characters',
+        usernameInvalidChars: 'Username can only contain letters, numbers, and underscores',
+        passwordRequired: 'Password is required',
         passwordTooShort: 'Password must be at least {{min}} characters',
+        passwordComplexity: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        confirmPasswordRequired: 'Please confirm your password',
         passwordsDoNotMatch: 'Passwords do not match',
         invalidCredentials: 'Invalid username or password',
         accountExists: 'An account with this email already exists',
         networkError: 'Network error. Please try again.',
+        registrationFailed: 'Registration failed. Please try again.',
       },
       // Showcase page
       showcase: {
@@ -97,6 +113,7 @@ const resources = {
         error: 'Lỗi',
         success: 'Thành công',
         or: 'Hoặc tiếp tục với',
+        and: 'và',
       },
       // Authentication
       auth: {
@@ -106,6 +123,7 @@ const resources = {
         email: 'Email',
         username: 'Tên người dùng',
         password: 'Mật khẩu',
+        confirmPassword: 'Xác nhận mật khẩu',
         retypePassword: 'Nhập lại mật khẩu',
         forgotPassword: 'Quên mật khẩu?',
         alreadyHaveAccount: 'Đã có tài khoản?',
@@ -116,6 +134,9 @@ const resources = {
         continueWithWallet: 'Tiếp tục với ví đã liên kết',
         signUpWithWallet: 'Đăng ký với ví hiện có',
         termsAndPrivacy: 'Bằng việc đăng ký, bạn đồng ý với {{terms}} và {{privacy}} của chúng tôi',
+        termsPrefix: 'Bằng việc đăng ký, bạn đồng ý với',
+        termsOfService: 'Điều khoản dịch vụ',
+        privacyPolicy: 'Chính sách bảo mật',
         terms: 'Điều khoản dịch vụ',
         privacy: 'Chính sách bảo mật',
       },
@@ -145,12 +166,23 @@ const resources = {
       // Validation errors
       validation: {
         required: 'Trường này là bắt buộc',
+        identifierRequired: 'Tên người dùng hoặc email là bắt buộc',
+        identifierInvalid: 'Vui lòng nhập email hoặc tên người dùng hợp lệ (tối thiểu 3 ký tự)',
+        emailRequired: 'Email là bắt buộc',
         invalidEmail: 'Vui lòng nhập địa chỉ email hợp lệ',
+        usernameRequired: 'Tên người dùng là bắt buộc',
+        usernameTooShort: 'Tên người dùng phải có ít nhất 3 ký tự',
+        usernameTooLong: 'Tên người dùng không được quá 20 ký tự',
+        usernameInvalidChars: 'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới',
+        passwordRequired: 'Mật khẩu là bắt buộc',
         passwordTooShort: 'Mật khẩu phải có ít nhất {{min}} ký tự',
+        passwordComplexity: 'Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường và một số',
+        confirmPasswordRequired: 'Vui lòng xác nhận mật khẩu',
         passwordsDoNotMatch: 'Mật khẩu không khớp',
         invalidCredentials: 'Tên người dùng hoặc mật khẩu không hợp lệ',
         accountExists: 'Tài khoản với email này đã tồn tại',
         networkError: 'Lỗi mạng. Vui lòng thử lại.',
+        registrationFailed: 'Đăng ký thất bại. Vui lòng thử lại.',
       },
       // Showcase page
       showcase: {
@@ -176,6 +208,7 @@ const resources = {
         error: 'エラー',
         success: '成功',
         or: 'または続ける',
+        and: 'と',
       },
       // Authentication
       auth: {
@@ -185,6 +218,7 @@ const resources = {
         email: 'メール',
         username: 'ユーザー名',
         password: 'パスワード',
+        confirmPassword: 'パスワード確認',
         retypePassword: 'パスワードを再入力',
         forgotPassword: 'パスワードをお忘れですか？',
         alreadyHaveAccount: 'すでにアカウントをお持ちですか？',
@@ -195,6 +229,9 @@ const resources = {
         continueWithWallet: 'リンクされたウォレットで続ける',
         signUpWithWallet: '既存のウォレットで登録',
         termsAndPrivacy: '登録することで、{{terms}}と{{privacy}}に同意したことになります',
+        termsPrefix: '登録することで、',
+        termsOfService: '利用規約',
+        privacyPolicy: 'プライバシーポリシー',
         terms: '利用規約',
         privacy: 'プライバシーポリシー',
       },
@@ -224,12 +261,23 @@ const resources = {
       // Validation errors
       validation: {
         required: 'この項目は必須です',
+        identifierRequired: 'ユーザー名またはメールは必須です',
+        identifierInvalid: '有効なメールアドレスまたはユーザー名を入力してください（最低3文字）',
+        emailRequired: 'メールは必須です',
         invalidEmail: '有効なメールアドレスを入力してください',
+        usernameRequired: 'ユーザー名は必須です',
+        usernameTooShort: 'ユーザー名は3文字以上である必要があります',
+        usernameTooLong: 'ユーザー名は20文字以内である必要があります',
+        usernameInvalidChars: 'ユーザー名は文字、数字、アンダースコアのみ使用できます',
+        passwordRequired: 'パスワードは必須です',
         passwordTooShort: 'パスワードは{{min}}文字以上である必要があります',
+        passwordComplexity: 'パスワードには少なくとも1つの大文字、1つの小文字、1つの数字を含める必要があります',
+        confirmPasswordRequired: 'パスワードを確認してください',
         passwordsDoNotMatch: 'パスワードが一致しません',
         invalidCredentials: 'ユーザー名またはパスワードが無効です',
         accountExists: 'このメールアドレスのアカウントは既に存在します',
         networkError: 'ネットワークエラー。もう一度お試しください。',
+        registrationFailed: '登録に失敗しました。もう一度お試しください。',
       },
       // Showcase page
       showcase: {

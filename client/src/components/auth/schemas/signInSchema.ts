@@ -1,6 +1,9 @@
 /**
  * Zod Validation Schema for Sign In Form
  * Validates user credentials for authentication
+ * 
+ * Note: Error messages use keys that will be translated by the component
+ * using react-i18next. The component is responsible for translating these keys.
  */
 
 import { z } from 'zod';
@@ -8,6 +11,7 @@ import { z } from 'zod';
 /**
  * Sign-in form validation schema
  * Supports both email and username authentication
+ * Error messages are translation keys that will be resolved by the component
  */
 export const signInSchema = z.object({
   /**
@@ -16,7 +20,7 @@ export const signInSchema = z.object({
    */
   identifier: z
     .string()
-    .min(1, 'Username or email is required')
+    .min(1, 'validation.identifierRequired')
     .refine(
       (value) => {
         // Check if it's a valid email or username (3+ chars)
@@ -25,7 +29,7 @@ export const signInSchema = z.object({
         return isEmail || isUsername;
       },
       {
-        message: 'Please enter a valid email or username (minimum 3 characters)',
+        message: 'validation.identifierInvalid',
       }
     ),
 
@@ -35,8 +39,8 @@ export const signInSchema = z.object({
    */
   password: z
     .string()
-    .min(1, 'Password is required')
-    .min(6, 'Password must be at least 6 characters'),
+    .min(1, 'validation.passwordRequired')
+    .min(6, 'validation.passwordTooShort'),
 });
 
 /**
