@@ -1,0 +1,81 @@
+/**
+ * Sign In Form Component Styles
+ * Custom styles for the sign-in form using SCSS modules
+ */
+
+.sign-in-form-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  /* Header styles */
+  .sign-in-form-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--cds-text-secondary);
+    }
+  }
+
+  /* Form spacing */
+  form {
+    .space-y-4 > * + * {
+      margin-top: 1rem;
+    }
+  }
+
+  /* Focus states */
+  input:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: 2px;
+  }
+
+  /* Button hover effects */
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+  }
+
+  button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  /* Disabled state */
+  button:disabled,
+  input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Link styles */
+  a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:focus {
+      outline: 2px solid var(--cds-focus);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+
+  /* Divider styles */
+  .relative {
+    position: relative;
+  }
+
+  /* Dark mode adjustments */
+  :global(.dark) & {
+    background-color: var(--cds-background);
+    
+    .sign-in-form-header p {
+      color: var(--cds-text-secondary);
+    }
+  }
+}

@@ -60,16 +60,16 @@ This project uses monorepo structure with npm workspaces:
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Create SignInForm component in client/src/components/auth/SignInForm.tsx
-- [ ] T014 [P] [US1] Create Zod validation schema for sign-in in client/src/components/auth/schemas/signInSchema.ts
-- [ ] T015 [US1] Implement form state management with React Hook Form in SignInForm.tsx
-- [ ] T016 [US1] Add Carbon TextInput components for username/email and password fields
-- [ ] T017 [US1] Add inline validation error messages using Carbon's error states
-- [ ] T018 [US1] Implement submit button with loading state and disabled during submission
-- [ ] T019 [US1] Add "Forgot password?" link with placeholder href
-- [ ] T020 [US1] Add "Want to have an account?" navigation link to sign-up page
-- [ ] T021 [US1] Style SignInForm with Tailwind CSS utilities for layout and spacing
-- [ ] T022 [US1] Add form component styles in client/src/components/auth/SignInForm.module.scss
+- [x] T013 [P] [US1] Create SignInForm component in client/src/components/auth/SignInForm.tsx
+- [x] T014 [P] [US1] Create Zod validation schema for sign-in in client/src/components/auth/schemas/signInSchema.ts
+- [x] T015 [US1] Implement form state management with React Hook Form in SignInForm.tsx
+- [x] T016 [US1] Add Carbon TextInput components for username/email and password fields
+- [x] T017 [US1] Add inline validation error messages using Carbon's error states
+- [x] T018 [US1] Implement submit button with loading state and disabled during submission
+- [x] T019 [US1] Add "Forgot password?" link with placeholder href
+- [x] T020 [US1] Add "Want to have an account?" navigation link to sign-up page
+- [x] T021 [US1] Style SignInForm with Tailwind CSS utilities for layout and spacing
+- [x] T022 [US1] Add form component styles in client/src/components/auth/SignInForm.module.scss
 
 **Checkpoint**: Sign-in form should be fully functional with validation and mock authentication
 

@@ -17,6 +17,7 @@ const resources = {
         loading: 'Loading...',
         error: 'Error',
         success: 'Success',
+        or: 'Or continue with',
       },
       // Authentication
       auth: {
@@ -95,6 +96,7 @@ const resources = {
         loading: 'Đang tải...',
         error: 'Lỗi',
         success: 'Thành công',
+        or: 'Hoặc tiếp tục với',
       },
       // Authentication
       auth: {
@@ -173,6 +175,7 @@ const resources = {
         loading: '読み込み中...',
         error: 'エラー',
         success: '成功',
+        or: 'または続ける',
       },
       // Authentication
       auth: {
