@@ -1,37 +1,42 @@
 # Tasks: Authentication & Navigation UI Components
 
 **Input**: Design documents from `/specs/001-auth-ui-components/`  
-**Prerequisites**: plan.md ✅, spec.md ✅, DEPENDENCIES.md ✅
+**Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅, quickstart.md ✅
 
-**Tests**: Not required for this feature (interactive testing via showcase page)
+**Tests**: Not explicitly requested - using interactive showcase page for validation
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each component.
 
-## Format: `[ID] [P?] [Story] Description`
+## Format: `- [ ] [ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions
+**CRITICAL FORMAT RULES**:
+
+- MUST start with `- [ ]` (markdown checkbox)
+- MUST include task ID (T001, T002, etc.)
+- MUST include [P] marker ONLY if parallelizable (different files, no incomplete dependencies)
+- MUST include [Story] label for user story phases ONLY (e.g., [US1], [US2])
+- MUST include exact file path in description
 
 ## Path Conventions
 
 This project uses monorepo structure with npm workspaces:
 
 - **Frontend**: `client/src/`
+- **Backend**: `server/src/`
 - **Paths**: All paths use forward slashes `/` for consistency
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Environment configuration and provider setup
+**Purpose**: Environment configuration and dependency setup
 
 - [x] T001 Create environment variable template in client/.env.example
-- [x] T002 [P] Configure i18n in client/src/i18n/config.ts with English, Vietnamese, Japanese translations
+- [x] T002 [P] Configure i18n with English, Vietnamese, Japanese translations in client/src/i18n/config.ts
 - [x] T003 [P] Create Carbon theme integration in client/src/styles/carbon.scss
 - [x] T004 [P] Create theme variables file in client/src/styles/theme.scss
 - [x] T005 [P] Create shared auth types in client/src/types/auth.ts
-- [x] T006 Update client/src/main.tsx to import Carbon styles and configure providers (WalletProvider, GoogleOAuthProvider, i18n)
+- [x] T006 Update client/src/main.tsx to import Carbon styles and configure i18n initialization
 
 ---
 
@@ -41,8 +46,8 @@ This project uses monorepo structure with npm workspaces:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [x] T007 Create mock authentication service in client/src/services/auth/authService.ts
-- [x] T008 [P] Create mock wallet service in client/src/services/auth/walletService.ts
+- [x] T007 Create authentication service skeleton in client/src/services/auth/authService.ts
+- [x] T008 [P] Create wallet service skeleton in client/src/services/auth/walletService.ts
 - [x] T009 [P] Create AuthContext provider in client/src/contexts/AuthContext.tsx
 - [x] T010 [P] Create ThemeContext provider in client/src/contexts/ThemeContext.tsx
 - [x] T011 Create barrel export in client/src/services/auth/index.ts
@@ -56,47 +61,63 @@ This project uses monorepo structure with npm workspaces:
 
 **Goal**: Users can authenticate using email/username and password with validation
 
-**Independent Test**: Render sign-in form, enter credentials, submit, verify mock authentication flow triggers with loading/error/success states
+**Independent Test**: Render sign-in form, enter valid credentials, submit form, verify validation triggers correctly and authentication flow handles success/error states properly
+
+**Acceptance Criteria**:
+
+- Valid username/email and password authentication succeeds
+- Invalid credentials show clear error message
+- "Forgot password?" link is present
+- "Want to have an account?" link navigates to sign-up
 
 ### Implementation for User Story 1
 
-- [x] T013 [P] [US1] Create SignInForm component in client/src/components/auth/SignInForm.tsx
-- [x] T014 [P] [US1] Create Zod validation schema for sign-in in client/src/components/auth/schemas/signInSchema.ts
-- [x] T015 [US1] Implement form state management with React Hook Form in SignInForm.tsx
-- [x] T016 [US1] Add Carbon TextInput components for username/email and password fields
-- [x] T017 [US1] Add inline validation error messages using Carbon's error states
-- [x] T018 [US1] Implement submit button with loading state and disabled during submission
-- [x] T019 [US1] Add "Forgot password?" link with placeholder href
-- [x] T020 [US1] Add "Want to have an account?" navigation link to sign-up page
-- [x] T021 [US1] Style SignInForm with Tailwind CSS utilities for layout and spacing
-- [x] T022 [US1] Add form component styles in client/src/components/auth/SignInForm.module.scss
+- [x] T013 [P] [US1] Create SignInForm component skeleton in client/src/components/auth/SignInForm.tsx
+- [x] T014 [P] [US1] Create Zod validation schema in client/src/components/auth/schemas/signInSchema.ts
+- [x] T015 [US1] Implement form state management with react-hook-form in SignInForm.tsx
+- [x] T016 [US1] Add Carbon TextInput for identifier field (email/username) in SignInForm.tsx
+- [x] T017 [US1] Add Carbon TextInput for password field in SignInForm.tsx
+- [x] T018 [US1] Implement inline validation error messages in SignInForm.tsx
+- [x] T019 [US1] Add Carbon Button for submit with loading state in SignInForm.tsx
+- [x] T020 [US1] Add "Forgot password?" link in SignInForm.tsx
+- [x] T021 [US1] Add "Want to have an account?" navigation link in SignInForm.tsx
+- [x] T022 [US1] Style SignInForm with Tailwind CSS and Carbon Design System in client/src/components/auth/SignInForm.module.scss
 
-**Checkpoint**: Sign-in form should be fully functional with validation and mock authentication
+**Checkpoint**: Sign-in form should be fully functional with validation and authentication flow
 
 ---
 
 ## Phase 4: User Story 2 - Sign Up with Email (Priority: P1) 🎯 MVP
 
-**Goal**: New users can create accounts with email, username, password validation
+**Goal**: New users can create accounts with email, username, and password validation
 
-**Independent Test**: Render sign-up form, enter registration data, verify validation (password match, email format), submit, verify mock account creation
+**Independent Test**: Render sign-up form, enter registration data with mismatched passwords, verify validation error appears, then enter valid data and submit to verify account creation flow
+
+**Acceptance Criteria**:
+
+- Email, username, password, and confirm password fields validate correctly
+- Passwords must match before submission
+- Invalid email format shows validation error
+- "Already have an account?" link navigates to sign-in
+- Terms of Service and Privacy Policy acknowledgment is displayed
 
 ### Implementation for User Story 2
 
-- [x] T023 [P] [US2] Create SignUpForm component in client/src/components/auth/SignUpForm.tsx
-- [x] T024 [P] [US2] Create Zod validation schema for sign-up in client/src/components/auth/schemas/signUpSchema.ts
-- [x] T025 [US2] Implement form state management with React Hook Form in SignUpForm.tsx
-- [x] T026 [US2] Add Carbon TextInput components for email, username, password, retype password
-- [x] T027 [US2] Add password match validation with custom error message
-- [x] T028 [US2] Add email format validation with clear error messaging
-- [x] T029 [US2] Implement "Create account" button with loading state
-- [x] T030 [US2] Add "Already have an account?" navigation link to sign-in page
-- [x] T031 [US2] Add Terms of Service and Privacy Policy links (placeholder hrefs)
-- [x] T032 [US2] Style SignUpForm with Tailwind CSS utilities for layout and spacing
-- [x] T033 [US2] Add form component styles in client/src/components/auth/SignUpForm.module.scss
-- [x] T034 [US2] Create barrel export for auth components in client/src/components/auth/index.ts
+- [x] T023 [P] [US2] Create SignUpForm component skeleton in client/src/components/auth/SignUpForm.tsx
+- [x] T024 [P] [US2] Create Zod validation schema in client/src/components/auth/schemas/signUpSchema.ts
+- [x] T025 [US2] Implement form state management with react-hook-form in SignUpForm.tsx
+- [x] T026 [US2] Add Carbon TextInput for email field in SignUpForm.tsx
+- [x] T027 [US2] Add Carbon TextInput for username field in SignUpForm.tsx
+- [x] T028 [US2] Add Carbon TextInput for password field in SignUpForm.tsx
+- [x] T029 [US2] Add Carbon TextInput for retype password field in SignUpForm.tsx
+- [x] T030 [US2] Implement password match validation logic in SignUpForm.tsx
+- [x] T031 [US2] Add Carbon Button for "Create account" with loading state in SignUpForm.tsx
+- [x] T032 [US2] Add "Already have an account?" navigation link in SignUpForm.tsx
+- [x] T033 [US2] Add Terms of Service and Privacy Policy links in SignUpForm.tsx
+- [x] T034 [US2] Style SignUpForm with Tailwind CSS and Carbon Design System in client/src/components/auth/SignUpForm.module.scss
+- [x] T035 [US2] Create barrel export for auth components in client/src/components/auth/index.ts
 
-**Checkpoint**: Sign-up form should be fully functional with all validation rules
+**Checkpoint**: Sign-up form should be fully functional with all validation rules enforced
 
 ---
 
@@ -104,115 +125,144 @@ This project uses monorepo structure with npm workspaces:
 
 **Goal**: Users can connect Solana wallets for Web3 authentication
 
-**Independent Test**: Click wallet button, see modal with wallet list, detect installed wallets, verify connection flow
+**Independent Test**: Click "Continue with wallet" button, verify wallet modal opens showing detected wallets, select wallet, verify connection flow handles success/rejection correctly
+
+**Acceptance Criteria**:
+
+- Wallet selection modal opens from auth forms
+- Detected Solana wallets are visually marked
+- Installation guidance shown when no wallets detected
+- Wallet connection approval redirects to dashboard
+- Connection rejection returns to modal with error message
 
 ### Implementation for User Story 3
 
-- [x] T035 [P] [US3] Create WalletModal component in client/src/components/auth/WalletModal.tsx
-- [x] T036 [P] [US3] Create wallet detection logic in walletService.ts
-- [x] T037 [US3] Implement Carbon Modal structure for wallet selection
-- [x] T038 [US3] Create wallet list grid showing popular Solana wallets (Phantom, Solflare, etc.)
-- [x] T039 [US3] Add "Detected" badge for installed wallets using wallet adapter detection
-- [x] T040 [US3] Implement wallet selection handler with mock connection flow
-- [x] T041 [US3] Add blockchain selector dropdown (defaulting to Solana)
-- [x] T042 [US3] Add "No wallet detected" state with installation guidance
-- [x] T043 [US3] Add loading state during wallet connection attempt
-- [x] T044 [US3] Add error state for rejected connections with retry option
-- [x] T045 [US3] Style WalletModal with Tailwind CSS utilities
-- [x] T046 [US3] Add modal component styles in client/src/components/auth/WalletModal.module.scss
-- [x] T047 [US3] Add "Continue with a linked wallet" button to SignInForm.tsx
-- [x] T048 [US3] Add "Sign up with an existing wallet(s)" button to SignUpForm.tsx
+- [x] T036 [P] [US3] Create WalletModal component skeleton in client/src/components/auth/WalletModal.tsx
+- [x] T037 [P] [US3] Create wallet detection utility in client/src/services/auth/walletService.ts
+- [x] T038 [US3] Implement Carbon Modal structure in WalletModal.tsx
+- [x] T039 [US3] Create wallet list grid with popular Solana wallets (Phantom, Solflare, Backpack, Glow) in WalletModal.tsx
+- [x] T040 [US3] Implement wallet detection logic with "Detected" badge in WalletModal.tsx
+- [x] T041 [US3] Add wallet selection click handler in WalletModal.tsx
+- [x] T042 [US3] Implement blockchain selector dropdown (Solana default) in WalletModal.tsx
+- [x] T043 [US3] Add "No wallet detected" empty state in WalletModal.tsx
+- [x] T044 [US3] Add wallet installation guidance and links in WalletModal.tsx
+- [x] T045 [US3] Add loading state during wallet detection in WalletModal.tsx
+- [x] T046 [US3] Add loading state during wallet connection in WalletModal.tsx
+- [x] T047 [US3] Add error state for rejected connection with retry in WalletModal.tsx
+- [x] T048 [US3] Style WalletModal with Tailwind CSS and Carbon Design System in client/src/components/auth/WalletModal.module.scss
+- [x] T049 [US3] Add "Continue with a linked wallet" button to SignInForm.tsx
+- [x] T050 [US3] Add "Sign up with an existing wallet(s)" button to SignUpForm.tsx
 
-**Checkpoint**: Wallet modal should open from auth forms, detect wallets, and handle connection flow
+**Checkpoint**: Wallet modal should open from auth forms, detect wallets, and handle full connection flow
 
 ---
 
 ## Phase 6: User Story 4 - Google OAuth Authentication (Priority: P2)
 
-**Goal**: Users can sign in/up using Google accounts
+**Goal**: Users can sign in or sign up using their Google account for faster onboarding
 
-**Independent Test**: Click Google button, verify OAuth flow initiates correctly
+**Independent Test**: Click "Continue with Google" button, verify OAuth popup initiates, test cancellation returns to form, test successful auth creates/authenticates user
+
+**Acceptance Criteria**:
+
+- "Continue with Google" button on sign-in initiates OAuth
+- "Sign up with Google" button on sign-up initiates OAuth
+- OAuth cancellation returns to form without errors
+- Successful OAuth authenticates or creates account
 
 ### Implementation for User Story 4
 
-- [ ] T049 [P] [US4] Create GoogleAuthButton component in client/src/components/auth/GoogleAuthButton.tsx
-- [ ] T050 [US4] Implement Google OAuth button using @react-oauth/google
-- [ ] T051 [US4] Add success callback handler with mock account linking
-- [ ] T052 [US4] Add error callback handler for cancelled/failed OAuth
-- [ ] T053 [US4] Style GoogleAuthButton with Carbon Button and Google branding
-- [ ] T054 [US4] Add component styles in client/src/components/auth/GoogleAuthButton.module.scss
-- [ ] T055 [US4] Integrate GoogleAuthButton into SignInForm.tsx as "Continue with Google"
-- [ ] T056 [US4] Integrate GoogleAuthButton into SignUpForm.tsx as "Sign up with Google"
+- [ ] T051 [P] [US4] Create GoogleAuthButton component in client/src/components/auth/GoogleAuthButton.tsx
+- [ ] T052 [P] [US4] Install and configure @react-oauth/google provider in client/src/main.tsx
+- [ ] T053 [US4] Implement GoogleLogin component with custom styling in GoogleAuthButton.tsx
+- [ ] T054 [US4] Add OAuth success handler with token validation in GoogleAuthButton.tsx
+- [ ] T055 [US4] Add OAuth error handler for cancelled/failed authentication in GoogleAuthButton.tsx
+- [ ] T056 [US4] Style GoogleAuthButton with Carbon and Google branding in client/src/components/auth/GoogleAuthButton.module.scss
+- [ ] T057 [US4] Integrate GoogleAuthButton into SignInForm.tsx as "Continue with Google"
+- [ ] T058 [US4] Integrate GoogleAuthButton into SignUpForm.tsx as "Sign up with Google"
+- [ ] T059 [US4] Update AuthContext to handle Google authentication flow in client/src/contexts/AuthContext.tsx
 
-**Checkpoint**: Google OAuth flow should initiate from both sign-in and sign-up forms
+**Checkpoint**: Google OAuth flow should initiate from both sign-in and sign-up forms with proper error handling
 
 ---
 
 ## Phase 7: User Story 5 - Navigation Header (Priority: P3)
 
-**Goal**: Authenticated users see consistent navigation with profile, language, theme controls
+**Goal**: Authenticated users see consistent navigation with profile, language selector, and theme toggle
 
-**Independent Test**: Render header with authenticated state, verify navigation links, dropdowns, language switching, theme toggle all function
+**Independent Test**: Render header in authenticated state, verify navigation items (Market, Alert, Dashboard) are visible, test language selector switches languages, test theme toggle switches between light/dark mode, verify unauthenticated state shows sign-up/login buttons
+
+**Acceptance Criteria**:
+
+- Header shows Market, Alert, Dashboard navigation items when authenticated
+- Username dropdown shows profile options
+- Language selector displays English, Tiếng Việt, 日本語 options
+- Language switching updates all i18n text within 200ms
+- Theme toggle switches between light and dark mode within 100ms
+- Unauthenticated state shows "Sign up" and "Login" buttons instead of username
 
 ### Implementation for User Story 5
 
-- [ ] T057 [P] [US5] Create Header component in client/src/components/navigation/Header.tsx
-- [ ] T058 [P] [US5] Create LanguageSelector component in client/src/components/navigation/LanguageSelector.tsx
-- [ ] T059 [P] [US5] Create ThemeToggle component in client/src/components/navigation/ThemeToggle.tsx
-- [ ] T060 [US5] Implement Carbon Header component structure with navigation items (Market, Alert, Dashboard)
-- [ ] T061 [US5] Add user profile dropdown with username display (authenticated state)
-- [ ] T062 [US5] Implement LanguageSelector with dropdown showing English, Tiếng Việt, 日本語
-- [ ] T063 [US5] Integrate i18next language switching in LanguageSelector
-- [ ] T064 [US5] Implement ThemeToggle with icon button (sun/moon icons)
-- [ ] T065 [US5] Integrate ThemeContext for light/dark mode switching in ThemeToggle
-- [ ] T066 [US5] Add unauthenticated state showing "Sign up" and "Login" buttons
-- [ ] T067 [US5] Style Header with Tailwind CSS utilities for layout
-- [ ] T068 [US5] Add header component styles in client/src/components/navigation/Header.module.scss
-- [ ] T069 [US5] Create barrel export in client/src/components/navigation/index.ts
+- [ ] T060 [P] [US5] Create Header component skeleton in client/src/components/navigation/Header.tsx
+- [ ] T061 [P] [US5] Create LanguageSelector component in client/src/components/navigation/LanguageSelector.tsx
+- [ ] T062 [P] [US5] Create ThemeToggle component in client/src/components/navigation/ThemeToggle.tsx
+- [ ] T063 [US5] Implement Carbon Header with navigation items (Market, Alert, Dashboard) in Header.tsx
+- [ ] T064 [US5] Add user profile dropdown with username display in Header.tsx
+- [ ] T065 [US5] Add sign-out functionality to profile dropdown in Header.tsx
+- [ ] T066 [US5] Implement LanguageSelector dropdown with i18next integration in LanguageSelector.tsx
+- [ ] T067 [US5] Add language options (English, Tiếng Việt, 日本語) with flags/labels in LanguageSelector.tsx
+- [ ] T068 [US5] Implement ThemeToggle button with sun/moon icons in ThemeToggle.tsx
+- [ ] T069 [US5] Integrate ThemeContext for light/dark mode switching in ThemeToggle.tsx
+- [ ] T070 [US5] Add unauthenticated state rendering "Sign up" and "Login" buttons in Header.tsx
+- [ ] T071 [US5] Style Header with Tailwind CSS and Carbon Design System in client/src/components/navigation/Header.module.scss
+- [ ] T072 [US5] Style LanguageSelector in client/src/components/navigation/LanguageSelector.module.scss
+- [ ] T073 [US5] Style ThemeToggle in client/src/components/navigation/ThemeToggle.module.scss
+- [ ] T074 [US5] Create barrel export in client/src/components/navigation/index.ts
 
-**Checkpoint**: Header should render with all navigation controls functional
-
----
-
-## Phase 8: Showcase Page (Temporary Homepage)
-
-**Purpose**: Create temporary homepage demonstrating all components with placeholder content
-
-- [ ] T070 Create showcase page component in client/src/pages/showcase/index.tsx
-- [ ] T071 Import and render Header component at top of showcase page
-- [ ] T072 Create section for Sign In component with placeholder intro text
-- [ ] T073 Create section for Sign Up component with placeholder intro text
-- [ ] T074 Create section demonstrating Wallet Modal (with trigger button)
-- [ ] T075 Create section demonstrating Google OAuth buttons
-- [ ] T076 Add placeholder content sections for Market, Alert, Dashboard pages
-- [ ] T077 Style showcase page with Tailwind CSS for layout and section spacing
-- [ ] T078 Add page styles in client/src/pages/showcase/index.module.scss
-- [ ] T079 Update client/src/App.tsx to route to showcase page
-- [ ] T080 Add responsive layout adjustments for mobile/tablet viewports
-
-**Checkpoint**: Showcase page should display all components with working interactions
+**Checkpoint**: Header should render with all navigation controls functional and responsive to auth state
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 8: Integration & Polish
 
-**Purpose**: Improvements that affect multiple components
+**Purpose**: Integrate all components and apply cross-cutting improvements
 
-- [ ] T081 [P] Add keyboard navigation support across all form components
-- [ ] T082 [P] Add ARIA labels and screen reader announcements to all interactive elements
-- [ ] T083 [P] Verify all components handle rapid-click submission prevention
-- [ ] T084 [P] Add focus management for modal open/close (trap focus in WalletModal)
-- [ ] T085 Add loading skeleton states for wallet detection
-- [ ] T086 Test form validation error messages for clarity and helpfulness
-- [ ] T087 Verify theme switching applies correctly to all components
-- [ ] T088 Verify language switching updates all text content
-- [ ] T089 Test all components in Chrome, Firefox, Safari latest 2 versions
-- [ ] T090 Run bundle size check to verify within 500KB budget
-- [ ] T091 Test component render performance (<100ms initial render)
-- [ ] T092 Test form validation response time (<500ms)
-- [ ] T093 Test language/theme switching performance (<200ms)
-- [ ] T094 Add JSDoc comments to all exported components
-- [ ] T095 Update README.md with showcase page instructions
+### Showcase Page Integration
+
+- [ ] T075 Create showcase/demo page in client/src/pages/auth/index.tsx
+- [ ] T076 Import and render Header component in showcase page
+- [ ] T077 Create section demonstrating SignInForm with placeholder content
+- [ ] T078 Create section demonstrating SignUpForm with placeholder content
+- [ ] T079 Add WalletModal trigger button demonstration
+- [ ] T080 Add placeholder content for Market, Alert, Dashboard pages
+- [ ] T081 Style showcase page with responsive layout in client/src/pages/auth/index.module.scss
+- [ ] T082 Update client/src/App.tsx routing to include auth showcase page
+
+### Accessibility & Polish
+
+- [ ] T083 [P] Add keyboard navigation support (Tab, Enter, Escape) to all form components
+- [ ] T084 [P] Add ARIA labels and screen reader announcements to interactive elements
+- [ ] T085 [P] Implement focus management for modal (trap focus in WalletModal)
+- [ ] T086 [P] Add loading skeleton states for wallet detection
+- [ ] T087 Verify form validation error messages are clear and helpful
+- [ ] T088 Test theme switching applies correctly to all components
+- [ ] T089 Test language switching updates all i18n text content
+- [ ] T090 Test all components in Chrome, Firefox, Safari (latest 2 versions)
+
+### Performance Validation
+
+- [ ] T091 Run bundle size analysis to verify within 500KB gzipped budget
+- [ ] T092 Measure component initial render time (target <100ms)
+- [ ] T093 Measure form validation response time (target <500ms)
+- [ ] T094 Measure language switching performance (target <200ms)
+- [ ] T095 Measure theme toggle performance (target <100ms)
+
+### Documentation
+
+- [ ] T096 [P] Add JSDoc comments to all exported component interfaces
+- [ ] T097 [P] Update README.md with component usage examples
+- [ ] T098 [P] Validate quickstart.md instructions work correctly
+- [ ] T099 Create component documentation in client/src/components/README.md
 
 ---
 
@@ -220,98 +270,202 @@ This project uses monorepo structure with npm workspaces:
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3-7)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
-  - Or sequentially in priority order: US1 → US2 → US3 → US4 → US5
-- **Showcase Page (Phase 8)**: Depends on all user stories being complete
-- **Polish (Phase 9)**: Depends on Showcase Page completion
+```
+Phase 1 (Setup)
+    ↓
+Phase 2 (Foundational) ← BLOCKS all user stories
+    ↓
+Phase 3-7 (User Stories) ← Can run in parallel after Phase 2
+    ↓
+Phase 8 (Integration & Polish) ← Requires all selected user stories complete
+```
 
-### User Story Dependencies
+- **Phase 1 (Setup)**: No dependencies - can start immediately
+- **Phase 2 (Foundational)**: Depends on Phase 1 completion - **BLOCKS ALL user stories**
+- **Phase 3 (US1 - Sign In)**: Depends on Phase 2 completion - No dependencies on other stories
+- **Phase 4 (US2 - Sign Up)**: Depends on Phase 2 completion - No dependencies on other stories
+- **Phase 5 (US3 - Wallet)**: Depends on Phase 2 completion - Integrates with US1/US2 but independently testable
+- **Phase 6 (US4 - Google OAuth)**: Depends on Phase 2 completion - Integrates with US1/US2 but independently testable
+- **Phase 7 (US5 - Navigation)**: Depends on Phase 2 completion - Uses AuthContext but independently testable
+- **Phase 8 (Integration & Polish)**: Depends on all desired user stories being complete
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P1)**: Can start after Foundational (Phase 2) - Independent of US1
-- **User Story 3 (P2)**: Can start after Foundational (Phase 2) - Integrates with US1/US2 but independently testable
-- **User Story 4 (P2)**: Can start after Foundational (Phase 2) - Integrates with US1/US2 but independently testable
-- **User Story 5 (P3)**: Can start after Foundational (Phase 2) - Uses AuthContext but independently testable
+### User Story Independence
+
+Each user story (US1-US5) can be implemented and tested independently after Phase 2:
+
+- **US1 (Sign In)**: ✅ Fully independent - Core authentication with credentials
+- **US2 (Sign Up)**: ✅ Fully independent - User registration with validation
+- **US3 (Wallet)**: ✅ Independently testable - Adds wallet button to US1/US2 forms but forms work without it
+- **US4 (Google OAuth)**: ✅ Independently testable - Adds Google button to US1/US2 forms but forms work without it
+- **US5 (Navigation)**: ✅ Independently testable - Uses AuthContext but doesn't modify auth flows
 
 ### Within Each User Story
 
-- Schema creation before form component implementation
-- Form structure before validation integration
-- Core functionality before styling
-- Component complete before integration into showcase page
+**General Pattern**:
+
+1. Create schemas/types first (can run in parallel with component skeleton)
+2. Create component skeleton
+3. Implement form logic and validation
+4. Add UI elements and interactions
+5. Apply styling last
+
+**Task Dependencies**:
+
+- Schema tasks [P] can run in parallel with component skeleton
+- Component skeleton must complete before implementation tasks
+- UI elements and interactions can often run in parallel [P]
+- Styling should be done after core functionality
 
 ### Parallel Opportunities
 
-- **Phase 1 (Setup)**: All tasks marked [P] can run in parallel
-- **Phase 2 (Foundational)**: All tasks marked [P] can run in parallel
-- **Phase 3-7 (User Stories)**: Once Foundational completes, all user stories can start in parallel
-- **Within User Stories**: Tasks marked [P] can run in parallel
-- **Phase 9 (Polish)**: All tasks marked [P] can run in parallel
+**Phase 1 (Setup)**: Tasks T002-T005 marked [P] can run in parallel  
+**Phase 2 (Foundational)**: Tasks T008-T010 marked [P] can run in parallel  
+**Phase 3 (US1)**: Tasks T013-T014 can run in parallel, T016-T017 can run after T015  
+**Phase 4 (US2)**: Tasks T023-T024 can run in parallel  
+**Phase 5 (US3)**: Tasks T036-T037 can run in parallel  
+**Phase 6 (US4)**: Tasks T051-T052 can run in parallel  
+**Phase 7 (US5)**: Tasks T060-T062 can run in parallel  
+**Phase 8 (Polish)**: Most accessibility and validation tasks can run in parallel
 
 ---
 
-## Parallel Example: User Story 1 (Sign In)
+## Parallel Execution Examples
+
+### Phase 2: Foundational Setup
 
 ```bash
-# Launch schema and component skeleton together:
-Task T013: "Create SignInForm component in client/src/components/auth/SignInForm.tsx"
-Task T014: "Create Zod validation schema for sign-in in client/src/components/auth/schemas/signInSchema.ts"
+# All these service/context files can be created simultaneously:
+Task T008: "Create wallet service skeleton in client/src/services/auth/walletService.ts"
+Task T009: "Create AuthContext provider in client/src/contexts/AuthContext.tsx"
+Task T010: "Create ThemeContext provider in client/src/contexts/ThemeContext.tsx"
+```
 
-# After T015 completes, these can run in parallel:
-Task T016: "Add Carbon TextInput components for username/email and password fields"
-Task T019: "Add 'Forgot password?' link with placeholder href"
-Task T020: "Add 'Want to have an account?' navigation link to sign-up page"
+### Phase 3: User Story 1 (Sign In)
+
+```bash
+# Start together - different files:
+Task T013: "Create SignInForm component skeleton in client/src/components/auth/SignInForm.tsx"
+Task T014: "Create Zod validation schema in client/src/components/auth/schemas/signInSchema.ts"
+
+# After T015 completes, these work on different parts of the form:
+Task T016: "Add Carbon TextInput for identifier field in SignInForm.tsx"
+Task T017: "Add Carbon TextInput for password field in SignInForm.tsx"
+Task T020: "Add 'Forgot password?' link in SignInForm.tsx"
+Task T021: "Add 'Want to have an account?' navigation link in SignInForm.tsx"
+```
+
+### Parallel User Stories (After Phase 2)
+
+```bash
+# If you have 3 developers, assign simultaneously:
+Developer A: Phase 3 (User Story 1 - Sign In) → 10 tasks
+Developer B: Phase 4 (User Story 2 - Sign Up) → 13 tasks
+Developer C: Phase 5 (User Story 3 - Wallet) → 15 tasks
+
+# Each story is independently completable and testable
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (User Stories 1 & 2)
+### MVP First (User Stories 1 & 2 Only)
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1 (Sign In)
-4. Complete Phase 4: User Story 2 (Sign Up)
-5. Create minimal showcase page with just sign-in/sign-up forms
-6. **STOP and VALIDATE**: Test both forms independently
-7. Deploy/demo if ready
+**Goal**: Fastest path to functional email authentication
 
-### Incremental Delivery
+1. ✅ Complete Phase 1: Setup (6 tasks, ~2 hours)
+2. ✅ Complete Phase 2: Foundational (6 tasks, ~3 hours)
+3. ✅ Complete Phase 3: User Story 1 - Sign In (10 tasks, ~4 hours)
+4. ✅ Complete Phase 4: User Story 2 - Sign Up (13 tasks, ~5 hours)
+5. Create minimal showcase page with sign-in/sign-up
+6. **VALIDATE**: Test both forms independently
+7. **DEPLOY**: MVP ready with core authentication
 
-1. Setup + Foundational → Foundation ready
-2. Add User Story 1 (Sign In) → Test independently
-3. Add User Story 2 (Sign Up) → Test independently → **MVP Ready!**
-4. Add User Story 3 (Wallet) → Test independently
-5. Add User Story 4 (Google OAuth) → Test independently
-6. Add User Story 5 (Navigation) → Test independently
-7. Complete Showcase Page → Test all interactions
-8. Polish & accessibility → Production ready
+**Estimated Time**: ~14 hours for MVP (P1 features only)
+
+### Incremental Feature Delivery
+
+**Delivery Sequence**:
+
+1. ✅ **Milestone 1**: Email Authentication (US1 + US2) → MVP deployed
+2. **Milestone 2**: Add Wallet Support (US3) → Web3 authentication enabled
+3. **Milestone 3**: Add Google OAuth (US4) → Social login enabled
+4. **Milestone 4**: Add Navigation (US5) → Full app navigation ready
+5. **Milestone 5**: Polish & Accessibility → Production-ready
+
+**Benefits**:
+
+- Each milestone adds value without breaking previous features
+- Can stop at any milestone based on priorities
+- Each user story is independently deployable
 
 ### Parallel Team Strategy
 
-With multiple developers:
+**3-Developer Team** (Most Efficient):
 
-1. Team completes Setup + Foundational together (6 tasks, ~2-3 hours)
-2. Once Foundational is done:
-   - **Developer A**: User Story 1 (Sign In) → 10 tasks
-   - **Developer B**: User Story 2 (Sign Up) → 12 tasks
-   - **Developer C**: User Story 3 (Wallet) → 14 tasks
-3. User Story 4 & 5 can follow, then integrate into showcase
-4. Team collaborates on polish phase
+1. **Week 1, Days 1-2**: All developers work on Phase 1 + Phase 2 together
+2. **Week 1, Days 3-5**: Split user stories
+   - Developer A: User Story 1 (Sign In)
+   - Developer B: User Story 2 (Sign Up)
+   - Developer C: User Story 3 (Wallet)
+3. **Week 2, Days 1-2**: Continue parallel work
+   - Developer A: User Story 4 (Google OAuth)
+   - Developer B: User Story 5 (Navigation)
+   - Developer C: Start integration page
+4. **Week 2, Days 3-5**: Team collaborates on Phase 8 (Integration & Polish)
+
+**Estimated Timeline**: ~10 working days with 3 developers
+
+**Single Developer**:
+
+- Follow priority order: Setup → Foundational → US1 → US2 → US3 → US4 → US5 → Integration
+- Estimated: ~3-4 weeks working sequentially
+
+---
+
+## Task Summary
+
+**Total Tasks**: 99  
+**Completed**: 50 (51%)  
+**Remaining**: 49
+
+**By Phase**:
+
+- Phase 1 (Setup): 6/6 ✅
+- Phase 2 (Foundational): 6/6 ✅
+- Phase 3 (US1 - Sign In): 10/10 ✅
+- Phase 4 (US2 - Sign Up): 13/13 ✅
+- Phase 5 (US3 - Wallet): 15/15 ✅
+- Phase 6 (US4 - Google OAuth): 0/9
+- Phase 7 (US5 - Navigation): 0/15
+- Phase 8 (Integration & Polish): 0/25
+
+**By Priority**:
+
+- P1 (MVP): 35/35 ✅ (US1 + US2 complete)
+- P2 (Enhanced Auth): 15/24 (US3 complete, US4 pending)
+- P3 (Navigation): 0/15 (US5 pending)
+- Polish: 0/25 (Integration pending)
+
+**Current Status**: MVP features complete, ready for P2/P3 enhancements
 
 ---
 
 ## Notes
 
-- All components use Carbon Design System as foundation with Tailwind CSS for customization
-- Mock services simulate realistic async operations with delays
-- Showcase page serves as interactive component library and testing environment
-- [P] tasks = different files, no dependencies on other in-progress tasks
-- [Story] label maps task to specific user story for traceability
-- Commit after each task or logical group of related tasks
-- Stop at checkpoints to validate story independently before proceeding
-- Environment variables needed: VITE_GOOGLE_CLIENT_ID (mock value acceptable for this branch)
+**Format Compliance**:
+
+- ✅ All tasks follow `- [ ] [ID] [P?] [Story] Description` format
+- ✅ All task IDs are sequential (T001-T099)
+- ✅ [P] marker only on parallelizable tasks
+- ✅ [Story] labels on user story tasks only
+- ✅ File paths included in all descriptions
+
+**Key Reminders**:
+
+- All components use Carbon Design System with Tailwind CSS customization
+- i18n translations already configured in `client/src/i18n/config.ts`
+- Services provide API integration layer
+- Test each user story independently before proceeding
+- Commit after completing each task or logical group
+- Environment variables: `VITE_GOOGLE_CLIENT_ID` needed for OAuth (Phase 6)
