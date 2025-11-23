@@ -8,7 +8,8 @@ import balances from "./routes/balances.js";
 import users from "./routes/users.js";
 import { honoApollo } from "./middlewares/apollo.js";
 import { ApolloServer } from "@apollo/server";
-import { db, graphqlSchema } from "./db/index.js";
+import { graphqlSchema } from "./db/index.js";
+export type { DbSelect } from "./db/schema.js";
 
 // Load environment variables
 process.loadEnvFile("./.env");
@@ -39,6 +40,5 @@ serve(
     console.log(`Server is running on http://localhost:${info.port}`);
   },
 );
-
 // RPC for client
 export type AppType = typeof app;

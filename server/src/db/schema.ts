@@ -8,6 +8,7 @@ import {
   boolean,
   decimal,
   varchar,
+  serial,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -20,6 +21,26 @@ export const users = pgTable("users", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const posts = pgTable("posts_table", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const posts_users_relations = relations(posts, ({ one }) => ({
+  user: one(users, {
+    fields: [posts.userId],
+    references: [users.id],
+  }),
+}));
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -35,7 +56,7 @@ export const tokenMeta = pgTable("token_meta", {
     .$onUpdate(() => new Date()),
 });
 
-export const tokenMarketData = pgTable("token_prices", {
+export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }),
   priceUsd: decimal().notNull(),
   marketCap: decimal().notNull(),
@@ -86,5 +107,32 @@ export const tokenMarketData_tokenMeta_relation = relations(
   }),
 );
 
-export type InsertUser = typeof users.$inferInsert;
-export type SelectUser = typeof users.$inferSelect;
+function merge<A extends object, B extends object>(a: A, b: B): A & B {
+  return { ...a, ...b } as A & B;
+}
+
+const dbSelectSchemas = {
+  user: users.$inferSelect,
+  tokenMeta: tokenMeta.$inferSelect,
+  tokenTransfers: tokenTransfers.$inferSelect,
+  wallet: wallets.$inferSelect,
+  tokenMarketData: merge(tokenMarketData.$inferSelect, {
+    tokenMeta: tokenMeta.$inferSelect,
+  }),
+  post: posts.$inferSelect,
+} as const;
+
+type PickFields<Table, Fields extends keyof Table> = {
+  [K in Fields]: Table[K];
+};
+
+export type DbSelectSchema = typeof dbSelectSchemas;
+
+// Some dark magic chatGPT told me
+export type DbSelect<
+  Table extends keyof DbSelectSchema,
+  Fields extends keyof DbSelectSchema[Table] = keyof DbSelectSchema[Table],
+  Relations extends Record<string, any> = {},
+> = PickFields<DbSelectSchema[Table], Fields> & {
+  [K in keyof Relations]: Relations[K];
+};

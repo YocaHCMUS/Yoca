@@ -18,13 +18,22 @@
     
     "paths": {
       "@server/*": ["../server/src/*"],
+      "@api/*": ["./src/api/*"]
     },
     
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "plugins": [ 
+      { 
+        "name": "gql.tada/ts-plugin", 
+        "schema": "../server/db/schema.gql", 
+        "tadaOutputLocation": "./src/api/graphql-env.d.ts"
+      } 
+    ] 
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]

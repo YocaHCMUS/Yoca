@@ -1,3 +1,4 @@
+// Apollo Server: handle HTTP GraphQL requests
 // Thanks to obedm503 (https://github.com/honojs/hono/issues/434#issuecomment-2025800825)
 import {
   HeaderMap,

@@ -1,6 +1,375 @@
-#######################################################
- # Generated GraphQL schema for preview, has no usage  #
- #######################################################
+input PostsInsertInput {
+  id: Int
+  title: String!
+  content: String!
+  userId: String!
+
+  """Date"""
+  createdAt: String
+
+  """Date"""
+  updatedAt: String
+}
+
+input PostsUpdateInput {
+  id: Int
+  title: String
+  content: String
+  userId: String
+
+  """Date"""
+  createdAt: String
+
+  """Date"""
+  updatedAt: String
+}
+
+input PostsFilters {
+  id: PostsIdFilters
+  title: PostsTitleFilters
+  content: PostsContentFilters
+  userId: PostsUserIdFilters
+  createdAt: PostsCreatedAtFilters
+  updatedAt: PostsUpdatedAtFilters
+  OR: [PostsFiltersOr!]
+}
+
+input PostsIdFilters {
+  eq: Int
+  ne: Int
+  lt: Int
+  lte: Int
+  gt: Int
+  gte: Int
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [Int!]
+
+  """Array<undefined>"""
+  notInArray: [Int!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsIdfiltersOr!]
+}
+
+input PostsIdfiltersOr {
+  eq: Int
+  ne: Int
+  lt: Int
+  lte: Int
+  gt: Int
+  gte: Int
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [Int!]
+
+  """Array<undefined>"""
+  notInArray: [Int!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsTitleFilters {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsTitlefiltersOr!]
+}
+
+input PostsTitlefiltersOr {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsContentFilters {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsContentfiltersOr!]
+}
+
+input PostsContentfiltersOr {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsUserIdFilters {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsUserIdfiltersOr!]
+}
+
+input PostsUserIdfiltersOr {
+  eq: String
+  ne: String
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<undefined>"""
+  inArray: [String!]
+
+  """Array<undefined>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsCreatedAtFilters {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsCreatedAtfiltersOr!]
+}
+
+input PostsCreatedAtfiltersOr {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsUpdatedAtFilters {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [PostsUpdatedAtfiltersOr!]
+}
+
+input PostsUpdatedAtfiltersOr {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
+input PostsFiltersOr {
+  id: PostsIdFilters
+  title: PostsTitleFilters
+  content: PostsContentFilters
+  userId: PostsUserIdFilters
+  createdAt: PostsCreatedAtFilters
+  updatedAt: PostsUpdatedAtFilters
+}
+
+input PostsOrderBy {
+  id: InnerOrder
+  title: InnerOrder
+  content: InnerOrder
+  userId: InnerOrder
+  createdAt: InnerOrder
+  updatedAt: InnerOrder
+}
+
+input InnerOrder {
+  direction: OrderDirection!
+
+  """Priority of current field"""
+  priority: Int!
+}
+
+"""Order by direction"""
+enum OrderDirection {
+  """Ascending order"""
+  asc
+
+  """Descending order"""
+  desc
+}
+
 input TokenMarketDataInsertInput {
   address: String
   priceUsd: String!
@@ -857,22 +1226,6 @@ input TokenMarketDataOrderBy {
   atl: InnerOrder
   atlChangePercentage: InnerOrder
   updatedAt: InnerOrder
-}
-
-input InnerOrder {
-  direction: OrderDirection!
-
-  """Priority of current field"""
-  priority: Int!
-}
-
-"""Order by direction"""
-enum OrderDirection {
-  """Ascending order"""
-  asc
-
-  """Descending order"""
-  desc
 }
 
 input TokenMetaInsertInput {
@@ -2012,16 +2365,23 @@ input UsersOrderBy {
 input WalletsInsertInput {
   address: String!
   balanceCount: Int
+
+  """Date"""
+  updatedAt: String
 }
 
 input WalletsUpdateInput {
   address: String
   balanceCount: Int
+
+  """Date"""
+  updatedAt: String
 }
 
 input WalletsFilters {
   address: WalletsAddressFilters
   balanceCount: WalletsBalanceCountFilters
+  updatedAt: WalletsUpdatedAtFilters
   OR: [WalletsFiltersOr!]
 }
 
@@ -2111,14 +2471,121 @@ input WalletsBalanceCountfiltersOr {
   isNotNull: Boolean
 }
 
+input WalletsUpdatedAtFilters {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+  OR: [WalletsUpdatedAtfiltersOr!]
+}
+
+input WalletsUpdatedAtfiltersOr {
+  """Date"""
+  eq: String
+
+  """Date"""
+  ne: String
+
+  """Date"""
+  lt: String
+
+  """Date"""
+  lte: String
+
+  """Date"""
+  gt: String
+
+  """Date"""
+  gte: String
+  like: String
+  notLike: String
+  ilike: String
+  notIlike: String
+
+  """Array<Date>"""
+  inArray: [String!]
+
+  """Array<Date>"""
+  notInArray: [String!]
+  isNull: Boolean
+  isNotNull: Boolean
+}
+
 input WalletsFiltersOr {
   address: WalletsAddressFilters
   balanceCount: WalletsBalanceCountFilters
+  updatedAt: WalletsUpdatedAtFilters
 }
 
 input WalletsOrderBy {
   address: InnerOrder
   balanceCount: InnerOrder
+  updatedAt: InnerOrder
+}
+
+type PostsSelectItem {
+  id: Int!
+  title: String!
+  content: String!
+  userId: String!
+
+  """Date"""
+  createdAt: String!
+
+  """Date"""
+  updatedAt: String!
+  user(where: UsersFilters): PostsUserRelation
+}
+
+type PostsUserRelation {
+  id: String!
+  name: String!
+  age: Int!
+  email: String!
+
+  """Date"""
+  createdAt: String!
+
+  """Date"""
+  updatedAt: String!
+}
+
+type PostsItem {
+  id: Int!
+  title: String!
+  content: String!
+  userId: String!
+
+  """Date"""
+  createdAt: String!
+
+  """Date"""
+  updatedAt: String!
 }
 
 type TokenMarketDataSelectItem {
@@ -2254,14 +2721,22 @@ type UsersItem {
 type WalletsSelectItem {
   address: String!
   balanceCount: Int!
+
+  """Date"""
+  updatedAt: String!
 }
 
 type WalletsItem {
   address: String!
   balanceCount: Int!
+
+  """Date"""
+  updatedAt: String!
 }
 
 type Query {
+  posts(offset: Int, limit: Int, orderBy: PostsOrderBy, where: PostsFilters): [PostsSelectItem!]!
+  postsSingle(offset: Int, orderBy: PostsOrderBy, where: PostsFilters): PostsSelectItem
   tokenMarketData(offset: Int, limit: Int, orderBy: TokenMarketDataOrderBy, where: TokenMarketDataFilters): [TokenMarketDataSelectItem!]!
   tokenMarketDataSingle(offset: Int, orderBy: TokenMarketDataOrderBy, where: TokenMarketDataFilters): TokenMarketDataSelectItem
   tokenMeta(offset: Int, limit: Int, orderBy: TokenMetaOrderBy, where: TokenMetaFilters): [TokenMetaSelectItem!]!
@@ -2275,6 +2750,10 @@ type Query {
 }
 
 type Mutation {
+  insertIntoPosts(values: [PostsInsertInput!]!): [PostsItem!]!
+  insertIntoPostsSingle(values: PostsInsertInput!): PostsItem
+  updatePosts(set: PostsUpdateInput!, where: PostsFilters): [PostsItem!]!
+  deleteFromPosts(where: PostsFilters): [PostsItem!]!
   insertIntoTokenMarketData(values: [TokenMarketDataInsertInput!]!): [TokenMarketDataItem!]!
   insertIntoTokenMarketDataSingle(values: TokenMarketDataInsertInput!): TokenMarketDataItem
   updateTokenMarketData(set: TokenMarketDataUpdateInput!, where: TokenMarketDataFilters): [TokenMarketDataItem!]!

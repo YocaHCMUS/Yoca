@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
-import client from "../../api/main";
+import {api} from "@api/main.js";
+import { graphql } from "gql.tada";
+import { useQuery } from "@apollo/client/react";
+
 import z from "zod";
 import { 
   Button, 
@@ -9,7 +12,24 @@ import {
   Form
 } from "@carbon/react";
 
+const GET_USER_EMAIL_QUERY = graphql(`
+  query {
+    posts(limit: 1){
+      user {
+        email
+        age
+        id
+      }
+    }
+  }
+`);
+
 export default function LoginPage() {
+
+  const {data} = useQuery(GET_USER_EMAIL_QUERY);
+
+  type hello = "hello" | "world" | { hello : "world"}
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -30,10 +50,7 @@ export default function LoginPage() {
     if (!emailValid || !passwordValid) return;
 
     try {
-      client.api.tokens.$get();
-      
-
-      const res = await client.api.users.$post({
+      const res = await api.users.$post({
         json: { email, password },
       });
       

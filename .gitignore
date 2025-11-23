@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+client/node_modules
+server/node_modules
 dist
 dist-ssr
 *.local
@@ -38,6 +40,3 @@ server/.env.*.local
 # TypeScript
 *.tsbuildinfo
 .tmp
-
-# Generated GraphQL schema
-server/src/db/schema.graphql
