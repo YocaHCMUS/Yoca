@@ -1,0 +1,25 @@
+/**
+ * ThemeToggle Component Styles
+ * Styles for theme toggle button with Carbon Design System and Tailwind CSS
+ */
+
+.themeToggle {
+  @apply transition-all duration-100;
+  
+  &:hover {
+    @apply bg-gray-100 dark:bg-gray-700;
+  }
+  
+  &:active {
+    @apply scale-95;
+  }
+}
+
+/* Animation for icon change */
+.themeToggle svg {
+  @apply transition-transform duration-100;
+}
+
+.themeToggle:hover svg {
+  @apply rotate-12;
+}

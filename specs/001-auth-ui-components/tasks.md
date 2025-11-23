@@ -203,21 +203,21 @@ This project uses monorepo structure with npm workspaces:
 
 ### Implementation for User Story 5
 
-- [ ] T060 [P] [US5] Create Header component skeleton in client/src/components/navigation/Header.tsx
-- [ ] T061 [P] [US5] Create LanguageSelector component in client/src/components/navigation/LanguageSelector.tsx
-- [ ] T062 [P] [US5] Create ThemeToggle component in client/src/components/navigation/ThemeToggle.tsx
-- [ ] T063 [US5] Implement Carbon Header with navigation items (Market, Alert, Dashboard) in Header.tsx
-- [ ] T064 [US5] Add user profile dropdown with username display in Header.tsx
-- [ ] T065 [US5] Add sign-out functionality to profile dropdown in Header.tsx
-- [ ] T066 [US5] Implement LanguageSelector dropdown with i18next integration in LanguageSelector.tsx
-- [ ] T067 [US5] Add language options (English, Tiếng Việt, 日本語) with flags/labels in LanguageSelector.tsx
-- [ ] T068 [US5] Implement ThemeToggle button with sun/moon icons in ThemeToggle.tsx
-- [ ] T069 [US5] Integrate ThemeContext for light/dark mode switching in ThemeToggle.tsx
-- [ ] T070 [US5] Add unauthenticated state rendering "Sign up" and "Login" buttons in Header.tsx
-- [ ] T071 [US5] Style Header with Tailwind CSS and Carbon Design System in client/src/components/navigation/Header.module.scss
-- [ ] T072 [US5] Style LanguageSelector in client/src/components/navigation/LanguageSelector.module.scss
-- [ ] T073 [US5] Style ThemeToggle in client/src/components/navigation/ThemeToggle.module.scss
-- [ ] T074 [US5] Create barrel export in client/src/components/navigation/index.ts
+- [x] T060 [P] [US5] Create Header component skeleton in client/src/components/navigation/Header.tsx
+- [x] T061 [P] [US5] Create LanguageSelector component in client/src/components/navigation/LanguageSelector.tsx
+- [x] T062 [P] [US5] Create ThemeToggle component in client/src/components/navigation/ThemeToggle.tsx
+- [x] T063 [US5] Implement Carbon Header with navigation items (Market, Alert, Dashboard) in Header.tsx
+- [x] T064 [US5] Add user profile dropdown with username display in Header.tsx
+- [x] T065 [US5] Add sign-out functionality to profile dropdown in Header.tsx
+- [x] T066 [US5] Implement LanguageSelector dropdown with i18next integration in LanguageSelector.tsx
+- [x] T067 [US5] Add language options (English, Tiếng Việt, 日本語) with flags/labels in LanguageSelector.tsx
+- [x] T068 [US5] Implement ThemeToggle button with sun/moon icons in ThemeToggle.tsx
+- [x] T069 [US5] Integrate ThemeContext for light/dark mode switching in ThemeToggle.tsx
+- [x] T070 [US5] Add unauthenticated state rendering "Sign up" and "Login" buttons in Header.tsx
+- [x] T071 [US5] Style Header with Tailwind CSS and Carbon Design System in client/src/components/navigation/Header.module.scss
+- [x] T072 [US5] Style LanguageSelector in client/src/components/navigation/LanguageSelector.module.scss
+- [x] T073 [US5] Style ThemeToggle in client/src/components/navigation/ThemeToggle.module.scss
+- [x] T074 [US5] Create barrel export in client/src/components/navigation/index.ts
 
 **Checkpoint**: Header should render with all navigation controls functional and responsive to auth state
 
@@ -426,8 +426,8 @@ Developer C: Phase 5 (User Story 3 - Wallet) → 15 tasks
 ## Task Summary
 
 **Total Tasks**: 99  
-**Completed**: 59 (60%)  
-**Remaining**: 40
+**Completed**: 74 (75%)  
+**Remaining**: 25
 
 **By Phase**:
 
@@ -437,17 +437,17 @@ Developer C: Phase 5 (User Story 3 - Wallet) → 15 tasks
 - Phase 4 (US2 - Sign Up): 13/13 ✅
 - Phase 5 (US3 - Wallet): 15/15 ✅
 - Phase 6 (US4 - Google OAuth): 9/9 ✅
-- Phase 7 (US5 - Navigation): 0/15
+- Phase 7 (US5 - Navigation): 15/15 ✅
 - Phase 8 (Integration & Polish): 0/25
 
 **By Priority**:
 
 - P1 (MVP): 35/35 ✅ (US1 + US2 complete)
 - P2 (Enhanced Auth): 24/24 ✅ (US3 + US4 complete)
-- P3 (Navigation): 0/15 (US5 pending)
+- P3 (Navigation): 15/15 ✅ (US5 complete)
 - Polish: 0/25 (Integration pending)
 
-**Current Status**: All P1 and P2 features complete, ready for P3 (Navigation) and Polish
+**Current Status**: All P1, P2, and P3 features complete, ready for Phase 8 (Integration & Polish)
 
 ---
 

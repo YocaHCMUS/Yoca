@@ -1,0 +1,77 @@
+/**
+ * LanguageSelector Component Styles
+ * Styles for language dropdown with Carbon Design System and Tailwind CSS
+ */
+
+.languageSelectorWrapper {
+  @apply relative;
+}
+
+.languageButton {
+  @apply relative;
+}
+
+/* Backdrop for closing dropdown */
+.backdrop {
+  @apply fixed inset-0 z-[999];
+  background: transparent;
+}
+
+/* Language dropdown */
+.languageDropdown {
+  @apply absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700;
+  z-index: 1000;
+  animation: slideDown 150ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownHeader {
+  @apply flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100;
+}
+
+.languageList {
+  @apply py-2;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.languageOption {
+  @apply flex items-center gap-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+  border: none;
+  background: none;
+  cursor: pointer;
+  
+  &.active {
+    @apply bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400;
+  }
+}
+
+.flag {
+  @apply text-lg;
+}
+
+.label {
+  @apply flex-1;
+}
+
+.checkmark {
+  @apply text-blue-600 dark:text-blue-400 font-bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .languageDropdown {
+    @apply w-48;
+  }
+}
