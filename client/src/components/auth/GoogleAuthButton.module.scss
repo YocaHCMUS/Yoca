@@ -1,0 +1,117 @@
+/**
+ * Google OAuth Button Styles
+ * Carbon Design System integration with Google OAuth button
+ */
+
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.google-auth-button-container {
+  width: 100%;
+  position: relative;
+}
+
+.google-login-wrapper {
+  width: 100%;
+  
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  // Override Google's default button styles to match Carbon
+  :global {
+    .nsm7Bb-HzV7m-LgbsSe {
+      width: 100% !important;
+      height: 48px !important;
+      border-radius: 0 !important;
+      border: 1px solid $border-subtle-01 !important;
+      background-color: $layer-01 !important;
+      font-family: 'IBM Plex Sans', sans-serif !important;
+      
+      &:hover {
+        background-color: $layer-hover-01 !important;
+        border-color: $border-strong-01 !important;
+      }
+      
+      &:active {
+        background-color: $layer-active-01 !important;
+      }
+    }
+    
+    .nsm7Bb-HzV7m-LgbsSe-Bz112c {
+      color: $text-primary !important;
+      @include type-style('body-compact-01');
+    }
+  }
+}
+
+.google-button-label {
+  display: none; // Hidden by default, can be used for custom text overlay
+}
+
+// Dark theme adjustments
+[data-carbon-theme='g100'],
+[data-carbon-theme='g90'] {
+  .google-login-wrapper {
+    :global {
+      .nsm7Bb-HzV7m-LgbsSe {
+        background-color: $layer-01 !important;
+        border-color: $border-subtle-01 !important;
+        
+        &:hover {
+          background-color: $layer-hover-01 !important;
+          border-color: $border-strong-01 !important;
+        }
+        
+        &:active {
+          background-color: $layer-active-01 !important;
+        }
+      }
+      
+      .nsm7Bb-HzV7m-LgbsSe-Bz112c {
+        color: $text-primary !important;
+      }
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 672px) {
+  .google-login-wrapper {
+    :global {
+      .nsm7Bb-HzV7m-LgbsSe {
+        height: 44px !important;
+      }
+    }
+  }
+}
+
+// Loading state
+.google-auth-button-container[data-loading='true'] {
+  .google-login-wrapper {
+    pointer-events: none;
+    opacity: 0.7;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid $border-subtle-01;
+      border-top-color: $border-interactive;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}

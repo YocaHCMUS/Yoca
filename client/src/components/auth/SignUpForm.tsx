@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { TextInput, PasswordInput, Button, InlineNotification } from '@carbon/react';
 import { signUpSchema, type SignUpFormData } from './schemas/signUpSchema';
+import { GoogleAuthButton } from './GoogleAuthButton';
 import { useAuth } from '../../contexts';
 import './SignUpForm.module.scss';
 
@@ -45,7 +46,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
   onNavigateToSignIn,
 }) => {
   const { t } = useTranslation();
-  const { signUp } = useAuth();
+  const { signUp, googleSignIn } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -94,6 +95,36 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /**
+   * Handle Google OAuth success
+   */
+  const handleGoogleSuccess = async (credential: string) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await googleSignIn({ credential, clientId: '' });
+
+      if (response.success) {
+        onSuccess?.();
+      } else {
+        setErrorMessage(response.error || t('auth.googleAuthFailed'));
+      }
+    } catch (error) {
+      setErrorMessage(t('auth.googleAuthFailed'));
+      console.error('Google sign up error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Handle Google OAuth error
+   */
+  const handleGoogleError = (error: string) => {
+    setErrorMessage(error);
   };
 
   return (
@@ -204,6 +235,14 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Google OAuth button */}
+        <GoogleAuthButton
+          mode="signup"
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={isSubmitting}
+        />
 
         {/* Wallet authentication button */}
         <Button

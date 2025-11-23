@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { TextInput, PasswordInput, Button, InlineNotification } from '@carbon/react';
 import { signInSchema, type SignInFormData } from './schemas/signInSchema';
+import { GoogleAuthButton } from './GoogleAuthButton';
 import { useAuth } from '../../contexts';
 import './SignInForm.module.scss';
 
@@ -45,7 +46,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
   onNavigateToSignUp,
 }) => {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
+  const { signIn, googleSignIn } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -99,6 +100,36 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /**
+   * Handle Google OAuth success
+   */
+  const handleGoogleSuccess = async (credential: string) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await googleSignIn({ credential, clientId: '' });
+
+      if (response.success) {
+        onSuccess?.();
+      } else {
+        setErrorMessage(response.error || t('auth.googleAuthFailed'));
+      }
+    } catch (error) {
+      setErrorMessage(t('auth.googleAuthFailed'));
+      console.error('Google sign in error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Handle Google OAuth error
+   */
+  const handleGoogleError = (error: string) => {
+    setErrorMessage(error);
   };
 
   return (
@@ -177,6 +208,14 @@ export const SignInForm: React.FC<SignInFormProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Google OAuth button */}
+        <GoogleAuthButton
+          mode="signin"
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={isSubmitting}
+        />
 
         {/* Wallet authentication button */}
         <Button

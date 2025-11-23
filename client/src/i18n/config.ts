@@ -44,6 +44,8 @@ const resources = {
         privacyPolicy: 'Privacy Policy',
         terms: 'Terms of Service',
         privacy: 'Privacy Policy',
+        googleAuthFailed: 'Google authentication failed. Please try again.',
+        googleAuthCancelled: 'Google authentication was cancelled.',
       },
       // Wallet
       wallet: {
@@ -156,6 +158,8 @@ const resources = {
         privacyPolicy: 'Chính sách bảo mật',
         terms: 'Điều khoản dịch vụ',
         privacy: 'Chính sách bảo mật',
+        googleAuthFailed: 'Xác thực Google thất bại. Vui lòng thử lại.',
+        googleAuthCancelled: 'Xác thực Google đã bị hủy.',
       },
       // Wallet
       wallet: {
@@ -268,6 +272,8 @@ const resources = {
         privacyPolicy: 'プライバシーポリシー',
         terms: '利用規約',
         privacy: 'プライバシーポリシー',
+        googleAuthFailed: 'Google認証に失敗しました。もう一度お試しください。',
+        googleAuthCancelled: 'Google認証がキャンセルされました。',
       },
       // Wallet
       wallet: {
