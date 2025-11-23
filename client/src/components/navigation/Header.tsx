@@ -18,8 +18,8 @@ import {
 } from '@carbon/react';
 import { UserAvatar, Login } from '@carbon/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
-import LanguageSelector from './LanguageSelector';
-import ThemeToggle from './ThemeToggle';
+import LanguageSelector from './LanguageSelector.tsx';
+import ThemeToggle from './ThemeToggle.tsx';
 import styles from './Header.module.scss';
 
 /**

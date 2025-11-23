@@ -86,11 +86,13 @@ npm run dev          # Run both client and server in development
 npm run build        # Build both client and server for production
 npm run lint         # Lint both workspaces
 npm run preview      # Preview production builds
+npm run perf         # Run performance tests (client only)
 
 # Individual workspace commands
 npm run client:dev
 npm run client:build
 npm run client:preview
+npm run client:perf  # Run client performance tests
 npm run server:dev
 npm run server:build
 npm run server:start
@@ -103,6 +105,8 @@ npm run dev          # Start Vite dev server (port 3000)
 npm run build        # Build for production
 npm run preview      # Preview production build
 npm run lint         # Run ESLint
+npm run perf         # Run performance tests
+npm run analyze      # Analyze bundle size
 ```
 
 ### Server Commands (cd server/)
@@ -128,6 +132,20 @@ This will:
 - Build the client React app to `client/build/`
 
 ## Key Features
+
+### Authentication & Navigation Components
+
+Complete authentication system with:
+
+- **Email/Password Authentication**: Sign-in and sign-up forms with real-time validation
+- **Google OAuth**: One-click authentication with Google accounts
+- **Solana Wallet Integration**: Connect Phantom, Solflare, Backpack, or Glow wallets
+- **Multi-language Support**: English, Vietnamese, and Japanese translations
+- **Theme Switching**: Light and dark mode with smooth transitions
+- **Responsive Navigation**: Mobile-first header with authentication state management
+- **Accessibility**: WCAG 2.1 AA compliant with keyboard navigation and screen readers
+
+See `client/src/components/README.md` for detailed component documentation.
 
 ### Independent Package Management
 

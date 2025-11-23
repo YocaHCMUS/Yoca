@@ -1,0 +1,254 @@
+@use '../../styles/theme.scss' as theme;
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/breakpoint' as *;
+
+.authShowcase {
+  min-height: 100vh;
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+.mainContent {
+  padding: $spacing-07 $spacing-05;
+  max-width: 1584px;
+  margin: 0 auto;
+
+  @include breakpoint(md) {
+    padding: $spacing-09 $spacing-07;
+  }
+
+  @include breakpoint(lg) {
+    padding: $spacing-10 $spacing-08;
+  }
+}
+
+.grid {
+  row-gap: $spacing-07;
+
+  @include breakpoint(md) {
+    row-gap: $spacing-09;
+  }
+}
+
+// Hero Section
+.hero {
+  text-align: center;
+  padding: $spacing-09 0;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-primary);
+
+  @include breakpoint(md) {
+    font-size: 3rem;
+  }
+
+  @include breakpoint(lg) {
+    font-size: 3.5rem;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--cds-text-secondary);
+  max-width: 48rem;
+  margin: 0 auto;
+
+  @include breakpoint(md) {
+    font-size: 1.25rem;
+  }
+}
+
+// Tab Navigation
+.tabContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: $spacing-06;
+}
+
+.tabs {
+  display: flex;
+  gap: $spacing-03;
+  background: var(--cds-layer-01);
+  padding: $spacing-02;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: $spacing-04 $spacing-06;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--cds-text-secondary);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  &:hover {
+    background: var(--cds-layer-hover);
+    color: var(--cds-text-primary);
+  }
+
+  &:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: 2px;
+  }
+
+  &.active {
+    background: var(--cds-layer-selected);
+    color: var(--cds-text-primary);
+    font-weight: 600;
+  }
+}
+
+// Form Section
+.formColumn,
+.demoColumn {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-06;
+}
+
+.formSection,
+.walletDemo {
+  background: var(--cds-layer-01);
+  padding: $spacing-07;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 1.75rem;
+  font-weight: 400;
+  margin-bottom: $spacing-04;
+  color: var(--cds-text-primary);
+}
+
+.sectionDescription {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--cds-text-secondary);
+  margin-bottom: $spacing-07;
+}
+
+// Wallet Demo
+.walletFeatures {
+  margin-top: $spacing-07;
+  padding-top: $spacing-06;
+  border-top: 1px solid var(--cds-border-subtle);
+}
+
+.featuresTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-primary);
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+
+  li {
+    position: relative;
+    padding-left: $spacing-06;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cds-text-secondary);
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--cds-support-success);
+      font-weight: 600;
+    }
+  }
+}
+
+// Features Section
+.featuresSection {
+  margin-top: $spacing-09;
+}
+
+.featuresGrid {
+  margin-top: $spacing-07;
+}
+
+.featureCard {
+  background: var(--cds-layer-01);
+  padding: $spacing-06;
+  border-radius: 4px;
+  height: 100%;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: $spacing-04;
+    color: var(--cds-text-primary);
+  }
+
+  p {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cds-text-secondary);
+    margin: 0;
+  }
+}
+
+// Responsive adjustments
+@include breakpoint-down(md) {
+  .formColumn,
+  .demoColumn {
+    width: 100%;
+  }
+
+  .formSection,
+  .walletDemo {
+    padding: $spacing-05;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+}
+
+// Dark mode enhancements
+[data-carbon-theme='g100'],
+[data-carbon-theme='g90'] {
+  .authShowcase {
+    background: var(--cds-background);
+  }
+
+  .formSection,
+  .walletDemo,
+  .featureCard {
+    background: var(--cds-layer-01);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .tabs {
+    background: var(--cds-layer-02);
+  }
+}

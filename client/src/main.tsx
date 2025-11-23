@@ -6,6 +6,8 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
 import { useMemo } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import App from "./App.tsx";
 import "./App.css";
 import "./index.scss";
@@ -45,7 +47,11 @@ function Root() {
         <ConnectionProvider endpoint={endpoint}>
           <WalletProvider wallets={wallets} autoConnect={false}>
             <WalletModalProvider>
-              <App />
+              <ThemeProvider>
+                <AuthProvider>
+                  <App />
+                </AuthProvider>
+              </ThemeProvider>
             </WalletModalProvider>
           </WalletProvider>
         </ConnectionProvider>

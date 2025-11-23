@@ -1,88 +1,175 @@
-import { useState, type FormEvent } from "react";
-import client from "../../api/main";
-import z from "zod";
-import { 
-  Button, 
-  PasswordInput,
-  Stack,
-  TextInput,
-  Form
-} from "@carbon/react";
-import { StatusCodes } from "http-status-codes";
+import { useState } from "react";
+import { Header } from "../../components/navigation";
+import { SignInForm, SignUpForm, WalletModal } from "../../components/auth";
+import { Button, Grid, Column } from "@carbon/react";
+import { useTranslation } from "react-i18next";
+import styles from "./index.module.scss";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Validation states
-  const [emailInvalid, setEmailInvalid] = useState(false);
-  const [passwordInvalid, setPasswordInvalid] = useState(false);
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    // Basic client-side validation
-    const emailValid = z.email(email);
-    const passwordValid = password.length >= 8;
-
-    setEmailInvalid(!emailValid);
-    setPasswordInvalid(!passwordValid);
-
-    if (!emailValid || !passwordValid) return;
-
-    try {
-      client.api.tokens.$get();
-      
-
-      const res = await client.api.users.$post({
-        json: { email, password },
-      });
-
-      if (res.status === 400) {
-        const data = await res.json();
-        console.log("Error:", data.message);
-      } else if (res.status === 201) {
-        const data = await res.json();
-        console.log("Success:", data.message, data.user.email);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+/**
+ * Authentication showcase page demonstrating all auth components
+ * Displays sign-in, sign-up forms, and wallet connection modal
+ */
+export default function AuthShowcase() {
+  const { t } = useTranslation();
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
 
   return (
-    <Stack>
-      <Form onSubmit={handleSubmit}>
-        <TextInput
-          id="email"
-          labelText="Email"
-          placeholder="Enter your email"
-          type="email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailInvalid(false);
-          }}
-          invalid={emailInvalid}
-          invalidText="Please enter a valid email address."
+    <div className={styles.authShowcase}>
+      {/* Navigation Header */}
+      <Header />
+
+      {/* Main Content */}
+      <main className={styles.mainContent}>
+        <Grid className={styles.grid}>
+          {/* Hero Section */}
+          <Column lg={16} md={8} sm={4} className={styles.hero}>
+            <h1 className={styles.title}>
+              {t("auth.showcase.title", "Authentication Components Showcase")}
+            </h1>
+            <p className={styles.subtitle}>
+              {t(
+                "auth.showcase.subtitle",
+                "Interactive demonstration of authentication UI components with Carbon Design System"
+              )}
+            </p>
+          </Column>
+
+          {/* Tab Navigation */}
+          <Column lg={16} md={8} sm={4} className={styles.tabContainer}>
+            <div className={styles.tabs}>
+              <button
+                className={`${styles.tab} ${activeTab === "signin" ? styles.active : ""}`}
+                onClick={() => setActiveTab("signin")}
+              >
+                {t("auth.signIn.title", "Sign In")}
+              </button>
+              <button
+                className={`${styles.tab} ${activeTab === "signup" ? styles.active : ""}`}
+                onClick={() => setActiveTab("signup")}
+              >
+                {t("auth.signUp.title", "Sign Up")}
+              </button>
+            </div>
+          </Column>
+
+          {/* Authentication Forms */}
+          <Column lg={8} md={8} sm={4} className={styles.formColumn}>
+            {activeTab === "signin" && (
+              <div className={styles.formSection}>
+                <h2 className={styles.sectionTitle}>
+                  {t("auth.signIn.title", "Sign In")}
+                </h2>
+                <p className={styles.sectionDescription}>
+                  {t(
+                    "auth.signIn.description",
+                    "Authenticate with email/username and password, Google OAuth, or Solana wallet"
+                  )}
+                </p>
+                <SignInForm />
+              </div>
+            )}
+
+            {activeTab === "signup" && (
+              <div className={styles.formSection}>
+                <h2 className={styles.sectionTitle}>
+                  {t("auth.signUp.title", "Sign Up")}
+                </h2>
+                <p className={styles.sectionDescription}>
+                  {t(
+                    "auth.signUp.description",
+                    "Create a new account with email and password, Google OAuth, or connect your Solana wallet"
+                  )}
+                </p>
+                <SignUpForm />
+              </div>
+            )}
+          </Column>
+
+          {/* Wallet Modal Demo */}
+          <Column lg={8} md={8} sm={4} className={styles.demoColumn}>
+            <div className={styles.walletDemo}>
+              <h2 className={styles.sectionTitle}>
+                {t("wallet.modal.title", "Wallet Connection")}
+              </h2>
+              <p className={styles.sectionDescription}>
+                {t(
+                  "wallet.modal.description",
+                  "Connect your Solana wallet to authenticate with Web3"
+                )}
+              </p>
+              <Button
+                kind="tertiary"
+                size="lg"
+                onClick={() => setShowWalletModal(true)}
+              >
+                {t("wallet.modal.openDemo", "Open Wallet Modal Demo")}
+              </Button>
+              <div className={styles.walletFeatures}>
+                <h3 className={styles.featuresTitle}>
+                  {t("wallet.features.title", "Features")}
+                </h3>
+                <ul className={styles.featuresList}>
+                  <li>{t("wallet.features.detection", "Automatic wallet detection")}</li>
+                  <li>{t("wallet.features.multiWallet", "Multi-wallet support (Phantom, Solflare, Backpack, Glow)")}</li>
+                  <li>{t("wallet.features.installation", "Installation guidance for missing wallets")}</li>
+                  <li>{t("wallet.features.errorHandling", "Error handling and retry logic")}</li>
+                </ul>
+              </div>
+            </div>
+          </Column>
+
+          {/* Component Features */}
+          <Column lg={16} md={8} sm={4} className={styles.featuresSection}>
+            <h2 className={styles.sectionTitle}>
+              {t("auth.showcase.features", "Component Features")}
+            </h2>
+            <Grid className={styles.featuresGrid}>
+              <Column lg={5} md={4} sm={4}>
+                <div className={styles.featureCard}>
+                  <h3>{t("auth.showcase.validation", "Form Validation")}</h3>
+                  <p>
+                    {t(
+                      "auth.showcase.validationDesc",
+                      "Real-time validation with Zod schemas and clear error messages"
+                    )}
+                  </p>
+                </div>
+              </Column>
+              <Column lg={5} md={4} sm={4}>
+                <div className={styles.featureCard}>
+                  <h3>{t("auth.showcase.i18n", "Internationalization")}</h3>
+                  <p>
+                    {t(
+                      "auth.showcase.i18nDesc",
+                      "Support for English, Vietnamese, and Japanese languages"
+                    )}
+                  </p>
+                </div>
+              </Column>
+              <Column lg={6} md={4} sm={4}>
+                <div className={styles.featureCard}>
+                  <h3>{t("auth.showcase.accessibility", "Accessibility")}</h3>
+                  <p>
+                    {t(
+                      "auth.showcase.accessibilityDesc",
+                      "WCAG 2.1 AA compliant with keyboard navigation and screen reader support"
+                    )}
+                  </p>
+                </div>
+              </Column>
+            </Grid>
+          </Column>
+        </Grid>
+      </main>
+
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <WalletModal
+          open={showWalletModal}
+          onClose={() => setShowWalletModal(false)}
         />
-        <PasswordInput
-          id="password"
-          labelText="Password"
-          placeholder="Enter your password"
-          type="password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setPasswordInvalid(false);
-          }}
-          invalid={passwordInvalid}
-          invalidText="Password must be at least 8 characters."
-        />
-        <Button type="submit" kind="primary" className="wide">
-          Login
-        </Button>
-      </Form>
-    </Stack>
+      )}
+    </div>
   );
 }

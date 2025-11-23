@@ -1,9 +1,10 @@
 /**
  * WalletModal Component
  * Modal for wallet selection and connection with blockchain support
+ * Features: Focus trapping, keyboard navigation (Tab, Escape), ARIA labels
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Select, SelectItem, Loading } from '@carbon/react';
 import { Wallet } from '@carbon/icons-react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +32,17 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const [detectingWallets, setDetectingWallets] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<WalletType | null>(null);
   const [error, setError] = useState<string>('');
+  const firstWalletButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus first wallet button when wallets are loaded
+  useEffect(() => {
+    if (open && wallets.length > 0 && !detectingWallets && !loading) {
+      // Delay to allow modal animation to complete
+      setTimeout(() => {
+        firstWalletButtonRef.current?.focus();
+      }, 100);
+    }
+  }, [open, wallets, detectingWallets, loading]);
 
   // Detect wallets when modal opens or blockchain changes
   useEffect(() => {
@@ -94,6 +106,17 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     }
   };
 
+  // Keyboard navigation handler for wallet buttons
+  const handleWalletKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    walletType: WalletType
+  ) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleWalletSelect(walletType);
+    }
+  };
+
   const detectedWallets = wallets.filter((w) => w.detected);
   const undetectedWallets = wallets.filter((w) => !w.detected);
   const hasDetectedWallets = detectedWallets.length > 0;
@@ -111,8 +134,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       preventCloseOnClickOutside={loading}
       className={styles.walletModal}
       size="md"
+      aria-label={t('wallet.modal.title', 'Wallet Connection Modal')}
+      aria-describedby="wallet-modal-description"
     >
-      <div className="space-y-4">
+      <div className="space-y-4" id="wallet-modal-description">
         {/* Blockchain Selector */}
         <div className="mb-6">
           <Select
@@ -131,9 +156,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Loading State - Detecting Wallets */}
         {detectingWallets && (
-          <div className="flex flex-col items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-8" role="status" aria-live="polite">
             <Loading description={t('wallet.detectingWallets')} withOverlay={false} />
-            <p className="mt-4 text-sm text-gray-600">
+            <p className="mt-4 text-sm text-gray-600" aria-label={t('wallet.scanningWallets', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}>
               {t('wallet.scanningWallets', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}
             </p>
           </div>
@@ -141,7 +166,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Error State */}
         {error && !detectingWallets && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4" role="alert" aria-live="assertive">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <svg
@@ -174,11 +199,15 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   {t('wallet.detectedWallets')}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {detectedWallets.map((wallet) => (
+                  {detectedWallets.map((wallet, index) => (
                     <button
                       key={wallet.type}
+                      ref={index === 0 ? firstWalletButtonRef : null}
                       onClick={() => handleWalletSelect(wallet.type)}
+                      onKeyDown={(e) => handleWalletKeyDown(e, wallet.type)}
                       disabled={loading}
+                      aria-label={t('wallet.connectWith', { wallet: wallet.name })}
+                      aria-busy={loading && connectingWallet === wallet.type}
                       className={`
                         relative flex flex-col items-center justify-center p-4 
                         border-2 rounded-lg transition-all duration-200
