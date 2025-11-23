@@ -108,20 +108,20 @@ This project uses monorepo structure with npm workspaces:
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Create WalletModal component in client/src/components/auth/WalletModal.tsx
-- [ ] T036 [P] [US3] Create wallet detection logic in walletService.ts
-- [ ] T037 [US3] Implement Carbon Modal structure for wallet selection
-- [ ] T038 [US3] Create wallet list grid showing popular Solana wallets (Phantom, Solflare, etc.)
-- [ ] T039 [US3] Add "Detected" badge for installed wallets using wallet adapter detection
-- [ ] T040 [US3] Implement wallet selection handler with mock connection flow
-- [ ] T041 [US3] Add blockchain selector dropdown (defaulting to Solana)
-- [ ] T042 [US3] Add "No wallet detected" state with installation guidance
-- [ ] T043 [US3] Add loading state during wallet connection attempt
-- [ ] T044 [US3] Add error state for rejected connections with retry option
-- [ ] T045 [US3] Style WalletModal with Tailwind CSS utilities
-- [ ] T046 [US3] Add modal component styles in client/src/components/auth/WalletModal.module.scss
-- [ ] T047 [US3] Add "Continue with a linked wallet" button to SignInForm.tsx
-- [ ] T048 [US3] Add "Sign up with an existing wallet(s)" button to SignUpForm.tsx
+- [x] T035 [P] [US3] Create WalletModal component in client/src/components/auth/WalletModal.tsx
+- [x] T036 [P] [US3] Create wallet detection logic in walletService.ts
+- [x] T037 [US3] Implement Carbon Modal structure for wallet selection
+- [x] T038 [US3] Create wallet list grid showing popular Solana wallets (Phantom, Solflare, etc.)
+- [x] T039 [US3] Add "Detected" badge for installed wallets using wallet adapter detection
+- [x] T040 [US3] Implement wallet selection handler with mock connection flow
+- [x] T041 [US3] Add blockchain selector dropdown (defaulting to Solana)
+- [x] T042 [US3] Add "No wallet detected" state with installation guidance
+- [x] T043 [US3] Add loading state during wallet connection attempt
+- [x] T044 [US3] Add error state for rejected connections with retry option
+- [x] T045 [US3] Style WalletModal with Tailwind CSS utilities
+- [x] T046 [US3] Add modal component styles in client/src/components/auth/WalletModal.module.scss
+- [x] T047 [US3] Add "Continue with a linked wallet" button to SignInForm.tsx
+- [x] T048 [US3] Add "Sign up with an existing wallet(s)" button to SignUpForm.tsx
 
 **Checkpoint**: Wallet modal should open from auth forms, detect wallets, and handle connection flow
 

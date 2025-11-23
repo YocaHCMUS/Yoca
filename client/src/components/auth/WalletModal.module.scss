@@ -1,0 +1,104 @@
+/**
+ * WalletModal Component Styles
+ * Custom styles for wallet connection modal
+ */
+
+.walletModal {
+  // Modal customizations
+  :global(.cds--modal-container) {
+    max-width: 600px;
+  }
+
+  :global(.cds--modal-content) {
+    padding: 1.5rem;
+    margin-bottom: 0;
+  }
+
+  // Blockchain selector customizations
+  :global(.cds--select) {
+    margin-bottom: 0;
+  }
+
+  // Loading state
+  :global(.cds--loading) {
+    margin: 0 auto;
+  }
+
+  // Ensure proper spacing
+  & > div {
+    min-height: 300px;
+  }
+}
+
+// Wallet card hover effects
+.walletCard {
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Badge styles
+.detectedBadge {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Wallet icon grayscale filter for uninstalled wallets
+.uninstalledIcon {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    filter: grayscale(0%);
+    opacity: 1;
+  }
+}
+
+// Error state animation
+.errorContainer {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Loading overlay
+.loadingOverlay {
+  backdrop-filter: blur(2px);
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .walletModal {
+    :global(.cds--modal-container) {
+      max-width: 100%;
+      margin: 1rem;
+    }
+  }
+}
