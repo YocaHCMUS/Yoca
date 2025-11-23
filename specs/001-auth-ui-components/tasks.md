@@ -26,12 +26,12 @@ This project uses monorepo structure with npm workspaces:
 
 **Purpose**: Environment configuration and provider setup
 
-- [ ] T001 Create environment variable template in client/.env.example
-- [ ] T002 [P] Configure i18n in client/src/i18n/config.ts with English, Vietnamese, Japanese translations
-- [ ] T003 [P] Create Carbon theme integration in client/src/styles/carbon.scss
-- [ ] T004 [P] Create theme variables file in client/src/styles/theme.scss
-- [ ] T005 [P] Create shared auth types in client/src/types/auth.ts
-- [ ] T006 Update client/src/main.tsx to import Carbon styles and configure providers (WalletProvider, GoogleOAuthProvider, i18n)
+- [x] T001 Create environment variable template in client/.env.example
+- [x] T002 [P] Configure i18n in client/src/i18n/config.ts with English, Vietnamese, Japanese translations
+- [x] T003 [P] Create Carbon theme integration in client/src/styles/carbon.scss
+- [x] T004 [P] Create theme variables file in client/src/styles/theme.scss
+- [x] T005 [P] Create shared auth types in client/src/types/auth.ts
+- [x] T006 Update client/src/main.tsx to import Carbon styles and configure providers (WalletProvider, GoogleOAuthProvider, i18n)
 
 ---
 
