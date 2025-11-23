@@ -123,7 +123,7 @@ Authenticated users need a consistent navigation header to access key sections a
 - **FR-012**: System MUST disable submit buttons during form submission to prevent duplicate requests
 - **FR-013**: System MUST provide a blockchain selector in wallet modal (defaulting to Solana)
 - **FR-014**: System MUST mark detected wallets visually in the wallet selection grid
-- **FR-015**: All form components MUST follow Carbon Design System patterns for consistency
+- **FR-015**: All form components MUST use Carbon Design System components as foundation with Tailwind CSS for custom styling and adjustments
 
 ### Key Entities
 
@@ -155,7 +155,8 @@ Authenticated users need a consistent navigation header to access key sections a
 - Backend authentication API endpoints exist and follow established API contracts
 - Form validation rules are consistent with backend validation requirements
 - Language translations will be provided by i18n configuration files
-- Carbon Design System is already installed and configured in the project
+- Carbon Design System with Tailwind CSS integration is configured for custom styling
+- Carbon components can be extended/customized with Tailwind utility classes where needed
 
 ## Out of Scope
 
