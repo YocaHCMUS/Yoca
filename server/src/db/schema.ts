@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -34,13 +33,6 @@ export const posts = pgTable("posts_table", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
-
-export const posts_users_relations = relations(posts, ({ one }) => ({
-  user: one(users, {
-    fields: [posts.userId],
-    references: [users.id],
-  }),
-}));
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -96,43 +88,3 @@ export const wallets = pgTable("wallets", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
-
-export const tokenMarketData_tokenMeta_relation = relations(
-  tokenMarketData,
-  ({ one }) => ({
-    tokenMeta: one(tokenMeta, {
-      fields: [tokenMarketData.address],
-      references: [tokenMeta.address],
-    }),
-  }),
-);
-
-function merge<A extends object, B extends object>(a: A, b: B): A & B {
-  return { ...a, ...b } as A & B;
-}
-
-const dbSelectSchemas = {
-  user: users.$inferSelect,
-  tokenMeta: tokenMeta.$inferSelect,
-  tokenTransfers: tokenTransfers.$inferSelect,
-  wallet: wallets.$inferSelect,
-  tokenMarketData: merge(tokenMarketData.$inferSelect, {
-    tokenMeta: tokenMeta.$inferSelect,
-  }),
-  post: posts.$inferSelect,
-} as const;
-
-type PickFields<Table, Fields extends keyof Table> = {
-  [K in Fields]: Table[K];
-};
-
-export type DbSelectSchema = typeof dbSelectSchemas;
-
-// Some dark magic chatGPT told me
-export type DbSelect<
-  Table extends keyof DbSelectSchema,
-  Fields extends keyof DbSelectSchema[Table] = keyof DbSelectSchema[Table],
-  Relations extends Record<string, any> = {},
-> = PickFields<DbSelectSchema[Table], Fields> & {
-  [K in keyof Relations]: Relations[K];
-};

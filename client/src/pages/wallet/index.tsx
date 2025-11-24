@@ -7,8 +7,8 @@ interface WalletProps {
 }
 
 export default function WalletPage(props : WalletProps) {
-  const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [transfers, setTransfers] = useState([]);
   const address = props.address;
 
   const headers = [

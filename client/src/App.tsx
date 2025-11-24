@@ -2,7 +2,7 @@ import {BrowserRouter, Routes, Route} from "react-router";
 import "./App.css";
 
 import Index from "./pages";
-import LoginPage from "./pages/login";
+import LoginPage from "./pages/auth";
 
 function App() {
   return (

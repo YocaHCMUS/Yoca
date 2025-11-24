@@ -27,9 +27,7 @@ const GET_USER_EMAIL_QUERY = graphql(`
 export default function LoginPage() {
 
   const {data} = useQuery(GET_USER_EMAIL_QUERY);
-
-  type hello = "hello" | "world" | { hello : "world"}
-
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -38,7 +36,7 @@ export default function LoginPage() {
   const [passwordInvalid, setPasswordInvalid] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+    e.preventDefault();  
 
     // Basic client-side validation
     const emailValid = z.email(email);
