@@ -73,26 +73,26 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             <h1>Yoca</h1>
           </HeaderName>
 
-          {/* Navigation items - only show when authenticated */}
+          {/* Navigation items - only show when authenticated
           {authState.isAuthenticated && (
-            <HeaderNavigation aria-label="Main navigation">
-              <HeaderMenuItem
-                onClick={() => handleNavigation('/market')}
-              >
-                {t('nav.market')}
-              </HeaderMenuItem>
-              <HeaderMenuItem
-                onClick={() => handleNavigation('/alert')}
-              >
-                {t('nav.alert')}
-              </HeaderMenuItem>
-              <HeaderMenuItem
-                onClick={() => handleNavigation('/dashboard')}
-              >
-                {t('nav.dashboard')}
-              </HeaderMenuItem>
-            </HeaderNavigation>
-          )}
+          )} */}
+          <HeaderNavigation aria-label="Main navigation">
+            <HeaderMenuItem
+              onClick={() => handleNavigation('/market')}
+            >
+              {t('nav.market')}
+            </HeaderMenuItem>
+            <HeaderMenuItem
+              onClick={() => handleNavigation('/alert')}
+            >
+              {t('nav.alert')}
+            </HeaderMenuItem>
+            <HeaderMenuItem
+              onClick={() => handleNavigation('/dashboard')}
+            >
+              {t('nav.dashboard')}
+            </HeaderMenuItem>
+          </HeaderNavigation>
 
           {/* Global actions */}
           <HeaderGlobalBar>

@@ -10,10 +10,12 @@
   z-index: 1000;
   background-color: var(--cds-background);
   min-height: 64px;
-  
+
   :global(.cds--header) {
     min-height: 64px;
     height: auto;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   :global(.dark) & {
@@ -41,6 +43,9 @@
   &:hover .profileDropdown {
     display: block;
   }
+
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 
 .profileDropdown {
@@ -111,6 +116,7 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: 1rem;
+  margin-right: 1rem;
 }
 
 .loginButton {
