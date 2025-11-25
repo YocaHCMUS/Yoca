@@ -77,17 +77,17 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           {authState.isAuthenticated && (
           )} */}
           <HeaderNavigation aria-label="Main navigation">
-            <HeaderMenuItem
+            <HeaderMenuItem className={styles.headerMenuItem}
               onClick={() => handleNavigation('/market')}
             >
               {t('nav.market')}
             </HeaderMenuItem>
-            <HeaderMenuItem
+            <HeaderMenuItem className={styles.headerMenuItem}
               onClick={() => handleNavigation('/alert')}
             >
               {t('nav.alert')}
             </HeaderMenuItem>
-            <HeaderMenuItem
+            <HeaderMenuItem className={styles.headerMenuItem}
               onClick={() => handleNavigation('/dashboard')}
             >
               {t('nav.dashboard')}

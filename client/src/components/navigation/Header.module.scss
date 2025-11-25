@@ -162,6 +162,10 @@
   }
 }
 
+.headerMenuItem {
+  cursor: pointer;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .profileDropdown {
