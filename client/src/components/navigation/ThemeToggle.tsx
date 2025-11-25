@@ -26,14 +26,16 @@ const ThemeToggle: React.FC = () => {
   const isDark = theme === 'dark';
 
   return (
-    <HeaderGlobalAction
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-      tooltipAlignment="end"
-      onClick={handleToggle}
-      className={styles.themeToggle}
-    >
-      {isDark ? <Light size={20} /> : <Asleep size={20} />}
-    </HeaderGlobalAction>
+    <div className={styles.themeToggleWrapper}>
+      <HeaderGlobalAction
+        aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+        tooltipAlignment="end"
+        onClick={handleToggle}
+        className={styles.themeToggle}
+      >
+        {isDark ? <Light size={20} /> : <Asleep size={20} />}
+      </HeaderGlobalAction>
+    </div>
   );
 };
 

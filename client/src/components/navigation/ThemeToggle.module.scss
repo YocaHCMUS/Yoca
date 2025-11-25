@@ -1,25 +1,35 @@
 /**
  * ThemeToggle Component Styles
- * Styles for theme toggle button with Carbon Design System and Tailwind CSS
+ * Styles for theme toggle button with Carbon Design System
  */
+.themeToggleWrapper {
+  display: flex;
+  align-items: center;
+}
+
 
 .themeToggle {
-  @apply transition-all duration-100;
+  transition: all 100ms;
+
   
   &:hover {
-    @apply bg-gray-100 dark:bg-gray-700;
+    background-color: #f3f4f6;
+
+    :global(.dark) & {
+      background-color: #374151;
+    }
   }
   
   &:active {
-    @apply scale-95;
+    transform: scale(0.95);
   }
 }
 
 /* Animation for icon change */
 .themeToggle svg {
-  @apply transition-transform duration-100;
+  transition: transform 100ms;
 }
 
 .themeToggle:hover svg {
-  @apply rotate-12;
+  transform: rotate(12deg);
 }

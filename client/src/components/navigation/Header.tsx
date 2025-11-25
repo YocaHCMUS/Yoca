@@ -18,6 +18,7 @@ import {
 } from '@carbon/react';
 import { UserAvatar, Login } from '@carbon/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
+import appLogo from '../../assets/app-logo.png';
 import LanguageSelector from './LanguageSelector.tsx';
 import ThemeToggle from './ThemeToggle.tsx';
 import styles from './Header.module.scss';
@@ -67,8 +68,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             isActive={isMenuOpen}
           />
-          <HeaderName href="#" prefix="">
-            Yoca
+          <HeaderName href="#" prefix="" className={styles.headerName}>
+            <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
+            <h1>Yoca</h1>
           </HeaderName>
 
           {/* Navigation items - only show when authenticated */}
