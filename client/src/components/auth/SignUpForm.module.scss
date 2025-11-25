@@ -3,133 +3,78 @@
  * Using CSS Modules with SCSS for scoped styling
  */
 
-.sign-up-form-container {
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 2rem;
+@use './shared' as *;
 
-  @media (max-width: 640px) {
-    padding: 1rem;
-  }
+.sign-up-form-container {
+    @include form-container;
 }
 
 .sign-up-form-header {
-  margin-bottom: 1.5rem;
-
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--cds-text-primary, #161616);
-
-    :global(.dark) & {
-      color: var(--cds-text-primary, #f4f4f4);
-    }
-  }
-
-  p {
-    font-size: 0.875rem;
-    color: var(--cds-text-secondary, #525252);
-
-    :global(.dark) & {
-      color: var(--cds-text-secondary, #c6c6c6);
-    }
-  }
+    @include form-header;
 }
 
-// Form field spacing
-form {
-  .cds--text-input,
-  .cds--password-input {
-    margin-bottom: 1rem;
-  }
+.header-title {
+    @include header-title;
+}
 
-  // Terms text styling
-  .text-xs {
+.header-description {
+    @include header-description;
+    margin-bottom: 1.5rem;
+}
+
+.error-notification {
+    margin-bottom: 1rem;
+}
+
+.form {
+    @include form-styles;
+}
+
+// SignUp-specific styles
+.terms-text {
+    font-size: 0.75rem;
     line-height: 1.5;
-    margin: 0.75rem 0;
+    color: #4b5563;
+
+    :global(.dark) & {
+        color: #9ca3af;
+    }
 
     a {
-      text-decoration: underline;
-      transition: color 0.2s ease;
-
-      &:hover {
-        text-decoration: none;
-      }
-
-      &:focus {
-        outline: 2px solid var(--cds-focus, #0f62fe);
-        outline-offset: 2px;
-        border-radius: 2px;
-      }
+        @include link-styles;
     }
-  }
 }
 
-// Button overrides for full width
-.cds--btn {
-  width: 100%;
-  justify-content: center;
-  max-width: none;
+// Shared divider styles
+.divider {
+    @include divider-container;
 }
 
-// Error notification spacing
-.cds--inline-notification {
-  margin-bottom: 1rem;
+.divider-line {
+    @include divider-line;
 }
 
-// Divider styling
-.relative {
-  margin: 1.5rem 0;
-
-  .border-t {
-    border-color: var(--cds-border-subtle, #e0e0e0);
-
-    :global(.dark) & {
-      border-color: var(--cds-border-subtle, #525252);
-    }
-  }
-
-  span {
-    background-color: var(--cds-background, #ffffff);
-
-    :global(.dark) & {
-      background-color: var(--cds-background, #161616);
-    }
-  }
+.divider-border {
+    @include divider-border;
 }
 
-// Sign in link section
-.text-center {
-  margin-top: 1rem;
-
-  button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    font-size: inherit;
-    font-family: inherit;
-    transition: color 0.2s ease;
-
-    &:focus {
-      outline: 2px solid var(--cds-focus, #0f62fe);
-      outline-offset: 2px;
-      border-radius: 2px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-  }
+.divider-text-container {
+    @include divider-text-container;
 }
 
-// Accessibility improvements
-.sign-up-form-container {
-  *:focus-visible {
-    outline: 2px solid var(--cds-focus, #0f62fe);
-    outline-offset: 2px;
-  }
+.divider-text {
+    @include divider-text;
+}
+
+// Navigation to SignIn
+.sign-in-section {
+    @include navigation-section;
+}
+
+.sign-in-text {
+    @include secondary-text;
+}
+
+.sign-in-button {
+    @include text-button;
 }

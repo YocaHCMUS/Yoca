@@ -128,10 +128,10 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
         />
       </div>
 
-      {/* Custom styled button overlay (optional - for Carbon integration) */}
+      {/* Custom styled button overlay (optional - for Carbon integration)
       <div className="google-button-label">
         {getButtonText()}
-      </div>
+      </div> */}
     </div>
   );
 };

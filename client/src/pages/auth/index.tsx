@@ -57,30 +57,13 @@ export default function AuthShowcase() {
           <Column lg={8} md={8} sm={4} className={styles.formColumn}>
             {activeTab === "signin" && (
               <div className={styles.formSection}>
-                <h2 className={styles.sectionTitle}>
-                  {t("auth.signIn.title", "Sign In")}
-                </h2>
-                <p className={styles.sectionDescription}>
-                  {t(
-                    "auth.signIn.description",
-                    "Authenticate with email/username and password, Google OAuth, or Solana wallet"
-                  )}
-                </p>
+
                 <SignInForm />
               </div>
             )}
 
             {activeTab === "signup" && (
               <div className={styles.formSection}>
-                <h2 className={styles.sectionTitle}>
-                  {t("auth.signUp.title", "Sign Up")}
-                </h2>
-                <p className={styles.sectionDescription}>
-                  {t(
-                    "auth.signUp.description",
-                    "Create a new account with email and password, Google OAuth, or connect your Solana wallet"
-                  )}
-                </p>
                 <SignUpForm />
               </div>
             )}

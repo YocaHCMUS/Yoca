@@ -8,10 +8,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { TextInput, PasswordInput, Button, InlineNotification } from '@carbon/react';
+import { UserFollow, Wallet } from '@carbon/icons-react';
 import { signUpSchema, type SignUpFormData } from './schemas/signUpSchema';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { useAuth } from '../../contexts';
-import './SignUpForm.module.scss';
+import styles from './SignUpForm.module.scss';
 
 /**
  * SignUpForm Props
@@ -128,12 +129,9 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
   };
 
   return (
-    <div className="sign-up-form-container">
-      <div className="sign-up-form-header">
-        <h2 className="text-2xl font-semibold mb-2">{t('auth.signUp')}</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {t('showcase.signUpSection')}
-        </p>
+    <div className={styles['sign-up-form-container']}>
+      <div className={styles['sign-up-form-header']}>
+        <h2 className={styles['header-title']}>{t('auth.signUp')}</h2>
       </div>
 
       {/* Error notification */}
@@ -143,12 +141,12 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
           title={t('common.error')}
           subtitle={errorMessage}
           onCloseButtonClick={() => setErrorMessage(null)}
-          className="mb-4"
+          className={styles['error-notification']}
           lowContrast
         />
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className={styles['form']}>
         {/* Email field */}
         <TextInput
           id="email"
@@ -195,11 +193,10 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         />
 
         {/* Terms and Privacy Policy */}
-        <div className="text-xs text-gray-600 dark:text-gray-400">
+        <div className={styles['terms-text']}>
           {t('auth.termsPrefix')}{' '}
           <a
             href="/terms"
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             tabIndex={isSubmitting ? -1 : 0}
           >
             {t('auth.termsOfService')}
@@ -207,7 +204,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
           {t('common.and')}{' '}
           <a
             href="/privacy"
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             tabIndex={isSubmitting ? -1 : 0}
           >
             {t('auth.privacyPolicy')}
@@ -217,21 +213,21 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         {/* Submit button */}
         <Button
           type="submit"
-          className="w-full"
           disabled={isSubmitting}
           size="lg"
+          renderIcon={UserFollow}
         >
           {isSubmitting ? t('common.loading') : t('auth.createAccount')}
         </Button>
 
         {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+        <div className={styles['divider']}>
+          <div className={styles['divider-line']}>
+            <div className={styles['divider-border']}></div>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">
-              {t('common.or')}
+          <div className={styles['divider-text-container']}>
+            <span className={styles['divider-text']}>
+              {t('auth.or')}
             </span>
           </div>
         </div>
@@ -247,23 +243,23 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({
         {/* Wallet authentication button */}
         <Button
           kind="secondary"
-          className="w-full"
           onClick={onOpenWalletModal}
           disabled={isSubmitting}
           size="lg"
+          renderIcon={Wallet}
         >
           {t('auth.signUpWithWallet')}
         </Button>
 
         {/* Sign in link */}
-        <div className="text-center mt-4">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+        <div className={styles['sign-in-section']}>
+          <span className={styles['sign-in-text']}>
             {t('auth.alreadyHaveAccount')}{' '}
           </span>
           <button
             type="button"
             onClick={onNavigateToSignIn}
-            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            className={styles['sign-in-button']}
             disabled={isSubmitting}
           >
             {t('auth.signIn')}

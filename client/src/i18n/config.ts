@@ -17,11 +17,12 @@ const resources = {
         loading: 'Loading...',
         error: 'Error',
         success: 'Success',
-        or: 'Or continue with',
+        or: 'or',
         and: 'and',
       },
       // Authentication
       auth: {
+        or: 'Or continue with',
         signIn: 'Sign In',
         signUp: 'Sign Up',
         signOut: 'Sign Out',
@@ -131,11 +132,12 @@ const resources = {
         loading: 'Đang tải...',
         error: 'Lỗi',
         success: 'Thành công',
-        or: 'Hoặc tiếp tục với',
+        or: 'hoặc',
         and: 'và',
       },
       // Authentication
       auth: {
+        or: 'Hoặc tiếp tục với',
         signIn: 'Đăng nhập',
         signUp: 'Đăng ký',
         signOut: 'Đăng xuất',
@@ -245,11 +247,12 @@ const resources = {
         loading: '読み込み中...',
         error: 'エラー',
         success: '成功',
-        or: 'または続ける',
+        or: 'または',
         and: 'と',
       },
       // Authentication
       auth: {
+        or: 'または続ける',
         signIn: 'ログイン',
         signUp: '登録',
         signOut: 'ログアウト',
