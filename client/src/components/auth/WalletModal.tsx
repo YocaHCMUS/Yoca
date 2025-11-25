@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Select, SelectItem, Loading } from '@carbon/react';
+import { Modal, Select, SelectItem, Loading, ButtonSkeleton  } from '@carbon/react';
 import { Wallet } from '@carbon/icons-react';
 import { useTranslation } from 'react-i18next';
 import type { WalletInfo, BlockchainType, WalletType } from '../../types/auth';
@@ -126,8 +126,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       open={open}
       onRequestClose={handleClose}
       modalHeading={mode === 'signin' ? t('wallet.connectToSignIn') : t('wallet.connectToSignUp')}
-      modalLabel={t('wallet.web3Auth')}
-      passiveModal={false}
+      // modalLabel={t('wallet.web3Auth')}
+      passiveModal={!error}
       primaryButtonText={error ? t('wallet.retry') : undefined}
       secondaryButtonText={t('common.cancel')}
       onRequestSubmit={error ? handleRetry : undefined}
@@ -137,16 +137,16 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       aria-label={t('wallet.modal.title', 'Wallet Connection Modal')}
       aria-describedby="wallet-modal-description"
     >
-      <div className="space-y-4" id="wallet-modal-description">
+      <div className={styles['modal-content']} id="wallet-modal-description">
         {/* Blockchain Selector */}
-        <div className="mb-6">
+        <div className={styles['blockchain-selector']}>
           <Select
             id="blockchain-selector"
             labelText={t('wallet.selectBlockchain')}
             value={selectedBlockchain}
             onChange={(e) => setSelectedBlockchain(e.target.value as BlockchainType)}
             disabled={loading || detectingWallets}
-            className="w-full"
+            className={styles['select-full-width']}
           >
             <SelectItem value="solana" text={t('wallet.solana')} />
             <SelectItem value="ethereum" text={t('wallet.ethereum')} />
@@ -156,18 +156,23 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Loading State - Detecting Wallets */}
         {detectingWallets && (
-          <div className="flex flex-col items-center justify-center py-8" role="status" aria-live="polite">
-            <Loading description={t('wallet.detectingWallets')} withOverlay={false} />
-            <p className="mt-4 text-sm text-gray-600" aria-label={t('wallet.scanningWallets', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}>
-              {t('wallet.scanningWallets', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}
-            </p>
+          <div className={styles['wallets-section']}>
+            <h3 className={styles['section-heading']}>
+              {t('wallet.detectedWallets')}
+            </h3>
+            <div className={styles['wallet-grid']}>
+              <ButtonSkeleton size="md" />
+              <ButtonSkeleton size="md" />
+              <ButtonSkeleton size="md" />
+              <ButtonSkeleton size="md" />
+            </div>
           </div>
         )}
 
         {/* Error State */}
         {error && !detectingWallets && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4" role="alert" aria-live="assertive">
-            <div className="flex items-start">
+          <div className={styles['error-container']} role="alert" aria-live="assertive">
+            <div className={styles['error-content']}>
               <div className="flex-shrink-0">
                 <svg
                   className="h-5 w-5 text-red-400"
@@ -181,9 +186,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   />
                 </svg>
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">{t('wallet.connectionFailed')}</h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
+              <div className={styles['error-text-wrapper']}>
+                <h3 className={styles['error-title']}>{t('wallet.connectionFailed')}</h3>
+                <p className={styles['error-message']}>{error}</p>
               </div>
             </div>
           </div>
@@ -194,11 +199,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           <>
             {/* Detected Wallets */}
             {hasDetectedWallets && (
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              <div className={styles['wallets-section']}>
+                <h3 className={styles['section-heading']}>
                   {t('wallet.detectedWallets')}
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={styles['wallet-grid']}>
                   {detectedWallets.map((wallet, index) => (
                     <button
                       key={wallet.type}
@@ -208,45 +213,40 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       disabled={loading}
                       aria-label={t('wallet.connectWith', { wallet: wallet.name })}
                       aria-busy={loading && connectingWallet === wallet.type}
-                      className={`
-                        relative flex flex-col items-center justify-center p-4 
-                        border-2 rounded-lg transition-all duration-200
-                        ${
-                          loading && connectingWallet === wallet.type
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                        }
-                        ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      `}
+                      className={`${styles['wallet-button']} ${
+                        loading && connectingWallet === wallet.type
+                          ? styles['wallet-button-connecting']
+                          : styles['wallet-button-default']
+                      } ${loading ? styles['wallet-button-disabled'] : ''}`}
                     >
                       {/* Detected Badge */}
-                      <div className="absolute top-2 right-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      <div className={styles['badge-container']}>
+                        <span className={styles['detected-badge']}>
                           {t('wallet.detected')}
                         </span>
                       </div>
 
                       {/* Wallet Icon */}
-                      <div className="mb-2">
+                      <div className={styles['wallet-icon-container']}>
                         {wallet.icon ? (
                           <img
                             src={wallet.icon}
                             alt={wallet.name}
-                            className="w-12 h-12 object-contain"
+                            className={styles['wallet-icon']}
                           />
                         ) : (
-                          <Wallet size={48} className="text-gray-400" />
+                          <Wallet size={48} className={styles['wallet-icon-fallback']} />
                         )}
                       </div>
 
                       {/* Wallet Name */}
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={styles['wallet-name']}>
                         {wallet.name}
                       </span>
 
                       {/* Loading Indicator */}
                       {loading && connectingWallet === wallet.type && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg">
+                        <div className={styles['loading-overlay']}>
                           <Loading
                             description={t('wallet.connecting')}
                             withOverlay={false}
@@ -263,13 +263,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             {/* Undetected Wallets */}
             {undetectedWallets.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <h3 className={styles['section-heading']}>
                   {hasDetectedWallets ? t('wallet.otherWallets') : t('wallet.noWalletsDetected')}
                 </h3>
                 
                 {!hasDetectedWallets && (
-                  <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <div className="flex items-start">
+                  <div className={styles['warning-container']}>
+                    <div className={styles['warning-content']}>
                       <div className="flex-shrink-0">
                         <svg
                           className="h-5 w-5 text-yellow-400"
@@ -283,11 +283,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                           />
                         </svg>
                       </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-yellow-800">
+                      <div className={styles['warning-text-wrapper']}>
+                        <h3 className={styles['warning-title']}>
                           {t('wallet.noWalletsFound', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}
                         </h3>
-                        <p className="mt-1 text-sm text-yellow-700">
+                        <p className={styles['warning-message']}>
                           {t('wallet.installWalletPrompt')}
                         </p>
                       </div>
@@ -295,41 +295,35 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className={styles['wallet-grid']}>
                   {undetectedWallets.map((wallet) => (
                     <a
                       key={wallet.type}
                       href={wallet.installUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="
-                        flex flex-col items-center justify-center p-4 
-                        border-2 border-gray-200 rounded-lg 
-                        hover:border-gray-400 hover:bg-gray-50
-                        transition-all duration-200 cursor-pointer
-                        opacity-60 hover:opacity-100
-                      "
+                      className={styles['install-link']}
                     >
                       {/* Wallet Icon */}
-                      <div className="mb-2">
+                      <div className={styles['wallet-icon-container']}>
                         {wallet.icon ? (
                           <img
                             src={wallet.icon}
                             alt={wallet.name}
-                            className="w-12 h-12 object-contain grayscale"
+                            className={styles['uninstalled-icon']}
                           />
                         ) : (
-                          <Wallet size={48} className="text-gray-400" />
+                          <Wallet size={48} className={styles['wallet-icon-fallback']} />
                         )}
                       </div>
 
                       {/* Wallet Name */}
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className={styles['uninstalled-wallet-name']}>
                         {wallet.name}
                       </span>
 
                       {/* Install Link */}
-                      <span className="text-xs text-blue-600 mt-1">
+                      <span className={styles['install-text']}>
                         {t('wallet.install')}
                       </span>
                     </a>
@@ -342,8 +336,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
         {/* Help Text */}
         {!detectingWallets && !error && hasDetectedWallets && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-600 text-center">
+          <div className={styles['help-text-container']}>
+            <p className={styles['help-text']}>
               {t('wallet.termsAgreement')}
             </p>
           </div>
