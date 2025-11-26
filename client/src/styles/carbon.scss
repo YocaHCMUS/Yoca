@@ -3,6 +3,7 @@
  * Import Carbon components and styles with proper theme configuration
  */
 
-// Import Carbon Design System with all components
-// This includes all theme tokens automatically
-@use '@carbon/react';
+// Import Carbon Design System styles
+// This includes all theme tokens and component styles
+@use '@carbon/styles';
+@use '@carbon/styles/scss/theme';

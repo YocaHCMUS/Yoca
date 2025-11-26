@@ -68,15 +68,24 @@ const applyTheme = (theme: ThemeMode): void => {
   const root = document.documentElement;
   const body = document.body;
 
+  console.log('Applying theme:', theme); // Debug log
+
   if (theme === 'dark') {
     root.classList.add('dark');
     body.classList.add('dark');
     root.setAttribute('data-carbon-theme', 'g100'); // Carbon dark theme
+    console.log('Set data-carbon-theme to g100'); // Debug log
   } else {
     root.classList.remove('dark');
     body.classList.remove('dark');
     root.setAttribute('data-carbon-theme', 'white'); // Carbon light theme
+    console.log('Set data-carbon-theme to white'); // Debug log
   }
+  
+  // Force a repaint
+  root.style.display = 'none';
+  root.offsetHeight; // Trigger reflow
+  root.style.display = '';
 };
 
 /**
