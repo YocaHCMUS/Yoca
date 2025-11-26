@@ -1,0 +1,46 @@
+/**
+ * PageWrapper Component Styles
+ * Styles for page layout with header and modals
+ */
+
+@use '../../styles/variables' as *;
+
+.pageWrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--cds-background);
+
+  :global(.dark) & {
+    background-color: var(--cds-background);
+  }
+}
+
+.pageContent {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding-top: $header-height;
+}
+
+/* Auth modal customizations */
+.authModal {
+  :global(.cds--modal-container) {
+    max-width: 480px;
+    padding: 0;
+  }
+
+  :global(.cds--modal-content) {
+    padding: 0;
+    margin-bottom: 0;
+  }
+
+  :global(.cds--modal-header) {
+    display: none;
+  }
+
+  :global(.cds--modal-footer) {
+    display: none;
+  }
+}

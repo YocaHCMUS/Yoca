@@ -3,17 +3,18 @@
  * Styles for navigation header with Carbon Design System
  */
 
+@use '../../styles/variables' as *;
+
 .header {
   border-bottom: 1px solid var(--cds-border-subtle-01, #e0e0e0);
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: $z-index-sticky;
   background-color: var(--cds-background);
-  min-height: 64px;
+  min-height: $header-height;
 
   :global(.cds--header__global) {
-    min-height: 64px;
-    height: auto;
+    height: $header-height;
     padding: 0 1rem;
     align-items: center;
   }

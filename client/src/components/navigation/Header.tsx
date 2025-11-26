@@ -28,13 +28,15 @@ import styles from './Header.module.scss';
  */
 interface HeaderProps {
   onNavigate?: (path: string) => void;
+  handleSignIn?: () => void; // open modal, navigate,...
+  handleSignUp?: () => void; // open modal, navigate,...
 }
 
 /**
  * Header Component
  * Displays navigation items, user profile, language selector, and theme toggle
  */
-const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp }) => {
   const { t } = useTranslation();
   const { authState, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -128,14 +130,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               <div className={styles.authButtons}>
                 <button
                   className={styles.loginButton}
-                  onClick={() => handleNavigation('/auth/signin')}
+                  onClick= {handleSignIn}
                 >
                   <Login size={16} />
                   {t('auth.signIn')}
                 </button>
                 <button
                   className={styles.signUpButton}
-                  onClick={() => handleNavigation('/auth/signup')}
+                  onClick={handleSignUp}
                 >
                   {t('auth.signUp')}
                 </button>
