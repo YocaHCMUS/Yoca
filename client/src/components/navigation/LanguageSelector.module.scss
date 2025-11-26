@@ -11,6 +11,18 @@
 
 .languageButton {
   position: relative;
+  
+  &:hover {
+    background-color: var(--color-bg-hover) !important;
+    
+    svg {
+      fill: var(--color-interactive-hover) !important;
+    }
+  }
+  
+  svg {
+    fill: var(--color-text-primary);
+  }
 }
 
 /* Backdrop for closing dropdown */
@@ -28,17 +40,12 @@
   top: 100%;
   margin-top: 0.5rem;
   width: 14rem;
-  background-color: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border-subtle);
   z-index: 1000;
   animation: slideDown 150ms ease-out;
-
-  :global(.dark) & {
-    background-color: #1f2937;
-    border-color: #374151;
-  }
 }
 
 @keyframes slideDown {
@@ -57,15 +64,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 0.875rem;
   font-weight: 500;
-  color: #111827;
-
-  :global(.dark) & {
-    border-bottom-color: #374151;
-    color: #f9fafb;
-  }
+  color: var(--color-text-primary);
 }
 
 .languageList {
@@ -82,32 +84,20 @@
   padding: 0.5rem 1rem;
   text-align: left;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text-primary);
   transition: background-color 0.2s, color 0.2s;
   border: none;
   background: none;
   cursor: pointer;
 
   &:hover {
-    background-color: #f3f4f6;
-  }
-
-  :global(.dark) & {
-    color: #d1d5db;
-
-    &:hover {
-      background-color: #374151;
-    }
+    color: var(--color-interactive-hover) !important; 
+    background-color: var(--color-bg-hover);
   }
   
   &.active {
-    background-color: #eff6ff;
-    color: #2563eb;
-
-    :global(.dark) & {
-      background-color: #1e3a8a;
-      color: #60a5fa;
-    }
+    background-color: color-mix(in srgb, var(--color-interactive) 15%, transparent);
+    color: var(--color-interactive);
   }
 }
 
@@ -120,12 +110,8 @@
 }
 
 .checkmark {
-  color: #2563eb;
+  color: var(--color-interactive);
   font-weight: 700;
-
-  :global(.dark) & {
-    color: #60a5fa;
-  }
 }
 
 /* Responsive adjustments */

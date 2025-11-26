@@ -105,13 +105,40 @@
 }
 
 // Apply theme transitions for smooth mode switching
-* {
-  transition: background-color 0.2s ease-in-out, 
-              color 0.2s ease-in-out, 
-              border-color 0.2s ease-in-out;
+*,
+*::before,
+*::after {
+  transition-property: background-color, color, border-color, box-shadow, opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
+}
+
+// Exclude specific elements from theme transitions
+button *,
+input,
+select,
+textarea,
+[role="button"] {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
 }
 
 // Ensure no transition on page load
-body.no-transition * {
+body.no-transition *,
+body.no-transition *::before,
+body.no-transition *::after {
   transition: none !important;
+}
+
+// Smooth theme switching for modal and overlay backgrounds
+.cds--modal,
+.cds--modal-container,
+.cds--text-input,
+.cds--text-input__field-wrapper,
+.cds--password-input-wrapper,
+.cds--btn,
+.cds--select,
+.cds--inline-notification {
+  transition: background-color 0.2s ease-in-out, 
+              color 0.2s ease-in-out, 
+              border-color 0.2s ease-in-out !important;
 }

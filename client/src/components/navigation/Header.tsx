@@ -72,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
           />
           <HeaderName href="#" prefix="" className={styles.headerName}>
             <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
-            <h1>Yoca</h1>
+            <h1 className={styles.appName}>Yoca</h1>
           </HeaderName>
 
           {/* Navigation items - only show when authenticated

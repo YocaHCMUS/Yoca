@@ -66,13 +66,18 @@ const getInitialTheme = (defaultTheme?: ThemeMode): ThemeMode => {
  */
 const applyTheme = (theme: ThemeMode): void => {
   const root = document.documentElement;
+  const body = document.body;
 
   if (theme === 'dark') {
     root.classList.add('dark');
+    body.classList.add('dark');
     root.setAttribute('data-carbon-theme', 'g100'); // Carbon dark theme
+    root.setAttribute('data-theme', 'dark'); // Custom theme variables
   } else {
     root.classList.remove('dark');
+    body.classList.remove('dark');
     root.setAttribute('data-carbon-theme', 'white'); // Carbon light theme
+    root.setAttribute('data-theme', 'light'); // Custom theme variables
   }
 };
 

@@ -11,17 +11,20 @@
 .themeToggle {
   transition: all 100ms;
 
-  
   &:hover {
-    background-color: #f3f4f6;
-
-    :global(.dark) & {
-      background-color: #374151;
+    background-color: var(--color-bg-hover) !important;
+    
+    svg {
+      fill: var(--color-interactive-hover) !important;
     }
   }
   
   &:active {
     transform: scale(0.95);
+  }
+  
+  svg {
+    fill: var(--color-text-primary);
   }
 }
 

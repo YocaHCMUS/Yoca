@@ -14,6 +14,7 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-01;
+    background-color: var(--color-bg-primary);
 
     @media (max-width: 640px) {
         padding: 1rem;
@@ -29,20 +30,12 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--cds-text-primary, #161616);
-
-    :global(.dark) & {
-        color: var(--cds-text-primary, #f4f4f4);
-    }
+    color: var(--color-text-primary);
 }
 
 @mixin header-description {
     font-size: 0.875rem;
-    color: #4b5563;
-
-    :global(.dark) & {
-        color: #9ca3af;
-    }
+    color: var(--color-text-secondary);
 }
 
 @mixin form-styles {
@@ -66,32 +59,24 @@
 
 @mixin link-styles {
     font-size: 0.875rem;
-    color: #2563eb;
+    color: var(--color-interactive);
     text-decoration: none;
     transition: color 0.2s ease;
 
     &:hover {
-        color: #1d4ed8;
+        color: var(--color-interactive-hover);
     }
 
     &:focus {
-        outline: 2px solid var(--cds-focus, #0f62fe);
+        outline: 2px solid var(--color-interactive);
         outline-offset: 2px;
         border-radius: 2px;
-    }
-
-    :global(.dark) & {
-        color: #60a5fa;
-
-        &:hover {
-            color: #93c5fd;
-        }
     }
 }
 
 @mixin text-button {
     font-size: 0.875rem;
-    color: #2563eb;
+    color: var(--color-interactive);
     font-weight: 500;
     background: none;
     border: none;
@@ -101,30 +86,18 @@
     transition: color 0.2s ease;
 
     &:hover {
-        color: #1d4ed8;
+        color: var(--color-interactive-hover);
     }
 
     &:disabled {
         cursor: not-allowed;
         opacity: 0.5;
     }
-
-    :global(.dark) & {
-        color: #60a5fa;
-
-        &:hover {
-            color: #93c5fd;
-        }
-    }
 }
 
 @mixin secondary-text {
     font-size: 0.875rem;
-    color: #4b5563;
-
-    :global(.dark) & {
-        color: #9ca3af;
-    }
+    color: var(--color-text-secondary);
 }
 
 @mixin divider-container {
@@ -141,11 +114,7 @@
 
 @mixin divider-border {
     width: 100%;
-    border-top: 1px solid #d1d5db;
-
-    :global(.dark) & {
-        border-color: #4b5563;
-    }
+    border-top: 1px solid var(--color-border-subtle);
 }
 
 @mixin divider-text-container {
@@ -157,12 +126,9 @@
 
 @mixin divider-text {
     padding: 0 0.5rem;
-    background-color: #ffffff;
-    color: #6b7280;
-
-    :global(.dark) & {
-        background-color: #111827;
-    }
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 @mixin navigation-section {
