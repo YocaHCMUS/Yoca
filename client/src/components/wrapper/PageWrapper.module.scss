@@ -1,15 +1,16 @@
 /**
  * PageWrapper Component Styles
- * Styles for page layout with header and modals
+ * Styles for page layout with header and modals using Carbon Design System tokens
  */
 
 @use '../../styles/variables' as *;
+@use '@carbon/react/scss/theme' as *;
 
 .pageWrapper {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--color-bg-primary);
+  background-color: $background;
 }
 
 .pageContent {
@@ -18,8 +19,8 @@
   max-width: 100%;
   margin: 0 auto;
   padding-top: $header-height;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
+  background-color: $layer-01;
+  color: $text-primary;
 }
 
 /* Auth modal customizations */

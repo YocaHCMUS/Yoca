@@ -1,29 +1,31 @@
 /**
  * WalletModal Component Styles
- * Custom styles for wallet connection modal
+ * Custom styles for wallet connection modal using Carbon Design System tokens
  */
+
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
 
 .walletModal {
   // main modal container
   :global(.cds--modal-container) {
-    background-color: var(--color-bg-primary);
+    background-color: $layer-01;
   }
 
-
   svg {
-    fill: var(--color-text-primary);
+    fill: $icon-primary;
   }
   
   // Modal customizations
   :global(.cds--modal-content) {
-
-    padding: 1rem;
+    padding: $spacing-05;
     margin-bottom: 0;
   }
 
   :global(.cds--modal-header__heading) {
     text-align: left;
-    color: var(--color-text-primary);
+    color: $text-primary;
   }
 
   // Blockchain selector customizations
@@ -46,13 +48,12 @@
 .modal-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  
+  gap: $spacing-05;
 }
 
 /* Blockchain selector */
 .blockchain-selector {
-  margin-bottom: 1.5rem;
+  margin-bottom: $spacing-06;
 }
 
 .select-full-width {
@@ -65,32 +66,23 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem 0;
+  padding: $spacing-07 0;
 }
 
 .detecting-text {
-  margin-top: 1rem;
-  font-size: 0.875rem;
-  color: var(--cds-text-secondary, #525252);
-
-  :global(.dark) & {
-    color: var(--cds-text-secondary, #c6c6c6);
-  }
+  margin-top: $spacing-05;
+  @include type-style('body-compact-01');
+  color: $text-secondary;
 }
 
 /* Error state */
 .error-container {
-  background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  margin-bottom: 1rem;
-  animation: slideDown 0.3s ease-out;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-
-  :global(.dark) & {
-    background-color: color-mix(in srgb, var(--color-error) 15%, transparent);
-  }
+  background-color: $support-error-inverse;
+  border: 1px solid $support-error;
+  border-radius: 0;
+  padding: $spacing-05;
+  margin-bottom: $spacing-05;
+  animation: slideDown 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 .error-content {
@@ -105,46 +97,42 @@
 .error-icon {
   height: 1.25rem;
   width: 1.25rem;
-  color: var(--color-error);
+  color: $support-error;
 }
 
 .error-text-wrapper {
-  margin-left: 0.75rem;
+  margin-left: $spacing-04;
 }
 
 .error-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-error);
+  @include type-style('label-01');
+  font-weight: 600;
+  color: $text-error;
 }
 
 .error-message {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--color-error);
+  margin-top: $spacing-02;
+  @include type-style('body-compact-01');
+  color: $text-error;
 }
 
 /* Wallets section */
 .wallets-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: $spacing-06;
 }
 
 .section-heading {
-  font-size: 0.875rem;
+  @include type-style('label-01');
   font-weight: 600;
-  color: var(--cds-text-primary, #161616);
-  margin-bottom: 0.75rem;
-
-  :global(.dark) & {
-    color: var(--cds-text-primary, #f4f4f4);
-  }
+  color: $text-primary;
+  margin-bottom: $spacing-04;
 }
 
 /* Wallet grid */
 .wallet-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
+  gap: $spacing-04;
 }
 
 /* Wallet button */
@@ -154,40 +142,31 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: $spacing-05;
   border: 2px solid;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
+  border-radius: 0;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
   background: none;
   cursor: pointer;
 }
 
 .wallet-button-default {
-  border-color: var(--cds-border-subtle-01, #e0e0e0);
+  border-color: $border-subtle-01;
 
   &:hover {
-    border-color: var(--cds-border-interactive, #0f62fe);
-    background-color: var(--cds-layer-hover-01, #f4f4f4);
+    border-color: $border-interactive;
+    background-color: $layer-hover-01;
   }
 
-  :global(.dark) & {
-    border-color: var(--cds-border-subtle-01, #525252);
-
-    &:hover {
-      border-color: var(--cds-border-interactive, #4589ff);
-      background-color: var(--cds-layer-hover-01, #353535);
-    }
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
   }
 }
 
 .wallet-button-connecting {
-  border-color: var(--cds-border-interactive, #0f62fe);
-  background-color: var(--cds-layer-selected-01, #e0e0e0);
-
-  :global(.dark) & {
-    border-color: var(--cds-border-interactive, #4589ff);
-    background-color: var(--cds-layer-selected-01, #525252);
-  }
+  border-color: $border-interactive;
+  background-color: $layer-selected-01;
 }
 
 .wallet-button-disabled {
@@ -198,31 +177,24 @@
 /* Badge */
 .badge-container {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: $spacing-03;
+  right: $spacing-03;
 }
 
 .detected-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #d1fae5;
-  color: #065f46;
-  animation: fadeIn 0.3s ease-in;
-  transition: background-color 0.2s ease, color 0.2s ease;
-
-  :global(.dark) & {
-    background-color: #064e3b;
-    color: #6ee7b7;
-  }
+  padding: $spacing-01 $spacing-03;
+  border-radius: 0;
+  @include type-style('label-01');
+  background-color: $support-success-inverse;
+  color: $text-on-color-disabled;
+  animation: fadeIn 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 /* Wallet icon */
 .wallet-icon-container {
-  margin-bottom: 0.5rem;
+  margin-bottom: $spacing-03;
 }
 
 .wallet-icon {
@@ -232,22 +204,14 @@
 }
 
 .wallet-icon-fallback {
-  color: var(--cds-icon-secondary, #525252);
-
-  :global(.dark) & {
-    color: var(--cds-icon-secondary, #c6c6c6);
-  }
+  color: $icon-secondary;
 }
 
 /* Wallet name */
 .wallet-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--cds-text-primary, #161616);
-
-  :global(.dark) & {
-    color: var(--cds-text-primary, #f4f4f4);
-  }
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-primary;
 }
 
 /* Loading overlay */
@@ -258,27 +222,17 @@
   align-items: center;
   justify-content: center;
   background-color: rgba(255, 255, 255, 0.75);
-  border-radius: 0.5rem;
+  border-radius: 0;
   backdrop-filter: blur(2px);
-  transition: background-color 0.2s ease;
-
-  :global(.dark) & {
-    background-color: rgba(0, 0, 0, 0.75);
-  }
 }
 
 /* Warning state */
 .warning-container {
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
-  border: 1px solid var(--color-warning);
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-
-  :global(.dark) & {
-    background-color: color-mix(in srgb, var(--color-warning) 15%, transparent);
-  }
+  margin-bottom: $spacing-05;
+  padding: $spacing-05;
+  background-color: $support-warning-inverse;
+  border: 1px solid $support-warning;
+  border-radius: 0;
 }
 
 .warning-content {
@@ -293,23 +247,23 @@
 .warning-icon {
   height: 1.25rem;
   width: 1.25rem;
-  color: var(--color-warning);
+  color: $support-warning;
 }
 
 .warning-text-wrapper {
-  margin-left: 0.75rem;
+  margin-left: $spacing-04;
 }
 
 .warning-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-warning);
+  @include type-style('label-01');
+  font-weight: 600;
+  color: $text-primary;
 }
 
 .warning-message {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--color-warning);
+  margin-top: $spacing-02;
+  @include type-style('body-compact-01');
+  color: $text-secondary;
 }
 
 /* Install link */
@@ -318,27 +272,23 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  border: 2px solid var(--cds-border-subtle-01, #e0e0e0);
-  border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
+  padding: $spacing-05;
+  border: 2px solid $border-subtle-01;
+  border-radius: 0;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
   cursor: pointer;
   opacity: 0.6;
   text-decoration: none;
 
   &:hover {
-    border-color: var(--cds-border-subtle-02, #c6c6c6);
-    background-color: var(--cds-layer-hover-01, #f4f4f4);
+    border-color: $border-subtle-02;
+    background-color: $layer-hover-01;
     opacity: 1;
   }
 
-  :global(.dark) & {
-    border-color: var(--cds-border-subtle-01, #525252);
-
-    &:hover {
-      border-color: var(--cds-border-subtle-02, #6f6f6f);
-      background-color: var(--cds-layer-hover-01, #353535);
-    }
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
   }
 }
 
@@ -349,7 +299,7 @@
   object-fit: contain;
   filter: grayscale(100%);
   opacity: 0.6;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 .install-link:hover .uninstalled-icon {
@@ -358,49 +308,33 @@
 }
 
 .uninstalled-wallet-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--cds-text-secondary, #525252);
-
-  :global(.dark) & {
-    color: var(--cds-text-secondary, #c6c6c6);
-  }
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-secondary;
 }
 
 .install-text {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--cds-link-primary, #0f62fe);
-
-  :global(.dark) & {
-    color: var(--cds-link-primary, #78a9ff);
-  }
+  margin-top: $spacing-02;
+  @include type-style('helper-text-01');
+  color: $link-primary;
 }
 
 /* Help text */
 .help-text-container {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--cds-border-subtle-01, #e0e0e0);
-
-  :global(.dark) & {
-    border-top-color: var(--cds-border-subtle-01, #525252);
-  }
+  margin-top: $spacing-06;
+  padding-top: $spacing-05;
+  border-top: 1px solid $border-subtle-01;
 }
 
 .help-text {
-  font-size: 0.75rem;
-  color: var(--cds-text-secondary, #525252);
+  @include type-style('helper-text-01');
+  color: $text-secondary;
   text-align: center;
-
-  :global(.dark) & {
-    color: var(--cds-text-secondary, #c6c6c6);
-  }
 }
 
 // Wallet card hover effects
 .walletCard {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
 
   &:hover {
     transform: translateY(-2px);
@@ -440,7 +374,7 @@
   .walletModal {
     :global(.cds--modal-container) {
       max-width: 100%;
-      margin: 1rem;
+      margin: $spacing-05;
     }
   }
 
