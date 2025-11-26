@@ -1,0 +1,9 @@
+/**
+ * Carbon Design System Integration
+ * Import Carbon components and styles with proper theme configuration
+ */
+
+// Import Carbon Design System styles
+// This includes all theme tokens and component styles
+@use '@carbon/styles';
+@use '@carbon/styles/scss/theme';

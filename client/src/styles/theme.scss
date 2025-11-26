@@ -1,0 +1,33 @@
+/**
+ * Theme Configuration
+ * Carbon Design System theme integration with smooth transitions
+ * All theme tokens are now provided by Carbon via CSS custom properties
+ */
+
+// Smooth theme transitions for all elements
+*,
+*::before,
+*::after {
+  transition-property: background-color, color, border-color, box-shadow, opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+// Enhanced transitions for interactive elements
+button,
+input,
+select,
+textarea,
+a,
+[role="button"] {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: 0.15s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+// Prevent transitions on initial page load
+body.no-transition *,
+body.no-transition *::before,
+body.no-transition *::after {
+  transition: none !important;
+}

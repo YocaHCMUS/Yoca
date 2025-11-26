@@ -1,0 +1,483 @@
+openapi: 3.0.3
+info:
+  title: Yoca Authentication API
+  description: API contracts for authentication and navigation UI components
+  version: 1.0.0
+  contact:
+    name: Yoca Team
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.yoca.app
+    description: Production server
+
+paths:
+  /api/auth/signin:
+    post:
+      summary: Sign in with email or username
+      description: Authenticate a user with their email/username and password
+      operationId: signIn
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+            examples:
+              emailSignIn:
+                summary: Sign in with email
+                value:
+                  identifier: user@example.com
+                  password: SecurePass123
+              usernameSignIn:
+                summary: Sign in with username
+                value:
+                  identifier: johndoe
+                  password: SecurePass123
+      responses:
+        "200":
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                user:
+                  id: usr_1234567890
+                  username: johndoe
+                  email: user@example.com
+                  walletAddress: null
+                  authMethod: email
+                  profilePicture: null
+                  createdAt: "2025-11-23T10:00:00Z"
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_CREDENTIALS
+                message: Invalid username or password
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: Invalid request data
+                details:
+                  identifier: Identifier is required
+                  password: Password must be at least 8 characters
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: RATE_LIMIT_EXCEEDED
+                message: Too many sign-in attempts. Please try again later.
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/signup:
+    post:
+      summary: Sign up with email and password
+      description: Create a new user account with email, username, and password
+      operationId: signUp
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequest"
+            example:
+              email: newuser@example.com
+              username: newuser
+              password: SecurePass123
+      responses:
+        "201":
+          description: User account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                user:
+                  id: usr_9876543210
+                  username: newuser
+                  email: newuser@example.com
+                  walletAddress: null
+                  authMethod: email
+                  profilePicture: null
+                  createdAt: "2025-11-23T10:30:00Z"
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "409":
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: USER_EXISTS
+                message: An account with this email already exists
+                details:
+                  email: Email already in use
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: Invalid request data
+                details:
+                  email: Invalid email format
+                  username: Username must be 3-20 characters
+                  password: Password must contain uppercase, lowercase, and number
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/wallet:
+    post:
+      summary: Authenticate with wallet signature
+      description: Sign in or sign up using a Solana wallet signature
+      operationId: walletAuth
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletAuthRequest"
+            example:
+              publicKey: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+              signature: 5K3NmZ7QVz8... (base58 encoded signature)
+              message: Sign this message to authenticate with Yoca
+              wallet: Phantom
+      responses:
+        "200":
+          description: Successfully authenticated with wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                user:
+                  id: usr_5555555555
+                  username: user_7xKXtg
+                  email: null
+                  walletAddress: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+                  authMethod: wallet
+                  profilePicture: null
+                  createdAt: "2025-11-23T11:00:00Z"
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "401":
+          description: Invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_SIGNATURE
+                message: Wallet signature verification failed
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: Invalid wallet authentication data
+                details:
+                  publicKey: Invalid Solana public key format
+                  signature: Signature is required
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/google:
+    post:
+      summary: Authenticate with Google OAuth
+      description: Sign in or sign up using a Google ID token
+      operationId: googleAuth
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleAuthRequest"
+            example:
+              idToken: eyJhbGciOiJSUzI1NiIsImtpZCI6IjY4YWU... (Google ID token)
+      responses:
+        "200":
+          description: Successfully authenticated with Google
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                user:
+                  id: usr_7777777777
+                  username: john_doe_google
+                  email: john.doe@gmail.com
+                  walletAddress: null
+                  authMethod: google
+                  profilePicture: https://lh3.googleusercontent.com/a/...
+                  createdAt: "2025-11-23T11:30:00Z"
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "401":
+          description: Invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_TOKEN
+                message: Google ID token verification failed
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: Invalid Google authentication data
+                details:
+                  idToken: ID token is required
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/signout:
+    post:
+      summary: Sign out current user
+      description: Invalidate the current authentication token
+      operationId: signOut
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully signed out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully signed out
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SignInRequest:
+      type: object
+      required:
+        - identifier
+        - password
+      properties:
+        identifier:
+          type: string
+          description: Username or email address
+          minLength: 3
+          maxLength: 255
+          example: user@example.com
+        password:
+          type: string
+          description: User password
+          minLength: 8
+          format: password
+          example: SecurePass123
+
+    SignUpRequest:
+      type: object
+      required:
+        - email
+        - username
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: newuser@example.com
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+          pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+          example: newuser
+        password:
+          type: string
+          minLength: 8
+          format: password
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+          example: SecurePass123
+
+    WalletAuthRequest:
+      type: object
+      required:
+        - publicKey
+        - signature
+        - message
+        - wallet
+      properties:
+        publicKey:
+          type: string
+          description: Base58 encoded Solana public key
+          minLength: 44
+          maxLength: 44
+          example: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+        signature:
+          type: string
+          description: Base58 encoded signature of the message
+          example: 5K3NmZ7QVz8...
+        message:
+          type: string
+          description: Original message that was signed
+          example: Sign this message to authenticate with Yoca
+        wallet:
+          type: string
+          description: Name of the wallet used
+          example: Phantom
+          enum:
+            - Phantom
+            - Solflare
+            - Backpack
+            - Glow
+            - Other
+
+    GoogleAuthRequest:
+      type: object
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          description: Google ID token from OAuth flow
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6IjY4YWU...
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - authMethod
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: usr_1234567890
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: user@example.com
+        walletAddress:
+          type: string
+          nullable: true
+          example: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+        authMethod:
+          type: string
+          enum:
+            - email
+            - wallet
+            - google
+          example: email
+        profilePicture:
+          type: string
+          format: uri
+          nullable: true
+          example: https://lh3.googleusercontent.com/a/...
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-23T10:00:00Z"
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+          description: JWT authentication token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid username or password
+        details:
+          type: object
+          description: Field-specific error details
+          additionalProperties:
+            type: string
+          example:
+            email: Invalid email format
+            password: Password too short

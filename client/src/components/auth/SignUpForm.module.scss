@@ -1,0 +1,79 @@
+/**
+ * Sign Up Form Component Styles
+ * Using CSS Modules with Carbon Design System tokens
+ */
+
+@use './shared' as *;
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.sign-up-form-container {
+    @include form-container;
+}
+
+.sign-up-form-header {
+    @include form-header;
+}
+
+.header-title {
+    @include header-title;
+}
+
+.header-description {
+    @include header-description;
+    margin-bottom: $spacing-06;
+}
+
+.error-notification {
+    margin-bottom: $spacing-05;
+}
+
+.form {
+    @include form-styles;
+}
+
+// SignUp-specific styles
+.terms-text {
+    @include type-style('helper-text-01');
+    line-height: 1.5;
+    color: $text-secondary;
+
+    a {
+        @include link-styles;
+    }
+}
+
+// Shared divider styles
+.divider {
+    @include divider-container;
+}
+
+.divider-line {
+    @include divider-line;
+}
+
+.divider-border {
+    @include divider-border;
+}
+
+.divider-text-container {
+    @include divider-text-container;
+}
+
+.divider-text {
+    @include divider-text;
+}
+
+// Navigation to SignIn
+.sign-in-section {
+    @include navigation-section;
+}
+
+.sign-in-text {
+    @include secondary-text;
+}
+
+.sign-in-button {
+    @include text-button;
+}

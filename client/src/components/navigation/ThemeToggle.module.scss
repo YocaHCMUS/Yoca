@@ -1,0 +1,43 @@
+/**
+ * ThemeToggle Component Styles
+ * Styles for theme toggle button with Carbon Design System tokens
+ */
+
+@use '@carbon/react/scss/theme' as *;
+
+.themeToggleWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.themeToggle {
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  &:hover {
+    background-color: $layer-hover-01 !important;
+    
+    svg {
+      fill: $icon-primary !important;
+    }
+  }
+  
+  &:active {
+    transform: scale(0.95);
+    background-color: $layer-active-01 !important;
+  }
+  
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
+  }
+  
+  svg {
+    fill: $icon-primary;
+    transition: transform 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+  }
+}
+
+/* Animation for icon change */
+.themeToggle:hover svg {
+  transform: rotate(12deg);
+}
