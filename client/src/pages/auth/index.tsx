@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { Header } from "../../components/navigation";
 import { SignInForm, SignUpForm, WalletModal } from "../../components/auth";
-import { Button, Grid, Column } from "@carbon/react";
+import { Button, Grid, Column, Theme } from "@carbon/react";
 import { useTranslation } from "react-i18next";
 import styles from "./index.module.scss";
 
-/**
- * Authentication showcase page demonstrating all auth components
- * Displays sign-in, sign-up forms, and wallet connection modal
- */
+
 import { PageWrapper } from "../../components/wrapper";
 
 export default function AuthShowcase() {
@@ -155,7 +152,7 @@ export default function AuthShowcase() {
     //       onClose={() => setShowWalletModal(false)}
     //     />
     //   )}
-    // </div>
+    // </div>  {/* g10, g90, g100 */}
     <PageWrapper
       onNavigate={(path) => console.log(path)}>
       <h1>Hello World</h1>

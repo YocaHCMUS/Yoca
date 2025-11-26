@@ -20,7 +20,7 @@
     cursor: not-allowed;
   }
   
-  // Override Google's default button styles to match Carbon
+  // Override Google's default button styles to match Carbon Design System
   :global {
     .nsm7Bb-HzV7m-LgbsSe {
       width: 100% !important;
@@ -29,6 +29,8 @@
       border: 1px solid $border-subtle-01 !important;
       background-color: $layer-01 !important;
       font-family: 'IBM Plex Sans', sans-serif !important;
+      transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9),
+                  border-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9) !important;
       
       &:hover {
         background-color: $layer-hover-01 !important;
@@ -37,6 +39,11 @@
       
       &:active {
         background-color: $layer-active-01 !important;
+      }
+      
+      &:focus {
+        outline: 2px solid $focus !important;
+        outline-offset: 2px !important;
       }
     }
     
@@ -49,32 +56,6 @@
 
 .google-button-label {
   display: none; // Hidden by default, can be used for custom text overlay
-}
-
-// Dark theme adjustments
-[data-carbon-theme='g100'],
-[data-carbon-theme='g90'] {
-  .google-login-wrapper {
-    :global {
-      .nsm7Bb-HzV7m-LgbsSe {
-        background-color: $layer-01 !important;
-        border-color: $border-subtle-01 !important;
-        
-        &:hover {
-          background-color: $layer-hover-01 !important;
-          border-color: $border-strong-01 !important;
-        }
-        
-        &:active {
-          background-color: $layer-active-01 !important;
-        }
-      }
-      
-      .nsm7Bb-HzV7m-LgbsSe-Bz112c {
-        color: $text-primary !important;
-      }
-    }
-  }
 }
 
 // Responsive adjustments
@@ -103,7 +84,7 @@
       width: 20px;
       height: 20px;
       border: 2px solid $border-subtle-01;
-      border-top-color: $border-interactive;
+      border-top-color: $link-primary;
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }

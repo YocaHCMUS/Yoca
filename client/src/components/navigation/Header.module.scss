@@ -1,31 +1,31 @@
 /**
  * Header Component Styles
- * Styles for navigation header with Carbon Design System
+ * Styles for navigation header using Carbon Design System tokens
  */
 
 @use '../../styles/variables' as *;
-
-
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
 
 .header {
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid $border-subtle-01;
   position: sticky;
   top: 0;
   z-index: $z-index-sticky;
   min-height: $header-height;
-  background-color: var(--color-bg-primary) !important; // carbon header luon luon co mau trang ???
+  background-color: $background !important;
   
   :global(.cds--header__global) {
-    // background-color: var(--color-bg-primary) !important;
     height: $header-height;
-    padding: 0 1rem;
+    padding: 0 $spacing-05;
     align-items: center;
   }
 }
 
 /* Header name with logo */
 .headerName {
-  gap: var(--spacing-sm);
+  gap: $spacing-03;
 }
 
 .logo {
@@ -35,10 +35,11 @@
 }
 
 .appName {
-  color: var(--color-text-primary);
+  color: $text-primary;
+  transition: color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
 
   &:hover {
-    color: var(--color-interactive);
+    color: $link-primary;
   }
 }
 
@@ -50,7 +51,7 @@
     display: block;
   }
 
-  margin-left: var(--spacing-md);
+  margin-left: $spacing-05;
 }
 
 .profileDropdown {
@@ -58,95 +59,94 @@
   position: absolute;
   right: 0;
   top: 100%;
-  margin-top: var(--spacing-sm);
+  margin-top: $spacing-03;
   width: 16rem;
-  background-color: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border-subtle);
+  background-color: $layer-01;
+  border-radius: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid $border-subtle-01;
   z-index: 1001;
 }
 
 .profileInfo {
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: $spacing-05;
+  border-bottom: 1px solid $border-subtle-01;
 }
 
 .username {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-primary;
 }
 
 .signOutButton {
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: $spacing-04 $spacing-05;
   text-align: left;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  transition: background-color 0.2s, color 0.2s;
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9), 
+              color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
   border: none;
   background: none;
   cursor: pointer;
 
   &:hover {
-    background-color: var(--color-bg-secondary);
+    background-color: $layer-hover-01;
+    color: $text-primary;
   }
 }
 
 /* Auth buttons for unauthenticated state */
 .authButtons {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-left: var(--spacing-md);
+  gap: $spacing-03;
+  margin-left: $spacing-05;
 }
 
 .loginButton {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s, color 0.2s;
+  gap: $spacing-03;
+  padding: $spacing-04 $spacing-05;
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-secondary;
+  border-radius: 0;
+  transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9), 
+              color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
   border: none;
   background: none;
   cursor: pointer;
 
   &:hover {
-    background-color: var(--color-bg-secondary);
-    color: var(--color-interactive-hover)
+    background-color: $layer-hover-01;
+    color: $link-primary;
   }
 }
 
 .signUpButton {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-inverse);
-  background-color: var(--color-interactive);
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s;
+  padding: $spacing-04 $spacing-05;
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-on-color;  
+  background-color: $background-brand;
+  border-radius: 0;
+  transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
   border: none;
   cursor: pointer;
-
-  &:hover {
-    background-color: var(--color-interactive-hover);
-  }
 }
 
 .headerMenuItem {
   cursor: pointer;
 
   :global(.cds--header__menu-item) {
-    color: var(--color-text-primary);
+    color: $text-primary;
     background-color: transparent;
-    transition: color 0.2s ease-in-out;
+    transition: color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
 
     &:hover {
-      color: var(--color-interactive);
+      color: $link-primary;
     }
   }
 }
@@ -159,6 +159,6 @@
   
   .authButtons {
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: $spacing-02;
   }
 }

@@ -1,9 +1,10 @@
 /**
  * Sign In Form Component Styles
- * Custom styles for the sign-in form using SCSS modules
+ * Custom styles for the sign-in form using Carbon Design System tokens
  */
 
 @use './shared' as *;
+@use '@carbon/react/scss/spacing' as *;
 
 .sign-in-form-container {
     @include form-container;
@@ -18,7 +19,7 @@
 }
 
 .error-notification {
-    margin-bottom: 1rem;
+    margin-bottom: $spacing-05;
 }
 
 .form {

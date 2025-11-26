@@ -1,9 +1,12 @@
 /**
  * Sign Up Form Component Styles
- * Using CSS Modules with SCSS for scoped styling
+ * Using CSS Modules with Carbon Design System tokens
  */
 
 @use './shared' as *;
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
 
 .sign-up-form-container {
     @include form-container;
@@ -19,11 +22,11 @@
 
 .header-description {
     @include header-description;
-    margin-bottom: 1.5rem;
+    margin-bottom: $spacing-06;
 }
 
 .error-notification {
-    margin-bottom: 1rem;
+    margin-bottom: $spacing-05;
 }
 
 .form {
@@ -32,14 +35,9 @@
 
 // SignUp-specific styles
 .terms-text {
-    font-size: 0.75rem;
+    @include type-style('helper-text-01');
     line-height: 1.5;
-    color: var(--color-text-secondary);
-    transition: color 0.2s ease;
-
-    :global(.dark) & {
-        color: var(--color-text-tertiary);
-    }
+    color: $text-secondary;
 
     a {
         @include link-styles;

@@ -1,38 +1,43 @@
 /**
  * ThemeToggle Component Styles
- * Styles for theme toggle button with Carbon Design System
+ * Styles for theme toggle button with Carbon Design System tokens
  */
+
+@use '@carbon/react/scss/theme' as *;
+
 .themeToggleWrapper {
   display: flex;
   align-items: center;
 }
 
-
 .themeToggle {
-  transition: all 100ms;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
 
   &:hover {
-    background-color: var(--color-bg-hover) !important;
+    background-color: $layer-hover-01 !important;
     
     svg {
-      fill: var(--color-interactive-hover) !important;
+      fill: $icon-primary !important;
     }
   }
   
   &:active {
     transform: scale(0.95);
+    background-color: $layer-active-01 !important;
+  }
+  
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
   }
   
   svg {
-    fill: var(--color-text-primary);
+    fill: $icon-primary;
+    transition: transform 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
   }
 }
 
 /* Animation for icon change */
-.themeToggle svg {
-  transition: transform 100ms;
-}
-
 .themeToggle:hover svg {
   transform: rotate(12deg);
 }

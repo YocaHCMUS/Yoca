@@ -1,7 +1,11 @@
 /**
  * LanguageSelector Component Styles
- * Styles for language dropdown with Carbon Design System
+ * Styles for language dropdown with Carbon Design System tokens
  */
+
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
 
 .languageSelectorWrapper {
   position: relative;
@@ -13,15 +17,24 @@
   position: relative;
   
   &:hover {
-    background-color: var(--color-bg-hover) !important;
+    background-color: $layer-hover-01 !important;
     
     svg {
-      fill: var(--color-interactive-hover) !important;
+      fill: $icon-primary !important;
     }
   }
   
+  &:active {
+    background-color: $layer-active-01 !important;
+  }
+  
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
+  }
+  
   svg {
-    fill: var(--color-text-primary);
+    fill: $icon-primary;
   }
 }
 
@@ -38,14 +51,14 @@
   position: absolute;
   right: 0;
   top: 100%;
-  margin-top: 0.5rem;
+  margin-top: $spacing-03;
   width: 14rem;
-  background-color: var(--color-bg-primary);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border-subtle);
+  background-color: $layer-01;
+  border-radius: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid $border-subtle-01;
   z-index: 1000;
-  animation: slideDown 150ms ease-out;
+  animation: slideDown 110ms cubic-bezier(0, 0, 0.38, 0.9);
 }
 
 @keyframes slideDown {
@@ -62,16 +75,16 @@
 .dropdownHeader {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border-subtle);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  gap: $spacing-03;
+  padding: $spacing-04 $spacing-05;
+  border-bottom: 1px solid $border-subtle-01;
+  @include type-style('label-01');
+  font-weight: 600;
+  color: $text-primary;
 }
 
 .languageList {
-  padding: 0.5rem 0;
+  padding: $spacing-02 0;
   list-style: none;
   margin: 0;
 }
@@ -79,25 +92,26 @@
 .languageOption {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: $spacing-04;
   width: 100%;
-  padding: 0.5rem 1rem;
+  padding: $spacing-03 $spacing-05;
   text-align: left;
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
-  transition: background-color 0.2s, color 0.2s;
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  transition: background-color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9),
+              color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
   border: none;
   background: none;
   cursor: pointer;
 
   &:hover {
-    color: var(--color-interactive-hover) !important; 
-    background-color: var(--color-bg-hover);
+    background-color: $layer-hover-01;
+    color: $text-primary;
   }
   
   &.active {
-    background-color: color-mix(in srgb, var(--color-interactive) 15%, transparent);
-    color: var(--color-interactive);
+    background-color: $layer-selected-01;
+    color: $text-primary;
   }
 }
 
@@ -110,7 +124,7 @@
 }
 
 .checkmark {
-  color: var(--color-interactive);
+  color: $icon-primary;
   font-weight: 700;
 }
 

@@ -1,92 +1,87 @@
 /**
  * Shared Auth Form Styles
- * Common styles used across SignIn and SignUp forms
+ * Common styles used across SignIn and SignUp forms using Carbon Design System tokens
  */
 
 @use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
 
 // Mixins for reusable patterns
 @mixin form-container {
     max-width: 480px;
     width: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    padding: $spacing-07;
     display: flex;
     flex-direction: column;
-    gap: $spacing-01;
-    background-color: var(--color-bg-primary);
+    gap: $spacing-05;
+    background-color: $layer-01;
 
     @media (max-width: 640px) {
-        padding: 1rem;
+        padding: $spacing-05;
     }
 }
 
 @mixin form-header {
     text-align: left;
-    margin-bottom: 1.5rem;
+    margin-bottom: $spacing-06;
 }
 
 @mixin header-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--color-text-primary);
+    @include type-style('heading-04');
+    margin-bottom: $spacing-03;
+    color: $text-primary;
 }
 
 @mixin header-description {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    @include type-style('body-compact-01');
+    color: $text-secondary;
 }
 
 @mixin form-styles {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: $spacing-05;
 
-    // Style Carbon buttons to be full width with centered text
+    // Style Carbon buttons to be full width
     :global(.cds--btn) {
         width: 100%;
         max-width: none;
-        justify-content: left;
-        // Ensure button text/content is centered
-        :global(.cds--btn__icon),
-        :global(svg) {
-            margin-left: auto;
-            margin-right: auto;
-        }
+        justify-content: center;
     }
 }
 
 @mixin link-styles {
-    font-size: 0.875rem;
-    color: var(--color-interactive);
+    @include type-style('body-compact-01');
+    color: $link-primary;
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
 
     &:hover {
-        color: var(--color-interactive-hover);
+        color: $link-primary-hover;
     }
 
     &:focus {
-        outline: 2px solid var(--color-interactive);
+        outline: 2px solid $focus;
         outline-offset: 2px;
-        border-radius: 2px;
     }
 }
 
 @mixin text-button {
-    font-size: 0.875rem;
-    color: var(--color-interactive);
-    font-weight: 500;
+    @include type-style('body-compact-01');
+    color: $link-primary;
+    font-weight: 600;
     background: none;
     border: none;
     cursor: pointer;
     padding: 0;
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
 
     &:hover {
-        color: var(--color-interactive-hover);
+        color: $link-primary-hover;
+        text-decoration: underline;
     }
 
     &:disabled {
@@ -96,13 +91,13 @@
 }
 
 @mixin secondary-text {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
+    @include type-style('body-compact-01');
+    color: $text-secondary;
 }
 
 @mixin divider-container {
     position: relative;
-    margin: 0.5rem 0;
+    margin: $spacing-04 0;
 }
 
 @mixin divider-line {
@@ -114,24 +109,23 @@
 
 @mixin divider-border {
     width: 100%;
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid $border-subtle-01;
 }
 
 @mixin divider-text-container {
     position: relative;
     display: flex;
     justify-content: center;
-    font-size: 0.875rem;
+    @include type-style('label-01');
 }
 
 @mixin divider-text {
-    padding: 0 0.5rem;
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-secondary);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    padding: 0 $spacing-03;
+    background-color: $layer-01;
+    color: $text-secondary;
 }
 
 @mixin navigation-section {
     text-align: center;
-    margin-top: 1rem;
+    margin-top: $spacing-05;
 }

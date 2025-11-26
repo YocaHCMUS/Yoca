@@ -1,17 +1,9 @@
 /**
  * Carbon Design System Integration
- * Import Carbon components and styles with Yoca theme customizations
+ * Import Carbon components and styles with proper theme configuration
  */
 
 // Import Carbon Design System styles
-@use '@carbon/react';
-
-// Import Carbon grid system
-@use '@carbon/react/scss/grid';
-
-// Import Carbon theme tokens
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/themes';
-
-// Carbon component overrides can be added here
-// For now, we use Carbon's default theme with light/dark mode support
+// This includes all theme tokens and component styles
+@use '@carbon/styles';
+@use '@carbon/styles/scss/theme';
