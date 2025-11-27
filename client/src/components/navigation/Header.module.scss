@@ -44,18 +44,46 @@
 }
 
 /* Profile button and dropdown */
+.profileWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .profileButton {
   position: relative;
-
-  &:hover .profileDropdown {
-    display: block;
+  
+  &:hover {
+    background-color: $layer-hover-01 !important;
+    
+    svg {
+      fill: $icon-primary !important;
+    }
   }
+  
+  &:active {
+    background-color: $layer-active-01 !important;
+  }
+  
+  &:focus {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
+  }
+  
+  svg {
+    fill: $icon-primary;
+  }
+}
 
-  margin-left: $spacing-05;
+/* Backdrop for closing dropdown */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
 }
 
 .profileDropdown {
-  display: none;
   position: absolute;
   right: 0;
   top: 100%;
@@ -63,20 +91,40 @@
   width: 16rem;
   background-color: $layer-01;
   border-radius: 0;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   border: 1px solid $border-subtle-01;
-  z-index: 1001;
+  z-index: 1000;
+  animation: slideDown 110ms cubic-bezier(0, 0, 0.38, 0.9);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .profileInfo {
-  padding: $spacing-05;
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  padding: $spacing-04 $spacing-05;
   border-bottom: 1px solid $border-subtle-01;
+  
+  svg {
+    fill: $icon-primary;
+  }
 }
 
 .username {
   @include type-style('body-compact-01');
   font-weight: 600;
   color: $text-primary;
+  margin: 0;
 }
 
 .signOutButton {
@@ -84,9 +132,9 @@
   padding: $spacing-04 $spacing-05;
   text-align: left;
   @include type-style('body-compact-01');
-  color: $text-secondary;
-  transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9), 
-              color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+  color: $text-primary;
+  transition: background-color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9), 
+              color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
   border: none;
   background: none;
   cursor: pointer;
