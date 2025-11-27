@@ -12,7 +12,8 @@
     "build": "npm run build --workspaces",
     "preview": "npm run start --workspace=server & npm run preview --workspace=client",
     "lint": "npm run lint --workspaces",
-    "clean": "npm run clean --workspaces"
+    "clean": "npm run clean --workspaces",
+    "db:studio": "npm run db:studio --workspace server"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
