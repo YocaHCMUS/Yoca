@@ -95,7 +95,7 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children, onNavigate }
                 onRequestClose={handleCloseModals}
                 passiveModal
                 className={styles.authModal}
-                size="sm"
+                size="lg"
             >
                 <SignInForm
                 onSuccess={handleAuthSuccess}
@@ -110,7 +110,7 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children, onNavigate }
                 onRequestClose={handleCloseModals}
                 passiveModal
                 className={styles.authModal}
-                size="sm"
+                size="lg"
             >
                 <SignUpForm
                 onSuccess={handleAuthSuccess}
