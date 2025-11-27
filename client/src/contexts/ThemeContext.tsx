@@ -16,7 +16,6 @@ export type ThemeMode = 'light' | 'dark';
 interface ThemeContextType {
   theme: ThemeMode;
   toggleTheme: () => void;
-  setTheme: (theme: ThemeMode) => void;
 }
 
 /**
@@ -34,119 +33,49 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  */
 interface ThemeProviderProps {
   children: React.ReactNode;
-  defaultTheme?: ThemeMode;
 }
 
 /**
  * Get initial theme from localStorage or system preference
  */
-const getInitialTheme = (defaultTheme?: ThemeMode): ThemeMode => {
-  // Check localStorage first
+const getInitialTheme = (): ThemeMode => {
   const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
   if (storedTheme === 'light' || storedTheme === 'dark') {
     return storedTheme;
   }
 
-  // Use provided default theme
-  if (defaultTheme) {
-    return defaultTheme;
-  }
-
   // Check system preference
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
     return 'dark';
   }
 
-  // Default to light theme
   return 'light';
-};
-
-/**
- * Apply theme to document
- */
-const applyTheme = (theme: ThemeMode): void => {
-  const root = document.documentElement;
-  const body = document.body;
-
-  console.log('Applying theme:', theme); // Debug log
-
-  if (theme === 'dark') {
-    root.classList.add('dark');
-    body.classList.add('dark');
-    root.setAttribute('data-carbon-theme', 'g100'); // Carbon dark theme
-    console.log('Set data-carbon-theme to g100'); // Debug log
-  } else {
-    root.classList.remove('dark');
-    body.classList.remove('dark');
-    root.setAttribute('data-carbon-theme', 'white'); // Carbon light theme
-    console.log('Set data-carbon-theme to white'); // Debug log
-  }
-  
-  // Force a repaint
-  root.style.display = 'none';
-  root.offsetHeight; // Trigger reflow
-  root.style.display = '';
 };
 
 /**
  * Theme Provider Component
  * Wraps the application to provide theme state and methods
  */
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, defaultTheme }) => {
-  const [theme, setThemeState] = useState<ThemeMode>(() => getInitialTheme(defaultTheme));
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
 
   /**
-   * Apply theme on mount and when theme changes
+   * Persist theme to localStorage when it changes
    */
   useEffect(() => {
-    applyTheme(theme);
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
-
-  /**
-   * Listen for system theme changes
-   */
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't manually set a preference
-      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-      if (!storedTheme) {
-        setThemeState(e.matches ? 'dark' : 'light');
-      }
-    };
-
-    // Modern browsers
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    // Legacy browsers
-    else if (mediaQuery.addListener) {
-      mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
-    }
-  }, []);
 
   /**
    * Toggle between light and dark themes
    */
   const toggleTheme = useCallback(() => {
-    setThemeState((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-  }, []);
-
-  /**
-   * Set theme to a specific value
-   */
-  const setTheme = useCallback((newTheme: ThemeMode) => {
-    setThemeState(newTheme);
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   }, []);
 
   const contextValue: ThemeContextType = {
     theme,
     toggleTheme,
-    setTheme,
   };
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
@@ -163,13 +92,4 @@ export const useTheme = (): ThemeContextType => {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-};
-
-/**
- * Hook to get current theme only
- * Useful when you only need to read the theme without calling methods
- */
-export const useThemeMode = (): ThemeMode => {
-  const { theme } = useTheme();
-  return theme;
 };
