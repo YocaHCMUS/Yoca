@@ -22,12 +22,4 @@ export class Storage {
   static generateTimestamp(): string {
     return dayjs().format("YYYY-MM-DD HH-MM-SS");
   }
-
-  // Check if we should save debug files
-  static shouldSaveDebugFiles(): boolean {
-    return (
-      process.env.NODE_ENV === "development" ||
-      process.env.SAVE_DEBUG_FILES === "true"
-    );
-  }
 }

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import * as bit from "../util/util-bitquery.js";
+import * as bitquery from "../util/util-bitquery.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateQuery } from "../middlewares/validation.js";
@@ -17,7 +17,7 @@ async function getTokenImage(uri: string): Promise<string> {
     const metaData = await resp.json();
     return metaData.image ?? "";
   } else {
-    // TODO: Set placeholder image
+    // TODO: Set placeholder image URL
     return "placeholder";
   }
 }
@@ -29,9 +29,9 @@ const app = new Hono()
       const { limit } = c.req.valid("query");
       // GraphQL query to Bitquery
       const query = `
-        {
+        query GetLatestTransfers($limit: Int!) {
           Solana {
-            Transfers(limit: { count : ${limit}}, orderBy: {descending: Block_Time}) {
+            Transfers(limit: { count : $limit}, orderBy: {descending: Block_Time}) {
               Transfer {
                 Amount
                 AmountInUSD
@@ -57,12 +57,12 @@ const app = new Hono()
         }
       `;
 
-      const req = new Request(bit.getStreamingEndpoint(), {
+      const req = new Request(bitquery.getStreamingEndpoint(), {
         method: "POST",
-        headers: bit.getRequiredHeaders(),
+        headers: bitquery.getRequiredHeaders(),
         body: JSON.stringify({
           query,
-          variables: {},
+          variables: { limit },
         }),
       });
 
@@ -72,35 +72,33 @@ const app = new Hono()
         const res = await resp.json();
 
         const transfers: Transfer[] = await Promise.all(
-          // Bitquery wraps their return values in a "data" field
-          res.data.Solana.Transfers.map(
-            async (rawTransfer: any): Promise<Transfer> => {
-              let tokenImgUrl = "";
-              try {
-                tokenImgUrl = await getTokenImage(
-                  rawTransfer.Transfer.Currency.Uri,
-                );
-              } catch (err) {
-                console.log("Unable to fetch image");
-              }
+          // GraphQL wraps return values in a "data" field
+          res.data.Solana.Transfers.map(async (rawTransfer: any) => {
+            let tokenImgUrl = "";
+            try {
+              tokenImgUrl = await getTokenImage(
+                rawTransfer.Transfer.Currency.Uri,
+              );
+            } catch (err) {
+              console.log("Unable to fetch image");
+            }
 
-              return {
-                from: rawTransfer.Transfer.Sender.Address,
-                to: rawTransfer.Transfer.Receiver.Address,
-                amount: rawTransfer.Transfer.Amount,
-                amountUsd: rawTransfer.Transfer.AmountInUSD,
-                time: rawTransfer.Block.Time,
-                tokenMeta: {
-                  name: rawTransfer.Transfer.Currency.Name,
-                  symbol: rawTransfer.Transfer.Currency.Symbol,
-                  isNative: rawTransfer.Transfer.Currency.Native,
-                  isWrapped: rawTransfer.Transfer.Currency.Wrapped,
-                  address: rawTransfer.Transfer.Currency.MintAddress,
-                  imageUrl: tokenImgUrl,
-                },
-              };
-            },
-          ),
+            return {
+              from: rawTransfer.Transfer.Sender.Address,
+              to: rawTransfer.Transfer.Receiver.Address,
+              amount: rawTransfer.Transfer.Amount,
+              amountUsd: rawTransfer.Transfer.AmountInUSD,
+              time: rawTransfer.Block.Time,
+              tokenMeta: {
+                name: rawTransfer.Transfer.Currency.Name,
+                symbol: rawTransfer.Transfer.Currency.Symbol,
+                isNative: rawTransfer.Transfer.Currency.Native,
+                isWrapped: rawTransfer.Transfer.Currency.Wrapped,
+                address: rawTransfer.Transfer.Currency.MintAddress,
+                imageUrl: tokenImgUrl,
+              },
+            };
+          }),
         );
 
         if (Storage.shouldSaveDebugFiles()) {

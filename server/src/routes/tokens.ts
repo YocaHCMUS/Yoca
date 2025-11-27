@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TokenMarketData, TokenMeta, TokenPrice } from "../data/schema.js";
 import {
+  addressSchema,
   paginationSchema,
   tokenAddressListSchema,
   tokenIdSchema,
@@ -12,10 +13,45 @@ import {
 import { Storage as Storage } from "../services/storage.js";
 import { validateQuery, validateParam } from "../middlewares/validation.js";
 import { Message, messageText } from "../util/response-messages.js";
+import * as tokenService from "@services/tokens.js";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 const app = new Hono()
+  .get("/meta/:address", validateParam(addressSchema), async (c) => {
+    try {
+      const {address} = c.req.valid("param");
+      // First check if we already have the meta value
+      const meta = tokenService.getTokenMeta(address);
+      
+      // If not, fetch it
+      if (meta == null){
+        const cgId = tokenService.fetchTokenMeta(address);
+
+      }
+      if (cgId == null){
+        // If cg id not found, fetch it
+        tokenService.fetchTokenMeta(address);
+      } 
+
+      const cgEndpoint = cg.getEndpoint("/coins/list");
+      cgEndpoint.searchParams.append("include_platform", "true");
+
+      const req = new Request(cgEndpoint, {
+        method: "GET",
+        headers: cg.getRequiredHeaders(),
+      });
+      const resp = await fetch(req);
+
+      if (resp.ok) {
+        const res = await resp.json();
+      } else {
+        return c.json(messageText[Message.FailedToFetchExternalData], 502);
+      }
+    } catch {
+      return c.json(messageText[Message.InternalServerError], 500);
+    }
+  }),
   // Get all solana tokens
   .get("/", validateQuery(paginationSchema), async (c) => {
     try {
@@ -45,18 +81,16 @@ const app = new Hono()
           )
           .slice(0, pagination.limit);
 
-        // Optional: Save to temp file in development
-        if (Storage.shouldSaveDebugFiles()) {
-          const outPath = join(currentDir, "../temp/solana-coin-list.json");
-          await Storage.saveJson(outPath, solanaCoins);
-        }
+        // Save to temp file in development
+        const outPath = join(currentDir, "../temp/solana-coin-list.json");
+        await Storage.saveJson(outPath, solanaCoins);
 
         return c.json(solanaCoins, 200);
       } else {
-        return c.json("Failed to fetch data from external sources", 502);
+        return c.json(messageText[Message.FailedToFetchExternalData], 502);
       }
     } catch (err) {
-      return c.json(messageText[Message.FailedToFetchExternalData], 500);
+      return c.json(messageText[Message.InternalServerError], 500);
     }
   })
   // Get price of tokens by token addresses (comma seperated)

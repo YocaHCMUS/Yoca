@@ -5,16 +5,11 @@ export function getEndpoint(path: string): URL {
 }
 
 export function getRequiredHeaders(): Record<string, string> {
-  const apiKey = process.env.COINGECKO_API_KEY;
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    "x-cg-pro-api-key": process.env.COINGECKO_API_KEY!,
   };
-
-  if (apiKey) {
-    headers["x-cg-demo-api-key"] = apiKey;
-  }
 
   return headers;
 }

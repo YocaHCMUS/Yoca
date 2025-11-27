@@ -1,7 +1,5 @@
 import { useState, type FormEvent } from "react";
 import {api} from "@api/main.js";
-import { graphql } from "gql.tada";
-import { useQuery } from "@apollo/client/react";
 
 import z from "zod";
 import { 
@@ -12,22 +10,8 @@ import {
   Form
 } from "@carbon/react";
 
-const GET_USER_EMAIL_QUERY = graphql(`
-  query {
-    posts(limit: 1){
-      user {
-        email
-        age
-        id
-      }
-    }
-  }
-`);
-
 export default function LoginPage() {
 
-  const {data} = useQuery(GET_USER_EMAIL_QUERY);
-  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
