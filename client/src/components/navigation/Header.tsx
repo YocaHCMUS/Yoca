@@ -40,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
   const { t } = useTranslation();
   const { authState, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   /**
    * Handle navigation item click
@@ -55,6 +56,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
    */
   const handleSignOut = () => {
     signOut();
+    setIsProfileOpen(false);
     if (onNavigate) {
       onNavigate('/auth');
     }
@@ -106,26 +108,42 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
 
             {/* User profile or auth buttons */}
             {authState.isAuthenticated ? (
-              <HeaderGlobalAction
-                aria-label={t('nav.profile')}
-                tooltipAlignment="end"
-                className={styles.profileButton}
-              >
-                <UserAvatar size={20} />
-                <div className={styles.profileDropdown}>
-                  <div className={styles.profileInfo}>
-                    <p className={styles.username}>
-                      {authState.user?.username || authState.user?.email}
-                    </p>
-                  </div>
-                  <button
-                    className={styles.signOutButton}
-                    onClick={handleSignOut}
-                  >
-                    {t('auth.signOut')}
-                  </button>
-                </div>
-              </HeaderGlobalAction>
+              <div className={styles.profileWrapper}>
+                <HeaderGlobalAction
+                  aria-label={t('nav.profile')}
+                  tooltipAlignment="end"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className={styles.profileButton}
+                >
+                  <UserAvatar size={20} />
+                </HeaderGlobalAction>
+
+                {isProfileOpen && (
+                  <>
+                    {/* Backdrop to close dropdown */}
+                    <div
+                      className={styles.backdrop}
+                      onClick={() => setIsProfileOpen(false)}
+                    />
+
+                    {/* Profile dropdown */}
+                    <div className={styles.profileDropdown}>
+                      <div className={styles.profileInfo}>
+                        <UserAvatar size={16} />
+                        <p className={styles.username}>
+                          {authState.user?.username || authState.user?.email}
+                        </p>
+                      </div>
+                      <button
+                        className={styles.signOutButton}
+                        onClick={handleSignOut}
+                      >
+                        {t('auth.signOut')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
               <div className={styles.authButtons}>
                 <button
