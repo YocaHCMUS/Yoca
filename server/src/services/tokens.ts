@@ -69,7 +69,6 @@ export async function getTokenMeta(tokenAddress: string) {
   //     tokenMeta: true,
   //   },
   // });
-
   if (result.length == 0) {
     return null;
   } else {
