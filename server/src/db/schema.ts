@@ -4,11 +4,10 @@ import {
   uuid,
   text,
   timestamp,
-  boolean,
   decimal as dec,
   varchar,
 } from "drizzle-orm/pg-core";
-import { inArray, relations } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 
 /*
  * Notes:
@@ -27,7 +26,7 @@ import { inArray, relations } from "drizzle-orm";
  * ```
  * [New]:
  * For readability:
- * I've have overite the decimal function to have default mode of "number"
+ * I've overwritten the decimal function to have default mode of "number"
  */
 
 function decimal(name: string) {

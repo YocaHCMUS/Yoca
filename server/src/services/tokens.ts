@@ -271,33 +271,31 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   const resp = await fetch(req);
 
   if (resp.ok) {
-    const res: CG_TokenMarketData = await resp.json();
+    const res: CG_TokenMarketData[] = await resp.json();
 
-    const marketDataList = await db
-      .insert(tokenMarketData)
-      .values({
-        priceUsd: res.current_price,
-        marketCap: res.market_cap,
-        marketCapRank: res.market_cap_rank,
-        fullyDilutedValuation: res.fully_diluted_valuation,
-        totalVolume: res.total_volume,
-        high24h: res.high_24h,
-        low24h: res.low_24h,
-        priceChange24h: res.price_change_24h,
-        priceChangePercentage24h: res.price_change_percentage_24h,
-        marketCapChange24h: res.market_cap_change_24h,
-        marketCapChangePercentage24h: res.market_cap_change_percentage_24h,
-        circulatingSupply: res.circulating_supply,
-        totalSupply: res.total_supply,
-        maxSupply: res.max_supply,
-        ath: res.ath,
-        athChangePercentage: res.ath_change_percentage,
-        atl: res.atl,
-        atlChangePercentage: res.atl_change_percentage,
-      })
-      .returning();
+    const marketDataList = res.map((rawMakertData) => ({
+      priceUsd: rawMakertData.current_price,
+      marketCap: rawMakertData.market_cap,
+      marketCapRank: rawMakertData.market_cap_rank,
+      fullyDilutedValuation: rawMakertData.fully_diluted_valuation,
+      totalVolume: rawMakertData.total_volume,
+      high24h: rawMakertData.high_24h,
+      low24h: rawMakertData.low_24h,
+      priceChange24h: rawMakertData.price_change_24h,
+      priceChangePercentage24h: rawMakertData.price_change_percentage_24h,
+      marketCapChange24h: rawMakertData.market_cap_change_24h,
+      marketCapChangePercentage24h:
+        rawMakertData.market_cap_change_percentage_24h,
+      circulatingSupply: rawMakertData.circulating_supply,
+      totalSupply: rawMakertData.total_supply,
+      maxSupply: rawMakertData.max_supply,
+      ath: rawMakertData.ath,
+      athChangePercentage: rawMakertData.ath_change_percentage,
+      atl: rawMakertData.atl,
+      atlChangePercentage: rawMakertData.atl_change_percentage,
+    }));
 
-    return marketDataList;
+    return await db.insert(tokenMarketData).values(marketDataList).returning();
   }
   return null;
 }
