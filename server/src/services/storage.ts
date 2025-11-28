@@ -4,22 +4,19 @@ import { dirname } from "node:path";
 import dayjs from "dayjs";
 
 export class Storage {
-  // Save data locally in pretty json format
-  static async saveText(filePath: string, data: string): Promise<void> {
+  static async saveText(filePath: string, data: string) {
     const dir = dirname(filePath);
     await mkdir(dir, { recursive: true });
     await writeFile(filePath, data, "utf-8");
   }
 
-  // Save data locally in pretty json format
-  static async saveJson(filePath: string, data: unknown): Promise<void> {
+  static async saveJson(filePath: string, data: unknown) {
     const dir = dirname(filePath);
     await mkdir(dir, { recursive: true });
     await writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
   }
 
-  // Generate a timestamp  in "YYYY-MM-DD HH-MM-SS" format
-  static generateTimestamp(): string {
+  static generateTimestamp() {
     return dayjs().format("YYYY-MM-DD HH-MM-SS");
   }
 }

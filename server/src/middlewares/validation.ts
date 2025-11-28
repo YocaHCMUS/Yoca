@@ -1,48 +1,51 @@
 import z from "zod";
 import { validator } from "hono/validator";
+import type { ValidationTargets } from "hono";
 
-export function validateQuery<T extends z.ZodType>(schema: T) {
-  return validator("query", (value, c) => {
+export const paginationSchema = z.object({
+  limit: z.number(),
+  offset: z.number(),
+});
+
+export const addressSchema = z.object({
+  address: z
+    .string()
+    .trim()
+    .min(32)
+    .max(44)
+    .regex(/^[1-9A-HJ-NP-Za-km-z]$/),
+});
+
+export const addressListSchema = z.object({
+  addresses: z
+    .string()
+    .transform((v) => v.split(","))
+    .pipe(
+      z
+        .string()
+        .trim()
+        .min(32)
+        .max(42)
+        .regex(/^[1-9A-HJ-NP-Za-km-z]$/)
+        .array(),
+    ),
+});
+
+export const tokenIdSchema = z.object({
+  id: z.string().trim().min(1),
+});
+
+export function validate<
+  T extends keyof ValidationTargets,
+  U extends z.ZodType,
+>(target: T, schema: U) {
+  return validator(target, (value, c) => {
     const parsed = schema.safeParse(value);
     if (!parsed.success) {
       return c.json(
         {
           error: "ValidationError",
-          message: "Invalid query parameters",
-          details: parsed.error.issues,
-        },
-        400,
-      );
-    }
-    return parsed.data;
-  });
-}
-
-export function validateBody<T extends z.ZodType>(schema: T) {
-  return validator("json", (value, c) => {
-    const parsed = schema.safeParse(value);
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: "ValidationError",
-          message: "Invalid json parameters",
-          details: parsed.error.issues,
-        },
-        400,
-      );
-    }
-    return parsed.data;
-  });
-}
-
-export function validateParam<T extends z.ZodType>(schema: T) {
-  return validator("param", (value, c) => {
-    const parsed = schema.safeParse(value);
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: "ValidationError",
-          message: "Invalid route parameters",
+          message: `Invalid ${target} parameters`,
           details: parsed.error.issues,
         },
         400,

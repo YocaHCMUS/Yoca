@@ -5,10 +5,34 @@ import {
   text,
   timestamp,
   boolean,
-  decimal,
+  decimal as dec,
   varchar,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { inArray, relations } from "drizzle-orm";
+
+/*
+ * Notes:
+ * [Old]:
+ * When you define a field with the type of decimal or numeric, you should
+ * add config with mode option of "number" for drizzle to be able to infer
+ * the field as number for future reference, or else it would be inferred
+ * as string. This is not drizzle's fault as node-postgress defined decimal
+ * and numeric values as string to keep precisions.
+ * Example:
+ * ```ts
+ * export const tokenMarketData = pgTable("token_market_data", {
+ *   priceUsd: dec("price_usd", { mode: "number" }).notNull(),
+ *   marketCap: dec("market_cap", { mode: "number" }).notNull(),
+ * }
+ * ```
+ * [New]:
+ * For readability:
+ * I've have overite the decimal function to have default mode of "number"
+ */
+
+function decimal(name: string) {
+  return dec(name, { mode: "number" });
+}
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -23,12 +47,15 @@ export const users = pgTable("users", {
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  name: text("name").notNull(),
-  symbol: text("symbol").notNull(),
-  isNative: boolean("is_native").notNull().default(false),
-  isWrapped: boolean("is_wrapped").notNull().default(false),
-  imageUrl: text("image_url"),
-  description: text("description"),
+  name: varchar("name").notNull(),
+  symbol: varchar("symbol").notNull(),
+
+  // Don't think they are very useful
+  // isNative: boolean("is_native").notNull().default(false),
+  // isWrapped: boolean("is_wrapped").notNull().default(false),
+
+  imageUrl: varchar("image_url"),
+  description: varchar("description"),
 
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -38,9 +65,19 @@ export const tokenMeta = pgTable("token_meta", {
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }),
   priceUsd: decimal("price_usd").notNull(),
+  priceChange24h: decimal("price_change_24").notNull(),
+  priceChangePercentage24h: decimal("price_change_24").notNull(),
+  marketCapChange24h: decimal("market_cap_change_24h").notNull(),
+  marketCapChangePercentage24h: decimal(
+    "market_cap_change_percentage_24h",
+  ).notNull(),
   marketCap: decimal("market_cap").notNull(),
-  usd24hVol: decimal("usd_24h_vol").notNull(),
-  usd24hChange: decimal("usd_24h_change").notNull(),
+  marketCapRank: decimal("market_cap_rank").notNull(),
+
+  // Currently require seperate API call to cg's simple/price
+  // usd24hVol: decimal("usd_24h_vol").notNull(),
+  // usd24hChange: decimal("usd_24h_change").notNull(),
+
   high24h: decimal("high_24h").notNull(),
   low24h: decimal("low_24h").notNull(),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
@@ -89,9 +126,19 @@ export const walletBalances = pgTable("wallet_balances", {
     .$onUpdate(() => new Date()),
 });
 
+export const tableMeta = pgTable("table_meta", {
+  tableName: text("table_name").notNull(),
+  lastRefresh: timestamp("last_refresh")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// The point of cg token - id list, is that it rarely changes, and when it does,
+// it'd be better that we update all at once
 export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
-  coinGeckoId: text().notNull().unique(),
+  // coinGeckId won't be unique during let's say an update that swaps two ids
+  coinGeckoId: text().notNull(),
 });
 
 // Relations
@@ -122,5 +169,3 @@ export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
     references: [wallets.address],
   }),
 }));
-
-export type TokenMetaSelect = typeof tokenMeta.$inferSelect;

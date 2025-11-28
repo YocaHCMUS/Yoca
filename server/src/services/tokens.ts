@@ -1,82 +1,174 @@
 import { db } from "@db/index.js";
-import { coinGeckoTokenList, tokenMeta, type TokenMetaSelect } from "@db/schema.js";
-import { eq, sql } from "drizzle-orm";
+import {
+  coinGeckoTokenList,
+  tableMeta,
+  tokenMarketData,
+  tokenMeta,
+} from "@db/schema.js";
+import { eq, inArray, sql, and, lte } from "drizzle-orm";
 import * as cg from "@util/util-coingecko.js";
+import { isExpired } from "@util/time.js";
+import {
+  CG_TTL_MS,
+  TOKEN_MARKET_DATA_TTL_MS,
+  TOKEN_META_TTL_MS,
+} from "../config/constants.js";
 
-interface Token {
+interface CG_Token {
   id: string;
   name: string;
   symbol: string;
   platforms: { solana?: string };
 }
 
-export async function getCoinGeckoId(tokenAddress: string) {
-  const result = await db
-    .select({
-      coinGeckoId: coinGeckoTokenList.coinGeckoId,
-    })
-    .from(coinGeckoTokenList)
-    .where(eq(coinGeckoTokenList.tokenAddress, tokenAddress));
+interface CG_TokenMeta {
+  address: string;
+  name: string;
+  symbol: string;
+  image: {
+    thumb: string;
+    small: string;
+    large: string;
+  };
+}
 
-  if (result.length == 0) {
+interface CG_TokenMarketData {
+  current_price: number;
+  market_cap: number;
+  market_cap_rank: number;
+  fully_diluted_valuation: number;
+  total_volume: number;
+  high_24h: number;
+  low_24h: number;
+  price_change_24h: number;
+  price_change_percentage_24h: number;
+  market_cap_change_24h: number;
+  market_cap_change_percentage_24h: number;
+  circulating_supply: number;
+  total_supply: number;
+  max_supply: number;
+  ath: number;
+  ath_change_percentage: number;
+  atl: number;
+  atl_change_percentage: number;
+}
+
+async function getCoinGeckoIdList(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
     return null;
+  }
+
+  // Check freshness of data (for CG token list we update all entries at once)
+  const freshCheck = await db
+    .select()
+    .from(tableMeta)
+    .where(eq(tableMeta.tableName, tokenMeta.name))
+    .limit(1);
+
+  const isStale =
+    freshCheck.length == 0 || isExpired(freshCheck[0].lastRefresh, CG_TTL_MS);
+
+  if (isStale) {
+    // Pull new data and conveniently get the required results
+    return await pullCgTokenList(tokenAddresses);
   } else {
-    return result[0];
+    // In TTL, query with what we already had
+    const res = await db
+      .select({
+        id: coinGeckoTokenList.coinGeckoId,
+        address: coinGeckoTokenList.tokenAddress,
+      })
+      .from(coinGeckoTokenList)
+      .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
+    const idLookup = Object.fromEntries(
+      res.map(({ id, address }) => [address, id]),
+    );
+    return tokenAddresses.map((address) => idLookup[address] || null);
   }
 }
 
-export async function fetchTokenMeta(tokenAddress: string) {
-  let cgIdResult = await getCoinGeckoId(tokenAddress);
-  if (cgIdResult == null) {
-    // Blind trust
-    cgIdResult = {
-      coinGeckoId: (await pullCgTokenList(tokenAddress))!,
-    };
-  
-  const cgId = cgIdResult.coinGeckoId;
-
-  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}`);
-
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
-  });
-
-  const resp = await fetch(req);
-  if (resp.ok) {
-    const result = await resp.json();
-    
-    await db.insert(tokenMeta).values([{
-      address: tokenAddress,
-      name: result.name!,
-      symbol: result.symbol,
-    }]);
-  } else {
+async function fetchTokenMetaList(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return null;
   }
 
-  return cgIdResult;
+  const cgIds =
+    (await getCoinGeckoIdList(tokenAddresses)) ??
+    (await pullCgTokenList(tokenAddresses));
+
+  if (!cgIds) {
+    return null;
+  }
+  const rawMetaList = await Promise.all(
+    cgIds
+      .filter((id) => id != null)
+      .map(async (id) => {
+        const cgEndpoint = cg.getEndpoint(`/coins/${id}`);
+        const req = new Request(cgEndpoint, {
+          method: "GET",
+          headers: cg.getRequiredHeaders(),
+        });
+
+        const resp = await fetch(req);
+        if (resp.ok) {
+          const rawMeta: CG_TokenMeta = await resp.json();
+          return rawMeta;
+        } else {
+          return null;
+        }
+      }),
+  );
+
+  const metaDataList = rawMetaList
+    .filter((rawMeta) => rawMeta != null)
+    .map((rawMeta) => ({
+      address: rawMeta.address,
+      symbol: rawMeta.symbol,
+      name: rawMeta.name,
+      imageUrl: rawMeta.image.small,
+    }));
+
+  return await db.insert(tokenMeta).values(metaDataList).returning();
 }
 
-export async function getTokenMeta(tokenAddress: string) {
-  const result = await db
+export async function getTokenMetaList(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return null;
+  }
+
+  const thresholdDate = new Date(Date.now() - TOKEN_META_TTL_MS);
+
+  const res = await db
     .select()
     .from(tokenMeta)
-    .where(eq(tokenMeta.address, tokenAddress));
-  // With ORM like query you can have easier typesafe relation with "with"
-  // const result = await db.query.tokenMarketData.findMany({
-  //   where: eq(tokenMeta.address, tokenAddress),
-  //   with: {
-  //     tokenMeta: true,
-  //   },
-  // });
-  if (result.length == 0) {
-    return null;
+    .where(
+      and(
+        lte(tokenMeta.updatedAt, thresholdDate),
+        inArray(tokenMeta.address, tokenAddresses),
+      ),
+    );
+
+  const metaDataLookup = Object.fromEntries(
+    res.map((meta) => [meta.address, meta]),
+  );
+
+  const staleAddresses = tokenAddresses.filter(
+    (address) => !metaDataLookup[address],
+  );
+
+  const refreshed = await fetchTokenMetaList(staleAddresses);
+  if (!refreshed || refreshed.length == 0) {
+    return res;
   } else {
-    return result;
+    return [...res, ...refreshed];
   }
 }
 
-async function pullCgTokenList(tokenAddress: string): Promise<string | null> {
+async function pullCgTokenList(tokenAddress: string[]) {
+  if (tokenAddress.length == 0) {
+    return null;
+  }
+
   const cgEndpoint = cg.getEndpoint("/coins/list");
   cgEndpoint.searchParams.append("include_platform", "true");
 
@@ -87,20 +179,25 @@ async function pullCgTokenList(tokenAddress: string): Promise<string | null> {
 
   const resp = await fetch(req);
 
-  let cgId = null;
+  let idList = null;
   if (resp.ok) {
-    const res = await resp.json();
-    const solanaTokens = (res.data as Token[])
+    const res: CG_Token[] = await resp.json();
+    const solanaTokens = res
       .filter((rawToken) => rawToken.platforms.solana)
-      .map((rawToken) => {
-        if (rawToken.platforms.solana! == tokenAddress) {
-          cgId = rawToken.id;
-        }
-        return {
-          coinGeckoId: rawToken.id,
-          tokenAddress: rawToken.platforms.solana!,
-        };
-      });
+      .map((rawToken) => ({
+        coinGeckoId: rawToken.id,
+        tokenAddress: rawToken.platforms.solana!,
+      }));
+
+    const idLookup = Object.fromEntries(
+      solanaTokens.map(({ coinGeckoId, tokenAddress }) => [
+        tokenAddress,
+        coinGeckoId,
+      ]),
+    );
+
+    idList = tokenAddress.map((address) => idLookup[address] || null);
+
     await db
       .insert(coinGeckoTokenList)
       .values(solanaTokens)
@@ -109,5 +206,98 @@ async function pullCgTokenList(tokenAddress: string): Promise<string | null> {
         set: { coinGeckoId: sql<string>`excluded.coin_gecko_id` },
       });
   }
-  return cgId;
+  return idList;
+}
+
+export async function getTokenMarketData(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return null;
+  }
+
+  const thresholdDate = new Date(Date.now() - TOKEN_MARKET_DATA_TTL_MS);
+  const res = await db
+    .select()
+    .from(tokenMarketData)
+    .where(
+      and(
+        lte(tokenMarketData.updatedAt, thresholdDate),
+        inArray(tokenMarketData.address, tokenMarketData),
+      ),
+    );
+
+  const marketDataLookup = Object.fromEntries(
+    res.map((marketData) => [marketData.address, marketData]),
+  );
+
+  const staleAddresses = tokenAddresses.filter(
+    (address) => !marketDataLookup[address],
+  );
+
+  const refreshed = await fetchTokenMarketData(staleAddresses);
+  if (!refreshed || refreshed.length == 0) {
+    return res;
+  } else {
+    return [...res, ...refreshed];
+  }
+}
+
+async function fetchTokenMarketData(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return null;
+  }
+
+  const cgIds =
+    (await getCoinGeckoIdList(tokenAddresses)) ??
+    (await pullCgTokenList(tokenAddresses));
+
+  if (!cgIds || cgIds.length == 0) {
+    return null;
+  }
+
+  const cgEndpoint = cg.getEndpoint(`/coins/makerts`);
+
+  cgEndpoint.search = new URLSearchParams({
+    ids: cgIds.filter((id) => id).join(","),
+    vs_currency: "usd",
+    order: "market_cap_desc",
+    price_percentage_change: "1h",
+  }).toString();
+
+  const req = new Request(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+
+  if (resp.ok) {
+    const res: CG_TokenMarketData = await resp.json();
+
+    const marketDataList = await db
+      .insert(tokenMarketData)
+      .values({
+        priceUsd: res.current_price,
+        marketCap: res.market_cap,
+        marketCapRank: res.market_cap_rank,
+        fullyDilutedValuation: res.fully_diluted_valuation,
+        totalVolume: res.total_volume,
+        high24h: res.high_24h,
+        low24h: res.low_24h,
+        priceChange24h: res.price_change_24h,
+        priceChangePercentage24h: res.price_change_percentage_24h,
+        marketCapChange24h: res.market_cap_change_24h,
+        marketCapChangePercentage24h: res.market_cap_change_percentage_24h,
+        circulatingSupply: res.circulating_supply,
+        totalSupply: res.total_supply,
+        maxSupply: res.max_supply,
+        ath: res.ath,
+        athChangePercentage: res.ath_change_percentage,
+        atl: res.atl,
+        atlChangePercentage: res.atl_change_percentage,
+      })
+      .returning();
+
+    return marketDataList;
+  }
+  return null;
 }
