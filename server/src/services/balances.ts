@@ -52,13 +52,18 @@ async function fetchWalletBalances(walletAddress: string) {
       }),
     );
 
-    // Update wallet entry
     await db
-      .update(wallets)
-      .set({
+      .insert(wallets)
+      .values({
+        address: walletAddress,
         balanceCount: balanceList.length,
       })
-      .where(eq(wallets.address, walletAddress));
+      .onConflictDoUpdate({
+        target: [wallets.address],
+        set: {
+          balanceCount: excluded(wallets.balanceCount),
+        },
+      });
 
     if (balanceList.length > 0) {
       return await db

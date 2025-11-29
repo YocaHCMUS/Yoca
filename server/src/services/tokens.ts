@@ -73,7 +73,20 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
 
   if (freshCheck.length == 0 || freshCheck[0].lastRefresh < thresholdDate) {
     // Pull new data and conveniently get the required results
-    return await pullCgTokenList(tokenAddresses);
+    const idLookup = await pullCgTokenList(tokenAddresses);
+    await db
+      .insert(tableMeta)
+      .values({
+        tableName: getTableName(tokenMeta),
+        lastRefresh: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [tableMeta.tableName],
+        set: {
+          lastRefresh: new Date(),
+        },
+      });
+    return idLookup;
   } else {
     // In TTL, query with what we already had
     const res = await db

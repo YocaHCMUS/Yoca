@@ -108,7 +108,7 @@ export const tokenTransfers = pgTable("token_transfers", {
 
 export const wallets = pgTable("wallets", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  balanceCount: integer().notNull().default(0),
+  balanceCount: integer("balance_count").notNull().default(0),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
@@ -132,10 +132,8 @@ export const walletBalances = pgTable(
 );
 
 export const tableMeta = pgTable("table_meta", {
-  tableName: text("table_name").notNull(),
-  lastRefresh: timestamp("last_refresh")
-    .notNull()
-    .$onUpdate(() => new Date()),
+  tableName: text("table_name").notNull().primaryKey(),
+  lastRefresh: timestamp("last_refresh").notNull(),
 });
 
 // The point of cg token - id list is that it rarely changes, and when it does,
