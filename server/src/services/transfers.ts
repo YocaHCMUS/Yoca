@@ -2,7 +2,7 @@ import { db } from "@db/index.js";
 import { tokenTransfers, tokenMeta } from "@db/schema.js";
 import { desc } from "drizzle-orm";
 import * as bitquery from "@util/util-bitquery.js";
-import { TOKEN_TRANSFERS_TTL_MS } from "../config/constants.js";
+import { TOKEN_TRANSFERS_TTL_MS } from "@config/constants.js";
 
 interface BQ_Transfer {
   Transfer: {

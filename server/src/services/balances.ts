@@ -37,7 +37,7 @@ async function fetchWalletBalances(walletAddress: string) {
     const data: SIM_BalancesResponse = await resp.json();
 
     const balancesList = data.balances.map((rawBalance) => ({
-      walletAddress: walletAddress,
+      address: walletAddress,
       tokenAddress: rawBalance.address,
       amount: rawBalance.amount,
       valueUsd: rawBalance.value_usd,

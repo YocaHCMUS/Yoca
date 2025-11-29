@@ -5,7 +5,7 @@ import {
   tokenMarketData,
   tokenMeta,
 } from "@db/schema.js";
-import { eq, inArray, sql, and, lte } from "drizzle-orm";
+import { eq, inArray, sql, and, lte, getTableName } from "drizzle-orm";
 import * as cg from "@util/util-coingecko.js";
 import {
   CG_TTL_MS,
@@ -61,7 +61,7 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
   const freshCheck = await db
     .select()
     .from(tableMeta)
-    .where(eq(tableMeta.tableName, tokenMeta.name))
+    .where(eq(tableMeta.tableName, getTableName(tokenMeta)))
     .limit(1);
 
   const thresholdDate = new Date(Date.now() - CG_TTL_MS);
