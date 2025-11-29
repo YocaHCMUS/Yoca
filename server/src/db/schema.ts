@@ -62,10 +62,10 @@ export const tokenMeta = pgTable("token_meta", {
 });
 
 export const tokenMarketData = pgTable("token_market_data", {
-  address: varchar("address", { length: 44 }),
+  address: varchar("address", { length: 44 }).primaryKey(),
   priceUsd: decimal("price_usd").notNull(),
   priceChange24h: decimal("price_change_24").notNull(),
-  priceChangePercentage24h: decimal("price_change_24").notNull(),
+  priceChangePercentage24h: decimal("price_change_percentage_24").notNull(),
   marketCapChange24h: decimal("market_cap_change_24h").notNull(),
   marketCapChangePercentage24h: decimal(
     "market_cap_change_percentage_24h",
@@ -168,3 +168,6 @@ export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
     references: [wallets.address],
   }),
 }));
+
+// Types
+export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;

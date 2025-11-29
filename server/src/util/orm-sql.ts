@@ -3,6 +3,6 @@
 import { sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-export function excluded<T extends PgColumn>(column: T) {
-  return sql<T["_"]["data"]>`excluded.${column.name}`;
+export function excluded<T extends PgColumn>(column: T): T["_"]["data"] {
+  return sql.raw(`excluded.${column.name}`);
 }

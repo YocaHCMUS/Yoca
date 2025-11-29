@@ -59,7 +59,7 @@ async function fetchWalletBalances(walletAddress: string) {
         .onConflictDoUpdate({
           target: [walletBalances.tokenAddress],
           set: {
-            amount: excluded(walletBalances.tokenAddress),
+            amount: excluded(walletBalances.amount),
             valueUsd: excluded(walletBalances.valueUsd),
             totalValueUsd: excluded(walletBalances.totalValueUsd),
           },
