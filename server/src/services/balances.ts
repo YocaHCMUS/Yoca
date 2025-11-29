@@ -1,9 +1,14 @@
 import { db } from "@db/index.js";
-import { walletBalances, wallets } from "@db/schema.js";
+import {
+  walletBalances,
+  wallets,
+  type WalletBalanceInsert,
+} from "@db/schema.js";
 import { eq } from "drizzle-orm";
 import * as sim from "@util/util-sim.js";
 import { WALLET_BALANCES_TTL_MS } from "@config/constants.js";
 import { excluded } from "@util/orm-sql.js";
+import { da } from "zod/locales";
 
 interface SIM_Balance {
   name: string;
@@ -35,29 +40,32 @@ async function fetchWalletBalances(walletAddress: string) {
 
   if (resp.ok) {
     const data: SIM_BalancesResponse = await resp.json();
+    console.log(data);
 
-    const balancesList = data.balances.map((rawBalance) => ({
-      address: walletAddress,
-      tokenAddress: rawBalance.address,
-      amount: rawBalance.amount,
-      valueUsd: rawBalance.value_usd,
-      totalValueUsd: rawBalance.value_usd,
-    }));
+    const balanceList: WalletBalanceInsert[] = data.balances.map(
+      (rawBalance) => ({
+        address: walletAddress,
+        tokenAddress: rawBalance.address,
+        amount: rawBalance.amount,
+        valueUsd: rawBalance.value_usd,
+        totalValueUsd: rawBalance.value_usd,
+      }),
+    );
 
     // Update wallet entry
     await db
       .update(wallets)
       .set({
-        balanceCount: balancesList.length,
+        balanceCount: balanceList.length,
       })
       .where(eq(wallets.address, walletAddress));
 
-    if (balancesList.length > 0) {
+    if (balanceList.length > 0) {
       return await db
         .insert(walletBalances)
-        .values(balancesList)
+        .values(balanceList)
         .onConflictDoUpdate({
-          target: [walletBalances.tokenAddress],
+          target: [walletBalances.address, walletBalances.tokenAddress],
           set: {
             amount: excluded(walletBalances.amount),
             valueUsd: excluded(walletBalances.valueUsd),
@@ -67,7 +75,7 @@ async function fetchWalletBalances(walletAddress: string) {
         .returning();
     }
 
-    return balancesList;
+    return balanceList;
   }
 
   return null;
@@ -83,7 +91,7 @@ export async function getWalletBalances(walletAddress: string) {
     .where(eq(wallets.address, walletAddress))
     .limit(1);
 
-  if (walletData.length === 0 || walletData[0].updatedAt < thresholdDate) {
+  if (walletData.length == 0 || walletData[0].updatedAt < thresholdDate) {
     // Data is stale or doesn't exist, fetch new data
     return await fetchWalletBalances(walletAddress);
   }

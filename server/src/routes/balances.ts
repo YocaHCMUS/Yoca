@@ -20,7 +20,8 @@ const app = new Hono().get(
           statusCode.BadGateway,
         );
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       return c.json(
         messageText.InternalServerError,
         statusCode.InternalServerError,

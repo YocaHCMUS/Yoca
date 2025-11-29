@@ -6,8 +6,10 @@ import {
   timestamp,
   decimal as dec,
   varchar,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { ta } from "zod/locales";
 
 /*
  * Notes:
@@ -112,18 +114,22 @@ export const wallets = pgTable("wallets", {
     .$onUpdate(() => new Date()),
 });
 
-export const walletBalances = pgTable("wallet_balances", {
-  address: varchar("wallet_address", { length: 44 }).primaryKey(),
-  tokenAddress: varchar("token_address", { length: 44 }),
-  totalValueUsd: decimal("total_value_usd").notNull(),
-  // Amount of token units
-  amount: decimal("amount").notNull(),
-  valueUsd: decimal("value_usd").notNull(),
+export const walletBalances = pgTable(
+  "wallet_balances",
+  {
+    address: varchar("address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    totalValueUsd: decimal("total_value_usd").notNull(),
+    // Amount of token units
+    amount: decimal("amount").notNull(),
+    valueUsd: decimal("value_usd").notNull(),
 
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.address, table.tokenAddress] })],
+);
 
 export const tableMeta = pgTable("table_meta", {
   tableName: text("table_name").notNull(),
@@ -171,3 +177,4 @@ export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
 
 // Types
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
+export type WalletBalanceInsert = typeof walletBalances.$inferInsert;

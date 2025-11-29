@@ -1,7 +1,7 @@
 import "@util/load-env.js";
 
-export function getEndpoint(route: string): URL {
-  return new URL(route, process.env.SIM_API_BASE_URL);
+export function getEndpoint(path: string): URL {
+  return new URL(`${process.env.SIM_API_BASE_URL}${path}`);
 }
 
 export function getRequiredHeaders(): HeadersInit {
