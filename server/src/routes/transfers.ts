@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { paginationSchema } from "../data/schema.js";
-import { Message, messageText } from "../util/response-messages.js";
-import { validate } from "@middlewares/validation.js";
+import { messageText, statusCode } from "@/util/responses.js";
+import { paginationSchema, validate } from "@middlewares/validation.js";
 import * as transferService from "@services/transfers.js";
 
 const app = new Hono().get(
@@ -14,12 +13,18 @@ const app = new Hono().get(
       const transfers = await transferService.getLatestTransfers(limit);
 
       if (transfers) {
-        return c.json(transfers, 200);
+        return c.json(transfers, statusCode.Ok);
       } else {
-        return c.json(messageText[Message.FailedToFetchRequestedData], 502);
+        return c.json(
+          messageText.FailedToFetchRequestedData,
+          statusCode.BadGateway,
+        );
       }
     } catch (err) {
-      return c.json(messageText[Message.InternalServerError], 500);
+      return c.json(
+        messageText.InternalServerError,
+        statusCode.InternalServerError,
+      );
     }
   },
 );

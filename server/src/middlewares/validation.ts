@@ -3,8 +3,8 @@ import { validator } from "hono/validator";
 import type { ValidationTargets } from "hono";
 
 export const paginationSchema = z.object({
-  limit: z.number(),
-  offset: z.number(),
+  limit: z.coerce.number(),
+  offset: z.coerce.number(),
 });
 
 export const addressSchema = z.object({
@@ -13,7 +13,7 @@ export const addressSchema = z.object({
     .trim()
     .min(32)
     .max(44)
-    .regex(/^[1-9A-HJ-NP-Za-km-z]$/),
+    .regex(/^[1-9A-HJ-NP-Za-km-z]+$/),
 });
 
 export const addressListSchema = z.object({
@@ -25,14 +25,19 @@ export const addressListSchema = z.object({
         .string()
         .trim()
         .min(32)
-        .max(42)
-        .regex(/^[1-9A-HJ-NP-Za-km-z]$/)
+        .max(44)
+        .regex(/^[1-9A-HJ-NP-Za-km-z]+$/)
         .array(),
     ),
 });
 
 export const tokenIdSchema = z.object({
   id: z.string().trim().min(1),
+});
+
+export const userSchema = z.object({
+  email: z.email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export function validate<

@@ -113,8 +113,8 @@ export const wallets = pgTable("wallets", {
 });
 
 export const walletBalances = pgTable("wallet_balances", {
-  walletAddress: varchar("wallet_address", { length: 44 }).primaryKey(),
-  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
+  address: varchar("wallet_address", { length: 44 }).primaryKey(),
+  tokenAddress: varchar("token_address", { length: 44 }),
   totalValueUsd: decimal("total_value_usd").notNull(),
   // Amount of token units
   amount: decimal("amount").notNull(),
@@ -132,12 +132,13 @@ export const tableMeta = pgTable("table_meta", {
     .$onUpdate(() => new Date()),
 });
 
-// The point of cg token - id list, is that it rarely changes, and when it does,
+// The point of cg token - id list is that it rarely changes, and when it does,
 // it'd be better that we update all at once
 export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
   // coinGeckId won't be unique during let's say an update that swaps two ids
   coinGeckoId: text().notNull(),
+  outes,
 });
 
 // Relations
@@ -164,7 +165,7 @@ export const walletBalances_tokenMeta = relations(
 
 export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
   wallet: one(wallets, {
-    fields: [walletBalances.walletAddress],
+    fields: [walletBalances.address],
     references: [wallets.address],
   }),
 }));

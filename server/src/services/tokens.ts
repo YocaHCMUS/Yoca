@@ -7,7 +7,6 @@ import {
 } from "@db/schema.js";
 import { eq, inArray, sql, and, lte } from "drizzle-orm";
 import * as cg from "@util/util-coingecko.js";
-import { isExpired } from "@util/time.js";
 import {
   CG_TTL_MS,
   TOKEN_MARKET_DATA_TTL_MS,
@@ -65,10 +64,9 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
     .where(eq(tableMeta.tableName, tokenMeta.name))
     .limit(1);
 
-  const isStale =
-    freshCheck.length == 0 || isExpired(freshCheck[0].lastRefresh, CG_TTL_MS);
+  const thresholdDate = new Date(Date.now() - CG_TTL_MS);
 
-  if (isStale) {
+  if (freshCheck.length == 0 || freshCheck[0].lastRefresh < thresholdDate) {
     // Pull new data and conveniently get the required results
     return await pullCgTokenList(tokenAddresses);
   } else {

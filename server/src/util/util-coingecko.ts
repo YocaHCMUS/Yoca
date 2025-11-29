@@ -1,5 +1,3 @@
-// Utility for CoinGecko API calls
-
 export function getEndpoint(path: string): URL {
   return new URL(path, process.env.COINGECKO_API_BASE_URL);
 }

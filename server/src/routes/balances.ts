@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { addressSchema } from "../data/schema.js";
-import { Message, messageText } from "../util/response-messages.js";
-import { validate } from "@middlewares/validation.js";
+import { messageText, statusCode } from "../util/responses.js";
+import { validate, addressSchema } from "@middlewares/validation.js";
 import * as balanceService from "@services/balances.js";
 
 const app = new Hono().get(
@@ -14,12 +13,18 @@ const app = new Hono().get(
       const balances = await balanceService.getWalletBalances(address);
 
       if (balances) {
-        return c.json(balances, 200);
+        return c.json(balances, statusCode.Ok);
       } else {
-        return c.json(messageText[Message.FailedToFetchRequestedData], 502);
+        return c.json(
+          messageText.FailedToFetchRequestedData,
+          statusCode.BadGateway,
+        );
       }
     } catch {
-      return c.json(messageText[Message.InternalServerError], 500);
+      return c.json(
+        messageText.InternalServerError,
+        statusCode.InternalServerError,
+      );
     }
   },
 );

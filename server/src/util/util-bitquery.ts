@@ -2,7 +2,7 @@ export function getStreamingEndpoint(): URL {
   return new URL(process.env.BITQUERY_STREAM_API_ENDPOINT!);
 }
 
-// Please use this carefully since it is more expensive then query from streaming API
+// Please use this carefully since it is more expensive than query from streaming API
 export function getEndpoint(): URL {
   return new URL(process.env.BITQUERY_API_ENDPOINT!);
 }

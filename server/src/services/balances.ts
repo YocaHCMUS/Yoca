@@ -2,7 +2,8 @@ import { db } from "@db/index.js";
 import { walletBalances, wallets } from "@db/schema.js";
 import { eq } from "drizzle-orm";
 import * as sim from "@util/util-sim.js";
-import { WALLET_BALANCES_TTL_MS } from "../config/constants.js";
+import { WALLET_BALANCES_TTL_MS } from "@config/constants.js";
+import { excluded } from "@util/orm-sql.js";
 
 interface SIM_Balance {
   name: string;
@@ -19,13 +20,10 @@ interface SIM_BalancesResponse {
   balances: SIM_Balance[];
 }
 
-const defaultLimit = 100;
-
 async function fetchWalletBalances(walletAddress: string) {
   const simEndpoint = sim.getEndpoint(`/balances/${walletAddress}`);
   simEndpoint.search = new URLSearchParams({
     chains: "solana",
-    limit: defaultLimit.toString(),
   }).toString();
 
   const req = new Request(simEndpoint, {
@@ -48,35 +46,27 @@ async function fetchWalletBalances(walletAddress: string) {
 
     // Update wallet entry
     await db
-      .insert(wallets)
-      .values({
-        address: walletAddress,
+      .update(wallets)
+      .set({
         balanceCount: balancesList.length,
       })
-      .onConflictDoUpdate({
-        target: wallets.address,
-        set: {
-          balanceCount: balancesList.length,
-          updatedAt: new Date(),
-        },
-      });
+      .where(eq(wallets.address, walletAddress));
 
-    // Insert or update balances
     if (balancesList.length > 0) {
       return await db
         .insert(walletBalances)
         .values(balancesList)
         .onConflictDoUpdate({
-          target: [walletBalances.walletAddress, walletBalances.tokenAddress],
+          target: [walletBalances.tokenAddress],
           set: {
-            amount: balancesList[0].amount,
-            valueUsd: balancesList[0].valueUsd,
-            totalValueUsd: balancesList[0].totalValueUsd,
-            updatedAt: new Date(),
+            amount: excluded(walletBalances.tokenAddress),
+            valueUsd: excluded(walletBalances.valueUsd),
+            totalValueUsd: excluded(walletBalances.totalValueUsd),
           },
         })
         .returning();
     }
+
     return balancesList;
   }
 
@@ -102,7 +92,7 @@ export async function getWalletBalances(walletAddress: string) {
   const res = await db
     .select()
     .from(walletBalances)
-    .where(eq(walletBalances.walletAddress, walletAddress));
+    .where(eq(walletBalances.address, walletAddress));
 
   return res;
 }
