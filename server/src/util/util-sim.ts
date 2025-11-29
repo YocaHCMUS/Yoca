@@ -1,3 +1,5 @@
+import "@util/load-env.js";
+
 export function getEndpoint(route: string): URL {
   return new URL(route, process.env.SIM_API_BASE_URL);
 }

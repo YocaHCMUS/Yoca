@@ -12,6 +12,8 @@ import {
   TOKEN_MARKET_DATA_TTL_MS,
   TOKEN_META_TTL_MS,
 } from "../config/constants.js";
+import { excluded } from "@util/orm-sql.js";
+import { Storage } from "./storage.js";
 
 interface CG_Token {
   id: string;
@@ -21,7 +23,9 @@ interface CG_Token {
 }
 
 interface CG_TokenMeta {
-  address: string;
+  platforms: {
+    solana: string;
+  };
   name: string;
   symbol: string;
   image: {
@@ -120,7 +124,7 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
   const metaDataList = rawMetaList
     .filter((rawMeta) => rawMeta != null)
     .map((rawMeta) => ({
-      address: rawMeta.address,
+      address: rawMeta.platforms.solana,
       symbol: rawMeta.symbol,
       name: rawMeta.name,
       imageUrl: rawMeta.image.small,
@@ -155,6 +159,7 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
   );
 
   const refreshed = await fetchTokenMetaList(staleAddresses);
+
   if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
@@ -169,7 +174,6 @@ async function pullCgTokenList(tokenAddress: string[]) {
 
   const cgEndpoint = cg.getEndpoint("/coins/list");
   cgEndpoint.searchParams.append("include_platform", "true");
-
   const req = new Request(cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
@@ -187,6 +191,8 @@ async function pullCgTokenList(tokenAddress: string[]) {
         tokenAddress: rawToken.platforms.solana!,
       }));
 
+    Storage.saveJson("./temp.json", solanaTokens);
+
     const idLookup = Object.fromEntries(
       solanaTokens.map(({ coinGeckoId, tokenAddress }) => [
         tokenAddress,
@@ -200,7 +206,7 @@ async function pullCgTokenList(tokenAddress: string[]) {
       .insert(coinGeckoTokenList)
       .values(solanaTokens)
       .onConflictDoUpdate({
-        target: coinGeckoTokenList.tokenAddress,
+        target: [coinGeckoTokenList.tokenAddress],
         set: { coinGeckoId: sql<string>`excluded.coin_gecko_id` },
       });
   }

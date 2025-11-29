@@ -137,7 +137,7 @@ export const tableMeta = pgTable("table_meta", {
 export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
   // coinGeckId won't be unique during let's say an update that swaps two ids
-  coinGeckoId: text().notNull(),
+  coinGeckoId: text("coin_gecko_id").notNull(),
 });
 
 // Relations
