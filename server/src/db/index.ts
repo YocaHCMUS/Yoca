@@ -13,7 +13,7 @@ const logger = new DefaultLogger({
   writer: {
     write(message: string): void {
       Storage.saveText(
-        join(currentDir, `../logs/sql/${Storage.generateTimestamp}.sql`),
+        join(currentDir, `../logs/sql/${Storage.generateTimestamp()}.sql`),
         message,
       );
     },
