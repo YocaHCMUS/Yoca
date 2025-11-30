@@ -6,10 +6,10 @@ import {
   tokenMeta,
   type TokenMarketDataInsert,
 } from "@db/schema.js";
-import { eq, inArray, sql, and, lte, getTableName, gte } from "drizzle-orm";
+import { eq, inArray, and, getTableName, gte } from "drizzle-orm";
 import * as cg from "@util/util-coingecko.js";
 import {
-  CG_TTL_MS,
+  CG_TOKEN_LIST_TTL_MS,
   TOKEN_MARKET_DATA_TTL_MS,
   TOKEN_META_TTL_MS,
 } from "../config/constants.js";
@@ -64,16 +64,19 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
 
   // Check freshness of data (for CG token list we update all entries at once)
   const freshCheck = await db
-    .select()
+    .select({
+      lastRefresh: tableMeta.lastRefresh,
+    })
     .from(tableMeta)
     .where(eq(tableMeta.tableName, getTableName(tokenMeta)))
     .limit(1);
 
-  const thresholdDate = new Date(Date.now() - CG_TTL_MS);
+  const thresholdDate = new Date(Date.now() - CG_TOKEN_LIST_TTL_MS);
 
   if (freshCheck.length == 0 || freshCheck[0].lastRefresh < thresholdDate) {
     // Pull new data and conveniently get the required results
     const idLookup = await pullCgTokenList(tokenAddresses);
+    // Update last refresh time
     await db
       .insert(tableMeta)
       .values({
@@ -95,7 +98,8 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
         address: coinGeckoTokenList.tokenAddress,
       })
       .from(coinGeckoTokenList)
-      .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
+      .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses))
+      .limit(tokenAddresses.length);
     const idLookup = Object.fromEntries(
       res.map(({ id, address }) => [address, id]),
     );
@@ -145,7 +149,18 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
       imageUrl: rawMeta.image.small,
     }));
 
-  return await db.insert(tokenMeta).values(metaDataList).returning();
+  return await db
+    .insert(tokenMeta)
+    .values(metaDataList)
+    .onConflictDoUpdate({
+      target: [tokenMeta.address],
+      set: {
+        name: excluded(tokenMeta.name),
+        symbol: excluded(tokenMeta.symbol),
+        imageUrl: excluded(tokenMeta.imageUrl),
+      },
+    })
+    .returning();
 }
 
 export async function getTokenMetaList(tokenAddresses: string[]) {
@@ -163,19 +178,16 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
         gte(tokenMeta.updatedAt, thresholdDate),
         inArray(tokenMeta.address, tokenAddresses),
       ),
-    );
+    )
+    .limit(tokenAddresses.length);
 
   const metaDataLookup = Object.fromEntries(
     res.map((meta) => [meta.address, meta]),
   );
 
-  console.log(metaDataLookup);
-
   const staleAddresses = tokenAddresses.filter(
     (address) => !metaDataLookup[address],
   );
-
-  console.log(staleAddresses);
 
   const refreshed = await fetchTokenMetaList(staleAddresses);
 
@@ -243,7 +255,8 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
         gte(tokenMarketData.updatedAt, thresholdDate),
         inArray(tokenMarketData.address, tokenAddresses),
       ),
-    );
+    )
+    .limit(tokenAddresses.length);
 
   const marketDataLookup = Object.fromEntries(
     res.map((marketData) => [marketData.address, marketData]),
@@ -326,7 +339,39 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       }),
     );
 
-    return await db.insert(tokenMarketData).values(marketDataList).returning();
+    return await db
+      .insert(tokenMarketData)
+      .values(marketDataList)
+      .onConflictDoUpdate({
+        target: [tokenMarketData.address],
+        set: {
+          priceUsd: excluded(tokenMarketData.priceUsd),
+          marketCap: excluded(tokenMarketData.marketCap),
+          marketCapRank: excluded(tokenMarketData.marketCapRank),
+          fullyDilutedValuation: excluded(
+            tokenMarketData.fullyDilutedValuation,
+          ),
+          totalVolume: excluded(tokenMarketData.totalVolume),
+          high24h: excluded(tokenMarketData.high24h),
+          low24h: excluded(tokenMarketData.low24h),
+          priceChange24h: excluded(tokenMarketData.priceChange24h),
+          priceChangePercentage24h: excluded(
+            tokenMarketData.priceChangePercentage24h,
+          ),
+          marketCapChange24h: excluded(tokenMarketData.marketCapChange24h),
+          marketCapChangePercentage24h: excluded(
+            tokenMarketData.marketCapChangePercentage24h,
+          ),
+          circulatingSupply: excluded(tokenMarketData.circulatingSupply),
+          totalSupply: excluded(tokenMarketData.totalSupply),
+          maxSupply: excluded(tokenMarketData.maxSupply),
+          ath: excluded(tokenMarketData.ath),
+          athChangePercentage: excluded(tokenMarketData.athChangePercentage),
+          atl: excluded(tokenMarketData.atl),
+          atlChangePercentage: excluded(tokenMarketData.atlChangePercentage),
+        },
+      })
+      .returning();
   }
   return null;
 }

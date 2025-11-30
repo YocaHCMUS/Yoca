@@ -9,16 +9,15 @@ import {
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { ta } from "zod/locales";
 
 /*
  * Notes:
  * [Old]:
  * When you define a field with the type of decimal or numeric, you should
  * add config with mode option of "number" for drizzle to be able to infer
- * the field as number for future reference, or else it would be inferred
+ * the field as number for future references, or else it would be inferred
  * as string. This is not drizzle's fault as node-postgress defined decimal
- * and numeric values as string to keep precisions.
+ * and numeric values as strings to keep precisions.
  * Example:
  * ```ts
  * export const tokenMarketData = pgTable("token_market_data", {
@@ -102,7 +101,7 @@ export const tokenTransfers = pgTable("token_transfers", {
   toAddress: varchar("to_address", { length: 44 }).notNull(),
   amount: decimal("amount").notNull(),
   amountUsd: decimal("amount_usd").notNull(),
-  time: integer("time").notNull(),
+  time: timestamp("time").notNull(),
   tokenAddress: varchar("token_address", { length: 44 }).notNull(),
 });
 
@@ -176,3 +175,5 @@ export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
 // Types
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
+export type UserInsert = typeof users.$inferInsert;
+export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;

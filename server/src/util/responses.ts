@@ -3,7 +3,7 @@ export const messageText = {
     "Failed to fetch requested data. Please try again later",
   FailedToFetchExternalData: "Failed to fetch data from external sources",
   InternalServerError:
-    "There is a problem happended on the server. Please try again later.",
+    "There was a problem happened on the server. Please try again later.",
 } as const;
 
 export const statusCode = {

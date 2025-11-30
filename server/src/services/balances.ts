@@ -8,7 +8,6 @@ import { eq } from "drizzle-orm";
 import * as sim from "@util/util-sim.js";
 import { WALLET_BALANCES_TTL_MS } from "@config/constants.js";
 import { excluded } from "@util/orm-sql.js";
-import { da } from "zod/locales";
 
 interface SIM_Balance {
   name: string;

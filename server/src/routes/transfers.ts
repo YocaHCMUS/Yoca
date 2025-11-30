@@ -21,6 +21,7 @@ const app = new Hono().get(
         );
       }
     } catch (err) {
+      console.error(err);
       return c.json(
         messageText.InternalServerError,
         statusCode.InternalServerError,

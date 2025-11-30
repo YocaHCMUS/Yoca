@@ -1,8 +1,7 @@
 import { db } from "@db/index.js";
-import { tokenTransfers, tokenMeta } from "@db/schema.js";
+import { tokenTransfers, type TokenTransferInsert } from "@db/schema.js";
 import { desc } from "drizzle-orm";
 import * as bitquery from "@util/util-bitquery.js";
-import { TOKEN_TRANSFERS_TTL_MS } from "@config/constants.js";
 
 interface BQ_Transfer {
   Transfer: {
@@ -15,15 +14,13 @@ interface BQ_Transfer {
       Address: string;
     };
     Currency: {
-      Symbol: string;
-      Name: string;
       MintAddress: string;
       Native: boolean;
-      Uri: string;
+      Wrapped: boolean;
     };
   };
   Block: {
-    Time: number;
+    Time: string;
   };
 }
 
@@ -33,19 +30,6 @@ interface BQ_TransfersResponse {
       Transfers: BQ_Transfer[];
     };
   };
-}
-
-async function getTokenImage(uri: string): Promise<string> {
-  try {
-    const resp = await fetch(uri, { method: "GET" });
-    if (resp.ok) {
-      const metaData = await resp.json();
-      return metaData.image ?? "";
-    }
-  } catch (err) {
-    console.log("Unable to fetch image from URI:", uri);
-  }
-  return "placeholder";
 }
 
 async function fetchLatestTransfers(limit: number) {
@@ -63,11 +47,9 @@ async function fetchLatestTransfers(limit: number) {
               Address
             }
             Currency {
-              Symbol
-              Name
-              MintAddress
               Native
-              Uri
+              Wrapped
+              MintAddress
             }
           }
           Block {
@@ -92,35 +74,23 @@ async function fetchLatestTransfers(limit: number) {
   if (resp.ok) {
     const res: BQ_TransfersResponse = await resp.json();
 
-    const transfersList = await Promise.all(
+    const transfersList: TokenTransferInsert[] = await Promise.all(
       res.data.Solana.Transfers.map(async (rawTransfer) => {
-        const tokenImgUrl = await getTokenImage(
-          rawTransfer.Transfer.Currency.Uri,
-        );
-
-        // Store token metadata if not exists
-        await db
-          .insert(tokenMeta)
-          .values({
-            address: rawTransfer.Transfer.Currency.MintAddress,
-            name: rawTransfer.Transfer.Currency.Name,
-            symbol: rawTransfer.Transfer.Currency.Symbol,
-            imageUrl: tokenImgUrl,
-          })
-          .onConflictDoNothing();
-
         return {
           fromAddress: rawTransfer.Transfer.Sender.Address,
           toAddress: rawTransfer.Transfer.Receiver.Address,
           amount: rawTransfer.Transfer.Amount,
           amountUsd: rawTransfer.Transfer.AmountInUSD,
-          time: rawTransfer.Block.Time,
-          tokenAddress: rawTransfer.Transfer.Currency.MintAddress,
+          time: new Date(rawTransfer.Block.Time),
+          tokenAddress: rawTransfer.Transfer.Currency.Native
+            ? "native"
+            : rawTransfer.Transfer.Currency.MintAddress,
         };
       }),
     );
 
-    // Insert transfers into database
+    console.log(transfersList);
+
     if (transfersList.length > 0) {
       return await db
         .insert(tokenTransfers)
@@ -135,8 +105,6 @@ async function fetchLatestTransfers(limit: number) {
 }
 
 export async function getLatestTransfers(limit: number) {
-  const thresholdDate = new Date(Date.now() - TOKEN_TRANSFERS_TTL_MS);
-
   // Try to get fresh data from cache
   const res = await db
     .select()
@@ -144,12 +112,7 @@ export async function getLatestTransfers(limit: number) {
     .orderBy(desc(tokenTransfers.time))
     .limit(limit);
 
-  // Check if we have enough fresh data
-  if (
-    res.length == 0 ||
-    (res.length > 0 && res[0].time < thresholdDate.getTime() / 1000)
-  ) {
-    // Data is stale or doesn't exist, fetch new data
+  if (res.length == 0) {
     return await fetchLatestTransfers(limit);
   }
 

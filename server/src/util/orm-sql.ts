@@ -1,4 +1,4 @@
-// Add quality of life function for Drizzle SQL-like query
+// Add quality of life functions for Drizzle SQL-like query
 
 import { sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
