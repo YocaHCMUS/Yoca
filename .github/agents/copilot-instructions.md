@@ -23,6 +23,7 @@ npm test; npm run lint
 TypeScript 5.x (strict mode enabled): Follow standard conventions
 
 ## Recent Changes
+- 002-data-chart-components: Added TypeScript 5.x (strict mode enabled)
 
 - 001-auth-ui-components: Added TypeScript 5.x (strict mode enabled)
 

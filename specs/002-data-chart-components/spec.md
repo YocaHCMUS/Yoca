@@ -180,7 +180,7 @@ Users need to filter chart data by time periods, specific tokens, transaction ty
 ### Edge Cases
 
 - What happens when user has no transaction history for selected time period? (Display empty state with helpful message)
-- How does system handle extremely large datasets (10,000+ transactions)? (Implement data aggregation and pagination)
+- How does system handle extremely large datasets (10,000+ transactions)? (Implement server-side data aggregation per FR-061; no pagination needed as aggregation reduces dataset size for visualization)
 - What happens when user portfolio value is zero or negative? (Display appropriate zero state or negative values in red)
 - How does chart rendering handle very small time windows (1 day) vs very large ones (5 years)? (Automatically adjust time granularity)
 - What happens when user has only one cryptocurrency in portfolio? (Distribution chart shows single segment with 100%)
@@ -234,9 +234,9 @@ Users need to filter chart data by time periods, specific tokens, transaction ty
 
 #### Data Filtering and Controls
 
-- **FR-023**: Each chart MUST support time period filtering with preset options (7D, 30D, 60D, 90D, 1Y, All)
+- **FR-023**: Each chart MUST support time period filtering with preset options (7D, 30D, 60D, 90D, 1Y, All) as default, with optional custom date range support for advanced users
 - **FR-024**: System MUST allow filtering by token type with "All tokens" as default and individual token selection
-- **FR-025**: System MUST provide transaction type filters (All time, All transactions, All trades, specific types)
+- **FR-025**: System MUST provide transaction type filters (All transactions, All trades, Transfers only, or specific transaction types)
 - **FR-026**: Filter selections MUST immediately update the chart display without page reload
 - **FR-027**: Chart filter state is non-persistent and resets when user navigates away or reloads page
 
@@ -264,7 +264,7 @@ Users need to filter chart data by time periods, specific tokens, transaction ty
 
 #### Visual Consistency
 
-- **FR-044**: All charts MUST use a contrast-focused color palette optimized for chart regions
+- **FR-044**: All charts MUST use the chartColors palette defined in research.md (8-color palette: #0f62fe, #24a148, #da1e28, #f1c21b, #8a3ffc, #ff832b, #005d5d, #009d9a) with WCAG 2.1 AA contrast ratios (4.5:1 for text, 3:1 for graphical elements)
 - **FR-045**: Positive values MUST be displayed in green/blue tones and negative values in red/orange tones
 - **FR-046**: Charts MUST follow consistent spacing, padding, and alignment standards
 - **FR-047**: Text labels MUST be readable with appropriate font sizes and contrast ratios
@@ -283,14 +283,14 @@ Users need to filter chart data by time periods, specific tokens, transaction ty
 - **FR-054**: System MUST automatically refresh chart data at 30-second intervals
 - **FR-055**: Component filter state MUST be non-persistent and reset on page reload
 - **FR-056**: State MUST be managed locally within individual chart components
-- **FR-057**: Components sharing the same container MUST share filter states (time period, token, transaction type)
+- **FR-057**: Charts rendered within the same dashboard page MUST share filter context via ChartProvider (time period, token, transaction type filters apply to all charts on that page)
 - **FR-058**: Components MUST be read-only with no user input affecting underlying data
 
 #### Data Handling
 
 - **FR-059**: System MUST display appropriate empty states when no data is available for selected filters
 - **FR-060**: Charts MUST handle missing data points gracefully with visual indicators or interpolation
-- **FR-061**: System MUST aggregate large datasets appropriately based on time granularity to maintain performance
+- **FR-061**: System MUST use server-side aggregation for datasets exceeding 5,000 points with time-based granularity (hourly for 7D period, daily for 30D/90D, weekly for 1Y, monthly for All). Client-side LTTB sampling MUST be applied for datasets exceeding 2,000 points to maintain rendering performance under 1 second
 - **FR-062**: Charts MUST display loading skeleton placeholder (following Carbon Design System pattern) while data is being fetched from REST API
 - **FR-063**: System MUST handle and display error states when data fails to load
 
@@ -326,7 +326,7 @@ Users need to filter chart data by time periods, specific tokens, transaction ty
 - **SC-004**: Chart components render correctly across all viewport sizes from mobile (320px) to desktop (1920px+)
 - **SC-005**: 95% of hover interactions display accurate tooltips with complete data within 100 milliseconds
 - **SC-006**: System handles datasets up to 10,000 data points through aggregation without visual degradation or performance issues
-- **SC-007**: All chart utility buttons (expand, download, filter) are discoverable and usable by 90% of users without instruction
+- **SC-007**: All chart utility buttons (expand, download, filter) follow Carbon Design System patterns with consistent iconography and tooltips on hover
 - **SC-008**: Chart empty states and error states are clear and actionable, reducing user confusion by 80%
 - **SC-009**: Color contrast ratios meet WCAG 2.1 AA standards (4.5:1 for text, 3:1 for graphical elements) across all chart components
 - **SC-010**: Users can complete common tasks (change time period, export data, expand chart) in under 3 clicks
