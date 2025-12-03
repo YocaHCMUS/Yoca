@@ -27,11 +27,11 @@ This is a monorepo web application:
 
 **Purpose**: Project initialization and dependency installation
 
-- [X] T001 Install chart dependencies: echarts@5.4.3, echarts-for-react@3.0.5, @types/echarts in client/
-- [X] T002 Install mini-player dependency: react-rnd@10.4.1 in client/
-- [X] T003 [P] Install date/timezone dependencies: date-fns@2.30.0, date-fns-tz@2.0.0 in client/
-- [X] T004 [P] Install utilities: lodash.debounce@4.0.8, @types/lodash.debounce in client/
-- [X] T005 Verify bundle size impact ≤135KB gzipped via npm run build
+- [x] T001 Install chart dependencies: echarts@5.4.3, echarts-for-react@3.0.5, @types/echarts in client/
+- [x] T002 Install mini-player dependency: react-rnd@10.4.1 in client/
+- [x] T003 [P] Install date/timezone dependencies: date-fns@2.30.0, date-fns-tz@2.0.0 in client/
+- [x] T004 [P] Install utilities: lodash.debounce@4.0.8, @types/lodash.debounce in client/
+- [x] T005 Verify bundle size impact ≤135KB gzipped via npm run build
 
 ---
 
