@@ -41,24 +41,24 @@ This is a monorepo web application:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create eCharts setup with tree-shaking in client/src/util/echarts-setup.ts
-- [ ] T007 [P] Define TypeScript types in client/src/types/chart.types.ts
-- [ ] T008 [P] Define data types in client/src/types/chart-data.types.ts
-- [ ] T009 [P] Define filter types in client/src/types/chart-filters.types.ts
-- [ ] T010 [P] Define API response types in client/src/types/chart-api.types.ts
-- [ ] T011 Create ChartContext for shared timezone state in client/src/contexts/ChartContext.tsx
-- [ ] T012 [P] Implement useChartFilters hook in client/src/hooks/useChartFilters.ts
-- [ ] T013 [P] Implement useAutoRefresh hook in client/src/hooks/useAutoRefresh.ts
-- [ ] T014 [P] Implement useChartExport hook in client/src/hooks/useChartExport.ts
-- [ ] T015 [P] Implement useFullscreen hook in client/src/hooks/useFullscreen.ts
-- [ ] T016 Create chartApi service in client/src/services/chart/chartApi.ts
-- [ ] T017 [P] Create chartExport utility in client/src/services/chart/chartExport.ts
-- [ ] T018 Create ChartWrapper base component in client/src/components/charts/shared/ChartWrapper.tsx
-- [ ] T019 [P] Create ChartSkeleton loading component in client/src/components/charts/shared/ChartSkeleton.tsx
-- [ ] T020 [P] Create ChartEmptyState component in client/src/components/charts/shared/ChartEmptyState.tsx
-- [ ] T021 [P] Create ChartErrorState component in client/src/components/charts/shared/ChartErrorState.tsx
-- [ ] T022 [P] Create ChartWrapper styles in client/src/components/charts/shared/ChartWrapper.module.scss
-- [ ] T023 Create chart helper utilities in client/src/util/chart-helpers.ts (formatCurrency, formatDate, formatTimestamp with timezone support, generateFilename for exports, estimateDataPoints for aggregation decisions)
+- [x] T006 Create eCharts setup with tree-shaking in client/src/util/echarts-setup.ts
+- [x] T007 [P] Define TypeScript types in client/src/types/chart.types.ts
+- [x] T008 [P] Define data types in client/src/types/chart-data.types.ts
+- [x] T009 [P] Define filter types in client/src/types/chart-filters.types.ts
+- [x] T010 [P] Define API response types in client/src/types/chart-api.types.ts
+- [x] T011 Create ChartContext for shared timezone state in client/src/contexts/ChartContext.tsx
+- [x] T012 [P] Implement useChartFilters hook in client/src/hooks/useChartFilters.ts
+- [x] T013 [P] Implement useAutoRefresh hook in client/src/hooks/useAutoRefresh.ts
+- [x] T014 [P] Implement useChartExport hook in client/src/hooks/useChartExport.ts
+- [x] T015 [P] Implement useFullscreen hook in client/src/hooks/useFullscreen.ts
+- [x] T016 Create chartApi service in client/src/services/chart/chartApi.ts
+- [x] T017 [P] Create chartExport utility in client/src/services/chart/chartExport.ts
+- [x] T018 Create ChartWrapper base component in client/src/components/charts/shared/ChartWrapper.tsx
+- [x] T019 [P] Create ChartSkeleton loading component in client/src/components/charts/shared/ChartSkeleton.tsx
+- [x] T020 [P] Create ChartEmptyState component in client/src/components/charts/shared/ChartEmptyState.tsx
+- [x] T021 [P] Create ChartErrorState component in client/src/components/charts/shared/ChartErrorState.tsx
+- [x] T022 [P] Create ChartWrapper styles in client/src/components/charts/shared/ChartWrapper.module.scss
+- [x] T023 Create chart helper utilities in client/src/util/chart-helpers.ts (formatCurrency, formatDate, formatTimestamp with timezone support, generateFilename for exports, estimateDataPoints for aggregation decisions)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

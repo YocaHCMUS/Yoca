@@ -14,12 +14,13 @@ Implement reusable chart components for visualizing cryptocurrency portfolio dat
 **Language/Version**: TypeScript 5.x (strict mode enabled)  
 **Primary Dependencies**:
 
-- Frontend: React 19, Vite 7, React Router 7, Carbon Design System
+- Frontend: React 19, Vite 7, React Router 7, Carbon Design System, react-i18next (i18n)
 - Backend: Hono 4, Node.js 20+, Zod (validation)
 - **Chart Library**: Apache eCharts 5.4.3, echarts-for-react 3.0.5
 - **Draggable UI**: react-rnd 10.4.1
 - **Date/Timezone**: date-fns 2.30.0, date-fns-tz 2.0.0
 - **Utilities**: lodash.debounce 4.0.8
+- **Localization**: i18next, react-i18next (multi-language support: en, vi, ja)
 
 **Storage**: REST API endpoints for pre-processed chart data (server/src/routes/charts/)  
 **Testing**: Vitest (unit tests), integration tests for API endpoints  

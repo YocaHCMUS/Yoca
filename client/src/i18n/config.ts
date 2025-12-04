@@ -120,6 +120,72 @@ const resources = {
         navigationSection: 'Navigation Header',
         placeholderContent: 'This is placeholder content for demonstration.',
       },
+      // Charts
+      charts: {
+        // Common
+        loading: 'Loading chart data...',
+        refreshing: 'Refreshing...',
+        retry: 'Try Again',
+        export: 'Export',
+        fullscreen: 'Fullscreen',
+        miniPlayer: 'Mini Player',
+        exitFullscreen: 'Exit Fullscreen',
+        
+        // Empty state
+        noDataTitle: 'No Data Available',
+        noDataMessage: 'There is no data to display for the selected filters.',
+        resetFilters: 'Reset Filters',
+        adjustFilters: 'Try adjusting your filters or date range',
+        
+        // Error state
+        errorTitle: 'Unable to Load Chart',
+        errorMessage: 'An error occurred while loading the chart data.',
+        technicalDetails: 'Technical Details',
+        networkError: 'Network error. Please check your connection.',
+        serverError: 'Server error. Please try again later.',
+        
+        // Export
+        exportPNG: 'Export as PNG',
+        exportSVG: 'Export as SVG',
+        exportCSV: 'Export as CSV',
+        exportSuccess: 'Chart exported successfully',
+        exportFailed: 'Export failed. Please try again.',
+        
+        // Filters
+        timePeriod: 'Time Period',
+        last7Days: 'Last 7 Days',
+        last30Days: 'Last 30 Days',
+        last60Days: 'Last 60 Days',
+        last90Days: 'Last 90 Days',
+        lastYear: 'Last Year',
+        allTime: 'All Time',
+        customRange: 'Custom Range',
+        tokens: 'Tokens',
+        allTokens: 'All Tokens',
+        transactionType: 'Transaction Type',
+        allTypes: 'All Types',
+        trades: 'Trades',
+        transfers: 'Transfers',
+        deposits: 'Deposits',
+        withdrawals: 'Withdrawals',
+        wallets: 'Wallets',
+        
+        // Chart titles
+        balanceTrend: 'Balance Trend',
+        assetDistribution: 'Asset Distribution',
+        profitLoss: 'Profit & Loss',
+        exchangeComparison: 'Exchange Comparison',
+        counterpartyActivity: 'Counterparty Activity',
+        volumeBenchmark: 'Volume Benchmark',
+        transactionDistribution: 'Transaction Distribution',
+        holdingDurations: 'Holding Durations',
+        
+        // Timezone
+        timezone: 'Timezone',
+        localTime: 'Local Time',
+        utc: 'UTC',
+        customTimezone: 'Custom Timezone',
+      },
     },
   },
   vi: {
@@ -235,6 +301,72 @@ const resources = {
         navigationSection: 'Thanh điều hướng',
         placeholderContent: 'Đây là nội dung mẫu để minh họa.',
       },
+      // Charts
+      charts: {
+        // Common
+        loading: 'Đang tải dữ liệu biểu đồ...',
+        refreshing: 'Đang làm mới...',
+        retry: 'Thử lại',
+        export: 'Xuất',
+        fullscreen: 'Toàn màn hình',
+        miniPlayer: 'Trình phát nhỏ',
+        exitFullscreen: 'Thoát toàn màn hình',
+        
+        // Empty state
+        noDataTitle: 'Không có dữ liệu',
+        noDataMessage: 'Không có dữ liệu để hiển thị cho bộ lọc đã chọn.',
+        resetFilters: 'Đặt lại bộ lọc',
+        adjustFilters: 'Thử điều chỉnh bộ lọc hoặc khoảng thời gian',
+        
+        // Error state
+        errorTitle: 'Không thể tải biểu đồ',
+        errorMessage: 'Đã xảy ra lỗi khi tải dữ liệu biểu đồ.',
+        technicalDetails: 'Chi tiết kỹ thuật',
+        networkError: 'Lỗi mạng. Vui lòng kiểm tra kết nối.',
+        serverError: 'Lỗi máy chủ. Vui lòng thử lại sau.',
+        
+        // Export
+        exportPNG: 'Xuất dưới dạng PNG',
+        exportSVG: 'Xuất dưới dạng SVG',
+        exportCSV: 'Xuất dưới dạng CSV',
+        exportSuccess: 'Xuất biểu đồ thành công',
+        exportFailed: 'Xuất thất bại. Vui lòng thử lại.',
+        
+        // Filters
+        timePeriod: 'Khoảng thời gian',
+        last7Days: '7 ngày qua',
+        last30Days: '30 ngày qua',
+        last60Days: '60 ngày qua',
+        last90Days: '90 ngày qua',
+        lastYear: 'Năm qua',
+        allTime: 'Toàn bộ thời gian',
+        customRange: 'Tùy chỉnh',
+        tokens: 'Token',
+        allTokens: 'Tất cả Token',
+        transactionType: 'Loại giao dịch',
+        allTypes: 'Tất cả loại',
+        trades: 'Giao dịch',
+        transfers: 'Chuyển khoản',
+        deposits: 'Nạp tiền',
+        withdrawals: 'Rút tiền',
+        wallets: 'Ví',
+        
+        // Chart titles
+        balanceTrend: 'Xu hướng số dư',
+        assetDistribution: 'Phân bổ tài sản',
+        profitLoss: 'Lãi & Lỗ',
+        exchangeComparison: 'So sánh sàn giao dịch',
+        counterpartyActivity: 'Hoạt động đối tác',
+        volumeBenchmark: 'Đánh giá khối lượng',
+        transactionDistribution: 'Phân bổ giao dịch',
+        holdingDurations: 'Thời gian nắm giữ',
+        
+        // Timezone
+        timezone: 'Múi giờ',
+        localTime: 'Giờ địa phương',
+        utc: 'UTC',
+        customTimezone: 'Múi giờ tùy chỉnh',
+      },
     },
   },
   ja: {
@@ -349,6 +481,72 @@ const resources = {
         googleAuthSection: 'Google認証',
         navigationSection: 'ナビゲーションヘッダー',
         placeholderContent: 'これはデモンストレーションのプレースホルダーコンテンツです。',
+      },
+      // Charts
+      charts: {
+        // Common
+        loading: 'チャートデータを読み込み中...',
+        refreshing: '更新中...',
+        retry: '再試行',
+        export: 'エクスポート',
+        fullscreen: 'フルスクリーン',
+        miniPlayer: 'ミニプレーヤー',
+        exitFullscreen: 'フルスクリーン終了',
+        
+        // Empty state
+        noDataTitle: 'データがありません',
+        noDataMessage: '選択したフィルターに表示するデータがありません。',
+        resetFilters: 'フィルターをリセット',
+        adjustFilters: 'フィルターまたは日付範囲を調整してください',
+        
+        // Error state
+        errorTitle: 'チャートを読み込めません',
+        errorMessage: 'チャートデータの読み込み中にエラーが発生しました。',
+        technicalDetails: '技術的な詳細',
+        networkError: 'ネットワークエラー。接続を確認してください。',
+        serverError: 'サーバーエラー。後でもう一度お試しください。',
+        
+        // Export
+        exportPNG: 'PNGとしてエクスポート',
+        exportSVG: 'SVGとしてエクスポート',
+        exportCSV: 'CSVとしてエクスポート',
+        exportSuccess: 'チャートのエクスポートに成功しました',
+        exportFailed: 'エクスポートに失敗しました。もう一度お試しください。',
+        
+        // Filters
+        timePeriod: '期間',
+        last7Days: '過去7日間',
+        last30Days: '過去30日間',
+        last60Days: '過去60日間',
+        last90Days: '過去90日間',
+        lastYear: '過去1年',
+        allTime: '全期間',
+        customRange: 'カスタム範囲',
+        tokens: 'トークン',
+        allTokens: 'すべてのトークン',
+        transactionType: '取引タイプ',
+        allTypes: 'すべてのタイプ',
+        trades: '取引',
+        transfers: '送金',
+        deposits: '入金',
+        withdrawals: '出金',
+        wallets: 'ウォレット',
+        
+        // Chart titles
+        balanceTrend: '残高推移',
+        assetDistribution: '資産分布',
+        profitLoss: '損益',
+        exchangeComparison: '取引所比較',
+        counterpartyActivity: '取引相手の活動',
+        volumeBenchmark: '取引量ベンチマーク',
+        transactionDistribution: '取引分布',
+        holdingDurations: '保有期間',
+        
+        // Timezone
+        timezone: 'タイムゾーン',
+        localTime: '現地時間',
+        utc: 'UTC',
+        customTimezone: 'カスタムタイムゾーン',
       },
     },
   },
