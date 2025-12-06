@@ -206,22 +206,29 @@ export interface HoldingDurationsResponse {
  * GET /api/charts/volume-benchmark
  */
 export interface VolumeBenchmarkResponse {
-  /** Volume data series for each wallet */
-  series: {
+  /** Volume data for each wallet */
+  wallets: {
     /** Wallet identifier */
-    walletId: string;
+    id: string;
     
     /** Wallet display name */
-    walletName: string;
+    name: string;
     
-    /** Time series data */
-    data: TimeSeriesPoint[];
+    /** Time series data points with volume */
+    dataPoints: {
+      /** Timestamp in milliseconds */
+      timestamp: number;
+      
+      /** Trading volume in USD */
+      volume: number;
+    }[];
   }[];
   
   /** Response metadata */
   metadata: {
     period: string;
     currency: string;
+    timezone: string;
   };
 }
 

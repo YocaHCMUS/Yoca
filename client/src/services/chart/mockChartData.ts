@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse } from '../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../types/chart-filters.types';
 
 /**
@@ -70,6 +70,28 @@ function getIntervalMs(aggregation: 'hourly' | 'daily' | 'weekly' | 'monthly'): 
       return 30 * 24 * 60 * 60 * 1000; // ~1 month
     default:
       return 24 * 60 * 60 * 1000;
+  }
+}
+
+/**
+ * Get time period details (days and data points)
+ */
+function getTimePeriodDetails(timePeriod: TimePeriod): { days: number; dataPoints: number } {
+  switch (timePeriod) {
+    case '7D':
+      return { days: 7, dataPoints: 168 }; // Hourly
+    case '30D':
+      return { days: 30, dataPoints: 30 }; // Daily
+    case '60D':
+      return { days: 60, dataPoints: 60 }; // Daily
+    case '90D':
+      return { days: 90, dataPoints: 13 }; // Weekly
+    case '1Y':
+      return { days: 365, dataPoints: 52 }; // Weekly
+    case 'All':
+      return { days: 730, dataPoints: 24 }; // Monthly
+    default:
+      return { days: 30, dataPoints: 30 }; // Default to 30 days
   }
 }
 
@@ -521,5 +543,108 @@ export async function mockFetchCounterpartyActivity(params?: {
     params?.timePeriod || '30D',
     params?.transactionType || 'all',
     params?.limit || 10
+  );
+}
+
+/**
+ * Generate mock volume benchmark comparison data
+ */
+function generateMockVolumeBenchmark(
+  timePeriod: TimePeriod,
+  walletIds: string[] = [],
+  timezone: string = 'UTC'
+): VolumeBenchmarkResponse {
+  // Define default wallets if none specified
+  const allWallets = [
+    { id: 'wallet-1', name: 'Main Wallet' },
+    { id: 'wallet-2', name: 'Trading Wallet' },
+    { id: 'wallet-3', name: 'Cold Storage' },
+    { id: 'wallet-4', name: 'DeFi Wallet' },
+    { id: 'wallet-5', name: 'NFT Wallet' },
+  ];
+  
+  // Filter wallets if specific IDs provided
+  const selectedWallets = walletIds.length > 0
+    ? allWallets.filter(w => walletIds.includes(w.id))
+    : allWallets;
+  
+  // Calculate time range and data points
+  const { days, dataPoints: pointCount } = getTimePeriodDetails(timePeriod);
+  const now = Date.now();
+  const startTime = now - (days * 24 * 60 * 60 * 1000);
+  const interval = (now - startTime) / pointCount;
+  
+  // Generate volume data for each wallet
+  const wallets = selectedWallets.map((wallet, walletIndex) => {
+    // Each wallet has different base volume and growth pattern
+    const baseVolume = 50000 + (walletIndex * 30000); // $50K - $170K base
+    const growthRate = 0.02 + (Math.random() * 0.03); // 2-5% growth trend
+    const volatility = 0.15 + (Math.random() * 0.15); // 15-30% volatility
+    
+    const dataPoints = [];
+    
+    for (let i = 0; i < pointCount; i++) {
+      const timestamp = startTime + (i * interval);
+      const progress = i / pointCount;
+      
+      // Trend component: gradual growth
+      const trend = baseVolume * (1 + (growthRate * progress));
+      
+      // Cyclical component: weekly trading patterns
+      const dayOfWeek = new Date(timestamp).getDay();
+      const weekdayFactor = dayOfWeek === 0 || dayOfWeek === 6 ? 0.7 : 1.0; // Lower weekend volume
+      
+      // Random noise component
+      const noise = (Math.random() - 0.5) * volatility;
+      
+      // Occasional spikes (10% chance)
+      const spike = Math.random() < 0.1 ? 1.5 : 1.0;
+      
+      // Calculate final volume
+      const volume = trend * weekdayFactor * (1 + noise) * spike;
+      
+      dataPoints.push({
+        timestamp: Math.floor(timestamp),
+        volume: Math.round(volume * 100) / 100, // Round to 2 decimals
+      });
+    }
+    
+    return {
+      id: wallet.id,
+      name: wallet.name,
+      dataPoints,
+    };
+  });
+  
+  return {
+    wallets,
+    metadata: {
+      period: timePeriod,
+      currency: 'USD',
+      timezone,
+    },
+  };
+}
+
+/**
+ * Mock fetch volume benchmark data with simulated network delay
+ */
+export async function mockFetchVolumeBenchmark(params?: {
+  timePeriod?: TimePeriod;
+  walletIds?: string[];
+  timezone?: string;
+}): Promise<VolumeBenchmarkResponse> {
+  // Simulate network delay
+  await delay(350 + Math.random() * 250);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch volume benchmark data');
+  }
+  
+  return generateMockVolumeBenchmark(
+    params?.timePeriod || '30D',
+    params?.walletIds || [],
+    params?.timezone || 'UTC'
   );
 }

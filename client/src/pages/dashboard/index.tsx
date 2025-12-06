@@ -7,6 +7,7 @@ import { AssetDistribution } from "../../components/charts/AssetDistribution";
 import { PnLChart } from "../../components/charts/PnLChart";
 import { ExchangeComparison } from "../../components/charts/ExchangeComparison";
 import { CounterpartyActivity } from "../../components/charts/CounterpartyActivity";
+import { VolumeBenchmark } from "../../components/charts/VolumeBenchmark";
 
 /**
  * Dashboard page - authenticated user dashboard
@@ -72,6 +73,17 @@ export default function DashboardPage() {
                   initialTimePeriod="30D"
                   initialTransactionType="all"
                   limit={10}
+                  enableAutoRefresh={true}
+                />
+              </Tile>
+              
+              {/* Volume Benchmark Chart */}
+              <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+                <VolumeBenchmark
+                  title={t("dashboard.volumeBenchmark.title", "Trading Volume Comparison")}
+                  height={400}
+                  initialTimePeriod="30D"
+                  chartType="line"
                   enableAutoRefresh={true}
                 />
               </Tile>
