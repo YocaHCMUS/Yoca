@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse } from '../../types/chart-api.types';
 import type { TimePeriod } from '../../types/chart-filters.types';
 
 /**
@@ -259,3 +259,172 @@ export async function mockFetchAssetDistribution(params?: {
     params?.wallets
   );
 }
+
+/**
+ * Generate mock P&L data
+ * 
+ * Creates realistic-looking profit and loss data with:
+ * - Daily P&L bars (positive and negative)
+ * - Cumulative P&L line showing running total
+ * - Realistic trading patterns (wins and losses)
+ */
+export function generateMockPnLData(
+  timePeriod: TimePeriod = '30D',
+  aggregation: 'daily' | 'weekly' | 'monthly' = 'daily'
+): PnLChartResponse {
+  const now = Date.now();
+  const startTimestamp = getStartTimestamp(timePeriod);
+  
+  // Determine interval based on aggregation
+  const intervalMs = aggregation === 'daily' ? 24 * 60 * 60 * 1000
+    : aggregation === 'weekly' ? 7 * 24 * 60 * 60 * 1000
+    : 30 * 24 * 60 * 60 * 1000; // monthly
+  
+  const dailyPnL: Array<{ timestamp: number; value: number }> = [];
+  const cumulativePnL: Array<{ timestamp: number; value: number }> = [];
+  
+  let cumulativeTotal = 0;
+  let currentTimestamp = startTimestamp;
+  
+  // Generate data points
+  while (currentTimestamp <= now) {
+    // Generate daily P&L with 60% win rate
+    const isWin = Math.random() < 0.6;
+    
+    // Base P&L value
+    const basePnL = isWin 
+      ? 500 + Math.random() * 1500  // Wins: $500 to $2000
+      : -(300 + Math.random() * 1200); // Losses: -$300 to -$1500
+    
+    // Add some market volatility
+    const volatility = (Math.random() - 0.5) * 400;
+    const dailyValue = basePnL + volatility;
+    
+    // Update cumulative total
+    cumulativeTotal += dailyValue;
+    
+    dailyPnL.push({
+      timestamp: currentTimestamp,
+      value: dailyValue,
+    });
+    
+    cumulativePnL.push({
+      timestamp: currentTimestamp,
+      value: cumulativeTotal,
+    });
+    
+    currentTimestamp += intervalMs;
+  }
+  
+  // Calculate start and end balance
+  const startBalance = 100000;
+  const endBalance = startBalance + cumulativeTotal;
+  
+  return {
+    dailyPnL,
+    cumulativePnL,
+    metadata: {
+      currency: 'USD',
+      startBalance,
+      endBalance,
+    },
+  };
+}
+
+/**
+ * Mock fetch P&L data with simulated network delay
+ */
+export async function mockFetchPnLChart(params?: {
+  period?: TimePeriod;
+  wallets?: string;
+  aggregation?: 'daily' | 'weekly' | 'monthly';
+}): Promise<PnLChartResponse> {
+  // Simulate network delay
+  await delay(300 + Math.random() * 200);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch P&L data');
+  }
+  
+  return generateMockPnLData(
+    params?.period || '30D',
+    params?.aggregation || 'daily'
+  );
+}
+
+/**
+ * Generate mock exchange comparison data
+ * 
+ * Creates realistic-looking exchange activity data with:
+ * - Multiple exchanges (Binance, Coinbase, Kraken, etc.)
+ * - Deposits and withdrawals for each exchange
+ * - Both transaction counts and volume metrics
+ */
+export function generateMockExchangeData(
+  timePeriod: TimePeriod = '30D',
+  metric: 'count' | 'volume' = 'count'
+): ExchangeComparisonResponse {
+  // Define major exchanges
+  const exchanges = [
+    { name: 'Binance', tier: 1 },
+    { name: 'Coinbase', tier: 1 },
+    { name: 'Kraken', tier: 2 },
+    { name: 'KuCoin', tier: 2 },
+    { name: 'Gemini', tier: 2 },
+    { name: 'Bitfinex', tier: 3 },
+    { name: 'Gate.io', tier: 3 },
+  ];
+  
+  const exchangeData = exchanges.map(exchange => {
+    // Tier 1 exchanges have higher activity
+    const activityMultiplier = exchange.tier === 1 ? 1.5 : exchange.tier === 2 ? 1.0 : 0.6;
+    
+    // Generate counts with some variation
+    const baseDeposits = Math.floor((50 + Math.random() * 150) * activityMultiplier);
+    const baseWithdrawals = Math.floor((40 + Math.random() * 120) * activityMultiplier);
+    
+    // Generate volumes (counts * avg transaction size)
+    const avgDepositSize = 1000 + Math.random() * 4000; // $1k to $5k
+    const avgWithdrawalSize = 1200 + Math.random() * 3800; // $1.2k to $5k
+    
+    return {
+      name: exchange.name,
+      deposits: baseDeposits,
+      withdrawals: baseWithdrawals,
+      depositsVolume: baseDeposits * avgDepositSize,
+      withdrawalsVolume: baseWithdrawals * avgWithdrawalSize,
+    };
+  });
+  
+  return {
+    exchanges: exchangeData,
+    metadata: {
+      period: timePeriod,
+      metric,
+    },
+  };
+}
+
+/**
+ * Mock fetch exchange comparison data with simulated network delay
+ */
+export async function mockFetchExchangeComparison(params?: {
+  timePeriod?: TimePeriod;
+  metric?: 'count' | 'volume';
+  timezone?: string;
+}): Promise<ExchangeComparisonResponse> {
+  // Simulate network delay
+  await delay(300 + Math.random() * 200);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch exchange comparison data');
+  }
+  
+  return generateMockExchangeData(
+    params?.timePeriod || '30D',
+    params?.metric || 'count'
+  );
+}
+

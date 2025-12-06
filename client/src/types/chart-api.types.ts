@@ -78,11 +78,17 @@ export interface ExchangeComparisonResponse {
     /** Exchange name */
     name: string;
     
-    /** Deposit count/value */
+    /** Deposit count */
     deposits: number;
     
-    /** Withdrawal count/value */
+    /** Withdrawal count */
     withdrawals: number;
+    
+    /** Deposit volume in USD */
+    depositsVolume: number;
+    
+    /** Withdrawal volume in USD */
+    withdrawalsVolume: number;
   }[];
   
   /** Response metadata */

@@ -159,22 +159,22 @@ This is a monorepo web application:
 
 ### Implementation for User Story 5
 
-- [ ] T071 [P] [US5] Create PnLChart component in client/src/components/charts/PnLChart/PnLChart.tsx
-- [ ] T072 [P] [US5] Create PnLChart styles in client/src/components/charts/PnLChart/PnLChart.module.scss
-- [ ] T073 [P] [US5] Create PnLChart index export in client/src/components/charts/PnLChart/index.ts
-- [ ] T074 [US5] Implement dual-axis chart option with bars (daily P&L) and line (cumulative)
-- [ ] T075 [US5] Add conditional bar coloring (green for positive, red for negative values)
-- [ ] T076 [US5] Add tooltip formatter showing both daily and cumulative P&L values
-- [ ] T077 [US5] Add time period filter integration
-- [ ] T078 [US5] Add wallet filter integration
-- [ ] T079 [US5] Add auto-refresh functionality for P&L data
-- [ ] T080 [US5] Add loading, error, and empty states to PnLChart
-- [ ] T081 [US5] Create mockFetchPnLChart function in client/src/services/chart/mockChartData.ts
-- [ ] T082 [US5] Implement generateMockPnLData with daily P&L bars and cumulative line
-- [ ] T083 [US5] Add P&L calculation logic (daily gains/losses and running total)
-- [ ] T084 [US5] Add aggregation support (daily, weekly, monthly) based on time period
-- [ ] T085 [US5] Add simulated network delay and error handling for testing
-- [ ] T086 [US5] Integrate PnLChart into dashboard page
+- [X] T071 [P] [US5] Create PnLChart component in client/src/components/charts/PnLChart/PnLChart.tsx
+- [X] T072 [P] [US5] Create PnLChart styles in client/src/components/charts/PnLChart/PnLChart.module.scss
+- [X] T073 [P] [US5] Create PnLChart index export in client/src/components/charts/PnLChart/index.ts
+- [X] T074 [US5] Implement dual-axis chart option with bars (daily P&L) and line (cumulative)
+- [X] T075 [US5] Add conditional bar coloring (green for positive, red for negative values)
+- [X] T076 [US5] Add tooltip formatter showing both daily and cumulative P&L values
+- [X] T077 [US5] Add time period filter integration
+- [X] T078 [US5] Add wallet filter integration
+- [X] T079 [US5] Add auto-refresh functionality for P&L data
+- [X] T080 [US5] Add loading, error, and empty states to PnLChart
+- [X] T081 [US5] Create mockFetchPnLChart function in client/src/services/chart/mockChartData.ts
+- [X] T082 [US5] Implement generateMockPnLData with daily P&L bars and cumulative line
+- [X] T083 [US5] Add P&L calculation logic (daily gains/losses and running total)
+- [X] T084 [US5] Add aggregation support (daily, weekly, monthly) based on time period
+- [X] T085 [US5] Add simulated network delay and error handling for testing
+- [X] T086 [US5] Integrate PnLChart into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 5, and 9 should all work independently
 
@@ -188,22 +188,22 @@ This is a monorepo web application:
 
 ### Implementation for User Story 3
 
-- [ ] T087 [P] [US3] Create ExchangeComparison component in client/src/components/charts/ExchangeComparison/ExchangeComparison.tsx
-- [ ] T088 [P] [US3] Create ExchangeComparison styles in client/src/components/charts/ExchangeComparison/ExchangeComparison.module.scss
-- [ ] T089 [P] [US3] Create ExchangeComparison index export in client/src/components/charts/ExchangeComparison/index.ts
-- [ ] T090 [US3] Implement grouped bar chart option with exchange names on X-axis
-- [ ] T091 [US3] Add series configuration for deposits and withdrawals with distinct colors
-- [ ] T092 [US3] Add data label display on top of each bar
-- [ ] T093 [US3] Add legend showing deposits vs withdrawals
-- [ ] T094 [US3] Add time period filter integration
-- [ ] T095 [US3] Add metric selector (count vs volume)
-- [ ] T096 [US3] Add auto-refresh functionality for exchange data
-- [ ] T097 [US3] Add loading, error, and empty states to ExchangeComparison
-- [ ] T098 [US3] Create mockFetchExchangeComparison function in client/src/services/chart/mockChartData.ts
-- [ ] T099 [US3] Implement generateMockExchangeData with deposits/withdrawals per exchange
-- [ ] T100 [US3] Add exchange activity aggregation logic (count vs volume metrics)
-- [ ] T101 [US3] Add simulated network delay and error handling for testing
-- [ ] T102 [US3] Integrate ExchangeComparison into dashboard page
+- [X] T087 [P] [US3] Create ExchangeComparison component in client/src/components/charts/ExchangeComparison/ExchangeComparison.tsx
+- [X] T088 [P] [US3] Create ExchangeComparison styles in client/src/components/charts/ExchangeComparison/ExchangeComparison.module.scss
+- [X] T089 [P] [US3] Create ExchangeComparison index export in client/src/components/charts/ExchangeComparison/index.ts
+- [X] T090 [US3] Implement grouped bar chart option with exchange names on X-axis
+- [X] T091 [US3] Add series configuration for deposits and withdrawals with distinct colors
+- [X] T092 [US3] Add data label display on top of each bar
+- [X] T093 [US3] Add legend showing deposits vs withdrawals
+- [X] T094 [US3] Add time period filter integration
+- [X] T095 [US3] Add metric selector (count vs volume)
+- [X] T096 [US3] Add auto-refresh functionality for exchange data
+- [X] T097 [US3] Add loading, error, and empty states to ExchangeComparison
+- [X] T098 [US3] Create mockFetchExchangeComparison function in client/src/services/chart/mockChartData.ts
+- [X] T099 [US3] Implement generateMockExchangeData with deposits/withdrawals per exchange
+- [X] T100 [US3] Add exchange activity aggregation logic (count vs volume metrics)
+- [X] T101 [US3] Add simulated network delay and error handling for testing
+- [X] T102 [US3] Integrate ExchangeComparison into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 5, and 9 should all work independently
 

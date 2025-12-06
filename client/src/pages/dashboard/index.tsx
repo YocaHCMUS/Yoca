@@ -4,6 +4,8 @@ import { PageWrapper } from "../../components/wrapper";
 import { ChartProvider } from "../../contexts/ChartContext";
 import { BalanceChart } from "../../components/charts/BalanceChart";
 import { AssetDistribution } from "../../components/charts/AssetDistribution";
+import { PnLChart } from "../../components/charts/PnLChart";
+import { ExchangeComparison } from "../../components/charts/ExchangeComparison";
 
 /**
  * Dashboard page - authenticated user dashboard
@@ -40,6 +42,27 @@ export default function DashboardPage() {
                 />
               </Tile>
               
+              {/* P&L Chart */}
+              <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+                <PnLChart
+                  title={t("dashboard.pnlChart.title", "Profit & Loss")}
+                  height={400}
+                  aggregation="daily"
+                  autoRefresh={true}
+                />
+              </Tile>
+              
+              {/* Exchange Comparison Chart */}
+              <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+                <ExchangeComparison
+                  title={t("dashboard.exchangeComparison.title", "Exchange Activity Comparison")}
+                  height={400}
+                  initialTimePeriod="30D"
+                  metric="count"
+                  enableAutoRefresh={true}
+                />
+              </Tile>
+              
               <Tile style={{ padding: "2rem", textAlign: "center" }}>
                 <h2 style={{ marginBottom: "1rem" }}>
                   {t("dashboard.placeholder.title", "More Charts Coming Soon")}
@@ -47,7 +70,7 @@ export default function DashboardPage() {
                 <p style={{ color: "var(--cds-text-secondary)" }}>
                   {t(
                     "dashboard.placeholder.description",
-                    "Additional charts including P&L tracking, exchange comparison, and more will be added here."
+                    "Additional charts including counterparty analysis, volume benchmarking, and more will be added here."
                   )}
                 </p>
               </Tile>
