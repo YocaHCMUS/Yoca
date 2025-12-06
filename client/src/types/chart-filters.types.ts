@@ -134,7 +134,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
  */
 export function validateFilters(filters: ChartFilters): boolean {
   // If tokens includes 'All', it must be the only element
-  if (filters.tokens && filters.tokens.includes('All') && filters.tokens.length > 1) {
+  if (filters.tokens && Array.isArray(filters.tokens) && filters.tokens.includes('All') && filters.tokens.length > 1) {
     return false;
   }
 
@@ -151,7 +151,7 @@ export function validateFilters(filters: ChartFilters): boolean {
   }
 
   // wallets array must be non-empty if provided
-  if (filters.wallets !== undefined && filters.wallets.length === 0) {
+  if (filters.wallets !== undefined && Array.isArray(filters.wallets) && filters.wallets.length === 0) {
     return false;
   }
 
