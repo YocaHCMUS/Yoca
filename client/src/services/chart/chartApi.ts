@@ -145,4 +145,13 @@ export const chartApi = {
   fetchTransactionDistribution,
   fetchHoldingDurations,
   fetchVolumeBenchmark,
+  // Aliases for convenience
+  getBalance: fetchBalanceTrend,
+  getDistribution: fetchAssetDistribution,
+  getExchanges: fetchExchangeComparison,
+  getCounterparties: fetchCounterpartyActivity,
+  getPnL: fetchPnLChart,
+  getTransactionDistribution: fetchTransactionDistribution,
+  getHoldings: fetchHoldingDurations,
+  getVolumeBenchmark: fetchVolumeBenchmark,
 };

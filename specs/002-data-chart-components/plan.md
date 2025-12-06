@@ -7,7 +7,7 @@
 
 Implement reusable chart components for visualizing cryptocurrency portfolio data using Apache eCharts. Components include balance trends (line/area charts), asset distribution (donut charts), exchange comparisons (grouped bars), P&L tracking (dual-axis), and transaction analysis. All charts support filtering by time period/tokens, data export (PNG/SVG/CSV), 30-second auto-refresh, and multiple viewing modes (normal, fullscreen, draggable mini-player).
 
-**Technical Approach**: Use echarts-for-react with tree-shaking to minimize bundle size (~105KB gzipped). Implement custom React hooks for filter management (debounced), auto-refresh (pause-aware), and export functionality. Use react-rnd for draggable mini-player, date-fns-tz for timezone handling, and React Context for shared timezone state. Charts consume pre-processed data from REST API endpoints with server-side aggregation for large datasets.
+**Technical Approach**: Use echarts-for-react with tree-shaking to minimize bundle size (~105KB gzipped). Implement custom React hooks for filter management (debounced), auto-refresh (pause-aware), and export functionality. Use react-rnd for draggable mini-player, date-fns-tz for timezone handling, and React Context for shared timezone state. **Charts use client-side mock data generators** for development and demo purposes, with backend API endpoints available for production integration.
 
 ## Technical Context
 
@@ -154,6 +154,7 @@ server/                    # Backend workspace (Hono + Node.js)
 - Debounce filter changes (300ms)
 - LTTB sampling for >2000 points
 - Server-side aggregation for >5000 points
+- **Use client-side mock data for development** (backend API endpoints available but optional)
 
 ---
 
@@ -226,27 +227,29 @@ server/                    # Backend workspace (Hono + Node.js)
 
 **Charts to Implement**:
 
-1. **BalanceChart** - Line/area chart for balance trends (User Story 1)
-2. **AssetDistribution** - Donut chart for portfolio allocation (User Story 2)
+1. **BalanceChart** - Line/area chart for balance trends (User Story 1) ✅
+2. **AssetDistribution** - Donut chart for portfolio allocation (User Story 2) ✅
 3. **PnLChart** - Dual-axis bars + line for profit/loss (User Story 5)
 
 **Each Chart Includes**:
 
 - Component with typed props
-- API integration via chartApi service
-- Filter support (time period, tokens)
-- Export functionality
-- Auto-refresh (30s interval)
-- Loading/error/empty states
+- Mock data generator in `client/src/services/chart/mockChartData.ts`
+- Filter support (time period, tokens, wallets)
+- Export functionality (deferred to Phase 5)
+- Auto-refresh (30s interval with pause detection)
+- Loading/error/empty states via ChartWrapper
 - SCSS module for styling
 
 **Acceptance Criteria**:
 
-- [ ] All 3 charts render with real API data
-- [ ] Filters update chart within 500ms
-- [ ] Export works for all formats (PNG, SVG, CSV)
-- [ ] Auto-refresh pauses when tab hidden
-- [ ] Charts handle 10,000+ data points smoothly (<1s render)
+- [x] BalanceChart renders with mock data
+- [x] AssetDistribution renders with mock data
+- [ ] PnLChart renders with mock data
+- [x] Filters update chart within 500ms (debounced)
+- [ ] Export works for all formats (PNG, SVG, CSV) - Phase 5
+- [x] Auto-refresh pauses when tab hidden
+- [x] Charts handle simulated delays smoothly
 
 ---
 

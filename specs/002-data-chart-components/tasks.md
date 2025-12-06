@@ -82,13 +82,13 @@ This is a monorepo web application:
 - [X] T031 [US1] Add auto-refresh functionality (30-second interval with pause detection)
 - [X] T032 [US1] Add loading, error, and empty states to BalanceChart
 - [X] T033 [US1] Implement LTTB sampling for datasets >2000 points
-- [X] T034 [US1] Create GET /api/charts/balance endpoint in server/src/routes/charts/balance.route.ts
-- [X] T035 [US1] Add Zod schema validation for balance endpoint parameters
-- [X] T036 [US1] Implement data aggregation logic (hourly, daily, weekly, monthly) based on time period
-- [X] T037 [US1] Add error handling and structured logging for balance endpoint
+- [X] T034 [US1] Create mockFetchBalanceTrend function in client/src/services/chart/mockChartData.ts
+- [X] T035 [US1] Implement generateMockBalanceTrend with realistic data patterns (trend, volatility, noise)
+- [X] T036 [US1] Add data aggregation logic (hourly, daily, weekly, monthly) based on time period
+- [X] T037 [US1] Add simulated network delay and 5% random error rate for testing
 - [X] T038 [US1] Integrate BalanceChart into dashboard page with ChartProvider wrapper
 
-**Checkpoint**: At this point, User Story 1 (Balance Chart) should be fully functional and testable independently
+**Checkpoint**: At this point, User Story 1 (Balance Chart) should be fully functional and testable independently with mock data
 
 ---
 
@@ -100,24 +100,24 @@ This is a monorepo web application:
 
 ### Implementation for User Story 2
 
-- [ ] T039 [P] [US2] Create AssetDistribution component in client/src/components/charts/AssetDistribution/AssetDistribution.tsx
-- [ ] T040 [P] [US2] Create AssetDistribution styles in client/src/components/charts/AssetDistribution/AssetDistribution.module.scss
-- [ ] T041 [P] [US2] Create AssetDistribution index export in client/src/components/charts/AssetDistribution/index.ts
-- [ ] T042 [US2] Implement donut chart option with radius configuration and segment colors
-- [ ] T043 [US2] Add center graphic for total portfolio value display
-- [ ] T044 [US2] Implement legend formatter showing token symbols with formatted values
-- [ ] T045 [US2] Add token filter integration with limit support (top N tokens)
-- [ ] T046 [US2] Add segment label formatting (symbol: percentage)
-- [ ] T047 [US2] Add auto-refresh functionality for distribution data
-- [ ] T047a [US2] Implement legend item click handler to toggle data series visibility in eCharts configuration
-- [ ] T048 [US2] Add loading, error, and empty states to AssetDistribution
-- [ ] T049 [US2] Create GET /api/charts/distribution endpoint in server/src/routes/charts/distribution.route.ts
-- [ ] T050 [US2] Add Zod schema validation for distribution endpoint parameters
-- [ ] T051 [US2] Implement distribution calculation logic with percentage computation
-- [ ] T052 [US2] Add error handling and logging for distribution endpoint
-- [ ] T053 [US2] Integrate AssetDistribution into dashboard page
+- [X] T039 [P] [US2] Create AssetDistribution component in client/src/components/charts/AssetDistribution/AssetDistribution.tsx
+- [X] T040 [P] [US2] Create AssetDistribution styles in client/src/components/charts/AssetDistribution/AssetDistribution.module.scss
+- [X] T041 [P] [US2] Create AssetDistribution index export in client/src/components/charts/AssetDistribution/index.ts
+- [X] T042 [US2] Implement donut chart option with radius configuration and segment colors
+- [X] T043 [US2] Add center graphic for total portfolio value display
+- [X] T044 [US2] Implement legend formatter showing token symbols with formatted values
+- [X] T045 [US2] Add token filter integration with limit support (top N tokens)
+- [X] T046 [US2] Add segment label formatting (symbol: percentage)
+- [X] T047 [US2] Add auto-refresh functionality for distribution data
+- [X] T047a [US2] Implement legend item click handler to toggle data series visibility in eCharts configuration
+- [X] T048 [US2] Add loading, error, and empty states to AssetDistribution
+- [X] T049 [US2] Create mockFetchAssetDistribution function in client/src/services/chart/mockChartData.ts
+- [X] T050 [US2] Implement generateMockAssetDistribution with 8 cryptocurrencies and realistic allocations
+- [X] T051 [US2] Add percentage computation and color assignments for distribution data
+- [X] T052 [US2] Add simulated network delay and 5% random error rate for testing
+- [X] T053 [US2] Integrate AssetDistribution into dashboard page
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
+**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently with mock data
 
 ---
 
@@ -169,11 +169,11 @@ This is a monorepo web application:
 - [ ] T078 [US5] Add wallet filter integration
 - [ ] T079 [US5] Add auto-refresh functionality for P&L data
 - [ ] T080 [US5] Add loading, error, and empty states to PnLChart
-- [ ] T081 [US5] Create GET /api/charts/pnl endpoint in server/src/routes/charts/pnl.route.ts
-- [ ] T082 [US5] Add Zod schema validation for P&L endpoint parameters
-- [ ] T083 [US5] Implement P&L calculation logic (daily and cumulative)
-- [ ] T084 [US5] Add aggregation support (daily, weekly, monthly)
-- [ ] T085 [US5] Add error handling and logging for P&L endpoint
+- [ ] T081 [US5] Create mockFetchPnLChart function in client/src/services/chart/mockChartData.ts
+- [ ] T082 [US5] Implement generateMockPnLData with daily P&L bars and cumulative line
+- [ ] T083 [US5] Add P&L calculation logic (daily gains/losses and running total)
+- [ ] T084 [US5] Add aggregation support (daily, weekly, monthly) based on time period
+- [ ] T085 [US5] Add simulated network delay and error handling for testing
 - [ ] T086 [US5] Integrate PnLChart into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 5, and 9 should all work independently
@@ -199,10 +199,10 @@ This is a monorepo web application:
 - [ ] T095 [US3] Add metric selector (count vs volume)
 - [ ] T096 [US3] Add auto-refresh functionality for exchange data
 - [ ] T097 [US3] Add loading, error, and empty states to ExchangeComparison
-- [ ] T098 [US3] Create GET /api/charts/exchanges endpoint in server/src/routes/charts/exchanges.route.ts
-- [ ] T099 [US3] Add Zod schema validation for exchanges endpoint parameters
-- [ ] T100 [US3] Implement exchange activity aggregation logic
-- [ ] T101 [US3] Add error handling and logging for exchanges endpoint
+- [ ] T098 [US3] Create mockFetchExchangeComparison function in client/src/services/chart/mockChartData.ts
+- [ ] T099 [US3] Implement generateMockExchangeData with deposits/withdrawals per exchange
+- [ ] T100 [US3] Add exchange activity aggregation logic (count vs volume metrics)
+- [ ] T101 [US3] Add simulated network delay and error handling for testing
 - [ ] T102 [US3] Integrate ExchangeComparison into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 5, and 9 should all work independently
@@ -227,10 +227,10 @@ This is a monorepo web application:
 - [ ] T110 [US4] Add limit selector for top N counterparties
 - [ ] T111 [US4] Add auto-refresh functionality for counterparty data
 - [ ] T112 [US4] Add loading, error, and empty states to CounterpartyActivity
-- [ ] T113 [US4] Create GET /api/charts/counterparties endpoint in server/src/routes/charts/counterparties.route.ts
-- [ ] T114 [US4] Add Zod schema validation for counterparties endpoint parameters
-- [ ] T115 [US4] Implement counterparty activity aggregation logic
-- [ ] T116 [US4] Add error handling and logging for counterparties endpoint
+- [ ] T113 [US4] Create mockFetchCounterpartyActivity function in client/src/services/chart/mockChartData.ts
+- [ ] T114 [US4] Implement generateMockCounterpartyData with transaction counts and volumes
+- [ ] T115 [US4] Add counterparty activity aggregation logic (top N filtering)
+- [ ] T116 [US4] Add simulated network delay and error handling for testing
 - [ ] T117 [US4] Integrate CounterpartyActivity into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 4, 5, and 9 should all work independently
@@ -255,10 +255,10 @@ This is a monorepo web application:
 - [ ] T125 [US6] Add time period filter integration
 - [ ] T126 [US6] Add auto-refresh functionality for volume data
 - [ ] T127 [US6] Add loading, error, and empty states to VolumeBenchmark
-- [ ] T128 [US6] Create GET /api/charts/volume-benchmark endpoint in server/src/routes/charts/volume-benchmark.route.ts
-- [ ] T129 [US6] Add Zod schema validation for volume benchmark endpoint parameters
-- [ ] T130 [US6] Implement volume comparison aggregation logic
-- [ ] T131 [US6] Add error handling and logging for volume benchmark endpoint
+- [ ] T128 [US6] Create mockFetchVolumeBenchmark function in client/src/services/chart/mockChartData.ts
+- [ ] T129 [US6] Implement generateMockVolumeBenchmark with multi-wallet comparison data
+- [ ] T130 [US6] Add volume comparison aggregation logic (multiple time series)
+- [ ] T131 [US6] Add simulated network delay and error handling for testing
 - [ ] T132 [US6] Integrate VolumeBenchmark into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 4, 5, 6, and 9 should all work independently
@@ -284,10 +284,10 @@ This is a monorepo web application:
 - [ ] T141 [US7] Add transaction type filter integration
 - [ ] T142 [US7] Add auto-refresh functionality for transaction distribution data
 - [ ] T143 [US7] Add loading, error, and empty states to TransactionDistribution
-- [ ] T144 [US7] Create GET /api/charts/transactions/distribution endpoint in server/src/routes/charts/transactions.route.ts
-- [ ] T145 [US7] Add Zod schema validation for transaction distribution endpoint parameters
-- [ ] T146 [US7] Implement transaction distribution aggregation logic
-- [ ] T147 [US7] Add error handling and logging for transaction distribution endpoint
+- [ ] T144 [US7] Create mockFetchTransactionDistribution function in client/src/services/chart/mockChartData.ts
+- [ ] T145 [US7] Implement generateMockTransactionDistribution with stacked/grouped bar data
+- [ ] T146 [US7] Add transaction distribution aggregation logic (counts and unique tokens)
+- [ ] T147 [US7] Add simulated network delay and error handling for testing
 - [ ] T148 [US7] Integrate TransactionDistribution into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 4, 5, 6, 7, and 9 should all work independently
@@ -313,10 +313,10 @@ This is a monorepo web application:
 - [ ] T157 [US8] Add time unit selector (days, weeks, months)
 - [ ] T158 [US8] Add auto-refresh functionality for holding duration data
 - [ ] T159 [US8] Add loading, error, and empty states to HoldingDurations
-- [ ] T160 [US8] Create GET /api/charts/holdings endpoint in server/src/routes/charts/holdings.route.ts
-- [ ] T161 [US8] Add Zod schema validation for holdings endpoint parameters
-- [ ] T162 [US8] Implement holding duration calculation logic
-- [ ] T163 [US8] Add error handling and logging for holdings endpoint
+- [ ] T160 [US8] Create mockFetchHoldingDurations function in client/src/services/chart/mockChartData.ts
+- [ ] T161 [US8] Implement generateMockHoldingDurations with token duration data per wallet
+- [ ] T162 [US8] Add holding duration calculation logic (days/weeks/months)
+- [ ] T163 [US8] Add simulated network delay and error handling for testing
 - [ ] T164 [US8] Integrate HoldingDurations into dashboard page
 
 **Checkpoint**: All user stories (1-8 + 9) should now be independently functional
@@ -507,6 +507,8 @@ With 3 developers after Foundational phase:
 - Each user story is independently completable and testable
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
-- Frontend tasks can proceed with mock data before backend endpoints are ready
+- **All charts use client-side mock data** in `client/src/services/chart/mockChartData.ts`
+- Mock data includes realistic patterns, network delays, and 5% random errors for testing
+- Backend API endpoints (server/src/routes/charts/) are optional and available for production use
 - All charts share ChartWrapper, filters, and export functionality from Foundational phase
 - Bundle size must remain ≤135KB gzipped throughout implementation

@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse } from '../../types/chart-api.types';
 import type { TimePeriod } from '../../types/chart-filters.types';
 
 /**
@@ -166,5 +166,96 @@ export async function mockFetchBalanceTrend(params?: {
   return generateMockBalanceTrend(
     params?.timePeriod || '30D',
     params?.tokens
+  );
+}
+
+/**
+ * Asset color palette for visualization
+ */
+const ASSET_COLORS = [
+  '#5470C6', // Blue
+  '#91CC75', // Green
+  '#FAC858', // Yellow
+  '#EE6666', // Red
+  '#73C0DE', // Light Blue
+  '#3BA272', // Dark Green
+  '#FC8452', // Orange
+  '#9A60B4', // Purple
+  '#EA7CCC', // Pink
+];
+
+/**
+ * Generate mock asset distribution data
+ * 
+ * Creates realistic-looking asset allocation data with:
+ * - Multiple cryptocurrencies
+ * - Realistic percentage distributions
+ * - Color assignments
+ */
+export function generateMockAssetDistribution(
+  _period?: string,
+  _wallets?: string
+): AssetDistributionResponse {
+  // Base asset allocations (will be adjusted based on randomness)
+  const baseAssets = [
+    { name: 'BTC', baseValue: 45000 },
+    { name: 'ETH', baseValue: 28000 },
+    { name: 'USDT', baseValue: 15000 },
+    { name: 'BNB', baseValue: 8000 },
+    { name: 'SOL', baseValue: 6000 },
+    { name: 'ADA', baseValue: 4500 },
+    { name: 'XRP', baseValue: 3000 },
+    { name: 'DOT', baseValue: 2500 },
+  ];
+  
+  // Add some randomness to values (±20%)
+  const assets = baseAssets.map((asset, index) => {
+    const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+    const value = asset.baseValue * randomFactor;
+    
+    return {
+      name: asset.name,
+      value,
+      color: ASSET_COLORS[index % ASSET_COLORS.length],
+    };
+  });
+  
+  // Calculate total value
+  const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0);
+  
+  // Calculate percentages
+  const dataWithPercentages = assets.map(asset => ({
+    ...asset,
+    percentage: (asset.value / totalValue) * 100,
+  }));
+  
+  return {
+    data: dataWithPercentages,
+    totalValue,
+    metadata: {
+      currency: 'USD',
+      timestamp: Date.now(),
+    },
+  };
+}
+
+/**
+ * Mock fetch asset distribution with simulated network delay
+ */
+export async function mockFetchAssetDistribution(params?: {
+  period?: string;
+  wallets?: string;
+}): Promise<AssetDistributionResponse> {
+  // Simulate network delay
+  await delay(300 + Math.random() * 200);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch distribution data');
+  }
+  
+  return generateMockAssetDistribution(
+    params?.period || '30D',
+    params?.wallets
   );
 }
