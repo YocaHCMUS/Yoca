@@ -302,22 +302,22 @@ This is a monorepo web application:
 
 ### Implementation for User Story 8
 
-- [ ] T149 [P] [US8] Create HoldingDurations component in client/src/components/charts/HoldingDurations/HoldingDurations.tsx
-- [ ] T150 [P] [US8] Create HoldingDurations styles in client/src/components/charts/HoldingDurations/HoldingDurations.module.scss
-- [ ] T151 [P] [US8] Create HoldingDurations index export in client/src/components/charts/HoldingDurations/index.ts
-- [ ] T152 [US8] Implement bar chart option with token symbols on X-axis
-- [ ] T153 [US8] Add multi-chart layout for separate wallet displays
-- [ ] T154 [US8] Add duration value labels on bars
-- [ ] T155 [US8] Add wallet filter integration
-- [ ] T156 [US8] Add limit selector for top N tokens
-- [ ] T157 [US8] Add time unit selector (days, weeks, months)
-- [ ] T158 [US8] Add auto-refresh functionality for holding duration data
-- [ ] T159 [US8] Add loading, error, and empty states to HoldingDurations
-- [ ] T160 [US8] Create mockFetchHoldingDurations function in client/src/services/chart/mockChartData.ts
-- [ ] T161 [US8] Implement generateMockHoldingDurations with token duration data per wallet
-- [ ] T162 [US8] Add holding duration calculation logic (days/weeks/months)
-- [ ] T163 [US8] Add simulated network delay and error handling for testing
-- [ ] T164 [US8] Integrate HoldingDurations into dashboard page
+- [X] T149 [P] [US8] Create HoldingDurations component in client/src/components/charts/HoldingDurations/HoldingDurations.tsx
+- [X] T150 [P] [US8] Create HoldingDurations styles in client/src/components/charts/HoldingDurations/HoldingDurations.module.scss
+- [X] T151 [P] [US8] Create HoldingDurations index export in client/src/components/charts/HoldingDurations/index.ts
+- [X] T152 [US8] Implement bar chart option with token symbols on X-axis
+- [X] T153 [US8] Add multi-chart layout for separate wallet displays
+- [X] T154 [US8] Add duration value labels on bars
+- [X] T155 [US8] Add wallet filter integration
+- [X] T156 [US8] Add limit selector for top N tokens
+- [X] T157 [US8] Add time unit selector (days, weeks, months)
+- [X] T158 [US8] Add auto-refresh functionality for holding duration data
+- [X] T159 [US8] Add loading, error, and empty states to HoldingDurations
+- [X] T160 [US8] Create mockFetchHoldingDurations function in client/src/services/chart/mockChartData.ts
+- [X] T161 [US8] Implement generateMockHoldingDurations with token duration data per wallet
+- [X] T162 [US8] Add holding duration calculation logic (days/weeks/months)
+- [X] T163 [US8] Add simulated network delay and error handling for testing
+- [X] T164 [US8] Integrate HoldingDurations into dashboard page
 
 **Checkpoint**: All user stories (1-8 + 9) should now be independently functional
 
@@ -327,22 +327,22 @@ This is a monorepo web application:
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T165 [P] Add comprehensive JSDoc comments to all custom hooks
-- [ ] T166 [P] Add JSDoc comments to all chart components
-- [ ] T167 Optimize bundle size with lazy loading for chart components
-- [ ] T168 [P] Add keyboard navigation support across all charts (tab, arrow keys)
-- [ ] T169 [P] Add screen reader support with ARIA labels and live regions
-- [ ] T170 Run axe-core accessibility audit and fix violations
-- [ ] T171 [P] Performance test with 10,000 data points across all chart types
-- [ ] T172 [P] Performance test with 50,000 data points using server aggregation
-- [ ] T173 Verify all empty states render correctly when no data available
-- [ ] T174 Verify all error states render correctly on API failures
-- [ ] T175 Add staggered refresh offset calculation for multiple charts
-- [ ] T176 [P] Create dashboard layout with responsive grid (2-column desktop, 1-column mobile)
-- [ ] T177 [P] Update README.md with chart component documentation
-- [ ] T178 Run quickstart.md validation to ensure all examples work
-- [ ] T179 Final bundle size verification (must be ≤135KB gzipped)
-- [ ] T180 Verify TypeScript strict mode passes with no errors
+- [X] T165 [P] Add comprehensive JSDoc comments to all custom hooks
+- [X] T166 [P] Add JSDoc comments to all chart components
+- [X] T167 Optimize bundle size with lazy loading for chart components
+- [X] T168 [P] Add keyboard navigation support across all charts (tab, arrow keys)
+- [X] T169 [P] Add screen reader support with ARIA labels and live regions
+- [X] T170 Run axe-core accessibility audit and fix violations
+- [X] T171 [P] Performance test with 10,000 data points across all chart types
+- [X] T172 [P] Performance test with 50,000 data points using server aggregation
+- [X] T173 Verify all empty states render correctly when no data available
+- [X] T174 Verify all error states render correctly on API failures
+- [X] T175 Add staggered refresh offset calculation for multiple charts
+- [X] T176 [P] Create dashboard layout with responsive grid (2-column desktop, 1-column mobile)
+- [X] T177 [P] Update README.md with chart component documentation
+- [X] T178 Run quickstart.md validation to ensure all examples work
+- [X] T179 Final bundle size verification (must be ≤135KB gzipped)
+- [X] T180 Verify TypeScript strict mode passes with no errors
 
 ---
 

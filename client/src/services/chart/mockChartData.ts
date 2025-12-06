@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse, TransactionDistributionResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse, TransactionDistributionResponse, HoldingDurationsResponse } from '../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../types/chart-filters.types';
 
 /**
@@ -792,6 +792,108 @@ export async function mockFetchTransactionDistribution(params?: {
     params?.transactionType || 'all',
     params?.walletIds || [],
     params?.timezone || 'UTC'
+  );
+}
+
+/**
+ * Generate mock holding durations data for specified wallets
+ */
+function generateMockHoldingDurations(
+  walletIds: string[],
+  topN: number,
+  timeUnit: 'days' | 'weeks' | 'months'
+): HoldingDurationsResponse {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { id: 'wallet-1', name: 'Main Wallet' },
+    { id: 'wallet-2', name: 'Trading Wallet' },
+    { id: 'wallet-3', name: 'Cold Storage' },
+  ];
+  
+  // Available tokens with typical holding patterns
+  const tokens = [
+    { symbol: 'BTC', minDays: 180, maxDays: 730 },  // Long-term hold
+    { symbol: 'ETH', minDays: 150, maxDays: 600 },  // Long-term hold
+    { symbol: 'BNB', minDays: 90, maxDays: 365 },   // Medium-term hold
+    { symbol: 'SOL', minDays: 60, maxDays: 300 },   // Medium-term hold
+    { symbol: 'ADA', minDays: 120, maxDays: 450 },  // Medium-term hold
+    { symbol: 'MATIC', minDays: 30, maxDays: 180 }, // Short to medium-term
+    { symbol: 'DOT', minDays: 45, maxDays: 240 },   // Short to medium-term
+    { symbol: 'AVAX', minDays: 25, maxDays: 150 },  // Short-term trading
+    { symbol: 'LINK', minDays: 60, maxDays: 200 },  // Medium-term
+    { symbol: 'UNI', minDays: 30, maxDays: 120 },   // Short-term trading
+    { symbol: 'ATOM', minDays: 90, maxDays: 300 },  // Medium-term hold
+    { symbol: 'AAVE', minDays: 20, maxDays: 90 },   // Short-term trading
+    { symbol: 'ALGO', minDays: 45, maxDays: 180 },  // Short to medium-term
+    { symbol: 'XRP', minDays: 100, maxDays: 400 },  // Medium to long-term
+    { symbol: 'DOGE', minDays: 15, maxDays: 60 },   // Very short-term
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = walletIds.length > 0
+    ? defaultWallets.filter(w => walletIds.includes(w.id))
+    : defaultWallets;
+  
+  const wallets = walletsToGenerate.map(wallet => {
+    // Randomly select tokens for this wallet (more than topN to allow variety)
+    const walletTokens = [...tokens]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, Math.min(topN + 5, tokens.length));
+    
+    // Generate holdings with durations
+    const holdings = walletTokens
+      .map(token => {
+        // Generate duration within token's typical range
+        const durationDays = Math.floor(
+          token.minDays + Math.random() * (token.maxDays - token.minDays)
+        );
+        
+        return {
+          tokenSymbol: token.symbol,
+          durationDays,
+        };
+      })
+      // Sort by duration (longest first)
+      .sort((a, b) => b.durationDays - a.durationDays)
+      // Take top N
+      .slice(0, topN);
+    
+    return {
+      id: wallet.id,
+      name: wallet.name,
+      holdings,
+    };
+  });
+  
+  return {
+    wallets,
+    metadata: {
+      unit: timeUnit,
+    },
+  };
+}
+
+/**
+ * Mock fetch holding durations data with simulated network delay
+ */
+export async function mockFetchHoldingDurations(params?: {
+  walletIds?: string[];
+  topN?: number;
+  timeUnit?: 'days' | 'weeks' | 'months';
+  timezone?: string;
+}): Promise<HoldingDurationsResponse> {
+  // Simulate network delay
+  await delay(400 + Math.random() * 300);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch holding durations data');
+  }
+  
+  return generateMockHoldingDurations(
+    params?.walletIds || [],
+    params?.topN || 10,
+    params?.timeUnit || 'days'
   );
 }
 

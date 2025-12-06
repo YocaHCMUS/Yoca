@@ -180,15 +180,15 @@ export interface HoldingDurationsResponse {
   /** Holdings data by wallet */
   wallets: {
     /** Wallet identifier */
-    walletId: string;
+    id: string;
     
     /** Wallet display name */
-    walletName: string;
+    name: string;
     
     /** Holdings data */
     holdings: {
       /** Token symbol */
-      token: string;
+      tokenSymbol: string;
       
       /** Holding duration in days */
       durationDays: number;
