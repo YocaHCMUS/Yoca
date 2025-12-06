@@ -122,6 +122,7 @@ export interface CounterpartyActivityResponse {
   metadata: {
     period: string;
     transactionType: string;
+    limit?: number;
   };
 }
 

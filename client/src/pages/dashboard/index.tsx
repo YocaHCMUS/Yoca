@@ -6,6 +6,7 @@ import { BalanceChart } from "../../components/charts/BalanceChart";
 import { AssetDistribution } from "../../components/charts/AssetDistribution";
 import { PnLChart } from "../../components/charts/PnLChart";
 import { ExchangeComparison } from "../../components/charts/ExchangeComparison";
+import { CounterpartyActivity } from "../../components/charts/CounterpartyActivity";
 
 /**
  * Dashboard page - authenticated user dashboard
@@ -59,6 +60,18 @@ export default function DashboardPage() {
                   height={400}
                   initialTimePeriod="30D"
                   metric="count"
+                  enableAutoRefresh={true}
+                />
+              </Tile>
+              
+              {/* Counterparty Activity Chart */}
+              <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+                <CounterpartyActivity
+                  title={t("dashboard.counterpartyActivity.title", "Counterparty Transaction Analysis")}
+                  height={400}
+                  initialTimePeriod="30D"
+                  initialTransactionType="all"
+                  limit={10}
                   enableAutoRefresh={true}
                 />
               </Tile>

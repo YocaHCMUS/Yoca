@@ -7,8 +7,8 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse } from '../../types/chart-api.types';
-import type { TimePeriod } from '../../types/chart-filters.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse } from '../../types/chart-api.types';
+import type { TimePeriod, TransactionType } from '../../types/chart-filters.types';
 
 /**
  * Calculate start timestamp based on time period
@@ -428,3 +428,98 @@ export async function mockFetchExchangeComparison(params?: {
   );
 }
 
+/**
+ * Generate mock counterparty activity data
+ * 
+ * Creates realistic-looking counterparty transaction data with:
+ * - Diverse counterparty names and addresses
+ * - Varying transaction counts and volumes
+ * - Top N counterparties by total activity
+ */
+function generateMockCounterpartyData(
+  timePeriod: TimePeriod = '30D',
+  transactionType: TransactionType = 'all',
+  limit: number = 10
+): CounterpartyActivityResponse {
+  // Mock counterparty data with realistic names and addresses
+  const allCounterparties = [
+    { name: 'Binance Hot Wallet', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb' },
+    { name: 'Coinbase Exchange', address: '0x503828976D22510aad0201ac7EC88293211D23Da' },
+    { name: 'Kraken Exchange', address: '0x2910543Af39abA0Cd09dBb2D50200b3E800A63D2' },
+    { name: 'Uniswap Router', address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D' },
+    { name: '1inch Exchange', address: '0x111111125421cA6dc452d289314280a0f8842A65' },
+    { name: 'SushiSwap Router', address: '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F' },
+    { name: 'DeFi Whale #1', address: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199' },
+    { name: 'DeFi Whale #2', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb' },
+    { name: 'NFT Marketplace', address: '0x00000000006c3852cbEf3e08E8dF289169EdE581' },
+    { name: 'Lending Protocol', address: '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9' },
+    { name: 'Bridge Contract', address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640' },
+    { name: 'DAO Treasury', address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984' },
+    { name: 'Staking Contract', address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84' },
+    { name: 'Yield Aggregator', address: '0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE' },
+    { name: 'OTC Desk #1', address: '0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8' },
+    { name: 'OTC Desk #2', address: '0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696' },
+    { name: 'Payment Processor', address: '0x28C6c06298d514Db089934071355E5743bf21d60' },
+    { name: 'Smart Contract Wallet', address: '0xBA12222222228d8Ba445958a75a0704d566BF2C8' },
+    { name: 'DEX Aggregator', address: '0xDef1C0ded9bec7F1a1670819833240f027b25EfF' },
+    { name: 'Multi-sig Treasury', address: '0x5f65f7b609678448494De4C87521CdF6cEf1e932' },
+  ];
+
+  // Generate activity data for each counterparty
+  const counterpartyActivity = allCounterparties.map((cp, index) => {
+    // Base transaction count decreases with rank
+    const baseCount = 500 - (index * 20);
+    const randomFactor = 0.8 + Math.random() * 0.4; // ±20% variation
+    const transactionCount = Math.floor(baseCount * randomFactor);
+    
+    // Volume correlates with transaction count but with variation
+    const avgTxVolume = 1000 + Math.random() * 9000; // $1K - $10K per transaction
+    const totalVolume = transactionCount * avgTxVolume;
+    
+    return {
+      id: cp.address,
+      name: cp.name,
+      transactionCount,
+      totalVolume,
+    };
+  });
+
+  // Sort by total volume descending
+  counterpartyActivity.sort((a, b) => b.totalVolume - a.totalVolume);
+
+  // Apply limit
+  const topCounterparties = counterpartyActivity.slice(0, limit);
+
+  return {
+    counterparties: topCounterparties,
+    metadata: {
+      period: timePeriod,
+      transactionType,
+      limit,
+    },
+  };
+}
+
+/**
+ * Mock fetch counterparty activity data with simulated network delay
+ */
+export async function mockFetchCounterpartyActivity(params?: {
+  timePeriod?: TimePeriod;
+  transactionType?: TransactionType;
+  limit?: number;
+  timezone?: string;
+}): Promise<CounterpartyActivityResponse> {
+  // Simulate network delay
+  await delay(350 + Math.random() * 250);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch counterparty activity data');
+  }
+  
+  return generateMockCounterpartyData(
+    params?.timePeriod || '30D',
+    params?.transactionType || 'all',
+    params?.limit || 10
+  );
+}

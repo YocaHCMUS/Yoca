@@ -217,21 +217,21 @@ This is a monorepo web application:
 
 ### Implementation for User Story 4
 
-- [ ] T103 [P] [US4] Create CounterpartyActivity component in client/src/components/charts/CounterpartyActivity/CounterpartyActivity.tsx
-- [ ] T104 [P] [US4] Create CounterpartyActivity styles in client/src/components/charts/CounterpartyActivity/CounterpartyActivity.module.scss
-- [ ] T105 [P] [US4] Create CounterpartyActivity index export in client/src/components/charts/CounterpartyActivity/index.ts
-- [ ] T106 [US4] Implement grouped bar chart option with counterparty identifiers on X-axis
-- [ ] T107 [US4] Add series for transaction count and total volume
-- [ ] T108 [US4] Add time period filter integration
-- [ ] T109 [US4] Add transaction type filter integration
-- [ ] T110 [US4] Add limit selector for top N counterparties
-- [ ] T111 [US4] Add auto-refresh functionality for counterparty data
-- [ ] T112 [US4] Add loading, error, and empty states to CounterpartyActivity
-- [ ] T113 [US4] Create mockFetchCounterpartyActivity function in client/src/services/chart/mockChartData.ts
-- [ ] T114 [US4] Implement generateMockCounterpartyData with transaction counts and volumes
-- [ ] T115 [US4] Add counterparty activity aggregation logic (top N filtering)
-- [ ] T116 [US4] Add simulated network delay and error handling for testing
-- [ ] T117 [US4] Integrate CounterpartyActivity into dashboard page
+- [X] T103 [P] [US4] Create CounterpartyActivity component in client/src/components/charts/CounterpartyActivity/CounterpartyActivity.tsx
+- [X] T104 [P] [US4] Create CounterpartyActivity styles in client/src/components/charts/CounterpartyActivity/CounterpartyActivity.module.scss
+- [X] T105 [P] [US4] Create CounterpartyActivity index export in client/src/components/charts/CounterpartyActivity/index.ts
+- [X] T106 [US4] Implement grouped bar chart option with counterparty identifiers on X-axis
+- [X] T107 [US4] Add series for transaction count and total volume
+- [X] T108 [US4] Add time period filter integration
+- [X] T109 [US4] Add transaction type filter integration
+- [X] T110 [US4] Add limit selector for top N counterparties
+- [X] T111 [US4] Add auto-refresh functionality for counterparty data
+- [X] T112 [US4] Add loading, error, and empty states to CounterpartyActivity
+- [X] T113 [US4] Create mockFetchCounterpartyActivity function in client/src/services/chart/mockChartData.ts
+- [X] T114 [US4] Implement generateMockCounterpartyData with transaction counts and volumes
+- [X] T115 [US4] Add counterparty activity aggregation logic (top N filtering)
+- [X] T116 [US4] Add simulated network delay and error handling for testing
+- [X] T117 [US4] Integrate CounterpartyActivity into dashboard page
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, 4, 5, and 9 should all work independently
 
