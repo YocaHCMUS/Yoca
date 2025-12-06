@@ -100,6 +100,20 @@ export function formatTimestamp(
 }
 
 /**
+ * Format timestamp with timezone support (alias for formatTimestamp)
+ * 
+ * @example
+ * formatTimestampWithTimezone(timestamp, 'America/New_York', 'PPpp') // "Dec 3, 2025, 10:30:15 AM"
+ */
+export function formatTimestampWithTimezone(
+  timestamp: number,
+  timezone: string = 'UTC',
+  formatStr: string = 'MMM d, yyyy h:mm a'
+): string {
+  return formatDate(timestamp, timezone, formatStr);
+}
+
+/**
  * Format relative time (e.g., "2 hours ago")
  * 
  * @example

@@ -72,21 +72,21 @@ This is a monorepo web application:
 
 ### Implementation for User Story 1
 
-- [ ] T024 [P] [US1] Create BalanceChart component in client/src/components/charts/BalanceChart/BalanceChart.tsx
-- [ ] T025 [P] [US1] Create BalanceChart styles in client/src/components/charts/BalanceChart/BalanceChart.module.scss
-- [ ] T026 [P] [US1] Create BalanceChart index export in client/src/components/charts/BalanceChart/index.ts
-- [ ] T027 [US1] Implement balance chart option generation with time series config and area fill
-- [ ] T028 [US1] Add time period filter integration (7D, 30D, 60D, 90D, 1Y, All)
-- [ ] T029 [US1] Add token filter integration (All tokens or specific selection)
-- [ ] T030 [US1] Implement tooltip formatter with timezone-aware timestamps and currency formatting
-- [ ] T031 [US1] Add auto-refresh functionality (30-second interval with pause detection)
-- [ ] T032 [US1] Add loading, error, and empty states to BalanceChart
-- [ ] T033 [US1] Implement LTTB sampling for datasets >2000 points
-- [ ] T034 [US1] Create GET /api/charts/balance endpoint in server/src/routes/charts/balance.route.ts
-- [ ] T035 [US1] Add Zod schema validation for balance endpoint parameters
-- [ ] T036 [US1] Implement data aggregation logic (hourly, daily, weekly, monthly) based on time period
-- [ ] T037 [US1] Add error handling and structured logging for balance endpoint
-- [ ] T038 [US1] Integrate BalanceChart into dashboard page with ChartProvider wrapper
+- [X] T024 [P] [US1] Create BalanceChart component in client/src/components/charts/BalanceChart/BalanceChart.tsx
+- [X] T025 [P] [US1] Create BalanceChart styles in client/src/components/charts/BalanceChart/BalanceChart.module.scss
+- [X] T026 [P] [US1] Create BalanceChart index export in client/src/components/charts/BalanceChart/index.ts
+- [X] T027 [US1] Implement balance chart option generation with time series config and area fill
+- [X] T028 [US1] Add time period filter integration (7D, 30D, 60D, 90D, 1Y, All)
+- [X] T029 [US1] Add token filter integration (All tokens or specific selection)
+- [X] T030 [US1] Implement tooltip formatter with timezone-aware timestamps and currency formatting
+- [X] T031 [US1] Add auto-refresh functionality (30-second interval with pause detection)
+- [X] T032 [US1] Add loading, error, and empty states to BalanceChart
+- [X] T033 [US1] Implement LTTB sampling for datasets >2000 points
+- [X] T034 [US1] Create GET /api/charts/balance endpoint in server/src/routes/charts/balance.route.ts
+- [X] T035 [US1] Add Zod schema validation for balance endpoint parameters
+- [X] T036 [US1] Implement data aggregation logic (hourly, daily, weekly, monthly) based on time period
+- [X] T037 [US1] Add error handling and structured logging for balance endpoint
+- [X] T038 [US1] Integrate BalanceChart into dashboard page with ChartProvider wrapper
 
 **Checkpoint**: At this point, User Story 1 (Balance Chart) should be fully functional and testable independently
 
