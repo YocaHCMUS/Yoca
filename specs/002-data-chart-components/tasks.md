@@ -129,23 +129,23 @@ This is a monorepo web application:
 
 ### Implementation for User Story 9
 
-- [ ] T054 [P] [US9] Create FullscreenView component in client/src/components/charts/shared/FullscreenView.tsx
-- [ ] T055 [P] [US9] Create FullscreenView styles in client/src/components/charts/shared/FullscreenView.module.scss
-- [ ] T056 [P] [US9] Create MiniPlayer component in client/src/components/charts/shared/MiniPlayer.tsx
-- [ ] T057 [P] [US9] Create MiniPlayer styles in client/src/components/charts/shared/MiniPlayer.module.scss
-- [ ] T058 [P] [US9] Create ExportMenu component in client/src/components/charts/shared/ExportMenu.tsx
-- [ ] T059 [P] [US9] Create ExportMenu styles in client/src/components/charts/shared/ExportMenu.module.scss
-- [ ] T060 [US9] Implement PNG export with pixelRatio: 2 for retina quality
-- [ ] T061 [US9] Implement SVG export functionality
-- [ ] T062 [US9] Implement CSV export with metadata headers including chart title, applied filters, export timestamp in ISO 8601 format, and timezone identifier (e.g., 'America/New_York', 'UTC', or user's current timezone)
-- [ ] T063 [US9] Implement filename generation following data_name-filters-timestamp convention
-- [ ] T064 [US9] Add fullscreen mode with hybrid native API + modal fallback
-- [ ] T065 [US9] Add ESC key handler for exiting fullscreen and mini-player
-- [ ] T066 [US9] Implement mini-player with react-rnd for drag and resize
-- [ ] T067 [US9] Add keyboard navigation support (focus trap in fullscreen)
-- [ ] T068 [US9] Integrate export and viewing mode controls into ChartWrapper header
-- [ ] T069 [US9] Add timezone selector UI component with local/UTC/custom options
-- [ ] T070 [US9] Implement timezone change propagation to all charts via ChartContext
+- [X] T054 [P] [US9] Create FullscreenView component in client/src/components/charts/shared/FullscreenView.tsx
+- [X] T055 [P] [US9] Create FullscreenView styles in client/src/components/charts/shared/FullscreenView.module.scss
+- [X] T056 [P] [US9] Create MiniPlayer component in client/src/components/charts/shared/MiniPlayer.tsx
+- [X] T057 [P] [US9] Create MiniPlayer styles in client/src/components/charts/shared/MiniPlayer.module.scss
+- [X] T058 [P] [US9] Create ExportMenu component in client/src/components/charts/shared/ExportMenu.tsx
+- [X] T059 [P] [US9] Create ExportMenu styles in client/src/components/charts/shared/ExportMenu.module.scss
+- [X] T060 [US9] Implement PNG export with pixelRatio: 2 for retina quality
+- [X] T061 [US9] Implement SVG export functionality
+- [X] T062 [US9] Implement CSV export with metadata headers including chart title, applied filters, export timestamp in ISO 8601 format, and timezone identifier (e.g., 'America/New_York', 'UTC', or user's current timezone)
+- [X] T063 [US9] Implement filename generation following data_name-filters-timestamp convention
+- [X] T064 [US9] Add fullscreen mode with hybrid native API + modal fallback
+- [X] T065 [US9] Add ESC key handler for exiting fullscreen and mini-player
+- [X] T066 [US9] Implement mini-player with react-rnd for drag and resize
+- [X] T067 [US9] Add keyboard navigation support (focus trap in fullscreen)
+- [X] T068 [US9] Integrate export and viewing mode controls into ChartWrapper header
+- [X] T069 [US9] Add timezone selector UI component with local/UTC/custom options
+- [X] T070 [US9] Implement timezone change propagation to all charts via ChartContext
 
 **Checkpoint**: All P1 user stories (Balance, Distribution, Filtering/Export) should now be independently functional
 

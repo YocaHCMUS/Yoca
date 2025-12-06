@@ -1,0 +1,255 @@
+/**
+ * MiniPlayer Styles
+ * 
+ * Styles for draggable and resizable mini-player mode.
+ */
+
+@import '../../../styles/variables';
+
+.miniPlayer {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  background-color: var(--cds-background, #ffffff);
+  display: flex;
+  flex-direction: column;
+  
+  &:focus {
+    outline: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--cds-layer-01, #f4f4f4);
+  border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+  height: 48px;
+  
+  &:hover {
+    background-color: var(--cds-layer-hover, #e8e8e8);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cds-text-secondary, #525252);
+  flex-shrink: 0;
+  cursor: move;
+  
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cds-text-primary, #161616);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minimizeButton,
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--cds-text-primary, #161616);
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s ease-in-out;
+  flex-shrink: 0;
+  
+  &:hover {
+    background-color: var(--cds-layer-hover, #e8e8e8);
+  }
+  
+  &:active {
+    background-color: var(--cds-layer-active, #c6c6c6);
+  }
+  
+  &:focus {
+    outline: 2px solid var(--cds-focus, #0f62fe);
+    outline-offset: -2px;
+  }
+  
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.closeButton {
+  &:hover {
+    background-color: var(--cds-danger, #da1e28);
+    color: #ffffff;
+  }
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+  background-color: var(--cds-background, #ffffff);
+}
+
+// Dark theme support
+[data-carbon-theme='g100'],
+[data-carbon-theme='g90'] {
+  .container {
+    background-color: var(--cds-background, #161616);
+  }
+  
+  .header {
+    background-color: var(--cds-layer-01, #262626);
+    border-bottom-color: var(--cds-border-subtle, #393939);
+    
+    &:hover {
+      background-color: var(--cds-layer-hover, #353535);
+    }
+  }
+  
+  .dragHandle {
+    color: var(--cds-text-secondary, #c6c6c6);
+  }
+  
+  .title {
+    color: var(--cds-text-primary, #f4f4f4);
+  }
+  
+  .minimizeButton,
+  .closeButton {
+    color: var(--cds-text-primary, #f4f4f4);
+    
+    &:hover {
+      background-color: var(--cds-layer-hover, #353535);
+    }
+    
+    &:active {
+      background-color: var(--cds-layer-active, #525252);
+    }
+  }
+  
+  .closeButton:hover {
+    background-color: var(--cds-danger, #da1e28);
+    color: #ffffff;
+  }
+  
+  .content {
+    background-color: var(--cds-background, #161616);
+  }
+}
+
+// Resize handles styling
+:global {
+  .react-draggable {
+    .react-resizable-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background-color: transparent;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: var(--cds-interactive, #0f62fe);
+        opacity: 0;
+        transition: opacity 0.15s ease-in-out;
+      }
+      
+      &:hover::after {
+        opacity: 0.3;
+      }
+    }
+    
+    .react-resizable-handle-se {
+      bottom: 0;
+      right: 0;
+      cursor: nwse-resize;
+    }
+    
+    .react-resizable-handle-sw {
+      bottom: 0;
+      left: 0;
+      cursor: nesw-resize;
+    }
+    
+    .react-resizable-handle-ne {
+      top: 0;
+      right: 0;
+      cursor: nesw-resize;
+    }
+    
+    .react-resizable-handle-nw {
+      top: 0;
+      left: 0;
+      cursor: nwse-resize;
+    }
+    
+    .react-resizable-handle-n {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      cursor: ns-resize;
+    }
+    
+    .react-resizable-handle-s {
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      cursor: ns-resize;
+    }
+    
+    .react-resizable-handle-e {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: ew-resize;
+    }
+    
+    .react-resizable-handle-w {
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: ew-resize;
+    }
+  }
+}

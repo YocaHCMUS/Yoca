@@ -13,6 +13,7 @@ import type { EChartsOption } from 'echarts';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartContext } from '../../../contexts/ChartContext';
 // import { fetchBalanceTrend } from '../../../services/chart/chartApi';
 import { mockFetchBalanceTrend } from '../../../services/chart/mockChartData';
@@ -20,6 +21,7 @@ import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart
 import type { BalanceTrendResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod } from '../../../types/chart-filters.types';
+import type { ExportFormat } from '../shared/ExportMenu';
 import styles from './BalanceChart.module.scss';
 
 /**
@@ -89,6 +91,9 @@ export function BalanceChart({
     status: 'idle',
     retryCount: 0,
   });
+  
+  // Chart instance ref for export
+  const chartRef = useRef<ReactECharts>(null);
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
@@ -260,6 +265,45 @@ export function BalanceChart({
   }, [data, timezone]);
   
   /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle: title,
+    timezone,
+    baseFilename: 'balance-trend',
+  });
+  
+  /**
+   * Handle export based on format
+   */
+  const handleExport = async (format: ExportFormat) => {
+    const chartInstance = chartRef.current?.getEchartsInstance();
+    if (!chartInstance) {
+      console.error('Chart instance not available for export');
+      return;
+    }
+    
+    if (format === 'png') {
+      exportPNG(chartInstance as any, filters);
+    } else if (format === 'svg') {
+      exportSVG(chartInstance as any, filters);
+    } else if (format === 'csv' && data) {
+      // Convert data to ChartDataSeries format for CSV export
+      const csvData = data.series.map((series, index) => ({
+        id: `series-${index}`,
+        name: series.name,
+        type: 'line' as const,
+        data: series.data.map(point => ({
+          timestamp: point.timestamp,
+          value: point.value,
+        })),
+        visible: true,
+      }));
+      exportCSV(csvData, filters);
+    }
+  };
+  
+  /**
    * Handle retry on error
    */
   const handleRetry = () => {
@@ -274,6 +318,7 @@ export function BalanceChart({
     
     return (
       <ReactECharts
+        ref={chartRef}
         option={chartOption}
         style={{ height: `${height}px`, width: '100%' }}
         notMerge={true}
@@ -290,6 +335,7 @@ export function BalanceChart({
         loadingState={loadingState}
         height={height}
         onRetry={handleRetry}
+        onExport={handleExport}
         isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
         emptyState={{
           title: 'No Balance Data',
