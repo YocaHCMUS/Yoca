@@ -14,7 +14,8 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchBalanceTrend } from '../../../services/chart/chartApi';
+// import { fetchBalanceTrend } from '../../../services/chart/chartApi';
+import { mockFetchBalanceTrend } from '../../../services/chart/mockChartData';
 import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
 import type { BalanceTrendResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
@@ -121,7 +122,7 @@ export function BalanceChart({
     }));
     
     try {
-      const response = await fetchBalanceTrend({
+      const response = await mockFetchBalanceTrend({
         timePeriod: filters.timePeriod,
         tokens: filters.tokens?.join(','),
         timezone,

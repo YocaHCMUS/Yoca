@@ -40,7 +40,7 @@ export interface ChartFilters {
   timePeriod: TimePeriod;
   
   /** Selected tokens (['All'] or specific tokens) */
-  tokens: string[];
+  tokens?: string[];
   
   /** Transaction type filter */
   transactionType: TransactionType;
@@ -99,7 +99,7 @@ export interface ExportMetadata {
  */
 export const DEFAULT_FILTERS: ChartFilters = {
   timePeriod: '30D',
-  tokens: ['All'],
+  tokens: undefined,
   transactionType: 'all',
   wallets: undefined,
   customDateRange: undefined,
@@ -134,7 +134,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
  */
 export function validateFilters(filters: ChartFilters): boolean {
   // If tokens includes 'All', it must be the only element
-  if (filters.tokens.includes('All') && filters.tokens.length > 1) {
+  if (filters.tokens && filters.tokens.includes('All') && filters.tokens.length > 1) {
     return false;
   }
 
@@ -164,8 +164,7 @@ export function validateFilters(filters: ChartFilters): boolean {
 export function isDefaultFilters(filters: ChartFilters): boolean {
   return (
     filters.timePeriod === DEFAULT_FILTERS.timePeriod &&
-    filters.tokens.length === 1 &&
-    filters.tokens[0] === 'All' &&
+    (!filters.tokens || filters.tokens.length === 0) &&
     filters.transactionType === DEFAULT_FILTERS.transactionType &&
     filters.wallets === undefined &&
     filters.customDateRange === undefined
