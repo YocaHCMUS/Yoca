@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse, TransactionDistributionResponse } from '../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../types/chart-filters.types';
 
 /**
@@ -648,3 +648,150 @@ export async function mockFetchVolumeBenchmark(params?: {
     params?.timezone || 'UTC'
   );
 }
+
+/**
+ * Generate mock transaction distribution data
+ */
+function generateMockTransactionDistribution(
+  timePeriod: TimePeriod,
+  transactionType: TransactionType,
+  walletIds: string[],
+  timezone: string
+): TransactionDistributionResponse {
+  const startTimestamp = getStartTimestamp(timePeriod);
+  const aggregation = getAggregationInterval(timePeriod);
+  const intervalMs = getIntervalMs(aggregation);
+  const { dataPoints: pointsCount } = getTimePeriodDetails(timePeriod);
+  
+  // Define wallets
+  const allWallets = [
+    { id: 'wallet-1', name: 'Main Wallet' },
+    { id: 'wallet-2', name: 'Trading Wallet' },
+    { id: 'wallet-3', name: 'Savings Wallet' },
+    { id: 'wallet-4', name: 'DeFi Wallet' },
+  ];
+  
+  const selectedWallets = walletIds.length > 0
+    ? allWallets.filter(w => walletIds.includes(w.id))
+    : allWallets;
+  
+  // Generate transaction counts by wallet
+  const transactionCounts = selectedWallets.map((wallet) => {
+    const data: { timestamp: number; value: number }[] = [];
+    
+    // Base transaction count varies by wallet
+    const baseCount = wallet.id === 'wallet-1' ? 15 : wallet.id === 'wallet-2' ? 25 : wallet.id === 'wallet-3' ? 8 : 12;
+    
+    for (let i = 0; i < pointsCount; i++) {
+      const timestamp = startTimestamp + (i * intervalMs);
+      
+      // Weekly pattern (weekends have fewer transactions)
+      const date = new Date(timestamp);
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const weekdayFactor = isWeekend ? 0.5 : 1.0;
+      
+      // Time of day pattern (peak hours have more transactions)
+      const hour = date.getHours();
+      const isPeakHour = hour >= 9 && hour <= 17;
+      const hourFactor = isPeakHour ? 1.2 : 0.8;
+      
+      // Random variation (±30%)
+      const noise = (Math.random() - 0.5) * 0.6;
+      
+      // Occasional spikes (15% chance)
+      const spike = Math.random() < 0.15 ? 1.8 : 1.0;
+      
+      // Apply transaction type filter
+      let typeFactor = 1.0;
+      if (transactionType === 'deposits') {
+        typeFactor = 0.6;
+      } else if (transactionType === 'withdrawals') {
+        typeFactor = 0.4;
+      } else if (transactionType === 'trades') {
+        typeFactor = 0.8;
+      }
+      
+      // Calculate final count
+      const count = Math.max(0, Math.round(baseCount * weekdayFactor * hourFactor * typeFactor * (1 + noise) * spike));
+      
+      data.push({
+        timestamp: Math.floor(timestamp),
+        value: count,
+      });
+    }
+    
+    return {
+      walletId: wallet.id,
+      walletName: wallet.name,
+      data,
+    };
+  });
+  
+  // Generate unique token counts per day
+  const uniqueTokenCounts: { timestamp: number; value: number }[] = [];
+  const baseTokenCount = 8;
+  
+  for (let i = 0; i < pointsCount; i++) {
+    const timestamp = startTimestamp + (i * intervalMs);
+    
+    // Weekly pattern (more diverse trading on weekdays)
+    const date = new Date(timestamp);
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const weekdayFactor = isWeekend ? 0.7 : 1.0;
+    
+    // Growth trend over time (more tokens over time)
+    const progress = i / pointsCount;
+    const trendFactor = 1.0 + (progress * 0.5); // Up to 50% growth
+    
+    // Random variation (±20%)
+    const noise = (Math.random() - 0.5) * 0.4;
+    
+    // Occasional spikes (10% chance - new token discoveries)
+    const spike = Math.random() < 0.1 ? 1.5 : 1.0;
+    
+    // Calculate final count
+    const count = Math.max(1, Math.round(baseTokenCount * weekdayFactor * trendFactor * (1 + noise) * spike));
+    
+    uniqueTokenCounts.push({
+      timestamp: Math.floor(timestamp),
+      value: count,
+    });
+  }
+  
+  return {
+    transactionCounts,
+    uniqueTokenCounts,
+    metadata: {
+      period: timePeriod,
+      transactionType: transactionType || 'all',
+    },
+  };
+}
+
+/**
+ * Mock fetch transaction distribution data with simulated network delay
+ */
+export async function mockFetchTransactionDistribution(params?: {
+  timePeriod?: TimePeriod;
+  transactionType?: TransactionType;
+  walletIds?: string[];
+  timezone?: string;
+}): Promise<TransactionDistributionResponse> {
+  // Simulate network delay
+  await delay(400 + Math.random() * 300);
+  
+  // Randomly fail 5% of requests to test error handling
+  if (Math.random() < 0.05) {
+    throw new Error('Mock API error: Failed to fetch transaction distribution data');
+  }
+  
+  return generateMockTransactionDistribution(
+    params?.timePeriod || '30D',
+    params?.transactionType || 'all',
+    params?.walletIds || [],
+    params?.timezone || 'UTC'
+  );
+}
+

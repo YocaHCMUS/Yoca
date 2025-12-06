@@ -8,6 +8,7 @@ import { PnLChart } from "../../components/charts/PnLChart";
 import { ExchangeComparison } from "../../components/charts/ExchangeComparison";
 import { CounterpartyActivity } from "../../components/charts/CounterpartyActivity";
 import { VolumeBenchmark } from "../../components/charts/VolumeBenchmark";
+import { TransactionDistribution } from "../../components/charts/TransactionDistribution";
 
 /**
  * Dashboard page - authenticated user dashboard
@@ -84,6 +85,18 @@ export default function DashboardPage() {
                   height={400}
                   initialTimePeriod="30D"
                   chartType="line"
+                  enableAutoRefresh={true}
+                />
+              </Tile>
+              
+              {/* Transaction Distribution Chart */}
+              <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+                <TransactionDistribution
+                  title={t("dashboard.transactionDistribution.title", "Transaction Activity Analysis")}
+                  height={300}
+                  initialTimePeriod="30D"
+                  initialTransactionType="all"
+                  chartMode="stacked"
                   enableAutoRefresh={true}
                 />
               </Tile>
