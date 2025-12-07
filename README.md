@@ -26,20 +26,20 @@ Frontend runs on `http://localhost:3000`, backend on `http://localhost:8000`.
 
 ## Getting Started
 
-This monorepo makes use of npm's workspace feature. You don't need to `cd` into `client` or `server` to run these following commands as each of them has assigned with a specific workspace.
+This monorepo makes use of npm's workspace feature. You don't need to `cd` into `client` or `server` to run these following commands as each of them has assigned to a specific workspace.
 
 
 ### Starting the Server
 ```bash
 npm run server:dev
 ```
-This starts server on `http://localhost:4000` in watch mode - any changes to the server will trigger a restart automatically.
+This starts server on `http://localhost:4000` in watch mode - any changes made to the server will trigger a restart automatically.
 
 ### Starting the Client
 ```bash
 npm run client:dev
 ```
-This starts the frontend Vite client on `http://localhost:3000` in Vite dev mode - any changes will lead to a **H**ot **M**odule **R**eload (which is *not equivalent to a full restart*, but faster to iterate)
+This starts the frontend Vite client on `http://localhost:3000` in Vite dev mode - any changes made will lead to a **H**ot **M**odule **R**eload (which is *not equivalent to a full restart*, but faster to itera/te)
 
 ### Inspecting the Database
 ```
