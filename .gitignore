@@ -30,7 +30,7 @@ client/build
 server/build
 
 # Environment variables
-**/.env
+s**/.env
 **/.env.local
 
 # TypeScript
