@@ -12,15 +12,33 @@
     "build": "npm run build --workspaces",
     "preview": "npm run start --workspace=server & npm run preview --workspace=client",
     "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces",
     "client:dev": "npm run dev --workspace=client",
     "client:build": "npm run build --workspace=client",
     "client:preview": "npm run preview --workspace=client",
+    "client:clean": "npm run clean --workspace=client",
     "server:dev": "npm run dev --workspace=server",
     "server:build": "npm run build --workspace=server",
-    "server:start": "npm run start --workspace=server",
-    "clean": "npm run clean --workspaces"
+    "server:preview": "npm run start --workspace=server",
+    "server:clean": "npm run clean --workspace=server",
+    "db:generate": "npm run db:generate --workspace=server",
+    "db:migrate": "npm run db:migrate --workspace=server",
+    "db:push": "npm run db:push --workspace=server",
+    "db:push-force": "npm run db:push-force --workspace=server",
+    "db:seed": "npm run db:seed --workspace=server",
+    "db:studio": "npm run db:studio --workspace server"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.19",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
-    "prettier": "3.6.2"
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
+    "prettier": "3.6.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0"
   }
 }
