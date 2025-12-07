@@ -69,7 +69,7 @@ function generateFilename(
   
   const filterParts: string[] = [
     filters.timePeriod,
-    filters.tokens.join(','),
+    filters.tokens?.join(',') || 'all-tokens',
     filters.transactionType !== 'all' ? filters.transactionType : null,
   ].filter(Boolean) as string[];
   
@@ -102,7 +102,7 @@ function dataToCSV(
   lines.push(`# Chart: ${metadata.chartTitle}`);
   lines.push(`# Timezone: ${metadata.timezone}`);
   lines.push(`# Export Date: ${metadata.exportDate}`);
-  lines.push(`# Filters: ${metadata.filters.timePeriod}, ${metadata.filters.tokens.join(',')}, ${metadata.filters.transactionType}`);
+  lines.push(`# Filters: ${metadata.filters.timePeriod}, ${metadata.filters.tokens?.join(',') || 'All'}, ${metadata.filters.transactionType}`);
   lines.push(`# Data Points: ${metadata.dataPointCount}`);
   lines.push('');
   

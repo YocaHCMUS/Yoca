@@ -2,11 +2,12 @@
  * ChartWrapper Component
  * 
  * Base wrapper component for all chart types with header, controls, and state management.
+ * Supports keyboard navigation: F for fullscreen, M for mini-player, ESC to exit modes.
  * 
  * @module ChartWrapper
  */
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { ChartSkeleton } from './ChartSkeleton';
 import { ChartEmptyState } from './ChartEmptyState';
 import { ChartErrorState } from './ChartErrorState';
@@ -158,17 +159,58 @@ export function ChartWrapper({
   }, []);
   
   /**
+   * Handle keyboard shortcuts
+   * F: Fullscreen, M: Mini-player, ESC: Exit modes
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      switch (event.key.toLowerCase()) {
+        case 'f':
+          if (enableFullscreen && !isFullscreen && !isMiniPlayer) {
+            event.preventDefault();
+            enterFullscreen();
+          }
+          break;
+        case 'm':
+          if (enableMiniPlayer && !isFullscreen && !isMiniPlayer) {
+            event.preventDefault();
+            enterMiniPlayer();
+          }
+          break;
+        case 'escape':
+          if (isFullscreen) {
+            event.preventDefault();
+            exitFullscreen();
+          } else if (isMiniPlayer) {
+            event.preventDefault();
+            exitMiniPlayer();
+          }
+          break;
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
+  
+  /**
    * Render viewing mode controls
    */
   const renderControls = () => (
-    <div className={styles.controls}>
+    <div className={styles.controls} role="toolbar" aria-label="Chart viewing modes">
       {enableFullscreen && (
         <button
           className={styles.controlButton}
           onClick={enterFullscreen}
-          aria-label="Fullscreen"
-          title="Fullscreen"
+          aria-label="Enter fullscreen mode (press F)"
+          title="Fullscreen (F)"
           disabled={loadingState.status === 'loading'}
+          tabIndex={0}
         >
           <svg
             width="20"
@@ -189,9 +231,10 @@ export function ChartWrapper({
         <button
           className={styles.controlButton}
           onClick={enterMiniPlayer}
-          aria-label="Mini player"
-          title="Mini player"
+          aria-label="Open mini player (press M)"
+          title="Mini player (M)"
           disabled={loadingState.status === 'loading'}
+          tabIndex={0}
         >
           <svg
             width="20"
@@ -260,10 +303,24 @@ export function ChartWrapper({
         ref={containerRef}
         className={`${styles.wrapper} ${className || ''}`}
         data-testid="chart-wrapper"
+        role="region"
+        aria-label={`Chart: ${title}`}
+        aria-busy={loadingState.status === 'loading' || loadingState.status === 'refreshing'}
       >
+        {/* Screen reader announcements */}
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {loadingState.status === 'loading' && `Loading ${title} chart data`}
+          {loadingState.status === 'refreshing' && `Refreshing ${title} chart data`}
+          {loadingState.status === 'success' && !isEmpty && `${title} chart loaded successfully`}
+          {loadingState.status === 'error' && `Error loading ${title} chart`}
+          {isEmpty && `No data available for ${title} chart`}
+        </div>
+        
         {/* Header */}
         <div className={styles.header}>
-          <h2 className={styles.title}>{title}</h2>
+          <h2 className={styles.title} id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+            {title}
+          </h2>
           <div className={styles.headerActions}>
             {actions}
             {renderControls()}

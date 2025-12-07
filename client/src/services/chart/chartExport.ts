@@ -22,7 +22,7 @@ export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata):
   lines.push(`# Timezone: ${metadata.timezone}`);
   lines.push(`# Export Date: ${metadata.exportDate}`);
   lines.push(`# Time Period: ${metadata.filters.timePeriod}`);
-  lines.push(`# Tokens: ${metadata.filters.tokens.join(', ')}`);
+  lines.push(`# Tokens: ${metadata.filters.tokens?.join(', ') || 'All'}`);
   lines.push(`# Transaction Type: ${metadata.filters.transactionType}`);
   if (metadata.filters.wallets) {
     lines.push(`# Wallets: ${metadata.filters.wallets.join(', ')}`);

@@ -651,6 +651,11 @@ export async function mockFetchVolumeBenchmark(params?: {
 
 /**
  * Generate mock transaction distribution data
+ * 
+ * @param timePeriod - Time period for data
+ * @param transactionType - Type of transactions
+ * @param walletIds - Specific wallet IDs to include
+ * @param timezone - Timezone for date formatting (currently unused, reserved for future)
  */
 function generateMockTransactionDistribution(
   timePeriod: TimePeriod,
@@ -658,6 +663,9 @@ function generateMockTransactionDistribution(
   walletIds: string[],
   timezone: string
 ): TransactionDistributionResponse {
+  // Note: timezone parameter is available for future date formatting enhancements
+  console.debug('Timezone context:', timezone);
+  
   const startTimestamp = getStartTimestamp(timePeriod);
   const aggregation = getAggregationInterval(timePeriod);
   const intervalMs = getIntervalMs(aggregation);
