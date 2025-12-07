@@ -30,12 +30,8 @@ client/build
 server/build
 
 # Environment variables
-.env.local
-.env.*.local
-client/.env.local
-client/.env.*.local
-server/.env.local
-server/.env.*.local
+**/.env
+**/.env.local
 
 # TypeScript
 *.tsbuildinfo
