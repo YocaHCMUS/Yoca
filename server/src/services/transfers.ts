@@ -1,0 +1,116 @@
+import { type TokenTransferInsert } from "@/db/schema.js";
+import * as bitquery from "@/util/util-bitquery.js";
+
+interface BQ_Transfer {
+  Transfer: {
+    Amount: number;
+    AmountInUSD: number;
+    Sender: {
+      Address: string;
+      Owner: string;
+    };
+    Receiver: {
+      Address: string;
+      Owner: string;
+    };
+    Currency: {
+      MintAddress: string;
+      Native: boolean;
+      Wrapped: boolean;
+    };
+  };
+  Block: {
+    Time: string;
+  };
+  Instruction: {
+    Index: number;
+  };
+  Transaction: {
+    Signature: string;
+  };
+}
+
+interface BQ_TransfersResponse {
+  data: {
+    Solana: {
+      Transfers: BQ_Transfer[];
+    };
+  };
+}
+
+async function fetchLatestTransfers(limit: number, offset: number) {
+  const query = `
+    query GetLatestTransfers($limit: Int!, $offset: Int!) {
+      Solana {
+        Transfers(limit: { count : $limit, offset: $offset}, orderBy: {descending: Block_Time}) {
+          Transfer {
+            Amount
+            AmountInUSD
+            Sender {
+              Address
+              Owner
+            }
+            Receiver {
+              Address
+              Owner
+            }
+            Currency {
+              Native
+              Wrapped
+              MintAddress
+            }
+          }
+          Block {
+            Time
+          }
+          Instruction {
+            Index
+          }
+          Transaction {
+            Signature
+          }
+        }
+      }
+    }
+  `;
+
+  const req = new Request(bitquery.getStreamingEndpoint(), {
+    method: "POST",
+    headers: bitquery.getRequiredHeaders(),
+    body: JSON.stringify({
+      query,
+      variables: { limit, offset },
+    }),
+  });
+
+  const resp = await fetch(req);
+
+  if (resp.ok) {
+    const res: BQ_TransfersResponse = await resp.json();
+
+    const transfersList = await Promise.all(
+      res.data.Solana.Transfers.map(
+        async (rawTransfer): Promise<TokenTransferInsert> => ({
+          fromOwner: rawTransfer.Transfer.Sender.Address,
+          toOwner: rawTransfer.Transfer.Receiver.Address,
+          amount: rawTransfer.Transfer.Amount,
+          amountUsd: rawTransfer.Transfer.AmountInUSD,
+          blockTime: new Date(rawTransfer.Block.Time),
+          instructionIndex: rawTransfer.Instruction.Index,
+          transactionSignature: rawTransfer.Transaction.Signature,
+          tokenAddress: rawTransfer.Transfer.Currency.Native
+            ? "native"
+            : rawTransfer.Transfer.Currency.MintAddress,
+        }),
+      ),
+    );
+
+    return transfersList;
+  }
+
+  return null;
+}
+
+export async function getLatestTransfers(limit: number, offset: number) {
+  return await fetchLatestTransfers(limit, offset);
+}

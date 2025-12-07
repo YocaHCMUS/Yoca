@@ -1,16 +1,9 @@
-import { z } from "zod";
+import { userSchema, validate } from "@/middlewares/validation.js";
 import { Hono } from "hono";
-import { validateBody } from "../middlewares/validation.middleware.js";
-
-// User validation schema
-const userSchema = z.object({
-  email: z.email("Invalid email format"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
 
 const app = new Hono()
   // Add a new user
-  .post("/", validateBody(userSchema), async (c) => {
+  .post("/", validate("json", userSchema), async (c) => {
     const user = c.req.valid("json");
     // TODO: Implement actual user creation logic
 
