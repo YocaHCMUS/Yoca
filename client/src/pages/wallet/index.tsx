@@ -5,10 +5,10 @@ import { formatNumber } from "../../util/format.ts";
 import { useTranslation } from "react-i18next";
 
 interface WalletProps {
-    address : string
+  address: string;
 }
 
-export default function WalletPage(props : WalletProps) {
+export default function WalletPage(props: WalletProps) {
   const { t } = useTranslation();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,19 +29,22 @@ export default function WalletPage(props : WalletProps) {
     },
   ];
 
-  useEffect(() => {(async () => {
+  useEffect(() => {
+    (async () => {
       try {
         const response = await fetch(`/api/v0/balances/${address}`);
         const data = await response.json();
-        const balances = data.map((
-          balance: { symbol: string; balance: string; valueUsd: string },
-          index: number,
-        ) => ({
-          id: index,
-          token: balance.symbol,
-          balance: formatNumber(Number(balance.balance)),
-          valueUsd: formatNumber(Number(balance.valueUsd)),
-        }));
+        const balances = data.map(
+          (
+            balance: { symbol: string; balance: string; valueUsd: string },
+            index: number,
+          ) => ({
+            id: index,
+            token: balance.symbol,
+            balance: formatNumber(Number(balance.balance)),
+            valueUsd: formatNumber(Number(balance.valueUsd)),
+          }),
+        );
 
         setTransfers(balances);
       } catch (error) {
@@ -56,9 +59,7 @@ export default function WalletPage(props : WalletProps) {
     <div style={{ minHeight: "100vh", background: "var(--cds-background)" }}>
       <Header />
       <main style={{ padding: "2rem", maxWidth: "1584px", margin: "0 auto" }}>
-        <h1 style={{ marginBottom: "1.5rem" }}>
-          {t("nav.wallet", "Wallet")}
-        </h1>
+        <h1 style={{ marginBottom: "1.5rem" }}>{t("nav.wallet", "Wallet")}</h1>
         <Tble loading={loading} rows={transfers} headers={headers} />
       </main>
     </div>

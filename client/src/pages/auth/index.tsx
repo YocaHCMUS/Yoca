@@ -5,7 +5,6 @@ import { Button, Grid, Column, Theme } from "@carbon/react";
 import { useTranslation } from "react-i18next";
 import styles from "./index.module.scss";
 
-
 import { PageWrapper } from "../../components/wrapper";
 
 export default function AuthShowcase() {
@@ -153,8 +152,7 @@ export default function AuthShowcase() {
     //     />
     //   )}
     // </div>  {/* g10, g90, g100 */}
-    <PageWrapper
-      onNavigate={(path) => console.log(path)}>
+    <PageWrapper onNavigate={(path) => console.log(path)}>
       <h1>Hello World</h1>
 
       {/* <div
