@@ -22,6 +22,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchAssetDistribution } from '../../../services/chart/mockChartData';
 import { formatCurrency } from '../../../util/chart-helpers';
@@ -29,6 +30,8 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import type { AssetDistributionResponse } from '../../../types/chart-api.types';
 import type { ChartFilters } from '../../../types/chart-filters.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
+import type { ExportFormat } from '../../../types/chart-filters.types';
+import type { ChartDataSeries } from '../../../types/chart-data.types';
 import styles from './AssetDistribution.module.scss';
 
 export interface AssetDistributionProps {
@@ -71,6 +74,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
     status: 'idle',
     retryCount: 0,
   });
+  
+  // Chart instance ref for export
+  const chartRef = useRef<ReactECharts>(null);
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
@@ -151,6 +157,45 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       fetchData();
     }
   }, [filters, topN, timezone]);
+  
+  /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle: title,
+    timezone,
+    baseFilename: 'asset-distribution',
+  });
+  
+  /**
+   * Handle export based on format
+   */
+  const handleExport = useCallback(async (format: ExportFormat) => {
+    const chartInstance = chartRef.current?.getEchartsInstance();
+    if (!chartInstance) {
+      console.error('Chart instance not available for export');
+      return;
+    }
+    
+    if (format === 'png') {
+      exportPNG(chartInstance as any, filters);
+    } else if (format === 'svg') {
+      exportSVG(chartInstance as any, filters);
+    } else if (format === 'csv' && data) {
+      // Convert data to ChartDataSeries format for CSV export
+      const csvData: ChartDataSeries[] = [{
+        id: 'asset-distribution',
+        name: 'Asset Distribution',
+        type: 'pie',
+        data: data.data.map(asset => ({
+          name: asset.name,
+          value: asset.value,
+        })),
+        visible: true,
+      }];
+      exportCSV(csvData, filters);
+    }
+  }, [exportPNG, exportSVG, exportCSV, filters, data]);
   
   /**
    * Generate eCharts option configuration
@@ -283,6 +328,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
     
     return (
       <ReactECharts
+        ref={chartRef}
         option={chartOption}
         style={{ height: `${height}px`, width: '100%' }}
         notMerge={true}
@@ -299,6 +345,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         loadingState={loadingState}
         height={height}
         onRetry={handleRetry}
+        onExport={handleExport}
         isEmpty={!data || data.data.length === 0}
         emptyState={{
           title: 'No Distribution Data',

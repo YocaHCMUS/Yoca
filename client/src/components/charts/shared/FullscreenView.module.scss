@@ -89,8 +89,13 @@
   overflow: auto;
   padding: 1.5rem;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  
+  // Ensure chart components stretch to fill available space
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 // Dark theme support

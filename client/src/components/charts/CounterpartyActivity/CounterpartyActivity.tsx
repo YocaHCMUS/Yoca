@@ -165,13 +165,39 @@ export function CounterpartyActivity({
   const { exportChart } = useChartExport({
     chartTitle: title,
     timezone,
+    baseFilename: 'counterparty-activity',
   });
   
   // Handle export
   const handleExport = async (format: ExportFormat) => {
     const echartsInstance = chartRef.current?.getEchartsInstance();
     const chartInstance = echartsInstance ? (echartsInstance as any) : null;
-    exportChart(format, chartInstance, [], filters);
+    
+    // Prepare CSV data
+    const csvData = data ? [
+      {
+        id: 'transaction-count',
+        name: 'Transaction Count',
+        type: 'bar' as const,
+        data: data.counterparties.map(cp => ({
+          category: cp.name,
+          value: cp.transactionCount,
+        })),
+        visible: true,
+      },
+      {
+        id: 'total-volume',
+        name: 'Total Volume',
+        type: 'bar' as const,
+        data: data.counterparties.map(cp => ({
+          category: cp.name,
+          value: cp.totalVolume,
+        })),
+        visible: true,
+      }
+    ] : [];
+    
+    exportChart(format, chartInstance, csvData, filters);
   };
   
   // Generate chart options

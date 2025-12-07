@@ -48,13 +48,27 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onClose,
   children,
   title = 'Chart',
-  defaultPosition = { x: window.innerWidth - 420, y: window.innerHeight - 320 },
+  defaultPosition,
   defaultSize = { width: 400, height: 300 },
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [position, setPosition] = useState(defaultPosition);
+  // Initialize position based on current viewport dimensions
+  const [position, setPosition] = useState(() => 
+    defaultPosition || { x: window.innerWidth - 420, y: window.innerHeight - 320 }
+  );
   const [size, setSize] = useState(defaultSize);
   const previousSizeRef = useRef(defaultSize);
+  
+  // Update position when activated to ensure it's always relative to current viewport
+  React.useEffect(() => {
+    if (isActive && !defaultPosition) {
+      // Recalculate position based on current viewport when opening
+      setPosition({ 
+        x: window.innerWidth - 420, 
+        y: window.innerHeight - 320 
+      });
+    }
+  }, [isActive, defaultPosition]);
   
   /**
    * Handle ESC key press to close mini-player
@@ -108,9 +122,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   
   return createPortal(
     <Rnd
-      default={{
+      position={{
         x: position.x,
         y: position.y,
+      }}
+      size={{
         width: size.width,
         height: size.height,
       }}

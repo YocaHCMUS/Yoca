@@ -373,7 +373,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           name: 'Daily P&L',
           type: 'bar' as const,
           data: data.dailyPnL.map((item: { timestamp: number; value: number }) => ({
-            name: formatTimestampWithTimezone(item.timestamp, timezone, 'MM/dd/yyyy'),
+            timestamp: item.timestamp,
             value: item.value,
           })),
           visible: true,
@@ -383,7 +383,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           name: 'Cumulative P&L',
           type: 'line' as const,
           data: data.cumulativePnL.map((item: { timestamp: number; value: number }) => ({
-            name: formatTimestampWithTimezone(item.timestamp, timezone, 'MM/dd/yyyy'),
+            timestamp: item.timestamp,
             value: item.value,
           })),
           visible: true,
