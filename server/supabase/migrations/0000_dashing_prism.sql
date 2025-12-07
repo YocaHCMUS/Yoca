@@ -41,13 +41,15 @@ CREATE TABLE "token_meta" (
 );
 --> statement-breakpoint
 CREATE TABLE "token_transfers" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"from_address" varchar(44) NOT NULL,
 	"to_address" varchar(44) NOT NULL,
 	"amount" numeric NOT NULL,
 	"amount_usd" numeric NOT NULL,
-	"time" timestamp NOT NULL,
-	"token_address" varchar(44) NOT NULL
+	"block_time" timestamp NOT NULL,
+	"token_address" varchar(44) NOT NULL,
+	"transaction_signature" char(64) NOT NULL,
+	"instruction_index" integer NOT NULL,
+	CONSTRAINT "token_transfers_transaction_signature_instruction_index_pk" PRIMARY KEY("transaction_signature","instruction_index")
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -75,3 +77,5 @@ CREATE TABLE "wallets" (
 	"balance_count" integer DEFAULT 0 NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
+--> statement-breakpoint
+CREATE INDEX "block_time_idx" ON "token_transfers" USING btree ("block_time");

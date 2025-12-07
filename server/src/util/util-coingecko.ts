@@ -1,5 +1,3 @@
-import "@util/load-env.js";
-
 export function getEndpoint(path: string): URL {
   return new URL(`${process.env.COINGECKO_API_BASE_URL}${path}`);
 }

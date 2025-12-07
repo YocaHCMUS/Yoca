@@ -1,5 +1,5 @@
+import { userSchema, validate } from "@/middlewares/validation.js";
 import { Hono } from "hono";
-import { validate, userSchema } from "../middlewares/validation.js";
 
 const app = new Hono()
   // Add a new user

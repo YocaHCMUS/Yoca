@@ -1,7 +1,7 @@
+import { addressListSchema, validate } from "@/middlewares/validation.js";
+import * as tokenService from "@/services/tokens.js";
+import { messageText, statusCode } from "@/util/responses.js";
 import { Hono } from "hono";
-import { addressListSchema, validate } from "@middlewares/validation.js";
-import { statusCode, messageText } from "@/util/responses.js";
-import * as tokenService from "@services/tokens.js";
 
 const app = new Hono()
   .get("/meta/:addresses", validate("param", addressListSchema), async (c) => {

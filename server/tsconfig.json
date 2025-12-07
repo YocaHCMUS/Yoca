@@ -13,12 +13,7 @@
     "outDir": "./build",
 
     "paths": {
-      "@/*": ["./src/*"],
-      "@util/*": ["./src/util/*"],
-      "@services/*": ["./src/services/*"],
-      "@db/*": ["./src/db/*"],
-      "@middlewares/*": ["./src/middlewares/*"],
-      "@config/*": ["./src/config/*"],
+      "@/*": ["./src/*"]
     },
     
     "strict": true,

@@ -1,14 +1,15 @@
+import { relations } from "drizzle-orm";
 import {
+  char,
+  decimal as dec,
   integer,
   pgTable,
-  uuid,
+  primaryKey,
   text,
   timestamp,
-  decimal as dec,
+  uuid,
   varchar,
-  primaryKey,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 /*
  * Notes:
@@ -95,15 +96,27 @@ export const tokenMarketData = pgTable("token_market_data", {
     .$onUpdate(() => new Date()),
 });
 
-export const tokenTransfers = pgTable("token_transfers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  fromAddress: varchar("from_address", { length: 44 }).notNull(),
-  toAddress: varchar("to_address", { length: 44 }).notNull(),
-  amount: decimal("amount").notNull(),
-  amountUsd: decimal("amount_usd").notNull(),
-  time: timestamp("time").notNull(),
-  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-});
+export const tokenTransfers = pgTable(
+  "token_transfers",
+  {
+    fromOwner: varchar("from_address", { length: 44 }).notNull(),
+    toOwner: varchar("to_address", { length: 44 }).notNull(),
+    // In the according token units
+    amount: decimal("amount").notNull(),
+    amountUsd: decimal("amount_usd").notNull(),
+    blockTime: timestamp("block_time").notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    transactionSignature: char("transaction_signature", {
+      length: 64,
+    }).notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.transactionSignature, table.instructionIndex],
+    }),
+  ],
+);
 
 export const wallets = pgTable("wallets", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -119,7 +132,7 @@ export const walletBalances = pgTable(
     address: varchar("address", { length: 44 }).notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
     totalValueUsd: decimal("total_value_usd").notNull(),
-    // Amount of token units
+    // In the according token units
     amount: decimal("amount").notNull(),
     valueUsd: decimal("value_usd").notNull(),
 

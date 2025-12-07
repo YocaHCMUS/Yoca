@@ -1,5 +1,2 @@
-// To use just load this file as a whole:
-//  import "load-env.js"
-
-process.loadEnvFile("./.env");
-process.loadEnvFile("./.env.local");
+import { config } from "dotenv";
+config({ path: ["./.env", "./.env.local"] });

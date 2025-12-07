@@ -1,21 +1,24 @@
-import { db } from "@db/index.js";
+import { WALLET_BALANCES_TTL_MS } from "@/config/constants.js";
+import { db } from "@/db/index.js";
 import {
   walletBalances,
   wallets,
   type WalletBalanceInsert,
-} from "@db/schema.js";
+} from "@/db/schema.js";
+import { excluded } from "@/util/orm-sql.js";
+import * as sim from "@/util/util-sim.js";
 import { eq } from "drizzle-orm";
-import * as sim from "@util/util-sim.js";
-import { WALLET_BALANCES_TTL_MS } from "@config/constants.js";
-import { excluded } from "@util/orm-sql.js";
 
 interface SIM_Balance {
   name: string;
   symbol: string;
   address: string;
+  // in lamports
   amount: number;
+  // in lamports
   balance: string;
   value_usd: number;
+  // in lamports
   raw_balance: string;
   decimals: number;
 }
@@ -45,7 +48,7 @@ async function fetchWalletBalances(walletAddress: string) {
       (rawBalance) => ({
         address: walletAddress,
         tokenAddress: rawBalance.address,
-        amount: rawBalance.amount,
+        amount: rawBalance.amount / 10 ** rawBalance.decimals,
         valueUsd: rawBalance.value_usd,
         totalValueUsd: rawBalance.value_usd,
       }),

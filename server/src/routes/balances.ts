@@ -1,7 +1,7 @@
+import { addressSchema, validate } from "@/middlewares/validation.js";
+import * as balanceService from "@/services/balances.js";
 import { Hono } from "hono";
 import { messageText, statusCode } from "../util/responses.js";
-import { validate, addressSchema } from "@middlewares/validation.js";
-import * as balanceService from "@services/balances.js";
 
 const app = new Hono().get(
   "/:address",

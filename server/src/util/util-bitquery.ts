@@ -1,5 +1,3 @@
-import "@util/load-env.js";
-
 export function getStreamingEndpoint(): URL {
   return new URL(process.env.BITQUERY_STREAM_API_ENDPOINT!);
 }

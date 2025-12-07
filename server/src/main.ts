@@ -1,12 +1,12 @@
+import "@/util/load-env.js";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import transfers from "./routes/transfers.js";
-import tokens from "./routes/tokens.js";
 import balances from "./routes/balances.js";
+import tokens from "./routes/tokens.js";
+import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
-import "@util/load-env.js";
 
 // Routes
 const app = new Hono()

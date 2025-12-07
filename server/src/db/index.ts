@@ -1,11 +1,10 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import * as dbSchema from "./schema.js";
+import { Storage } from "@/services/storage.js";
 import { DefaultLogger } from "drizzle-orm";
-import { join, dirname } from "path";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { dirname, join } from "path";
+import postgres from "postgres";
 import { fileURLToPath } from "url";
-import { Storage } from "@services/storage.js";
-import "@util/load-env.js";
+import * as dbSchema from "./schema.js";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 

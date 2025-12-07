@@ -1,7 +1,5 @@
-import { db } from "@db/index.js";
-import { tokenTransfers, type TokenTransferInsert } from "@db/schema.js";
-import { desc } from "drizzle-orm";
-import * as bitquery from "@util/util-bitquery.js";
+import { type TokenTransferInsert } from "@/db/schema.js";
+import * as bitquery from "@/util/util-bitquery.js";
 
 interface BQ_Transfer {
   Transfer: {
@@ -9,9 +7,11 @@ interface BQ_Transfer {
     AmountInUSD: number;
     Sender: {
       Address: string;
+      Owner: string;
     };
     Receiver: {
       Address: string;
+      Owner: string;
     };
     Currency: {
       MintAddress: string;
@@ -21,6 +21,12 @@ interface BQ_Transfer {
   };
   Block: {
     Time: string;
+  };
+  Instruction: {
+    Index: number;
+  };
+  Transaction: {
+    Signature: string;
   };
 }
 
@@ -32,19 +38,21 @@ interface BQ_TransfersResponse {
   };
 }
 
-async function fetchLatestTransfers(limit: number) {
+async function fetchLatestTransfers(limit: number, offset: number) {
   const query = `
-    query GetLatestTransfers($limit: Int!) {
+    query GetLatestTransfers($limit: Int!, $offset: Int!) {
       Solana {
-        Transfers(limit: { count : $limit}, orderBy: {descending: Block_Time}) {
+        Transfers(limit: { count : $limit, offset: $offset}, orderBy: {descending: Block_Time}) {
           Transfer {
             Amount
             AmountInUSD
             Sender {
               Address
+              Owner
             }
             Receiver {
               Address
+              Owner
             }
             Currency {
               Native
@@ -54,6 +62,12 @@ async function fetchLatestTransfers(limit: number) {
           }
           Block {
             Time
+          }
+          Instruction {
+            Index
+          }
+          Transaction {
+            Signature
           }
         }
       }
@@ -65,7 +79,7 @@ async function fetchLatestTransfers(limit: number) {
     headers: bitquery.getRequiredHeaders(),
     body: JSON.stringify({
       query,
-      variables: { limit },
+      variables: { limit, offset },
     }),
   });
 
@@ -74,47 +88,29 @@ async function fetchLatestTransfers(limit: number) {
   if (resp.ok) {
     const res: BQ_TransfersResponse = await resp.json();
 
-    const transfersList: TokenTransferInsert[] = await Promise.all(
-      res.data.Solana.Transfers.map(async (rawTransfer) => {
-        return {
-          fromAddress: rawTransfer.Transfer.Sender.Address,
-          toAddress: rawTransfer.Transfer.Receiver.Address,
+    const transfersList = await Promise.all(
+      res.data.Solana.Transfers.map(
+        async (rawTransfer): Promise<TokenTransferInsert> => ({
+          fromOwner: rawTransfer.Transfer.Sender.Address,
+          toOwner: rawTransfer.Transfer.Receiver.Address,
           amount: rawTransfer.Transfer.Amount,
           amountUsd: rawTransfer.Transfer.AmountInUSD,
-          time: new Date(rawTransfer.Block.Time),
+          blockTime: new Date(rawTransfer.Block.Time),
+          instructionIndex: rawTransfer.Instruction.Index,
+          transactionSignature: rawTransfer.Transaction.Signature,
           tokenAddress: rawTransfer.Transfer.Currency.Native
             ? "native"
             : rawTransfer.Transfer.Currency.MintAddress,
-        };
-      }),
+        }),
+      ),
     );
 
-    console.log(transfersList);
-
-    if (transfersList.length > 0) {
-      return await db
-        .insert(tokenTransfers)
-        .values(transfersList)
-        .onConflictDoNothing()
-        .returning();
-    }
     return transfersList;
   }
 
   return null;
 }
 
-export async function getLatestTransfers(limit: number) {
-  // Try to get fresh data from cache
-  const res = await db
-    .select()
-    .from(tokenTransfers)
-    .orderBy(desc(tokenTransfers.time))
-    .limit(limit);
-
-  if (res.length == 0) {
-    return await fetchLatestTransfers(limit);
-  }
-
-  return res;
+export async function getLatestTransfers(limit: number, offset: number) {
+  return await fetchLatestTransfers(limit, offset);
 }

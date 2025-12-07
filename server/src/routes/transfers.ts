@@ -1,16 +1,16 @@
-import { Hono } from "hono";
+import { paginationSchema, validate } from "@/middlewares/validation.js";
+import * as transferService from "@/services/transfers.js";
 import { messageText, statusCode } from "@/util/responses.js";
-import { paginationSchema, validate } from "@middlewares/validation.js";
-import * as transferService from "@services/transfers.js";
+import { Hono } from "hono";
 
 const app = new Hono().get(
   "/",
   validate("query", paginationSchema),
   async (c) => {
     try {
-      const { limit } = c.req.valid("query");
+      const { limit, offset } = c.req.valid("query");
 
-      const transfers = await transferService.getLatestTransfers(limit);
+      const transfers = await transferService.getLatestTransfers(limit, offset);
 
       if (transfers) {
         return c.json(transfers, statusCode.Ok);
