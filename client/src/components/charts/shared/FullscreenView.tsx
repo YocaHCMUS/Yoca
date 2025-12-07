@@ -15,6 +15,8 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Theme } from '@carbon/react';
+import { useTheme } from '../../../contexts/ThemeContext';
 import styles from './FullscreenView.module.scss';
 
 export interface FullscreenViewProps {
@@ -43,6 +45,7 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
   children,
   title = 'Chart',
 }) => {
+  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   
@@ -168,14 +171,15 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
   }
   
   return createPortal(
-    <div
-      ref={containerRef}
-      className={styles.fullscreenView}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${title} - Fullscreen View`}
-      tabIndex={-1}
-    >
+    <Theme theme={theme === 'dark' ? 'g100' : 'white'}>
+      <div
+        ref={containerRef}
+        className={styles.fullscreenView}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${title} - Fullscreen View`}
+        tabIndex={-1}
+      >
       <div className={styles.header}>
         <h2 className={styles.title}>{title}</h2>
         <button
@@ -203,7 +207,8 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
       <div className={styles.content}>
         {children}
       </div>
-    </div>,
+      </div>
+    </Theme>,
     document.body
   );
 };

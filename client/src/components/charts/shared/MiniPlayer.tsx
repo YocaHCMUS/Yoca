@@ -16,6 +16,8 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { createPortal } from 'react-dom';
+import { Theme } from '@carbon/react';
+import { useTheme } from '../../../contexts/ThemeContext';
 import styles from './MiniPlayer.module.scss';
 
 export interface MiniPlayerProps {
@@ -51,6 +53,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   defaultPosition,
   defaultSize = { width: 400, height: 300 },
 }) => {
+  const { theme } = useTheme();
   const [isMinimized, setIsMinimized] = useState(false);
   // Initialize position based on current viewport dimensions
   const [position, setPosition] = useState(() => 
@@ -144,14 +147,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       }}
       className={styles.miniPlayer}
     >
-      <div
-        className={styles.container}
-        onKeyDown={handleKeyDown}
-        role="dialog"
-        aria-modal="false"
-        aria-label={`${title} - Mini Player`}
-        tabIndex={-1}
-      >
+      <Theme theme={theme === 'dark' ? 'g100' : 'white'}>
+        <div
+          className={styles.container}
+          onKeyDown={handleKeyDown}
+          role="dialog"
+          aria-modal="false"
+          aria-label={`${title} - Mini Player`}
+          tabIndex={-1}
+        >
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <div className={styles.dragHandle} aria-label="Drag to move">
@@ -232,7 +236,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             {children}
           </div>
         )}
-      </div>
+        </div>
+      </Theme>
     </Rnd>,
     document.body
   );

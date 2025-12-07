@@ -1,9 +1,10 @@
 /**
  * FullscreenView Styles
  * 
- * Styles for fullscreen chart viewing mode with dark overlay and transitions.
+ * Styles for fullscreen chart viewing mode with theme support and transitions.
  */
 
+@use '@carbon/react/scss/theme' as *;
 @import '../../../styles/variables';
 
 .fullscreenView {
@@ -14,7 +15,7 @@
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background-color: var(--cds-background, #ffffff);
+  background-color: $background;
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -39,8 +40,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
-  background-color: var(--cds-layer-01, #f4f4f4);
+  border-bottom: 1px solid $border-subtle-01;
+  background-color: $layer-01;
   flex-shrink: 0;
 }
 
@@ -48,7 +49,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--cds-text-primary, #161616);
+  color: $text-primary;
 }
 
 .exitButton {
@@ -60,21 +61,21 @@
   padding: 0;
   border: none;
   background-color: transparent;
-  color: var(--cds-text-primary, #161616);
+  color: $text-primary;
   cursor: pointer;
   border-radius: 0.25rem;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
   
   &:hover {
-    background-color: var(--cds-layer-hover, #e8e8e8);
+    background-color: $layer-hover-01;
   }
   
   &:active {
-    background-color: var(--cds-layer-active, #c6c6c6);
+    background-color: $layer-active-01;
   }
   
   &:focus {
-    outline: 2px solid var(--cds-focus, #0f62fe);
+    outline: 2px solid $focus;
     outline-offset: 2px;
   }
   
@@ -95,35 +96,6 @@
   > * {
     flex: 1;
     min-height: 0;
-  }
-}
-
-// Dark theme support
-[data-carbon-theme='g100'],
-[data-carbon-theme='g90'] {
-  .fullscreenView {
-    background-color: var(--cds-background, #161616);
-  }
-  
-  .header {
-    background-color: var(--cds-layer-01, #262626);
-    border-bottom-color: var(--cds-border-subtle, #393939);
-  }
-  
-  .title {
-    color: var(--cds-text-primary, #f4f4f4);
-  }
-  
-  .exitButton {
-    color: var(--cds-text-primary, #f4f4f4);
-    
-    &:hover {
-      background-color: var(--cds-layer-hover, #353535);
-    }
-    
-    &:active {
-      background-color: var(--cds-layer-active, #525252);
-    }
   }
 }
 
