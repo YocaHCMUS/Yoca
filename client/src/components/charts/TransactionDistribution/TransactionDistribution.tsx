@@ -13,6 +13,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchTransactionDistribution } from '../../../services/chart/mockChartData';
 import { formatDate } from '../../../util/chart-helpers';
@@ -109,6 +110,9 @@ export function TransactionDistribution({
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
   
+  // Get theme configuration
+  const chartTheme = useChartTheme();
+  
   // Chart filters with debouncing
   const {
     filters,
@@ -196,19 +200,11 @@ export function TransactionDistribution({
       return {};
     }
     
-    // Generate color palette for wallets
-    const colorPalette = [
-      '#1f77b4', // Blue
-      '#ff7f0e', // Orange
-      '#2ca02c', // Green
-      '#d62728', // Red
-      '#9467bd', // Purple
-      '#8c564b', // Brown
-      '#e377c2', // Pink
-      '#7f7f7f', // Gray
-      '#bcbd22', // Olive
-      '#17becf', // Cyan
-    ];
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
+    // Use theme color palette
+    const colorPalette = chartTheme.colorPalette;
     
     // Create series for each wallet
     const series = data.transactionCounts.map((wallet, index) => ({
@@ -232,6 +228,7 @@ export function TransactionDistribution({
     }));
     
     return {
+      ...baseOption,
       grid: {
         top: 50,
         right: 40,
@@ -240,6 +237,7 @@ export function TransactionDistribution({
         containLabel: true,
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'shadow',
@@ -274,40 +272,29 @@ export function TransactionDistribution({
         },
       },
       legend: {
+        ...baseOption.legend,
         data: data.transactionCounts.map(w => w.walletName),
         top: 10,
         type: 'scroll',
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'time',
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatDate(new Date(value), timezone, 'MMM dd'),
           rotate: 45,
         },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         name: 'Transaction Count',
         nameLocation: 'middle',
         nameGap: 45,
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            type: 'dashed',
-            opacity: 0.3,
-          },
         },
       },
       series,
@@ -327,7 +314,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, selectedChartMode, timezone]);
+  }, [data, selectedChartMode, timezone, chartTheme]);
   
   /**
    * Generate eCharts options for unique token counts chart
@@ -337,7 +324,11 @@ export function TransactionDistribution({
       return {};
     }
     
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     return {
+      ...baseOption,
       grid: {
         top: 50,
         right: 40,
@@ -371,35 +362,23 @@ export function TransactionDistribution({
         },
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'time',
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatDate(new Date(value), timezone, 'MMM dd'),
           rotate: 45,
         },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         name: 'Unique Tokens',
         nameLocation: 'middle',
         nameGap: 45,
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            type: 'dashed',
-            opacity: 0.3,
-          },
         },
       },
       series: [
@@ -411,7 +390,7 @@ export function TransactionDistribution({
           showSymbol: data.uniqueTokenCounts.length <= 50,
           symbolSize: 6,
           itemStyle: {
-            color: '#2ca02c',
+            color: chartTheme.colorPalette[1], // Use theme green
           },
           areaStyle: {
             color: {
@@ -421,8 +400,8 @@ export function TransactionDistribution({
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(44, 160, 44, 0.3)' },
-                { offset: 1, color: 'rgba(44, 160, 44, 0.05)' },
+                { offset: 0, color: `${chartTheme.colorPalette[1]}4D` }, // 30% opacity
+                { offset: 1, color: `${chartTheme.colorPalette[1]}0D` }, // 5% opacity
               ],
             },
           },
@@ -450,7 +429,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, timezone]);
+  }, [data, timezone, chartTheme]);
   
   // Export functionality
   const { exportPNG, exportSVG, exportCSV } = useChartExport({

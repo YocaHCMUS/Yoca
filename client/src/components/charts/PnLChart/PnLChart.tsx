@@ -23,6 +23,7 @@ import type { EChartsOption } from 'echarts';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchPnLChart } from '../../../services/chart/mockChartData';
 import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
@@ -76,6 +77,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Get theme configuration
+  const chartTheme = useChartTheme();
   
   // Chart filters with debouncing
   const {
@@ -166,12 +170,13 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       return null;
     }
     
-    // Get theme colors dynamically
-    const textPrimaryColor = getComputedStyle(document.documentElement).getPropertyValue('--cds-text-primary').trim() || '#161616';
-    const textSecondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--cds-text-secondary').trim() || '#525252';
-    const profitColor = getComputedStyle(document.documentElement).getPropertyValue('--cds-support-success').trim() || '#24a148';
-    const lossColor = getComputedStyle(document.documentElement).getPropertyValue('--cds-support-error').trim() || '#da1e28';
-    const cumulativeColor = getComputedStyle(document.documentElement).getPropertyValue('--cds-interactive-01').trim() || '#0f62fe';
+    // Use theme colors
+    const profitColor = chartTheme.colorPalette[1]; // Green
+    const lossColor = chartTheme.colorPalette[2]; // Red
+    const cumulativeColor = chartTheme.colorPalette[0]; // Blue
+    
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Extract timestamps and values
     const timestamps = data.dailyPnL.map((item: { timestamp: number; value: number }) => item.timestamp);
@@ -182,6 +187,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     const xAxisData = timestamps.map((ts: number) => formatTimestampWithTimezone(ts, timezone, 'MM/dd'));
     
     return {
+      ...baseOption,
       grid: {
         left: '3%',
         right: '4%',
@@ -190,11 +196,12 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         containLabel: true,
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'cross',
           crossStyle: {
-            color: textSecondaryColor,
+            color: chartTheme.textColorSecondary,
           },
         },
         formatter: (params: any) => {
@@ -213,43 +220,32 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       },
       legend: {
+        ...baseOption.legend,
         data: ['Daily P&L', 'Cumulative P&L'],
         top: 0,
-        textStyle: {
-          color: textPrimaryColor,
-          fontSize: 12,
-        },
       },
       xAxis: [
         {
+          ...baseOption.xAxis,
           type: 'category',
           data: xAxisData,
           axisPointer: {
             type: 'shadow',
           },
-          axisLine: {
-            lineStyle: {
-              color: textSecondaryColor,
-            },
-          },
-          axisLabel: {
-            color: textPrimaryColor,
-            fontSize: 11,
-          },
         },
       ],
       yAxis: [
         {
+          ...baseOption.yAxis,
           type: 'value',
           name: 'Daily P&L',
           position: 'left',
           axisLine: {
+            ...baseOption.yAxis.axisLine,
             show: true,
-            lineStyle: {
-              color: textSecondaryColor,
-            },
           },
           axisLabel: {
+            ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => {
               // Format with K/M suffix for large numbers
               if (Math.abs(value) >= 1000000) {
@@ -259,27 +255,26 @@ export const PnLChart: React.FC<PnLChartProps> = ({
               }
               return formatCurrency(value);
             },
-            color: textPrimaryColor,
-            fontSize: 11,
           },
           splitLine: {
+            ...baseOption.yAxis.splitLine,
             lineStyle: {
-              color: textSecondaryColor,
+              ...baseOption.yAxis.splitLine?.lineStyle,
               opacity: 0.2,
             },
           },
         },
         {
+          ...baseOption.yAxis,
           type: 'value',
           name: 'Cumulative P&L',
           position: 'right',
           axisLine: {
+            ...baseOption.yAxis.axisLine,
             show: true,
-            lineStyle: {
-              color: textSecondaryColor,
-            },
           },
           axisLabel: {
+            ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => {
               // Format with K/M suffix for large numbers
               if (Math.abs(value) >= 1000000) {
@@ -289,8 +284,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
               }
               return formatCurrency(value);
             },
-            color: textPrimaryColor,
-            fontSize: 11,
           },
           splitLine: {
             show: false,
@@ -340,7 +333,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       ],
     };
-  }, [data, timezone]);
+  }, [data, timezone, chartTheme]);
   
   /**
    * Setup chart export

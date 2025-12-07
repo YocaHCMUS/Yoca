@@ -13,6 +13,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchHoldingDurations } from '../../../services/chart/mockChartData';
 import type { HoldingDurationsResponse } from '../../../types/chart-api.types';
@@ -106,6 +107,9 @@ export function HoldingDurations({
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Get theme configuration
+  const chartTheme = useChartTheme();
   
   // Chart filters with debouncing
   const {
@@ -215,12 +219,16 @@ export function HoldingDurations({
    * Generate eCharts options for a single wallet's holding durations
    */
   const generateWalletChartOptions = (wallet: HoldingDurationsResponse['wallets'][0]) => {
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     const chartData = wallet.holdings.map(holding => ({
       name: holding.tokenSymbol,
       value: convertDuration(holding.durationDays),
     }));
     
     return {
+      ...baseOption,
       grid: {
         top: 40,
         right: 40,
@@ -229,6 +237,7 @@ export function HoldingDurations({
         containLabel: true,
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'shadow',
@@ -247,36 +256,24 @@ export function HoldingDurations({
         },
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'category',
         data: chartData.map(d => d.name),
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           rotate: 45,
           fontSize: 11,
         },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         name: `Duration (${getTimeUnitLabel()})`,
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            type: 'dashed',
-            opacity: 0.3,
-          },
         },
       },
       series: [
@@ -284,7 +281,7 @@ export function HoldingDurations({
           type: 'bar',
           data: chartData.map(d => d.value),
           itemStyle: {
-            color: '#1f77b4',
+            color: chartTheme.colorPalette[0], // Use theme blue
           },
           label: {
             show: true,
@@ -294,7 +291,9 @@ export function HoldingDurations({
           },
           emphasis: {
             itemStyle: {
-              color: '#4a9eda',
+              color: chartTheme.colorPalette[0],
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
             },
           },
         },

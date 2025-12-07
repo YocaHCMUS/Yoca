@@ -13,6 +13,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchVolumeBenchmark } from '../../../services/chart/mockChartData';
 import { formatCurrency, formatDate } from '../../../util/chart-helpers';
@@ -109,6 +110,9 @@ export function VolumeBenchmark({
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
   
+  // Get theme configuration
+  const chartTheme = useChartTheme();
+  
   // Chart filters with debouncing
   const {
     filters,
@@ -194,19 +198,11 @@ export function VolumeBenchmark({
       return {};
     }
     
-    // Generate color palette for wallets
-    const colorPalette = [
-      '#1f77b4', // Blue
-      '#ff7f0e', // Orange
-      '#2ca02c', // Green
-      '#d62728', // Red
-      '#9467bd', // Purple
-      '#8c564b', // Brown
-      '#e377c2', // Pink
-      '#7f7f7f', // Gray
-      '#bcbd22', // Olive
-      '#17becf', // Cyan
-    ];
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
+    // Use theme color palette
+    const colorPalette = chartTheme.colorPalette;
     
     // Create series for each wallet
     const series = data.wallets.map((wallet, index) => ({
@@ -229,6 +225,7 @@ export function VolumeBenchmark({
     }));
     
     return {
+      ...baseOption,
       grid: {
         top: 60,
         right: 40,
@@ -267,40 +264,29 @@ export function VolumeBenchmark({
         },
       },
       legend: {
+        ...baseOption.legend,
         data: data.wallets.map(w => w.name),
         top: 10,
         type: 'scroll',
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'time',
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatDate(new Date(value), timezone, 'MMM dd'),
           rotate: 45,
         },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         name: 'Volume (USD)',
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => formatCurrency(value),
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#666',
-          },
-        },
-        splitLine: {
-          lineStyle: {
-            type: 'dashed',
-            opacity: 0.3,
-          },
         },
       },
       series,
@@ -320,7 +306,7 @@ export function VolumeBenchmark({
         },
       ],
     };
-  }, [data, selectedChartType, showDataLabels, timezone]);
+  }, [data, selectedChartType, showDataLabels, timezone, chartTheme]);
   
   // Export functionality
   const { exportPNG, exportSVG, exportCSV } = useChartExport({

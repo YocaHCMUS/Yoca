@@ -14,6 +14,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 // import { fetchBalanceTrend } from '../../../services/chart/chartApi';
 import { mockFetchBalanceTrend } from '../../../services/chart/mockChartData';
@@ -97,6 +98,9 @@ export function BalanceChart({
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Get theme configuration
+  const chartTheme = useChartTheme();
   
   // Chart filters with debouncing
   const {
@@ -190,7 +194,11 @@ export function BalanceChart({
     // Determine if LTTB sampling is needed (>2000 points)
     const enableSampling = seriesData.length > 2000;
     
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     return {
+      ...baseOption,
       grid: {
         left: '3%',
         right: '4%',
@@ -199,17 +207,21 @@ export function BalanceChart({
         containLabel: true,
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'time',
         boundaryGap: false as any,
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => {
             return formatTimestampWithTimezone(value, timezone, 'MMM dd');
           },
         },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => formatCurrency(value),
         },
       },
@@ -262,7 +274,7 @@ export function BalanceChart({
         },
       },
     };
-  }, [data, timezone]);
+  }, [data, timezone, chartTheme]);
   
   /**
    * Setup chart export

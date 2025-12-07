@@ -23,6 +23,7 @@ import type { EChartsOption } from 'echarts';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchAssetDistribution } from '../../../services/chart/mockChartData';
 import { formatCurrency } from '../../../util/chart-helpers';
@@ -80,6 +81,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Get theme configuration
+  const chartTheme = useChartTheme();
   
   // Chart filters with debouncing
   const {
@@ -205,6 +209,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       return null;
     }
     
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     // Calculate total value for percentages
     const totalValue = data.totalValue;
     
@@ -214,12 +221,14 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       value: asset.value,
       percentage: asset.percentage,
       itemStyle: {
-        color: (asset as any).color || `hsl(${(index * 360) / data.data.length}, 70%, 50%)`,
+        color: (asset as any).color || chartTheme.colorPalette[index % chartTheme.colorPalette.length],
       },
     }));
     
     return {
+      ...baseOption,
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'item',
         formatter: (params: any) => {
           const { name, value, data } = params;
@@ -232,6 +241,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
       },
       legend: {
+        ...baseOption.legend,
         orient: 'vertical',
         right: 20,
         top: 'center',
@@ -239,9 +249,6 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           const asset = data.data.find(a => a.name === name);
           if (!asset) return name;
           return `${name}: ${formatCurrency(asset.value)}`;
-        },
-        textStyle: {
-          fontSize: 12,
         },
       },
       series: [
@@ -293,7 +300,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           style: {
             text: 'Total Value',
             textAlign: 'center',
-            fill: getComputedStyle(document.documentElement).getPropertyValue('--cds-text-secondary').trim() || '#666',
+            fill: chartTheme.textColorSecondary,
             fontSize: 14,
           },
         },
@@ -304,14 +311,14 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           style: {
             text: formatCurrency(totalValue),
             textAlign: 'center',
-            fill: getComputedStyle(document.documentElement).getPropertyValue('--cds-text-primary').trim() || '#333',
+            fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
           },
         },
       ],
     };
-  }, [data]);
+  }, [data, chartTheme]);
   
   /**
    * Handle retry on error

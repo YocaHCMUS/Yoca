@@ -14,6 +14,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchExchangeComparison } from '../../../services/chart/mockChartData';
 import { formatCurrency } from '../../../util/chart-helpers';
@@ -99,6 +100,9 @@ export function ExchangeComparison({
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
   
+  // Get theme configuration
+  const chartTheme = useChartTheme();
+  
   // Chart filters with debouncing
   const {
     filters,
@@ -181,6 +185,9 @@ export function ExchangeComparison({
   const chartOption = useMemo((): EChartsOption | null => {
     if (!data || data.exchanges.length === 0) return null;
     
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     // Extract exchange names and values
     const exchangeNames = data.exchanges.map(ex => ex.name);
     const deposits = data.exchanges.map(ex => 
@@ -191,6 +198,7 @@ export function ExchangeComparison({
     );
     
     return {
+      ...baseOption,
       grid: {
         left: '3%',
         right: '4%',
@@ -199,6 +207,7 @@ export function ExchangeComparison({
         containLabel: true,
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'shadow',
@@ -220,22 +229,27 @@ export function ExchangeComparison({
         },
       },
       legend: {
+        ...baseOption.legend,
         data: ['Deposits', 'Withdrawals'],
         top: '5%',
         left: 'center',
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'category',
         data: exchangeNames,
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           rotate: 30,
           interval: 0,
         },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: 'value',
         name: currentMetric === 'count' ? 'Transaction Count' : 'Volume (USD)',
         axisLabel: {
+          ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
             if (currentMetric === 'count') {
               return value.toLocaleString();
@@ -291,7 +305,7 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric]);
+  }, [data, currentMetric, chartTheme]);
   
   /**
    * Setup chart export

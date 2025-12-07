@@ -14,6 +14,7 @@ import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { mockFetchCounterpartyActivity } from '../../../services/chart/mockChartData';
 import { formatCurrency } from '../../../util/chart-helpers';
@@ -104,6 +105,9 @@ export function CounterpartyActivity({
   
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Get theme configuration
+  const chartTheme = useChartTheme();
   
   // Filter management with time period and transaction type
   const {
@@ -206,12 +210,16 @@ export function CounterpartyActivity({
       return {};
     }
     
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
     // Extract counterparty names and values
     const counterpartyNames = data.counterparties.map(cp => cp.name);
     const transactionCounts = data.counterparties.map(cp => cp.transactionCount);
     const totalVolumes = data.counterparties.map(cp => cp.totalVolume);
     
     return {
+      ...baseOption,
       grid: {
         left: '3%',
         right: '4%',
@@ -220,6 +228,7 @@ export function CounterpartyActivity({
         containLabel: true,
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'shadow',
@@ -243,14 +252,17 @@ export function CounterpartyActivity({
         },
       },
       legend: {
+        ...baseOption.legend,
         data: ['Transaction Count', 'Total Volume'],
         top: '5%',
         left: 'center',
       },
       xAxis: {
+        ...baseOption.xAxis,
         type: 'category',
         data: counterpartyNames,
         axisLabel: {
+          ...baseOption.xAxis.axisLabel,
           rotate: 45,
           interval: 0,
           formatter: (value: string) => {
@@ -261,18 +273,22 @@ export function CounterpartyActivity({
       },
       yAxis: [
         {
+          ...baseOption.yAxis,
           type: 'value',
           name: 'Transaction Count',
           position: 'left',
           axisLabel: {
+            ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => value.toLocaleString(),
           },
         },
         {
+          ...baseOption.yAxis,
           type: 'value',
           name: 'Total Volume (USD)',
           position: 'right',
           axisLabel: {
+            ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => formatCurrency(value),
           },
         },
@@ -311,7 +327,7 @@ export function CounterpartyActivity({
         },
       ],
     };
-  }, [data]);
+  }, [data, chartTheme]);
   
   // Handle retry
   const handleRetry = () => {

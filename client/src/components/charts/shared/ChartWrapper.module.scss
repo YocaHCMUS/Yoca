@@ -21,7 +21,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  background: var(--cds-layer-01, #f4f4f4);
+  background: var(--cds-layer-01);
   border-radius: 4px;
   padding: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -33,13 +33,13 @@
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  border-bottom: 1px solid var(--cds-border-subtle-01);
 }
 
 .title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--cds-text-primary, #161616);
+  color: var(--cds-text-primary);
   margin: 0;
 }
 
@@ -63,23 +63,24 @@
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
-  border: 1px solid var(--cds-border-strong, #8d8d8d);
-  background-color: var(--cds-button-tertiary, transparent);
-  color: var(--cds-text-primary, #161616);
+  border: 1px solid var(--cds-border-subtle-01);
+  background-color: var(--cds-layer-02);
+  color: var(--cds-icon-primary);
   cursor: pointer;
   border-radius: 0.25rem;
   transition: all 0.15s ease-in-out;
   
   &:hover:not(:disabled) {
-    background-color: var(--cds-button-tertiary-hover, #e8e8e8);
+    background-color: var(--cds-layer-hover-02);
+    border-color: var(--cds-border-strong);
   }
   
   &:active:not(:disabled) {
-    background-color: var(--cds-button-tertiary-active, #c6c6c6);
+    background-color: var(--cds-layer-active-02);
   }
   
   &:focus {
-    outline: 2px solid var(--cds-focus, #0f62fe);
+    outline: 2px solid var(--cds-focus);
     outline-offset: 2px;
   }
   
@@ -131,34 +132,5 @@
   .actions {
     width: 100%;
     justify-content: flex-end;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .wrapper {
-    background: var(--cds-layer-01, #262626);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .header {
-    border-bottom-color: var(--cds-border-subtle-01, #393939);
-  }
-
-  .title {
-    color: var(--cds-text-primary, #f4f4f4);
-  }
-  
-  .controlButton {
-    border-color: var(--cds-border-strong, #6f6f6f);
-    color: var(--cds-text-primary, #f4f4f4);
-    
-    &:hover:not(:disabled) {
-      background-color: var(--cds-button-tertiary-hover, #353535);
-    }
-    
-    &:active:not(:disabled) {
-      background-color: var(--cds-button-tertiary-active, #525252);
-    }
   }
 }
