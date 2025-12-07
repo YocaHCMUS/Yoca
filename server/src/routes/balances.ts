@@ -1,5 +1,5 @@
-import { addressSchema, validate } from "@/middlewares/validation.js";
-import * as balanceService from "@/services/balances.js";
+import { addressSchema, validate } from "@sv/middlewares/validation.js";
+import * as balanceService from "@sv/services/balances.js";
 import { Hono } from "hono";
 import { messageText, statusCode } from "../util/responses.js";
 

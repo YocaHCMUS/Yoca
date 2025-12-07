@@ -2,17 +2,17 @@ import {
   CG_TOKEN_LIST_TTL_MS,
   TOKEN_MARKET_DATA_TTL_MS,
   TOKEN_META_TTL_MS,
-} from "@/config/constants.js";
-import { db } from "@/db/index.js";
+} from "@sv/config/constants.js";
+import { db } from "@sv/db/index.js";
 import {
   coinGeckoTokenList,
   tableMeta,
   tokenMarketData,
   tokenMeta,
   type TokenMarketDataInsert,
-} from "@/db/schema.js";
-import { excluded } from "@/util/orm-sql.js";
-import * as cg from "@/util/util-coingecko.js";
+} from "@sv/db/schema.js";
+import { excluded } from "@sv/util/orm-sql.js";
+import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, getTableName, gte, inArray } from "drizzle-orm";
 
 interface CG_Token {

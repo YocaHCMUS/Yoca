@@ -1,4 +1,4 @@
-import { Storage } from "@/services/storage.js";
+import { Storage } from "@sv/services/storage.js";
 import { DefaultLogger } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { dirname, join } from "path";

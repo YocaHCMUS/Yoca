@@ -1,5 +1,5 @@
-import { type TokenTransferInsert } from "@/db/schema.js";
-import * as bitquery from "@/util/util-bitquery.js";
+import { type TokenTransferInsert } from "@sv/db/schema.js";
+import * as bitquery from "@sv/util/util-bitquery.js";
 
 interface BQ_Transfer {
   Transfer: {

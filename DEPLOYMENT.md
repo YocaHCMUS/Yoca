@@ -314,7 +314,7 @@ If ports 3000 or 8000 are already in use:
 
 ### Import Type Errors
 
-The client imports types from the server using `@server/*` path alias. This is
+The client imports types from the server using `@sv/*` path alias. This is
 only for TypeScript type checking and doesn't include server code in the client
 bundle. If you see import errors:
 

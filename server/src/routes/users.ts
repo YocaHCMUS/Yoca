@@ -1,4 +1,4 @@
-import { userSchema, validate } from "@/middlewares/validation.js";
+import { userSchema, validate } from "@sv/middlewares/validation.js";
 import { Hono } from "hono";
 
 const app = new Hono()

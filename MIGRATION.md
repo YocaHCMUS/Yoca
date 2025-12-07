@@ -222,7 +222,7 @@ times might be slightly faster since TypeScript doesn't need project references
 anymore.
 
 **Q: Do I lose type safety between client and server?** No. The client can still
-import types from server via the `@server/*` path alias in
+import types from server via the `@sv/*` path alias in
 `client/tsconfig.json`. This only imports types, not runtime code.
 
 ## Getting Help

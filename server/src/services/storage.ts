@@ -17,6 +17,6 @@ export class Storage {
   }
 
   static generateTimestamp() {
-    return dayjs().format("YYYY-MM-DD HH-MM-SS");
+    return dayjs().format("YYYY-MM-DD HH-MM-ss");
   }
 }

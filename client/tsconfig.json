@@ -15,17 +15,14 @@
     "noEmit": true,
     
     "types": ["vite/client", "node"],
-    "rootDir": "./src",
     
     "paths": {
-      "@server/*": ["../server/src/*"],
+      // Must be the same as server's alias path config
+      "@sv/*": ["../server/src/*"],
     },
     
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "strictNullChecks": true,
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]

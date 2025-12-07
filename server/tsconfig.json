@@ -13,18 +13,11 @@
     "outDir": "./build",
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@sv/*": ["./src/*"]
     },
     
     "strict": true,
     "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]

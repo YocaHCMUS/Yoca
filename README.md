@@ -170,7 +170,7 @@ The client can import types from the server for end-to-end type safety:
 
 ```typescript
 // client/src/api/main.ts
-import type { AppType } from "@server/src/main";
+import type { AppType } from "@sv/src/main";
 ```
 
 This is configured via path aliases in `client/tsconfig.json` and only imports

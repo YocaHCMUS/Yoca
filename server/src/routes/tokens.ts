@@ -1,6 +1,6 @@
-import { addressListSchema, validate } from "@/middlewares/validation.js";
-import * as tokenService from "@/services/tokens.js";
-import { messageText, statusCode } from "@/util/responses.js";
+import { addressListSchema, validate } from "@sv/middlewares/validation.js";
+import * as tokenService from "@sv/services/tokens.js";
+import { messageText, statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
 const app = new Hono()
