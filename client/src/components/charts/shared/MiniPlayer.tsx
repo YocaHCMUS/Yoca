@@ -55,23 +55,32 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isMinimized, setIsMinimized] = useState(false);
-  // Initialize position based on current viewport dimensions
-  const [position, setPosition] = useState(() => 
-    defaultPosition || { x: window.innerWidth - 420, y: window.innerHeight - 320 }
-  );
   const [size, setSize] = useState(defaultSize);
   const previousSizeRef = useRef(defaultSize);
   
-  // Update position when activated to ensure it's always relative to current viewport
+  // Calculate position relative to current scroll position
+  const getInitialPosition = useCallback(() => {
+    if (defaultPosition) return defaultPosition;
+    
+    // Get current scroll position
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // Calculate position in document coordinates (viewport position + scroll)
+    return {
+      x: scrollX + window.innerWidth - 420,
+      y: scrollY + window.innerHeight - 320
+    };
+  }, [defaultPosition]);
+  
+  const [position, setPosition] = useState(getInitialPosition);
+  
+  // Update position when activated to account for current scroll position
   React.useEffect(() => {
-    if (isActive && !defaultPosition) {
-      // Recalculate position based on current viewport when opening
-      setPosition({ 
-        x: window.innerWidth - 420, 
-        y: window.innerHeight - 320 
-      });
+    if (isActive) {
+      setPosition(getInitialPosition());
     }
-  }, [isActive, defaultPosition]);
+  }, [isActive, getInitialPosition]);
   
   /**
    * Handle ESC key press to close mini-player
@@ -137,13 +146,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       minHeight={isMinimized ? 48 : 240}
       maxWidth={window.innerWidth * 0.9}
       maxHeight={window.innerHeight * 0.9}
-      bounds="window"
+      bounds="parent"
       dragHandleClassName={styles.header}
       onDragStop={handleDragStop}
       onResizeStop={handleResizeStop}
       enableResizing={!isMinimized}
       style={{
-        zIndex: 9998,
+        zIndex: 999,
       }}
       className={styles.miniPlayer}
     >
