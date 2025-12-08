@@ -16,6 +16,7 @@ import { FullscreenView } from './FullscreenView';
 import { MiniPlayer } from './MiniPlayer';
 import type { ChartLoadingState } from '../../../types/chart.types';
 import styles from './ChartWrapper.module.scss';
+import { Maximize, ShrinkScreen } from '@carbon/icons-react'
 
 /**
  * Props for ChartWrapper component
@@ -162,41 +163,41 @@ export function ChartWrapper({
    * Handle keyboard shortcuts
    * F: Fullscreen, M: Mini-player, ESC: Exit modes
    */
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-        return;
-      }
+  // useEffect(() => {
+  //   const handleKeyDown = (event: KeyboardEvent) => {
+  //     // Ignore if user is typing in an input
+  //     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+  //       return;
+  //     }
       
-      switch (event.key.toLowerCase()) {
-        case 'f':
-          if (enableFullscreen && !isFullscreen && !isMiniPlayer) {
-            event.preventDefault();
-            enterFullscreen();
-          }
-          break;
-        case 'm':
-          if (enableMiniPlayer && !isFullscreen && !isMiniPlayer) {
-            event.preventDefault();
-            enterMiniPlayer();
-          }
-          break;
-        case 'escape':
-          if (isFullscreen) {
-            event.preventDefault();
-            exitFullscreen();
-          } else if (isMiniPlayer) {
-            event.preventDefault();
-            exitMiniPlayer();
-          }
-          break;
-      }
-    };
+  //     switch (event.key.toLowerCase()) {
+  //       case 'f':
+  //         if (enableFullscreen && !isFullscreen && !isMiniPlayer) {
+  //           event.preventDefault();
+  //           enterFullscreen();
+  //         }
+  //         break;
+  //       case 'm':
+  //         if (enableMiniPlayer && !isFullscreen && !isMiniPlayer) {
+  //           event.preventDefault();
+  //           enterMiniPlayer();
+  //         }
+  //         break;
+  //       case 'escape':
+  //         if (isFullscreen) {
+  //           event.preventDefault();
+  //           exitFullscreen();
+  //         } else if (isMiniPlayer) {
+  //           event.preventDefault();
+  //           exitMiniPlayer();
+  //         }
+  //         break;
+  //     }
+  //   };
     
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
+  //   document.addEventListener('keydown', handleKeyDown);
+  //   return () => document.removeEventListener('keydown', handleKeyDown);
+  // }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
   
   /**
    * Render viewing mode controls
@@ -207,23 +208,18 @@ export function ChartWrapper({
         <button
           className={styles.controlButton}
           onClick={enterFullscreen}
-          aria-label="Enter fullscreen mode (press F)"
-          title="Fullscreen (F)"
+          aria-label="Enter fullscreen mode"
+          title="Fullscreen"
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+          <Maximize 
+            width={20} 
+            height={20} 
+            stroke='currentColor'
+            strokeWidth="1"
             strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 3h5v2H5v3H3V3zm9 0h5v5h-2V5h-3V3zM8 15H5v-3H3v5h5v-2zm9-3v3h-3v2h5v-5h-2z" />
-          </svg>
+            strokeLinejoin="round" />
         </button>
       )}
       
@@ -231,24 +227,18 @@ export function ChartWrapper({
         <button
           className={styles.controlButton}
           onClick={enterMiniPlayer}
-          aria-label="Open mini player (press M)"
-          title="Mini player (M)"
+          aria-label="Open mini player"
+          title="Mini player"
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
-          <svg
+          <ShrinkScreen
             width="20"
             height="20"
-            viewBox="0 0 20 20"
-            fill="none"
+            fill="currentColor"
             stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="7" width="14" height="10" rx="1" />
-            <path d="M6 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
+            strokeWidth="1"
+          />
         </button>
       )}
     </div>

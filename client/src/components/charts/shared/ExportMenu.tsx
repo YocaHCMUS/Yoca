@@ -16,6 +16,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './ExportMenu.module.scss';
+import { Download, Image, Svg, Table } from '@carbon/icons-react';
 
 export type ExportFormat = 'png' | 'svg' | 'csv';
 
@@ -145,20 +146,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             </path>
           </svg>
         ) : (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 17v2h14v-2" />
-            <path d="M10 3v11" />
-            <polyline points="6 10 10 14 14 10" />
-          </svg>
+          <Download size={20} />
         )}
         <span className={styles.buttonText}>Export</span>
       </button>
@@ -177,18 +165,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             role="menuitem"
             tabIndex={0}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <rect x="2" y="2" width="12" height="12" rx="1" />
-              <circle cx="6" cy="6" r="1.5" />
-              <polyline points="12 10 9 7 2 14" />
-            </svg>
+            <Image size={16} />
             <span>Export as PNG</span>
             <span className={styles.badge}>Retina</span>
           </button>
@@ -199,17 +176,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             role="menuitem"
             tabIndex={0}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M2 2 L8 2 L14 8 L14 14 L2 14 Z" />
-              <polyline points="8 2 8 8 14 8" />
-            </svg>
+            <Svg size={16} />
             <span>Export as SVG</span>
             <span className={styles.badge}>Vector</span>
           </button>
@@ -220,20 +187,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             role="menuitem"
             tabIndex={0}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <rect x="2" y="2" width="12" height="12" rx="1" />
-              <line x1="5" y1="2" x2="5" y2="14" />
-              <line x1="11" y1="2" x2="11" y2="14" />
-              <line x1="2" y1="6" x2="14" y2="6" />
-              <line x1="2" y1="10" x2="14" y2="10" />
-            </svg>
+            <Table size={16} />
             <span>Export as CSV</span>
             <span className={styles.badge}>Data</span>
           </button>
