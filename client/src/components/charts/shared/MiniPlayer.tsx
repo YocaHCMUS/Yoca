@@ -20,6 +20,18 @@ import { Theme } from '@carbon/react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import styles from './MiniPlayer.module.scss';
 
+// Constants
+const MINI_PLAYER_DEFAULTS = {
+  WIDTH: 500,
+  HEIGHT: 400,
+  MIN_WIDTH: 320,
+  MIN_HEIGHT: 240,
+  HEADER_HEIGHT: 80,
+  MAX_WIDTH_RATIO: 0.9,
+  MAX_HEIGHT_RATIO: 0.9,
+  Z_INDEX: 999,
+} as const;
+
 export interface MiniPlayerProps {
   /** Whether mini-player mode is active */
   isActive: boolean;
@@ -36,7 +48,7 @@ export interface MiniPlayerProps {
   /** Initial position (default: bottom-right) */
   defaultPosition?: { x: number; y: number };
   
-  /** Initial size (default: 400x300) */
+  /** Initial size (default: 500x400) */
   defaultSize?: { width: number; height: number };
 }
 
@@ -51,7 +63,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   children,
   title = 'Chart',
   defaultPosition,
-  defaultSize = { width: 400, height: 300 },
+  defaultSize = { width: MINI_PLAYER_DEFAULTS.WIDTH, height: MINI_PLAYER_DEFAULTS.HEIGHT },
 }) => {
   const { theme } = useTheme();
   const [isMinimized, setIsMinimized] = useState(false);
@@ -68,8 +80,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     
     // Calculate position in document coordinates (viewport position + scroll)
     return {
-      x: scrollX + window.innerWidth - 420,
-      y: scrollY + window.innerHeight - 320
+      x: scrollX + window.innerWidth - size.width,
+      y: scrollY + window.innerHeight - size.width
     };
   }, [defaultPosition]);
   
@@ -102,7 +114,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     } else {
       // Store current size before minimizing
       previousSizeRef.current = size;
-      setSize({ width: size.width, height: 48 }); // Minimize to header only
+      setSize({ width: size.width, height: MINI_PLAYER_DEFAULTS.HEADER_HEIGHT }); // Minimize to header only
     }
     setIsMinimized(!isMinimized);
   }, [isMinimized, size]);
@@ -111,7 +123,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
    * Handle drag stop to save position
    */
   const handleDragStop = useCallback((_e: any, data: { x: number; y: number }) => {
-    setPosition({ x: data.x, y: data.y });
+    setPosition({ x: data.x, y: Math.max(data.y, MINI_PLAYER_DEFAULTS.HEADER_HEIGHT) });
   }, []);
   
   /**
@@ -123,7 +135,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
         width: ref.offsetWidth,
         height: ref.offsetHeight,
       });
-      setPosition(position);
+      setPosition({x: position.x, y: Math.max(position.y, MINI_PLAYER_DEFAULTS.HEADER_HEIGHT)});
     },
     []
   );
@@ -142,17 +154,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
         width: size.width,
         height: size.height,
       }}
-      minWidth={320}
-      minHeight={isMinimized ? 48 : 240}
-      maxWidth={window.innerWidth * 0.9}
-      maxHeight={window.innerHeight * 0.9}
+      minWidth={MINI_PLAYER_DEFAULTS.MIN_WIDTH}
+      minHeight={isMinimized ? MINI_PLAYER_DEFAULTS.HEADER_HEIGHT : MINI_PLAYER_DEFAULTS.MIN_HEIGHT}
+      maxWidth={window.innerWidth * MINI_PLAYER_DEFAULTS.MAX_WIDTH_RATIO}
+      maxHeight={window.innerHeight * MINI_PLAYER_DEFAULTS.MAX_HEIGHT_RATIO}
       bounds="parent"
       dragHandleClassName={styles.header}
       onDragStop={handleDragStop}
       onResizeStop={handleResizeStop}
       enableResizing={!isMinimized}
       style={{
-        zIndex: 999,
+        zIndex: MINI_PLAYER_DEFAULTS.Z_INDEX,
       }}
       className={styles.miniPlayer}
     >
