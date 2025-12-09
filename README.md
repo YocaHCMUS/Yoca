@@ -268,6 +268,100 @@ Organize your backend code in `server/src/`:
 - `models/` - Data models/schemas
 - `utils/` - Utility functions
 
+## Chart Components
+
+This project includes a comprehensive set of interactive chart components built with ECharts:
+
+### Available Chart Components
+
+1. **BalanceChart** - Portfolio balance trends over time
+   - Time series visualization with area fill
+   - Supports multiple time periods (7D, 30D, 60D, 90D, 1Y, All)
+   - Token filtering and auto-refresh
+   - Location: `client/src/components/charts/BalanceChart/`
+
+2. **AssetDistribution** - Asset allocation visualization
+   - Donut chart with percentages
+   - Total portfolio value at center
+   - Interactive legend with toggle capability
+   - Location: `client/src/components/charts/AssetDistribution/`
+
+3. **PnLChart** - Profit and loss analysis
+   - Dual-axis chart (daily bars + cumulative line)
+   - Conditional coloring (green/red)
+   - Time period and wallet filtering
+   - Location: `client/src/components/charts/PnLChart/`
+
+4. **ExchangeComparison** - Exchange activity comparison
+   - Grouped bar chart
+   - Deposits vs withdrawals
+   - Count or volume metrics
+   - Location: `client/src/components/charts/ExchangeComparison/`
+
+5. **CounterpartyActivity** - Transaction analysis by counterparty
+   - Grouped bar chart
+   - Transaction count and volume
+   - Top N filtering
+   - Location: `client/src/components/charts/CounterpartyActivity/`
+
+6. **VolumeBenchmark** - Multi-wallet volume comparison
+   - Multi-series line or bar chart
+   - Multiple wallet comparison
+   - Time period filtering
+   - Location: `client/src/components/charts/VolumeBenchmark/`
+
+7. **TransactionDistribution** - Transaction activity patterns
+   - Stacked or grouped bar chart
+   - Wallet segmentation
+   - Transaction type filtering
+   - Location: `client/src/components/charts/TransactionDistribution/`
+
+8. **HoldingDurations** - Token holding time analysis
+   - Multi-chart layout (one per wallet)
+   - Duration in days/weeks/months
+   - Top N token filtering
+   - Location: `client/src/components/charts/HoldingDurations/`
+
+### Shared Features
+
+All chart components support:
+- **Export**: PNG, SVG, and CSV formats
+- **Viewing Modes**: Fullscreen and mini-player
+- **Auto-refresh**: Configurable refresh intervals
+- **Loading States**: Skeleton, error, and empty states
+- **Timezone Support**: Configurable timezone display
+- **Responsive Design**: Mobile and desktop layouts
+- **Accessibility**: ARIA labels and keyboard navigation
+
+### Usage Example
+
+```tsx
+import { BalanceChart } from './components/charts/BalanceChart';
+import { ChartProvider } from './contexts/ChartContext';
+
+function Dashboard() {
+  return (
+    <ChartProvider>
+      <BalanceChart
+        title="Portfolio Balance"
+        height={400}
+        initialTimePeriod="30D"
+        enableAutoRefresh={true}
+      />
+    </ChartProvider>
+  );
+}
+```
+
+### Custom Hooks
+
+- `useChartFilters` - Debounced filter management
+- `useAutoRefresh` - Auto-refresh with pause detection
+- `useChartExport` - Export functionality (PNG/SVG/CSV)
+- `useFullscreen` - Fullscreen and mini-player modes
+
+For detailed API documentation, see the JSDoc comments in each component file.
+
 ## Troubleshooting
 
 ### Build fails with TypeScript errors

@@ -1,0 +1,43 @@
+/**
+ * CounterpartyActivity Component Styles
+ */
+
+.limitSelector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--cds-text-primary);
+  }
+}
+
+.limitSelect {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  background-color: var(--cds-field);
+  color: var(--cds-text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+
+  &:hover {
+    background-color: var(--cds-field-hover);
+    border-color: var(--cds-border-strong);
+  }
+
+  &:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: 1px;
+    border-color: var(--cds-focus);
+  }
+
+  option {
+    background-color: var(--cds-field);
+    color: var(--cds-text-primary);
+  }
+}

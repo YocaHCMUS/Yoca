@@ -24,5 +24,15 @@ export default ({ mode }: { mode: string }) => {
     build: {
       outDir: "build",
     },
+    resolve: {
+      dedupe: ['react', 'react-dom'],
+      alias: {
+        'react': 'react',
+        'react-dom': 'react-dom',
+      },
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
+    },
   });
 };
