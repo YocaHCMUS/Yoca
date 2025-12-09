@@ -295,8 +295,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       graphic: [
         {
           type: 'text',
-          left: '40%',
-          top: '47%',
+          left: '14%',
+          top: '14%',
           style: {
             text: 'Total Value',
             textAlign: 'center',
@@ -306,8 +306,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
         {
           type: 'text',
-          left: '40%',
-          top: '52%',
+          left: '14%',
+          top: '20%',
           style: {
             text: formatCurrency(totalValue),
             textAlign: 'center',
