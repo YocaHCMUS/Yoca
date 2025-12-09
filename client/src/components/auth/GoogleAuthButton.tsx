@@ -89,14 +89,6 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
     onError?.(errorMsg);
   };
 
-  /**
-   * Get button text based on mode
-   */
-  const getButtonText = (): string => {
-    if (isLoading) return t('common.loading');
-    return mode === 'signin' ? t('auth.continueWithGoogle') : t('auth.signUpWithGoogle');
-  };
-
   return (
     <div className="google-auth-button-container">
       {/* Error notification */}

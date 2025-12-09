@@ -3,10 +3,15 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import balances from "./routes/balances.js";
-import tokens from "./routes/tokens.js";
-import transfers from "./routes/transfers.js";
-import users from "./routes/users.js";
+import transfers from "./routes/transfers.route.js";
+import tokens from "./routes/tokens.route.js";
+import balances from "./routes/balances.route.js";
+import users from "./routes/users.route.js";
+import chartBalance from "./routes/charts/balance.route.js";
+import chartDistribution from "./routes/charts/distribution.route.js";
+import { loadEnvFile } from "node:process";
+
+loadEnvFile("../.env");
 
 // Routes
 const app = new Hono()
@@ -17,7 +22,9 @@ const app = new Hono()
   .route("/api/users", users)
   .route("/api/tokens", tokens)
   .route("/api/balances", balances)
-  .route("/api/transfers", transfers);
+  .route("/api/transfers", transfers)
+  .route("/api/charts/balance", chartBalance)
+  .route("/api/charts/distribution", chartDistribution);
 
 // Server
 serve(

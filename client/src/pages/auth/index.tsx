@@ -8,9 +8,6 @@ import styles from "./index.module.scss";
 import { PageWrapper } from "../../components/wrapper";
 
 export default function AuthShowcase() {
-  const { t } = useTranslation();
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
 
   return (
     // <div className={styles.authShowcase}>
