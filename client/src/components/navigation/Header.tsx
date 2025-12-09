@@ -15,8 +15,11 @@ import {
   HeaderGlobalBar,
   HeaderGlobalAction,
   SkipToContent,
+  SideNav,
+  SideNavItems,
+  SideNavLink,
 } from '@carbon/react';
-import { UserAvatar, Login } from '@carbon/icons-react';
+import { UserAvatar, Login, Logout } from '@carbon/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 import appLogo from '../../assets/app-logo.png';
 import LanguageSelector from './LanguageSelector.tsx';
@@ -65,104 +68,210 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
   return (
     <HeaderContainer
       render={() => (
-        <CarbonHeader aria-label="Yoca" className={styles.header}>
-          <SkipToContent />
-          <HeaderMenuButton
-            aria-label="Open menu"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            isActive={isMenuOpen}
-          />
-          <HeaderName href="#" prefix="" className={styles.headerName}>
-            <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
-            <h1 className={styles.appName}>Yoca</h1>
-          </HeaderName>
+        <>
+          <CarbonHeader aria-label="Yoca" className={styles.header}>
+            <SkipToContent />
+            
+            <HeaderName href="#" prefix="" className={styles.headerName}>
+              <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
+              <h1 className={styles.appName}>Yoca</h1>
+            </HeaderName>
 
-          {/* Navigation items - only show when authenticated
-          {authState.isAuthenticated && (
-          )} */}
-          <HeaderNavigation aria-label="Main navigation">
-            <HeaderMenuItem className={styles.headerMenuItem}
-              onClick={() => handleNavigation('/market')}
-            >
-              {t('nav.market')}
-            </HeaderMenuItem>
-            <HeaderMenuItem className={styles.headerMenuItem}
-              onClick={() => handleNavigation('/alert')}
-            >
-              {t('nav.alert')}
-            </HeaderMenuItem>
-            <HeaderMenuItem className={styles.headerMenuItem}
-              onClick={() => handleNavigation('/dashboard')}
-            >
-              {t('nav.dashboard')}
-            </HeaderMenuItem>
-          </HeaderNavigation>
+            {/* Navigation items - Desktop only */}
+            <HeaderNavigation aria-label="Main navigation" className={styles.desktopNav}>
+              <HeaderMenuItem className={styles.headerMenuItem}
+                onClick={() => handleNavigation('/market')}
+              >
+                {t('nav.market')}
+              </HeaderMenuItem>
+              <HeaderMenuItem className={styles.headerMenuItem}
+                onClick={() => handleNavigation('/alert')}
+              >
+                {t('nav.alert')}
+              </HeaderMenuItem>
+              <HeaderMenuItem className={styles.headerMenuItem}
+                onClick={() => handleNavigation('/dashboard')}
+              >
+                {t('nav.dashboard')}
+              </HeaderMenuItem>
+            </HeaderNavigation>
 
-          {/* Global actions */}
-          <HeaderGlobalBar>
-            {/* Language selector */}
-            <LanguageSelector />
+            {/* Global actions - Desktop only */}
+            <HeaderGlobalBar className={styles.desktopGlobalBar}>
+              {/* Language selector */}
+              <LanguageSelector />
 
-            {/* Theme toggle */}
-            <ThemeToggle />
+              {/* Theme toggle */}
+              <ThemeToggle />
 
-            {/* User profile or auth buttons */}
-            {authState.isAuthenticated ? (
-              <div className={styles.profileWrapper}>
-                <HeaderGlobalAction
-                  aria-label={t('nav.profile')}
-                  tooltipAlignment="end"
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className={styles.profileButton}
-                >
-                  <UserAvatar size={20} />
-                </HeaderGlobalAction>
+              {/* User profile or auth buttons */}
+              {authState.isAuthenticated ? (
+                <div className={styles.profileWrapper}>
+                  <HeaderGlobalAction
+                    aria-label={t('nav.profile')}
+                    tooltipAlignment="end"
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className={styles.profileButton}
+                  >
+                    <UserAvatar size={20} />
+                  </HeaderGlobalAction>
 
-                {isProfileOpen && (
-                  <>
-                    {/* Backdrop to close dropdown */}
-                    <div
-                      className={styles.backdrop}
-                      onClick={() => setIsProfileOpen(false)}
-                    />
+                  {isProfileOpen && (
+                    <>
+                      {/* Backdrop to close dropdown */}
+                      <div
+                        className={styles.backdrop}
+                        onClick={() => setIsProfileOpen(false)}
+                      />
 
-                    {/* Profile dropdown */}
-                    <div className={styles.profileDropdown}>
-                      <div className={styles.profileInfo}>
-                        <UserAvatar size={16} />
-                        <p className={styles.username}>
-                          {authState.user?.username || authState.user?.email}
-                        </p>
+                      {/* Profile dropdown */}
+                      <div className={styles.profileDropdown}>
+                        <div className={styles.profileInfo}>
+                          <UserAvatar size={16} />
+                          <p className={styles.username}>
+                            {authState.user?.username || authState.user?.email}
+                          </p>
+                        </div>
+                        <button
+                          className={styles.signOutButton}
+                          onClick={handleSignOut}
+                        >
+                          {t('auth.signOut')}
+                        </button>
                       </div>
-                      <button
-                        className={styles.signOutButton}
-                        onClick={handleSignOut}
-                      >
-                        {t('auth.signOut')}
-                      </button>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className={styles.authButtons}>
+                  <button
+                    className={styles.loginButton}
+                    onClick= {handleSignIn}
+                  >
+                    <Login size={16} />
+                    {t('auth.signIn')}
+                  </button>
+                  <button
+                    className={styles.signUpButton}
+                    onClick={handleSignUp}
+                  >
+                    {t('auth.signUp')}
+                  </button>
+                </div>
+              )}
+            </HeaderGlobalBar>
+
+            <HeaderMenuButton
+              aria-label="Open menu"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              isActive={isMenuOpen}
+            />
+          </CarbonHeader>
+
+          {/* Mobile Side Navigation */}
+          <SideNav
+            aria-label="Side navigation"
+            expanded={isMenuOpen}
+            onOverlayClick={() => setIsMenuOpen(false)}
+            className={styles.sideNav}
+          >
+            <SideNavItems>
+              {/* User Info Section - Mobile only */}
+              {authState.isAuthenticated && (
+                <div className={styles.mobileUserInfo}>
+                  <UserAvatar size={32} />
+                  <div className={styles.mobileUserDetails}>
+                    <p className={styles.mobileUsername}>
+                      {authState.user?.username || authState.user?.email}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Links */}
+              <SideNavLink
+                onClick={() => {
+                  handleNavigation('/market');
+                  setIsMenuOpen(false);
+                }}
+              >
+                {t('nav.market')}
+              </SideNavLink>
+              <SideNavLink
+                onClick={() => {
+                  handleNavigation('/alert');
+                  setIsMenuOpen(false);
+                }}
+              >
+                {t('nav.alert')}
+              </SideNavLink>
+              <SideNavLink
+                onClick={() => {
+                  handleNavigation('/dashboard');
+                  setIsMenuOpen(false);
+                }}
+              >
+                {t('nav.dashboard')}
+              </SideNavLink>
+
+              {/* Divider */}
+              <div className={styles.mobileDivider} />
+
+              {/* Settings Section */}
+              <div className={styles.mobileSettings}>
+                <div className={styles.mobileSettingItem}>
+                  <span className={styles.mobileSettingLabel}>{t('nav.language')}</span>
+                  <LanguageSelector />
+                </div>
+                <div className={styles.mobileSettingItem}>
+                  <span className={styles.mobileSettingLabel}>{t('nav.theme')}</span>
+                  <ThemeToggle />
+                </div>
               </div>
-            ) : (
-              <div className={styles.authButtons}>
-                <button
-                  className={styles.loginButton}
-                  onClick= {handleSignIn}
-                >
-                  <Login size={16} />
-                  {t('auth.signIn')}
-                </button>
-                <button
-                  className={styles.signUpButton}
-                  onClick={handleSignUp}
-                >
-                  {t('auth.signUp')}
-                </button>
-              </div>
-            )}
-          </HeaderGlobalBar>
-        </CarbonHeader>
+
+              {/* Divider */}
+              <div className={styles.mobileDivider} />
+
+              {/* Auth Actions */}
+              {authState.isAuthenticated ? (
+                <div className={styles.mobileAuthActions}>
+                  <button
+                    className={styles.mobileSignOutButton}
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Logout size={20} />
+                    {t('auth.signOut')}
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.mobileAuthActions}>
+                  <button
+                    className={styles.mobileLoginButton}
+                    onClick={() => {
+                      handleSignIn?.();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Login size={20} />
+                    {t('auth.signIn')}
+                  </button>
+                  <button
+                    className={styles.mobileSignUpButton}
+                    onClick={() => {
+                      handleSignUp?.();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    {t('auth.signUp')}
+                  </button>
+                </div>
+              )}
+            </SideNavItems>
+          </SideNav>
+        </>
       )}
     />
   );

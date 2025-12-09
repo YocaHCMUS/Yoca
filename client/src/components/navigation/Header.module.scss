@@ -206,7 +206,197 @@
   }
   
   .authButtons {
-    flex-direction: column;
     gap: $spacing-02;
   }
+
+  /* Hide desktop navigation and global bar on mobile */
+  .desktopNav {
+    display: none !important;
+  }
+
+  .desktopGlobalBar {
+    display: none !important;
+  }
+
+  /* Adjust header for mobile */
+  .header {
+    justify-content: space-between;
+    :global(.cds--header__global) {
+      padding: 0 $spacing-04;
+    }
+  }
+
+  .logo {
+    height: 40px;
+  }
 }
+
+/* Show desktop nav and hide hamburger on desktop */
+@media (min-width: 769px) {
+  :global(.cds--header__menu-toggle) {
+    display: none !important;
+  }
+
+  /* Hide side nav on desktop */
+  .sideNav {
+    display: none !important;
+  }
+}
+
+/* Mobile Side Navigation Styles */
+.sideNav {
+  /* Position below header */
+  top: $header-height !important;
+  height: calc(100vh - $header-height) !important;
+
+  :global(.cds--side-nav__items) {
+    padding: $spacing-05 0;
+  }
+
+  :global(.cds--side-nav__link) {
+    padding: $spacing-04 $spacing-05;
+    @include type-style('body-compact-01');
+    color: $text-primary;
+    transition: background-color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+
+    &:hover {
+      background-color: $layer-hover-01;
+      color: $link-primary;
+    }
+  }
+}
+
+/* Mobile User Info */
+.mobileUserInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-04;
+  padding: $spacing-05;
+  background-color: $layer-02;
+  margin-bottom: $spacing-03;
+
+  svg {
+    fill: $icon-primary;
+  }
+}
+
+.mobileUserDetails {
+  flex: 1;
+}
+
+.mobileUsername {
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0;
+}
+
+/* Mobile Divider */
+.mobileDivider {
+  height: 1px;
+  background-color: $border-subtle-01;
+  margin: $spacing-04 0;
+}
+
+/* Mobile Settings */
+.mobileSettings {
+  padding: 0 $spacing-05;
+  margin-bottom: $spacing-04;
+}
+
+.mobileSettingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-04 0;
+  border-bottom: 1px solid $border-subtle-01;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.mobileSettingLabel {
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-primary;
+}
+
+/* Mobile Auth Actions */
+.mobileAuthActions {
+  padding: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.mobileSignOutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-03;
+  width: 100%;
+  padding: $spacing-04 $spacing-05;
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-error;
+  background-color: transparent;
+  border: 1px solid $border-subtle-01;
+  border-radius: 0;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+  cursor: pointer;
+
+  &:hover {
+    background-color: $support-error-inverse;
+    border-color: $support-error;
+  }
+
+  svg {
+    fill: currentColor;
+  }
+}
+
+.mobileLoginButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-03;
+  width: 100%;
+  padding: $spacing-04 $spacing-05;
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-secondary;
+  background-color: transparent;
+  border: 1px solid $border-subtle-01;
+  border-radius: 0;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+  cursor: pointer;
+
+  &:hover {
+    background-color: $layer-hover-01;
+    border-color: $border-interactive;
+    color: $link-primary;
+  }
+
+  svg {
+    fill: currentColor;
+  }
+}
+
+.mobileSignUpButton {
+  width: 100%;
+  padding: $spacing-04 $spacing-05;
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-on-color;
+  background-color: $background-brand;
+  border: none;
+  border-radius: 0;
+  transition: background-color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+  cursor: pointer;
+
+  // &:hover {
+  //   background-color: $button-primary;
+  // }
+}
+
