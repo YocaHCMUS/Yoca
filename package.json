@@ -8,19 +8,37 @@
     "server"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
-    "build": "npm run build --workspaces",
-    "preview": "npm run start --workspace=server & npm run preview --workspace=client",
-    "lint": "npm run lint --workspaces",
-    "client:dev": "npm run dev --workspace=client",
-    "client:build": "npm run build --workspace=client",
-    "client:preview": "npm run preview --workspace=client",
-    "server:dev": "npm run dev --workspace=server",
-    "server:build": "npm run build --workspace=server",
-    "server:start": "npm run start --workspace=server",
-    "clean": "npm run clean --workspaces"
+    "dev": "npm run dev -w=server & npm run dev -w=client",
+    "build": "npm run build -ws",
+    "preview": "npm run start -w=server & npm run preview -w=client",
+    "lint": "npm run lint -ws",
+    "clean": "npm run clean -ws",
+    "client:dev": "npm run dev -w=client",
+    "client:build": "npm run build -w=client",
+    "client:preview": "npm run preview -w=client",
+    "client:clean": "npm run clean -w=client",
+    "server:dev": "npm run dev -w=server",
+    "server:build": "npm run build -w=server",
+    "server:preview": "npm run start -w=server",
+    "server:clean": "npm run clean -w=server",
+    "db:generate": "npm run db:generate -w=server",
+    "db:migrate": "npm run db:migrate -w=server",
+    "db:push": "npm run db:push -w=server",
+    "db:push-force": "npm run db:push-force -w=server",
+    "db:seed": "npm run db:seed -w=server",
+    "db:studio": "npm run db:studio -w server"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.19",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
-    "prettier": "3.6.2"
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
+    "prettier": "3.6.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0"
   }
 }

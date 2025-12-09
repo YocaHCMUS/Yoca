@@ -1,4 +1,4 @@
-import {BrowserRouter, Routes, Route} from "react-router";
+import { BrowserRouter, Routes, Route } from "react-router";
 import "./App.css";
 
 import Index from "./pages";
@@ -12,12 +12,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />}/>
-        <Route path="/auth" element={<AuthShowcase />}/>
-        <Route path="/dashboard" element={<DashboardPage />}/>
-        <Route path="/market" element={<OverviewPage />}/>
-        <Route path="/tokens" element={<TokenPage />}/>
-        <Route path="/wallet/:address" element={<WalletPage address="" />}/>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<AuthShowcase />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/market" element={<OverviewPage />} />
+        <Route path="/tokens" element={<TokenPage />} />
+        <Route path="/wallet/:address" element={<WalletPage address="" />} />
       </Routes>
     </BrowserRouter>
   );

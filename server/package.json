@@ -5,24 +5,28 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "node build/main.js",
     "lint": "eslint .",
-    "clean": "rm -rf build"
+    "clean": "rm -rf build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push --verbose",
+    "db:push-force": "drizzle-kit push --verbose --force",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.6",
-    "dayjs": "^1.11.19",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-seed": "^0.3.1",
     "hono": "^4.10.4",
-    "zod": "^4.1.12"
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
-    "@eslint/js": "^9.36.0",
-    "@types/node": "^24.10.1",
-    "eslint": "^9.36.0",
-    "globals": "^16.4.0",
-    "tsx": "^4.20.6",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0"
+    "drizzle-kit": "^0.31.7",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6"
   }
 }
