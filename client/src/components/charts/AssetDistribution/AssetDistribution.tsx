@@ -20,6 +20,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
@@ -62,13 +63,17 @@ export interface AssetDistributionProps {
  * Displays donut chart showing asset allocation with percentages and total value.
  */
 export const AssetDistribution: React.FC<AssetDistributionProps> = ({
-  title = 'Asset Distribution',
+  title,
   height = 400,
   initialFilters,
   topN,
   autoRefresh = true,
   className,
 }) => {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.assetDistributionChart.title');
+  
   // State management
   const [data, setData] = useState<AssetDistributionResponse | null>(null);
   const [loadingState, setLoadingState] = useState<ChartLoadingState>({
@@ -166,7 +171,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
    * Setup chart export
    */
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'asset-distribution',
   });
@@ -235,8 +240,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           const percentage = data.percentage || 0;
           return `
             <strong>${name}</strong><br/>
-            Value: ${formatCurrency(value)}<br/>
-            Percentage: ${percentage.toFixed(2)}%
+            ${t('charts.assetDistributionChart.value')}: ${formatCurrency(value)}<br/>
+            ${t('charts.assetDistributionChart.percentage')}: ${percentage.toFixed(2)}%
           `;
         },
       },
@@ -253,7 +258,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       },
       series: [
         {
-          name: 'Asset Distribution',
+          name: t('charts.assetDistributionChart.title'),
           type: 'pie',
           radius: ['50%', '70%'], // Donut shape
           center: ['40%', '50%'],
@@ -298,7 +303,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           left: '14%',
           top: '14%',
           style: {
-            text: 'Total Value',
+            text: t('charts.assetDistributionChart.totalValue'),
             textAlign: 'center',
             fill: chartTheme.textColorSecondary,
             fontSize: 14,
@@ -318,7 +323,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
       ],
     };
-  }, [data, chartTheme]);
+  }, [data, chartTheme, t]);
   
   /**
    * Handle retry on error
@@ -348,17 +353,17 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   return (
     <div className={`${styles.assetDistribution} ${className || ''}`}>
       <ChartWrapper
-        title={title}
+        title={chartTitle}
         loadingState={loadingState}
         height={height}
         onRetry={handleRetry}
         onExport={handleExport}
         isEmpty={!data || data.data.length === 0}
         emptyState={{
-          title: 'No Distribution Data',
-          message: 'No asset distribution data available for the selected time period.',
+          title: t('charts.noDataTitle'),
+          message: t('charts.noDataMessage'),
           action: {
-            label: 'Reset Filters',
+            label: t('charts.resetFilters'),
             onClick: () => {
               setTimePeriod('30D');
               setWallets(undefined);

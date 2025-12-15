@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -77,7 +78,7 @@ interface BalanceChartProps {
  * ```
  */
 export function BalanceChart({
-  title = 'Balance Trend',
+  title,
   height = 400,
   initialTimePeriod = '30D',
   initialTokens = [],
@@ -86,6 +87,10 @@ export function BalanceChart({
   onDataLoaded,
   className,
 }: BalanceChartProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.balanceChart.title');
+  
   // State management
   const [data, setData] = React.useState<BalanceTrendResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -227,7 +232,7 @@ export function BalanceChart({
       },
       series: [
         {
-          name: 'Balance',
+          name: t('charts.balanceChart.balance'),
           type: 'line',
           smooth: true,
           sampling: enableSampling ? 'lttb' : undefined,
@@ -268,7 +273,7 @@ export function BalanceChart({
               ${formatTimestampWithTimezone(timestamp, timezone, 'PPpp')}
             </div>
             <div>
-              Balance: <strong>${formatCurrency(value)}</strong>
+              ${t('charts.balanceChart.balance')}: <strong>${formatCurrency(value)}</strong>
             </div>
           `;
         },
@@ -280,7 +285,7 @@ export function BalanceChart({
    * Setup chart export
    */
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'balance-trend',
   });
@@ -343,17 +348,17 @@ export function BalanceChart({
   return (
     <div className={`${styles.balanceChart} ${className || ''}`}>
       <ChartWrapper
-        title={title}
+        title={chartTitle}
         loadingState={loadingState}
         height={height}
         onRetry={handleRetry}
         onExport={handleExport}
         isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
         emptyState={{
-          title: 'No Balance Data',
-          message: 'No balance data available for the selected time period and filters.',
+          title: t('charts.noDataTitle'),
+          message: t('charts.noDataMessage'),
           action: {
-            label: 'Reset Filters',
+            label: t('charts.resetFilters'),
             onClick: () => {
               setTimePeriod('30D');
               setTokens([]);

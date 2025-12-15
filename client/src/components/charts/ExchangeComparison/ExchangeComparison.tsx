@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -77,7 +78,7 @@ interface ExchangeComparisonProps {
  * ```
  */
 export function ExchangeComparison({
-  title = 'Exchange Activity Comparison',
+  title,
   height = 400,
   initialTimePeriod = '30D',
   metric = 'count',
@@ -86,6 +87,10 @@ export function ExchangeComparison({
   onDataLoaded,
   className,
 }: ExchangeComparisonProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.exchangeComparisonChart.title');
+  
   // State management
   const [data, setData] = React.useState<ExchangeComparisonResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -230,7 +235,7 @@ export function ExchangeComparison({
       },
       legend: {
         ...baseOption.legend,
-        data: ['Deposits', 'Withdrawals'],
+        data: [t('charts.exchangeComparisonChart.deposits'), t('charts.exchangeComparisonChart.withdrawals')],
         top: '5%',
         left: 'center',
       },
@@ -247,7 +252,7 @@ export function ExchangeComparison({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: currentMetric === 'count' ? 'Transaction Count' : 'Volume (USD)',
+        name: currentMetric === 'count' ? t('charts.exchangeComparisonChart.count') : t('charts.exchangeComparisonChart.volume'),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
@@ -260,7 +265,7 @@ export function ExchangeComparison({
       },
       series: [
         {
-          name: 'Deposits',
+          name: t('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           data: deposits,
           itemStyle: {
@@ -282,7 +287,7 @@ export function ExchangeComparison({
           barMaxWidth: 50,
         },
         {
-          name: 'Withdrawals',
+          name: t('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           data: withdrawals,
           itemStyle: {
@@ -305,13 +310,13 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric, chartTheme]);
+  }, [data, currentMetric, chartTheme, t]);
   
   /**
    * Setup chart export
    */
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'exchange-comparison',
   });
@@ -335,7 +340,7 @@ export function ExchangeComparison({
       const csvData = [
         {
           id: 'deposits',
-          name: 'Deposits',
+          name: t('charts.exchangeComparisonChart.deposits'),
           type: 'bar' as const,
           data: data.exchanges.map(ex => ({
             name: ex.name,
@@ -345,7 +350,7 @@ export function ExchangeComparison({
         },
         {
           id: 'withdrawals',
-          name: 'Withdrawals',
+          name: t('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar' as const,
           data: data.exchanges.map(ex => ({
             name: ex.name,
@@ -385,17 +390,17 @@ export function ExchangeComparison({
   
   return (
     <ChartWrapper
-      title={title}
+      title={chartTitle}
       loadingState={loadingState}
       height={height}
       onRetry={handleRetry}
       onExport={handleExport}
       isEmpty={!data || data.exchanges.length === 0}
       emptyState={{
-        title: 'No Exchange Data',
-        message: 'No exchange activity data available for the selected time period.',
+        title: t('charts.noDataTitle'),
+        message: t('charts.noDataMessage'),
         action: {
-          label: 'Reset Filters',
+          label: t('charts.resetFilters'),
           onClick: () => {
             setTimePeriod('30D');
             setCurrentMetric('count');

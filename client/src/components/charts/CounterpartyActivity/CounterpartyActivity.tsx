@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -82,7 +83,7 @@ interface CounterpartyActivityProps {
  * ```
  */
 export function CounterpartyActivity({
-  title = 'Counterparty Activity Analysis',
+  title,
   height = 400,
   initialTimePeriod = '30D',
   initialTransactionType = 'all',
@@ -92,6 +93,10 @@ export function CounterpartyActivity({
   onDataLoaded,
   className,
 }: CounterpartyActivityProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.counterpartyActivityChart.title');
+  
   // State management
   const [data, setData] = React.useState<CounterpartyActivityResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -167,7 +172,7 @@ export function CounterpartyActivity({
   
   // Export functionality
   const { exportChart } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'counterparty-activity',
   });
@@ -253,7 +258,7 @@ export function CounterpartyActivity({
       },
       legend: {
         ...baseOption.legend,
-        data: ['Transaction Count', 'Total Volume'],
+        data: [t('charts.counterpartyActivityChart.transactionCount'), t('charts.counterpartyActivityChart.totalVolume')],
         top: '5%',
         left: 'center',
       },
@@ -275,7 +280,7 @@ export function CounterpartyActivity({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: 'Transaction Count',
+          name: t('charts.counterpartyActivityChart.transactionCount'),
           position: 'left',
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
@@ -285,7 +290,7 @@ export function CounterpartyActivity({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: 'Total Volume (USD)',
+          name: t('charts.counterpartyActivityChart.totalVolume'),
           position: 'right',
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
@@ -295,7 +300,7 @@ export function CounterpartyActivity({
       ],
       series: [
         {
-          name: 'Transaction Count',
+          name: t('charts.counterpartyActivityChart.transactionCount'),
           type: 'bar',
           data: transactionCounts,
           yAxisIndex: 0,
@@ -311,7 +316,7 @@ export function CounterpartyActivity({
           barGap: '10%',
         },
         {
-          name: 'Total Volume',
+          name: t('charts.counterpartyActivityChart.totalVolume'),
           type: 'bar',
           data: totalVolumes,
           yAxisIndex: 1,
@@ -327,7 +332,7 @@ export function CounterpartyActivity({
         },
       ],
     };
-  }, [data, chartTheme]);
+  }, [data, chartTheme, t]);
   
   // Handle retry
   const handleRetry = () => {
@@ -342,17 +347,17 @@ export function CounterpartyActivity({
   // Render chart with wrapper
   return (
     <ChartWrapper
-      title={title}
+      title={chartTitle}
       loadingState={loadingState}
       height={height}
       onRetry={handleRetry}
       onExport={handleExport}
       isEmpty={!data || data.counterparties.length === 0}
       emptyState={{
-        title: 'No Counterparty Data',
-        message: 'No counterparty activity data available for the selected time period and filters.',
+        title: t('charts.noDataTitle'),
+        message: t('charts.noDataMessage'),
         action: {
-          label: 'Reset Filters',
+          label: t('charts.resetFilters'),
           onClick: () => {
             setTimePeriod('30D');
             setTransactionType('all');

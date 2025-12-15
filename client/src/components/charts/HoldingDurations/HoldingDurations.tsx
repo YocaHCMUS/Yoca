@@ -9,6 +9,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -83,7 +84,7 @@ export interface HoldingDurationsProps {
  * ```
  */
 export function HoldingDurations({
-  title = 'Token Holding Durations',
+  title,
   height = 300,
   walletIds = [],
   topN = 10,
@@ -93,6 +94,10 @@ export function HoldingDurations({
   onDataLoaded,
   className,
 }: HoldingDurationsProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.holdingDurationsChart.title');
+  
   // State management
   const [data, setData] = React.useState<HoldingDurationsResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -207,11 +212,11 @@ export function HoldingDurations({
   const getTimeUnitLabel = (): string => {
     switch (selectedTimeUnit) {
       case 'weeks':
-        return 'Weeks';
+        return t('charts.holdingDurationsChart.weeks');
       case 'months':
-        return 'Months';
+        return t('charts.holdingDurationsChart.months');
       default:
-        return 'Days';
+        return t('charts.holdingDurationsChart.days');
     }
   };
   
@@ -249,7 +254,7 @@ export function HoldingDurations({
           const originalDays = wallet.holdings.find(h => h.tokenSymbol === param.name)?.durationDays || 0;
           
           let tooltipContent = `<strong>${param.name}</strong><br/>`;
-          tooltipContent += `Duration: <strong>${param.value.toFixed(1)} ${getTimeUnitLabel().toLowerCase()}</strong><br/>`;
+          tooltipContent += `${t('charts.holdingDurationsChart.duration')}: <strong>${param.value.toFixed(1)} ${getTimeUnitLabel().toLowerCase()}</strong><br/>`;
           tooltipContent += `<span style="font-size: 0.75rem; color: #888;">(${originalDays} days)</span>`;
           
           return tooltipContent;
@@ -268,7 +273,7 @@ export function HoldingDurations({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: `Duration (${getTimeUnitLabel()})`,
+        name: `${t('charts.holdingDurationsChart.duration')} (${getTimeUnitLabel()})`,
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
@@ -303,7 +308,7 @@ export function HoldingDurations({
   
   // Export functionality
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'holding-durations',
   });
@@ -363,17 +368,17 @@ export function HoldingDurations({
   
   return (
     <ChartWrapper
-      title={title}
+      title={chartTitle}
       loadingState={loadingState}
       height={height * (data?.wallets.length || 1)}
       onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || data.wallets.length === 0}
       emptyState={{
-        title: 'No Holding Data',
-        message: 'No token holding duration data available for the selected wallets.',
+        title: t('charts.noDataTitle'),
+        message: t('charts.noDataMessage'),
         action: {
-          label: 'Refresh Data',
+          label: t('charts.retry'),
           onClick: handleRetry,
         },
       }}
@@ -383,31 +388,31 @@ export function HoldingDurations({
         {/* Controls */}
         <div className={styles.controls}>
           <div className={styles.filterGroup}>
-            <label htmlFor="timeUnit">Time Unit:</label>
+            <label htmlFor="timeUnit">{t('charts.holdingDurationsChart.timeUnit')}:</label>
             <select
               id="timeUnit"
               value={selectedTimeUnit}
               onChange={handleTimeUnitChange}
-              aria-label="Select time unit"
+              aria-label={t('charts.holdingDurationsChart.timeUnit')}
             >
-              <option value="days">Days</option>
-              <option value="weeks">Weeks</option>
-              <option value="months">Months</option>
+              <option value="days">{t('charts.holdingDurationsChart.days')}</option>
+              <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
+              <option value="months">{t('charts.holdingDurationsChart.months')}</option>
             </select>
           </div>
           
           <div className={styles.filterGroup}>
-            <label htmlFor="topN">Show Top:</label>
+            <label htmlFor="topN">{t('charts.holdingDurationsChart.topN')}:</label>
             <select
               id="topN"
               value={selectedTopN}
               onChange={handleTopNChange}
-              aria-label="Select number of tokens to display"
+              aria-label={t('charts.holdingDurationsChart.topN')}
             >
-              <option value="5">5 tokens</option>
-              <option value="10">10 tokens</option>
-              <option value="15">15 tokens</option>
-              <option value="20">20 tokens</option>
+              <option value="5">5 {t('charts.tokens')}</option>
+              <option value="10">10 {t('charts.tokens')}</option>
+              <option value="15">15 {t('charts.tokens')}</option>
+              <option value="20">20 {t('charts.tokens')}</option>
             </select>
           </div>
         </div>

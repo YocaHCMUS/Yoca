@@ -9,6 +9,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -85,7 +86,7 @@ export interface VolumeBenchmarkProps {
  * ```
  */
 export function VolumeBenchmark({
-  title = 'Trading Volume Comparison',
+  title,
   height = 400,
   initialTimePeriod = '30D',
   chartType = 'line',
@@ -96,6 +97,10 @@ export function VolumeBenchmark({
   onDataLoaded,
   className,
 }: VolumeBenchmarkProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.volumeBenchmarkChart.title');
+  
   // State management
   const [data, setData] = React.useState<VolumeBenchmarkResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -281,7 +286,7 @@ export function VolumeBenchmark({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: 'Volume (USD)',
+        name: t('charts.volumeBenchmarkChart.volume'),
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
@@ -310,7 +315,7 @@ export function VolumeBenchmark({
   
   // Export functionality
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'volume-benchmark',
   });
@@ -361,17 +366,17 @@ export function VolumeBenchmark({
   
   return (
     <ChartWrapper
-      title={title}
+      title={chartTitle}
       loadingState={loadingState}
       height={height}
       onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || data.wallets.length === 0}
       emptyState={{
-        title: 'No Volume Data',
-        message: 'No trading volume data available for the selected time period and wallets.',
+        title: t('charts.noDataTitle'),
+        message: t('charts.noDataMessage'),
         action: {
-          label: 'Reset Filters',
+          label: t('charts.resetFilters'),
           onClick: () => setTimePeriod('30D'),
         },
       }}
@@ -384,18 +389,18 @@ export function VolumeBenchmark({
             <button
               className={selectedChartType === 'line' ? styles.active : ''}
               onClick={() => handleChartTypeChange('line')}
-              aria-label="Line chart"
-              title="Line chart"
+              aria-label={t('charts.volumeBenchmarkChart.line')}
+              title={t('charts.volumeBenchmarkChart.line')}
             >
-              Line
+              {t('charts.volumeBenchmarkChart.line')}
             </button>
             <button
               className={selectedChartType === 'bar' ? styles.active : ''}
               onClick={() => handleChartTypeChange('bar')}
-              aria-label="Bar chart"
-              title="Bar chart"
+              aria-label={t('charts.volumeBenchmarkChart.bar')}
+              title={t('charts.volumeBenchmarkChart.bar')}
             >
-              Bar
+              {t('charts.volumeBenchmarkChart.bar')}
             </button>
           </div>
         </div>

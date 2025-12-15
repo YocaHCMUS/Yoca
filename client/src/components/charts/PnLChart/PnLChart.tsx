@@ -20,6 +20,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
@@ -61,13 +62,17 @@ export interface PnLChartProps {
  * Displays dual-axis chart showing daily P&L bars with cumulative P&L line overlay.
  */
 export const PnLChart: React.FC<PnLChartProps> = ({
-  title = 'Profit & Loss',
+  title,
   height = 400,
   initialFilters,
   aggregation = 'daily',
   autoRefresh = true,
   className,
 }) => {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.pnlChart.title');
+  
   // State management
   const [data, setData] = useState<PnLChartResponse | null>(null);
   const [loadingState, setLoadingState] = useState<ChartLoadingState>({
@@ -214,14 +219,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           
           return `
             <strong>${date}</strong><br/>
-            Daily P&L: <span style="color: ${dailyValue >= 0 ? profitColor : lossColor}">${formatCurrency(dailyValue)}</span><br/>
-            Cumulative P&L: ${formatCurrency(cumulativeValue)}
+            ${t('charts.pnlChart.dailyPnL')}: <span style="color: ${dailyValue >= 0 ? profitColor : lossColor}">${formatCurrency(dailyValue)}</span><br/>
+            ${t('charts.pnlChart.cumulativePnL')}: ${formatCurrency(cumulativeValue)}
           `;
         },
       },
       legend: {
         ...baseOption.legend,
-        data: ['Daily P&L', 'Cumulative P&L'],
+        data: [t('charts.pnlChart.dailyPnL'), t('charts.pnlChart.cumulativePnL')],
         top: 0,
       },
       xAxis: [
@@ -238,7 +243,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: 'Daily P&L',
+          name: t('charts.pnlChart.dailyPnL'),
           position: 'left',
           axisLine: {
             ...baseOption.yAxis.axisLine,
@@ -267,7 +272,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: 'Cumulative P&L',
+          name: t('charts.pnlChart.cumulativePnL'),
           position: 'right',
           axisLine: {
             ...baseOption.yAxis.axisLine,
@@ -292,7 +297,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       ],
       series: [
         {
-          name: 'Daily P&L',
+          name: t('charts.pnlChart.dailyPnL'),
           type: 'bar',
           data: dailyValues,
           itemStyle: {
@@ -309,7 +314,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           },
         },
         {
-          name: 'Cumulative P&L',
+          name: t('charts.pnlChart.cumulativePnL'),
           type: 'line',
           yAxisIndex: 1,
           data: cumulativeValues,
@@ -333,13 +338,13 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       ],
     };
-  }, [data, timezone, chartTheme]);
+  }, [data, timezone, chartTheme, t]);
   
   /**
    * Setup chart export
    */
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'pnl-chart',
   });
@@ -363,7 +368,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       const csvData = [
         {
           id: 'daily-pnl',
-          name: 'Daily P&L',
+          name: t('charts.pnlChart.dailyPnL'),
           type: 'bar' as const,
           data: data.dailyPnL.map((item: { timestamp: number; value: number }) => ({
             timestamp: item.timestamp,
@@ -373,7 +378,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
         {
           id: 'cumulative-pnl',
-          name: 'Cumulative P&L',
+          name: t('charts.pnlChart.cumulativePnL'),
           type: 'line' as const,
           data: data.cumulativePnL.map((item: { timestamp: number; value: number }) => ({
             timestamp: item.timestamp,
@@ -414,17 +419,17 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   return (
     <div className={`${styles.pnlChart} ${className || ''}`}>
       <ChartWrapper
-        title={title}
+        title={chartTitle}
         loadingState={loadingState}
         height={height}
         onRetry={handleRetry}
         onExport={handleExport}
         isEmpty={!data || data.dailyPnL.length === 0}
         emptyState={{
-          title: 'No P&L Data',
-          message: 'No profit and loss data available for the selected time period.',
+          title: t('charts.noDataTitle'),
+          message: t('charts.noDataMessage'),
           action: {
-            label: 'Reset Filters',
+            label: t('charts.resetFilters'),
             onClick: () => {
               setTimePeriod('30D');
               setWallets(undefined);

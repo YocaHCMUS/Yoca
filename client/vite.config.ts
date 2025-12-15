@@ -24,6 +24,14 @@ export default ({ mode }: { mode: string }) => {
     build: {
       outDir: "build",
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          // api: 'modern-compiler',
+          silenceDeprecations: ['if-function'],
+        },
+      },
+    },
     resolve: {
       dedupe: ['react', 'react-dom'],
       alias: {

@@ -9,6 +9,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { useChartFilters } from '../../../hooks/useChartFilters';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
@@ -84,7 +85,7 @@ export interface TransactionDistributionProps {
  * ```
  */
 export function TransactionDistribution({
-  title = 'Transaction Activity Analysis',
+  title,
   height = 300,
   initialTimePeriod = '30D',
   initialTransactionType = 'all',
@@ -95,6 +96,10 @@ export function TransactionDistribution({
   onDataLoaded,
   className,
 }: TransactionDistributionProps) {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.transactionDistributionChart.title');
+  
   // State management
   const [data, setData] = React.useState<TransactionDistributionResponse | null>(null);
   const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
@@ -289,7 +294,7 @@ export function TransactionDistribution({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: 'Transaction Count',
+        name: t('charts.transactionDistributionChart.count'),
         nameLocation: 'middle',
         nameGap: 45,
         axisLabel: {
@@ -314,7 +319,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, selectedChartMode, timezone, chartTheme]);
+  }, [data, selectedChartMode, timezone, chartTheme, t]);
   
   /**
    * Generate eCharts options for unique token counts chart
@@ -355,7 +360,7 @@ export function TransactionDistribution({
             <strong>${dateStr}</strong><br/>
             <div style="display: flex; align-items: center; margin-top: 4px;">
               <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">Unique Tokens:</span>
+              <span style="flex: 1;">${t('charts.transactionDistributionChart.tokens')}:</span>
               <strong style="margin-left: 8px;">${count}</strong>
             </div>
           `;
@@ -373,7 +378,7 @@ export function TransactionDistribution({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: 'Unique Tokens',
+        name: t('charts.transactionDistributionChart.tokens'),
         nameLocation: 'middle',
         nameGap: 45,
         axisLabel: {
@@ -383,7 +388,7 @@ export function TransactionDistribution({
       },
       series: [
         {
-          name: 'Unique Tokens',
+          name: t('charts.transactionDistributionChart.tokens'),
           type: 'line',
           data: data.uniqueTokenCounts.map(point => [point.timestamp, point.value]),
           smooth: 0.3,
@@ -429,11 +434,11 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, timezone, chartTheme]);
+  }, [data, timezone, chartTheme, t]);
   
   // Export functionality
   const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle: title,
+    chartTitle,
     timezone,
     baseFilename: 'transaction-distribution',
   });
@@ -474,7 +479,7 @@ export function TransactionDistribution({
       // Add unique token counts as a separate series
       csvData.push({
         id: 'unique-tokens',
-        name: 'Unique Tokens',
+        name: t('charts.transactionDistributionChart.tokens'),
         type: 'line' as const,
         data: data.uniqueTokenCounts.map(point => ({
           name: new Date(point.timestamp).toISOString(),
@@ -503,17 +508,17 @@ export function TransactionDistribution({
   
   return (
     <ChartWrapper
-      title={title}
+      title={chartTitle}
       loadingState={loadingState}
       height={height * 2 + 40}
       onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
       emptyState={{
-        title: 'No Transaction Data',
-        message: 'No transaction distribution data available for the selected time period and filters.',
+        title: t('charts.noDataTitle'),
+        message: t('charts.noDataMessage'),
         action: {
-          label: 'Reset Filters',
+          label: t('charts.resetFilters'),
           onClick: () => setTimePeriod('30D'),
         },
       }}
@@ -526,18 +531,18 @@ export function TransactionDistribution({
             <button
               className={selectedChartMode === 'stacked' ? styles.active : ''}
               onClick={() => handleChartModeChange('stacked')}
-              aria-label="Stacked bars"
-              title="Stacked bars"
+              aria-label={t('charts.transactionDistributionChart.stacked')}
+              title={t('charts.transactionDistributionChart.stacked')}
             >
-              Stacked
+              {t('charts.transactionDistributionChart.stacked')}
             </button>
             <button
               className={selectedChartMode === 'grouped' ? styles.active : ''}
               onClick={() => handleChartModeChange('grouped')}
-              aria-label="Grouped bars"
-              title="Grouped bars"
+              aria-label={t('charts.transactionDistributionChart.grouped')}
+              title={t('charts.transactionDistributionChart.grouped')}
             >
-              Grouped
+              {t('charts.transactionDistributionChart.grouped')}
             </button>
           </div>
         </div>
@@ -545,7 +550,7 @@ export function TransactionDistribution({
         {/* Transaction counts chart */}
         {data && (
           <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>Transaction Counts by Wallet</h3>
+            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
             <ReactECharts
               ref={transactionChartRef}
               option={transactionCountsOptions}
@@ -560,7 +565,7 @@ export function TransactionDistribution({
         {/* Unique token counts chart */}
         {data && (
           <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>Unique Tokens Traded Per Day</h3>
+            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
             <ReactECharts
               ref={tokenChartRef}
               option={uniqueTokenCountsOptions}
