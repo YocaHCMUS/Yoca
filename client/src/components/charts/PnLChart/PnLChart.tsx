@@ -26,7 +26,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchPnLChart } from '../../../services/chart/mockChartData';
+import { fetchPnLChart } from '../../../services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import type { PnLChartResponse } from '../../../types/chart-api.types';
@@ -115,7 +115,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     }));
     
     try {
-      const result = await mockFetchPnLChart({
+      const result = await fetchPnLChart({
         period: filters.timePeriod,
         wallets: filters.wallets?.join(','),
         aggregation,

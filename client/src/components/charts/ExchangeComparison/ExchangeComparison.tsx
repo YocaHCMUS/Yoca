@@ -17,7 +17,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchExchangeComparison } from '../../../services/chart/mockChartData';
+import { fetchExchangeComparison } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import type { ExchangeComparisonResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
@@ -135,7 +135,7 @@ export function ExchangeComparison({
     }));
     
     try {
-      const response = await mockFetchExchangeComparison({
+      const response = await fetchExchangeComparison({
         timePeriod: filters.timePeriod,
         metric: currentMetric,
         timezone,

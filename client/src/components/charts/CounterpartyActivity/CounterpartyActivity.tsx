@@ -17,7 +17,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchCounterpartyActivity } from '../../../services/chart/mockChartData';
+import { fetchCounterpartyActivity } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import type { CounterpartyActivityResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
@@ -132,7 +132,7 @@ export function CounterpartyActivity({
     setLoadingState({ status: 'loading', retryCount: loadingState.retryCount });
     
     try {
-      const response = await mockFetchCounterpartyActivity({
+      const response = await fetchCounterpartyActivity({
         timePeriod: filters.timePeriod,
         transactionType: filters.transactionType,
         limit: currentLimit,

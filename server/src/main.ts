@@ -3,14 +3,18 @@ import "@sv/util/load-env.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import {
-  default as balances,
-  default as chartBalance,
-} from "./routes/charts/balance.route.js";
-import chartDistribution from "./routes/charts/distribution.route.js";
+import balances from "./routes/balances.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
+import chartBalance from "./routes/charts/balance.route.js";
+import chartDistribution from "./routes/charts/distribution.route.js";
+import chartPnL from "./routes/charts/pnl.route.js";
+import chartExchanges from "./routes/charts/exchanges.route.js";
+import chartCounterparties from "./routes/charts/counterparties.route.js";
+import chartVolume from "./routes/charts/volume.route.js";
+import chartTransactions from "./routes/charts/transactions.route.js";
+import chartHoldings from "./routes/charts/holdings.route.js";
 
 process.loadEnvFile("./.env");
 
@@ -25,7 +29,13 @@ const app = new Hono()
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
   .route("/api/charts/balance", chartBalance)
-  .route("/api/charts/distribution", chartDistribution);
+  .route("/api/charts/distribution", chartDistribution)
+  .route("/api/charts/pnl", chartPnL)
+  .route("/api/charts/exchanges", chartExchanges)
+  .route("/api/charts/counterparties", chartCounterparties)
+  .route("/api/charts/volume", chartVolume)
+  .route("/api/charts/transactions", chartTransactions)
+  .route("/api/charts/holdings", chartHoldings);
 
 // Server
 serve(

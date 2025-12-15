@@ -16,7 +16,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchHoldingDurations } from '../../../services/chart/mockChartData';
+import { fetchHoldingDurations } from '../../../services/chart/chartApi';
 import type { HoldingDurationsResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
 import type { ExportFormat } from '../shared/ExportMenu';
@@ -142,7 +142,7 @@ export function HoldingDurations({
     }));
     
     try {
-      const response = await mockFetchHoldingDurations({
+      const response = await fetchHoldingDurations({
         walletIds: filters.wallets,
         topN: selectedTopN,
         timeUnit: selectedTimeUnit,

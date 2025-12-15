@@ -26,7 +26,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchAssetDistribution } from '../../../services/chart/mockChartData';
+import { fetchAssetDistribution } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import type { AssetDistributionResponse } from '../../../types/chart-api.types';
@@ -116,7 +116,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
     }));
     
     try {
-      const result = await mockFetchAssetDistribution({
+      const result = await fetchAssetDistribution({
         period: filters.timePeriod,
         wallets: filters.wallets?.join(','),
       });

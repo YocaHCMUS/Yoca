@@ -16,7 +16,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchVolumeBenchmark } from '../../../services/chart/mockChartData';
+import { fetchVolumeBenchmark } from '../../../services/chart/chartApi';
 import { formatCurrency, formatDate } from '../../../util/chart-helpers';
 import type { VolumeBenchmarkResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
@@ -146,7 +146,7 @@ export function VolumeBenchmark({
     }));
     
     try {
-      const response = await mockFetchVolumeBenchmark({
+      const response = await fetchVolumeBenchmark({
         timePeriod: filters.timePeriod,
         walletIds: filters.wallets,
         timezone,

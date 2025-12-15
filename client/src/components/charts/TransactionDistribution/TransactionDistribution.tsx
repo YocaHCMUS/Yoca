@@ -16,7 +16,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { mockFetchTransactionDistribution } from '../../../services/chart/mockChartData';
+import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
 import type { TransactionDistributionResponse } from '../../../types/chart-api.types';
 import type { ChartLoadingState } from '../../../types/chart.types';
@@ -147,7 +147,7 @@ export function TransactionDistribution({
     }));
     
     try {
-      const response = await mockFetchTransactionDistribution({
+      const response = await fetchTransactionDistribution({
         timePeriod: filters.timePeriod,
         transactionType: filters.transactionType,
         walletIds: filters.wallets,

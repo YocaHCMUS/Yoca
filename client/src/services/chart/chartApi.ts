@@ -111,10 +111,10 @@ export async function fetchPnLChart(params?: PnLRequestParams): Promise<PnLChart
 
 /**
  * Fetch transaction distribution data
- * GET /api/charts/transactions/distribution
+ * GET /api/charts/transactions
  */
 export async function fetchTransactionDistribution(params?: TransactionDistributionRequestParams): Promise<TransactionDistributionResponse> {
-  return fetchAPI<TransactionDistributionResponse>('/transactions/distribution', params);
+  return fetchAPI<TransactionDistributionResponse>('/transactions', params);
 }
 
 /**
@@ -127,10 +127,10 @@ export async function fetchHoldingDurations(params?: HoldingsRequestParams): Pro
 
 /**
  * Fetch volume benchmark data
- * GET /api/charts/volume-benchmark
+ * GET /api/charts/volume
  */
 export async function fetchVolumeBenchmark(params?: VolumeBenchmarkRequestParams): Promise<VolumeBenchmarkResponse> {
-  return fetchAPI<VolumeBenchmarkResponse>('/volume-benchmark', params);
+  return fetchAPI<VolumeBenchmarkResponse>('/volume', params);
 }
 
 /**
