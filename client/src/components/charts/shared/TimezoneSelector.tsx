@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChartContext } from '../../../contexts/ChartContext';
 import styles from './TimezoneSelector.module.scss';
 
@@ -51,6 +52,7 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
   className,
   compact = false,
 }) => {
+  const { t } = useTranslation();
   const { selectedTimezone, setTimezone } = useChartContext();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,10 +140,10 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
         ref={buttonRef}
         className={`${styles.triggerButton} ${compact ? styles.compact : ''}`}
         onClick={toggleMenu}
-        aria-label="Select timezone"
+        aria-label={t('charts.selectTimezone')}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title={`Timezone: ${getCurrentLabel()}`}
+        title={`${t('charts.timezone')}: ${getCurrentLabel()}`}
       >
         <svg
           width="20"
@@ -175,7 +177,7 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
           ref={menuRef}
           className={styles.menu}
           role="menu"
-          aria-label="Timezone options"
+          aria-label={t('charts.timezoneOptions')}
           onKeyDown={handleKeyDown}
         >
           <div className={styles.searchContainer}>
@@ -183,10 +185,10 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
               ref={searchInputRef}
               type="text"
               className={styles.searchInput}
-              placeholder="Search timezones..."
+              placeholder={t('charts.searchTimezones')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search timezones"
+              aria-label={t('charts.searchTimezones')}
             />
           </div>
           
@@ -222,7 +224,7 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
               ))
             ) : (
               <div className={styles.emptyState}>
-                No timezones found
+                {t('charts.noTimezonesFound')}
               </div>
             )}
           </div>

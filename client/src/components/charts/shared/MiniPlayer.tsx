@@ -14,6 +14,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Rnd } from 'react-rnd';
 import { createPortal } from 'react-dom';
 import { Theme } from '@carbon/react';
@@ -65,6 +66,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   defaultPosition,
   defaultSize = { width: MINI_PLAYER_DEFAULTS.WIDTH, height: MINI_PLAYER_DEFAULTS.HEIGHT },
 }) => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const [isMinimized, setIsMinimized] = useState(false);
   const [size, setSize] = useState(defaultSize);
@@ -174,12 +176,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           onKeyDown={handleKeyDown}
           role="dialog"
           aria-modal="false"
-          aria-label={`${title} - Mini Player`}
+          aria-label={`${title} - ${t('charts.miniPlayer')}`}
           tabIndex={-1}
         >
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <div className={styles.dragHandle} aria-label="Drag to move">
+            <div className={styles.dragHandle} aria-label={t('charts.dragToMove')}>
               <svg
                 width="16"
                 height="16"
@@ -201,8 +203,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             <button
               className={styles.minimizeButton}
               onClick={toggleMinimize}
-              aria-label={isMinimized ? 'Maximize' : 'Minimize'}
-              title={isMinimized ? 'Maximize' : 'Minimize'}
+              aria-label={isMinimized ? t('charts.maximize') : t('charts.minimize')}
+              title={isMinimized ? t('charts.maximize') : t('charts.minimize')}
             >
               {isMinimized ? (
                 <svg
@@ -232,8 +234,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             <button
               className={styles.closeButton}
               onClick={onClose}
-              aria-label="Close mini-player"
-              title="Close mini-player (ESC)"
+              aria-label={t('charts.closeMiniPlayer')}
+              title={t('charts.closeMiniPlayerEsc')}
             >
               <svg
                 width="16"

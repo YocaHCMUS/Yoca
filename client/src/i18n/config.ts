@@ -131,6 +131,34 @@ const resources = {
         miniPlayer: 'Mini Player',
         exitFullscreen: 'Exit Fullscreen',
         
+        // Viewing modes
+        enterFullscreenMode: 'Enter fullscreen mode',
+        openMiniPlayer: 'Open mini player',
+        chartViewingModes: 'Chart viewing modes',
+        fullscreenView: 'Fullscreen View',
+        exitFullscreenEsc: 'Exit fullscreen (ESC)',
+        closeMiniPlayer: 'Close mini-player',
+        closeMiniPlayerEsc: 'Close mini-player (ESC)',
+        dragToMove: 'Drag to move',
+        maximize: 'Maximize',
+        minimize: 'Minimize',
+        
+        // Timezone
+        selectTimezone: 'Select timezone',
+        timezone: 'Timezone',
+        timezoneOptions: 'Timezone options',
+        searchTimezones: 'Search timezones...',
+        noTimezonesFound: 'No timezones found',
+        localTime: 'Local Time',
+        utc: 'UTC',
+        
+        // Loading states
+        loadingChartData: 'Loading {{title}} chart data',
+        refreshingChartData: 'Refreshing {{title}} chart data',
+        chartLoadedSuccessfully: '{{title}} chart loaded successfully',
+        errorLoadingChart: 'Error loading {{title}} chart',
+        noDataForChart: 'No data available for {{title}} chart',
+        
         // Empty state
         noDataTitle: 'No Data Available',
         noDataMessage: 'There is no data to display for the selected filters.',
@@ -145,9 +173,17 @@ const resources = {
         serverError: 'Server error. Please try again later.',
         
         // Export
+        exportChart: 'Export chart',
+        exportFormatOptions: 'Export format options',
         exportPNG: 'Export as PNG',
         exportSVG: 'Export as SVG',
         exportCSV: 'Export as CSV',
+        pngFormat: 'PNG',
+        svgFormat: 'SVG',
+        csvFormat: 'CSV',
+        retinaBadge: 'Image',
+        vectorBadge: 'Vector',
+        dataBadge: 'Data',
         exportSuccess: 'Chart exported successfully',
         exportFailed: 'Export failed. Please try again.',
         
@@ -263,12 +299,6 @@ const resources = {
           topN: 'Show Top',
           wallet: 'Wallet',
         },
-        
-        // Timezone
-        timezone: 'Timezone',
-        localTime: 'Local Time',
-        utc: 'UTC',
-        customTimezone: 'Custom Timezone',
       },
     },
   },
@@ -396,6 +426,34 @@ const resources = {
         miniPlayer: 'Trình phát nhỏ',
         exitFullscreen: 'Thoát toàn màn hình',
         
+        // Viewing modes
+        enterFullscreenMode: 'Vào chế độ toàn màn hình',
+        openMiniPlayer: 'Mở trình phát nhỏ',
+        chartViewingModes: 'Chế độ xem biểu đồ',
+        fullscreenView: 'Chế độ toàn màn hình',
+        exitFullscreenEsc: 'Thoát toàn màn hình (ESC)',
+        closeMiniPlayer: 'Đóng trình phát nhỏ',
+        closeMiniPlayerEsc: 'Đóng trình phát nhỏ (ESC)',
+        dragToMove: 'Kéo để di chuyển',
+        maximize: 'Phóng to',
+        minimize: 'Thu nhỏ',
+        
+        // Timezone
+        selectTimezone: 'Chọn múi giờ',
+        timezone: 'Múi giờ',
+        timezoneOptions: 'Tùy chọn múi giờ',
+        searchTimezones: 'Tìm kiếm múi giờ...',
+        noTimezonesFound: 'Không tìm thấy múi giờ',
+        localTime: 'Giờ địa phương',
+        utc: 'UTC',
+        
+        // Loading states
+        loadingChartData: 'Đang tải dữ liệu biểu đồ {{title}}',
+        refreshingChartData: 'Đang làm mới dữ liệu biểu đồ {{title}}',
+        chartLoadedSuccessfully: 'Biểu đồ {{title}} đã tải thành công',
+        errorLoadingChart: 'Lỗi khi tải biểu đồ {{title}}',
+        noDataForChart: 'Không có dữ liệu cho biểu đồ {{title}}',
+        
         // Empty state
         noDataTitle: 'Không có dữ liệu',
         noDataMessage: 'Không có dữ liệu để hiển thị cho bộ lọc đã chọn.',
@@ -410,9 +468,17 @@ const resources = {
         serverError: 'Lỗi máy chủ. Vui lòng thử lại sau.',
         
         // Export
+        exportChart: 'Xuất biểu đồ',
+        exportFormatOptions: 'Tùy chọn định dạng xuất',
         exportPNG: 'Xuất dưới dạng PNG',
         exportSVG: 'Xuất dưới dạng SVG',
         exportCSV: 'Xuất dưới dạng CSV',
+        pngFormat: 'PNG',
+        svgFormat: 'SVG',
+        csvFormat: 'CSV',
+        retinaBadge: 'Ảnh',
+        vectorBadge: 'Vector',
+        dataBadge: 'Dữ liệu',
         exportSuccess: 'Xuất biểu đồ thành công',
         exportFailed: 'Xuất thất bại. Vui lòng thử lại.',
         
@@ -509,7 +575,7 @@ const resources = {
         transactionDistributionChart: {
           title: 'Phân tích hoạt động giao dịch',
           transactionCounts: 'Số lượng giao dịch',
-          uniqueTokens: 'Token duy nhất được giao dịch',
+          uniqueTokens: 'Số loại Token được giao dịch',
           date: 'Ngày',
           count: 'Số lượng',
           tokens: 'Token',
@@ -528,12 +594,6 @@ const resources = {
           topN: 'Hiển thị top',
           wallet: 'Ví',
         },
-        
-        // Timezone
-        timezone: 'Múi giờ',
-        localTime: 'Giờ địa phương',
-        utc: 'UTC',
-        customTimezone: 'Múi giờ tùy chỉnh',
       },
     },
   },
@@ -661,6 +721,34 @@ const resources = {
         miniPlayer: 'ミニプレーヤー',
         exitFullscreen: 'フルスクリーン終了',
         
+        // Viewing modes
+        enterFullscreenMode: 'フルスクリーンモードに入る',
+        openMiniPlayer: 'ミニプレーヤーを開く',
+        chartViewingModes: 'チャート表示モード',
+        fullscreenView: 'フルスクリーン表示',
+        exitFullscreenEsc: 'フルスクリーン終了（ESC）',
+        closeMiniPlayer: 'ミニプレーヤーを閉じる',
+        closeMiniPlayerEsc: 'ミニプレーヤーを閉じる（ESC）',
+        dragToMove: 'ドラッグして移動',
+        maximize: '最大化',
+        minimize: '最小化',
+        
+        // Timezone
+        selectTimezone: 'タイムゾーンを選択',
+        timezone: 'タイムゾーン',
+        timezoneOptions: 'タイムゾーンオプション',
+        searchTimezones: 'タイムゾーンを検索...',
+        noTimezonesFound: 'タイムゾーンが見つかりません',
+        localTime: 'ローカル時刻',
+        utc: 'UTC',
+        
+        // Loading states
+        loadingChartData: '{{title}}チャートデータを読み込み中',
+        refreshingChartData: '{{title}}チャートデータを更新中',
+        chartLoadedSuccessfully: '{{title}}チャートが正常に読み込まれました',
+        errorLoadingChart: '{{title}}チャートの読み込みエラー',
+        noDataForChart: '{{title}}チャートのデータがありません',
+        
         // Empty state
         noDataTitle: 'データがありません',
         noDataMessage: '選択したフィルターに表示するデータがありません。',
@@ -675,9 +763,17 @@ const resources = {
         serverError: 'サーバーエラー。後でもう一度お試しください。',
         
         // Export
+        exportChart: 'チャートをエクスポート',
+        exportFormatOptions: 'エクスポート形式オプション',
         exportPNG: 'PNGとしてエクスポート',
         exportSVG: 'SVGとしてエクスポート',
         exportCSV: 'CSVとしてエクスポート',
+        pngFormat: 'PNG',
+        svgFormat: 'SVG',
+        csvFormat: 'CSV',
+        retinaBadge: 'Retina',
+        vectorBadge: 'ベクター',
+        dataBadge: 'データ',
         exportSuccess: 'チャートのエクスポートに成功しました',
         exportFailed: 'エクスポートに失敗しました。もう一度お試しください。',
         
@@ -793,12 +889,6 @@ const resources = {
           topN: 'トップを表示',
           wallet: 'ウォレット',
         },
-        
-        // Timezone
-        timezone: 'タイムゾーン',
-        localTime: '現地時間',
-        utc: 'UTC',
-        customTimezone: 'カスタムタイムゾーン',
       },
     },
   },

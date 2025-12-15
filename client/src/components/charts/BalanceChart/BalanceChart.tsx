@@ -279,7 +279,7 @@ export function BalanceChart({
         },
       },
     };
-  }, [data, timezone, chartTheme]);
+  }, [data, timezone, chartTheme, t]);
   
   /**
    * Setup chart export

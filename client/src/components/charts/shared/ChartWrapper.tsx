@@ -8,6 +8,7 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from './ChartSkeleton';
 import { ChartEmptyState } from './ChartEmptyState';
 import { ChartErrorState } from './ChartErrorState';
@@ -108,6 +109,7 @@ export function ChartWrapper({
   enableFullscreen = true,
   enableMiniPlayer = true,
 }: ChartWrapperProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMiniPlayer, setIsMiniPlayer] = useState(false);
@@ -203,13 +205,13 @@ export function ChartWrapper({
    * Render viewing mode controls
    */
   const renderControls = () => (
-    <div className={styles.controls} role="toolbar" aria-label="Chart viewing modes">
+    <div className={styles.controls} role="toolbar" aria-label={t('charts.chartViewingModes')}>
       {enableFullscreen && (
         <button
           className={styles.controlButton}
           onClick={enterFullscreen}
-          aria-label="Enter fullscreen mode"
-          title="Fullscreen"
+          aria-label={t('charts.enterFullscreenMode')}
+          title={t('charts.fullscreen')}
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
@@ -227,8 +229,8 @@ export function ChartWrapper({
         <button
           className={styles.controlButton}
           onClick={enterMiniPlayer}
-          aria-label="Open mini player"
-          title="Mini player"
+          aria-label={t('charts.openMiniPlayer')}
+          title={t('charts.miniPlayer')}
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
@@ -299,11 +301,11 @@ export function ChartWrapper({
       >
         {/* Screen reader announcements */}
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {loadingState.status === 'loading' && `Loading ${title} chart data`}
-          {loadingState.status === 'refreshing' && `Refreshing ${title} chart data`}
-          {loadingState.status === 'success' && !isEmpty && `${title} chart loaded successfully`}
-          {loadingState.status === 'error' && `Error loading ${title} chart`}
-          {isEmpty && `No data available for ${title} chart`}
+          {loadingState.status === 'loading' && t('charts.loadingChartData', { title })}
+          {loadingState.status === 'refreshing' && t('charts.refreshingChartData', { title })}
+          {loadingState.status === 'success' && !isEmpty && t('charts.chartLoadedSuccessfully', { title })}
+          {loadingState.status === 'error' && t('charts.errorLoadingChart', { title })}
+          {isEmpty && t('charts.noDataForChart', { title })}
         </div>
         
         {/* Header */}

@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Theme } from '@carbon/react';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -45,6 +46,7 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
   children,
   title = 'Chart',
 }) => {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -177,7 +179,7 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
         className={styles.fullscreenView}
         role="dialog"
         aria-modal="true"
-        aria-label={`${title} - Fullscreen View`}
+        aria-label={`${title} - ${t('charts.fullscreenView')}`}
         tabIndex={-1}
       >
       <div className={styles.header}>
@@ -185,8 +187,8 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
         <button
           className={styles.exitButton}
           onClick={onExit}
-          aria-label="Exit fullscreen"
-          title="Exit fullscreen (ESC)"
+          aria-label={t('charts.exitFullscreen')}
+          title={t('charts.exitFullscreenEsc')}
         >
           <svg
             width="24"

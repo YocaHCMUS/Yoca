@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ExportMenu.module.scss';
 import { Download, Image, Svg, Table } from '@carbon/icons-react';
 
@@ -45,6 +46,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   className,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -118,10 +120,10 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         className={styles.triggerButton}
         onClick={toggleMenu}
         disabled={disabled || showLoading}
-        aria-label="Export chart"
+        aria-label={t('charts.exportChart')}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        title="Export chart"
+        title={t('charts.exportChart')}
       >
         {showLoading ? (
           <svg
@@ -148,7 +150,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         ) : (
           <Download size={20} />
         )}
-        <span className={styles.buttonText}>Export</span>
+        <span className={styles.buttonText}>{t('charts.export')}</span>
       </button>
       
       {isOpen && !showLoading && (
@@ -156,7 +158,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           ref={menuRef}
           className={styles.menu}
           role="menu"
-          aria-label="Export format options"
+          aria-label={t('charts.exportFormatOptions')}
           onKeyDown={handleKeyDown}
         >
           <button
@@ -166,8 +168,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             tabIndex={0}
           >
             <Image size={16} />
-            <span>Export as PNG</span>
-            <span className={styles.badge}>Retina</span>
+            <span>{t('charts.exportPNG')}</span>
+            <span className={styles.badge}>{t('charts.retinaBadge')}</span>
           </button>
           
           <button
@@ -177,8 +179,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             tabIndex={0}
           >
             <Svg size={16} />
-            <span>Export as SVG</span>
-            <span className={styles.badge}>Vector</span>
+            <span>{t('charts.exportSVG')}</span>
+            <span className={styles.badge}>{t('charts.vectorBadge')}</span>
           </button>
           
           <button
@@ -188,8 +190,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             tabIndex={0}
           >
             <Table size={16} />
-            <span>Export as CSV</span>
-            <span className={styles.badge}>Data</span>
+            <span>{t('charts.exportCSV')}</span>
+            <span className={styles.badge}>{t('charts.dataBadge')}</span>
           </button>
         </div>
       )}
