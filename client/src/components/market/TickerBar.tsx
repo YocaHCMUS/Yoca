@@ -10,13 +10,15 @@ interface TickerItem {
 }
 
 export const TickerBar: React.FC = () => {
-  const [items, setItems] = useState<TickerItem[]>([
-    { rank: 1, pair: 'WSOL-USDC', price: 189.45, change24h: 2.34 },
-    { rank: 2, pair: 'JTO-USDC', price: 3.21, change24h: -1.23 },
-    { rank: 3, pair: 'BONK-USDC', price: 0.000034, change24h: 5.67 },
-    { rank: 4, pair: 'JUP-USDC', price: 0.89, change24h: 1.89 },
-    { rank: 5, pair: 'WIF-USDC', price: 2.45, change24h: -0.78 },
-  ]);
+  const [items, setItems] = useState<TickerItem[]>(
+    [
+      { rank: 1, pair: 'WSOL-USDC', price: 189.45, change24h: 2.34 },
+      { rank: 2, pair: 'JTO-USDC', price: 3.21, change24h: -1.23 },
+      { rank: 3, pair: 'BONK-USDC', price: 0.000034, change24h: 5.67 },
+      { rank: 4, pair: 'JUP-USDC', price: 0.89, change24h: 1.89 },
+      { rank: 5, pair: 'WIF-USDC', price: 2.45, change24h: -0.78 },
+    ]
+  );
 
   const duplicatedItems = [...items, ...items];
 

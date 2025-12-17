@@ -42,17 +42,16 @@
 .rank {
   @include type-style('label-01');
   color: $text-secondary;
-  font-weight: 600;
 }
 
 .pair {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  @include type-style('body-short-01');
   font-weight: 600;
+  color: $text-primary;
 }
 
 .price {
-  @include type-style('body-compact-01');
+  @include type-style('body-short-01');
   color: $text-primary;
 }
 
