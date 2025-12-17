@@ -1,0 +1,22 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.overviewTab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-07;
+}
+
+.heatmapSection {
+  background: $layer-01;
+  border-radius: 4px;
+  padding: $spacing-05;
+}
+
+.tableSection {
+  .sectionTitle {
+    @include type-style('heading-03');
+    margin-bottom: $spacing-05;
+  }
+}

@@ -1,0 +1,45 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.transactionTable {
+  background: $layer-01;
+  border-radius: 4px;
+  padding: $spacing-05;
+}
+
+.signature {
+  @include type-style('code-01');
+  color: $text-secondary;
+  font-size: 0.75rem;
+}
+
+.typeBuy {
+  color: $support-success;
+  font-weight: 600;
+}
+
+.typeSell {
+  color: $support-error;
+  font-weight: 600;
+}
+
+.token {
+  font-weight: 600;
+}
+
+.statusSuccess,
+.statusFailed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.statusSuccess {
+  color: $support-success;
+}
+
+.statusFailed {
+  color: $support-error;
+}

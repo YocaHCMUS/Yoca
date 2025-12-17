@@ -1,0 +1,74 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.tickerBar {
+  background: $layer-01;
+  border-bottom: 1px solid $border-subtle-01;
+  overflow: hidden;
+  height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.tickerTrack {
+  display: flex;
+  gap: $spacing-07;
+  animation: scroll 30s linear infinite;
+  will-change: transform;
+
+  &:hover {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.tickerItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  white-space: nowrap;
+  padding: 0 $spacing-05;
+}
+
+.rank {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+}
+
+.pair {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 600;
+}
+
+.price {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+}
+
+.changePositive,
+.changeNegative {
+  @include type-style('label-01');
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.changePositive {
+  color: $support-success;
+}
+
+.changeNegative {
+  color: $support-error;
+}

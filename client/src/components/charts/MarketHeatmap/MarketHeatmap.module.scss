@@ -1,0 +1,17 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.heatmap {
+  width: 100%;
+  padding: 0;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: $layer-02;
+  color: $text-secondary;
+  border: 1px dashed $border-subtle-01;
+}

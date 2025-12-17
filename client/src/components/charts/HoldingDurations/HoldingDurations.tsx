@@ -143,7 +143,7 @@ export function HoldingDurations({
     
     try {
       const response = await fetchHoldingDurations({
-        walletIds: filters.wallets,
+        walletIds: filters.wallets?.join(','),
         topN: selectedTopN,
         timeUnit: selectedTimeUnit,
         timezone,

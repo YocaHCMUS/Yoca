@@ -138,7 +138,7 @@ export function TransactionDistribution({
   /**
    * Fetch transaction distribution data from API
    */
-  const fetchData = React.useCallback(async (isRefreshing = false) => {
+  const fetchData = useCallback(async (isRefreshing = false) => {
     if (!isValid) return;
     
     setLoadingState(prev => ({
@@ -147,18 +147,18 @@ export function TransactionDistribution({
     }));
     
     try {
-      const response = await fetchTransactionDistribution({
+      const result = await fetchTransactionDistribution({
         timePeriod: filters.timePeriod,
         transactionType: filters.transactionType,
-        walletIds: filters.wallets,
+        walletIds: filters.wallets?.join(','), // Changed from filters.wallets
         timezone,
       });
       
       if (!isMountedRef.current) return;
       
-      setData(response);
+      setData(result);
       setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
+      onDataLoaded?.(result);
     } catch (error) {
       if (!isMountedRef.current) return;
       

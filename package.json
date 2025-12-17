@@ -1,5 +1,5 @@
 {
-  "name": "node-vite-react-hono",
+  "name": "vite-react-hono",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -44,5 +44,17 @@
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0"
-  }
+  },
+  "description": "Full-stack TypeScript monorepo with React frontend (Vite) and Hono backend.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hongphuchcmus/Yoca.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hongphuchcmus/Yoca/issues"
+  },
+  "homepage": "https://github.com/hongphuchcmus/Yoca#readme"
 }

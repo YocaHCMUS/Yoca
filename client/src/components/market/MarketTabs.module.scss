@@ -1,0 +1,12 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.marketTabs {
+  :global(.cds--tabs) {
+    background: $layer-01;
+  }
+
+  .tabList {
+    border-bottom: 1px solid $border-subtle-01;
+  }
+}

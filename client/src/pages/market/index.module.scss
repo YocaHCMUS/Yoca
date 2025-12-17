@@ -1,0 +1,13 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.marketPage {
+  min-height: 100vh;
+  background: $background;
+}
+
+.content {
+  max-width: 1584px;
+  margin: 0 auto;
+  padding: $spacing-06 $spacing-05;
+}
