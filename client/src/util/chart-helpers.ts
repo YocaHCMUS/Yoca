@@ -17,10 +17,17 @@ import type { TimePeriod } from '../types/chart-filters.types';
  * @example
  * formatCurrency(1234567.89) // "$1.23M"
  * formatCurrency(123.45) // "$123.45"
+ * formatCurrency(0.000034) // "$0.000034"
  */
 export function formatCurrency(value: number, _currency: string = 'USD'): string {
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
+  
+  // Handle very small values (like BONK) with appropriate precision
+  if (absValue > 0 && absValue < 0.01) {
+    // For very small values, show up to 6 decimal places
+    return `${sign}$${absValue.toFixed(6)}`;
+  }
   
   // Format large numbers with K, M, B suffixes
   if (absValue >= 1_000_000_000) {

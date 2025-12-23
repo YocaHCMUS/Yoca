@@ -15,6 +15,7 @@ import chartCounterparties from "./routes/charts/counterparties.route.js";
 import chartVolume from "./routes/charts/volume.route.js";
 import chartTransactions from "./routes/charts/transactions.route.js";
 import chartHoldings from "./routes/charts/holdings.route.js";
+import chartPriceHistory from "./routes/charts/price-history.route.js";
 
 process.loadEnvFile("./.env");
 
@@ -35,7 +36,8 @@ const app = new Hono()
   .route("/api/charts/counterparties", chartCounterparties)
   .route("/api/charts/volume", chartVolume)
   .route("/api/charts/transactions", chartTransactions)
-  .route("/api/charts/holdings", chartHoldings);
+  .route("/api/charts/holdings", chartHoldings)
+  .route("/api/charts/price-history", chartPriceHistory);
 
 // Server
 serve(

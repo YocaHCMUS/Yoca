@@ -15,6 +15,7 @@ import type {
   TransactionDistributionResponse,
   HoldingDurationsResponse,
   VolumeBenchmarkResponse,
+  PriceHistoryResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -23,6 +24,7 @@ import type {
   TransactionDistributionRequestParams,
   HoldingsRequestParams,
   VolumeBenchmarkRequestParams,
+  PriceHistoryRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -134,6 +136,14 @@ export async function fetchVolumeBenchmark(params?: VolumeBenchmarkRequestParams
 }
 
 /**
+ * Fetch price history data
+ * GET /api/charts/price-history
+ */
+export async function fetchPriceHistory(params?: PriceHistoryRequestParams): Promise<PriceHistoryResponse> {
+  return fetchAPI<PriceHistoryResponse>('/price-history', params);
+}
+
+/**
  * Chart API service object
  */
 export const chartApi = {
@@ -145,6 +155,7 @@ export const chartApi = {
   fetchTransactionDistribution,
   fetchHoldingDurations,
   fetchVolumeBenchmark,
+  fetchPriceHistory,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -154,4 +165,5 @@ export const chartApi = {
   getTransactionDistribution: fetchTransactionDistribution,
   getHoldings: fetchHoldingDurations,
   getVolumeBenchmark: fetchVolumeBenchmark,
+  getPriceHistory: fetchPriceHistory,
 };

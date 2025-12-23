@@ -370,3 +370,44 @@ export interface VolumeBenchmarkRequestParams {
   
   [key: string]: string | number | undefined;
 }
+
+/**
+ * Price history API response
+ * GET /api/charts/price-history
+ */
+export interface PriceHistoryResponse {
+  /** Price data series for each token */
+  series: {
+    /** Token symbol */
+    symbol: string;
+    
+    /** Token name */
+    name: string;
+    
+    /** Time series price data points */
+    data: TimeSeriesPoint[];
+  }[];
+  
+  /** Response metadata */
+  metadata: ApiResponseMetadata & {
+    currency: string;
+    timezone: string;
+    aggregation: string;
+  };
+}
+
+/**
+ * API request parameters for price history endpoint
+ */
+export interface PriceHistoryRequestParams {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated token list */
+  tokens?: string;
+  
+  /** Aggregation level */
+  aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  
+  [key: string]: string | number | undefined;
+}

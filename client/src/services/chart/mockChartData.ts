@@ -7,7 +7,7 @@
  * @module mockChartData
  */
 
-import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse, TransactionDistributionResponse, HoldingDurationsResponse } from '../../types/chart-api.types';
+import type { BalanceTrendResponse, AssetDistributionResponse, PnLChartResponse, ExchangeComparisonResponse, CounterpartyActivityResponse, VolumeBenchmarkResponse, TransactionDistributionResponse, HoldingDurationsResponse, PriceHistoryResponse } from '../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../types/chart-filters.types';
 
 /**
@@ -904,4 +904,6 @@ export async function mockFetchHoldingDurations(params?: {
     params?.timeUnit || 'days'
   );
 }
+
+
 

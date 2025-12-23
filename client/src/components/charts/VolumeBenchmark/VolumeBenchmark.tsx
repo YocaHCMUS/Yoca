@@ -7,7 +7,7 @@
  * @module VolumeBenchmark
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '../shared/ChartWrapper';
