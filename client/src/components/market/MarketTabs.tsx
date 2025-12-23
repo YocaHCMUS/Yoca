@@ -36,7 +36,10 @@ export const MarketTabs: React.FC<MarketTabsProps> = ({ activeTab, onTabChange, 
           }
         }}
       >
-        <TabList aria-label="Market tabs" className={styles.tabList}>
+        <TabList
+          contained
+          aria-label="Market tabs" 
+          className={styles.tabList}>
           {tabs.map(tab => (
             <Tab key={tab.key}>{tab.label}</Tab>
           ))}

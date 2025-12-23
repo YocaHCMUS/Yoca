@@ -33,6 +33,9 @@ export interface ExportMenuProps {
   
   /** Disabled state */
   disabled?: boolean;
+  
+  /** Available export formats (default: all) */
+  formats?: ExportFormat[];
 }
 
 /**
@@ -45,6 +48,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   isExporting = false,
   className,
   disabled = false,
+  formats = ['png', 'svg', 'csv'],
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -161,38 +165,44 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           aria-label={t('charts.exportFormatOptions')}
           onKeyDown={handleKeyDown}
         >
-          <button
-            className={styles.menuItem}
-            onClick={() => handleExport('png')}
-            role="menuitem"
-            tabIndex={0}
-          >
-            <Image size={16} />
-            <span>{t('charts.exportPNG')}</span>
-            <span className={styles.badge}>{t('charts.retinaBadge')}</span>
-          </button>
+          {formats.includes('png') && (
+            <button
+              className={styles.menuItem}
+              onClick={() => handleExport('png')}
+              role="menuitem"
+              tabIndex={0}
+            >
+              <Image size={16} />
+              <span>{t('charts.exportPNG')}</span>
+              <span className={styles.badge}>{t('charts.retinaBadge')}</span>
+            </button>
+          )}
           
-          <button
-            className={styles.menuItem}
-            onClick={() => handleExport('svg')}
-            role="menuitem"
-            tabIndex={0}
-          >
-            <Svg size={16} />
-            <span>{t('charts.exportSVG')}</span>
-            <span className={styles.badge}>{t('charts.vectorBadge')}</span>
-          </button>
+          {formats.includes('svg') && (
+            <button
+              className={styles.menuItem}
+              onClick={() => handleExport('svg')}
+              role="menuitem"
+              tabIndex={0}
+            >
+              <Svg size={16} />
+              <span>{t('charts.exportSVG')}</span>
+              <span className={styles.badge}>{t('charts.vectorBadge')}</span>
+            </button>
+          )}
           
-          <button
-            className={styles.menuItem}
-            onClick={() => handleExport('csv')}
-            role="menuitem"
-            tabIndex={0}
-          >
-            <Table size={16} />
-            <span>{t('charts.exportCSV')}</span>
-            <span className={styles.badge}>{t('charts.dataBadge')}</span>
-          </button>
+          {formats.includes('csv') && (
+            <button
+              className={styles.menuItem}
+              onClick={() => handleExport('csv')}
+              role="menuitem"
+              tabIndex={0}
+            >
+              <Table size={16} />
+              <span>{t('charts.exportCSV')}</span>
+              <span className={styles.badge}>{t('charts.dataBadge')}</span>
+            </button>
+          )}
         </div>
       )}
     </div>

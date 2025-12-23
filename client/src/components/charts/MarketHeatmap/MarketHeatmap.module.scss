@@ -1,91 +1,38 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
+/**
+ * MarketHeatmap Styles
+ * 
+ * Styles for the Market Heatmap treemap visualization component
+ * 
+ * @module MarketHeatmap.module.scss
+ */
 
-.heatmap {
+.marketHeatmap {
   width: 100%;
-  padding: 0;
-  overflow: hidden;
-  position: relative;
-}
-
-.chartContainer {
-  position: relative;
-  width: 100%;
-}
-
-.expandButton {
-  position: absolute;
-  top: $spacing-03;
-  left: $spacing-03;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #ffffff;
-  transition: background 0.2s ease;
-  z-index: 10;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.4);
-  }
-
-  svg {
-    fill: currentColor;
-  }
-}
-
-.loading,
-.error {
+  height: 100%;
+  min-height: 400px;
+  
+  // Container styling
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: $spacing-05;
-  color: var(--cds-text-secondary);
-}
-
-.error {
-  p {
-    @include type-style('body-short-01');
-    color: var(--cds-text-error);
+  
+  // Chart-specific overrides
+  :global(.echarts-for-react) {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1;
+    
+    canvas {
+      // Ensure crisp rendering on retina displays
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
   }
-}
-
-.retryButton {
-  @include type-style('body-short-01');
-  padding: $spacing-03 $spacing-05;
-  background: var(--cds-button-primary);
-  color: var(--cds-text-on-color);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: var(--cds-button-primary-hover);
-  }
-}
-
-// Responsive adjustments
-@media (max-width: 672px) {
-  .cell {
-    min-width: 60px;
-    min-height: 50px;
-  }
-
-  .symbol {
-    font-size: 0.75rem;
-  }
-
-  .change,
-  .marketCap {
-    font-size: 0.625rem;
+  
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    // Adjust chart height on mobile if needed
+    :global(.echarts-for-react) {
+      min-height: 300px;
+    }
   }
 }

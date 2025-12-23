@@ -10,6 +10,8 @@ import {
   Pagination,
 } from '@carbon/react';
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
+import { TableWrapper } from '../charts/shared/TableWrapper';
+import type { ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TransactionTable.module.scss';
 
 interface Transaction {
@@ -81,42 +83,79 @@ export const TransactionTable: React.FC = () => {
     ),
   }));
 
+  /**
+   * Handle export functionality
+   */
+  const handleExport = async (format: ExportFormat) => {
+    if (format === 'csv') {
+      // Export as CSV
+      const csvHeaders = headers.map(h => h.header).join(',');
+      const csvRows = transactions.map(tx =>
+        [
+          tx.signature,
+          tx.type,
+          tx.token,
+          tx.amount.toFixed(4),
+          tx.price.toFixed(2),
+          tx.total.toFixed(2),
+          tx.timestamp,
+          tx.status,
+        ].join(',')
+      );
+      const csvContent = [csvHeaders, ...csvRows].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `transactions-${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
-    <div className={styles.transactionTable}>
-      <DataTable rows={rows} headers={headers}>
-        {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-          <Table {...getTableProps()}>
-            <TableHead>
-              <TableRow>
-                {headers.map(header => (
-                  <TableHeader {...getHeaderProps({ header })}>
-                    {header.header}
-                  </TableHeader>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map(row => (
-                <TableRow {...getRowProps({ row })}>
-                  {row.cells.map(cell => (
-                    <TableCell key={cell.id}>{cell.value}</TableCell>
+    <TableWrapper
+      title="Recent Transactions"
+      onExport={handleExport}
+      isEmpty={transactions.length === 0}
+    >
+      <div className={styles.transactionTable}>
+        <DataTable rows={rows} headers={headers}>
+          {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+            <Table {...getTableProps()}>
+              <TableHead>
+                <TableRow>
+                  {headers.map(header => (
+                    <TableHeader {...getHeaderProps({ header })}>
+                      {header.header}
+                    </TableHeader>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DataTable>
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        pageSizes={[10, 20, 30, 50]}
-        totalItems={transactions.length}
-        onChange={({ page, pageSize }) => {
-          setPage(page);
-          setPageSize(pageSize);
-        }}
-      />
-    </div>
+              </TableHead>
+              <TableBody>
+                {rows.map(row => (
+                  <TableRow {...getRowProps({ row })}>
+                    {row.cells.map(cell => (
+                      <TableCell key={cell.id}>{cell.value}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DataTable>
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          pageSizes={[10, 20, 30, 50]}
+          totalItems={transactions.length}
+          onChange={({ page, pageSize }) => {
+            setPage(page);
+            setPageSize(pageSize);
+          }}
+        />
+      </div>
+    </TableWrapper>
   );
 };

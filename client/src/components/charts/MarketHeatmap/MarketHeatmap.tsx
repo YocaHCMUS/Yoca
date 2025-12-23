@@ -1,7 +1,28 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+/**
+ * MarketHeatmap Component
+ * 
+ * Displays a treemap visualization of cryptocurrency market data showing asset distribution
+ * by market cap with dynamic coloring based on 24h price changes.
+ * 
+ * Features:
+ * - Treemap visualization of market cap distribution
+ * - Color coding by 24h price change (green for gain, red for loss)
+ * - Interactive tooltips with price, change, volume info
+ * - Auto-refresh every 30 seconds
+ * - Export to PNG/SVG/CSV
+ * - Fullscreen and mini-player viewing modes
+ * 
+ * @module components/charts/MarketHeatmap
+ */
+
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Tile, InlineLoading } from '@carbon/react';
-import { WarningAlt, Maximize } from '@carbon/icons-react';
+import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
+import { ChartWrapper } from '../shared/ChartWrapper';
+import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { useChartExport } from '../../../hooks/useChartExport';
+import { useChartTheme } from '../../../hooks/useChartTheme';
 import {
   mockFetchHeatmapData,
   getChangeColor,
@@ -9,34 +30,99 @@ import {
   formatPrice,
   type HeatmapCell,
 } from '../../../services/market/mockMarketData';
+import type { ChartLoadingState } from '../../../types/chart.types';
+import type { ExportFormat } from '../shared/ExportMenu';
 import styles from './MarketHeatmap.module.scss';
 
-interface MarketHeatmapProps {
+/**
+ * Props for MarketHeatmap component
+ */
+export interface MarketHeatmapProps {
+  /** Chart title */
+  title?: string;
+  
+  /** Chart height in pixels */
   height?: number;
+  
+  /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
+  
+  /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
+  
+  /** Callback when data is loaded */
+  onDataLoaded?: (data: HeatmapCell[]) => void;
+  
+  /** Additional CSS class */
+  className?: string;
 }
 
+/**
+ * MarketHeatmap Component
+ * 
+ * Displays market sentiment visualization through treemap showing asset distribution
+ * by market cap with color-coded performance indicators.
+ * 
+ * @example
+ * ```tsx
+ * <MarketHeatmap
+ *   title="Market Heatmap"
+ *   height={400}
+ *   autoRefresh={true}
+ * />
+ * ```
+ */
 export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
-  height = 500,
+  title,
+  height = 400,
   autoRefresh = true,
   refreshInterval = 30000,
+  onDataLoaded,
+  className,
 }) => {
+  // i18n
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.marketHeatmap.title', 'Market Heatmap');
+  
+  // State management
   const [data, setData] = useState<HeatmapCell[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingState, setLoadingState] = useState<ChartLoadingState>({
+    status: 'idle',
+    retryCount: 0,
+  });
+  
+  // Chart instance ref for export
+  const chartRef = useRef<any>(null);
+
+  // Get theme configuration
+  const chartTheme = useChartTheme();
 
   const fetchData = useCallback(async () => {
     try {
-      setError(null);
+      setLoadingState((prev) => ({
+        ...prev,
+        status: prev.status === 'success' ? 'refreshing' : 'loading',
+      }));
       const heatmapData = await mockFetchHeatmapData();
       setData(heatmapData);
+      onDataLoaded?.(heatmapData);
+      setLoadingState({
+        status: 'success',
+        retryCount: 0,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load market data';
+      setLoadingState((prev) => ({
+        status: 'error',
+        error: {
+          code: 'FETCH_ERROR',
+          message: errorMessage,
+          retryable: true,
+        },
+        retryCount: prev.retryCount + 1,
+      }));
     }
-  }, []);
+  }, [onDataLoaded]);
 
   useEffect(() => {
     fetchData();
@@ -145,42 +231,73 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
     };
   }, [data]);
 
-  if (loading) {
-    return (
-      <Tile className={styles.heatmap}>
-        <div style={{ height: `${height}px` }} className={styles.loading}>
-          <InlineLoading description="Loading market data..." />
-        </div>
-      </Tile>
-    );
-  }
+  // Export handler
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      if (!chartRef.current || data.length === 0) return;
 
-  if (error) {
-    return (
-      <Tile className={styles.heatmap}>
-        <div style={{ height: `${height}px` }} className={styles.error}>
-          <WarningAlt size={32} />
-          <p>{error}</p>
-          <button onClick={fetchData} className={styles.retryButton}>
-            Retry
-          </button>
-        </div>
-      </Tile>
-    );
-  }
+      try {
+        const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
+          type: format === 'png' ? 'png' : 'svg',
+          pixelRatio: 2,
+          backgroundColor: '#fff',
+        });
+
+        if (format === 'csv') {
+          // CSV export
+          const csvContent = [
+            ['Symbol', 'Name', 'Price', '24h Change (%)', 'Market Cap', 'Volume'],
+            ...data.map((item) => [
+              item.symbol,
+              item.name,
+              formatPrice(item.price),
+              item.change.toFixed(2),
+              formatLargeNumber(item.value),
+              formatLargeNumber(item.volume),
+            ]),
+          ]
+            .map((row) => row.join(','))
+            .join('\n');
+
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `market-heatmap-${Date.now()}.csv`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } else {
+          // PNG/SVG export
+          const link = document.createElement('a');
+          link.href = dataUrl;
+          link.download = `market-heatmap-${Date.now()}.${format === 'png' ? 'png' : 'svg'}`;
+          link.click();
+        }
+      } catch (err) {
+        console.error('Export failed:', err);
+      }
+    },
+    [data]
+  );
 
   return (
-    <Tile className={styles.heatmap}>
-      <div className={styles.chartContainer} style={{ height: `${height}px` }}>
+    <ChartWrapper
+      title={chartTitle}
+      loadingState={loadingState}
+      height={height}
+      onRetry={fetchData}
+      isEmpty={data.length === 0}
+      onExport={handleExport}
+      className={className}
+    >
+      <div className={styles.marketHeatmap}>
         <ReactECharts
+          ref={chartRef}
           option={chartOption}
           style={{ height: '100%', width: '100%' }}
           opts={{ renderer: 'canvas' }}
         />
-        <button className={styles.expandButton} aria-label="Expand chart">
-          <Maximize size={16} />
-        </button>
       </div>
-    </Tile>
+    </ChartWrapper>
   );
 };
