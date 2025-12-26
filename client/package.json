@@ -8,7 +8,8 @@
     "build": "npm run clean && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "clean": "rm -rf build tsconfig.tsbuildinfo",
+    "clear": "rm -rf ./node_modules & npm run clean",
+    "clean": "rm -rf ./build ./tsconfig.tsbuildinfo",
     "perf": "tsx src/scripts/performance-test.ts",
     "analyze": "vite-bundle-visualizer"
   },

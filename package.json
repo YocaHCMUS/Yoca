@@ -12,6 +12,7 @@
     "build": "npm run build -ws",
     "preview": "npm run start -w=server & npm run preview -w=client",
     "lint": "npm run lint -ws",
+    "clear": "rm -rf ./node_modules & npm run clear -ws",
     "clean": "npm run clean -ws",
     "client:dev": "npm run dev -w=client",
     "client:build": "npm run build -w=client",
