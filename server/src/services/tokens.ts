@@ -375,3 +375,17 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   }
   return null;
 }
+
+// async function getTokenMarket(tokenAddress: string) {
+//   const tokenMarket = await cg.client.coins.markets.get({
+//     ids: "sol,pudgypenguin",
+//     vs_currency: "usd",
+//   });
+//   const insertValue : TokenMarketDataInsert = {
+//     address: tokenAddress,
+//     ath: tokenMarket[0].ath!,
+//     atl: tokenMarket[0].atl!,
+
+//   }
+//   await db.insert(tokenMarketData).values(insertValue);
+// }

@@ -30,6 +30,7 @@
     "db:studio": "npm run db:studio -w server"
   },
   "dependencies": {
+    "@coingecko/coingecko-typescript": "^2.5.0",
     "dayjs": "^1.11.19",
     "zod": "^4.1.12"
   },
