@@ -1,19 +1,24 @@
 import {
   CG_TOKEN_LIST_TTL_MS,
+  TOKEN_CHART_24H_UPDATE_THRESHOLD,
   TOKEN_MARKET_DATA_TTL_MS,
   TOKEN_META_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
   coinGeckoTokenList,
-  tableMeta,
+  coinGeckoTokenListMeta,
+  tokenMarketChart24h,
   tokenMarketData,
   tokenMeta,
+  type CoingeckoTokenListInsert,
+  type TokenMarketChart24hInsert,
   type TokenMarketDataInsert,
+  type TokenMetaInsert,
 } from "@sv/db/schema.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { and, eq, getTableName, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 
 interface CG_Token {
   id: string;
@@ -27,6 +32,9 @@ interface CG_TokenMeta {
     solana: string;
   };
   name: string;
+  description?: {
+    en?: string;
+  };
   symbol: string;
   image: {
     thumb: string;
@@ -45,16 +53,30 @@ interface CG_TokenMarketData {
   high_24h: number;
   low_24h: number;
   price_change_24h: number;
-  price_change_percentage_24h: number;
+  // These fields only available if price_percentage_change is set accordingly
+  price_change_percentage_1h_in_currency: number;
+  price_change_percentage_24h_in_currency: number;
+  price_change_percentage_14d_in_currency: number;
+  price_change_percentage_30d_in_currency: number;
+  price_change_percentage_200d_in_currency: number;
+  price_change_percentage_1y_in_currency: number;
   market_cap_change_24h: number;
   market_cap_change_percentage_24h: number;
   circulating_supply: number;
   total_supply: number;
   max_supply: number;
   ath: number;
+  ath_date: string;
   ath_change_percentage: number;
   atl: number;
+  atl_date: string;
   atl_change_percentage: number;
+}
+
+interface CG_TokenMarketChart {
+  prices: [number, number][];
+  market_caps: [number, number][];
+  total_volumes: [number, number][];
 }
 
 async function getCoinGeckoIdList(tokenAddresses: string[]) {
@@ -65,30 +87,20 @@ async function getCoinGeckoIdList(tokenAddresses: string[]) {
   // Check freshness of data (for CG token list we update all entries at once)
   const freshCheck = await db
     .select({
-      lastRefresh: tableMeta.lastRefresh,
+      lastRefresh: coinGeckoTokenListMeta.lastRefresh,
     })
-    .from(tableMeta)
-    .where(eq(tableMeta.tableName, getTableName(tokenMeta)))
+    .from(coinGeckoTokenListMeta)
     .limit(1);
 
   const thresholdDate = new Date(Date.now() - CG_TOKEN_LIST_TTL_MS);
 
   if (freshCheck.length == 0 || freshCheck[0].lastRefresh < thresholdDate) {
     // Pull new data and conveniently get the required results
-    const idLookup = await pullCgTokenList(tokenAddresses);
+    const idLookup = await fetchCgTokenList(tokenAddresses);
     // Update last refresh time
-    await db
-      .insert(tableMeta)
-      .values({
-        tableName: getTableName(tokenMeta),
-        lastRefresh: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [tableMeta.tableName],
-        set: {
-          lastRefresh: new Date(),
-        },
-      });
+    await db.update(coinGeckoTokenListMeta).set({
+      lastRefresh: new Date(),
+    });
     return idLookup;
   } else {
     // In TTL, query with what we already had
@@ -114,7 +126,7 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
 
   const idLookup =
     (await getCoinGeckoIdList(tokenAddresses)) ??
-    (await pullCgTokenList(tokenAddresses));
+    (await fetchCgTokenList(tokenAddresses));
 
   if (!idLookup) {
     return null;
@@ -142,12 +154,15 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
 
   const metaDataList = rawMetaList
     .filter((rawMeta) => rawMeta != null)
-    .map((rawMeta) => ({
-      address: rawMeta.platforms.solana,
-      symbol: rawMeta.symbol,
-      name: rawMeta.name,
-      imageUrl: rawMeta.image.small,
-    }));
+    .map(
+      (rawMeta): TokenMetaInsert => ({
+        address: rawMeta.platforms.solana,
+        symbol: rawMeta.symbol,
+        name: rawMeta.name,
+        description: rawMeta.description?.en || null,
+        imageUrl: rawMeta.image.small,
+      }),
+    );
 
   return await db
     .insert(tokenMeta)
@@ -198,28 +213,33 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
   }
 }
 
-async function pullCgTokenList(tokenAddresses: string[]) {
+async function fetchCgTokenList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return null;
   }
 
   const cgEndpoint = cg.getEndpoint("/coins/list");
-  cgEndpoint.searchParams.append("include_platform", "true");
+  cgEndpoint.search = new URLSearchParams({
+    include_platform: "true",
+  }).toString();
+
   const req = new Request(cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
   });
 
   const resp = await fetch(req);
-
   if (resp.ok) {
     const res: CG_Token[] = await resp.json();
+    console.log(res);
     const solanaTokens = res
       .filter((rawToken) => rawToken.platforms.solana)
-      .map((rawToken) => ({
-        coinGeckoId: rawToken.id,
-        tokenAddress: rawToken.platforms.solana!,
-      }));
+      .map(
+        (rawToken): CoingeckoTokenListInsert => ({
+          coinGeckoId: rawToken.id,
+          tokenAddress: rawToken.platforms.solana!,
+        }),
+      );
 
     const idLookup = Object.fromEntries(
       solanaTokens
@@ -281,7 +301,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
 
   const idLookup =
     (await getCoinGeckoIdList(tokenAddresses)) ??
-    (await pullCgTokenList(tokenAddresses));
+    (await fetchCgTokenList(tokenAddresses));
 
   if (!idLookup) {
     return null;
@@ -295,7 +315,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       .join(","),
     vs_currency: "usd",
     order: "market_cap_desc",
-    price_percentage_change: "1h",
+    price_percentage_change: "1h,24h,14d,30d,200d,1y",
   }).toString();
 
   const req = new Request(cgEndpoint, {
@@ -314,28 +334,41 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
         .map(([address, id]) => [id, address]),
     );
 
-    const marketDataList: TokenMarketDataInsert[] = res.map(
-      (rawMakertData) => ({
-        address: addressLookup[rawMakertData.id],
-        priceUsd: rawMakertData.current_price,
-        marketCap: rawMakertData.market_cap,
-        marketCapRank: rawMakertData.market_cap_rank,
-        fullyDilutedValuation: rawMakertData.fully_diluted_valuation,
-        totalVolume: rawMakertData.total_volume,
-        high24h: rawMakertData.high_24h,
-        low24h: rawMakertData.low_24h,
-        priceChange24h: rawMakertData.price_change_24h,
-        priceChangePercentage24h: rawMakertData.price_change_percentage_24h,
-        marketCapChange24h: rawMakertData.market_cap_change_24h,
+    const marketDataList = res.map(
+      (rawMarketData): TokenMarketDataInsert => ({
+        address: addressLookup[rawMarketData.id],
+        priceUsd: rawMarketData.current_price,
+        marketCap: rawMarketData.market_cap,
+        marketCapRank: rawMarketData.market_cap_rank,
+        fullyDilutedValuation: rawMarketData.fully_diluted_valuation,
+        volume24h: rawMarketData.total_volume,
+        high24h: rawMarketData.high_24h,
+        low24h: rawMarketData.low_24h,
+        priceChange24h: rawMarketData.price_change_24h,
+        priceChangePercentage1h:
+          rawMarketData.price_change_percentage_1h_in_currency,
+        priceChangePercentage24h:
+          rawMarketData.price_change_percentage_24h_in_currency,
+        priceChangePercentage14d:
+          rawMarketData.price_change_percentage_14d_in_currency,
+        priceChangePercentage30d:
+          rawMarketData.price_change_percentage_30d_in_currency,
+        priceChangePercentage200d:
+          rawMarketData.price_change_percentage_200d_in_currency,
+        priceChangePercentage1y:
+          rawMarketData.price_change_percentage_1y_in_currency,
+        marketCapChange24h: rawMarketData.market_cap_change_24h,
         marketCapChangePercentage24h:
-          rawMakertData.market_cap_change_percentage_24h,
-        circulatingSupply: rawMakertData.circulating_supply,
-        totalSupply: rawMakertData.total_supply,
-        maxSupply: rawMakertData.max_supply,
-        ath: rawMakertData.ath,
-        athChangePercentage: rawMakertData.ath_change_percentage,
-        atl: rawMakertData.atl,
-        atlChangePercentage: rawMakertData.atl_change_percentage,
+          rawMarketData.market_cap_change_percentage_24h,
+        circulatingSupply: rawMarketData.circulating_supply,
+        totalSupply: rawMarketData.total_supply,
+        maxSupply: rawMarketData.max_supply,
+        ath: rawMarketData.ath,
+        athDate: new Date(rawMarketData.ath_date),
+        athChangePercentage: rawMarketData.ath_change_percentage,
+        atl: rawMarketData.atl,
+        atlDate: new Date(rawMarketData.ath_date),
+        atlChangePercentage: rawMarketData.atl_change_percentage,
       }),
     );
 
@@ -345,13 +378,14 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       .onConflictDoUpdate({
         target: [tokenMarketData.address],
         set: {
+          // Had to type all the fields here since unfortunately that is how Postgres works
           priceUsd: excluded(tokenMarketData.priceUsd),
           marketCap: excluded(tokenMarketData.marketCap),
           marketCapRank: excluded(tokenMarketData.marketCapRank),
           fullyDilutedValuation: excluded(
             tokenMarketData.fullyDilutedValuation,
           ),
-          totalVolume: excluded(tokenMarketData.totalVolume),
+          volume24h: excluded(tokenMarketData.volume24h),
           high24h: excluded(tokenMarketData.high24h),
           low24h: excluded(tokenMarketData.low24h),
           priceChange24h: excluded(tokenMarketData.priceChange24h),
@@ -376,16 +410,112 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   return null;
 }
 
-// async function getTokenMarket(tokenAddress: string) {
-//   const tokenMarket = await cg.client.coins.markets.get({
-//     ids: "sol,pudgypenguin",
-//     vs_currency: "usd",
-//   });
-//   const insertValue : TokenMarketDataInsert = {
-//     address: tokenAddress,
-//     ath: tokenMarket[0].ath!,
-//     atl: tokenMarket[0].atl!,
+export async function get24hTokenMarketChart(tokenAddress: string) {
+  const to = new Date().getTime();
+  const from = to - 86_400_000;
 
-//   }
-//   await db.insert(tokenMarketData).values(insertValue);
-// }
+  const chartData = await db
+    .select()
+    .from(tokenMarketChart24h)
+    .where(
+      and(
+        eq(tokenMarketChart24h.address, tokenAddress),
+        gte(tokenMarketChart24h.unixTimestampMs, from),
+        lte(tokenMarketChart24h.unixTimestampMs, to),
+      ),
+    );
+
+  if (chartData.length == 0) {
+    return fetch24hTokenMarketChart(tokenAddress);
+  }
+
+  const latestUpdate = chartData[chartData.length - 1].unixTimestampMs;
+  const isStale =
+    new Date().getTime() - latestUpdate > TOKEN_CHART_24H_UPDATE_THRESHOLD;
+
+  if (isStale) {
+    const newerChartData = await fetch24hTokenMarketChart(
+      tokenAddress,
+      latestUpdate,
+    );
+
+    if (newerChartData) {
+      return [...chartData, ...newerChartData];
+    }
+  }
+
+  return chartData;
+}
+
+export async function fetch24hTokenMarketChart(
+  tokenAddress: string,
+  latestUpdateUnixMs: number | null = null,
+) {
+  if (!tokenAddress) {
+    return [];
+  }
+
+  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+
+  if (!cgId) {
+    return [];
+  }
+
+  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
+
+  const to = new Date().getTime();
+  let from = to - 86_400_000;
+
+  // If possible just load from the latest availale data.
+  // It won't save an API call but may increase query speed (I guess)
+  if (latestUpdateUnixMs && from < latestUpdateUnixMs) {
+    from = latestUpdateUnixMs;
+  }
+
+  // "from" and "to" can either be in seconds or miliseconds.
+  // Using miliseconds here
+  cgEndpoint.search = new URLSearchParams({
+    vs_currency: "usd",
+    from: from.toString(),
+    to: to.toString(),
+  }).toString();
+  const req = new Request(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+
+  if (resp.ok) {
+    const res: CG_TokenMarketChart = await resp.json();
+    const chartDataPoints = res.prices.map(
+      ([timestamp, price], index): TokenMarketChart24hInsert => ({
+        address: tokenAddress,
+        unixTimestampMs: timestamp,
+        price: price,
+        marketCap: res.market_caps[index][1],
+        totalVolume: res.total_volumes[index][1],
+      }),
+    );
+    const chartData = await db
+      .insert(tokenMarketChart24h)
+      .values(chartDataPoints)
+      .onConflictDoUpdate({
+        target: [
+          tokenMarketChart24h.address,
+          tokenMarketChart24h.unixTimestampMs,
+        ],
+        set: {
+          price: excluded(tokenMarketChart24h.price),
+          marketCap: excluded(tokenMarketChart24h.marketCap),
+          totalVolume: excluded(tokenMarketChart24h.totalVolume),
+        },
+      })
+      .returning();
+
+    return chartData;
+  }
+
+  return [];
+}

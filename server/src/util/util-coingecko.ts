@@ -1,5 +1,9 @@
 import Coingecko from "@coingecko/coingecko-typescript";
 
+// Currently there is a bug with the sdk that makes all the returned fields optional:
+// github.com/coingecko/coingecko-typescript/issues/31
+// So we'd need to be using "!" alot
+
 export const client = new Coingecko({
   demoAPIKey: process.env.COINGECKO_API_KEY!,
   environment: "demo",

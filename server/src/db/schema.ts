@@ -1,8 +1,10 @@
 import { relations } from "drizzle-orm";
 import {
+  bigint,
   char,
   decimal as dec,
   integer,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -11,29 +13,32 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-/*
- * Notes:
- * [Old]:
- * When you define a field with the type of decimal or numeric, you should
- * add config with mode option of "number" for drizzle to be able to infer
- * the field as number for future references, or else it would be inferred
- * as string. This is not drizzle's fault as node-postgress defined decimal
- * and numeric values as strings to keep precisions.
- * Example:
- * ```ts
- * export const tokenMarketData = pgTable("token_market_data", {
- *   priceUsd: dec("price_usd", { mode: "number" }).notNull(),
- *   marketCap: dec("market_cap", { mode: "number" }).notNull(),
- * }
- * ```
- * [New]:
- * For readability:
- * I've overwritten the decimal function to have default mode of "number"
- */
-
+// Decimal has "string" mode by default, due to how node-postgres saves
+// decimal numbers to keep precisions, this overrides that so you can pass
+// number into the inferred types of these fields
 function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
+
+export const chartGranularityOrder = {
+  five_minutely: 0,
+  hourly: 1,
+  daily: 2,
+} as const;
+
+type ChartGranularityKey = keyof typeof chartGranularityOrder;
+
+const chartGranularity = pgEnum(
+  "chart_granularity",
+  Object.keys(chartGranularityOrder) as [
+    ChartGranularityKey,
+    ...ChartGranularityKey[],
+  ],
+  // The above type means an array of atleast one ChartGranularityKey,
+  // as pgEnum doesn't allow empty arrays
+);
+
+// #region Table definitions
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -50,11 +55,6 @@ export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
   name: varchar("name").notNull(),
   symbol: varchar("symbol").notNull(),
-
-  // Don't think they are very useful
-  // isNative: boolean("is_native").notNull().default(false),
-  // isWrapped: boolean("is_wrapped").notNull().default(false),
-
   imageUrl: varchar("image_url"),
   description: varchar("description"),
 
@@ -66,35 +66,87 @@ export const tokenMeta = pgTable("token_meta", {
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
   priceUsd: decimal("price_usd").notNull(),
-  priceChange24h: decimal("price_change_24").notNull(),
-  priceChangePercentage24h: decimal("price_change_percentage_24").notNull(),
+  priceChange24h: decimal("price_change_24h").notNull(),
+  priceChangePercentage1h: decimal("price_change_percentage_1h").notNull(),
+  priceChangePercentage24h: decimal("price_change_percentage_24h").notNull(),
+  priceChangePercentage14d: decimal("price_change_percentage_14d").notNull(),
+  priceChangePercentage30d: decimal("price_change_percentage_30d").notNull(),
+  priceChangePercentage200d: decimal("price_change_percentage_200d").notNull(),
+  priceChangePercentage1y: decimal("price_change_percentage_1y").notNull(),
+  marketCap: decimal("market_cap").notNull(),
   marketCapChange24h: decimal("market_cap_change_24h").notNull(),
   marketCapChangePercentage24h: decimal(
     "market_cap_change_percentage_24h",
   ).notNull(),
-  marketCap: decimal("market_cap").notNull(),
   marketCapRank: decimal("market_cap_rank").notNull(),
-
-  // Currently require seperate API call to cg's simple/price
-  // usd24hVol: decimal("usd_24h_vol").notNull(),
-  // usd24hChange: decimal("usd_24h_change").notNull(),
-
   high24h: decimal("high_24h").notNull(),
   low24h: decimal("low_24h").notNull(),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
-  totalVolume: decimal("total_volume").notNull(),
+  volume24h: decimal("24h_volume").notNull(),
   circulatingSupply: decimal("circulating_supply").notNull(),
   totalSupply: decimal("total_supply").notNull(),
   maxSupply: decimal("max_supply").notNull(),
   ath: decimal("ath").notNull(),
+  athDate: timestamp("ath_date").notNull(),
   athChangePercentage: decimal("ath_change_percentage").notNull(),
   atl: decimal("atl").notNull(),
+  atlDate: timestamp("atl_date").notNull(),
   atlChangePercentage: decimal("atl_change_percentage").notNull(),
 
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const tokenMarketChart24h = pgTable(
+  "token_market_chart_24h",
+  {
+    address: varchar("address", { length: 44 }),
+    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
+    price: decimal("price").notNull(),
+    marketCap: decimal("market_cap").notNull(),
+    totalVolume: decimal("total_volume").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.address, table.unixTimestampMs],
+    }),
+  ],
+);
+
+export const tokenMarketChartHourly = pgTable(
+  "token_market_chart_hourly",
+  {
+    address: varchar("address", { length: 44 }),
+    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
+    price: decimal("price").notNull(),
+    marketCap: decimal("market_cap").notNull(),
+    totalVolume: decimal("total_volume").notNull(),
+    unixUpdatedAt: integer("unix_updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.address, table.unixTimestampMs],
+    }),
+  ],
+);
+
+export const tokenMarketChartDaily = pgTable(
+  "token_market_chart_daily",
+  {
+    address: varchar("address", { length: 44 }),
+    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
+    price: decimal("price").notNull(),
+    marketCap: decimal("market_cap").notNull(),
+    totalVolume: decimal("total_volume").notNull(),
+    unixUpdatedAt: integer("unix_updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.address, table.unixTimestampMs],
+    }),
+  ],
+);
 
 export const tokenTransfers = pgTable(
   "token_transfers",
@@ -143,8 +195,8 @@ export const walletBalances = pgTable(
   (table) => [primaryKey({ columns: [table.address, table.tokenAddress] })],
 );
 
-export const tableMeta = pgTable("table_meta", {
-  tableName: text("table_name").notNull().primaryKey(),
+export const coinGeckoTokenListMeta = pgTable("coin_gecko_token_list_meta", {
+  key: text("key").primaryKey(),
   lastRefresh: timestamp("last_refresh").notNull(),
 });
 
@@ -156,7 +208,8 @@ export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   coinGeckoId: text("coin_gecko_id").notNull(),
 });
 
-// Relations
+// #endregion
+// #region Relations
 
 export const tokenMarketData_tokenMeta = relations(
   tokenMarketData,
@@ -185,8 +238,16 @@ export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
   }),
 }));
 
-// Types
+// #endregion
+
+// #region Types
+export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
+export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
+export type ChartGranularity = (typeof chartGranularity.enumValues)[number];
+export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
+
+// #endregion

@@ -3,30 +3,66 @@ CREATE TABLE "coin_gecko_token_list" (
 	"coin_gecko_id" text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "table_meta" (
-	"table_name" text PRIMARY KEY NOT NULL,
+CREATE TABLE "coin_gecko_token_list_meta" (
+	"key" text PRIMARY KEY NOT NULL,
 	"last_refresh" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "token_market_chart_24h" (
+	"address" varchar(44),
+	"unix_timestamp_ms" bigint NOT NULL,
+	"price" numeric NOT NULL,
+	"market_cap" numeric NOT NULL,
+	"total_volume" numeric NOT NULL,
+	CONSTRAINT "token_market_chart_24h_address_unix_timestamp_ms_pk" PRIMARY KEY("address","unix_timestamp_ms")
+);
+--> statement-breakpoint
+CREATE TABLE "token_market_chart_daily" (
+	"address" varchar(44),
+	"unix_timestamp_ms" bigint NOT NULL,
+	"price" numeric NOT NULL,
+	"market_cap" numeric NOT NULL,
+	"total_volume" numeric NOT NULL,
+	"unix_updated_at" integer NOT NULL,
+	CONSTRAINT "token_market_chart_daily_address_unix_timestamp_ms_pk" PRIMARY KEY("address","unix_timestamp_ms")
+);
+--> statement-breakpoint
+CREATE TABLE "token_market_chart_hourly" (
+	"address" varchar(44),
+	"unix_timestamp_ms" bigint NOT NULL,
+	"price" numeric NOT NULL,
+	"market_cap" numeric NOT NULL,
+	"total_volume" numeric NOT NULL,
+	"unix_updated_at" integer NOT NULL,
+	CONSTRAINT "token_market_chart_hourly_address_unix_timestamp_ms_pk" PRIMARY KEY("address","unix_timestamp_ms")
 );
 --> statement-breakpoint
 CREATE TABLE "token_market_data" (
 	"address" varchar(44) PRIMARY KEY NOT NULL,
 	"price_usd" numeric NOT NULL,
-	"price_change_24" numeric NOT NULL,
-	"price_change_percentage_24" numeric NOT NULL,
+	"price_change_24h" numeric NOT NULL,
+	"price_change_percentage_1h" numeric NOT NULL,
+	"price_change_percentage_24h" numeric NOT NULL,
+	"price_change_percentage_14d" numeric NOT NULL,
+	"price_change_percentage_30d" numeric NOT NULL,
+	"price_change_percentage_200d" numeric NOT NULL,
+	"price_change_percentage_1y" numeric NOT NULL,
+	"market_cap" numeric NOT NULL,
 	"market_cap_change_24h" numeric NOT NULL,
 	"market_cap_change_percentage_24h" numeric NOT NULL,
-	"market_cap" numeric NOT NULL,
 	"market_cap_rank" numeric NOT NULL,
 	"high_24h" numeric NOT NULL,
 	"low_24h" numeric NOT NULL,
 	"fully_diluted_valuation" numeric NOT NULL,
-	"total_volume" numeric NOT NULL,
+	"24h_volume" numeric NOT NULL,
 	"circulating_supply" numeric NOT NULL,
 	"total_supply" numeric NOT NULL,
 	"max_supply" numeric NOT NULL,
 	"ath" numeric NOT NULL,
+	"ath_date" timestamp NOT NULL,
 	"ath_change_percentage" numeric NOT NULL,
 	"atl" numeric NOT NULL,
+	"atl_date" timestamp NOT NULL,
 	"atl_change_percentage" numeric NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
@@ -77,5 +113,3 @@ CREATE TABLE "wallets" (
 	"balance_count" integer DEFAULT 0 NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
---> statement-breakpoint
-CREATE INDEX "block_time_idx" ON "token_transfers" USING btree ("block_time");
