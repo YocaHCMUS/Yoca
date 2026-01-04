@@ -169,7 +169,7 @@ export default function TokenPage() {
               unixTimeMs: chart.unixTimestampMs,
               value: chart.price,
             }))}
-            title="24 Price Chart"
+            title="24h Price Chart"
             height={300}
             unit="USD"
             decimals={2}
