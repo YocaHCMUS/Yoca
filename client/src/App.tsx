@@ -1,11 +1,11 @@
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 
 import Index from "./pages";
 import AuthShowcase from "./pages/auth";
 import DashboardPage from "./pages/dashboard";
-import OverviewPage from "./pages/overview";
 import MarketPage from "./pages/market";
+import OverviewPage from "./pages/overview";
 import TokenPage from "./pages/token";
 import WalletPage from "./pages/wallet";
 
@@ -17,7 +17,7 @@ function App() {
         <Route path="/auth" element={<AuthShowcase />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/overview" element={<OverviewPage />} />
-        <Route path="/market" element={<MarketPage />} /> {/* Add this route */}
+        <Route path="/market" element={<MarketPage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenPage />} />
         <Route path="/wallets/:address" element={<WalletPage address="" />} />

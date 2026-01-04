@@ -231,7 +231,6 @@ async function fetchCgTokenList(tokenAddresses: string[]) {
   const resp = await fetch(req);
   if (resp.ok) {
     const res: CG_Token[] = await resp.json();
-    console.log(res);
     const solanaTokens = res
       .filter((rawToken) => rawToken.platforms.solana)
       .map(
@@ -285,8 +284,8 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
   const staleAddresses = tokenAddresses.filter(
     (address) => !marketDataLookup[address],
   );
-
   const refreshed = await fetchTokenMarketData(staleAddresses);
+
   if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
@@ -315,14 +314,13 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       .join(","),
     vs_currency: "usd",
     order: "market_cap_desc",
-    price_percentage_change: "1h,24h,14d,30d,200d,1y",
+    price_change_percentage: "1h,24h,14d,30d,200d,1y",
   }).toString();
 
   const req = new Request(cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
   });
-
   const resp = await fetch(req);
 
   if (resp.ok) {
@@ -334,6 +332,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
         .map(([address, id]) => [id, address]),
     );
 
+    console.log(res);
     const marketDataList = res.map(
       (rawMarketData): TokenMarketDataInsert => ({
         address: addressLookup[rawMarketData.id],
@@ -389,8 +388,23 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
           high24h: excluded(tokenMarketData.high24h),
           low24h: excluded(tokenMarketData.low24h),
           priceChange24h: excluded(tokenMarketData.priceChange24h),
+          priceChangePercentage1h: excluded(
+            tokenMarketData.priceChangePercentage1h,
+          ),
           priceChangePercentage24h: excluded(
             tokenMarketData.priceChangePercentage24h,
+          ),
+          priceChangePercentage14d: excluded(
+            tokenMarketData.priceChangePercentage14d,
+          ),
+          priceChangePercentage30d: excluded(
+            tokenMarketData.priceChangePercentage30d,
+          ),
+          priceChangePercentage200d: excluded(
+            tokenMarketData.priceChangePercentage200d,
+          ),
+          priceChangePercentage1y: excluded(
+            tokenMarketData.priceChangePercentage1y,
           ),
           marketCapChange24h: excluded(tokenMarketData.marketCapChange24h),
           marketCapChangePercentage24h: excluded(

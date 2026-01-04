@@ -1,45 +1,28 @@
-import { Column, Grid, Tile } from "@carbon/react";
+import type { InferResponseType } from "hono/client";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
-import { Header } from "../../components/navigation";
 import client from "../../api/main.js";
-import { useEffect, useState } from "react";
-import PageWrapper from "../../components/wrapper/PageWrapper";
-import type { InferRequestType, InferResponseType } from 'hono/client';
-import { parseResponse, DetailedError } from 'hono/client';
-import { TokenPriceChart } from "../../components/charts/TokenPriceChart";
+import { TimeSeriesLineChart } from "../../components/charts/TimeSeriesLineChart/index.js";
+import PageWrapper from "../../components/wrapper/PageWrapper.js";
 // interface TokenProps {
 //   address: string;
 // }
 
 const $get = client.api.tokens.markets.chart[":address"].$get;
-type ResType = InferResponseType<typeof $get,200>
+type ChartData = InferResponseType<typeof $get, 200>;
 
-
-
-// result contains the parsed response body (automatically parsed based on Content-Type
-// parseResponse automatically throws an error if response is not ok
-// const $get: InferRequestType<$get> = {
-//   param: {
-//     address: address,
-//   },
-// };
-// const $get: InferResponseType<$get> = {
-//   status: 200,
-//   json: () => Promise.resolve({}),
-// };
-/**
- * Token page - placeholder for token management
- */
-// export default  function TokenPage(props: TokenProps) {
-  export default function TokenPage() {
+export default function TokenPage() {
   const { t } = useTranslation();
   // const address = props.address;
   const { address } = useParams<{ address: string }>();
-  const [chartData, setChartData] = useState<ResType>([]);
+  const [chartData, setChartData] = useState<ChartData>([]);
+
+  if (!address) {
+    return "Non existent page";
+  }
 
   useEffect(() => {
-    if (!address) return;
     (async () => {
       // const response = await $get({
       //   param: {
@@ -49,55 +32,40 @@ type ResType = InferResponseType<typeof $get,200>
       // if (response.status == 200) {
       //   const data = await response.json();
       //   setChartData(data);
-      // } 
+      // }
       try {
-        const response = await $get({
+        const resp = await $get({
           param: {
-            address: address,
+            address,
           },
         });
-        if (response.status == 200) {
-          const data = await response.json();
+        if (resp.status == 200) {
+          const data = await resp.json();
+          console.log("Data: ", data);
           setChartData(data);
+        } else {
+          console.error(`Failed to get: ${resp.status}`);
         }
       } catch (error) {
-        console.error('Failed to fetch token data:', error);
+        console.error("Failed to fetch token data:", error);
       }
     })();
   }, [address]);
+
   return (
     <PageWrapper>
-    <div style={{ minHeight: "100vh", background: "var(--cds-background)" }}>
-      <Header />
-      <main style={{ padding: "2rem", maxWidth: "1584px", margin: "0 auto" }}>
-        <Grid>
-          <Column lg={16} md={8} sm={4}>
-            <h1 style={{ marginBottom: "1.5rem" }}>
-              {t("nav.tokens", "Tokens")}
-            </h1>
-            <Tile style={{ padding: "2rem", textAlign: "center" }}>
-              <h2 style={{ marginBottom: "1rem" }}>
-                {t("tokens.placeholder.title", "Token Management Coming Soon")}
-              </h2>
-              <p style={{ color: "var(--cds-text-secondary)" }}>
-                {t(
-                  "tokens.placeholder.description",
-                  "This page will display token balances, transfers, and management options.",
-                )}
-              </p>
-              {/* <TokenPriceChart data={chartData} height={400} /> */}
-              {address ? (
-                <TokenPriceChart data={chartData} height={400} />
-              ) : (
-                <p style={{ color: "var(--cds-text-secondary)" }}>
-                  {t("tokens.noAddress", "Please provide a token address in the URL")}
-                </p>
-              )}
-            </Tile>
-          </Column>
-        </Grid>
-      </main>
-    </div>
+      <TimeSeriesLineChart
+        data={chartData.map((chart) => ({
+          unixTimeMs: chart.unixTimestampMs,
+          value: chart.price,
+        }))}
+        title="Hello"
+        height={300}
+        unit="USD"
+        decimals={2}
+        showArea={true}
+        showZoom={true}
+      />
     </PageWrapper>
   );
 }
