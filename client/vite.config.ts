@@ -42,5 +42,9 @@ export default ({ mode }: { mode: string }) => {
     optimizeDeps: {
       include: ['react', 'react-dom'],
     },
+    define: {
+      'global': 'globalThis',
+      'process.env': {},
+    },
   });
 };
