@@ -22,30 +22,28 @@ interface TblProps {
   loading: boolean;
   headers: TblHdr[];
   rows: TblRw[];
+  hideHeaders?: boolean;
 }
 
-export default function Tble(
-  props: TblProps,
-) {
-  return props.loading
-    ? (
-      <DataTableSkeleton
-        headers={props.headers}
-        showHeader={false}
-        showToolbar={false}
-      />
-    )
-    : (
-      <DataTable rows={props.rows} headers={props.headers}>
-        {({
-          rows,
-          headers,
-          getTableProps,
-          getHeaderProps,
-          getRowProps,
-          getCellProps,
-        }) => (
-          <Table {...getTableProps()}>
+export default function Tble(props: TblProps) {
+  return props.loading ? (
+    <DataTableSkeleton
+      headers={props.headers}
+      showHeader={false}
+      showToolbar={false}
+    />
+  ) : (
+    <DataTable rows={props.rows} headers={props.headers}>
+      {({
+        rows,
+        headers,
+        getTableProps,
+        getHeaderProps,
+        getRowProps,
+        getCellProps,
+      }) => (
+        <Table {...getTableProps()}>
+          {!props.hideHeaders && (
             <TableHead>
               <TableRow>
                 {headers.map((header) => (
@@ -55,19 +53,20 @@ export default function Tble(
                 ))}
               </TableRow>
             </TableHead>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow {...getRowProps({ row })}>
-                  {row.cells.map((cell) => (
-                    <TableCell {...getCellProps({ cell })}>
-                      {cell.value}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DataTable>
-    );
+          )}
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow {...getRowProps({ row })}>
+                {row.cells.map((cell) => (
+                  <TableCell {...getCellProps({ cell })}>
+                    {cell.value}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </DataTable>
+  );
 }

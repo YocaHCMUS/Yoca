@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import client from "../../api/main.js";
 import { TimeSeriesLineChart } from "../../components/charts/TimeSeriesLineChart/index.js";
+import Tble from "../../components/Tble.js";
 import PageWrapper from "../../components/wrapper/PageWrapper.js";
 
 const $getChart = client.api.tokens.markets.chart[":address"].$get;
@@ -87,11 +88,8 @@ export default function TokenPage() {
       setLoading(true);
 
       await getChartData(address);
-      console.log("chart");
       await getMarketData(address);
-      console.log("market");
       await getMetaData(address);
-      console.log("meta");
 
       setLoading(false);
     })();
@@ -100,6 +98,47 @@ export default function TokenPage() {
   if (loading || !metaData || !marketData || !chartData) {
     return "Is Loading ...";
   }
+
+  const marketDataHeaders = [
+    {
+      key: "name",
+      header: "Name",
+    },
+    {
+      key: "value",
+      header: "Value",
+    },
+  ];
+
+  const marketDataRows = [
+    {
+      id: "marketCap",
+      name: "Market Cap",
+      value: marketData.marketCap.toLocaleString(),
+    },
+    {
+      id: "volume24h",
+      name: "24h Volume Trading Volume",
+      value: marketData.volume24h.toLocaleString(),
+    },
+    {
+      id: "circulatingSupply",
+      name: "Circulating Supply",
+      value: marketData.circulatingSupply.toLocaleString(),
+    },
+    {
+      id: "totalSupply",
+      name: "Total Supply",
+      value: marketData.totalSupply.toLocaleString(),
+    },
+    {
+      id: "maxSupply",
+      name: "Max Supply",
+      value: marketData.maxSupply
+        ? marketData.maxSupply.toLocaleString()
+        : "N/A",
+    },
+  ];
 
   return (
     <PageWrapper>
@@ -111,9 +150,17 @@ export default function TokenPage() {
                 width={48}
                 src={metaData.imageUrl ?? "https://placehold.co/48x48"}
               />
-              <p>{metaData.name}</p>
+              <Stack orientation="vertical">
+                <b>{metaData.name}</b>
+                <em>{metaData.address}</em>
+              </Stack>
             </Stack>
-            <p>{metaData.address}</p>
+            <Tble
+              headers={marketDataHeaders}
+              loading={false}
+              rows={marketDataRows}
+              hideHeaders
+            />
           </Stack>
         </Column>
         <Column lg={8}>
@@ -122,7 +169,7 @@ export default function TokenPage() {
               unixTimeMs: chart.unixTimestampMs,
               value: chart.price,
             }))}
-            title="Hello"
+            title="24 Price Chart"
             height={300}
             unit="USD"
             decimals={2}
