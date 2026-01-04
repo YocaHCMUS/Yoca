@@ -8,6 +8,9 @@ import PageWrapper from "../../components/wrapper/PageWrapper";
 import type { InferRequestType, InferResponseType } from 'hono/client';
 import { parseResponse, DetailedError } from 'hono/client';
 import { TokenPriceChart } from "../../components/charts/TokenPriceChart";
+// interface TokenProps {
+//   address: string;
+// }
 
 const $get = client.api.tokens.markets.chart[":address"].$get;
 type ResType = InferResponseType<typeof $get,200>
@@ -28,15 +31,25 @@ type ResType = InferResponseType<typeof $get,200>
 /**
  * Token page - placeholder for token management
  */
-export default function TokenPage() {
+// export default  function TokenPage(props: TokenProps) {
+  export default function TokenPage() {
   const { t } = useTranslation();
+  // const address = props.address;
   const { address } = useParams<{ address: string }>();
   const [chartData, setChartData] = useState<ResType>([]);
 
   useEffect(() => {
     if (!address) return;
-
     (async () => {
+      // const response = await $get({
+      //   param: {
+      //     address: address,
+      //   },
+      // });
+      // if (response.status == 200) {
+      //   const data = await response.json();
+      //   setChartData(data);
+      // } 
       try {
         const response = await $get({
           param: {
@@ -72,6 +85,7 @@ export default function TokenPage() {
                   "This page will display token balances, transfers, and management options.",
                 )}
               </p>
+              {/* <TokenPriceChart data={chartData} height={400} /> */}
               {address ? (
                 <TokenPriceChart data={chartData} height={400} />
               ) : (
