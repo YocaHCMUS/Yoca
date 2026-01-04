@@ -1,11 +1,11 @@
-import { Header } from "../../components/navigation";
-import { Grid, Column, Tile } from "@carbon/react";
+import { Column, Grid, Tile } from "@carbon/react";
 import { useTranslation } from "react-i18next";
+import { Header } from "../../components/navigation";
 
 /**
  * Token page - placeholder for token management
  */
-export default function TokenPage() {
+export default async function TokenPage() {
   const { t } = useTranslation();
 
   return (
@@ -24,7 +24,7 @@ export default function TokenPage() {
               <p style={{ color: "var(--cds-text-secondary)" }}>
                 {t(
                   "tokens.placeholder.description",
-                  "This page will display token balances, transfers, and management options."
+                  "This page will display token balances, transfers, and management options.",
                 )}
               </p>
             </Tile>
