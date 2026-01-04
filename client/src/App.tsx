@@ -18,8 +18,8 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/market" element={<MarketPage />} /> {/* Add this route */}
-        <Route path="/tokens" element={<TokenPage />} />
-        <Route path="/wallet/:address" element={<WalletPage address="" />} />
+        <Route path="/tokens/:address" element={<TokenPage address="" />} />
+        <Route path="/wallets/:address" element={<WalletPage address="" />} />
       </Routes>
     </BrowserRouter>
   );

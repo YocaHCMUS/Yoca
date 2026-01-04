@@ -1,14 +1,37 @@
 import { Column, Grid, Tile } from "@carbon/react";
 import { useTranslation } from "react-i18next";
 import { Header } from "../../components/navigation";
-
+import client from "../../api/main.js";
+import { useEffect, useState } from "react";
+import PageWrapper from "../../components/wrapper/PageWrapper";
+interface TokenProps {
+  address: string;
+}
 /**
  * Token page - placeholder for token management
  */
-export default async function TokenPage() {
+export default  function TokenPage(props: TokenProps) {
   const { t } = useTranslation();
+  const address = props.address;
+  const [chartData, setChartData] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const response = await client.api.tokens.markets.chart[":address"].$get({
+        param: {
+          address: address,
+        },
+      });
+      if (response.status == 200) {
+        const data = await response.json();
+        setChartData(data);
+      } 
+      
+    })();
+  }, [address]);
 
   return (
+    <PageWrapper>
     <div style={{ minHeight: "100vh", background: "var(--cds-background)" }}>
       <Header />
       <main style={{ padding: "2rem", maxWidth: "1584px", margin: "0 auto" }}>
@@ -32,5 +55,6 @@ export default async function TokenPage() {
         </Grid>
       </main>
     </div>
+    </PageWrapper>
   );
 }
