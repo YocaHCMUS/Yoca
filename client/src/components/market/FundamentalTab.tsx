@@ -19,7 +19,6 @@ export const FundamentalTab: React.FC = () => {
         </Column>
       </Grid>
       <div className={styles.tableSection}>
-        <h3 className={styles.sectionTitle}>Token Performance</h3>
         <TokenPerformanceTable />
       </div>
     </div>

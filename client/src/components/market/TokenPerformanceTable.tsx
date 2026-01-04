@@ -10,6 +10,8 @@ import {
   Pagination,
 } from '@carbon/react';
 import { ArrowUp, ArrowDown } from '@carbon/icons-react';
+import { TableWrapper } from '../charts/shared/TableWrapper';
+import type { ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TokenPerformanceTable.module.scss';
 
 interface TokenPerformance {
@@ -71,33 +73,73 @@ export const TokenPerformanceTable: React.FC = () => {
     marketCap: formatNumber(token.marketCap),
     supply: `${(token.supply / 1e6).toFixed(2)}M ${token.symbol}`,
   }));
+  /**
+   * Handle export functionality
+   */
+  const handleExport = async (format: ExportFormat) => {
+    if (format === 'csv') {
+      // Export as CSV
+      const csvHeaders = headers.map(h => h.header).join(',');
+      const csvRows = tokens.map(token =>
+        [
+          token.token,
+          token.symbol,
+          token.price.toFixed(6),
+          token.change24h.toFixed(2),
+          token.volume24h.toString(),
+          token.marketCap.toString(),
+          token.supply.toString(),
+        ].join(',')
+      );
+      const csvContent = [csvHeaders, ...csvRows].join('\n');
 
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `token-performance-${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  };
   return (
-    <div className={styles.tokenPerformanceTable}>
-      <DataTable rows={rows} headers={headers}>
-        {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-          <Table {...getTableProps()}>
-            <TableHead>
-              <TableRow>
-                {headers.map(header => (
-                  <TableHeader {...getHeaderProps({ header })}>
-                    {header.header}
-                  </TableHeader>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map(row => (
-                <TableRow {...getRowProps({ row })}>
-                  {row.cells.map(cell => (
-                    <TableCell key={cell.id}>{cell.value}</TableCell>
-                  ))}
+    <TableWrapper
+      title="Token Performance"
+      onExport={handleExport}
+      isEmpty={tokens.length === 0}
+    >
+      <div className={styles.tokenPerformanceTable}>
+        <DataTable rows={rows} headers={headers}>
+          {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+            <Table {...getTableProps()}>
+              <TableHead>
+                <TableRow>
+                  {headers.map(header => {
+                    const { key, ...headerProps } = getHeaderProps({ header });
+                    return (
+                      <TableHeader key={key} {...headerProps}>
+                        {header.header}
+                      </TableHeader>
+                    );
+                  })}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DataTable>
-    </div>
+              </TableHead>
+              <TableBody>
+                {rows.map(row => {
+                  const { key, ...rowProps } = getRowProps({ row });
+                  return (
+                    <TableRow key={key} {...rowProps}>
+                      {row.cells.map(cell => (
+                        <TableCell key={cell.id}>{cell.value}</TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </DataTable>
+      </div>
+    </TableWrapper>
   );
 };

@@ -10,7 +10,6 @@ export const OverviewTab: React.FC = () => {
         <MarketHeatmap height={500} />
       </div>
       <div className={styles.tableSection}>
-        <h3 className={styles.sectionTitle}>Recent Transactions</h3>
         <TransactionTable />
       </div>
     </div>

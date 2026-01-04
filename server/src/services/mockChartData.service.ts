@@ -687,3 +687,87 @@ export function generateHoldingDurations(
     },
   };
 }
+
+/**
+ * Generate mock price history data
+ */
+export function generateMockPriceHistory(
+  tokens: string[],
+  timePeriod: TimePeriod,
+  aggregation: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'daily'
+): Array<{
+  symbol: string;
+  name: string;
+  data: Array<{ timestamp: number; value: number }>;
+}> {
+  const startTime = getStartTimestamp(timePeriod);
+  const interval = getAggregationInterval(timePeriod);
+  const { dataPoints } = getTimePeriodDetails(timePeriod);
+  
+  // Default tokens if none specified
+  const tokenList = tokens.length > 0 ? tokens : ['SOL', 'JTO', 'BONK', 'JUP', 'WIF'];
+  
+  return tokenList.map(token => {
+    const basePrice = getBasePriceForToken(token);
+    const volatility = getVolatilityForToken(token);
+    
+    const data = Array.from({ length: dataPoints }, (_, i) => {
+      const timestamp = startTime + (i * getIntervalMs(interval));
+      const priceChange = (Math.random() - 0.5) * volatility;
+      const price = Math.max(basePrice * (1 + priceChange), 0.000001); // Ensure positive price
+      
+      return {
+        timestamp,
+        value: price,
+      };
+    });
+    
+    return {
+      symbol: token,
+      name: getTokenName(token),
+      data,
+    };
+  });
+}
+
+/**
+ * Get base price for a token
+ */
+function getBasePriceForToken(token: string): number {
+  const prices: Record<string, number> = {
+    'SOL': 189.45,
+    'JTO': 3.21,
+    'BONK': 0.000034,
+    'JUP': 0.89,
+    'WIF': 2.45,
+  };
+  return prices[token] || 1.0;
+}
+
+/**
+ * Get volatility for a token
+ */
+function getVolatilityForToken(token: string): number {
+  const volatilities: Record<string, number> = {
+    'SOL': 0.1,
+    'JTO': 0.15,
+    'BONK': 0.3,
+    'JUP': 0.12,
+    'WIF': 0.18,
+  };
+  return volatilities[token] || 0.1;
+}
+
+/**
+ * Get token name
+ */
+function getTokenName(token: string): string {
+  const names: Record<string, string> = {
+    'SOL': 'Solana',
+    'JTO': 'Jito',
+    'BONK': 'Bonk',
+    'JUP': 'Jupiter',
+    'WIF': 'Dogwifhat',
+  };
+  return names[token] || token;
+}

@@ -10,6 +10,7 @@ import chartDistribution from "./routes/charts/distribution.route.js";
 import chartExchanges from "./routes/charts/exchanges.route.js";
 import chartHoldings from "./routes/charts/holdings.route.js";
 import chartPnL from "./routes/charts/pnl.route.js";
+import chartPriceHistory from "./routes/charts/price-history.route.js";
 import chartTransactions from "./routes/charts/transactions.route.js";
 import chartVolume from "./routes/charts/volume.route.js";
 import tokens from "./routes/tokens.js";
@@ -17,8 +18,6 @@ import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
 
 process.loadEnvFile("./.env");
-
-loadEnvFile(".env");
 
 // Routes
 const app = new Hono()
@@ -37,7 +36,8 @@ const app = new Hono()
   .route("/api/charts/counterparties", chartCounterparties)
   .route("/api/charts/volume", chartVolume)
   .route("/api/charts/transactions", chartTransactions)
-  .route("/api/charts/holdings", chartHoldings);
+  .route("/api/charts/holdings", chartHoldings)
+  .route("/api/charts/price-history", chartPriceHistory);
 
 // Server
 serve(
