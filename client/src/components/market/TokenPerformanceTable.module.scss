@@ -10,8 +10,20 @@
 
 .tokenCell {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-03;
+
+  .tokenImage {
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .tokenInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
 
   .tokenName {
     font-weight: 600;
@@ -36,5 +48,16 @@
 }
 
 .negative {
+  color: $support-error;
+}
+
+.loadingState,
+.errorState {
+  padding: $spacing-07;
+  text-align: center;
+  color: $text-secondary;
+}
+
+.errorState {
   color: $support-error;
 }
