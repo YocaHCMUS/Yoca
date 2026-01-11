@@ -61,3 +61,26 @@
 .errorState {
   color: $support-error;
 }
+
+// Clickable row styles
+.clickableRow {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+
+  &:active {
+    background-color: $layer-active-01;
+  }
+}
+
+.selectedRow {
+  background-color: var(--cds-layer-selected-01, #3d3d3d) !important;
+  border-left: 3px solid #4589ff;
+
+  &:hover {
+    background-color: var(--cds-layer-selected-hover-01, #474747) !important;
+  }
+}

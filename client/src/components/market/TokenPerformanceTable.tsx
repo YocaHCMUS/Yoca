@@ -36,7 +36,7 @@ interface TokenMetaDataItem {
 type MarketData = TokenMarketDataItem[];
 type MetaData = TokenMetaDataItem[];
 
-interface TokenPerformance {
+export interface TokenPerformance {
   id: string;
   address: string;
   token: string;
@@ -47,6 +47,13 @@ interface TokenPerformance {
   volume24h: number;
   marketCap: number;
   supply: number;
+}
+
+interface TokenPerformanceTableProps {
+  /** Callback when a token row is clicked */
+  onTokenSelect?: (token: TokenPerformance) => void;
+  /** Currently selected token address */
+  selectedTokenAddress?: string;
 }
 
 // Popular Solana ecosystem token addresses (verified tokens with CoinGecko data)
@@ -120,12 +127,23 @@ const headers = [
   { key: 'supply', header: 'Circulating Supply' },
 ];
 
-export const TokenPerformanceTable: React.FC = () => {
+export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
+  onTokenSelect,
+  selectedTokenAddress,
+}) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [tokens, setTokens] = useState<TokenPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle row click
+  const handleRowClick = (tokenId: string) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (token && onTokenSelect) {
+      onTokenSelect(token);
+    }
+  };
 
   useEffect(() => {
     async function fetchTokenData() {
@@ -351,8 +369,15 @@ export const TokenPerformanceTable: React.FC = () => {
               <TableBody>
                 {rows.map(row => {
                   const { key, ...rowProps } = getRowProps({ row });
+                  const token = tokens.find(t => t.id === row.id);
+                  const isSelected = token?.address === selectedTokenAddress;
                   return (
-                    <TableRow key={key} {...rowProps}>
+                    <TableRow 
+                      key={key} 
+                      {...rowProps}
+                      className={`${styles.clickableRow} ${isSelected ? styles.selectedRow : ''}`}
+                      onClick={() => handleRowClick(row.id)}
+                    >
                       {row.cells.map(cell => (
                         <TableCell key={cell.id}>{cell.value}</TableCell>
                       ))}

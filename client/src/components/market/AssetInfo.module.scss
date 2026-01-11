@@ -20,6 +20,33 @@
   border-radius: 50%;
 }
 
+.logoPlaceholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: $text-secondary;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  color: $text-secondary;
+  
+  p {
+    @include type-style('body-01');
+    max-width: 200px;
+  }
+}
+
 .title {
   h2 {
     @include type-style('heading-03');
@@ -46,8 +73,15 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    color: $support-success;
     font-weight: 600;
+
+    &.positive {
+      color: $support-success;
+    }
+
+    &.negative {
+      color: $support-error;
+    }
   }
 }
 
