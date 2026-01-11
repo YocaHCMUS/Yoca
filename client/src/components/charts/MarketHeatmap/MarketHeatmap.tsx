@@ -24,7 +24,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme } from '../../../hooks/useChartTheme';
 import {
-  mockFetchHeatmapData,
+  fetchRealHeatmapData,
   getChangeColor,
   formatLargeNumber,
   formatPrice,
@@ -103,7 +103,7 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
         ...prev,
         status: prev.status === 'success' ? 'refreshing' : 'loading',
       }));
-      const heatmapData = await mockFetchHeatmapData();
+      const heatmapData = await fetchRealHeatmapData();
       setData(heatmapData);
       onDataLoaded?.(heatmapData);
       setLoadingState({

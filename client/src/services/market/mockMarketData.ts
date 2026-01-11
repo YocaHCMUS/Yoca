@@ -127,3 +127,89 @@ export async function mockFetchHeatmapData(): Promise<HeatmapCell[]> {
   
   return generateHeatmapData();
 }
+
+// API response types
+interface ApiMarketData {
+  address: string;
+  priceUsd: number;
+  priceChangePercentage24h: number;
+  volume24h: number;
+  marketCap: number;
+  circulatingSupply: number;
+}
+
+interface ApiMetaData {
+  address: string;
+  name: string;
+  symbol: string;
+  imageUrl: string | null;
+}
+
+// Top Solana tokens for heatmap (verified addresses)
+const HEATMAP_TOKEN_ADDRESSES = [
+  'So11111111111111111111111111111111111111112',  // Wrapped SOL
+  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // Jupiter (JUP)
+  'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // Jito (JTO)
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // Bonk (BONK)
+  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', // Dogwifhat (WIF)
+  'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3', // PYTH Network (PYTH)
+  'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux', // Helium (HNT)
+  '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', // Raydium (RAY)
+  'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE', // Orca (ORCA)
+  'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof', // Render (RNDR)
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // Marinade SOL (mSOL)
+  '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU', // Samoyedcoin (SAMO)
+];
+
+/**
+ * Fetch real heatmap data from API
+ */
+export async function fetchRealHeatmapData(): Promise<HeatmapCell[]> {
+  const apiDomain = import.meta.env?.CLIENT_API_DOMAIN || 'http://localhost:4000';
+  const addressesParam = HEATMAP_TOKEN_ADDRESSES.join(',');
+
+  try {
+    // Fetch market data and meta data in parallel
+    const [marketResp, metaResp] = await Promise.all([
+      fetch(`${apiDomain}/api/tokens/markets/${addressesParam}`),
+      fetch(`${apiDomain}/api/tokens/meta/${addressesParam}`),
+    ]);
+
+    if (!marketResp.ok || !metaResp.ok) {
+      console.warn('Failed to fetch heatmap data, falling back to mock');
+      return generateHeatmapData();
+    }
+
+    const marketData = (await marketResp.json()) as ApiMarketData[];
+    const metaData = (await metaResp.json()) as ApiMetaData[];
+
+    if (!Array.isArray(marketData) || !Array.isArray(metaData) || marketData.length === 0) {
+      console.warn('Invalid heatmap data format, falling back to mock');
+      return generateHeatmapData();
+    }
+
+    // Create meta lookup
+    const metaLookup = new Map(metaData.map(m => [m.address, m]));
+
+    // Convert to heatmap data format, sorted by market cap
+    const heatmapData: HeatmapCell[] = marketData
+      .filter(m => m && m.address && m.marketCap > 0)
+      .map(market => {
+        const meta = metaLookup.get(market.address);
+        return {
+          symbol: meta?.symbol?.toUpperCase() || '???',
+          name: meta?.name || 'Unknown',
+          value: Number(market.marketCap) || 0,
+          change: Number(market.priceChangePercentage24h) || 0,
+          price: Number(market.priceUsd) || 0,
+          volume: Number(market.volume24h) || 0,
+        };
+      })
+      .sort((a, b) => b.value - a.value); // Sort by market cap (largest first)
+
+    return heatmapData;
+  } catch (error) {
+    console.error('Error fetching heatmap data:', error);
+    return generateHeatmapData();
+  }
+}
