@@ -25,10 +25,11 @@ export const FundamentalTab: React.FC = () => {
     marketCap: selectedToken.marketCap,
     volume24h: selectedToken.volume24h,
     circulatingSupply: selectedToken.supply,
-    // These would need additional API calls to fetch
-    totalSupply: undefined,
-    allTimeHigh: undefined,
-    allTimeLow: undefined,
+    totalSupply: selectedToken.totalSupply,
+    allTimeHigh: selectedToken.ath,
+    allTimeHighChangePercentage: selectedToken.athChangePercentage,
+    allTimeLow: selectedToken.atl,
+    allTimeLowChangePercentage: selectedToken.atlChangePercentage,
   } : null;
 
   return (

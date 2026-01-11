@@ -24,6 +24,11 @@ interface TokenMarketDataItem {
   volume24h: number;
   marketCap: number;
   circulatingSupply: number;
+  totalSupply: number;
+  ath: number;
+  athChangePercentage: number;
+  atl: number;
+  atlChangePercentage: number;
 }
 
 interface TokenMetaDataItem {
@@ -47,6 +52,11 @@ export interface TokenPerformance {
   volume24h: number;
   marketCap: number;
   supply: number;
+  totalSupply: number;
+  ath: number;
+  athChangePercentage: number;
+  atl: number;
+  atlChangePercentage: number;
 }
 
 interface TokenPerformanceTableProps {
@@ -225,6 +235,11 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
               volume24h: Number(market.volume24h) || 0,
               marketCap: Number(market.marketCap) || 0,
               supply: Number(market.circulatingSupply) || 0,
+              totalSupply: Number(market.totalSupply) || 0,
+              ath: Number(market.ath) || 0,
+              athChangePercentage: Number(market.athChangePercentage) || 0,
+              atl: Number(market.atl) || 0,
+              atlChangePercentage: Number(market.atlChangePercentage) || 0,
             };
           })
           // Sort by market cap descending

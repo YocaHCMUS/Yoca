@@ -14,7 +14,9 @@ export interface AssetData {
   circulatingSupply: number;
   totalSupply?: number;
   allTimeHigh?: number;
+  allTimeHighChangePercentage?: number;
   allTimeLow?: number;
+  allTimeLowChangePercentage?: number;
 }
 
 interface AssetInfoProps {
@@ -104,21 +106,27 @@ export const AssetInfo: React.FC<AssetInfoProps> = ({ data, loading }) => {
     },
     { 
       label: 'Total Supply', 
-      value: data.totalSupply ? formatSupply(data.totalSupply, data.symbol) : 'N/A', 
+      value: data.totalSupply && data.totalSupply > 0 
+        ? formatSupply(data.totalSupply, data.symbol) 
+        : 'N/A', 
       change: null 
     },
     { 
       label: 'All-Time High', 
-      value: data.allTimeHigh ? formatNumber(data.allTimeHigh) : 'N/A', 
-      change: data.allTimeHigh && data.price 
-        ? formatPercentage(((data.price - data.allTimeHigh) / data.allTimeHigh) * 100)
+      value: data.allTimeHigh && data.allTimeHigh > 0 
+        ? formatNumber(data.allTimeHigh) 
+        : 'N/A', 
+      change: data.allTimeHighChangePercentage != null 
+        ? formatPercentage(data.allTimeHighChangePercentage)
         : null
     },
     { 
       label: 'All-Time Low', 
-      value: data.allTimeLow ? formatNumber(data.allTimeLow) : 'N/A', 
-      change: data.allTimeLow && data.price
-        ? formatPercentage(((data.price - data.allTimeLow) / data.allTimeLow) * 100)
+      value: data.allTimeLow && data.allTimeLow > 0 
+        ? formatNumber(data.allTimeLow) 
+        : 'N/A', 
+      change: data.allTimeLowChangePercentage != null 
+        ? formatPercentage(data.allTimeLowChangePercentage)
         : null
     },
   ];
