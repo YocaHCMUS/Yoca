@@ -19,6 +19,7 @@
     "paths": {
       // Must be the same as server's alias path config
       "@sv/*": ["../server/src/*"],
+      "@/*": ["./src/*"],
     },
     
     "strict": true,

@@ -8,9 +8,9 @@ import {
   ProfitLossTab,
   FuturesTab,
   type TabType,
-} from '../../components/market';
+} from '@/components/market';
 import styles from './index.module.scss';
-import PageWrapper from '../../components/wrapper/PageWrapper';
+import { PageWrapper } from '@/components/wrapper';
 
 export default function MarketPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
