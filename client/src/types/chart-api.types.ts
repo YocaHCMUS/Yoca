@@ -9,9 +9,15 @@
 import type { TimeSeriesPoint, DistributionPoint } from './chart-data.types';
 
 /**
+ * Base interface for all responses
+ */
+export interface ChartResponseBase {
+}
+
+/**
  * Common API response metadata
  */
-export interface ApiResponseMetadata {
+export interface ApiResponseMetadata extends ChartResponseBase {
   /** Display currency (e.g., 'USD') */
   currency?: string;
   
@@ -29,7 +35,7 @@ export interface ApiResponseMetadata {
  * Balance trend API response
  * GET /api/charts/balance
  */
-export interface BalanceTrendResponse {
+export interface BalanceTrendResponse extends ChartResponseBase {
   /** Data series for each token or total */
   series: {
     /** Token symbol or "Total" */
@@ -51,7 +57,7 @@ export interface BalanceTrendResponse {
  * Asset distribution API response
  * GET /api/charts/distribution
  */
-export interface AssetDistributionResponse {
+export interface AssetDistributionResponse extends ChartResponseBase {
   /** Distribution data points */
   data: (DistributionPoint & {
     /** Percentage of total (calculated) */
@@ -72,7 +78,7 @@ export interface AssetDistributionResponse {
  * Exchange comparison API response
  * GET /api/charts/exchanges
  */
-export interface ExchangeComparisonResponse {
+export interface ExchangeComparisonResponse extends ChartResponseBase {
   /** Data for each exchange */
   exchanges: {
     /** Exchange name */
@@ -102,7 +108,7 @@ export interface ExchangeComparisonResponse {
  * Counterparty activity API response
  * GET /api/charts/counterparties
  */
-export interface CounterpartyActivityResponse {
+export interface CounterpartyActivityResponse extends ChartResponseBase {
   /** Data for each counterparty */
   counterparties: {
     /** Counterparty identifier (address or name) */
@@ -130,7 +136,7 @@ export interface CounterpartyActivityResponse {
  * P&L chart API response
  * GET /api/charts/pnl
  */
-export interface PnLChartResponse {
+export interface PnLChartResponse extends ChartResponseBase {
   /** Daily P&L data */
   dailyPnL: TimeSeriesPoint[];
   
@@ -149,7 +155,7 @@ export interface PnLChartResponse {
  * Transaction distribution API response
  * GET /api/charts/transactions/distribution
  */
-export interface TransactionDistributionResponse {
+export interface TransactionDistributionResponse extends ChartResponseBase {
   /** Transaction count by wallet over time */
   transactionCounts: {
     /** Wallet identifier */
@@ -176,7 +182,7 @@ export interface TransactionDistributionResponse {
  * Holding durations API response
  * GET /api/charts/holdings
  */
-export interface HoldingDurationsResponse {
+export interface HoldingDurationsResponse extends ChartResponseBase {
   /** Holdings data by wallet */
   wallets: {
     /** Wallet identifier */
@@ -205,7 +211,7 @@ export interface HoldingDurationsResponse {
  * Volume benchmark API response
  * GET /api/charts/volume-benchmark
  */
-export interface VolumeBenchmarkResponse {
+export interface VolumeBenchmarkResponse extends ChartResponseBase {
   /** Volume data for each wallet */
   wallets: {
     /** Wallet identifier */
@@ -235,7 +241,7 @@ export interface VolumeBenchmarkResponse {
 /**
  * Generic API error response
  */
-export interface ApiErrorResponse {
+export interface ApiErrorResponse extends ChartResponseBase {
   /** Error code */
   code: string;
   
@@ -252,7 +258,7 @@ export interface ApiErrorResponse {
 /**
  * API request parameters for balance endpoint
  */
-export interface BalanceRequestParams {
+export interface BalanceRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -268,7 +274,7 @@ export interface BalanceRequestParams {
 /**
  * API request parameters for distribution endpoint
  */
-export interface DistributionRequestParams {
+export interface DistributionRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -281,7 +287,7 @@ export interface DistributionRequestParams {
 /**
  * API request parameters for exchanges endpoint
  */
-export interface ExchangesRequestParams {
+export interface ExchangesRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -297,7 +303,7 @@ export interface ExchangesRequestParams {
 /**
  * API request parameters for counterparties endpoint
  */
-export interface CounterpartiesRequestParams {
+export interface CounterpartiesRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -313,7 +319,7 @@ export interface CounterpartiesRequestParams {
 /**
  * API request parameters for P&L endpoint
  */
-export interface PnLRequestParams {
+export interface PnLRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -329,7 +335,7 @@ export interface PnLRequestParams {
 /**
  * API request parameters for transaction distribution endpoint
  */
-export interface TransactionDistributionRequestParams {
+export interface TransactionDistributionRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -345,7 +351,7 @@ export interface TransactionDistributionRequestParams {
 /**
  * API request parameters for holdings endpoint
  */
-export interface HoldingsRequestParams {
+export interface HoldingsRequestParams extends ChartResponseBase {
   /** Comma-separated wallet list */
   wallets?: string;
   
@@ -361,7 +367,7 @@ export interface HoldingsRequestParams {
 /**
  * API request parameters for volume benchmark endpoint
  */
-export interface VolumeBenchmarkRequestParams {
+export interface VolumeBenchmarkRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
@@ -375,7 +381,7 @@ export interface VolumeBenchmarkRequestParams {
  * Price history API response
  * GET /api/charts/price-history
  */
-export interface PriceHistoryResponse {
+export interface PriceHistoryResponse extends ChartResponseBase {
   /** Price data series for each token */
   series: {
     /** Token symbol */
@@ -399,7 +405,7 @@ export interface PriceHistoryResponse {
 /**
  * API request parameters for price history endpoint
  */
-export interface PriceHistoryRequestParams {
+export interface PriceHistoryRequestParams extends ChartResponseBase {
   /** Time period filter */
   period?: string;
   
