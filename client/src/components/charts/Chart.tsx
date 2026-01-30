@@ -8,8 +8,9 @@ import type { ChartLoadingState } from '@/types/chart.types';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { useChartFilters } from '@/hooks/useChartFilters';
-import type { ChartFilters } from '@/types/chart-filters.types';
+import type { ChartFilters, ExportFormat } from '@/types/chart-filters.types';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import { ChartWrapper } from './shared/ChartWrapper';
 
 
 export enum ChartType {
@@ -28,7 +29,7 @@ export type ChartConfig = EChartsOption;
 
 export interface ChartProps {
     /** Chart title */
-    title?: string;
+    title: string;
 
     /** Chart height in pixels */
     height?: number;
@@ -51,6 +52,8 @@ export interface ChartProps {
     features?: {export?: boolean, fullscreen?: boolean};
 
     fetchData: (filters: ChartFilters) => Promise<any>; 
+
+    classname?: string;
 }
 
 export const Chart: React.FC<ChartProps> = ({
@@ -62,7 +65,8 @@ export const Chart: React.FC<ChartProps> = ({
     error: errorProp,
     initialFilters,
     features,
-    fetchData
+    fetchData,
+    classname
 }) => {
     const { t } = useTranslation();
     const chartTitle = title;
@@ -99,7 +103,9 @@ export const Chart: React.FC<ChartProps> = ({
         debounceDelay: 300,
     });
 
-
+    function checkIfEmpty(data: any): React.SetStateAction<boolean> {
+        throw new Error('Function not implemented.');
+    }
 
     useEffect(() => {
         let isMounted = true;
@@ -147,46 +153,40 @@ export const Chart: React.FC<ChartProps> = ({
         enabled: enableAutoRefresh && loadingState.status === 'success',
     });
 
-    // Render loading, error, or empty states
-    if (loading) {
-        return (
-            <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {t('charts.loading', 'Loading...')}
-            </div>
-        );
+    function handleExport(format: ExportFormat): Promise<void> {
+        throw new Error('Function not implemented.');
     }
-    if (error) {
-        return (
-            <div style={{ height, color: 'red', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {t('charts.error', 'Error:')} {error}
-            </div>
-        );
+
+    function handleRetry(): void {
+        throw new Error('Function not implemented.');
     }
-    if (empty) {
-        return (
-            <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {t('charts.noData', 'No data available')}
-            </div>
-        );
+
+    const content = null
+    function renderContent() {
+
     }
 
     // Render the chart
     return (
-        <div style={{ width: '100%' }}>
-            <div style={{ marginBottom: 8, fontWeight: 600 }}>{chartTitle}</div>
-            <ReactECharts
-                ref={chartRef}
-                option={config}
-                style={{ height: `${height}px`, width: '100%' }}
-                notMerge={true}
-                lazyUpdate={true}
-                opts={{ renderer: 'canvas' }}
-            />
-            {/* Add export/fullscreen controls here if features prop is enabled */}
-        </div>
+        <ChartWrapper
+            title={chartTitle}
+            loadingState={loadingState}
+            height={height}
+            onExport={handleExport}
+            onRetry={handleRetry}
+            isEmpty={empty}
+            emptyState={{
+                title: t('charts.noDataTitle'),
+                message: t('charts.noDataMessage'),
+                action: {
+                label: t('charts.retry'),
+                onClick: handleRetry,
+                },
+            }}
+            className={classname}
+            >
+            {content}
+        </ChartWrapper>
     );
 }
 
-function checkIfEmpty(data: any): React.SetStateAction<boolean> {
-    throw new Error('Function not implemented.');
-}
