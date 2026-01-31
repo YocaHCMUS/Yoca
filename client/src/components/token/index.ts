@@ -1,4 +1,8 @@
 export * from './TokenHeader';
 export * from './MarketStats';
-export * from './PriceChart';
-export * from './TopPools';
+export * from './TopHolders';
+export * from './RecentTransactions';
+export * from './PoolSelector';
+export * from './TokenChart';
+
+

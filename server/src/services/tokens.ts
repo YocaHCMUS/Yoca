@@ -164,6 +164,10 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
       }),
     );
 
+  if (metaDataList.length === 0) {
+    return [];
+  }
+
   return await db
     .insert(tokenMeta)
     .values(metaDataList)
@@ -178,6 +182,7 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
     .returning();
 }
 
+
 export async function getTokenMetaList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return null;
@@ -185,9 +190,22 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
 
   const thresholdDate = new Date(Date.now() - TOKEN_META_TTL_MS);
 
+  // Join with coinGeckoTokenList to get coinGeckoId
   const res = await db
-    .select()
+    .select({
+      address: tokenMeta.address,
+      name: tokenMeta.name,
+      symbol: tokenMeta.symbol,
+      imageUrl: tokenMeta.imageUrl,
+      description: tokenMeta.description,
+      updatedAt: tokenMeta.updatedAt,
+      coinGeckoId: coinGeckoTokenList.coinGeckoId,
+    })
     .from(tokenMeta)
+    .leftJoin(
+      coinGeckoTokenList,
+      eq(tokenMeta.address, coinGeckoTokenList.tokenAddress)
+    )
     .where(
       and(
         gte(tokenMeta.updatedAt, thresholdDate),
@@ -209,9 +227,29 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
   if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
-    return [...res, ...refreshed];
+    // Also get coinGeckoId for refreshed tokens
+    const refreshedWithIds = await db
+      .select({
+        address: tokenMeta.address,
+        name: tokenMeta.name,
+        symbol: tokenMeta.symbol,
+        imageUrl: tokenMeta.imageUrl,
+        description: tokenMeta.description,
+        updatedAt: tokenMeta.updatedAt,
+        coinGeckoId: coinGeckoTokenList.coinGeckoId,
+      })
+      .from(tokenMeta)
+      .leftJoin(
+        coinGeckoTokenList,
+        eq(tokenMeta.address, coinGeckoTokenList.tokenAddress)
+      )
+      .where(inArray(tokenMeta.address, refreshed.map(r => r.address)))
+      .limit(refreshed.length);
+
+    return [...res, ...refreshedWithIds];
   }
 }
+
 
 async function fetchCgTokenList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
@@ -246,13 +284,15 @@ async function fetchCgTokenList(tokenAddresses: string[]) {
         .map(({ coinGeckoId, tokenAddress }) => [tokenAddress, coinGeckoId]),
     );
 
-    await db
-      .insert(coinGeckoTokenList)
-      .values(solanaTokens)
-      .onConflictDoUpdate({
-        target: [coinGeckoTokenList.tokenAddress],
-        set: { coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId) },
-      });
+    if (solanaTokens.length > 0) {
+      await db
+        .insert(coinGeckoTokenList)
+        .values(solanaTokens)
+        .onConflictDoUpdate({
+          target: [coinGeckoTokenList.tokenAddress],
+          set: { coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId) },
+        });
+    }
 
     return idLookup;
   } else {
@@ -333,43 +373,49 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     );
 
     console.log(res);
-    const marketDataList = res.map(
-      (rawMarketData): TokenMarketDataInsert => ({
-        address: addressLookup[rawMarketData.id],
-        priceUsd: rawMarketData.current_price,
-        marketCap: rawMarketData.market_cap,
-        marketCapRank: rawMarketData.market_cap_rank,
-        fullyDilutedValuation: rawMarketData.fully_diluted_valuation,
-        volume24h: rawMarketData.total_volume,
-        high24h: rawMarketData.high_24h,
-        low24h: rawMarketData.low_24h,
-        priceChange24h: rawMarketData.price_change_24h,
-        priceChangePercentage1h:
-          rawMarketData.price_change_percentage_1h_in_currency,
-        priceChangePercentage24h:
-          rawMarketData.price_change_percentage_24h_in_currency,
-        priceChangePercentage14d:
-          rawMarketData.price_change_percentage_14d_in_currency,
-        priceChangePercentage30d:
-          rawMarketData.price_change_percentage_30d_in_currency,
-        priceChangePercentage200d:
-          rawMarketData.price_change_percentage_200d_in_currency,
-        priceChangePercentage1y:
-          rawMarketData.price_change_percentage_1y_in_currency,
-        marketCapChange24h: rawMarketData.market_cap_change_24h,
-        marketCapChangePercentage24h:
-          rawMarketData.market_cap_change_percentage_24h,
-        circulatingSupply: rawMarketData.circulating_supply,
-        totalSupply: rawMarketData.total_supply,
-        maxSupply: rawMarketData.max_supply,
-        ath: rawMarketData.ath,
-        athDate: new Date(rawMarketData.ath_date),
-        athChangePercentage: rawMarketData.ath_change_percentage,
-        atl: rawMarketData.atl,
-        atlDate: new Date(rawMarketData.ath_date),
-        atlChangePercentage: rawMarketData.atl_change_percentage,
-      }),
-    );
+    const marketDataList = res
+      .filter(raw => addressLookup[raw.id]) // Ensure we can map back to an address
+      .map(
+        (rawMarketData): TokenMarketDataInsert => ({
+          address: addressLookup[rawMarketData.id],
+          priceUsd: rawMarketData.current_price,
+          marketCap: rawMarketData.market_cap,
+          marketCapRank: rawMarketData.market_cap_rank,
+          fullyDilutedValuation: rawMarketData.fully_diluted_valuation,
+          volume24h: rawMarketData.total_volume,
+          high24h: rawMarketData.high_24h,
+          low24h: rawMarketData.low_24h,
+          priceChange24h: rawMarketData.price_change_24h,
+          priceChangePercentage1h:
+            rawMarketData.price_change_percentage_1h_in_currency,
+          priceChangePercentage24h:
+            rawMarketData.price_change_percentage_24h_in_currency,
+          priceChangePercentage14d:
+            rawMarketData.price_change_percentage_14d_in_currency,
+          priceChangePercentage30d:
+            rawMarketData.price_change_percentage_30d_in_currency,
+          priceChangePercentage200d:
+            rawMarketData.price_change_percentage_200d_in_currency,
+          priceChangePercentage1y:
+            rawMarketData.price_change_percentage_1y_in_currency,
+          marketCapChange24h: rawMarketData.market_cap_change_24h,
+          marketCapChangePercentage24h:
+            rawMarketData.market_cap_change_percentage_24h,
+          circulatingSupply: rawMarketData.circulating_supply,
+          totalSupply: rawMarketData.total_supply,
+          maxSupply: rawMarketData.max_supply,
+          ath: rawMarketData.ath,
+          athDate: new Date(rawMarketData.ath_date),
+          athChangePercentage: rawMarketData.ath_change_percentage,
+          atl: rawMarketData.atl,
+          atlDate: new Date(rawMarketData.ath_date),
+          atlChangePercentage: rawMarketData.atl_change_percentage,
+        }),
+      );
+
+    if (marketDataList.length === 0) {
+      return null;
+    }
 
     return await db
       .insert(tokenMarketData)
@@ -512,6 +558,10 @@ export async function fetch24hTokenMarketChart(
         totalVolume: res.total_volumes[index][1],
       }),
     );
+    if (chartDataPoints.length === 0) {
+      return [];
+    }
+
     const chartData = await db
       .insert(tokenMarketChart24h)
       .values(chartDataPoints)

@@ -147,6 +147,15 @@ export interface PoolDetail {
         h6: string;
         h24: string;
     };
+    buyVolumeUsd: {
+        h24: string;
+    };
+    sellVolumeUsd: {
+        h24: string;
+    };
+    netBuyVolumeUsd: {
+        h24: string;
+    };
     priceChangePercentage: {
         m30: string;
         h1: string;
@@ -208,6 +217,15 @@ interface CG_PoolDetailResponse {
                 m30: string;
                 h1: string;
                 h6: string;
+                h24: string;
+            };
+            buy_volume_usd: {
+                h24: string;
+            };
+            sell_volume_usd: {
+                h24: string;
+            };
+            net_buy_volume_usd: {
                 h24: string;
             };
             transactions: {
@@ -323,6 +341,15 @@ export async function getPoolDetails(poolAddress: string): Promise<PoolDetail | 
             h1: pool.attributes.volume_usd?.h1 || "0",
             h6: pool.attributes.volume_usd?.h6 || "0",
             h24: pool.attributes.volume_usd?.h24 || "0",
+        },
+        buyVolumeUsd: {
+            h24: pool.attributes.buy_volume_usd?.h24 || "0",
+        },
+        sellVolumeUsd: {
+            h24: pool.attributes.sell_volume_usd?.h24 || "0",
+        },
+        netBuyVolumeUsd: {
+            h24: pool.attributes.net_buy_volume_usd?.h24 || "0",
         },
         // Note: price_change_percentage from CoinGecko is for QUOTE token (SOL), not base token
         priceChangePercentage: {
