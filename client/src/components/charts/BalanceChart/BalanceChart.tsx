@@ -116,40 +116,40 @@ export function BalanceChart({
       onDataLoaded,
     });
 
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'balance-trend',
-  });
-  const handleExport = useCallback(
-    (format: ExportFormat) => {
-      if (!data) return;
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'balance-trend',
+  // });
+  // const handleExport = useCallback(
+  //   (format: ExportFormat) => {
+  //     if (!data) return;
 
-      const instance = chartRef.current?.getEchartsInstance() ?? null;
+  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
 
-      if (format === 'csv') {
-        const csv: ChartDataSeries[] = data.series.map((series, index) => ({
-          id: `series-${index}`,
-          name: series.name,
-          type: 'line',
-          visible: true,
-          data: series.data.map(point => ({
-            timestamp: point.timestamp,
-            value: point.value,
-          })),
-        }));
-        exportCSV(csv, filters);
-        return;
-      }
+  //     if (format === 'csv') {
+  //       const csv: ChartDataSeries[] = data.series.map((series, index) => ({
+  //         id: `series-${index}`,
+  //         name: series.name,
+  //         type: 'line',
+  //         visible: true,
+  //         data: series.data.map(point => ({
+  //           timestamp: point.timestamp,
+  //           value: point.value,
+  //         })),
+  //       }));
+  //       exportCSV(csv, filters);
+  //       return;
+  //     }
 
-      if (!instance) return;
+  //     if (!instance) return;
 
-      format === 'png'
-        ? exportPNG(instance as any, filters)
-        : exportSVG(instance as any, filters);
-    },
-    [data, filters]
-  );
+  //     format === 'png'
+  //       ? exportPNG(instance as any, filters)
+  //       : exportSVG(instance as any, filters);
+  //   },
+  //   [data, filters]
+  // );
 
   /**
    * Generate eCharts option configuration
@@ -255,7 +255,6 @@ export function BalanceChart({
         loadingState={loadingState}
         isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
         onRetry={() => refetch(false)}
-        onExport={handleExport}
       >
         {chartOption && (
           <ReactECharts

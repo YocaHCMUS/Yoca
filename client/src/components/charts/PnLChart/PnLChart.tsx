@@ -111,53 +111,53 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       autoRefresh,
     });
 
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'pnl-chart',
-  });
-  const handleExport = useCallback(
-    (format: ExportFormat) => {
-      if (!data) return;
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'pnl-chart',
+  // });
+  // const handleExport = useCallback(
+  //   (format: ExportFormat) => {
+  //     if (!data) return;
 
 
-      const instance = chartRef.current?.getEchartsInstance() ?? null;
+  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
 
-      if (format === 'csv') {
-        const csv: ChartDataSeries[] = [
-          {
-            id: 'daily-pnl',
-            name: 'Daily P&L',
-            type: 'bar',
-            visible: true,
-            data: data.dailyPnL.map(d => ({
-              name: String(d.timestamp),
-              value: d.value,
-            })),
-          },
-          {
-            id: 'cumulative-pnl',
-            name: 'Cumulative P&L',
-            type: 'line',
-            visible: true,
-            data: data.cumulativePnL.map(d => ({
-              name: String(d.timestamp),
-              value: d.value,
-            })),
-          },
-        ];
-        exportCSV(csv, filters);
-        return;
-      }
+  //     if (format === 'csv') {
+  //       const csv: ChartDataSeries[] = [
+  //         {
+  //           id: 'daily-pnl',
+  //           name: 'Daily P&L',
+  //           type: 'bar',
+  //           visible: true,
+  //           data: data.dailyPnL.map(d => ({
+  //             name: String(d.timestamp),
+  //             value: d.value,
+  //           })),
+  //         },
+  //         {
+  //           id: 'cumulative-pnl',
+  //           name: 'Cumulative P&L',
+  //           type: 'line',
+  //           visible: true,
+  //           data: data.cumulativePnL.map(d => ({
+  //             name: String(d.timestamp),
+  //             value: d.value,
+  //           })),
+  //         },
+  //       ];
+  //       exportCSV(csv, filters);
+  //       return;
+  //     }
 
-      if (!instance) return;
+  //     if (!instance) return;
 
-      format === 'png'
-        ? exportPNG(instance as any, filters)
-        : exportSVG(instance as any, filters);
-    },
-    [data, filters]
-  );
+  //     format === 'png'
+  //       ? exportPNG(instance as any, filters)
+  //       : exportSVG(instance as any, filters);
+  //   },
+  //   [data, filters]
+  // );
 
   /**
    * Generate eCharts option configuration
@@ -340,7 +340,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         loadingState={loadingState}
         isEmpty={!data || data.dailyPnL.length === 0}
         onRetry={() => refetch(false)}
-        onExport={handleExport}
       >
         {chartOption && (
           <ReactECharts

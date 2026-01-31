@@ -268,53 +268,53 @@ export function ExchangeComparison({
   /**
    * Setup chart export
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'exchange-comparison',
-  });
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'exchange-comparison',
+  // });
   
   /**
    * Handle export based on format
    */
-  const handleExport = async (format: ExportFormat) => {
-    const chartInstance = chartRef.current?.getEchartsInstance();
-    if (!chartInstance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
+  // const handleExport = async (format: ExportFormat) => {
+  //   const chartInstance = chartRef.current?.getEchartsInstance();
+  //   if (!chartInstance) {
+  //     console.error('Chart instance not available for export');
+  //     return;
+  //   }
     
-    if (format === 'png') {
-      exportPNG(chartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(chartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData = [
-        {
-          id: 'deposits',
-          name: t('charts.exchangeComparisonChart.deposits'),
-          type: 'bar' as const,
-          data: data.exchanges.map(ex => ({
-            name: ex.name,
-            value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
-          })),
-          visible: true,
-        },
-        {
-          id: 'withdrawals',
-          name: t('charts.exchangeComparisonChart.withdrawals'),
-          type: 'bar' as const,
-          data: data.exchanges.map(ex => ({
-            name: ex.name,
-            value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
-          })),
-          visible: true,
-        },
-      ];
-      exportCSV(csvData, filters);
-    }
-  };
+  //   if (format === 'png') {
+  //     exportPNG(chartInstance as any, filters);
+  //   } else if (format === 'svg') {
+  //     exportSVG(chartInstance as any, filters);
+  //   } else if (format === 'csv' && data) {
+  //     // Convert data to ChartDataSeries format for CSV export
+  //     const csvData = [
+  //       {
+  //         id: 'deposits',
+  //         name: t('charts.exchangeComparisonChart.deposits'),
+  //         type: 'bar' as const,
+  //         data: data.exchanges.map(ex => ({
+  //           name: ex.name,
+  //           value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
+  //         })),
+  //         visible: true,
+  //       },
+  //       {
+  //         id: 'withdrawals',
+  //         name: t('charts.exchangeComparisonChart.withdrawals'),
+  //         type: 'bar' as const,
+  //         data: data.exchanges.map(ex => ({
+  //           name: ex.name,
+  //           value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
+  //         })),
+  //         visible: true,
+  //       },
+  //     ];
+  //     exportCSV(csvData, filters);
+  //   }
+  // };
   
   return (
     <BaseChart
@@ -322,7 +322,6 @@ export function ExchangeComparison({
       loadingState={loadingState}
       height={height}
       onRetry={refetch}
-      onExport={handleExport}
       isEmpty={!data || data.exchanges.length === 0}
     >
       {chartOptions && (

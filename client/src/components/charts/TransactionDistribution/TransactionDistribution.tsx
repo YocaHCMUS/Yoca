@@ -7,7 +7,7 @@
  * @module TransactionDistribution
  */
 
-import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
@@ -22,9 +22,6 @@ import type { TimePeriod, TransactionType } from '../../../types/chart-filters.t
 import type { ExportFormat } from '../shared/ExportMenu';
 import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './TransactionDistribution.module.scss';
-import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import type { ChartLoadingState } from '@/types/chart.types';
-import { ChartWrapper } from '../shared';
 
 /**
  * Props for TransactionDistribution component
@@ -59,13 +56,6 @@ export interface TransactionDistributionProps {
   
   /** Additional CSS class */
   className?: string;
-}
-
-interface TransactionDistributionQuery {
-  timePeriod: TimePeriod;
-  transactionType: TransactionType;
-  wallets?: string[];
-  timezone: string;
 }
 
 /**
@@ -109,13 +99,8 @@ export function TransactionDistribution({
   const { t } = useTranslation();
   const chartTitle = title || t('charts.transactionDistributionChart.title');
   
-  // State management
-  const [data, setData] = React.useState<TransactionDistributionResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  const [selectedChartMode, setSelectedChartMode] = React.useState<'stacked' | 'grouped'>(chartMode);
+  // State for chart mode
+  const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
   
   // Chart instance refs for export
   const transactionChartRef = useRef<ReactECharts>(null);
@@ -141,70 +126,30 @@ export function TransactionDistribution({
     debounceDelay: 300,
   });
   
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
+  /**
+   * Memoize query to prevent unnecessary re-fetches
+   */
+  const query = useMemo(
+    () => ({
+      timePeriod: filters.timePeriod,
+      transactionType: filters.transactionType,
+      walletIds: filters.wallets?.join(','),
+      timezone,
+    }),
+    [filters.timePeriod, filters.transactionType, filters.wallets, timezone]
+  );
   
   /**
-   * Fetch transaction distribution data from API
+   * Centralized lifecycle handling
    */
-  const fetchData = useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const result = await fetchTransactionDistribution({
-        timePeriod: filters.timePeriod,
-        transactionType: filters.transactionType,
-        walletIds: filters.wallets?.join(','), // Changed from filters.wallets
-        timezone,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(result);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(result);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load transaction distribution data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [isValid, filters, timezone, onDataLoaded]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  // Fetch data on filter changes
-  useEffect(() => {
-    fetchData(false);
-  }, [fetchData]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: refreshInterval,
-      pauseOnInteraction: true,
-    },
-    enabled: enableAutoRefresh && loadingState.status === 'success',
-  });
+  const { data, loadingState, refetch } =
+    useStandardChartController<TransactionDistributionResponse, any>({
+      fetcher: fetchTransactionDistribution,
+      query,
+      autoRefresh: enableAutoRefresh,
+      refreshInterval,
+      onDataLoaded,
+    });
   
   /**
    * Generate eCharts options for transaction counts chart
@@ -446,60 +391,60 @@ export function TransactionDistribution({
   }, [data, timezone, chartTheme, t]);
   
   // Export functionality
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'transaction-distribution',
-  });
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'transaction-distribution',
+  // });
   
-  /**
-   * Handle export based on format
-   */
-  const handleExport = async (format: ExportFormat) => {
-    const transactionChartInstance = transactionChartRef.current?.getEchartsInstance();
-    if (!transactionChartInstance) {
-      console.error('Transaction chart instance not available for export');
-      return;
-    }
+  // /**
+  //  * Handle export based on format
+  //  */
+  // const handleExport = async (format: ExportFormat) => {
+  //   const transactionChartInstance = transactionChartRef.current?.getEchartsInstance();
+  //   if (!transactionChartInstance) {
+  //     console.error('Transaction chart instance not available for export');
+  //     return;
+  //   }
     
-    if (format === 'png') {
-      exportPNG(transactionChartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(transactionChartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData: Array<{
-        id: string;
-        name: string;
-        type: 'bar' | 'line';
-        data: Array<{ name: string; value: number }>;
-        visible: boolean;
-      }> = data.transactionCounts.map(wallet => ({
-        id: wallet.walletId,
-        name: wallet.walletName,
-        type: 'bar' as const,
-        data: wallet.data.map(point => ({
-          name: new Date(point.timestamp).toISOString(),
-          value: point.value,
-        })),
-        visible: true,
-      }));
+  //   if (format === 'png') {
+  //     exportPNG(transactionChartInstance as any, filters);
+  //   } else if (format === 'svg') {
+  //     exportSVG(transactionChartInstance as any, filters);
+  //   } else if (format === 'csv' && data) {
+  //     // Convert data to ChartDataSeries format for CSV export
+  //     const csvData: Array<{
+  //       id: string;
+  //       name: string;
+  //       type: 'bar' | 'line';
+  //       data: Array<{ name: string; value: number }>;
+  //       visible: boolean;
+  //     }> = data.transactionCounts.map(wallet => ({
+  //       id: wallet.walletId,
+  //       name: wallet.walletName,
+  //       type: 'bar' as const,
+  //       data: wallet.data.map(point => ({
+  //         name: new Date(point.timestamp).toISOString(),
+  //         value: point.value,
+  //       })),
+  //       visible: true,
+  //     }));
       
-      // Add unique token counts as a separate series
-      csvData.push({
-        id: 'unique-tokens',
-        name: t('charts.transactionDistributionChart.tokens'),
-        type: 'line' as const,
-        data: data.uniqueTokenCounts.map(point => ({
-          name: new Date(point.timestamp).toISOString(),
-          value: point.value,
-        })),
-        visible: true,
-      });
+  //     // Add unique token counts as a separate series
+  //     csvData.push({
+  //       id: 'unique-tokens',
+  //       name: t('charts.transactionDistributionChart.tokens'),
+  //       type: 'line' as const,
+  //       data: data.uniqueTokenCounts.map(point => ({
+  //         name: new Date(point.timestamp).toISOString(),
+  //         value: point.value,
+  //       })),
+  //       visible: true,
+  //     });
       
-      exportCSV(csvData, filters);
-    }
-  };
+  //     exportCSV(csvData, filters);
+  //   }
+  // };
   
   /**
    * Handle chart mode toggle
@@ -512,7 +457,7 @@ export function TransactionDistribution({
    * Handle retry on error
    */
   const handleRetry = () => {
-    fetchData(false);
+    refetch(false);
   };
   
   return (
@@ -520,7 +465,6 @@ export function TransactionDistribution({
       title={chartTitle}
       loadingState={loadingState}
       height={height * 2 + 40}
-      onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
     >

@@ -147,43 +147,43 @@ export function CounterpartyActivity({
   });
   
   // Export functionality
-  const { exportChart } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'counterparty-activity',
-  });
+  // const { exportChart } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'counterparty-activity',
+  // });
   
   // Handle export
-  const handleExport = async (format: ExportFormat) => {
-    const echartsInstance = chartRef.current?.getEchartsInstance();
-    const chartInstance = echartsInstance ? (echartsInstance as any) : null;
+  // const handleExport = async (format: ExportFormat) => {
+  //   const echartsInstance = chartRef.current?.getEchartsInstance();
+  //   const chartInstance = echartsInstance ? (echartsInstance as any) : null;
     
-    // Prepare CSV data
-    const csvData = data ? [
-      {
-        id: 'transaction-count',
-        name: 'Transaction Count',
-        type: 'bar' as const,
-        data: data.counterparties.map(cp => ({
-          category: cp.name,
-          value: cp.transactionCount,
-        })),
-        visible: true,
-      },
-      {
-        id: 'total-volume',
-        name: 'Total Volume',
-        type: 'bar' as const,
-        data: data.counterparties.map(cp => ({
-          category: cp.name,
-          value: cp.totalVolume,
-        })),
-        visible: true,
-      }
-    ] : [];
+  //   // Prepare CSV data
+  //   const csvData = data ? [
+  //     {
+  //       id: 'transaction-count',
+  //       name: 'Transaction Count',
+  //       type: 'bar' as const,
+  //       data: data.counterparties.map(cp => ({
+  //         category: cp.name,
+  //         value: cp.transactionCount,
+  //       })),
+  //       visible: true,
+  //     },
+  //     {
+  //       id: 'total-volume',
+  //       name: 'Total Volume',
+  //       type: 'bar' as const,
+  //       data: data.counterparties.map(cp => ({
+  //         category: cp.name,
+  //         value: cp.totalVolume,
+  //       })),
+  //       visible: true,
+  //     }
+  //   ] : [];
     
-    exportChart(format, chartInstance, csvData, filters);
-  };
+  //   exportChart(format, chartInstance, csvData, filters);
+  // };
   
   // Generate chart options
   const chartOptions: EChartsOption = useMemo(() => {
@@ -322,7 +322,6 @@ export function CounterpartyActivity({
       loadingState={loadingState}
       height={height}
       onRetry={refetch}
-      onExport={handleExport}
       isEmpty={!data || data.counterparties.length === 0}
     >
       <div className={styles.limitSelector}>

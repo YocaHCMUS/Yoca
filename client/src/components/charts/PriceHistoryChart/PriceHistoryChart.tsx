@@ -142,32 +142,32 @@ export function PriceHistoryChart({
     onDataLoaded,
   });
 
-  // Export functionality
-  const { exportChart } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'price-history',
-  });
+  // // Export functionality
+  // const { exportChart } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'price-history',
+  // });
 
-  // Handle export
-  const handleExport = async (format: ExportFormat) => {
-    const echartsInstance = chartRef.current?.getEchartsInstance();
-    const chartInstance = echartsInstance ? (echartsInstance as any) : null;
+  // // Handle export
+  // const handleExport = async (format: ExportFormat) => {
+  //   const echartsInstance = chartRef.current?.getEchartsInstance();
+  //   const chartInstance = echartsInstance ? (echartsInstance as any) : null;
 
-    // Prepare CSV data
-    const csvData = data ? data.series.map(series => ({
-      id: series.symbol,
-      name: series.name,
-      type: 'line' as const,
-      data: series.data.map(point => ({
-        category: new Date(point.timestamp).toISOString(),
-        value: point.value,
-      })),
-      visible: true,
-    })) : [];
+  //   // Prepare CSV data
+  //   const csvData = data ? data.series.map(series => ({
+  //     id: series.symbol,
+  //     name: series.name,
+  //     type: 'line' as const,
+  //     data: series.data.map(point => ({
+  //       category: new Date(point.timestamp).toISOString(),
+  //       value: point.value,
+  //     })),
+  //     visible: true,
+  //   })) : [];
 
-    exportChart(format, chartInstance, csvData, filters);
-  };
+  //   exportChart(format, chartInstance, csvData, filters);
+  // };
 
   // Generate chart options
   const chartOptions: EChartsOption = useMemo(() => {
@@ -262,7 +262,6 @@ export function PriceHistoryChart({
       loadingState={loadingState}
       isEmpty={!data || data.series.length === 0}
       onRetry={refetch}
-      onExport={handleExport}
     >
       <ReactECharts
         ref={chartRef}

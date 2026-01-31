@@ -105,41 +105,41 @@ export function HoldingDurations({
   /**
    * Export policy (standardized)
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'holding-duration',
-  });
-  const handleExport = useCallback(
-    (format: ExportFormat) => {
-      if (!data) return;
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'holding-duration',
+  // });
+  // const handleExport = useCallback(
+  //   (format: ExportFormat) => {
+  //     if (!data) return;
 
-      if (format === 'csv') {
-        const csv: ChartDataSeries[] = data.wallets.map(w => ({
-          id: w.id,
-          name: w.name,
-          type: 'bar',
-          visible: true,
-          data: w.holdings.map(h => ({
-            name: h.tokenSymbol,
-            value: convert(h.durationDays),
-          })),
-        }));
-        exportCSV(csv, filters);
-        return;
-      }
+  //     if (format === 'csv') {
+  //       const csv: ChartDataSeries[] = data.wallets.map(w => ({
+  //         id: w.id,
+  //         name: w.name,
+  //         type: 'bar',
+  //         visible: true,
+  //         data: w.holdings.map(h => ({
+  //           name: h.tokenSymbol,
+  //           value: convert(h.durationDays),
+  //         })),
+  //       }));
+  //       exportCSV(csv, filters);
+  //       return;
+  //     }
 
-      const firstChart =
-        chartRefs.current.values().next().value?.getEchartsInstance();
+  //     const firstChart =
+  //       chartRefs.current.values().next().value?.getEchartsInstance();
 
-      if (!firstChart) return;
+  //     if (!firstChart) return;
 
-      format === 'png'
-        ? exportPNG(firstChart as any, filters)
-        : exportSVG(firstChart as any, filters);
-    },
-    [data, filters, convert]
-  );
+  //     format === 'png'
+  //       ? exportPNG(firstChart as any, filters)
+  //       : exportSVG(firstChart as any, filters);
+  //   },
+  //   [data, filters, convert]
+  // );
 
    /**
    * Option factory (pure, deterministic)
@@ -189,7 +189,6 @@ export function HoldingDurations({
       loadingState={loadingState}
       isEmpty={!data || data.wallets.length === 0}
       onRetry={() => refetch(false)}
-      onExport={handleExport}
     >
       <div className={styles.holdingDurations}>
         {/* Controls */}

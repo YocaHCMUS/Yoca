@@ -7,21 +7,20 @@
  * @module VolumeBenchmark
  */
 
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '../Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchVolumeBenchmark } from '../../../services/chart/chartApi';
 import { formatCurrency, formatDate } from '../../../util/chart-helpers';
 import type { VolumeBenchmarkResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../shared/ExportMenu';
+import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './VolumeBenchmark.module.scss';
 
 /**
@@ -101,14 +100,6 @@ export function VolumeBenchmark({
   const { t } = useTranslation();
   const chartTitle = title || t('charts.volumeBenchmarkChart.title');
   
-  // State management
-  const [data, setData] = React.useState<VolumeBenchmarkResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  const [selectedChartType, setSelectedChartType] = React.useState<'line' | 'bar'>(chartType);
-  
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
   
@@ -131,69 +122,32 @@ export function VolumeBenchmark({
     debounceDelay: 300,
   });
   
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
+  // State for chart type
+  const [selectedChartType, setSelectedChartType] = useState<'line' | 'bar'>(chartType);
   
   /**
-   * Fetch volume benchmark data from API
+   * Memoize query to prevent unnecessary re-fetches
    */
-  const fetchData = useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const result = await fetchVolumeBenchmark({
-        timePeriod: filters.timePeriod,
-        walletIds: filters.wallets?.join(','), // Changed from filters.wallets
-        timezone,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(result);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(result);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load volume benchmark data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [isValid, filters, timezone, onDataLoaded]);
+  const query = useMemo(
+    () => ({
+      timePeriod: filters.timePeriod,
+      walletIds: filters.wallets?.join(','),
+      timezone,
+    }),
+    [filters.timePeriod, filters.wallets, timezone]
+  );
   
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  // Fetch data on filter changes
-  useEffect(() => {
-    fetchData(false);
-  }, [fetchData]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: refreshInterval,
-      pauseOnInteraction: true,
-    },
-    enabled: enableAutoRefresh && loadingState.status === 'success',
-  });
+  /**
+   * Centralized lifecycle handling
+   */
+  const { data, loadingState, refetch } =
+    useStandardChartController<VolumeBenchmarkResponse, any>({
+      fetcher: fetchVolumeBenchmark,
+      query,
+      autoRefresh: enableAutoRefresh,
+      refreshInterval,
+      onDataLoaded,
+    });
   
   /**
    * Generate eCharts options for volume benchmark visualization
@@ -314,41 +268,41 @@ export function VolumeBenchmark({
   }, [data, selectedChartType, showDataLabels, timezone, chartTheme]);
   
   // Export functionality
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'volume-benchmark',
-  });
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'volume-benchmark',
+  // });
   
-  /**
-   * Handle export based on format
-   */
-  const handleExport = async (format: ExportFormat) => {
-    const chartInstance = chartRef.current?.getEchartsInstance();
-    if (!chartInstance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
+  // /**
+  //  * Handle export based on format
+  //  */
+  // const handleExport = useCallback(async (format: ExportFormat) => {
+  //   const chartInstance = chartRef.current?.getEchartsInstance();
+  //   if (!chartInstance) {
+  //     console.error('Chart instance not available for export');
+  //     return;
+  //   }
     
-    if (format === 'png') {
-      exportPNG(chartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(chartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData = data.wallets.map(wallet => ({
-        id: wallet.id,
-        name: wallet.name,
-        type: 'line' as const,
-        data: wallet.dataPoints.map(point => ({
-          name: new Date(point.timestamp).toISOString(),
-          value: point.volume,
-        })),
-        visible: true,
-      }));
-      exportCSV(csvData, filters);
-    }
-  };
+  //   if (format === 'png') {
+  //     exportPNG(chartInstance as any, filters);
+  //   } else if (format === 'svg') {
+  //     exportSVG(chartInstance as any, filters);
+  //   } else if (format === 'csv' && data) {
+  //     // Convert data to ChartDataSeries format for CSV export
+  //     const csvData = data.wallets.map(wallet => ({
+  //       id: wallet.id,
+  //       name: wallet.name,
+  //       type: 'line' as const,
+  //       data: wallet.dataPoints.map(point => ({
+  //         name: new Date(point.timestamp).toISOString(),
+  //         value: point.volume,
+  //       })),
+  //       visible: true,
+  //     }));
+  //     exportCSV(csvData, filters);
+  //   }
+  // }, [exportPNG, exportSVG, exportCSV, data, filters]);
   
   /**
    * Handle chart type toggle
@@ -361,26 +315,16 @@ export function VolumeBenchmark({
    * Handle retry on error
    */
   const handleRetry = () => {
-    fetchData(false);
+    refetch(false);
   };
   
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
-      loadingState={loadingState}
       height={height}
-      onExport={handleExport}
+      loadingState={loadingState}
       onRetry={handleRetry}
       isEmpty={!data || data.wallets.length === 0}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => setTimePeriod('30D'),
-        },
-      }}
-      className={className}
     >
       <div className={styles.volumeBenchmark}>
         {/* Chart type selector */}
@@ -417,6 +361,6 @@ export function VolumeBenchmark({
           />
         )}
       </div>
-    </ChartWrapper>
+    </BaseChart>
   );
 }

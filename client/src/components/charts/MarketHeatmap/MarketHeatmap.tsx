@@ -90,11 +90,11 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   const chartTheme = useChartTheme();
 
   // // Export functionality
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone: 'UTC',
-    baseFilename: 'market-heatmap',
-  });
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone: 'UTC',
+  //   baseFilename: 'market-heatmap',
+  // });
 
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController({
@@ -205,53 +205,53 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   }, [data]);
 
   // Export handler
-  const handleExport = useCallback(
-    async (format: ExportFormat) => {
-      if (!chartRef.current || !data || data.length === 0) return;
+  // const handleExport = useCallback(
+  //   async (format: ExportFormat) => {
+  //     if (!chartRef.current || !data || data.length === 0) return;
 
-      try {
-        const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
-          type: format === 'png' ? 'png' : 'svg',
-          pixelRatio: 2,
-          backgroundColor: '#fff',
-        });
+  //     try {
+  //       const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
+  //         type: format === 'png' ? 'png' : 'svg',
+  //         pixelRatio: 2,
+  //         backgroundColor: '#fff',
+  //       });
 
-        if (format === 'csv') {
-          // CSV export
-          const csvContent = [
-            ['Symbol', 'Name', 'Price', '24h Change (%)', 'Market Cap', 'Volume'],
-            ...data.map((item) => [
-              item.symbol,
-              item.name,
-              formatPrice(item.price),
-              item.change.toFixed(2),
-              formatLargeNumber(item.value),
-              formatLargeNumber(item.volume),
-            ]),
-          ]
-            .map((row) => row.join(','))
-            .join('\n');
+  //       if (format === 'csv') {
+  //         // CSV export
+  //         const csvContent = [
+  //           ['Symbol', 'Name', 'Price', '24h Change (%)', 'Market Cap', 'Volume'],
+  //           ...data.map((item) => [
+  //             item.symbol,
+  //             item.name,
+  //             formatPrice(item.price),
+  //             item.change.toFixed(2),
+  //             formatLargeNumber(item.value),
+  //             formatLargeNumber(item.volume),
+  //           ]),
+  //         ]
+  //           .map((row) => row.join(','))
+  //           .join('\n');
 
-          const blob = new Blob([csvContent], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `market-heatmap-${Date.now()}.csv`;
-          link.click();
-          URL.revokeObjectURL(url);
-        } else {
-          // PNG/SVG export
-          const link = document.createElement('a');
-          link.href = dataUrl;
-          link.download = `market-heatmap-${Date.now()}.${format === 'png' ? 'png' : 'svg'}`;
-          link.click();
-        }
-      } catch (err) {
-        console.error('Export failed:', err);
-      }
-    },
-    [data]
-  );
+  //         const blob = new Blob([csvContent], { type: 'text/csv' });
+  //         const url = URL.createObjectURL(blob);
+  //         const link = document.createElement('a');
+  //         link.href = url;
+  //         link.download = `market-heatmap-${Date.now()}.csv`;
+  //         link.click();
+  //         URL.revokeObjectURL(url);
+  //       } else {
+  //         // PNG/SVG export
+  //         const link = document.createElement('a');
+  //         link.href = dataUrl;
+  //         link.download = `market-heatmap-${Date.now()}.${format === 'png' ? 'png' : 'svg'}`;
+  //         link.click();
+  //       }
+  //     } catch (err) {
+  //       console.error('Export failed:', err);
+  //     }
+  //   },
+  //   [data]
+  // );
 
   return (
     <BaseChart
@@ -260,7 +260,6 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
       loadingState={loadingState}
       isEmpty={!data || data.length === 0}
       onRetry={refetch}
-      onExport={handleExport}
     >
       <div className={styles.marketHeatmap}>
         <ReactECharts
