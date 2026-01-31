@@ -17,23 +17,23 @@
  * @module components/charts/PnLChart
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchPnLChart } from '../../../services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
-import { ChartWrapper } from '../shared/ChartWrapper';
 import type { PnLChartResponse } from '../../../types/chart-api.types';
-import type { ChartFilters } from '../../../types/chart-filters.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
-import type { ExportFormat } from '../shared/ExportMenu';
+import type { TimePeriod } from '../../../types/chart-filters.types';
+import type { ExportFormat } from '../../../types/chart-filters.types';
 import styles from './PnLChart.module.scss';
+import { useStandardChartController } from '@/hooks/useChartController';
+import { BaseChart } from '../Base/BaseChart';
+import type { ChartDataSeries } from '@/types/chart-data.types';
 
 export interface PnLChartProps {
   /** Chart title */
@@ -42,8 +42,11 @@ export interface PnLChartProps {
   /** Chart height in pixels */
   height?: number;
   
-  /** Initial filters */
-  initialFilters?: Partial<ChartFilters>;
+  /** Initial time period */
+  initialTimePeriod?: TimePeriod;
+  
+  /** Initial wallets */
+  initialWallets?: string[];
   
   /** Data aggregation level */
   aggregation?: 'daily' | 'weekly' | 'monthly';
@@ -64,109 +67,98 @@ export interface PnLChartProps {
 export const PnLChart: React.FC<PnLChartProps> = ({
   title,
   height = 400,
-  initialFilters,
+  initialTimePeriod = '30D',
+  initialWallets = [],
   aggregation = 'daily',
   autoRefresh = true,
   className,
 }) => {
-  // i18n
   const { t } = useTranslation();
   const chartTitle = title || t('charts.pnlChart.title');
-  
-  // State management
-  const [data, setData] = useState<PnLChartResponse | null>(null);
-  const [loadingState, setLoadingState] = useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  
-  // Get timezone from context
-  const { selectedTimezone: timezone } = useChartContext();
-  
-  // Get theme configuration
+
+  const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
-  
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    setWallets,
-    isValid,
-  } = useChartFilters({
-    initialFilters,
+  const { selectedTimezone: timezone } = useChartContext();
+
+  const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
+    initialFilters: {
+      timePeriod: initialTimePeriod,
+      wallets: initialWallets.length > 0 ? initialWallets : undefined,
+    },
     debounceDelay: 300,
   });
-  
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
-  
-  // Chart instance ref for export
-  const chartRef = useRef<ReactECharts>(null);
-  
+
   /**
-   * Fetch P&L data from API
+   * Memoize query to prevent unnecessary re-fetches
    */
-  const fetchData = useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const result = await fetchPnLChart({
-        period: filters.timePeriod,
-        wallets: filters.wallets?.join(','),
-        aggregation,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(result);
-      setLoadingState({ status: 'success', retryCount: 0 });
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load P&L data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [filters, isValid, aggregation]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: 30000,
-      pauseOnInteraction: true,
-    },
-    enabled: autoRefresh && loadingState.status === 'success',
+  const query = useMemo(
+    () => ({
+      timePeriod: filters.timePeriod,
+      wallets: filters.wallets?.join(','),
+      aggregation,
+      timezone,
+    }),
+    [filters.timePeriod, filters.wallets, aggregation, timezone]
+  );
+
+  /**
+   * Unified lifecycle controller
+   */
+  const { data, loadingState, refetch } =
+    useStandardChartController<PnLChartResponse, any>({
+      fetcher: fetchPnLChart,
+      query,
+      autoRefresh,
+    });
+
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'pnl-chart',
   });
-  
-  // Initial data fetch
-  useEffect(() => {
-    fetchData();
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchData]);
-  
-  // Update data when filters change
-  useEffect(() => {
-    if (loadingState.status !== 'idle') {
-      fetchData();
-    }
-  }, [filters, aggregation, timezone]);
-  
+  const handleExport = useCallback(
+    (format: ExportFormat) => {
+      if (!data) return;
+
+
+      const instance = chartRef.current?.getEchartsInstance() ?? null;
+
+      if (format === 'csv') {
+        const csv: ChartDataSeries[] = [
+          {
+            id: 'daily-pnl',
+            name: 'Daily P&L',
+            type: 'bar',
+            visible: true,
+            data: data.dailyPnL.map(d => ({
+              name: String(d.timestamp),
+              value: d.value,
+            })),
+          },
+          {
+            id: 'cumulative-pnl',
+            name: 'Cumulative P&L',
+            type: 'line',
+            visible: true,
+            data: data.cumulativePnL.map(d => ({
+              name: String(d.timestamp),
+              value: d.value,
+            })),
+          },
+        ];
+        exportCSV(csv, filters);
+        return;
+      }
+
+      if (!instance) return;
+
+      format === 'png'
+        ? exportPNG(instance as any, filters)
+        : exportSVG(instance as any, filters);
+    },
+    [data, filters]
+  );
+
   /**
    * Generate eCharts option configuration
    */
@@ -339,108 +331,27 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       ],
     };
   }, [data, timezone, chartTheme, t]);
-  
-  /**
-   * Setup chart export
-   */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'pnl-chart',
-  });
-  
-  /**
-   * Handle export based on format
-   */
-  const handleExport = async (format: ExportFormat) => {
-    const chartInstance = chartRef.current?.getEchartsInstance();
-    if (!chartInstance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
-    
-    if (format === 'png') {
-      exportPNG(chartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(chartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData = [
-        {
-          id: 'daily-pnl',
-          name: t('charts.pnlChart.dailyPnL'),
-          type: 'bar' as const,
-          data: data.dailyPnL.map((item: { timestamp: number; value: number }) => ({
-            timestamp: item.timestamp,
-            value: item.value,
-          })),
-          visible: true,
-        },
-        {
-          id: 'cumulative-pnl',
-          name: t('charts.pnlChart.cumulativePnL'),
-          type: 'line' as const,
-          data: data.cumulativePnL.map((item: { timestamp: number; value: number }) => ({
-            timestamp: item.timestamp,
-            value: item.value,
-          })),
-          visible: true,
-        },
-      ];
-      exportCSV(csvData, filters);
-    }
-  };
-  
-  /**
-   * Handle retry on error
-   */
-  const handleRetry = () => {
-    fetchData();
-  };
-  
-  /**
-   * Render chart content
-   */
-  const renderChart = () => {
-    if (!chartOption) return null;
-    
-    return (
-      <ReactECharts
-        ref={chartRef}
-        option={chartOption}
-        style={{ height: `${height}px`, width: '100%' }}
-        notMerge={true}
-        lazyUpdate={true}
-        opts={{ renderer: 'canvas' }}
-      />
-    );
-  };
-  
+
   return (
     <div className={`${styles.pnlChart} ${className || ''}`}>
-      <ChartWrapper
+      <BaseChart
         title={chartTitle}
-        loadingState={loadingState}
         height={height}
-        onRetry={handleRetry}
-        onExport={handleExport}
+        loadingState={loadingState}
         isEmpty={!data || data.dailyPnL.length === 0}
-        emptyState={{
-          title: t('charts.noDataTitle'),
-          message: t('charts.noDataMessage'),
-          action: {
-            label: t('charts.resetFilters'),
-            onClick: () => {
-              setTimePeriod('30D');
-              setWallets(undefined);
-            },
-          },
-        }}
+        onRetry={() => refetch(false)}
+        onExport={handleExport}
       >
-        {renderChart()}
-      </ChartWrapper>
+        {chartOption && (
+          <ReactECharts
+            ref={chartRef}
+            option={chartOption}
+            style={{ height, width: '100%' }}
+            notMerge
+            lazyUpdate
+          />
+        )}
+      </BaseChart>
     </div>
   );
 };
-
-export default PnLChart;

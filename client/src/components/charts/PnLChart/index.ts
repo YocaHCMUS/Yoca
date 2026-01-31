@@ -4,5 +4,5 @@
  * @module components/charts/PnLChart
  */
 
-export { PnLChart, default } from './PnLChart';
+export { PnLChart } from './PnLChart';
 export type { PnLChartProps } from './PnLChart';

@@ -32,7 +32,7 @@ export default function DashboardPage() {
                 <BalanceChart
                   height={400}
                   initialTimePeriod="30D"
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
               
@@ -101,7 +101,7 @@ export default function DashboardPage() {
                   height={300}
                   topN={10}
                   timeUnit="days"
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
             </Column>
