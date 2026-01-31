@@ -1,0 +1,223 @@
+.container {
+    margin-top: 0;
+    background: #fff;
+    padding: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px; // Increased vertical padding
+    cursor: pointer;
+    background: #fff;
+    border-bottom: none;
+}
+
+.title {
+    margin: 0;
+    font-size: 14px; // Changed to 14px per request
+    font-weight: 500; // Reduced to Medium (not bold)
+    text-transform: uppercase;
+    color: #111827;
+}
+
+.stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.totalPercentage {
+    font-size: 16px; // Changed to 16px per request
+    font-weight: 500;
+    color: #111827;
+}
+
+.accordionButton {
+    background: #f3f4f6; // Keep light gray box
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #4b5563;
+    transition: background 0.2s;
+    width: 24px;
+    height: 24px;
+
+    &:hover {
+        background: #e5e7eb;
+    }
+}
+
+// Table Wrapper Overrides
+.tableWrapper {
+    padding: 0;
+    background: #fff;
+
+    // Deep selector to override Carbon Table styles
+    :global {
+        .cds--data-table-container {
+            padding-top: 0;
+            background: #fff;
+        }
+
+        .cds--data-table {
+            background: #fff;
+
+            thead {
+                background: #fff;
+
+                tr {
+                    height: 32px; // Simpler header height
+                }
+            }
+
+            th {
+                background: #fff;
+                color: #9ca3af; // Match MarketStats label color
+                font-family: 'Inter', system-ui, sans-serif;
+                font-weight: 600;
+                font-size: 11px;
+                text-transform: uppercase;
+                border-bottom: none; // No border
+                padding: 4px 8px; // Default padding
+                text-align: left;
+
+                // Rank column (#)
+                &:first-child {
+                    width: 40px;
+                    padding-left: 16px; // Align with Title
+                    padding-right: 0;
+                }
+
+                // Address column
+                &:nth-child(2) {
+                    padding-left: 12px; // Moved right (increased from 4px)
+                }
+
+                // % Column (Last child)
+                &:last-child {
+                    text-align: right;
+                    padding-right: 32px; // Moved left (increased padding from 16px)
+                    // Carbon headers are often flex, so we need justify-content
+                    display: flex;
+                    justify-content: flex-end;
+                    flex-direction: row; // Ensure row direction
+                }
+
+                span {
+                    padding: 0;
+                }
+            }
+
+            tbody {
+                tr {
+                    background: #fff;
+                    height: 44px; // Increased from 36px for more spacing
+
+                    // Top 1 Holder Highlight (Gray Background)
+                    &:first-child td {
+                        background-color: #f3f4f6; // Light gray highlight
+                        font-weight: 600; // Make top holder text slightly bolder
+                    }
+
+                    &:hover {
+                        background-color: transparent; // No hover effect requested? Or keep subtle? User said "trắng hết"
+
+                        td {
+                            background-color: transparent;
+                        }
+                    }
+
+                    td {
+                        background: #fff;
+                        border-top: none;
+                        border-bottom: none;
+                        padding: 4px 8px; // Default padding
+                        color: #111827;
+                        font-family: 'Inter', system-ui, sans-serif;
+                        font-size: 14px;
+                        font-weight: 500;
+                        text-align: left;
+
+                        // Rank cell
+                        &:first-child {
+                            padding-left: 16px; // Align with Header #
+                            padding-right: 0;
+                        }
+
+                        // Address cell
+                        &:nth-child(2) {
+                            padding-left: 12px; // Align with Header Address
+                        }
+
+                        // % Cell
+                        &:last-child {
+                            text-align: right;
+                            padding-right: 32px; // Right alignment with padding
+                        }
+                    }
+
+                    &:first-child td {
+                        border-top: none;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.rank {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    width: 24px;
+    display: inline-block;
+}
+
+.addressWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.addressLink {
+    color: #3b82f6; // Blue link
+    text-decoration: none;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 400; // Normal weight
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.copyButton {
+    color: #9ca3af;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+        color: #6b7280;
+    }
+}
+
+.percentage {
+    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.emptyState {
+    padding: 32px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+}
