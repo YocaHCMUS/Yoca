@@ -13,7 +13,7 @@ import type { MarketData, MetaData, PoolData, TopHoldersData } from "@/hooks/use
 import { useTokenPageLogic } from "@/hooks/useTokenPageLogic";
 import styles from "./index.module.scss";
 
-// Dev Step 5: Fetch transaction data
+// Dev Step 6: Refine UI
 
 export default function TokenPage() {
   const { address, poolAddress } = useParams<{ address: string; poolAddress?: string }>();
