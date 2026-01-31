@@ -10,17 +10,17 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '../Base/BaseChart';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchVolumeBenchmark } from '../../../services/chart/chartApi';
-import { formatCurrency, formatDate } from '../../../util/chart-helpers';
-import type { VolumeBenchmarkResponse } from '../../../types/chart-api.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import { useStandardChartController } from '../../../hooks/useChartController';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
+import { formatCurrency, formatDate } from '@/util/chart-helpers';
+import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
+import { useStandardChartController } from '@/hooks/useChartController';
 import styles from './VolumeBenchmark.module.scss';
 
 /**
@@ -46,7 +46,7 @@ export interface VolumeBenchmarkProps {
   walletIds?: string[];
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -91,7 +91,7 @@ export function VolumeBenchmark({
   chartType = 'line',
   showDataLabels = false,
   walletIds = [],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -128,7 +128,7 @@ export function VolumeBenchmark({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo<VolumeBenchmarkRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
       walletIds: filters.wallets?.join(','),
@@ -141,10 +141,10 @@ export function VolumeBenchmark({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<VolumeBenchmarkResponse, any>({
+    useStandardChartController<VolumeBenchmarkResponse, VolumeBenchmarkRequestParams>({
       fetcher: fetchVolumeBenchmark,
       query,
-      autoRefresh: enableAutoRefresh,
+      autoRefresh,
       refreshInterval,
       onDataLoaded,
     });

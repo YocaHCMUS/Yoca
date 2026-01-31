@@ -11,22 +11,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '../Base/BaseChart';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchExchangeComparison } from '../../../services/chart/chartApi';
-import { formatCurrency } from '../../../util/chart-helpers';
-import type { ExchangeComparisonResponse } from '../../../types/chart-api.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import { useStandardChartController } from '../../../hooks/useChartController';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchExchangeComparison } from '@/services/chart/chartApi';
+import { formatCurrency } from '@/util/chart-helpers';
+import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
+import { useStandardChartController } from '@/hooks/useChartController';
 
 /**
  * Props for ExchangeComparison component
  */
-interface ExchangeComparisonProps {
+export interface ExchangeComparisonProps {
   /** Chart title */
   title?: string;
   
@@ -40,7 +40,7 @@ interface ExchangeComparisonProps {
   metric?: 'count' | 'volume';
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -50,13 +50,6 @@ interface ExchangeComparisonProps {
   
   /** Additional CSS class */
   className?: string;
-}
-
-interface ExchangeComparisonQuery {
-  timePeriod: TimePeriod;
-  metric: 'count' | 'volume';
-  timezone: string;
-  [key: string]: any;
 }
 
 /**
@@ -79,7 +72,7 @@ interface ExchangeComparisonQuery {
  *   height={400}
  *   initialTimePeriod="30D"
  *   metric="count"
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -88,7 +81,7 @@ export function ExchangeComparison({
   height = 400,
   initialTimePeriod = '30D',
   metric = 'count',
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -122,17 +115,17 @@ export function ExchangeComparison({
   });
   
   // Query for the controller
-  const query = useMemo<ExchangeComparisonQuery>(() => ({
+  const query = useMemo<ExchangesRequestParams>(() => ({
     timePeriod: filters.timePeriod,
     metric: currentMetric,
     timezone,
   }), [filters.timePeriod, currentMetric, timezone]);
   
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController({
+  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonResponse, ExchangesRequestParams>({
     fetcher: fetchExchangeComparison,
     query,
-    autoRefresh: enableAutoRefresh,
+    autoRefresh,
     refreshInterval,
     onDataLoaded,
   });

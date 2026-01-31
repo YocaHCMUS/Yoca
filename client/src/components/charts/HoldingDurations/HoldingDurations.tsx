@@ -7,7 +7,7 @@ import { getThemedChartBaseOption, useChartTheme } from '../../../hooks/useChart
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchHoldingDurations } from '../../../services/chart/chartApi';
 
-import type { HoldingDurationsResponse } from '../../../types/chart-api.types';
+import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
 import type { ChartDataSeries } from '../../../types/chart-data.types';
 import type { ExportFormat } from '../../../types/chart-filters.types';
 
@@ -26,16 +26,18 @@ export interface HoldingDurationsProps {
   topN?: number;
   timeUnit?: TimeUnit;
   autoRefresh?: boolean;
+  refreshInterval?: number;
   className?: string;
 }
 
 export function HoldingDurations({
   title,
-  height = 300,
+  height = 400,
   walletIds = [],
   topN = 10,
   timeUnit = 'days',
-  autoRefresh = false,
+  autoRefresh = true,
+  refreshInterval = 30000,
   className,
 }: HoldingDurationsProps) {
   const { t } = useTranslation();
@@ -59,7 +61,7 @@ export function HoldingDurations({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo <HoldingsRequestParams>(
     () => ({
       walletIds: filters.wallets?.join(','),
       topN: selectedTopN,
@@ -73,10 +75,11 @@ export function HoldingDurations({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<HoldingDurationsResponse, any>({
+    useStandardChartController<HoldingDurationsResponse, HoldingsRequestParams>({
       fetcher: fetchHoldingDurations,
       query,
       autoRefresh,
+      refreshInterval,
     });
 
   /**

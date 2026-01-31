@@ -11,23 +11,23 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '../Base/BaseChart';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchCounterpartyActivity } from '../../../services/chart/chartApi';
-import { formatCurrency } from '../../../util/chart-helpers';
-import type { CounterpartyActivityResponse } from '../../../types/chart-api.types';
-import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import { useStandardChartController } from '../../../hooks/useChartController';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchCounterpartyActivity } from '@/services/chart/chartApi';
+import { formatCurrency } from '@/util/chart-helpers';
+import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
+import { useStandardChartController } from '@/hooks/useChartController';
 import styles from './CounterpartyActivity.module.scss';
 
 /**
  * Props for CounterpartyActivity component
  */
-interface CounterpartyActivityProps {
+export interface CounterpartyActivityProps {
   /** Chart title */
   title?: string;
   
@@ -44,7 +44,7 @@ interface CounterpartyActivityProps {
   limit?: number;
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -54,14 +54,6 @@ interface CounterpartyActivityProps {
   
   /** Additional CSS class */
   className?: string;
-}
-
-interface CounterpartyQuery {
-  timePeriod: TimePeriod;
-  transactionType: TransactionType;
-  limit: number;
-  timezone: string;
-  [key: string]: any;
 }
 
 /**
@@ -85,7 +77,7 @@ interface CounterpartyQuery {
  *   initialTimePeriod="30D"
  *   initialTransactionType="all"
  *   limit={10}
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -95,7 +87,7 @@ export function CounterpartyActivity({
   initialTimePeriod = '30D',
   initialTransactionType = 'all',
   limit = 10,
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -130,7 +122,7 @@ export function CounterpartyActivity({
   });
   
   // Query for the controller
-  const query = useMemo<CounterpartyQuery>(() => ({
+  const query = useMemo<CounterpartiesRequestParams>(() => ({
     timePeriod: filters.timePeriod,
     transactionType: filters.transactionType,
     limit: currentLimit,
@@ -138,10 +130,10 @@ export function CounterpartyActivity({
   }), [filters.timePeriod, filters.transactionType, currentLimit, timezone]);
   
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController({
+  const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityResponse, CounterpartiesRequestParams>({
     fetcher: fetchCounterpartyActivity,
     query,
-    autoRefresh: enableAutoRefresh,
+    autoRefresh,
     refreshInterval,
     onDataLoaded,
   });

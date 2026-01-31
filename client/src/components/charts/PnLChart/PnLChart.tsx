@@ -27,7 +27,7 @@ import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChart
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchPnLChart } from '../../../services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
-import type { PnLChartResponse } from '../../../types/chart-api.types';
+import type { PnLChartResponse, PnLRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../../../types/chart-filters.types';
 import styles from './PnLChart.module.scss';
@@ -54,6 +54,9 @@ export interface PnLChartProps {
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
   
+  /** Auto-refresh interval in milliseconds (default: 30000) */
+  refreshInterval?: number;
+  
   /** Custom CSS class */
   className?: string;
 }
@@ -71,6 +74,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   initialWallets = [],
   aggregation = 'daily',
   autoRefresh = true,
+  refreshInterval = 30000,
   className,
 }) => {
   const { t } = useTranslation();
@@ -91,7 +95,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo<PnLRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
       wallets: filters.wallets?.join(','),
@@ -105,10 +109,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<PnLChartResponse, any>({
+    useStandardChartController<PnLChartResponse, PnLRequestParams>({
       fetcher: fetchPnLChart,
       query,
       autoRefresh,
+      refreshInterval,
     });
 
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({

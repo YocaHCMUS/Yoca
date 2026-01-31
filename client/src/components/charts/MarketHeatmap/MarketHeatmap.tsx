@@ -19,18 +19,18 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '../Base/BaseChart';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme } from '../../../hooks/useChartTheme';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme } from '@/hooks/useChartTheme';
 import {
   fetchRealHeatmapData,
   getChangeColor,
   formatLargeNumber,
   formatPrice,
   type HeatmapCell,
-} from '../../../services/market/mockMarketData';
-import type { ExportFormat } from '../shared/ExportMenu';
-import { useStandardChartController } from '../../../hooks/useChartController';
+} from '@/services/market/mockMarketData';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
+import { useStandardChartController } from '@/hooks/useChartController';
 import styles from './MarketHeatmap.module.scss';
 
 /**
@@ -55,6 +55,11 @@ export interface MarketHeatmapProps {
   /** Additional CSS class */
   className?: string;
 }
+
+/**
+ * Query interface for MarketHeatmap API
+ */
+export interface MarketHeatmapQuery {}
 
 /**
  * MarketHeatmap Component
@@ -97,7 +102,7 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   // });
 
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController({
+  const { data, loadingState, refetch } = useStandardChartController<HeatmapCell[], MarketHeatmapQuery>({
     fetcher: fetchRealHeatmapData,
     query: {},
     autoRefresh,

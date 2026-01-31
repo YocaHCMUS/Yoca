@@ -59,7 +59,7 @@ export default function DashboardPage() {
                   height={400}
                   initialTimePeriod="30D"
                   metric="count"
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
               
@@ -70,7 +70,7 @@ export default function DashboardPage() {
                   initialTimePeriod="30D"
                   initialTransactionType="all"
                   limit={10}
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
               
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                   height={400}
                   initialTimePeriod="30D"
                   chartType="line"
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
               
@@ -91,7 +91,7 @@ export default function DashboardPage() {
                   initialTimePeriod="30D"
                   initialTransactionType="all"
                   chartMode="stacked"
-                  enableAutoRefresh={true}
+                  autoRefresh={true}
                 />
               </Tile>
               

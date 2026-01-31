@@ -17,9 +17,9 @@ import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChart
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
-import type { TransactionDistributionResponse } from '../../../types/chart-api.types';
+import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './TransactionDistribution.module.scss';
 
@@ -46,7 +46,7 @@ export interface TransactionDistributionProps {
   walletIds?: string[];
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -79,7 +79,7 @@ export interface TransactionDistributionProps {
  *   height={300}
  *   initialTimePeriod="30D"
  *   chartMode="stacked"
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -90,7 +90,7 @@ export function TransactionDistribution({
   initialTransactionType = 'all',
   chartMode = 'stacked',
   walletIds = [],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -129,7 +129,7 @@ export function TransactionDistribution({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo<TransactionDistributionRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
       transactionType: filters.transactionType,
@@ -143,10 +143,10 @@ export function TransactionDistribution({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TransactionDistributionResponse, any>({
+    useStandardChartController<TransactionDistributionResponse, TransactionDistributionRequestParams>({
       fetcher: fetchTransactionDistribution,
       query,
-      autoRefresh: enableAutoRefresh,
+      autoRefresh,
       refreshInterval,
       onDataLoaded,
     });

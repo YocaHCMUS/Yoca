@@ -17,7 +17,7 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -26,26 +26,25 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
-import type { AssetDistributionResponse } from '@/types/chart-api.types';
-import type { ExportFormat } from '@/types/chart-filters.types';
-import type { ChartDataSeries } from '@/types/chart-data.types';
+import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
 import styles from './AssetDistribution.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartExport } from '@/hooks/useChartExport';
 
 
 export interface AssetDistributionProps {
   height?: number;
   initialFilters?: Partial<any>;
   autoRefresh?: boolean;
+  refreshInterval?: number;
   className?: string;
 }
 
 export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   height = 400,
   initialFilters,
-  autoRefresh = false,
+  autoRefresh = true,
+  refreshInterval = 30000,
   className,
 }) => {
   const { t } = useTranslation();
@@ -63,7 +62,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo<DistributionRequestParams>(
     () => ({
       period: filters.timePeriod,
       wallets: filters.wallets?.join(','),
@@ -75,10 +74,11 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<AssetDistributionResponse, any>({
+    useStandardChartController<AssetDistributionResponse, DistributionRequestParams>({
       fetcher: fetchAssetDistribution,
       query,
       autoRefresh,
+      refreshInterval,
     });
 
 

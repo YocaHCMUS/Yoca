@@ -2,15 +2,15 @@ import React, { useMemo, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchBalanceTrend } from '../../../services/chart/chartApi';
-import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
-import type { BalanceTrendResponse } from '../../../types/chart-api.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../../../types/chart-filters.types';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchBalanceTrend } from '@/services/chart/chartApi';
+import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import type { ExportFormat } from '@/types/chart-filters.types';
 import styles from './BalanceChart.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -96,7 +96,7 @@ export function BalanceChart({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo<BalanceRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
       tokens: filters.tokens?.join(','),
@@ -109,10 +109,11 @@ export function BalanceChart({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<BalanceTrendResponse, any>({
+    useStandardChartController<BalanceTrendResponse, BalanceRequestParams>({
       fetcher: fetchBalanceTrend,
       query,
       autoRefresh,
+      refreshInterval,
       onDataLoaded,
     });
 

@@ -11,22 +11,22 @@ import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '../Base/BaseChart';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchPriceHistory } from '../../../services/chart/chartApi';
-import { formatCurrency } from '../../../util/chart-helpers';
-import type { PriceHistoryResponse } from '../../../types/chart-api.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import { useStandardChartController } from '../../../hooks/useChartController';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartExport } from '@/hooks/useChartExport';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchPriceHistory } from '@/services/chart/chartApi';
+import { formatCurrency } from '@/util/chart-helpers';
+import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
+import { useStandardChartController } from '@/hooks/useChartController';
 
 /**
  * Props for PriceHistoryChart component
  */
-interface PriceHistoryChartProps {
+export interface PriceHistoryChartProps {
   /** Chart title */
   title?: string;
 
@@ -40,7 +40,7 @@ interface PriceHistoryChartProps {
   initialTokens?: string[];
 
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
 
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -50,12 +50,6 @@ interface PriceHistoryChartProps {
 
   /** Additional CSS class */
   className?: string;
-}
-
-interface PriceHistoryQuery {
-  timePeriod: TimePeriod;
-  tokens: string[];
-  timezone: string;
 }
 
 /**
@@ -76,7 +70,7 @@ interface PriceHistoryQuery {
  *   height={400}
  *   initialTimePeriod="30D"
  *   initialTokens={['SOL', 'JTO']}
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -85,7 +79,7 @@ export function PriceHistoryChart({
   height = 400,
   initialTimePeriod = '30D',
   initialTokens = ['SOL', 'JTO', 'BONK'],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -127,17 +121,17 @@ export function PriceHistoryChart({
   });
 
   // Query for the controller
-  const query = useMemo(() => ({
+  const query = useMemo<PriceHistoryRequestParams>(() => ({
     tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
     period: filters.timePeriod,
     aggregation: 'daily' as const,
   }), [filters.tokens, filters.timePeriod]);
 
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController({
+  const { data, loadingState, refetch } = useStandardChartController<PriceHistoryResponse, PriceHistoryRequestParams>({
     fetcher: fetchPriceHistory,
     query,
-    autoRefresh: enableAutoRefresh,
+    autoRefresh,
     refreshInterval,
     onDataLoaded,
   });
