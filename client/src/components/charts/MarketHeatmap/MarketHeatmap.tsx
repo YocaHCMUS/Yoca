@@ -19,8 +19,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { BaseChart } from '../Base/BaseChart';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme } from '../../../hooks/useChartTheme';
 import {
@@ -30,8 +29,8 @@ import {
   formatPrice,
   type HeatmapCell,
 } from '../../../services/market/mockMarketData';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { ExportFormat } from '../shared/ExportMenu';
+import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './MarketHeatmap.module.scss';
 
 /**
@@ -84,56 +83,30 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   const { t } = useTranslation();
   const chartTitle = title || t('charts.marketHeatmap.title', 'Market Heatmap');
   
-  // State management
-  const [data, setData] = useState<HeatmapCell[]>([]);
-  const [loadingState, setLoadingState] = useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  
   // Chart instance ref for export
   const chartRef = useRef<any>(null);
 
   // Get theme configuration
   const chartTheme = useChartTheme();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoadingState((prev) => ({
-        ...prev,
-        status: prev.status === 'success' ? 'refreshing' : 'loading',
-      }));
-      const heatmapData = await fetchRealHeatmapData();
-      setData(heatmapData);
-      onDataLoaded?.(heatmapData);
-      setLoadingState({
-        status: 'success',
-        retryCount: 0,
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load market data';
-      setLoadingState((prev) => ({
-        status: 'error',
-        error: {
-          code: 'FETCH_ERROR',
-          message: errorMessage,
-          retryable: true,
-        },
-        retryCount: prev.retryCount + 1,
-      }));
-    }
-  }, [onDataLoaded]);
+  // // Export functionality
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone: 'UTC',
+    baseFilename: 'market-heatmap',
+  });
 
-  useEffect(() => {
-    fetchData();
-    if (autoRefresh) {
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchData, autoRefresh, refreshInterval]);
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController({
+    fetcher: fetchRealHeatmapData,
+    query: {},
+    autoRefresh,
+    refreshInterval,
+    onDataLoaded,
+  });
 
   const chartOption = useMemo(() => {
-    if (data.length === 0) return {};
+    if (!data || data.length === 0) return {};
 
     const treemapData = data.map((item) => ({
       name: item.symbol,
@@ -234,7 +207,7 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   // Export handler
   const handleExport = useCallback(
     async (format: ExportFormat) => {
-      if (!chartRef.current || data.length === 0) return;
+      if (!chartRef.current || !data || data.length === 0) return;
 
       try {
         const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
@@ -281,14 +254,13 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   );
 
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
-      loadingState={loadingState}
       height={height}
-      onRetry={fetchData}
-      isEmpty={data.length === 0}
+      loadingState={loadingState}
+      isEmpty={!data || data.length === 0}
+      onRetry={refetch}
       onExport={handleExport}
-      className={className}
     >
       <div className={styles.marketHeatmap}>
         <ReactECharts
@@ -298,6 +270,6 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
           opts={{ renderer: 'canvas' }}
         />
       </div>
-    </ChartWrapper>
+    </BaseChart>
   );
 };

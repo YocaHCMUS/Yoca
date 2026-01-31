@@ -7,23 +7,21 @@
  * @module PriceHistoryChart
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '../Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchPriceHistory } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import type { PriceHistoryResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../shared/ExportMenu';
-import styles from './PriceHistoryChart.module.scss';
+import { useStandardChartController } from '../../../hooks/useChartController';
 
 /**
  * Props for PriceHistoryChart component
@@ -52,6 +50,12 @@ interface PriceHistoryChartProps {
 
   /** Additional CSS class */
   className?: string;
+}
+
+interface PriceHistoryQuery {
+  timePeriod: TimePeriod;
+  tokens: string[];
+  timezone: string;
 }
 
 /**
@@ -91,11 +95,7 @@ export function PriceHistoryChart({
   const chartTitle = title || t('charts.priceHistoryChart.title', 'Price History');
 
   // State management
-  const [data, setData] = React.useState<PriceHistoryResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
+  // Removed data and loadingState, using controller
 
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -126,46 +126,20 @@ export function PriceHistoryChart({
     },
   });
 
-  // Fetch data function
-  const fetchData = React.useCallback(async () => {
-    setLoadingState({ status: 'loading', retryCount: loadingState.retryCount });
+  // Query for the controller
+  const query = useMemo(() => ({
+    tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
+    period: filters.timePeriod,
+    aggregation: 'daily' as const,
+  }), [filters.tokens, filters.timePeriod]);
 
-    try {
-      const response = await fetchPriceHistory({
-        tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
-        period: filters.timePeriod,
-        aggregation: 'daily',
-      });
-
-      setData(response);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
-    } catch (error) {
-      console.error('Failed to fetch price history data:', error);
-      setLoadingState({
-        status: 'error',
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load data',
-          retryable: true,
-        },
-        retryCount: loadingState.retryCount + 1,
-      });
-    }
-  }, [filters.tokens, filters.timePeriod, loadingState.retryCount, onDataLoaded]);
-
-  // Initial data load and filter changes
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Auto-refresh setup
-  useAutoRefresh({
-    enabled: enableAutoRefresh,
-    onRefresh: fetchData,
-    config: {
-      interval: refreshInterval,
-    },
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController({
+    fetcher: fetchPriceHistory,
+    query,
+    autoRefresh: enableAutoRefresh,
+    refreshInterval,
+    onDataLoaded,
   });
 
   // Export functionality
@@ -280,32 +254,15 @@ export function PriceHistoryChart({
     };
   }, [data, chartTheme, t]);
 
-  // Handle retry
-  const handleRetry = () => {
-    fetchData();
-  };
-
   // Render chart with wrapper
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
-      loadingState={loadingState}
       height={height}
-      onRetry={handleRetry}
-      onExport={handleExport}
+      loadingState={loadingState}
       isEmpty={!data || data.series.length === 0}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => {
-            setTimePeriod('30D');
-            setTokens(['SOL', 'JTO', 'BONK']);
-          },
-        },
-      }}
-      className={className}
+      onRetry={refetch}
+      onExport={handleExport}
     >
       <ReactECharts
         ref={chartRef}
@@ -314,6 +271,6 @@ export function PriceHistoryChart({
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />
-    </ChartWrapper>
+    </BaseChart>
   );
 }

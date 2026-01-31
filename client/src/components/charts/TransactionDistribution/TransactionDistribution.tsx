@@ -7,22 +7,24 @@
  * @module TransactionDistribution
  */
 
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
 import type { TransactionDistributionResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../shared/ExportMenu';
+import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './TransactionDistribution.module.scss';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import type { ChartLoadingState } from '@/types/chart.types';
+import { ChartWrapper } from '../shared';
 
 /**
  * Props for TransactionDistribution component
@@ -57,6 +59,13 @@ export interface TransactionDistributionProps {
   
   /** Additional CSS class */
   className?: string;
+}
+
+interface TransactionDistributionQuery {
+  timePeriod: TimePeriod;
+  transactionType: TransactionType;
+  wallets?: string[];
+  timezone: string;
 }
 
 /**
@@ -507,22 +516,13 @@ export function TransactionDistribution({
   };
   
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       height={height * 2 + 40}
       onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => setTimePeriod('30D'),
-        },
-      }}
-      className={className}
     >
       <div className={styles.transactionDistribution}>
         {/* Chart mode selector */}
@@ -577,6 +577,6 @@ export function TransactionDistribution({
           </div>
         )}
       </div>
-    </ChartWrapper>
+    </BaseChart>
   );
 }

@@ -7,22 +7,21 @@
  * @module CounterpartyActivity
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '../Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchCounterpartyActivity } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import type { CounterpartyActivityResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../shared/ExportMenu';
+import { useStandardChartController } from '../../../hooks/useChartController';
 import styles from './CounterpartyActivity.module.scss';
 
 /**
@@ -55,6 +54,14 @@ interface CounterpartyActivityProps {
   
   /** Additional CSS class */
   className?: string;
+}
+
+interface CounterpartyQuery {
+  timePeriod: TimePeriod;
+  transactionType: TransactionType;
+  limit: number;
+  timezone: string;
+  [key: string]: any;
 }
 
 /**
@@ -98,12 +105,7 @@ export function CounterpartyActivity({
   const chartTitle = title || t('charts.counterpartyActivityChart.title');
   
   // State management
-  const [data, setData] = React.useState<CounterpartyActivityResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  const [currentLimit, setCurrentLimit] = React.useState<number>(limit);
+  const [currentLimit, setCurrentLimit] = useState<number>(limit);
   
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -127,47 +129,21 @@ export function CounterpartyActivity({
     },
   });
   
-  // Fetch data function
-  const fetchData = React.useCallback(async () => {
-    setLoadingState({ status: 'loading', retryCount: loadingState.retryCount });
-    
-    try {
-      const response = await fetchCounterpartyActivity({
-        timePeriod: filters.timePeriod,
-        transactionType: filters.transactionType,
-        limit: currentLimit,
-        timezone,
-      });
-      
-      setData(response);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
-    } catch (error) {
-      console.error('Failed to fetch counterparty activity data:', error);
-      setLoadingState({ 
-        status: 'error', 
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load data',
-          retryable: true,
-        },
-        retryCount: loadingState.retryCount + 1,
-      });
-    }
-  }, [filters.timePeriod, filters.transactionType, currentLimit, timezone, loadingState.retryCount, onDataLoaded]);
+  // Query for the controller
+  const query = useMemo<CounterpartyQuery>(() => ({
+    timePeriod: filters.timePeriod,
+    transactionType: filters.transactionType,
+    limit: currentLimit,
+    timezone,
+  }), [filters.timePeriod, filters.transactionType, currentLimit, timezone]);
   
-  // Initial data load and filter changes
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  // Auto-refresh setup
-  useAutoRefresh({
-    enabled: enableAutoRefresh,
-    onRefresh: fetchData,
-    config: {
-      interval: refreshInterval,
-    },
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController({
+    fetcher: fetchCounterpartyActivity,
+    query,
+    autoRefresh: enableAutoRefresh,
+    refreshInterval,
+    onDataLoaded,
   });
   
   // Export functionality
@@ -334,11 +310,6 @@ export function CounterpartyActivity({
     };
   }, [data, chartTheme, t]);
   
-  // Handle retry
-  const handleRetry = () => {
-    fetchData();
-  };
-  
   // Handle limit change
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
@@ -346,43 +317,28 @@ export function CounterpartyActivity({
   
   // Render chart with wrapper
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       height={height}
-      onRetry={handleRetry}
+      onRetry={refetch}
       onExport={handleExport}
       isEmpty={!data || data.counterparties.length === 0}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => {
-            setTimePeriod('30D');
-            setTransactionType('all');
-            setCurrentLimit(10);
-          },
-        },
-      }}
-      actions={
-        <div className={styles.limitSelector}>
-          <label htmlFor="limit-select">Top:</label>
-          <select
-            id="limit-select"
-            value={currentLimit}
-            onChange={(e) => handleLimitChange(Number(e.target.value))}
-            className={styles.limitSelect}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-        </div>
-      }
-      className={className}
     >
+      <div className={styles.limitSelector}>
+        <label htmlFor="limit-select">Top:</label>
+        <select
+          id="limit-select"
+          value={currentLimit}
+          onChange={(e) => handleLimitChange(Number(e.target.value))}
+          className={styles.limitSelect}
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+      </div>
       <ReactECharts
         ref={chartRef}
         option={chartOptions}
@@ -390,6 +346,6 @@ export function CounterpartyActivity({
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />
-    </ChartWrapper>
+    </BaseChart>
   );
 }

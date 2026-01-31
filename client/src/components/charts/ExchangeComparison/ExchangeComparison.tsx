@@ -7,22 +7,21 @@
  * @module ExchangeComparison
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '../Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchExchangeComparison } from '../../../services/chart/chartApi';
 import { formatCurrency } from '../../../util/chart-helpers';
 import type { ExchangeComparisonResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
 import type { TimePeriod } from '../../../types/chart-filters.types';
 import type { ExportFormat } from '../shared/ExportMenu';
+import { useStandardChartController } from '../../../hooks/useChartController';
 
 /**
  * Props for ExchangeComparison component
@@ -51,6 +50,13 @@ interface ExchangeComparisonProps {
   
   /** Additional CSS class */
   className?: string;
+}
+
+interface ExchangeComparisonQuery {
+  timePeriod: TimePeriod;
+  metric: 'count' | 'volume';
+  timezone: string;
+  [key: string]: any;
 }
 
 /**
@@ -92,12 +98,7 @@ export function ExchangeComparison({
   const chartTitle = title || t('charts.exchangeComparisonChart.title');
   
   // State management
-  const [data, setData] = React.useState<ExchangeComparisonResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  const [currentMetric, setCurrentMetric] = React.useState<'count' | 'volume'>(metric);
+  const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
   
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -120,74 +121,26 @@ export function ExchangeComparison({
     debounceDelay: 300,
   });
   
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
+  // Query for the controller
+  const query = useMemo<ExchangeComparisonQuery>(() => ({
+    timePeriod: filters.timePeriod,
+    metric: currentMetric,
+    timezone,
+  }), [filters.timePeriod, currentMetric, timezone]);
   
-  /**
-   * Fetch exchange comparison data from API
-   */
-  const fetchData = React.useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const response = await fetchExchangeComparison({
-        timePeriod: filters.timePeriod,
-        metric: currentMetric,
-        timezone,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(response);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load exchange data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [filters, currentMetric, timezone, isValid, onDataLoaded]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: refreshInterval,
-      pauseOnInteraction: true,
-    },
-    enabled: enableAutoRefresh && loadingState.status === 'success',
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController({
+    fetcher: fetchExchangeComparison,
+    query,
+    autoRefresh: enableAutoRefresh,
+    refreshInterval,
+    onDataLoaded,
   });
-  
-  // Fetch data when filters change
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
   
   /**
    * Generate eCharts option configuration for grouped bar chart
    */
-  const chartOption = useMemo((): EChartsOption | null => {
+  const chartOptions = useMemo((): EChartsOption | null => {
     if (!data || data.exchanges.length === 0) return null;
     
     // Get base theme configuration
@@ -363,53 +316,25 @@ export function ExchangeComparison({
     }
   };
   
-  /**
-   * Handle retry after error
-   */
-  const handleRetry = () => {
-    fetchData();
-  };
-  
-  /**
-   * Render chart content
-   */
-  const renderChart = () => {
-    if (!chartOption) return null;
-    
-    return (
-      <ReactECharts
-        ref={chartRef}
-        option={chartOption}
-        style={{ height: `${height}px`, width: '100%' }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-        lazyUpdate={true}
-      />
-    );
-  };
-  
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       height={height}
-      onRetry={handleRetry}
+      onRetry={refetch}
       onExport={handleExport}
       isEmpty={!data || data.exchanges.length === 0}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => {
-            setTimePeriod('30D');
-            setCurrentMetric('count');
-          },
-        },
-      }}
-      className={className}
     >
-      {renderChart()}
-    </ChartWrapper>
+      {chartOptions && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOptions}
+          style={{ height: `${height}px`, width: '100%' }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+          lazyUpdate={true}
+        />
+      )}
+    </BaseChart>
   );
 }
