@@ -141,7 +141,7 @@ export function HoldingDurations({
   //   [data, filters, convert]
   // );
 
-   /**
+  /**
    * Option factory (pure, deterministic)
    */
   const buildOptions = useCallback(
@@ -150,17 +150,25 @@ export function HoldingDurations({
 
       return {
         ...base,
-        grid: { top: 40, left: 80, right: 40, bottom: 60 },
+        grid: { top: '10%', left: '10%', right: '4%', bottom: '15%', containLabel: true },
         xAxis: {
+          ...base.xAxis,
           type: 'category',
           data: wallet.holdings.map(h => h.tokenSymbol),
-          axisLabel: { rotate: 45 },
+          axisLabel: {
+            ...base.xAxis.axisLabel,
+            rotate: 45,
+            interval: 0,
+            formatter: (value: string) => value.length > 20 ? `${value.substring(0, 17)}...` : value,
+          },
         },
         yAxis: {
+          ...base.yAxis,
           type: 'value',
           name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
           nameLocation: 'middle',
           nameGap: 60,
+          nameTextStyle: { color: chartTheme.textColor },
         },
         tooltip: {
           trigger: 'axis',
@@ -173,7 +181,7 @@ export function HoldingDurations({
           {
             type: 'bar',
             data: wallet.holdings.map(h => convert(h.durationDays)),
-            itemStyle: { color: chartTheme.colorPalette[0] },
+            itemStyle: { color: '#0f62fe' },
             label: { show: true, position: 'top', fontSize: 10 },
           },
         ],
@@ -191,13 +199,13 @@ export function HoldingDurations({
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
-        <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)}>
+        <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)} className={sharedStyles.chartSelect}>
           <option value="days">{t('charts.holdingDurationsChart.days')}</option>
           <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
           <option value="months">{t('charts.holdingDurationsChart.months')}</option>
         </select>
 
-        <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)}>
+        <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)} className={sharedStyles.chartSelect}>
           <option value={5}>5</option>
           <option value={10}>10</option>
           <option value={15}>15</option>
@@ -206,8 +214,8 @@ export function HoldingDurations({
       </div>
 
       {data?.wallets.map(wallet => (
-        <div key={wallet.id}>
-          {/* <div className={styles.walletTitle}>{wallet.name}</div> */}
+        <div key={wallet.id} className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{wallet.name}</h3>
 
           <ReactECharts
             ref={ref => {

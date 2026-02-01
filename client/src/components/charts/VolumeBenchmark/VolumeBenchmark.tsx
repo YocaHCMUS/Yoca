@@ -7,21 +7,18 @@
  * @module VolumeBenchmark
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '@/hooks/useChartFilters';
-import { useChartExport } from '@/hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
 import { formatCurrency, formatDate } from '@/util/chart-helpers';
 import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
-import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '@/hooks/useChartController';
-import styles from './VolumeBenchmark.module.scss';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 
 /**
