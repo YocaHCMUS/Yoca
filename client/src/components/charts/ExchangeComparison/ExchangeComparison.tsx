@@ -7,20 +7,18 @@
  * @module ExchangeComparison
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '@/hooks/useChartFilters';
-import { useChartExport } from '@/hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
-import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '@/hooks/useChartController';
 
 /**

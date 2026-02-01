@@ -27,7 +27,6 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
-import styles from './AssetDistribution.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 
@@ -193,25 +192,23 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   }, [data, chartTheme, t]);
 
   return (
-    <div className={`${styles.assetDistribution} ${className ?? ''}`}>
-      <BaseChart
-        title={chartTitle}
-        height={height}
-        loadingState={loadingState}
-        isEmpty={!data || data.data.length === 0}
-        onRetry={() => refetch(false)}
-      >
-        {option && (
-          <ReactECharts
-            ref={chartRef}
-            option={option}
-            style={{ height, width: '100%' }}
-            notMerge
-            lazyUpdate
-          />
-        )}
-      </BaseChart>
-    </div>
+    <BaseChart
+      title={chartTitle}
+      height={height}
+      loadingState={loadingState}
+      isEmpty={!data || data.data.length === 0}
+      onRetry={() => refetch(false)}
+    >
+      {option && (
+        <ReactECharts
+          ref={chartRef}
+          option={option}
+          style={{ height, width: '100%' }}
+          notMerge
+          lazyUpdate
+        />
+      )}
+    </BaseChart>
   );
 };
 

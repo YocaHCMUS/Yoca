@@ -2,18 +2,15 @@ import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { getThemedChartBaseOption, useChartTheme } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchHoldingDurations } from '../../../services/chart/chartApi';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchHoldingDurations } from '@/services/chart/chartApi';
 
 import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
-import type { ChartDataSeries } from '../../../types/chart-data.types';
-import type { ExportFormat } from '../../../types/chart-filters.types';
 
-import styles from '@/components/charts/HoldingDurations/HoldingDurations.module.scss';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { useChartExport } from '@/hooks/useChartExport';
 import { BaseChart } from '../Base/BaseChart';
 
 
@@ -193,43 +190,40 @@ export function HoldingDurations({
       isEmpty={!data || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
-      <div className={styles.holdingDurations}>
-        {/* Controls */}
-        <div className={styles.controls}>
-          <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)}>
-            <option value="days">{t('charts.holdingDurationsChart.days')}</option>
-            <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
-            <option value="months">{t('charts.holdingDurationsChart.months')}</option>
-          </select>
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
+        <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)}>
+          <option value="days">{t('charts.holdingDurationsChart.days')}</option>
+          <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
+          <option value="months">{t('charts.holdingDurationsChart.months')}</option>
+        </select>
 
-          <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)}>
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-          </select>
-        </div>
-
-        {data?.wallets.map(wallet => (
-          <div key={wallet.id} className={styles.walletChart}>
-            <div className={styles.walletTitle}>{wallet.name}</div>
-
-            <ReactECharts
-              ref={ref => {
-                if (ref) {
-                  chartRefs.current.set(wallet.id, ref);
-                } else {
-                  chartRefs.current.delete(wallet.id);
-                }
-              }}
-              option={buildOptions(wallet)}
-              style={{ height }}
-              notMerge
-              lazyUpdate
-            />
-          </div>
-        ))}
+        <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)}>
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={15}>15</option>
+          <option value={20}>20</option>
+        </select>
       </div>
+
+      {data?.wallets.map(wallet => (
+        <div key={wallet.id}>
+          {/* <div className={styles.walletTitle}>{wallet.name}</div> */}
+
+          <ReactECharts
+            ref={ref => {
+              if (ref) {
+                chartRefs.current.set(wallet.id, ref);
+              } else {
+                chartRefs.current.delete(wallet.id);
+              }
+            }}
+            option={buildOptions(wallet)}
+            style={{ height }}
+            notMerge
+            lazyUpdate
+          />
+        </div>
+      ))}
     </BaseChart>
   );
 }

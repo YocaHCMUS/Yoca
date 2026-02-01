@@ -7,21 +7,19 @@
  * @module TransactionDistribution
  */
 
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
 import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '../../../hooks/useChartController';
-import styles from './TransactionDistribution.module.scss';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 /**
  * Props for TransactionDistribution component
@@ -468,59 +466,59 @@ export function TransactionDistribution({
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
     >
-      <div className={styles.transactionDistribution}>
-        {/* Chart mode selector */}
-        <div className={styles.controls}>
-          <div className={styles.chartModeToggle}>
-            <button
-              className={selectedChartMode === 'stacked' ? styles.active : ''}
-              onClick={() => handleChartModeChange('stacked')}
-              aria-label={t('charts.transactionDistributionChart.stacked')}
-              title={t('charts.transactionDistributionChart.stacked')}
-            >
-              {t('charts.transactionDistributionChart.stacked')}
-            </button>
-            <button
-              className={selectedChartMode === 'grouped' ? styles.active : ''}
-              onClick={() => handleChartModeChange('grouped')}
-              aria-label={t('charts.transactionDistributionChart.grouped')}
-              title={t('charts.transactionDistributionChart.grouped')}
-            >
-              {t('charts.transactionDistributionChart.grouped')}
-            </button>
-          </div>
+      {/* <div className={styles.transactionDistribution}>
+      </div> */}
+      {/* Chart mode selector */}
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--withBorder']} ${sharedStyles['chartControls--end']}`}>
+        <div className={sharedStyles['chartToggle--padded']}>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'stacked' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartModeChange('stacked')}
+            aria-label={t('charts.transactionDistributionChart.stacked')}
+            title={t('charts.transactionDistributionChart.stacked')}
+          >
+            {t('charts.transactionDistributionChart.stacked')}
+          </button>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'grouped' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartModeChange('grouped')}
+            aria-label={t('charts.transactionDistributionChart.grouped')}
+            title={t('charts.transactionDistributionChart.grouped')}
+          >
+            {t('charts.transactionDistributionChart.grouped')}
+          </button>
         </div>
-        
-        {/* Transaction counts chart */}
-        {data && (
-          <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
-            <ReactECharts
-              ref={transactionChartRef}
-              option={transactionCountsOptions}
-              style={{ height: `${height}px`, width: '100%' }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </div>
-        )}
-        
-        {/* Unique token counts chart */}
-        {data && (
-          <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
-            <ReactECharts
-              ref={tokenChartRef}
-              option={uniqueTokenCountsOptions}
-              style={{ height: `${height}px`, width: '100%' }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </div>
-        )}
       </div>
+      
+      {/* Transaction counts chart */}
+      {data && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
+          <ReactECharts
+            ref={transactionChartRef}
+            option={transactionCountsOptions}
+            style={{ height: `${height}px`, width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </div>
+      )}
+      
+      {/* Unique token counts chart */}
+      {data && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
+          <ReactECharts
+            ref={tokenChartRef}
+            option={uniqueTokenCountsOptions}
+            style={{ height: `${height}px`, width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </div>
+      )}
     </BaseChart>
   );
 }

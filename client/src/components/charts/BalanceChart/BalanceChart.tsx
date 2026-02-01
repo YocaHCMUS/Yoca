@@ -1,20 +1,17 @@
-import React, { useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { useChartFilters } from '@/hooks/useChartFilters';
-import { useChartExport } from '@/hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
-import type { ExportFormat } from '@/types/chart-filters.types';
-import styles from './BalanceChart.module.scss';
+import styles from '@/components/charts/shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
-import type { ChartDataSeries } from '@/types/chart-data.types';
 
 /**
  * Props for BalanceChart component
@@ -249,24 +246,22 @@ export function BalanceChart({
   }, [data, timezone, chartTheme, t]);
 
   return (
-    <div className={`${styles.balanceChart} ${className || ''}`}>
-      <BaseChart
-        title={chartTitle}
-        height={height}
-        loadingState={loadingState}
-        isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
-        onRetry={() => refetch(false)}
-      >
-        {chartOption && (
-          <ReactECharts
-            ref={chartRef}
-            option={chartOption}
-            style={{ height, width: '100%' }}
-            notMerge
-            lazyUpdate
-          />
-        )}
-      </BaseChart>
-    </div>
+    <BaseChart
+      title={chartTitle}
+      height={height}
+      loadingState={loadingState}
+      isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
+      onRetry={() => refetch(false)}
+    >
+      {chartOption && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOption}
+          style={{ height, width: '100%' }}
+          notMerge
+          lazyUpdate
+        />
+      )}
+    </BaseChart>
   );
 }

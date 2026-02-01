@@ -13,14 +13,12 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '@/hooks/useChartFilters';
-import { useChartExport } from '@/hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPriceHistory } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
-import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '@/hooks/useChartController';
 
 /**
@@ -260,7 +258,6 @@ export function PriceHistoryChart({
       <ReactECharts
         ref={chartRef}
         option={chartOptions}
-        style={{ height: `${height}px`, width: '100%' }}
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />

@@ -1,5 +1,6 @@
 import type { ChartLoadingState } from "@/types/chart.types";
 import { ChartWrapper } from "@/components/charts/shared";
+import styles from "@/components/charts/shared/ChartStyle.module.scss"
 
 interface BaseChartProps {
   title: string;
@@ -18,6 +19,7 @@ export function BaseChart(props: BaseChartProps) {
         loadingState={props.loadingState}
         onRetry={props.onRetry}
         isEmpty={props.isEmpty}
+        className={styles.Chart}
     >
         {props.children}
     </ChartWrapper>

@@ -17,23 +17,20 @@
  * @module components/charts/PnLChart
  */
 
-import React, { useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchPnLChart } from '../../../services/chart/chartApi';
-import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
-import type { PnLChartResponse, PnLRequestParams } from '../../../types/chart-api.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../../../types/chart-filters.types';
-import styles from './PnLChart.module.scss';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchPnLChart } from '@/services/chart/chartApi';
+import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
-import type { ChartDataSeries } from '@/types/chart-data.types';
 
 export interface PnLChartProps {
   /** Chart title */
@@ -338,24 +335,22 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   }, [data, timezone, chartTheme, t]);
 
   return (
-    <div className={`${styles.pnlChart} ${className || ''}`}>
-      <BaseChart
-        title={chartTitle}
-        height={height}
-        loadingState={loadingState}
-        isEmpty={!data || data.dailyPnL.length === 0}
-        onRetry={() => refetch(false)}
-      >
-        {chartOption && (
-          <ReactECharts
-            ref={chartRef}
-            option={chartOption}
-            style={{ height, width: '100%' }}
-            notMerge
-            lazyUpdate
-          />
-        )}
-      </BaseChart>
-    </div>
+    <BaseChart
+      title={chartTitle}
+      height={height}
+      loadingState={loadingState}
+      isEmpty={!data || data.dailyPnL.length === 0}
+      onRetry={() => refetch(false)}
+    >
+      {chartOption && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOption}
+          style={{ height, width: '100%' }}
+          notMerge
+          lazyUpdate
+        />
+      )}
+    </BaseChart>
   );
 };

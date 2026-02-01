@@ -15,12 +15,10 @@
  * @module components/charts/MarketHeatmap
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartExport } from '@/hooks/useChartExport';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import {
   fetchRealHeatmapData,
@@ -29,9 +27,7 @@ import {
   formatPrice,
   type HeatmapCell,
 } from '@/services/market/mockMarketData';
-import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '@/hooks/useChartController';
-import styles from './MarketHeatmap.module.scss';
 
 /**
  * Props for MarketHeatmap component
@@ -266,14 +262,12 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
       isEmpty={!data || data.length === 0}
       onRetry={refetch}
     >
-      <div className={styles.marketHeatmap}>
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%' }}
-          opts={{ renderer: 'canvas' }}
-        />
-      </div>
+      <ReactECharts
+        ref={chartRef}
+        option={chartOption}
+        style={{ height: '100%', width: '100%' }}
+        opts={{ renderer: 'canvas' }}
+      />
     </BaseChart>
   );
 };

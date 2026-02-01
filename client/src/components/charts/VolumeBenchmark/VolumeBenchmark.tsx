@@ -22,6 +22,7 @@ import type { TimePeriod } from '@/types/chart-filters.types';
 import type { ExportFormat } from '@/components/charts/shared/ExportMenu';
 import { useStandardChartController } from '@/hooks/useChartController';
 import styles from './VolumeBenchmark.module.scss';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 /**
  * Props for VolumeBenchmark component
@@ -326,41 +327,41 @@ export function VolumeBenchmark({
       onRetry={handleRetry}
       isEmpty={!data || data.wallets.length === 0}
     >
-      <div className={styles.volumeBenchmark}>
-        {/* Chart type selector */}
-        <div className={styles.controls}>
-          <div className={styles.chartTypeToggle}>
-            <button
-              className={selectedChartType === 'line' ? styles.active : ''}
-              onClick={() => handleChartTypeChange('line')}
-              aria-label={t('charts.volumeBenchmarkChart.line')}
-              title={t('charts.volumeBenchmarkChart.line')}
-            >
-              {t('charts.volumeBenchmarkChart.line')}
-            </button>
-            <button
-              className={selectedChartType === 'bar' ? styles.active : ''}
-              onClick={() => handleChartTypeChange('bar')}
-              aria-label={t('charts.volumeBenchmarkChart.bar')}
-              title={t('charts.volumeBenchmarkChart.bar')}
-            >
-              {t('charts.volumeBenchmarkChart.bar')}
-            </button>
-          </div>
+      {/* <div className={styles.volumeBenchmark}>
+      </div> */}
+      {/* Chart type selector */}
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
+        <div className={sharedStyles['chartToggle--bordered']}>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'line' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartTypeChange('line')}
+            aria-label={t('charts.volumeBenchmarkChart.line')}
+            title={t('charts.volumeBenchmarkChart.line')}
+          >
+            {t('charts.volumeBenchmarkChart.line')}
+          </button>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'bar' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartTypeChange('bar')}
+            aria-label={t('charts.volumeBenchmarkChart.bar')}
+            title={t('charts.volumeBenchmarkChart.bar')}
+          >
+            {t('charts.volumeBenchmarkChart.bar')}
+          </button>
         </div>
-        
-        {/* Chart */}
-        {data && (
-          <ReactECharts
-            ref={chartRef}
-            option={chartOptions}
-            style={{ height: `${height}px`, width: '100%' }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-            lazyUpdate={true}
-          />
-        )}
       </div>
+      
+      {/* Chart */}
+      {data && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOptions}
+          style={{ height: `${height}px`, width: '100%' }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+          lazyUpdate={true}
+        />
+      )}
     </BaseChart>
   );
 }
