@@ -85,7 +85,7 @@ export const tokenMarketData = pgTable("token_market_data", {
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply").notNull(),
   totalSupply: decimal("total_supply").notNull(),
-  maxSupply: decimal("max_supply").notNull(),
+  maxSupply: decimal("max_supply"),
   ath: decimal("ath").notNull(),
   athDate: timestamp("ath_date").notNull(),
   athChangePercentage: decimal("ath_change_percentage").notNull(),
@@ -101,7 +101,7 @@ export const tokenMarketData = pgTable("token_market_data", {
 export const tokenMarketChart24h = pgTable(
   "token_market_chart_24h",
   {
-    address: varchar("address", { length: 44 }),
+    address: varchar("address", { length: 44 }).notNull(),
     unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
@@ -117,7 +117,7 @@ export const tokenMarketChart24h = pgTable(
 export const tokenMarketChartHourly = pgTable(
   "token_market_chart_hourly",
   {
-    address: varchar("address", { length: 44 }),
+    address: varchar("address", { length: 44 }).notNull(),
     unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
@@ -134,12 +134,12 @@ export const tokenMarketChartHourly = pgTable(
 export const tokenMarketChartDaily = pgTable(
   "token_market_chart_daily",
   {
-    address: varchar("address", { length: 44 }),
+    address: varchar("address", { length: 44 }).notNull(),
     unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
+    unixUpdatedAt: integer("unix_updated_at").notNull() ,
   },
   (table) => [
     primaryKey({

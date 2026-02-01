@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
 import Header from '../navigation/Header';
 import { SignInForm } from '../auth/SignInForm';
 import { SignUpForm } from '../auth/SignUpForm';
@@ -15,15 +16,15 @@ import styles from './PageWrapper.module.scss'
 
 interface PageWrapperProps {
     children: React.ReactNode;
-    onNavigate?: (path: string) => void;
 }
 
 /**
  * PageWrapper Component
  * Provides header with authentication modals
  */
-export const PageWrapper: React.FC<PageWrapperProps> = ({ children, onNavigate }) => {
+export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     const { theme } = useTheme();
+    const navigate = useNavigate();
     const [signInModalOpen, setSignInModalOpen] = useState(false);
     const [signUpModalOpen, setSignUpModalOpen] = useState(false);
     const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -71,16 +72,14 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children, onNavigate }
      */
     const handleAuthSuccess = () => {
         handleCloseModals();
-        if (onNavigate) {
-        onNavigate('/dashboard');
-        }
+        navigate('/dashboard');
     };
 
     return (
         <Theme theme={theme === 'dark' ? 'g100' : 'white'}>
             <div className={styles.pageWrapper}>
             <Header
-                onNavigate={onNavigate}
+                onNavigate={navigate}
                 handleSignIn={handleOpenSignIn}
                 handleSignUp={handleOpenSignUp}
             />

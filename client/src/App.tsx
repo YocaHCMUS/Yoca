@@ -5,7 +5,6 @@ import Index from "./pages";
 import AuthShowcase from "./pages/auth";
 import DashboardPage from "./pages/dashboard";
 import MarketPage from "./pages/market";
-import OverviewPage from "./pages/overview";
 import TokenPage from "./pages/token";
 import WalletPage from "./pages/wallet";
 
@@ -16,7 +15,6 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthShowcase />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/overview" element={<OverviewPage />} />
         <Route path="/market" element={<MarketPage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenPage />} />

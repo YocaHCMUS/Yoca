@@ -64,7 +64,7 @@ interface ChartWrapperProps {
   enableExport?: boolean;
   
   /** Export callback */
-  onExport?: (format: ExportFormat) => Promise<void>;
+  onExport?: (format: ExportFormat) => void;
   
   /** Enable fullscreen mode (default: true) */
   enableFullscreen?: boolean;
