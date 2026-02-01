@@ -96,11 +96,12 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   //   timezone: 'UTC',
   //   baseFilename: 'market-heatmap',
   // });
-
+  const query = useMemo(() => ({}), []);
+    
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<HeatmapCell[], MarketHeatmapQuery>({
     fetcher: fetchRealHeatmapData,
-    query: {},
+    query: query,
     autoRefresh,
     refreshInterval,
     onDataLoaded,
