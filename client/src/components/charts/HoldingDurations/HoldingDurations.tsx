@@ -2,18 +2,15 @@ import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { getThemedChartBaseOption, useChartTheme } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchHoldingDurations } from '../../../services/chart/chartApi';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchHoldingDurations } from '@/services/chart/chartApi';
 
-import type { HoldingDurationsResponse } from '../../../types/chart-api.types';
-import type { ChartDataSeries } from '../../../types/chart-data.types';
-import type { ExportFormat } from '../../../types/chart-filters.types';
+import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
 
-import styles from '@/components/charts/HoldingDurations/HoldingDurations.module.scss';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { useChartExport } from '@/hooks/useChartExport';
 import { BaseChart } from '../Base/BaseChart';
 
 
@@ -26,16 +23,18 @@ export interface HoldingDurationsProps {
   topN?: number;
   timeUnit?: TimeUnit;
   autoRefresh?: boolean;
+  refreshInterval?: number;
   className?: string;
 }
 
 export function HoldingDurations({
   title,
-  height = 300,
+  height = 400,
   walletIds = [],
   topN = 10,
   timeUnit = 'days',
-  autoRefresh = false,
+  autoRefresh = true,
+  refreshInterval = 30000,
   className,
 }: HoldingDurationsProps) {
   const { t } = useTranslation();
@@ -59,7 +58,7 @@ export function HoldingDurations({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo(
+  const query = useMemo <HoldingsRequestParams>(
     () => ({
       walletIds: filters.wallets?.join(','),
       topN: selectedTopN,
@@ -73,10 +72,11 @@ export function HoldingDurations({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<HoldingDurationsResponse, any>({
+    useStandardChartController<HoldingDurationsResponse, HoldingsRequestParams>({
       fetcher: fetchHoldingDurations,
       query,
       autoRefresh,
+      refreshInterval,
     });
 
   /**
@@ -105,43 +105,43 @@ export function HoldingDurations({
   /**
    * Export policy (standardized)
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'holding-duration',
-  });
-  const handleExport = useCallback(
-    (format: ExportFormat) => {
-      if (!data) return;
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'holding-duration',
+  // });
+  // const handleExport = useCallback(
+  //   (format: ExportFormat) => {
+  //     if (!data) return;
 
-      if (format === 'csv') {
-        const csv: ChartDataSeries[] = data.wallets.map(w => ({
-          id: w.id,
-          name: w.name,
-          type: 'bar',
-          visible: true,
-          data: w.holdings.map(h => ({
-            name: h.tokenSymbol,
-            value: convert(h.durationDays),
-          })),
-        }));
-        exportCSV(csv, filters);
-        return;
-      }
+  //     if (format === 'csv') {
+  //       const csv: ChartDataSeries[] = data.wallets.map(w => ({
+  //         id: w.id,
+  //         name: w.name,
+  //         type: 'bar',
+  //         visible: true,
+  //         data: w.holdings.map(h => ({
+  //           name: h.tokenSymbol,
+  //           value: convert(h.durationDays),
+  //         })),
+  //       }));
+  //       exportCSV(csv, filters);
+  //       return;
+  //     }
 
-      const firstChart =
-        chartRefs.current.values().next().value?.getEchartsInstance();
+  //     const firstChart =
+  //       chartRefs.current.values().next().value?.getEchartsInstance();
 
-      if (!firstChart) return;
+  //     if (!firstChart) return;
 
-      format === 'png'
-        ? exportPNG(firstChart as any, filters)
-        : exportSVG(firstChart as any, filters);
-    },
-    [data, filters, convert]
-  );
+  //     format === 'png'
+  //       ? exportPNG(firstChart as any, filters)
+  //       : exportSVG(firstChart as any, filters);
+  //   },
+  //   [data, filters, convert]
+  // );
 
-   /**
+  /**
    * Option factory (pure, deterministic)
    */
   const buildOptions = useCallback(
@@ -150,17 +150,25 @@ export function HoldingDurations({
 
       return {
         ...base,
-        grid: { top: 40, left: 80, right: 40, bottom: 60 },
+        grid: { top: '10%', left: '10%', right: '4%', bottom: '15%', containLabel: true },
         xAxis: {
+          ...base.xAxis,
           type: 'category',
           data: wallet.holdings.map(h => h.tokenSymbol),
-          axisLabel: { rotate: 45 },
+          axisLabel: {
+            ...base.xAxis.axisLabel,
+            rotate: 45,
+            interval: 0,
+            formatter: (value: string) => value.length > 20 ? `${value.substring(0, 17)}...` : value,
+          },
         },
         yAxis: {
+          ...base.yAxis,
           type: 'value',
           name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
           nameLocation: 'middle',
           nameGap: 60,
+          nameTextStyle: { color: chartTheme.textColor },
         },
         tooltip: {
           trigger: 'axis',
@@ -173,7 +181,7 @@ export function HoldingDurations({
           {
             type: 'bar',
             data: wallet.holdings.map(h => convert(h.durationDays)),
-            itemStyle: { color: chartTheme.colorPalette[0] },
+            itemStyle: { color: '#0f62fe' },
             label: { show: true, position: 'top', fontSize: 10 },
           },
         ],
@@ -189,45 +197,41 @@ export function HoldingDurations({
       loadingState={loadingState}
       isEmpty={!data || data.wallets.length === 0}
       onRetry={() => refetch(false)}
-      onExport={handleExport}
     >
-      <div className={styles.holdingDurations}>
-        {/* Controls */}
-        <div className={styles.controls}>
-          <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)}>
-            <option value="days">{t('charts.holdingDurationsChart.days')}</option>
-            <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
-            <option value="months">{t('charts.holdingDurationsChart.months')}</option>
-          </select>
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
+        <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)} className={sharedStyles.chartSelect}>
+          <option value="days">{t('charts.holdingDurationsChart.days')}</option>
+          <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
+          <option value="months">{t('charts.holdingDurationsChart.months')}</option>
+        </select>
 
-          <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)}>
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-          </select>
-        </div>
-
-        {data?.wallets.map(wallet => (
-          <div key={wallet.id} className={styles.walletChart}>
-            <div className={styles.walletTitle}>{wallet.name}</div>
-
-            <ReactECharts
-              ref={ref => {
-                if (ref) {
-                  chartRefs.current.set(wallet.id, ref);
-                } else {
-                  chartRefs.current.delete(wallet.id);
-                }
-              }}
-              option={buildOptions(wallet)}
-              style={{ height }}
-              notMerge
-              lazyUpdate
-            />
-          </div>
-        ))}
+        <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)} className={sharedStyles.chartSelect}>
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={15}>15</option>
+          <option value={20}>20</option>
+        </select>
       </div>
+
+      {data?.wallets.map(wallet => (
+        <div key={wallet.id} className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{wallet.name}</h3>
+
+          <ReactECharts
+            ref={ref => {
+              if (ref) {
+                chartRefs.current.set(wallet.id, ref);
+              } else {
+                chartRefs.current.delete(wallet.id);
+              }
+            }}
+            option={buildOptions(wallet)}
+            style={{ height }}
+            notMerge
+            lazyUpdate
+          />
+        </div>
+      ))}
     </BaseChart>
   );
 }

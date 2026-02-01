@@ -1,34 +1,22 @@
-/**
- * BalanceChart Component
- * 
- * Displays line/area chart showing balance history over selectable time periods
- * to deliver immediate portfolio performance visibility.
- * 
- * @module BalanceChart
- */
-
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchBalanceTrend } from '../../../services/chart/chartApi';
-import { formatCurrency, formatTimestampWithTimezone } from '../../../util/chart-helpers';
-import type { BalanceTrendResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import styles from './BalanceChart.module.scss';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchBalanceTrend } from '@/services/chart/chartApi';
+import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import styles from '@/components/charts/shared/ChartStyle.module.scss';
+import { useStandardChartController } from '@/hooks/useChartController';
+import { BaseChart } from '../Base/BaseChart';
 
 /**
  * Props for BalanceChart component
  */
-interface BalanceChartProps {
+export interface BalanceChartProps {
   /** Chart title */
   title?: string;
   
@@ -42,7 +30,7 @@ interface BalanceChartProps {
   initialTokens?: string[];
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -76,114 +64,91 @@ interface BalanceChartProps {
  * />
  * ```
  */
+
 export function BalanceChart({
   title,
   height = 400,
   initialTimePeriod = '30D',
   initialTokens = [],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
 }: BalanceChartProps) {
-  // i18n
   const { t } = useTranslation();
   const chartTitle = title || t('charts.balanceChart.title');
-  
-  // State management
-  const [data, setData] = React.useState<BalanceTrendResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  
-  // Chart instance ref for export
+
   const chartRef = useRef<ReactECharts>(null);
-  
-  // Get timezone from context
-  const { selectedTimezone: timezone } = useChartContext();
-  
-  // Get theme configuration
   const chartTheme = useChartTheme();
-  
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    setTokens,
-    isValid,
-  } = useChartFilters({
+  const { selectedTimezone: timezone } = useChartContext();
+
+  const { filters, setTimePeriod, setTokens, isValid } = useChartFilters({
     initialFilters: {
       timePeriod: initialTimePeriod,
       tokens: initialTokens.length > 0 ? initialTokens : undefined,
     },
     debounceDelay: 300,
   });
-  
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
-  
+
   /**
-   * Fetch balance trend data from API
+   * Memoize query to prevent unnecessary re-fetches
    */
-  const fetchData = React.useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const response = await fetchBalanceTrend({
-        timePeriod: filters.timePeriod,
-        tokens: filters.tokens?.join(','),
-        timezone,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(response);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load balance data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [filters, timezone, isValid, onDataLoaded]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: refreshInterval,
-      pauseOnInteraction: true,
-    },
-    enabled: enableAutoRefresh && loadingState.status === 'success',
-  });
-  
-  // Fetch data when filters change
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
+  const query = useMemo<BalanceRequestParams>(
+    () => ({
+      timePeriod: filters.timePeriod,
+      tokens: filters.tokens?.join(','),
+      timezone,
+    }),
+    [filters.timePeriod, filters.tokens, timezone]
+  );
+
+  /**
+   * Unified lifecycle controller
+   */
+  const { data, loadingState, refetch } =
+    useStandardChartController<BalanceTrendResponse, BalanceRequestParams>({
+      fetcher: fetchBalanceTrend,
+      query,
+      autoRefresh,
+      refreshInterval,
+      onDataLoaded,
+    });
+
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'balance-trend',
+  // });
+  // const handleExport = useCallback(
+  //   (format: ExportFormat) => {
+  //     if (!data) return;
+
+  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
+
+  //     if (format === 'csv') {
+  //       const csv: ChartDataSeries[] = data.series.map((series, index) => ({
+  //         id: `series-${index}`,
+  //         name: series.name,
+  //         type: 'line',
+  //         visible: true,
+  //         data: series.data.map(point => ({
+  //           timestamp: point.timestamp,
+  //           value: point.value,
+  //         })),
+  //       }));
+  //       exportCSV(csv, filters);
+  //       return;
+  //     }
+
+  //     if (!instance) return;
+
+  //     format === 'png'
+  //       ? exportPNG(instance as any, filters)
+  //       : exportSVG(instance as any, filters);
+  //   },
+  //   [data, filters]
+  // );
+
   /**
    * Generate eCharts option configuration
    */
@@ -279,96 +244,24 @@ export function BalanceChart({
       },
     };
   }, [data, timezone, chartTheme, t]);
-  
-  /**
-   * Setup chart export
-   */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'balance-trend',
-  });
-  
-  /**
-   * Handle export based on format
-   */
-  const handleExport = async (format: ExportFormat) => {
-    const chartInstance = chartRef.current?.getEchartsInstance();
-    if (!chartInstance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
-    
-    if (format === 'png') {
-      exportPNG(chartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(chartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData = data.series.map((series, index) => ({
-        id: `series-${index}`,
-        name: series.name,
-        type: 'line' as const,
-        data: series.data.map(point => ({
-          timestamp: point.timestamp,
-          value: point.value,
-        })),
-        visible: true,
-      }));
-      exportCSV(csvData, filters);
-    }
-  };
-  
-  /**
-   * Handle retry on error
-   */
-  const handleRetry = () => {
-    fetchData();
-  };
-  
-  /**
-   * Render chart content
-   */
-  const renderChart = () => {
-    if (!chartOption) return null;
-    
-    return (
-      <ReactECharts
-        ref={chartRef}
-        option={chartOption}
-        style={{ height: `${height}px`, width: '100%' }}
-        notMerge={true}
-        lazyUpdate={true}
-        opts={{ renderer: 'canvas' }}
-      />
-    );
-  };
-  
+
   return (
-    <div className={`${styles.balanceChart} ${className || ''}`}>
-      <ChartWrapper
-        title={chartTitle}
-        loadingState={loadingState}
-        height={height}
-        onRetry={handleRetry}
-        onExport={handleExport}
-        isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
-        emptyState={{
-          title: t('charts.noDataTitle'),
-          message: t('charts.noDataMessage'),
-          action: {
-            label: t('charts.resetFilters'),
-            onClick: () => {
-              setTimePeriod('30D');
-              setTokens([]);
-            },
-          },
-        }}
-      >
-        {renderChart()}
-      </ChartWrapper>
-    </div>
+    <BaseChart
+      title={chartTitle}
+      height={height}
+      loadingState={loadingState}
+      isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
+      onRetry={() => refetch(false)}
+    >
+      {chartOption && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOption}
+          style={{ height, width: '100%' }}
+          notMerge
+          lazyUpdate
+        />
+      )}
+    </BaseChart>
   );
 }
-
-export default BalanceChart;

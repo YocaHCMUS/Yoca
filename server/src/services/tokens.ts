@@ -333,7 +333,9 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     );
 
     console.log(res);
-    const marketDataList = res.map(
+    const marketDataList = res
+      .filter((rawMarketData) => rawMarketData.market_cap_rank != null)
+      .map(
       (rawMarketData): TokenMarketDataInsert => ({
         address: addressLookup[rawMarketData.id],
         priceUsd: rawMarketData.current_price,

@@ -29,8 +29,6 @@ export function useStandardChartController<TData, TQuery>({
         retryCount: 0,
     });
 
-    const isMountedRef = useRef(true);
-
     const fetchData = useCallback(async (isRefreshing = false) => {
         setLoadingState(prev => ({
             status: isRefreshing ? 'refreshing' : 'loading',
@@ -39,14 +37,10 @@ export function useStandardChartController<TData, TQuery>({
 
         try {
             const result = await fetcher(query);
-            if (!isMountedRef.current) return;
-
             setData(result);
             setLoadingState({ status: 'success', retryCount: 0 });
             onDataLoaded?.(result);
         } catch (error) {
-            if (!isMountedRef.current) return;
-
             setLoadingState(prev => ({
                 status: 'error',
                 retryCount: prev.retryCount,
@@ -71,9 +65,6 @@ export function useStandardChartController<TData, TQuery>({
 
     useEffect(() => {
         fetchData();
-        return () => {
-        isMountedRef.current = false;
-        };
     }, [fetchData]);
 
     return { data, loadingState, refetch: fetchData };

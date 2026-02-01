@@ -1,6 +1,6 @@
 import type { ChartLoadingState } from "@/types/chart.types";
-import type { ExportFormat } from "@/components/charts/shared";
 import { ChartWrapper } from "@/components/charts/shared";
+import styles from "@/components/charts/shared/ChartStyle.module.scss"
 
 interface BaseChartProps {
   title: string;
@@ -8,7 +8,6 @@ interface BaseChartProps {
   loadingState: ChartLoadingState;
   isEmpty: boolean;
   onRetry: () => void;
-  onExport: (format: ExportFormat) => void;
   children: React.ReactNode;
 }
 
@@ -19,8 +18,8 @@ export function BaseChart(props: BaseChartProps) {
         height={props.height}
         loadingState={props.loadingState}
         onRetry={props.onRetry}
-        onExport={props.onExport}
         isEmpty={props.isEmpty}
+        className={styles.Chart}
     >
         {props.children}
     </ChartWrapper>

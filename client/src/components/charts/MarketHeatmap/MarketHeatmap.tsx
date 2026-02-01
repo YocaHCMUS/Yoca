@@ -15,24 +15,19 @@
  * @module components/charts/MarketHeatmap
  */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme } from '../../../hooks/useChartTheme';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartTheme } from '@/hooks/useChartTheme';
 import {
   fetchRealHeatmapData,
   getChangeColor,
   formatLargeNumber,
   formatPrice,
   type HeatmapCell,
-} from '../../../services/market/mockMarketData';
-import type { ChartLoadingState } from '../../../types/chart.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import styles from './MarketHeatmap.module.scss';
+} from '@/services/market/mockMarketData';
+import { useStandardChartController } from '@/hooks/useChartController';
 
 /**
  * Props for MarketHeatmap component
@@ -56,6 +51,11 @@ export interface MarketHeatmapProps {
   /** Additional CSS class */
   className?: string;
 }
+
+/**
+ * Query interface for MarketHeatmap API
+ */
+export interface MarketHeatmapQuery {}
 
 /**
  * MarketHeatmap Component
@@ -84,56 +84,31 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   const { t } = useTranslation();
   const chartTitle = title || t('charts.marketHeatmap.title', 'Market Heatmap');
   
-  // State management
-  const [data, setData] = useState<HeatmapCell[]>([]);
-  const [loadingState, setLoadingState] = useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  
   // Chart instance ref for export
   const chartRef = useRef<any>(null);
 
   // Get theme configuration
   const chartTheme = useChartTheme();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoadingState((prev) => ({
-        ...prev,
-        status: prev.status === 'success' ? 'refreshing' : 'loading',
-      }));
-      const heatmapData = await fetchRealHeatmapData();
-      setData(heatmapData);
-      onDataLoaded?.(heatmapData);
-      setLoadingState({
-        status: 'success',
-        retryCount: 0,
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load market data';
-      setLoadingState((prev) => ({
-        status: 'error',
-        error: {
-          code: 'FETCH_ERROR',
-          message: errorMessage,
-          retryable: true,
-        },
-        retryCount: prev.retryCount + 1,
-      }));
-    }
-  }, [onDataLoaded]);
-
-  useEffect(() => {
-    fetchData();
-    if (autoRefresh) {
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchData, autoRefresh, refreshInterval]);
+  // // Export functionality
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone: 'UTC',
+  //   baseFilename: 'market-heatmap',
+  // });
+  const query = useMemo(() => ({}), []);
+    
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController<HeatmapCell[], MarketHeatmapQuery>({
+    fetcher: fetchRealHeatmapData,
+    query: query,
+    autoRefresh,
+    refreshInterval,
+    onDataLoaded,
+  });
 
   const chartOption = useMemo(() => {
-    if (data.length === 0) return {};
+    if (!data || data.length === 0) return {};
 
     const treemapData = data.map((item) => ({
       name: item.symbol,
@@ -232,72 +207,68 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   }, [data]);
 
   // Export handler
-  const handleExport = useCallback(
-    async (format: ExportFormat) => {
-      if (!chartRef.current || data.length === 0) return;
+  // const handleExport = useCallback(
+  //   async (format: ExportFormat) => {
+  //     if (!chartRef.current || !data || data.length === 0) return;
 
-      try {
-        const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
-          type: format === 'png' ? 'png' : 'svg',
-          pixelRatio: 2,
-          backgroundColor: '#fff',
-        });
+  //     try {
+  //       const dataUrl = chartRef.current.getEchartsInstance().getDataURL({
+  //         type: format === 'png' ? 'png' : 'svg',
+  //         pixelRatio: 2,
+  //         backgroundColor: '#fff',
+  //       });
 
-        if (format === 'csv') {
-          // CSV export
-          const csvContent = [
-            ['Symbol', 'Name', 'Price', '24h Change (%)', 'Market Cap', 'Volume'],
-            ...data.map((item) => [
-              item.symbol,
-              item.name,
-              formatPrice(item.price),
-              item.change.toFixed(2),
-              formatLargeNumber(item.value),
-              formatLargeNumber(item.volume),
-            ]),
-          ]
-            .map((row) => row.join(','))
-            .join('\n');
+  //       if (format === 'csv') {
+  //         // CSV export
+  //         const csvContent = [
+  //           ['Symbol', 'Name', 'Price', '24h Change (%)', 'Market Cap', 'Volume'],
+  //           ...data.map((item) => [
+  //             item.symbol,
+  //             item.name,
+  //             formatPrice(item.price),
+  //             item.change.toFixed(2),
+  //             formatLargeNumber(item.value),
+  //             formatLargeNumber(item.volume),
+  //           ]),
+  //         ]
+  //           .map((row) => row.join(','))
+  //           .join('\n');
 
-          const blob = new Blob([csvContent], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `market-heatmap-${Date.now()}.csv`;
-          link.click();
-          URL.revokeObjectURL(url);
-        } else {
-          // PNG/SVG export
-          const link = document.createElement('a');
-          link.href = dataUrl;
-          link.download = `market-heatmap-${Date.now()}.${format === 'png' ? 'png' : 'svg'}`;
-          link.click();
-        }
-      } catch (err) {
-        console.error('Export failed:', err);
-      }
-    },
-    [data]
-  );
+  //         const blob = new Blob([csvContent], { type: 'text/csv' });
+  //         const url = URL.createObjectURL(blob);
+  //         const link = document.createElement('a');
+  //         link.href = url;
+  //         link.download = `market-heatmap-${Date.now()}.csv`;
+  //         link.click();
+  //         URL.revokeObjectURL(url);
+  //       } else {
+  //         // PNG/SVG export
+  //         const link = document.createElement('a');
+  //         link.href = dataUrl;
+  //         link.download = `market-heatmap-${Date.now()}.${format === 'png' ? 'png' : 'svg'}`;
+  //         link.click();
+  //       }
+  //     } catch (err) {
+  //       console.error('Export failed:', err);
+  //     }
+  //   },
+  //   [data]
+  // );
 
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
-      loadingState={loadingState}
       height={height}
-      onRetry={fetchData}
-      isEmpty={data.length === 0}
-      onExport={handleExport}
-      className={className}
+      loadingState={loadingState}
+      isEmpty={!data || data.length === 0}
+      onRetry={refetch}
     >
-      <div className={styles.marketHeatmap}>
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%' }}
-          opts={{ renderer: 'canvas' }}
-        />
-      </div>
-    </ChartWrapper>
+      <ReactECharts
+        ref={chartRef}
+        option={chartOption}
+        style={{ height: '100%', width: '100%' }}
+        opts={{ renderer: 'canvas' }}
+      />
+    </BaseChart>
   );
 };

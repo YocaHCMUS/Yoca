@@ -7,22 +7,19 @@
  * @module TransactionDistribution
  */
 
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
-import { useChartExport } from '../../../hooks/useChartExport';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
-import type { TransactionDistributionResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
+import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import styles from './TransactionDistribution.module.scss';
+import { useStandardChartController } from '../../../hooks/useChartController';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 /**
  * Props for TransactionDistribution component
@@ -47,7 +44,7 @@ export interface TransactionDistributionProps {
   walletIds?: string[];
   
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
   
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -80,7 +77,7 @@ export interface TransactionDistributionProps {
  *   height={300}
  *   initialTimePeriod="30D"
  *   chartMode="stacked"
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -91,7 +88,7 @@ export function TransactionDistribution({
   initialTransactionType = 'all',
   chartMode = 'stacked',
   walletIds = [],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -100,13 +97,8 @@ export function TransactionDistribution({
   const { t } = useTranslation();
   const chartTitle = title || t('charts.transactionDistributionChart.title');
   
-  // State management
-  const [data, setData] = React.useState<TransactionDistributionResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
-  const [selectedChartMode, setSelectedChartMode] = React.useState<'stacked' | 'grouped'>(chartMode);
+  // State for chart mode
+  const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
   
   // Chart instance refs for export
   const transactionChartRef = useRef<ReactECharts>(null);
@@ -132,70 +124,30 @@ export function TransactionDistribution({
     debounceDelay: 300,
   });
   
-  // Reference to track if component is mounted
-  const isMountedRef = useRef(true);
+  /**
+   * Memoize query to prevent unnecessary re-fetches
+   */
+  const query = useMemo<TransactionDistributionRequestParams>(
+    () => ({
+      timePeriod: filters.timePeriod,
+      transactionType: filters.transactionType,
+      walletIds: filters.wallets?.join(','),
+      timezone,
+    }),
+    [filters.timePeriod, filters.transactionType, filters.wallets, timezone]
+  );
   
   /**
-   * Fetch transaction distribution data from API
+   * Centralized lifecycle handling
    */
-  const fetchData = useCallback(async (isRefreshing = false) => {
-    if (!isValid) return;
-    
-    setLoadingState(prev => ({
-      status: isRefreshing ? 'refreshing' : 'loading',
-      retryCount: isRefreshing ? prev.retryCount : prev.retryCount + 1,
-    }));
-    
-    try {
-      const result = await fetchTransactionDistribution({
-        timePeriod: filters.timePeriod,
-        transactionType: filters.transactionType,
-        walletIds: filters.wallets?.join(','), // Changed from filters.wallets
-        timezone,
-      });
-      
-      if (!isMountedRef.current) return;
-      
-      setData(result);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(result);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      
-      setLoadingState(prev => ({
-        status: 'error',
-        retryCount: prev.retryCount,
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load transaction distribution data',
-          retryable: true,
-        },
-      }));
-    }
-  }, [isValid, filters, timezone, onDataLoaded]);
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  // Fetch data on filter changes
-  useEffect(() => {
-    fetchData(false);
-  }, [fetchData]);
-  
-  // Auto-refresh with pause detection
-  useAutoRefresh({
-    onRefresh: () => fetchData(true),
-    config: {
-      enabled: true,
-      interval: refreshInterval,
-      pauseOnInteraction: true,
-    },
-    enabled: enableAutoRefresh && loadingState.status === 'success',
-  });
+  const { data, loadingState, refetch } =
+    useStandardChartController<TransactionDistributionResponse, TransactionDistributionRequestParams>({
+      fetcher: fetchTransactionDistribution,
+      query,
+      autoRefresh,
+      refreshInterval,
+      onDataLoaded,
+    });
   
   /**
    * Generate eCharts options for transaction counts chart
@@ -437,60 +389,60 @@ export function TransactionDistribution({
   }, [data, timezone, chartTheme, t]);
   
   // Export functionality
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'transaction-distribution',
-  });
+  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'transaction-distribution',
+  // });
   
-  /**
-   * Handle export based on format
-   */
-  const handleExport = async (format: ExportFormat) => {
-    const transactionChartInstance = transactionChartRef.current?.getEchartsInstance();
-    if (!transactionChartInstance) {
-      console.error('Transaction chart instance not available for export');
-      return;
-    }
+  // /**
+  //  * Handle export based on format
+  //  */
+  // const handleExport = async (format: ExportFormat) => {
+  //   const transactionChartInstance = transactionChartRef.current?.getEchartsInstance();
+  //   if (!transactionChartInstance) {
+  //     console.error('Transaction chart instance not available for export');
+  //     return;
+  //   }
     
-    if (format === 'png') {
-      exportPNG(transactionChartInstance as any, filters);
-    } else if (format === 'svg') {
-      exportSVG(transactionChartInstance as any, filters);
-    } else if (format === 'csv' && data) {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData: Array<{
-        id: string;
-        name: string;
-        type: 'bar' | 'line';
-        data: Array<{ name: string; value: number }>;
-        visible: boolean;
-      }> = data.transactionCounts.map(wallet => ({
-        id: wallet.walletId,
-        name: wallet.walletName,
-        type: 'bar' as const,
-        data: wallet.data.map(point => ({
-          name: new Date(point.timestamp).toISOString(),
-          value: point.value,
-        })),
-        visible: true,
-      }));
+  //   if (format === 'png') {
+  //     exportPNG(transactionChartInstance as any, filters);
+  //   } else if (format === 'svg') {
+  //     exportSVG(transactionChartInstance as any, filters);
+  //   } else if (format === 'csv' && data) {
+  //     // Convert data to ChartDataSeries format for CSV export
+  //     const csvData: Array<{
+  //       id: string;
+  //       name: string;
+  //       type: 'bar' | 'line';
+  //       data: Array<{ name: string; value: number }>;
+  //       visible: boolean;
+  //     }> = data.transactionCounts.map(wallet => ({
+  //       id: wallet.walletId,
+  //       name: wallet.walletName,
+  //       type: 'bar' as const,
+  //       data: wallet.data.map(point => ({
+  //         name: new Date(point.timestamp).toISOString(),
+  //         value: point.value,
+  //       })),
+  //       visible: true,
+  //     }));
       
-      // Add unique token counts as a separate series
-      csvData.push({
-        id: 'unique-tokens',
-        name: t('charts.transactionDistributionChart.tokens'),
-        type: 'line' as const,
-        data: data.uniqueTokenCounts.map(point => ({
-          name: new Date(point.timestamp).toISOString(),
-          value: point.value,
-        })),
-        visible: true,
-      });
+  //     // Add unique token counts as a separate series
+  //     csvData.push({
+  //       id: 'unique-tokens',
+  //       name: t('charts.transactionDistributionChart.tokens'),
+  //       type: 'line' as const,
+  //       data: data.uniqueTokenCounts.map(point => ({
+  //         name: new Date(point.timestamp).toISOString(),
+  //         value: point.value,
+  //       })),
+  //       visible: true,
+  //     });
       
-      exportCSV(csvData, filters);
-    }
-  };
+  //     exportCSV(csvData, filters);
+  //   }
+  // };
   
   /**
    * Handle chart mode toggle
@@ -503,80 +455,70 @@ export function TransactionDistribution({
    * Handle retry on error
    */
   const handleRetry = () => {
-    fetchData(false);
+    refetch(false);
   };
   
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       height={height * 2 + 40}
-      onExport={handleExport}
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => setTimePeriod('30D'),
-        },
-      }}
-      className={className}
     >
-      <div className={styles.transactionDistribution}>
-        {/* Chart mode selector */}
-        <div className={styles.controls}>
-          <div className={styles.chartModeToggle}>
-            <button
-              className={selectedChartMode === 'stacked' ? styles.active : ''}
-              onClick={() => handleChartModeChange('stacked')}
-              aria-label={t('charts.transactionDistributionChart.stacked')}
-              title={t('charts.transactionDistributionChart.stacked')}
-            >
-              {t('charts.transactionDistributionChart.stacked')}
-            </button>
-            <button
-              className={selectedChartMode === 'grouped' ? styles.active : ''}
-              onClick={() => handleChartModeChange('grouped')}
-              aria-label={t('charts.transactionDistributionChart.grouped')}
-              title={t('charts.transactionDistributionChart.grouped')}
-            >
-              {t('charts.transactionDistributionChart.grouped')}
-            </button>
-          </div>
+      {/* <div className={styles.transactionDistribution}>
+      </div> */}
+      {/* Chart mode selector */}
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--withBorder']} ${sharedStyles['chartControls--end']}`}>
+        <div className={sharedStyles['chartToggle--padded']}>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'stacked' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartModeChange('stacked')}
+            aria-label={t('charts.transactionDistributionChart.stacked')}
+            title={t('charts.transactionDistributionChart.stacked')}
+          >
+            {t('charts.transactionDistributionChart.stacked')}
+          </button>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'grouped' ? sharedStyles.active : ''}`}
+            onClick={() => handleChartModeChange('grouped')}
+            aria-label={t('charts.transactionDistributionChart.grouped')}
+            title={t('charts.transactionDistributionChart.grouped')}
+          >
+            {t('charts.transactionDistributionChart.grouped')}
+          </button>
         </div>
-        
-        {/* Transaction counts chart */}
-        {data && (
-          <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
-            <ReactECharts
-              ref={transactionChartRef}
-              option={transactionCountsOptions}
-              style={{ height: `${height}px`, width: '100%' }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </div>
-        )}
-        
-        {/* Unique token counts chart */}
-        {data && (
-          <div className={styles.chartSection}>
-            <h3 className={styles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
-            <ReactECharts
-              ref={tokenChartRef}
-              option={uniqueTokenCountsOptions}
-              style={{ height: `${height}px`, width: '100%' }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </div>
-        )}
       </div>
-    </ChartWrapper>
+      
+      {/* Transaction counts chart */}
+      {data && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
+          <ReactECharts
+            ref={transactionChartRef}
+            option={transactionCountsOptions}
+            style={{ height: `${height}px`, width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </div>
+      )}
+      
+      {/* Unique token counts chart */}
+      {data && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
+          <ReactECharts
+            ref={tokenChartRef}
+            option={uniqueTokenCountsOptions}
+            style={{ height: `${height}px`, width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </div>
+      )}
+    </BaseChart>
   );
 }

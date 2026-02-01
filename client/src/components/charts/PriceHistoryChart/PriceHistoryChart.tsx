@@ -7,28 +7,24 @@
  * @module PriceHistoryChart
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { ChartWrapper } from '../shared/ChartWrapper';
-import { useChartFilters } from '../../../hooks/useChartFilters';
-import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
-import { useChartExport } from '../../../hooks/useChartExport';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchPriceHistory } from '../../../services/chart/chartApi';
-import { formatCurrency } from '../../../util/chart-helpers';
-import type { PriceHistoryResponse } from '../../../types/chart-api.types';
-import type { ChartLoadingState } from '../../../types/chart.types';
-import type { TimePeriod } from '../../../types/chart-filters.types';
-import type { ExportFormat } from '../shared/ExportMenu';
-import styles from './PriceHistoryChart.module.scss';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchPriceHistory } from '@/services/chart/chartApi';
+import { formatCurrency } from '@/util/chart-helpers';
+import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
+import type { TimePeriod } from '@/types/chart-filters.types';
+import { useStandardChartController } from '@/hooks/useChartController';
 
 /**
  * Props for PriceHistoryChart component
  */
-interface PriceHistoryChartProps {
+export interface PriceHistoryChartProps {
   /** Chart title */
   title?: string;
 
@@ -42,7 +38,7 @@ interface PriceHistoryChartProps {
   initialTokens?: string[];
 
   /** Enable auto-refresh (default: true) */
-  enableAutoRefresh?: boolean;
+  autoRefresh?: boolean;
 
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
@@ -72,7 +68,7 @@ interface PriceHistoryChartProps {
  *   height={400}
  *   initialTimePeriod="30D"
  *   initialTokens={['SOL', 'JTO']}
- *   enableAutoRefresh={true}
+ *   autoRefresh={true}
  * />
  * ```
  */
@@ -81,7 +77,7 @@ export function PriceHistoryChart({
   height = 400,
   initialTimePeriod = '30D',
   initialTokens = ['SOL', 'JTO', 'BONK'],
-  enableAutoRefresh = true,
+  autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
   className,
@@ -91,11 +87,7 @@ export function PriceHistoryChart({
   const chartTitle = title || t('charts.priceHistoryChart.title', 'Price History');
 
   // State management
-  const [data, setData] = React.useState<PriceHistoryResponse | null>(null);
-  const [loadingState, setLoadingState] = React.useState<ChartLoadingState>({
-    status: 'idle',
-    retryCount: 0,
-  });
+  // Removed data and loadingState, using controller
 
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -126,74 +118,48 @@ export function PriceHistoryChart({
     },
   });
 
-  // Fetch data function
-  const fetchData = React.useCallback(async () => {
-    setLoadingState({ status: 'loading', retryCount: loadingState.retryCount });
+  // Query for the controller
+  const query = useMemo<PriceHistoryRequestParams>(() => ({
+    tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
+    period: filters.timePeriod,
+    aggregation: 'daily' as const,
+  }), [filters.tokens, filters.timePeriod]);
 
-    try {
-      const response = await fetchPriceHistory({
-        tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
-        period: filters.timePeriod,
-        aggregation: 'daily',
-      });
-
-      setData(response);
-      setLoadingState({ status: 'success', retryCount: 0 });
-      onDataLoaded?.(response);
-    } catch (error) {
-      console.error('Failed to fetch price history data:', error);
-      setLoadingState({
-        status: 'error',
-        error: {
-          code: 'FETCH_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to load data',
-          retryable: true,
-        },
-        retryCount: loadingState.retryCount + 1,
-      });
-    }
-  }, [filters.tokens, filters.timePeriod, loadingState.retryCount, onDataLoaded]);
-
-  // Initial data load and filter changes
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Auto-refresh setup
-  useAutoRefresh({
-    enabled: enableAutoRefresh,
-    onRefresh: fetchData,
-    config: {
-      interval: refreshInterval,
-    },
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController<PriceHistoryResponse, PriceHistoryRequestParams>({
+    fetcher: fetchPriceHistory,
+    query,
+    autoRefresh,
+    refreshInterval,
+    onDataLoaded,
   });
 
-  // Export functionality
-  const { exportChart } = useChartExport({
-    chartTitle,
-    timezone,
-    baseFilename: 'price-history',
-  });
+  // // Export functionality
+  // const { exportChart } = useChartExport({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'price-history',
+  // });
 
-  // Handle export
-  const handleExport = async (format: ExportFormat) => {
-    const echartsInstance = chartRef.current?.getEchartsInstance();
-    const chartInstance = echartsInstance ? (echartsInstance as any) : null;
+  // // Handle export
+  // const handleExport = async (format: ExportFormat) => {
+  //   const echartsInstance = chartRef.current?.getEchartsInstance();
+  //   const chartInstance = echartsInstance ? (echartsInstance as any) : null;
 
-    // Prepare CSV data
-    const csvData = data ? data.series.map(series => ({
-      id: series.symbol,
-      name: series.name,
-      type: 'line' as const,
-      data: series.data.map(point => ({
-        category: new Date(point.timestamp).toISOString(),
-        value: point.value,
-      })),
-      visible: true,
-    })) : [];
+  //   // Prepare CSV data
+  //   const csvData = data ? data.series.map(series => ({
+  //     id: series.symbol,
+  //     name: series.name,
+  //     type: 'line' as const,
+  //     data: series.data.map(point => ({
+  //       category: new Date(point.timestamp).toISOString(),
+  //       value: point.value,
+  //     })),
+  //     visible: true,
+  //   })) : [];
 
-    exportChart(format, chartInstance, csvData, filters);
-  };
+  //   exportChart(format, chartInstance, csvData, filters);
+  // };
 
   // Generate chart options
   const chartOptions: EChartsOption = useMemo(() => {
@@ -280,40 +246,21 @@ export function PriceHistoryChart({
     };
   }, [data, chartTheme, t]);
 
-  // Handle retry
-  const handleRetry = () => {
-    fetchData();
-  };
-
   // Render chart with wrapper
   return (
-    <ChartWrapper
+    <BaseChart
       title={chartTitle}
-      loadingState={loadingState}
       height={height}
-      onRetry={handleRetry}
-      onExport={handleExport}
+      loadingState={loadingState}
       isEmpty={!data || data.series.length === 0}
-      emptyState={{
-        title: t('charts.noDataTitle'),
-        message: t('charts.noDataMessage'),
-        action: {
-          label: t('charts.resetFilters'),
-          onClick: () => {
-            setTimePeriod('30D');
-            setTokens(['SOL', 'JTO', 'BONK']);
-          },
-        },
-      }}
-      className={className}
+      onRetry={refetch}
     >
       <ReactECharts
         ref={chartRef}
         option={chartOptions}
-        style={{ height: `${height}px`, width: '100%' }}
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />
-    </ChartWrapper>
+    </BaseChart>
   );
 }
