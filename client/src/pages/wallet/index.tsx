@@ -8,6 +8,7 @@ import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
 import { OverviewTab } from "@/components/market/OverviewTab.tsx";
 import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
+import styles from "./index.module.scss";
 
 export default function WalletPage() {
   const { t } = useTranslation();
@@ -74,8 +75,8 @@ export default function WalletPage() {
         <Tble loading={loading} rows={transfers} headers={headers} />
       </main> */}
 
-      <h1>Activity</h1>
-      <div style={{display: 'flex', flexDirection: 'row'}}>
+      <h1 className={styles.sectionTitle}>Activity</h1>
+      <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
           names={["Overview", "Transactions", "Holdings"]}
@@ -90,9 +91,9 @@ export default function WalletPage() {
         />
       </div>
 
-      <h1>Asset</h1>
+      <h1 className={styles.sectionTitle}>Asset</h1>
       {/* mock component for space, replace with implemented components */}
-      <div style={{display: 'flex', flexDirection: 'row'}}>
+      <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
           names={["Overview", "Transactions", "Holdings"]}
@@ -107,9 +108,9 @@ export default function WalletPage() {
         />
       </div>
 
-      <h1>Top exchange</h1>
+      <h1 className={styles.sectionTitle}>Top exchange</h1>
       {/* mock component for space, replace with implemented components */}
-      <div style={{display: 'flex', flexDirection: 'row'}}>
+      <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
           names={["Overview", "Transactions", "Holdings"]}
@@ -118,9 +119,9 @@ export default function WalletPage() {
         />
       </div>
 
-      <h1>Top counterparties</h1>
+      <h1 className={styles.sectionTitle}>Top counterparties</h1>
       {/* mock component for space, replace with implemented components */}
-      <div style={{display: 'flex', flexDirection: 'row'}}>
+      <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
           names={["Overview", "Transactions", "Holdings"]}

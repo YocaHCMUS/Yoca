@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from './tabContainer.module.scss';
 
 export type tabIndex = number;
 
@@ -16,48 +17,14 @@ export const TabContainer: React.FC<TabContainerProps> = ({
     onTabChange
 }) => {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
+        <div className={styles.tabContainer}>
             {/* Tab Headers */}
-            <div style={{ 
-                display: 'flex', 
-                borderBottom: '1px solid #e0e0e0',
-                gap: '0',
-                background: '#f4f4f4'
-            }}>
+            <div className={styles.tabHeaders}>
                 {names.map((name, index) => (
                     <button
                         key={index}
                         onClick={() => onTabChange?.(index)}
-                        style={{
-                            flex: '1',
-                            alignContent: 'center',
-                            justifyContent: 'center',
-                            padding: '14px 16px',
-                            border: 'none',
-                            background: activeTab === index ? '#ffffff' : 'transparent',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: activeTab === index ? '600' : 'normal',
-                            color: activeTab === index ? '#161616' : '#525252',
-                            borderBottom: activeTab === index ? '3px solid #0f62fe' : '3px solid transparent',
-                            transition: 'all 0.11s',
-                            letterSpacing: '0.16px',
-                            textTransform: 'none',
-                            position: 'relative',
-                            minHeight: '48px',
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}
-                        onMouseEnter={(e) => {
-                            if (activeTab !== index) {
-                                e.currentTarget.style.background = '#e8e8e8';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (activeTab !== index) {
-                                e.currentTarget.style.background = 'transparent';
-                            }
-                        }}
+                        className={activeTab === index ? styles.tabButtonActive : styles.tabButton}
                     >
                         {name}
                     </button>
@@ -65,7 +32,7 @@ export const TabContainer: React.FC<TabContainerProps> = ({
             </div>
             
             {/* Tab Content */}
-            <div style={{ padding: '0' }}>
+            <div className={styles.tabContent}>
                 {tabs[activeTab]}
             </div>
         </div>

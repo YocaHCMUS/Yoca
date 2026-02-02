@@ -1,0 +1,43 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '../../styles/variables' as *;
+
+.walletsComparisonPage {
+  padding: $spacing-xl;
+  margin: 0 auto;
+}
+
+.sidebarContainer {
+  position: sticky;
+  top: $spacing-xl;
+}
+
+.sidebarTitle {
+  margin-bottom: $spacing-md;
+  color: $text-primary;
+}
+
+.walletInput {
+  margin-bottom: $spacing-md;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.emptyState {
+  font-size: 0.875rem;
+  color: $text-secondary;
+}
+
+.walletTag {
+  max-width: 100%;
+  
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+}

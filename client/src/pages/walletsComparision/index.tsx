@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Grid, Column, TextInput, Tag, Stack } from "@carbon/react";
 import { Search, Close } from "@carbon/icons-react";
 import { PageWrapper } from "@/components/wrapper";
+import styles from "./index.module.scss";
 
 export default function WalletsComparisionPage() {
     const [activeTab, setActiveTab] = useState(0);
@@ -29,12 +30,12 @@ export default function WalletsComparisionPage() {
 
     return (
         <PageWrapper>
-            <div style={{ padding: "2rem", margin: "0 auto" }}>
+            <div className={styles.walletsComparisonPage}>
                 <Grid>
                     {/* 3 columns - Wallet Selection Sidebar */}
                     <Column lg={4} md={3} sm={4}>
-                        <div style={{ position: "sticky", top: "2rem" }}>
-                            <h3 style={{ marginBottom: "1rem" }}>Selected Wallets</h3>
+                        <div className={styles.sidebarContainer}>
+                            <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
                             
                             {/* Wallet Address Search */}
                             <TextInput
@@ -44,13 +45,13 @@ export default function WalletsComparisionPage() {
                                 value={walletAddress}
                                 onChange={(e) => setWalletAddress(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                style={{ marginBottom: "1rem" }}
+                                className={styles.walletInput}
                             />
 
                             {/* List of Selected Wallets */}
-                            <Stack gap={4}>
+                            <Stack gap={4} className={styles.walletList}>
                                 {selectedWallets.length === 0 ? (
-                                    <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                                    <p className={styles.emptyState}>
                                         No wallets selected. Add wallet addresses to compare.
                                     </p>
                                 ) : (
@@ -59,13 +60,9 @@ export default function WalletsComparisionPage() {
                                             key={wallet}
                                             filter
                                             onClose={() => handleRemoveWallet(wallet)}
-                                            style={{ maxWidth: "100%" }}
+                                            className={styles.walletTag}
                                         >
-                                            <span style={{ 
-                                                overflow: "hidden", 
-                                                textOverflow: "ellipsis",
-                                                display: "block"
-                                            }}>
+                                            <span>
                                                 {wallet.slice(0, 6)}...{wallet.slice(-4)}
                                             </span>
                                         </Tag>
