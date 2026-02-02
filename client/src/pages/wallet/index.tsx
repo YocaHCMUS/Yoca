@@ -75,12 +75,61 @@ export default function WalletPage() {
         <h1 style={{ marginBottom: "1.5rem" }}>{t("nav.wallet", "Wallet")}</h1>
         <Tble loading={loading} rows={transfers} headers={headers} />
       </main> */}
-      <TabContainer
-        activeTab={activeTab}
-        names={["Overview", "Transactions", "Holdings"]}
-        tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-        onTabChange={(index) => setActiveTab(index)}
-      />
+
+      <h1>Activity</h1>
+      <div style={{display: 'flex', flexDirection: 'row'}}>
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+      </div>
+
+      <h1>Asset</h1>
+      {/* mock component for space, replace with implemented components */}
+      <div style={{display: 'flex', flexDirection: 'row'}}>
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+      </div>
+
+      <h1>Top exchange</h1>
+      {/* mock component for space, replace with implemented components */}
+      <div style={{display: 'flex', flexDirection: 'row'}}>
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+      </div>
+
+      <h1>Top counterparties</h1>
+      {/* mock component for space, replace with implemented components */}
+      <div style={{display: 'flex', flexDirection: 'row'}}>
+        <TabContainer
+          activeTab={activeTab}
+          names={["Overview", "Transactions", "Holdings"]}
+          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          onTabChange={(index) => setActiveTab(index)}
+        />
+      </div>
     </PageWrapper>
   );
 }
