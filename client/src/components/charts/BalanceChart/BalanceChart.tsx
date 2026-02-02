@@ -9,7 +9,6 @@ import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
-import styles from '@/components/charts/shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 
