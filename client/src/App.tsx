@@ -7,6 +7,7 @@ import DashboardPage from "./pages/dashboard";
 import MarketPage from "./pages/market";
 import TokenPage from "./pages/token";
 import WalletPage from "./pages/wallet";
+import WalletsComparisionPage from "./pages/walletsComparision";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenPage />} />
         <Route path="/wallets/:address" element={<WalletPage />} />
+        <Route path="/comparision/wallets" element={<WalletsComparisionPage/>} />
       </Routes>
     </BrowserRouter>
   );

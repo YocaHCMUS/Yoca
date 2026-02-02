@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { Header } from "../../components/navigation";
-import Tble from "../../components/Tble.tsx";
 import { formatNumber } from "../../util/format.ts";
 import { useTranslation } from "react-i18next";
 import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
