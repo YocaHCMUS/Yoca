@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
+import { Link, Slider } from '@carbon/react';
 import styles from './WalletOverview.module.scss';
+
+export enum OverviewFilterSelection {
+    month,
+    week,
+    day,
+    custom
+}
 
 export interface WalletOverviewProps {
     walletAddress: string,
@@ -26,7 +35,56 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const tokenTraded = 54;
     const numberOfTokenHolding = 32;
 
+    const [bookmark, setBookmark] = useState(false);
+    const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
+    const [filterValue, setFilterValue] = useState(1); // 24h
+    const [showCustomControl, setShowCustomControl] = useState(false);
+    const [customDays, setCustomDays] = useState(30);
+
+    const handleBookmark = () => {
+        setBookmark(!bookmark);
+        // Add your bookmark logic here
+        console.log('Bookmark toggled:', !bookmark);
+    };
+
+    const handleCreateAlert = () => {
+        // Add your alert creation logic here
+        console.log('Create alert clicked');
+    };
+
+    const handleShare = () => {
+        // Add your share logic here
+        console.log('Share clicked');
+    };
+
+    const handleCompare = () => {
+        // Add your compare logic here
+        console.log('Compare clicked');
+    };
+
+    const handleFilterClick = (option: OverviewFilterSelection, value: number) => {
+        setFilterOptions(option);
+        setFilterValue(value);
+        setShowCustomControl(false);
+        console.log(`Filter changed to: ${OverviewFilterSelection[option]} (${value} days)`);
+    };
+
+    const handleCustomFilter = () => {
+        setShowCustomControl(!showCustomControl);
+        if (!showCustomControl) {
+            setFilterOptions(OverviewFilterSelection.custom);
+        }
+    };
+
+    const handleCustomDaysChange = ({ value }: { value: number }) => {
+        setCustomDays(value);
+        setFilterValue(value);
+        console.log(`Custom filter: ${value} days`);
+    };
+
     return (
+
+
         // main container: column
         <div className={styles.walletOverview}>
             {/* 1st row: row containing 3 columns */}
@@ -57,29 +115,57 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* 3rd column: 1st line: filter buttons ; 2nd line: utilities links (bookmark, create alert, share, compare) */}
                 <div className={styles.actions}>
                     <div className={styles.filterButtons}>
-                        <button className={styles.filterButton}>
+                        <button 
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
+                            onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
+                        >
                             24H
                         </button>
-                        <button className={styles.filterButton}>
+                        <button 
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
+                            onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
+                        >
                             7D
                         </button>
-                        <button className={styles.filterButton}>
+                        <button 
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.month ? styles.active : ''}`}
+                            onClick={() => handleFilterClick(OverviewFilterSelection.month, 30)}
+                        >
                             30D
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
+                            onClick={handleCustomFilter}
+                        >
+                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}D` : "Custom"}
+                            {showCustomControl && (
+                                <div className={styles.customControl}>
+                                    <Slider
+                                        min={1}
+                                        max={365}
+                                        value={customDays}
+                                        onChange={handleCustomDaysChange}
+                                        step={1}
+                                        hideTextInput
+                                    />
+                                </div>
+                            )}
                         </button>
                     </div>
                     <div className={styles.utilityButtons}>
-                        <button className={styles.utilityButton}>
-                            📌 Bookmark
-                        </button>
-                        <button className={styles.utilityButton}>
-                            🔔 Alert
-                        </button>
-                        <button className={styles.utilityButton}>
-                            📤 Share
-                        </button>
-                        <button className={styles.utilityButton}>
-                            ⚖️ Compare
-                        </button>
+                        <Link onClick={handleShare} renderIcon={Share}>
+                            Share this wallet
+                        </Link>
+                        <Link onClick={handleCompare} renderIcon={Repeat}>
+                            Compare this wallet
+                        </Link>
+                        <Link onClick={handleCreateAlert} renderIcon={Notification}>
+                            Create alert for this wallet
+                        </Link>
+                        <Link onClick={handleBookmark} 
+                            renderIcon={bookmark ? BookmarkFilled : Bookmark}>
+                            {bookmark ? 'Bookmarked' : 'Bookmark this wallet'}
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -120,19 +206,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Transaction Count */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Transactions
-                        </div>
-                        <div className={styles.statValue}>
-                            {transactionCount.toLocaleString()}
-                        </div>
-                    </div>
-                    
-                    {/* Token Traded */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            Tokens Traded
-                        </div>
-                        <div className={styles.statValue}>
                             {tokenTraded}
                         </div>
                     </div>

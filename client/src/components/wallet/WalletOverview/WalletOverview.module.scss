@@ -78,6 +78,7 @@
 }
 
 .filterButton {
+  position: relative;
   padding: $spacing-02 $spacing-05;
   border: 1px solid $border-subtle-01;
   border-radius: $border-radius-sm;
@@ -91,6 +92,23 @@
     background: $layer-hover-01;
     border-color: $border-subtle-02;
   }
+
+  .customControl {
+    position: absolute;
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid $border-subtle-01;
+    border-radius: $border-radius-sm;
+    background: $layer-01;
+    padding: $spacing-01 $spacing-04;
+  }
+}
+
+
+
+.active {
+  background: $layer-02
 }
 
 .utilityButtons {
@@ -98,6 +116,11 @@
   gap: $spacing-04;
   font-size: 14px;
   flex-direction: row-reverse;
+
+  * {
+    cursor: pointer;
+  }
+  
 }
 
 .utilityButton {
@@ -151,11 +174,11 @@
 }
 
 .statValuePositive {
-  composes: statValue;
+  color-scheme: statValue;
   color: $support-success;
 }
 
 .statValueNegative {
-  composes: statValue;
+  color-scheme: statValue;
   color: $support-error;
 }
