@@ -6,12 +6,18 @@ import { formatNumber } from "../../util/format.ts";
 import { useTranslation } from "react-i18next";
 import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
+import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
+import { OverviewTab } from "@/components/market/OverviewTab.tsx";
+import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
 
 export default function WalletPage() {
   const { t } = useTranslation();
   const { address } = useParams<{ address: string }>();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [activeTab, setActiveTab] = useState(0);
 
   const headers = [
     {
@@ -69,6 +75,12 @@ export default function WalletPage() {
         <h1 style={{ marginBottom: "1.5rem" }}>{t("nav.wallet", "Wallet")}</h1>
         <Tble loading={loading} rows={transfers} headers={headers} />
       </main> */}
+      <TabContainer
+        activeTab={activeTab}
+        names={["Overview", "Transactions", "Holdings"]}
+        tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+        onTabChange={(index) => setActiveTab(index)}
+      />
     </PageWrapper>
   );
 }
