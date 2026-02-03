@@ -1,8 +1,8 @@
 import { OverviewTab, FundamentalTab, ProfitLossTab } from "@/components/market";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { useState } from "react";
-import { Grid, Column, TextInput, Tag, Stack } from "@carbon/react";
-import { Search, Close } from "@carbon/icons-react";
+import { Grid, Column, TextInput, Tag, Stack, DismissibleTag, Button, Search } from "@carbon/react";
+import { Add, Close, SearchAdvanced } from '@carbon/react/icons';
 import { PageWrapper } from "@/components/wrapper";
 import styles from "./index.module.scss";
 
@@ -31,14 +31,14 @@ export default function WalletsComparisionPage() {
     return (
         <PageWrapper>
             <div className={styles.walletsComparisonPage}>
-                <Grid>
+                <Grid className={styles.grid} fullWidth>
                     {/* 3 columns - Wallet Selection Sidebar */}
-                    <Column lg={4} md={3} sm={4}>
+                    <Column lg={4} md={4} sm={4}>
                         <div className={styles.sidebarContainer}>
                             <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
                             
                             {/* Wallet Address Search */}
-                            <TextInput
+                            {/* <TextInput
                                 id="wallet-search"
                                 labelText="Add Wallet Address"
                                 placeholder="Enter wallet address..."
@@ -46,7 +46,16 @@ export default function WalletsComparisionPage() {
                                 onChange={(e) => setWalletAddress(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 className={styles.walletInput}
-                            />
+                            /> */}
+                            <Search
+                                id="wallet-search"
+                                labelText="Add Wallet Address"
+                                placeholder="Enter wallet address..."
+                                value={walletAddress}
+                                onChange={(e) => setWalletAddress(e.target.value)}
+                                onKeyDown={handleKeyPress}
+                                renderIcon={SearchAdvanced}
+                                />
 
                             {/* List of Selected Wallets */}
                             <Stack gap={4} className={styles.walletList}>
@@ -56,16 +65,14 @@ export default function WalletsComparisionPage() {
                                     </p>
                                 ) : (
                                     selectedWallets.map((wallet) => (
-                                        <Tag
-                                            key={wallet}
-                                            filter
-                                            onClose={() => handleRemoveWallet(wallet)}
+                                        <Button
                                             className={styles.walletTag}
+                                            renderIcon={Close}
+                                            onClick={() => handleRemoveWallet(wallet)}
+                                            kind="tertiary"
                                         >
-                                            <span>
-                                                {wallet.slice(0, 6)}...{wallet.slice(-4)}
-                                            </span>
-                                        </Tag>
+                                            {wallet}
+                                        </Button>
                                     ))
                                 )}
                             </Stack>
@@ -73,7 +80,7 @@ export default function WalletsComparisionPage() {
                     </Column>
 
                     {/* 9 columns - Main Content Area */}
-                    <Column lg={12} md={5} sm={4}>
+                    <Column lg={12} md={12} sm={4}>
                         <TabContainer
                             activeTab={activeTab}
                             names={["General", "Holdings", "Profit & Risk Management"]} // remember to refactor this to support localization (not now since we have to refactor localization hooks first)

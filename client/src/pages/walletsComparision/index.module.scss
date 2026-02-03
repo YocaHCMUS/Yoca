@@ -3,13 +3,22 @@
 @use '../../styles/variables' as *;
 
 .walletsComparisonPage {
-  padding: $spacing-xl;
-  margin: 0 auto;
+  min-height: 100vh;
+  background: $background;
+  margin: 0;
 }
 
 .sidebarContainer {
   position: sticky;
   top: $spacing-xl;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+  padding-top: $spacing-02;
+}
+
+.grid {
+  width: 100%;
 }
 
 .sidebarTitle {
@@ -33,11 +42,34 @@
 }
 
 .walletTag {
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
+  
+  // span {
+  //   width: 100%;
+  //   display: flex;
+  //   justify-content: space-between;
+
+  //   // :global(.cds--interactive--tag-children) {
+  //   //   display: flex;
+  //   //   width: 100%;
+  //   //   max-width: 100% !important;
+  //   //   display: flex;
+  //   //   justify-content: space-between;
+
+  //   //   :global(.cds--tag__label) {
+  //   //     flex: 1;
+  //   //     // overflow: hidden;
+  //   //     // text-overflow: ellipsis;
+  //   //   }
+      
+  //   //   :global(.cds--tag__close-icon) {
+  //   //     margin-left: auto;
+  //   //   }
+  //   // }
+
+   
+  // }
+  
 }

@@ -27,7 +27,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 }) => {
     // mock data, need to create a hook to fetch these information
     const name = "Wallet A"; 
-    const tags = ["whale", "early x holder", "early y holder", "metamask user"];
+    const tags = ["whale", "early x holder", "early y holder", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user"];
     const totalAssetValue = 14199;
     const tradingVolumn = 1822333;
     const totalPnL = 140000;
@@ -93,8 +93,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     return (
-
-
         // main container: column
         <div className={styles.walletOverview}>
             {/* 1st row: row containing 3 columns */}
@@ -222,6 +220,9 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     
                     {/* Transaction Count */}
                     <div className={styles.statItem}>
+                        <div className={styles.statLabel}>
+                            Tokens traded
+                        </div>
                         <div className={styles.statLabel}>
                             {tokenTraded}
                         </div>
