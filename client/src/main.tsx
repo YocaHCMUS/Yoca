@@ -8,6 +8,7 @@ import { clusterApiUrl } from "@solana/web3.js";
 import { useMemo } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ChartProvider } from "./contexts/ChartContext";
 import App from "./App.tsx";
 import "./App.css";
 import "./index.scss";
@@ -49,7 +50,9 @@ function Root() {
             <WalletModalProvider>
               <ThemeProvider>
                 <AuthProvider>
-                  <App />
+                  <ChartProvider>
+                    <App />
+                  </ChartProvider>
                 </AuthProvider>
               </ThemeProvider>
             </WalletModalProvider>

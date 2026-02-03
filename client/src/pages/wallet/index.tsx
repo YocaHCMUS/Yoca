@@ -9,6 +9,8 @@ import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
 import { OverviewTab } from "@/components/market/OverviewTab.tsx";
 import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
 import styles from "./index.module.scss";
+import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 
 export default function WalletPage() {
   const { t } = useTranslation();
@@ -17,6 +19,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState(0);
+  const [secondaryActiveTab, setSecondaryActiveTab] = useState(0); // TODO: implement a hook to scale these state
 
   const headers = [
     {
@@ -79,15 +82,30 @@ export default function WalletPage() {
       <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          names={["Balance History", "Token Balance History", "Profit & Lost"]}
+          tabs={
+            [<BalanceChart
+                height={400}
+                initialTimePeriod="30D"
+                autoRefresh={true}
+                />,
+              <BalanceChart
+                height={400}
+                initialTimePeriod="30D"
+                autoRefresh={true} 
+                />,
+              <PnLChart 
+                height={400}
+                aggregation="daily"
+                autoRefresh={true}              
+                />]} //for testing purpose
           onTabChange={(index) => setActiveTab(index)}
         />
         <TabContainer
-          activeTab={activeTab}
+          activeTab={secondaryActiveTab}
           names={["Overview", "Transactions", "Holdings"]}
           tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
+          onTabChange={(index) => setSecondaryActiveTab(index)}
         />
       </div>
 
