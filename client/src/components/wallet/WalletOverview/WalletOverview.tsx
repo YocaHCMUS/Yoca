@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
-import { CopyButton, Link, Slider, Tooltip } from '@carbon/react';
+import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -117,12 +117,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     </div>
                     <div className={styles.tags}>
                         {tags.map((tag, index) => (
-                            <span 
+                            <Tag
                                 key={index}
-                                className={styles.tag}
+                                size="md"
+                                title="Clear filter"
+                                type="cyan" // probably change color based on tag type
                             >
                                 {tag}
-                            </span>
+                            </Tag>
                         ))}
                     </div>
                 </div>
