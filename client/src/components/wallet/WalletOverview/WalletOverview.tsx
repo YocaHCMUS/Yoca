@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
-import { Link, Slider } from '@carbon/react';
+import { CopyButton, Link, Slider, Tooltip } from '@carbon/react';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -82,6 +82,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         console.log(`Custom filter: ${value} days`);
     };
 
+    const handleCopyAddress = async () => {
+        try {
+            await navigator.clipboard.writeText(walletAddress);
+            console.log('Wallet address copied to clipboard');
+            // Optionally add a toast notification here
+        } catch (err) {
+            console.error('Failed to copy wallet address:', err);
+        }
+    };
+
     return (
 
 
@@ -97,9 +107,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* 2nd column: basic profile information (name, wallet address, tags) */}
                 <div className={styles.profileInfo}>
                     <h2 className={styles.walletName}>{name}</h2>
-                    <h3 className={styles.walletAddress}>
-                        {walletAddress}
-                    </h3>
+                    <div className={styles.walletAddressContainer}>
+                        {/* <Tooltip align="bottom" label={walletAddress}>
+                        </Tooltip> */}
+                        <h4
+                            className={styles.walletAddress}
+                        >
+                            {walletAddress}
+                        </h4>
+                        <CopyButton onClick={handleCopyAddress}/>
+                    </div>
                     <div className={styles.tags}>
                         {tags.map((tag, index) => (
                             <span 

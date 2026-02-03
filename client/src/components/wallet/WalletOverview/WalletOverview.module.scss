@@ -33,7 +33,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: $spacing-02;
 }
 
 .walletName {
@@ -48,6 +48,17 @@
   color: $text-secondary;
   font-family: 'IBM Plex Mono', monospace;
   margin: 0;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.walletAddressContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-01;
 }
 
 .tags {
