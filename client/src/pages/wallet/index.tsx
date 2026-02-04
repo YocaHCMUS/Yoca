@@ -11,6 +11,22 @@ import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
+import { Table } from "@/components/tables/Table.tsx";
+import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
+
+// temporary interface
+interface Transaction {
+  id: string;
+  signature: string;
+  type: 'Buy' | 'Sell';
+  token: string;
+  amount: number;
+  price: number;
+  total: number;
+  timestamp: string;
+  status: 'Success' | 'Failed';
+}
+
 
 export default function WalletPage() {
   const { t } = useTranslation();
@@ -20,6 +36,77 @@ export default function WalletPage() {
 
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0); // TODO: implement a hook to scale these state
+
+  // Mock data - replace with actual API call
+  const transactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
+    id: `tx-${i}`,
+    signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
+    type: i % 2 === 0 ? 'Buy' : 'Sell',
+    token: ['SOL', 'USDC', 'JTO', 'BONK'][i % 4],
+    amount: Math.random() * 1000,
+    price: Math.random() * 200,
+    total: Math.random() * 10000,
+    timestamp: new Date(Date.now() - Math.random() * 86400000).toLocaleTimeString(),
+    status: i % 10 === 0 ? 'Failed' : 'Success',
+  }));
+
+  // Transform transactions to array format for Table component
+  const transactionData = transactions.map(tx => [
+    tx.signature,
+    tx.type,
+    tx.token,
+    tx.amount.toFixed(4),
+    `$${tx.price.toFixed(2)}`,
+    `$${tx.total.toFixed(2)}`,
+    tx.timestamp,
+    tx.status
+  ]);
+
+  const transactionHeaders = [
+    'Signature',
+    'Type',
+    'Token',
+    'Amount',
+    'Price',
+    'Total',
+    'Time',
+    'Status'
+  ];
+
+  // Cell renderers for conditional styling (temporary, move to util service)
+  const cellRenderers = [
+    (value: string) => (
+      <code style={{ color: 'var(--cds-text-secondary)', fontSize: '0.75rem' }} title={value}>
+        {value}
+      </code>
+    ),
+    (value: string) => (
+      <span style={{ 
+        color: value === 'Buy' ? 'var(--cds-support-success)' : 'var(--cds-support-error)',
+        fontWeight: 600 
+      }}>
+        {value}
+      </span>
+    ),
+    (value: string) => <span style={{ fontWeight: 600 }}>{value}</span>,
+    null,
+    null,
+    null,
+    null,
+    (value: string) => (
+      <span style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        color: value === 'Success' ? 'var(--cds-support-success)' : 'var(--cds-support-error)',
+        fontWeight: 600
+      }}>
+        {value === 'Success' ? <CheckmarkFilled size={16} /> : <CloseFilled size={16} />}
+        {value}
+      </span>
+    )
+  ];
+
 
   const headers = [
     {
@@ -73,11 +160,6 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <WalletOverview walletAddress={address}/>
-      {/* <main style={{ padding: "2rem", maxWidth: "1584px", margin: "0 auto" }}>
-        <h1 style={{ marginBottom: "1.5rem" }}>{t("nav.wallet", "Wallet")}</h1>
-        <Tble loading={loading} rows={transfers} headers={headers} />
-      </main> */}
-
       <h1 className={styles.sectionTitle}>Activity</h1>
       <div className={styles.chartContainer}>
         <TabContainer
@@ -103,8 +185,54 @@ export default function WalletPage() {
         />
         <TabContainer
           activeTab={secondaryActiveTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+          names={["Transfer", "Swap", "Inflow", "Outflow", "Conterparties"]}
+          tabs={[
+            <Table
+              title="Transfer"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={{}}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+            />,
+            <Table
+              title="Swap"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={{}}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+            />,
+            <Table
+              title="Inflow"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={{}}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+            />,
+            <Table
+              title="Outflow"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={{}}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+            />,
+            <Table
+              title="Conterparties"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={{}}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+            />
+          ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}
         />
       </div>

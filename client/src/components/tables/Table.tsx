@@ -14,6 +14,7 @@ export interface TableProps {
     filterSchema: any;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
+    dataEntries?: any[][];
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -23,10 +24,9 @@ export const Table: React.FC<TableProps> = ({
     fetcher,
     filterSchema,
     classnames = [],
-    cellRenderers = []
+    cellRenderers = [],
+    dataEntries = []
 }) => {
-    const dataEntries: string | any[][] = []
-
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const start = (page - 1) * pageSize;
