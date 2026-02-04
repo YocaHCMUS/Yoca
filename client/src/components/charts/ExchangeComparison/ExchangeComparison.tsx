@@ -28,8 +28,8 @@ export interface ExchangeComparisonProps {
   /** Chart title */
   title?: string;
   
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
   
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
@@ -67,7 +67,7 @@ export interface ExchangeComparisonProps {
  * ```tsx
  * <ExchangeComparison
  *   title="Exchange Activity Comparison"
- *   height={400}
+ *   minHeight={400}
  *   initialTimePeriod="30D"
  *   metric="count"
  *   autoRefresh={true}
@@ -76,7 +76,7 @@ export interface ExchangeComparisonProps {
  */
 export function ExchangeComparison({
   title,
-  height = 400,
+  minHeight = 400,
   initialTimePeriod = '30D',
   metric = 'count',
   autoRefresh = true,
@@ -311,7 +311,7 @@ export function ExchangeComparison({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      height={height}
+      // height={height}
       onRetry={refetch}
       isEmpty={!data || data.exchanges.length === 0}
     >
@@ -319,7 +319,7 @@ export function ExchangeComparison({
         <ReactECharts
           ref={chartRef}
           option={chartOptions}
-          style={{ height: `${height}px`, width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
           opts={{ renderer: 'canvas' }}
           notMerge={true}
           lazyUpdate={true}

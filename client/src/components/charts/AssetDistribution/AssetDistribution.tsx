@@ -32,7 +32,7 @@ import { BaseChart } from '@/components/charts/Base/BaseChart';
 
 
 export interface AssetDistributionProps {
-  height?: number;
+  minHeight?: number;
   initialFilters?: Partial<any>;
   autoRefresh?: boolean;
   refreshInterval?: number;
@@ -40,7 +40,7 @@ export interface AssetDistributionProps {
 }
 
 export const AssetDistribution: React.FC<AssetDistributionProps> = ({
-  height = 400,
+  minHeight = 400,
   initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
@@ -194,7 +194,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height={height}
       loadingState={loadingState}
       isEmpty={!data || data.data.length === 0}
       onRetry={() => refetch(false)}
@@ -203,7 +203,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         <ReactECharts
           ref={chartRef}
           option={option}
-          style={{ height, width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
           notMerge
           lazyUpdate
         />

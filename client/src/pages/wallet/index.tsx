@@ -167,17 +167,17 @@ export default function WalletPage() {
           names={["Balance History", "Token Balance History", "Profit & Lost"]}
           tabs={
             [<BalanceChart
-                height={400}
+                // height={400}
                 initialTimePeriod="30D"
                 autoRefresh={true}
                 />,
               <BalanceChart
-                height={400}
+                // height={400}
                 initialTimePeriod="30D"
                 autoRefresh={true} 
                 />,
               <PnLChart 
-                height={400}
+                // height={400}
                 aggregation="daily"
                 autoRefresh={true}              
                 />]} //for testing purpose

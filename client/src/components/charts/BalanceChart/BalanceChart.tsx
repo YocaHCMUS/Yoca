@@ -20,7 +20,7 @@ export interface BalanceChartProps {
   title?: string;
   
   /** Chart height in pixels */
-  height?: number;
+  minHeight?: number;
   
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
@@ -57,7 +57,7 @@ export interface BalanceChartProps {
  * ```tsx
  * <BalanceChart
  *   title="Portfolio Balance Trend"
- *   height={400}
+ *   minHeight={400}
  *   initialTimePeriod="30D"
  *   enableAutoRefresh={true}
  * />
@@ -66,7 +66,7 @@ export interface BalanceChartProps {
 
 export function BalanceChart({
   title,
-  height = 400,
+  minHeight = 400,
   initialTimePeriod = '30D',
   initialTokens = [],
   autoRefresh = true,
@@ -247,7 +247,7 @@ export function BalanceChart({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height="100%"
       loadingState={loadingState}
       isEmpty={!data || data.series.length === 0 || data.series[0].data.length === 0}
       onRetry={() => refetch(false)}
@@ -256,7 +256,7 @@ export function BalanceChart({
         <ReactECharts
           ref={chartRef}
           option={chartOption}
-          style={{ height, width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
           notMerge
           lazyUpdate
         />

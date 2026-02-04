@@ -98,47 +98,51 @@ export const Table: React.FC<TableProps> = ({
             onExport={handleExport}
             isEmpty={dataEntries.length === 0}
         >
-            <div>
-                <DataTable rows={rows} headers={carbonHeaders}>
-                    {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-                        <CarbonTable {...getTableProps()}>
-                            <TableHead>
-                                <TableRow>
-                                    {headers.map(header => {
-                                        const { key, ...headerProps } = getHeaderProps({ header });
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
+                    <DataTable rows={rows} headers={carbonHeaders}>
+                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+                            <CarbonTable {...getTableProps()}>
+                                <TableHead>
+                                    <TableRow>
+                                        {headers.map(header => {
+                                            const { key, ...headerProps } = getHeaderProps({ header });
+                                            return (
+                                                <TableHeader key={key} {...headerProps}>
+                                                    {header.header}
+                                                </TableHeader>
+                                            );
+                                        })}
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {rows.map(row => {
+                                        const { key, ...rowProps } = getRowProps({ row });
                                         return (
-                                            <TableHeader key={key} {...headerProps}>
-                                                {header.header}
-                                            </TableHeader>
+                                            <TableRow key={key} {...rowProps}>
+                                                {row.cells.map(cell => (
+                                                    <TableCell key={cell.id}>{cell.value}</TableCell>
+                                                ))}
+                                            </TableRow>
                                         );
                                     })}
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {rows.map(row => {
-                                    const { key, ...rowProps } = getRowProps({ row });
-                                    return (
-                                        <TableRow key={key} {...rowProps}>
-                                            {row.cells.map(cell => (
-                                                <TableCell key={cell.id}>{cell.value}</TableCell>
-                                            ))}
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </CarbonTable>
-                    )}
-                </DataTable>
-                <Pagination
-                    page={page}
-                    pageSize={pageSize}
-                    pageSizes={[10, 20, 30, 50]}
-                    totalItems={dataEntries.length}
-                    onChange={({ page, pageSize }) => {
-                        setPage(page);
-                        setPageSize(pageSize);
-                    }}
-                />
+                                </TableBody>
+                            </CarbonTable>
+                        )}
+                    </DataTable>
+                </div>
+                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--cds-border-subtle-01)', paddingTop: '1rem' }}>
+                    <Pagination
+                        page={page}
+                        pageSize={pageSize}
+                        pageSizes={[10, 20, 30, 50]}
+                        totalItems={dataEntries.length}
+                        onChange={({ page, pageSize }) => {
+                            setPage(page);
+                            setPageSize(pageSize);
+                        }}
+                    />
+                </div>
             </div>
         </TableWrapper>
     );

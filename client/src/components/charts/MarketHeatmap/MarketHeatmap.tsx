@@ -36,8 +36,8 @@ export interface MarketHeatmapProps {
   /** Chart title */
   title?: string;
   
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
   
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
@@ -74,7 +74,7 @@ export interface MarketHeatmapQuery {}
  */
 export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   title,
-  height = 400,
+  minHeight = 400,
   autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
@@ -258,7 +258,7 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height={height}
       loadingState={loadingState}
       isEmpty={!data || data.length === 0}
       onRetry={refetch}
@@ -266,7 +266,7 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
       <ReactECharts
         ref={chartRef}
         option={chartOption}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
         opts={{ renderer: 'canvas' }}
       />
     </BaseChart>
