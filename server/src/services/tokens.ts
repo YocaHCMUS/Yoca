@@ -332,15 +332,15 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
         .map(([address, id]) => [id, address]),
     );
 
+    // .filter((rawMarketData) => rawMarketData.market_cap_rank != null)
     console.log(res);
     const marketDataList = res
-      .filter((rawMarketData) => rawMarketData.market_cap_rank != null)
       .map(
       (rawMarketData): TokenMarketDataInsert => ({
         address: addressLookup[rawMarketData.id],
         priceUsd: rawMarketData.current_price,
         marketCap: rawMarketData.market_cap,
-        marketCapRank: rawMarketData.market_cap_rank,
+        // marketCapRank: rawMarketData.market_cap_rank,
         fullyDilutedValuation: rawMarketData.fully_diluted_valuation,
         volume24h: rawMarketData.total_volume,
         high24h: rawMarketData.high_24h,
@@ -382,7 +382,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
           // Had to type all the fields here since unfortunately that is how Postgres works
           priceUsd: excluded(tokenMarketData.priceUsd),
           marketCap: excluded(tokenMarketData.marketCap),
-          marketCapRank: excluded(tokenMarketData.marketCapRank),
+          // marketCapRank: excluded(tokenMarketData.marketCapRank),
           fullyDilutedValuation: excluded(
             tokenMarketData.fullyDilutedValuation,
           ),

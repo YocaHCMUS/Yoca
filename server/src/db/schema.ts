@@ -78,10 +78,10 @@ export const tokenMarketData = pgTable("token_market_data", {
   marketCapChangePercentage24h: decimal(
     "market_cap_change_percentage_24h",
   ).notNull(),
-  marketCapRank: decimal("market_cap_rank").notNull(),
+  // marketCapRank: decimal("market_cap_rank").notNull(),
   high24h: decimal("high_24h").notNull(),
   low24h: decimal("low_24h").notNull(),
-  fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
+  fullyDilutedValuation: decimal("fully_diluted_valuation"),
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply").notNull(),
   totalSupply: decimal("total_supply").notNull(),
