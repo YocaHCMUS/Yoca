@@ -73,6 +73,8 @@ export default function WalletPage() {
     'Status'
   ];
 
+  const isSortable = [false, false, false, true, true, true, true, false];
+
   // Cell renderers for conditional styling (temporary, move to util service)
   const cellRenderers = [
     (value: string) => (
@@ -195,6 +197,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
             />,
             <Table
               title="Swap"
@@ -204,6 +207,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
             />,
             <Table
               title="Inflow"
@@ -213,6 +217,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
             />,
             <Table
               title="Outflow"
@@ -222,6 +227,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
             />,
             <Table
               title="Conterparties"
@@ -231,6 +237,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
             />
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}

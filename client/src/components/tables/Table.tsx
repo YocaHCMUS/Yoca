@@ -2,6 +2,7 @@ import type { ExportFormat } from "@/components/charts/shared/ExportMenu"
 import { useState } from "react";
 import { TableWrapper } from '../charts/shared/TableWrapper';
 import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination } from "@carbon/react";
+import { ArrowUp, ArrowDown, CaretUp, CaretDown } from "@carbon/icons-react";
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -15,6 +16,7 @@ export interface TableProps {
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
+    isSortable?: boolean[];
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -25,13 +27,44 @@ export const Table: React.FC<TableProps> = ({
     filterSchema,
     classnames = [],
     cellRenderers = [],
-    dataEntries = []
+    dataEntries = [],
+    isSortable = []
 }) => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [sortColumn, setSortColumn] = useState<number | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
+
     const paginatedRows = dataEntries.slice(start, end);
+
+    // Apply sorting if a column is selected
+    const sortedData = sortColumn !== null 
+        ? [...paginatedRows].sort((a, b) => {
+            const aVal = a[sortColumn];
+            const bVal = b[sortColumn];
+            
+            // Handle null/undefined values
+            if (aVal == null && bVal == null) return 0;
+            if (aVal == null) return 1;
+            if (bVal == null) return -1;
+            
+            // Compare values
+            let comparison = 0;
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                comparison = aVal - bVal;
+            } else {
+                comparison = String(aVal).localeCompare(String(bVal));
+            }
+            
+            return sortDirection === 'asc' ? comparison : -comparison;
+        })
+        : paginatedRows;
+
+
+    
 
     /**
      * Handle export functionality
@@ -40,7 +73,7 @@ export const Table: React.FC<TableProps> = ({
         if (format === 'csv') {
             // Export as CSV
             const csvHeaders = headers.join(',');
-            const csvRows = paginatedRows.map(row =>
+            const csvRows = sortedData.map(row =>
                 row.map(entry => 
                     typeof entry === 'string' ? `"${entry.replace(/"/g, '""')}"` : entry
                 ).join(',')
@@ -58,6 +91,18 @@ export const Table: React.FC<TableProps> = ({
     };
 
 
+    /**
+     * Handle column sorting
+     */
+    const handleSort = (columnIndex: number) => {
+        if (sortColumn === columnIndex) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(columnIndex);
+            setSortDirection('asc');
+        }
+    };
+
     // Transform headers for Carbon DataTable
     const carbonHeaders = headers.map((header, index) => ({
         key: `header-${index}`,
@@ -65,7 +110,7 @@ export const Table: React.FC<TableProps> = ({
     }));
 
     // Constructing the rows for Carbon DataTable
-    const rows = paginatedRows.map((row, rowIndex) => {
+    const rows = sortedData.map((row, rowIndex) => {
         const rowData: any = {
             id: `row-${rowIndex}`
         };
@@ -105,11 +150,27 @@ export const Table: React.FC<TableProps> = ({
                             <CarbonTable {...getTableProps()}>
                                 <TableHead>
                                     <TableRow>
-                                        {headers.map(header => {
-                                            const { key, ...headerProps } = getHeaderProps({ header });
+                                        {headers.map((header, index) => {
+                                            const isColumnSortable = isSortable[index] ?? false;
+                                            const { key, ...headerProps } = getHeaderProps({ 
+                                                header,
+                                                isSortable: isColumnSortable
+                                            });
                                             return (
-                                                <TableHeader key={key} {...headerProps}>
-                                                    {header.header}
+                                                <TableHeader 
+                                                    key={key} 
+                                                    {...headerProps}
+                                                    onClick={isColumnSortable ? () => handleSort(index) : undefined}
+                                                    style={isColumnSortable ? { cursor: 'pointer' } : undefined}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        {header.header}
+                                                        {isColumnSortable && sortColumn === index && (
+                                                            sortDirection === 'asc' 
+                                                                ? <CaretUp size={16} /> 
+                                                                : <CaretDown size={16} />
+                                                        )}
+                                                    </div>
                                                 </TableHeader>
                                             );
                                         })}
@@ -136,7 +197,7 @@ export const Table: React.FC<TableProps> = ({
                         page={page}
                         pageSize={pageSize}
                         pageSizes={[10, 20, 30, 50]}
-                        totalItems={dataEntries.length}
+                        totalItems={sortedData.length}
                         onChange={({ page, pageSize }) => {
                             setPage(page);
                             setPageSize(pageSize);
