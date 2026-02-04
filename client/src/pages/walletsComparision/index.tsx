@@ -1,5 +1,5 @@
 import { OverviewTab, FundamentalTab, ProfitLossTab } from "@/components/market";
-import TabContainer from "@/components/tabContainer/tabContainer";
+import TabContainer from "@/components/tabContainer/TabContainer";
 import { useState } from "react";
 import { Grid, Column, TextInput, Tag, Stack, DismissibleTag, Button, Search } from "@carbon/react";
 import { Add, Close, SearchAdvanced } from '@carbon/react/icons';

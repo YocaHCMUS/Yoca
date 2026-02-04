@@ -41,7 +41,7 @@
 }
 
 .tabButtonActive {
-  composes: tabButton;
+  @extend .tabButton;
   background: $layer-02;
   font-weight: 600;
   color: $text-primary;

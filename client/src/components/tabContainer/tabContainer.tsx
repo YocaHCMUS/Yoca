@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './tabContainer.module.scss';
+import styles from './TabContainer.module.scss';
 
 export type tabIndex = number;
 
