@@ -28,8 +28,8 @@ export interface PriceHistoryChartProps {
   /** Chart title */
   title?: string;
 
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
 
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
@@ -65,7 +65,7 @@ export interface PriceHistoryChartProps {
  * ```tsx
  * <PriceHistoryChart
  *   title="Token Price History"
- *   height={400}
+ *   minHeight={400}
  *   initialTimePeriod="30D"
  *   initialTokens={['SOL', 'JTO']}
  *   autoRefresh={true}
@@ -74,7 +74,7 @@ export interface PriceHistoryChartProps {
  */
 export function PriceHistoryChart({
   title,
-  height = 400,
+  minHeight = 400,
   initialTimePeriod = '30D',
   initialTokens = ['SOL', 'JTO', 'BONK'],
   autoRefresh = true,
@@ -250,7 +250,7 @@ export function PriceHistoryChart({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height={height}
       loadingState={loadingState}
       isEmpty={!data || data.series.length === 0}
       onRetry={refetch}
@@ -258,6 +258,7 @@ export function PriceHistoryChart({
       <ReactECharts
         ref={chartRef}
         option={chartOptions}
+        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />

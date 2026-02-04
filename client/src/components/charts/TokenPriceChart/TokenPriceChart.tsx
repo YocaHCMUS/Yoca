@@ -36,8 +36,8 @@ interface TokenPriceChartProps {
   /** Chart title */
   title?: string;
 
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
 
   /** Which metric to display: 'price' | 'marketCap' | 'volume' */
   metric?: 'price' | 'marketCap' | 'volume';
@@ -59,7 +59,7 @@ interface TokenPriceChartProps {
  * <TokenPriceChart
  *   data={chartData}
  *   title="SOL Price History"
- *   height={400}
+ *   minHeight={400}
  *   metric="price"
  * />
  * ```
@@ -67,7 +67,7 @@ interface TokenPriceChartProps {
 export function TokenPriceChart({
   data,
   title,
-  height = 400,
+  minHeight = 400,
   metric = 'price',
   showArea = true,
   className,
@@ -231,7 +231,7 @@ export function TokenPriceChart({
   // Empty state
   if (!data || data.length === 0) {
     return (
-      <div className={`${styles.container} ${className || ''}`} style={{ height }}>
+      <div className={`${styles.container} ${className || ''}`} style={{ minHeight: `${minHeight}px` }}>
         <div className={styles.emptyState}>
           <p>{t('charts.noData', 'No data available')}</p>
         </div>
@@ -243,7 +243,7 @@ export function TokenPriceChart({
     <div className={`${styles.container} ${className || ''}`}>
       <ReactECharts
         option={chartOptions}
-        style={{ height: `${height}px`, width: '100%' }}
+        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
         opts={{ renderer: 'canvas' }}
         notMerge={true}
       />

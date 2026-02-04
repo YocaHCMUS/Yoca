@@ -1,0 +1,21 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.walletPage {
+  min-height: 100vh;
+  background: $background;
+}
+
+.sectionTitle {
+  margin: $spacing-06 0 $spacing-05 0;
+  padding: 0 $spacing-05;
+  color: $text-primary;
+}
+
+.chartContainer {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-05;
+  margin-bottom: $spacing-06;
+  padding: 0 $spacing-05;
+}

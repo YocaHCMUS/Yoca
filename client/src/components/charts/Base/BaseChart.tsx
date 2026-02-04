@@ -4,7 +4,7 @@ import styles from "@/components/charts/shared/ChartStyle.module.scss"
 
 interface BaseChartProps {
   title: string;
-  height: number;
+  // height: number;
   loadingState: ChartLoadingState;
   isEmpty: boolean;
   onRetry: () => void;
@@ -15,7 +15,7 @@ export function BaseChart(props: BaseChartProps) {
   return (
     <ChartWrapper
         title={props.title}
-        height={props.height}
+        // height={props.height}
         loadingState={props.loadingState}
         onRetry={props.onRetry}
         isEmpty={props.isEmpty}

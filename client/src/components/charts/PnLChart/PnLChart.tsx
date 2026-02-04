@@ -36,8 +36,8 @@ export interface PnLChartProps {
   /** Chart title */
   title?: string;
   
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
   
   /** Initial time period */
   initialTimePeriod?: TimePeriod;
@@ -66,7 +66,7 @@ export interface PnLChartProps {
  */
 export const PnLChart: React.FC<PnLChartProps> = ({
   title,
-  height = 400,
+  minHeight = 400,
   initialTimePeriod = '30D',
   initialWallets = [],
   aggregation = 'daily',
@@ -337,7 +337,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height="100%"
       loadingState={loadingState}
       isEmpty={!data || data.dailyPnL.length === 0}
       onRetry={() => refetch(false)}
@@ -346,7 +346,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         <ReactECharts
           ref={chartRef}
           option={chartOption}
-          style={{ height, width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
           notMerge
           lazyUpdate
         />

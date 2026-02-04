@@ -28,8 +28,8 @@ export interface TransactionDistributionProps {
   /** Chart title */
   title?: string;
   
-  /** Chart height in pixels for each sub-chart */
-  height?: number;
+  /** Chart minimum height in pixels for each sub-chart */
+  minHeight?: number;
   
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
@@ -83,7 +83,7 @@ export interface TransactionDistributionProps {
  */
 export function TransactionDistribution({
   title,
-  height = 300,
+  minHeight = 400,
   initialTimePeriod = '30D',
   initialTransactionType = 'all',
   chartMode = 'stacked',
@@ -462,7 +462,7 @@ export function TransactionDistribution({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      height={height * 2 + 40}
+      // height={height * 2 + 40}
       onRetry={handleRetry}
       isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
     >
@@ -497,7 +497,7 @@ export function TransactionDistribution({
           <ReactECharts
             ref={transactionChartRef}
             option={transactionCountsOptions}
-            style={{ height: `${height}px`, width: '100%' }}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
             opts={{ renderer: 'canvas' }}
             notMerge={true}
             lazyUpdate={true}
@@ -512,7 +512,7 @@ export function TransactionDistribution({
           <ReactECharts
             ref={tokenChartRef}
             option={uniqueTokenCountsOptions}
-            style={{ height: `${height}px`, width: '100%' }}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
             opts={{ renderer: 'canvas' }}
             notMerge={true}
             lazyUpdate={true}

@@ -18,7 +18,7 @@ export type TimeUnit = 'days' | 'weeks' | 'months';
 
 export interface HoldingDurationsProps {
   title?: string;
-  height?: number;
+  minHeight?: number;
   walletIds?: string[];
   topN?: number;
   timeUnit?: TimeUnit;
@@ -29,7 +29,7 @@ export interface HoldingDurationsProps {
 
 export function HoldingDurations({
   title,
-  height = 400,
+  minHeight = 400,
   walletIds = [],
   topN = 10,
   timeUnit = 'days',
@@ -193,7 +193,7 @@ export function HoldingDurations({
   return (
     <BaseChart
       title={chartTitle}
-      height={height * (data?.wallets.length || 1)}
+      // height={height * (data?.wallets.length || 1)}
       loadingState={loadingState}
       isEmpty={!data || data.wallets.length === 0}
       onRetry={() => refetch(false)}
@@ -226,7 +226,7 @@ export function HoldingDurations({
               }
             }}
             option={buildOptions(wallet)}
-            style={{ height }}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
             notMerge
             lazyUpdate
           />

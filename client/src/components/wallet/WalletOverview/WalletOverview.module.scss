@@ -1,0 +1,187 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '../../../styles/variables' as *;
+
+.walletOverview {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-06;
+  padding: $spacing-05;
+}
+
+.topSection {
+  display: flex;
+  gap: $spacing-05;
+  align-items: flex-start;
+}
+
+.profilePicture {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: $text-secondary;
+}
+
+.profileInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.walletName {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: $text-primary;
+}
+
+.walletAddress {
+  font-size: 14px;
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  margin: 0;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.walletAddressContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-01;
+}
+
+.tags {
+  display: flex;
+  gap: $spacing-03;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  gap: $spacing-03;
+}
+
+.filterButtons {
+  display: flex;
+  gap: $spacing-03;
+  flex-direction: row-reverse;
+}
+
+.filterButton {
+  position: relative;
+  padding: $spacing-02 $spacing-05;
+  border: 1px solid $border-subtle-01;
+  border-radius: $border-radius-sm;
+  background: $layer-01;
+  cursor: pointer;
+  color: $text-primary;
+  font-size: 14px;
+  transition: background-color $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    background: $layer-hover-01;
+    border-color: $border-subtle-02;
+  }
+
+  .customControl {
+    position: absolute;
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid $border-subtle-01;
+    border-radius: $border-radius-sm;
+    background: $layer-01;
+    padding: $spacing-01 $spacing-04;
+  }
+}
+
+
+
+.active {
+  background: $layer-02
+}
+
+.utilityButtons {
+  display: flex;
+  gap: $spacing-04;
+  font-size: 14px;
+  flex-direction: row-reverse;
+
+  * {
+    cursor: pointer;
+  }
+  
+}
+
+.utilityButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $link-primary;
+  font-size: 14px;
+  padding: 0;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $link-primary-hover;
+  }
+}
+
+.statsSection {
+  border-top: 1px solid $border-subtle-01;
+  padding-top: $spacing-06;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+  padding: 0 $spacing-06;
+  border-right: 1px solid $border-subtle-01;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.statLabel {
+  font-size: 12px;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.32px;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: bold;
+  color: $text-primary;
+}
+
+.statValuePositive {
+  color-scheme: statValue;
+  color: $support-success;
+}
+
+.statValueNegative {
+  color-scheme: statValue;
+  color: $support-error;
+}

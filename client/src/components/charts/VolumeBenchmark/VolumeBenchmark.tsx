@@ -28,8 +28,8 @@ export interface VolumeBenchmarkProps {
   /** Chart title */
   title?: string;
   
-  /** Chart height in pixels */
-  height?: number;
+  /** Chart minimum height in pixels */
+  minHeight?: number;
   
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
@@ -84,7 +84,7 @@ export interface VolumeBenchmarkProps {
  */
 export function VolumeBenchmark({
   title,
-  height = 400,
+  minHeight = 400,
   initialTimePeriod = '30D',
   chartType = 'line',
   showDataLabels = false,
@@ -319,7 +319,7 @@ export function VolumeBenchmark({
   return (
     <BaseChart
       title={chartTitle}
-      height={height}
+      // height={height}
       loadingState={loadingState}
       onRetry={handleRetry}
       isEmpty={!data || data.wallets.length === 0}
@@ -353,7 +353,7 @@ export function VolumeBenchmark({
         <ReactECharts
           ref={chartRef}
           option={chartOptions}
-          style={{ height: `${height}px`, width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
           opts={{ renderer: 'canvas' }}
           notMerge={true}
           lazyUpdate={true}

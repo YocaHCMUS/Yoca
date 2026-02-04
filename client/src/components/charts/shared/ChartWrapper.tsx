@@ -36,7 +36,7 @@ interface ChartWrapperProps {
   actions?: React.ReactNode;
   
   /** Chart height */
-  height?: number;
+  // height?: number;
   
   /** Show legend skeleton in loading state */
   showLegend?: boolean;
@@ -98,7 +98,7 @@ export function ChartWrapper({
   loadingState,
   children,
   actions,
-  height = 400,
+  // height = 400,
   showLegend = true,
   onRetry,
   emptyState,
@@ -254,7 +254,7 @@ export function ChartWrapper({
       {/* Loading state */}
       {loadingState.status === 'loading' && (
         <ChartSkeleton
-          height={height}
+          // height={height}
           showHeader={false}
           showLegend={showLegend}
         />
@@ -265,7 +265,7 @@ export function ChartWrapper({
         <ChartErrorState
           error={loadingState.error}
           onRetry={onRetry}
-          height={height}
+          // height={height}
         />
       )}
       
@@ -275,7 +275,7 @@ export function ChartWrapper({
           title={emptyState?.title}
           message={emptyState?.message}
           action={emptyState?.action}
-          height={height}
+          // height={height}
         />
       )}
       
