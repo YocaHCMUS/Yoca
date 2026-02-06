@@ -43,112 +43,67 @@ const mockUsers: User[] = [
 const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
+// client/src/services/auth/authService.ts
+// Tự động xác định API base URL
+const API_URL = (() => {
+  const domain = import.meta.env.CLIENT_API_DOMAIN as string | undefined;
+  if (domain && domain.length > 0) {
+    return `${domain.replace(/\/+$/, '')}/api`;
+  }
+  // Trong môi trường dev, dùng proxy của Vite
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  // Fallback an toàn khi không có cấu hình
+  return 'http://localhost:4000/api';
+})();
 
-/**
- * Mock sign-in service
- * @param data Sign-in form data
- * @returns Authentication response
- */
+
 export const signIn = async (data: SignInFormData): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    const response = await fetch(`${API_URL}/users/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-  // Simulate validation
-  if (!data.usernameOrEmail || !data.password) {
-    return {
-      success: false,
-      error: 'Username/email and password are required',
-    };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.error || 'Đăng nhập thất bại' 
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return { success: false, error: "Không thể kết nối đến máy chủ" };
   }
-
-  // Find user by username or email
-  const user = mockUsers.find(
-    (u) =>
-      u.username === data.usernameOrEmail || u.email === data.usernameOrEmail
-  );
-
-  // Simulate invalid credentials
-  if (!user || data.password !== 'password123') {
-    return {
-      success: false,
-      error: 'Invalid credentials. Please check your username/email and password.',
-    };
-  }
-
-  // Successful authentication
-  return {
-    success: true,
-    user: {
-      ...user,
-      lastLogin: new Date(),
-    },
-    token: `mock-token-${user.id}-${Date.now()}`,
-    message: 'Sign in successful',
-  };
 };
-
-/**
- * Mock sign-up service
- * @param data Sign-up form data
- * @returns Authentication response
- */
 export const signUp = async (data: SignUpFormData): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    const response = await fetch(`${API_URL}/users/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-  // Simulate validation
-  if (!data.email || !data.username || !data.password) {
-    return {
-      success: false,
-      error: 'All fields are required',
-    };
+    // Thêm kiểm tra response.ok để tránh lỗi "Unexpected end of JSON input"
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.error || 'Đăng ký thất bại' 
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Signup error:", error);
+    return { success: false, error: "Không thể kết nối đến máy chủ" };
   }
-
-  // Check if email already exists
-  const emailExists = mockUsers.some((u) => u.email === data.email);
-  if (emailExists) {
-    return {
-      success: false,
-      error: 'Email already registered. Please use a different email or sign in.',
-    };
-  }
-
-  // Check if username already exists
-  const usernameExists = mockUsers.some((u) => u.username === data.username);
-  if (usernameExists) {
-    return {
-      success: false,
-      error: 'Username is already taken. Please choose a different username.',
-    };
-  }
-
-  // Password strength check
-  if (data.password.length < 8) {
-    return {
-      success: false,
-      error: 'Password must be at least 8 characters long.',
-    };
-  }
-
-  // Create new user
-  const newUser: User = {
-    id: `${mockUsers.length + 1}`,
-    username: data.username,
-    email: data.email,
-    createdAt: new Date(),
-    lastLogin: new Date(),
-  };
-
-  // Add to mock database
-  mockUsers.push(newUser);
-
-  // Successful registration
-  return {
-    success: true,
-    user: newUser,
-    token: `mock-token-${newUser.id}-${Date.now()}`,
-    message: 'Account created successfully',
-  };
 };
-
 /**
  * Mock Google OAuth sign-in service
  * @param data Google authentication data

@@ -40,15 +40,16 @@ const chartGranularity = pgEnum(
 
 // #region Table definitions
 
+// server/src/db/schema.ts
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  age: integer("age").notNull(),
+  username: text("username").notNull().unique(), // Thêm username
+  password: text("password"), // Lưu mật khẩu hash
+  name: text("name"), 
   email: text("email").notNull().unique(),
+  googleId: text("google_id"), // Dành cho Google OAuth
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at").notNull().$onUpdate(() => new Date()),
 });
 
 export const tokenMeta = pgTable("token_meta", {

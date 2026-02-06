@@ -12,7 +12,8 @@ export default ({ mode }: { mode: string }) => {
       port: 3000,
       proxy: {
         "/api": {
-          target: env.CLIENT_API_DOMAIN,
+          // Mặc định proxy đến server localhost:4000 nếu biến môi trường chưa đặt
+          target: env.CLIENT_API_DOMAIN || "http://localhost:4000",
         },
       },
       allowedHosts: true,
