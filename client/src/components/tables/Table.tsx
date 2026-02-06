@@ -163,14 +163,7 @@ export const Table: React.FC<TableProps> = ({
                                                     onClick={isColumnSortable ? () => handleSort(index) : undefined}
                                                     style={isColumnSortable ? { cursor: 'pointer' } : undefined}
                                                 >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        {header.header}
-                                                        {isColumnSortable && sortColumn === index && (
-                                                            sortDirection === 'asc' 
-                                                                ? <CaretUp size={16} /> 
-                                                                : <CaretDown size={16} />
-                                                        )}
-                                                    </div>
+                                                    {header.header}
                                                 </TableHeader>
                                             );
                                         })}
