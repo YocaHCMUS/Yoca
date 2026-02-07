@@ -1,7 +1,8 @@
-import type { ExportFormat } from "@/components/charts/shared/ExportFormat"
 import { useState } from "react";
-import { TableWrapper } from '../charts/shared/TableWrapper';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput } from "@carbon/react";
+import { TableWrapper, type ActiveFilter } from '../charts/shared/TableWrapper';
+import type { ExportFormat } from '../charts/shared/ExportMenu';
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput, IconButton, Modal } from "@carbon/react";
+import { Filter } from "@carbon/react/icons";
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -59,7 +60,91 @@ export const Table: React.FC<TableProps> = ({
     const [sortIndex, setSortIndex] = useState(0);
     const [searchValue, setSearchValue] = useState("");
     const [filters, setFilters] = useState<Partial<any>>(initialFilters);
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
+    const [tempFilterValue, setTempFilterValue] = useState<any>(null);
+
+    /**
+     * Open filter modal for specific column
+     */
+    const openFilterForColumn = (columnIndex: number) => {
+        setOpenFilterModal(columnIndex);
+        setTempFilterValue(filters[columnIndex] || null);
+    };
+
+    /**
+     * Close filter modal
+     */
+    const closeFilterModal = () => {
+        setOpenFilterModal(null);
+        setTempFilterValue(null);
+    };
+
+    /**
+     * Apply filter from modal
+     */
+    const applyFilter = (columnIndex: number) => {
+        if (tempFilterValue !== null && tempFilterValue !== undefined) {
+            setFilters(prev => ({
+                ...prev,
+                [columnIndex]: tempFilterValue
+            }));
+        }
+        setPage(1);
+        closeFilterModal();
+    };
+
+    /**
+     * Remove specific filter
+     */
+    const removeFilter = (columnIndex: number) => {
+        setFilters(prev => {
+            const newFilters = { ...prev };
+            delete newFilters[columnIndex];
+            return newFilters;
+        });
+        setPage(1);
+    };
+
+    /**
+     * Generate active filters for display
+     */
+    const getActiveFilters = (): ActiveFilter[] => {
+        const active: ActiveFilter[] = [];
+        
+        Object.entries(filters).forEach(([columnIndex, filterValue]) => {
+            const colIdx = parseInt(columnIndex);
+            const schema = filterSchema[colIdx];
+            const columnName = headers[colIdx] || `Column ${colIdx}`;
+            
+            if (!schema || !filterValue) return;
+            
+            let displayText = '';
+            
+            if (schema.type === FilterType.Range) {
+                const rangeFilter = filterValue as { min?: number; max?: number };
+                if (rangeFilter.min !== undefined && rangeFilter.max !== undefined) {
+                    displayText = `${rangeFilter.min} - ${rangeFilter.max}`;
+                } else if (rangeFilter.min !== undefined) {
+                    displayText = `≥ ${rangeFilter.min}`;
+                } else if (rangeFilter.max !== undefined) {
+                    displayText = `≤ ${rangeFilter.max}`;
+                }
+            } else {
+                displayText = String(filterValue);
+            }
+            
+            if (displayText && filterValue !== 'all') {
+                active.push({
+                    columnIndex: colIdx,
+                    columnName,
+                    value: filterValue,
+                    displayText
+                });
+            }
+        });
+        
+        return active;
+    };
 
     // Apply search and filter to data
     const filteredData = dataEntries.filter(row => {
@@ -213,121 +298,92 @@ export const Table: React.FC<TableProps> = ({
     };
 
     /**
-     * Render filter panel based on filterSchema
+     * Render filter modal based on filterSchema for specific column
      */
-    const renderFilterPanel = () => {
-        if (!filterSchema || Object.keys(filterSchema).length === 0) {
-            return <div style={{ padding: '1rem' }}>No filters available</div>;
-        }
+    const renderFilterModal = () => {
+        if (openFilterModal === null) return null;
+        
+        const columnIndex = openFilterModal;
+        const schema = filterSchema[columnIndex];
+        const columnHeader = headers[columnIndex] || `Column ${columnIndex}`;
+        
+        if (!schema) return null;
 
         return (
-            <div style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                {Object.entries(filterSchema).map(([columnIndex, schema]: [string, FilterConfig]) => {
-                    const colIdx = parseInt(columnIndex);
-                    const columnHeader = headers[colIdx] || `Column ${colIdx}`;
-                    
-                    if (schema.type === FilterType.Range) {
-                        // Render range filter with min/max inputs
-                        const rangeFilter = (filters[columnIndex] as { min?: number; max?: number }) || {};
-                        
-                        return (
-                            <div key={columnIndex} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
-                                <NumberInput
-                                    id={`filter-${columnIndex}-min`}
-                                    label={`${columnHeader} (Min)`}
-                                    value={rangeFilter.min ?? ''}
-                                    onChange={(e: any) => {
-                                        const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                        setFilters(prev => ({
-                                            ...prev,
-                                            [columnIndex]: {
-                                                ...(prev[columnIndex] as any || {}),
-                                                min: numValue
-                                            }
-                                        }));
-                                        setPage(1);
-                                    }}
-                                    hideSteppers={true}
-                                />
-                                <NumberInput
-                                    id={`filter-${columnIndex}-max`}
-                                    label={`${columnHeader} (Max)`}
-                                    value={rangeFilter.max ?? ''}
-                                    onChange={(e: any) => {
-                                        const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                        setFilters(prev => ({
-                                            ...prev,
-                                            [columnIndex]: {
-                                                ...(prev[columnIndex] as any || {}),
-                                                max: numValue
-                                            }
-                                        }));
-                                        setPage(1);
-                                    }}
-                                    hideSteppers={true}
-                                />
-                            </div>
-                        );
-                    } else {
-                        // Render select filter (default)
-                        const uniqueValues = Array.from(
-                            new Set(dataEntries.map(row => String(row[colIdx])))
-                        ).sort();
-
-                        return (
-                            <Select
-                                key={columnIndex}
-                                id={`filter-${columnIndex}`}
-                                labelText={columnHeader}
-                                value={filters[columnIndex] || 'all'}
-                                onChange={(e) => {
-                                    setFilters(prev => ({
-                                        ...prev,
-                                        [columnIndex]: e.target.value
-                                    }));
-                                    setPage(1);
-                                }}
-                                style={{ minWidth: '200px' }}
-                            >
-                                <SelectItem value="all" text="All" />
-                                {uniqueValues.map(value => (
-                                    <SelectItem key={value} value={value} text={value} />
-                                ))}
-                            </Select>
-                        );
-                    }
-                })}
-                <Button 
-                    kind="secondary" 
-                    size="sm"
-                    onClick={() => {
-                        setFilters(initialFilters);
-                        setPage(1);
-                    }}
-                >
-                    Clear Filters
-                </Button>
-            </div>
+            <Modal
+                open={true}
+                modalHeading={`Filter: ${columnHeader}`}
+                primaryButtonText="Apply"
+                secondaryButtonText="Cancel"
+                onRequestClose={closeFilterModal}
+                onRequestSubmit={() => applyFilter(columnIndex)}
+                size="sm"
+            >
+                {schema.type === FilterType.Range ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <NumberInput
+                            id={`filter-modal-${columnIndex}-min`}
+                            label="Minimum Value"
+                            value={tempFilterValue?.min ?? ''}
+                            onChange={(e: any) => {
+                                const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                setTempFilterValue((prev: any) => ({
+                                    ...(prev || {}),
+                                    min: numValue
+                                }));
+                            }}
+                            hideSteppers={true}
+                        />
+                        <NumberInput
+                            id={`filter-modal-${columnIndex}-max`}
+                            label="Maximum Value"
+                            value={tempFilterValue?.max ?? ''}
+                            onChange={(e: any) => {
+                                const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                setTempFilterValue((prev: any) => ({
+                                    ...(prev || {}),
+                                    max: numValue
+                                }));
+                            }}
+                            hideSteppers={true}
+                        />
+                    </div>
+                ) : (
+                    <Select
+                        id={`filter-modal-${columnIndex}`}
+                        labelText="Select value"
+                        value={tempFilterValue || 'all'}
+                        onChange={(e) => setTempFilterValue(e.target.value)}
+                    >
+                        <SelectItem value="all" text="All" />
+                        {Array.from(
+                            new Set(dataEntries.map(row => String(row[columnIndex])))
+                        ).sort().map(value => (
+                            <SelectItem key={value} value={value} text={value} />
+                        ))}
+                    </Select>
+                )}
+            </Modal>
         );
     };
 
     return (
-        <TableWrapper
-            title={title}
-            onExport={handleExport}
-            isEmpty={filteredData.length === 0}
-            enableToolbar={true}
-            searchPlaceholder="Search table..."
-            searchValue={searchValue}
-            onSearchChange={(value) => {
-                setSearchValue(value);
-                setPage(1);
-            }}
-            enableFilterButton={filterSchema && Object.keys(filterSchema).length > 0}
-            isFilterOpen={isFilterOpen}
-            onFilterToggle={() => setIsFilterOpen(!isFilterOpen)}
-            filterPanel={renderFilterPanel()}
-        >
+        <>
+            {renderFilterModal()}
+            <TableWrapper
+                title={title}
+                onExport={handleExport}
+                isEmpty={filteredData.length === 0}
+                enableToolbar={true}
+                searchPlaceholder="Search table..."
+                searchValue={searchValue}
+                onSearchChange={(value) => {
+                    setSearchValue(value);
+                    setPage(1);
+                }}
+                activeFilters={getActiveFilters()}
+                onRemoveFilter={removeFilter}
+            >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
                     <DataTable
@@ -347,13 +403,29 @@ export const Table: React.FC<TableProps> = ({
                                                 isSortable: isColumnSortable
                                             });
                                             return (
-                                                <TableHeader 
+                                <TableHeader 
                                                     key={key} 
                                                     {...headerProps}
-                                                    // onClick={() => setSortIndex(index)}
                                                     style={isColumnSortable ? { cursor: 'pointer' } : undefined}
                                                 >
-                                                    {header.header}
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem"}}>
+                                                        <span style={{lineHeight: "100%"}}>
+                                                            {header.header}
+                                                        </span>
+                                                        {filterSchema[index] && (
+                                                            <IconButton 
+                                                                label={`Filter ${header.header}`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openFilterForColumn(index);
+                                                                }}
+                                                                kind={filters[index] ? 'primary' : 'ghost'}
+                                                                size="sm"
+                                                            >
+                                                                <Filter/>
+                                                            </IconButton>
+                                                        )}
+                                                    </div>
                                                 </TableHeader>
                                             );
                                         })}
@@ -406,6 +478,7 @@ export const Table: React.FC<TableProps> = ({
                 </div>
             </div>
         </TableWrapper>
+        </>
     );
 } 
 

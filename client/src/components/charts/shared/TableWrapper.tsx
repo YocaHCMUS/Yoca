@@ -11,8 +11,18 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExportMenu, type ExportFormat } from './ExportMenu';
 import styles from './TableWrapper.module.scss';
-import { IconButton } from '@carbon/react';
+import { IconButton, Tag } from '@carbon/react';
 import { Filter } from '@carbon/react/icons';
+
+/**
+ * Active filter representation
+ */
+export interface ActiveFilter {
+  columnIndex: number;
+  columnName: string;
+  value: any;
+  displayText: string;
+}
 
 /**
  * Props for TableWrapper component
@@ -51,16 +61,11 @@ interface TableWrapperProps {
   /** Search change callback */
   onSearchChange?: (value: string) => void;
 
-  enableFilterButton?: boolean;
+  /** Active filters to display as tags */
+  activeFilters?: ActiveFilter[];
 
-  /** Filter panel open state */
-  isFilterOpen?: boolean;
-
-  /** Filter panel toggle callback */
-  onFilterToggle?: () => void;
-
-  /** Filter panel content */
-  filterPanel?: React.ReactNode;
+  /** Callback when a filter tag is removed */
+  onRemoveFilter?: (columnIndex: number) => void;
 
   /** Custom toolbar content */
   toolbarContent?: React.ReactNode;
@@ -93,10 +98,8 @@ export function TableWrapper({
   searchPlaceholder = 'Search...',
   searchValue = '',
   onSearchChange,
-  enableFilterButton,
-  isFilterOpen = false,
-  onFilterToggle,
-  filterPanel,
+  activeFilters = [],
+  onRemoveFilter,
   toolbarContent,
 }: TableWrapperProps) {
   const { t } = useTranslation();
@@ -143,16 +146,6 @@ export function TableWrapper({
             />
           )}
 
-          {/* Toolbar buttonFilter */}
-          {enableFilterButton && onFilterToggle && (
-            <IconButton 
-              label="Filter" 
-              onClick={onFilterToggle}
-              kind={isFilterOpen ? 'primary' : 'ghost'}
-            >
-              <Filter/>
-            </IconButton>
-          )}
           {/* Custom toolbar content */}
           {toolbarContent}
           {actions}
@@ -167,10 +160,20 @@ export function TableWrapper({
         </div>
       </div>
 
-      {/* Filter Panel */}
-      {enableFilterButton && isFilterOpen && filterPanel && (
-        <div className={styles.filterPanel}>
-          {filterPanel}
+      {/* Active Filters Display */}
+      {activeFilters.length > 0 && (
+        <div className={styles.activeFilters}>
+          {activeFilters.map((filter) => (
+            <Tag
+              key={filter.columnIndex}
+              type="blue"
+              filter
+              onClose={() => onRemoveFilter?.(filter.columnIndex)}
+              title={`Filter: ${filter.columnName} = ${filter.displayText}`}
+            >
+              {filter.columnName}: {filter.displayText}
+            </Tag>
+          ))}
         </div>
       )}
 
