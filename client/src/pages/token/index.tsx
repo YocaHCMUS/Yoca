@@ -1,22 +1,24 @@
-import { useParams } from "react-router";
-import { useState, useEffect } from "react";
-import PageWrapper from "@/components/wrapper/PageWrapper";
 import {
-  TokenHeader,
   MarketStats,
-  TopHolders,
-  RecentTransactions,
   PoolSelector,
+  RecentTransactions,
   TokenChart,
+  TokenHeader,
+  TopHolders,
 } from "@/components/token";
-import type { MarketData, MetaData, PoolData, TopHoldersData } from "@/hooks/useTokenPageData";
+import PageWrapper from "@/components/wrapper/PageWrapper";
 import { useTokenPageLogic } from "@/hooks/useTokenPageLogic";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router";
 import styles from "./index.module.scss";
 
 // Dev Step 8: Final UI fix
 
 export default function TokenPage() {
-  const { address, poolAddress } = useParams<{ address: string; poolAddress?: string }>();
+  const { address, poolAddress } = useParams<{
+    address: string;
+    poolAddress?: string;
+  }>();
   const {
     marketData,
     metaData,
@@ -26,7 +28,7 @@ export default function TokenPage() {
     selectedPool,
     trades,
     loading,
-    handlePoolChange
+    handlePoolChange,
   } = useTokenPageLogic(address, poolAddress);
 
   const [discordInvite, setDiscordInvite] = useState<string | null>(null);
@@ -39,16 +41,17 @@ export default function TokenPage() {
       const fetchSocials = async () => {
         try {
           const response = await fetch(
-            `https://api.coingecko.com/api/v3/coins/${metaData.coinGeckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`
+            `https://api.coingecko.com/api/v3/coins/${metaData.coinGeckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`,
           );
           if (response.ok) {
             const data = await response.json();
             const chatUrls = data.links?.chat_url;
             if (Array.isArray(chatUrls)) {
-              const discordUrl = chatUrls.find((url: string) =>
-                url.includes("discord.com/invite/") ||
-                url.includes("discord.gg/") ||
-                url.includes("discordapp.com/invite/")
+              const discordUrl = chatUrls.find(
+                (url: string) =>
+                  url.includes("discord.com/invite/") ||
+                  url.includes("discord.gg/") ||
+                  url.includes("discordapp.com/invite/"),
               );
               if (discordUrl) {
                 const parts = discordUrl.split("/");
@@ -58,7 +61,11 @@ export default function TokenPage() {
             }
 
             // Website
-            if (data.links?.homepage && Array.isArray(data.links.homepage) && data.links.homepage.length > 0) {
+            if (
+              data.links?.homepage &&
+              Array.isArray(data.links.homepage) &&
+              data.links.homepage.length > 0
+            ) {
               setWebsiteUrl(data.links.homepage[0]);
             }
 
@@ -72,8 +79,10 @@ export default function TokenPage() {
             if (!genesisDateString && data.market_data) {
               // Fallback to earliest of ATL/ATH date if available
               const dates: number[] = [];
-              if (data.market_data.atl_date?.usd) dates.push(new Date(data.market_data.atl_date.usd).getTime());
-              if (data.market_data.ath_date?.usd) dates.push(new Date(data.market_data.ath_date.usd).getTime());
+              if (data.market_data.atl_date?.usd)
+                dates.push(new Date(data.market_data.atl_date.usd).getTime());
+              if (data.market_data.ath_date?.usd)
+                dates.push(new Date(data.market_data.ath_date.usd).getTime());
 
               if (dates.length > 0) {
                 genesisDateString = new Date(Math.min(...dates)).toISOString();
@@ -121,9 +130,9 @@ export default function TokenPage() {
     return (
       <div className={styles.loadingContainer}>
         <p>Token data not found.</p>
-        <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '8px' }}>
-          The token might be new or not verified on CoinGecko.
-          On-chain data fallback failed to retrieve pools.
+        <p style={{ fontSize: "0.9rem", color: "#666", marginTop: "8px" }}>
+          The token might be new or not verified on CoinGecko. On-chain data
+          fallback failed to retrieve pools.
         </p>
       </div>
     );
