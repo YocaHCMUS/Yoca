@@ -66,6 +66,7 @@ export const Table: React.FC<TableProps> = ({
     const [popupAlignment, setPopupAlignment] = useState<'left' | 'right'>('right');
     const filterPopupRef = useRef<HTMLDivElement>(null);
     const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+    const tableContainerRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close popup
     useEffect(() => {
@@ -90,14 +91,16 @@ export const Table: React.FC<TableProps> = ({
      */
     const openFilterForColumn = (columnIndex: number) => {
         const buttonElement = filterButtonRefs.current[columnIndex];
-        if (buttonElement) {
-            const rect = buttonElement.getBoundingClientRect();
+        const tableContainer = tableContainerRef.current;
+        
+        if (buttonElement && tableContainer) {
+            const buttonRect = buttonElement.getBoundingClientRect();
+            const tableRect = tableContainer.getBoundingClientRect();
             const popupWidth = 280; // min-width from CSS
-            const viewportWidth = window.innerWidth;
-            const spaceOnRight = viewportWidth - rect.right;
+            const spaceFromTableStart = buttonRect.right - tableRect.left;
             
-            // If not enough space on right, align to left
-            setPopupAlignment(spaceOnRight < popupWidth ? 'right' : 'left');
+            // If not enough space from table start to button right, align to left
+            setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
         }
         setOpenFilterModal(columnIndex);
         setTempFilterValue(filters[columnIndex] || null);
@@ -433,7 +436,7 @@ export const Table: React.FC<TableProps> = ({
                 onRemoveFilter={removeFilter}
             >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
                     <DataTable
                         rows={rows} 
                         headers={carbonHeaders} 
