@@ -24,6 +24,7 @@ console.log(`API Domain in client 1: ${apiDomain}`);
 
 // Google OAuth Client ID from environment
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+console.log("Client ID hiện tại:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 /**
  * Root component with all providers configured

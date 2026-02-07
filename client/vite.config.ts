@@ -3,11 +3,14 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
-  const env = loadEnv(mode, "..", "CLIENT_");
+  // Load environment variables from the client folder and expose both CLIENT_ and VITE_ prefixes
+  const env = loadEnv(mode, __dirname, ["CLIENT_", "VITE_"]);
 
   return defineConfig({
-    envDir: "..",
-    envPrefix: "CLIENT_",
+    // Read .env files from the client folder
+    envDir: __dirname,
+    // Expose both CLIENT_ and VITE_ prefixed env vars to the client
+    envPrefix: ["CLIENT_", "VITE_"],
     server: {
       port: 3000,
       proxy: {

@@ -105,39 +105,32 @@ export const signUp = async (data: SignUpFormData): Promise<AuthResponse> => {
   }
 };
 /**
- * Mock Google OAuth sign-in service
- * @param data Google authentication data
- * @returns Authentication response
+ * Google OAuth sign-in service (server-backed)
  */
 export const googleSignIn = async (
   data: GoogleAuthData
 ): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    if (!data.credential) {
+      return { success: false, error: 'Thiếu mã xác thực Google' };
+    }
 
-  // Simulate validation
-  if (!data.credential) {
-    return {
-      success: false,
-      error: 'Google authentication failed. Please try again.',
-    };
+    const response = await fetch(`${API_URL}/users/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: data.credential }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Đăng nhập Google thất bại' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Google sign-in error:', error);
+    return { success: false, error: 'Không thể kết nối đến máy chủ' };
   }
-
-  // Simulate Google user creation/login
-  const googleUser: User = {
-    id: 'google-user-1',
-    username: 'google_user',
-    email: 'user@gmail.com',
-    createdAt: new Date(),
-    lastLogin: new Date(),
-    googleAuth: true,
-  };
-
-  return {
-    success: true,
-    user: googleUser,
-    token: `mock-google-token-${Date.now()}`,
-    message: 'Google sign in successful',
-  };
 };
 
 /**
@@ -154,26 +147,28 @@ export const signOut = async (): Promise<void> => {
  * @param token Authentication token
  * @returns User data if token is valid
  */
-export const validateToken = async (
-  token: string
-): Promise<AuthResponse> => {
-  await delay(500);
+export const validateToken = async (token: string): Promise<AuthResponse> => {
+  try {
+    const response = await fetch(`${API_URL}/users/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      // Allow server to also accept body token
+      body: JSON.stringify({ token }),
+    });
 
-  // Simple mock validation - check if token format is correct
-  if (!token || !token.startsWith('mock-token-') && !token.startsWith('mock-google-token-')) {
-    return {
-      success: false,
-      error: 'Invalid or expired token',
-    };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Token không hợp lệ' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Token validate error:', error);
+    return { success: false, error: 'Không thể kết nối đến máy chủ' };
   }
-
-  // Return mock user for valid token
-  const user = mockUsers[0]; // Return first user for demo
-  return {
-    success: true,
-    user,
-    token,
-  };
 };
 
 /**
