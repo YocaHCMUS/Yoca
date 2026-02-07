@@ -10,9 +10,11 @@ import * as cg from "@sv/util/util-coingecko.js";
 import { inArray } from "drizzle-orm";
 import type { CG_Token } from "../_types/token_raw_responses.js";
 
-export async function getCoinGeckoIdList(tokenAddresses: string[]) {
+export async function getCoinGeckoIdList(
+  tokenAddresses: string[],
+): Promise<Record<string, string>> {
   if (tokenAddresses.length == 0) {
-    return null;
+    return {};
   }
 
   const freshCheck = await db
@@ -46,9 +48,11 @@ export async function getCoinGeckoIdList(tokenAddresses: string[]) {
   }
 }
 
-export async function fetchCgTokenList(tokenAddresses: string[]) {
+export async function fetchCgTokenList(
+  tokenAddresses: string[],
+): Promise<Record<string, string>> {
   if (tokenAddresses.length == 0) {
-    return null;
+    return {};
   }
 
   const cgEndpoint = cg.getEndpoint("/coins/list");
@@ -91,6 +95,6 @@ export async function fetchCgTokenList(tokenAddresses: string[]) {
 
     return idLookup;
   } else {
-    return null;
+    return {};
   }
 }

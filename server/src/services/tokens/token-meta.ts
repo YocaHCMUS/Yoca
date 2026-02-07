@@ -1,48 +1,38 @@
 import { TOKEN_META_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import {
-  coinGeckoTokenList,
-  tokenMeta,
-  type TokenMetaInsert,
-} from "@sv/db/schema.js";
+import { tokenMeta, type TokenMetaInsert } from "@sv/db/schema.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, gte, inArray } from "drizzle-orm";
 import type { CG_TokenMeta } from "../_types/token_raw_responses.js";
 import { fetchCgTokenList, getCoinGeckoIdList } from "./token-list.js";
 
-// Fetch token metadata from CoinGecko API and store in database
+// https://docs.coingecko.com/v3.0.1/reference/coins-id
 async function fetchTokenMetaList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
-    return null;
+    return [];
   }
 
   const idLookup =
     (await getCoinGeckoIdList(tokenAddresses)) ??
     (await fetchCgTokenList(tokenAddresses));
 
-  if (!idLookup) {
-    return null;
-  }
-
   const rawMetaList = await Promise.all(
-    Object.values(idLookup)
-      .filter((id) => id != null)
-      .map(async (id) => {
-        const cgEndpoint = cg.getEndpoint(`/coins/${id}`);
-        const req = new Request(cgEndpoint, {
-          method: "GET",
-          headers: cg.getRequiredHeaders(),
-        });
+    Object.values(idLookup).map(async (id) => {
+      const cgEndpoint = cg.getEndpoint(`/coins/${id}`);
+      const req = new Request(cgEndpoint, {
+        method: "GET",
+        headers: cg.getRequiredHeaders(),
+      });
 
-        const resp = await fetch(req);
-        if (resp.ok) {
-          const rawMeta: CG_TokenMeta = await resp.json();
-          return rawMeta;
-        } else {
-          return null;
-        }
-      }),
+      const resp = await fetch(req);
+      if (resp.ok) {
+        const rawMeta: CG_TokenMeta = await resp.json();
+        return rawMeta;
+      } else {
+        return null;
+      }
+    }),
   );
 
   const metaDataList = rawMetaList
@@ -54,10 +44,14 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
         name: rawMeta.name,
         description: rawMeta.description?.en || null,
         imageUrl: rawMeta.image.small,
+        linkHomepage: rawMeta.links?.homepage?.at(0) || null,
+        linkDiscord: rawMeta.links?.chat_url?.at(0) || null,
+        twitterScreenName: rawMeta.links?.twitter_screen_name || null,
+        coinGeckoId: rawMeta.id,
       }),
     );
 
-  if (metaDataList.length === 0) {
+  if (metaDataList.length == 0) {
     return [];
   }
 
@@ -77,26 +71,14 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
 
 export async function getTokenMetaList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
-    return null;
+    return [];
   }
 
   const thresholdDate = new Date(Date.now() - TOKEN_META_TTL_MS);
 
   const res = await db
-    .select({
-      address: tokenMeta.address,
-      name: tokenMeta.name,
-      symbol: tokenMeta.symbol,
-      imageUrl: tokenMeta.imageUrl,
-      description: tokenMeta.description,
-      updatedAt: tokenMeta.updatedAt,
-      coinGeckoId: coinGeckoTokenList.coinGeckoId,
-    })
+    .select()
     .from(tokenMeta)
-    .leftJoin(
-      coinGeckoTokenList,
-      eq(tokenMeta.address, coinGeckoTokenList.tokenAddress),
-    )
     .where(
       and(
         gte(tokenMeta.updatedAt, thresholdDate),
@@ -119,20 +101,8 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
     return res;
   } else {
     const refreshedWithIds = await db
-      .select({
-        address: tokenMeta.address,
-        name: tokenMeta.name,
-        symbol: tokenMeta.symbol,
-        imageUrl: tokenMeta.imageUrl,
-        description: tokenMeta.description,
-        updatedAt: tokenMeta.updatedAt,
-        coinGeckoId: coinGeckoTokenList.coinGeckoId,
-      })
+      .select()
       .from(tokenMeta)
-      .leftJoin(
-        coinGeckoTokenList,
-        eq(tokenMeta.address, coinGeckoTokenList.tokenAddress),
-      )
       .where(
         inArray(
           tokenMeta.address,
