@@ -11,7 +11,7 @@ import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
-import { Table, SortType } from "@/components/tables/Table.tsx";
+import { Table, SortType, FilterType } from "@/components/tables/Table.tsx";
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
 import { 
   renderCode, 
@@ -108,9 +108,12 @@ export default function WalletPage() {
 
   // Filter schema for filterable columns
   const filterSchema = {
-    1: {}, // Type (Buy/Sell)
-    2: {}, // Token (SOL, USDC, etc.)
-    7: {}  // Status (Success/Failed)
+    1: { type: FilterType.Select }, // Type (Buy/Sell) - Select filter
+    2: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
+    3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
+    4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
+    5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
+    7: { type: FilterType.Select }  // Status (Success/Failed) - Select filter
   };
 
 

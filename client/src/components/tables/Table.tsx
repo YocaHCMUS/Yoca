@@ -1,7 +1,7 @@
 import type { ExportFormat } from "@/components/charts/shared/ExportFormat"
 import { useState } from "react";
 import { TableWrapper } from '../charts/shared/TableWrapper';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput } from "@carbon/react";
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -11,6 +11,18 @@ export enum SortType {
     Date = 'date',
     Priority = 'priority',
     Number = 'number'
+}
+
+export enum FilterType {
+    Select = 'select',
+    Range = 'range'
+}
+
+export interface FilterConfig {
+    type: FilterType;
+    min?: number;
+    max?: number;
+    step?: number;
 }
 
 export interface SortConfig {
@@ -23,7 +35,7 @@ export interface TableProps {
     headers: string[];
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
-    filterSchema: any;
+    filterSchema: Record<number, FilterConfig>;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
@@ -63,11 +75,32 @@ export const Table: React.FC<TableProps> = ({
         // Apply column filters
         if (filterSchema && Object.keys(filters).length > 0) {
             for (const [columnIndex, filterValue] of Object.entries(filters)) {
-                if (filterValue && filterValue !== 'all') {
-                    const colIdx = parseInt(columnIndex);
-                    const cellValue = String(row[colIdx]);
-                    if (cellValue !== filterValue) {
+                const colIdx = parseInt(columnIndex);
+                const schema = filterSchema[colIdx];
+                
+                if (!schema) continue;
+
+                if (schema.type === FilterType.Range) {
+                    // Handle range filter
+                    const numValue = Number(row[colIdx]);
+                    if (isNaN(numValue)) continue;
+                    
+                    const rangeFilter = filterValue as { min?: number; max?: number };
+                    if (!rangeFilter) continue;
+                    
+                    if (rangeFilter.min !== undefined && numValue < rangeFilter.min) {
                         return false;
+                    }
+                    if (rangeFilter.max !== undefined && numValue > rangeFilter.max) {
+                        return false;
+                    }
+                } else {
+                    // Handle select filter
+                    if (filterValue && filterValue !== 'all') {
+                        const cellValue = String(row[colIdx]);
+                        if (cellValue !== filterValue) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -189,36 +222,80 @@ export const Table: React.FC<TableProps> = ({
 
         return (
             <div style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                {Object.entries(filterSchema).map(([columnIndex, schema]: [string, any]) => {
+                {Object.entries(filterSchema).map(([columnIndex, schema]: [string, FilterConfig]) => {
                     const colIdx = parseInt(columnIndex);
                     const columnHeader = headers[colIdx] || `Column ${colIdx}`;
                     
-                    // Get unique values for this column
-                    const uniqueValues = Array.from(
-                        new Set(dataEntries.map(row => String(row[colIdx])))
-                    ).sort();
+                    if (schema.type === FilterType.Range) {
+                        // Render range filter with min/max inputs
+                        const rangeFilter = (filters[columnIndex] as { min?: number; max?: number }) || {};
+                        
+                        return (
+                            <div key={columnIndex} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                                <NumberInput
+                                    id={`filter-${columnIndex}-min`}
+                                    label={`${columnHeader} (Min)`}
+                                    value={rangeFilter.min ?? ''}
+                                    onChange={(e: any) => {
+                                        const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                        setFilters(prev => ({
+                                            ...prev,
+                                            [columnIndex]: {
+                                                ...(prev[columnIndex] as any || {}),
+                                                min: numValue
+                                            }
+                                        }));
+                                        setPage(1);
+                                    }}
+                                    hideSteppers={true}
+                                />
+                                <NumberInput
+                                    id={`filter-${columnIndex}-max`}
+                                    label={`${columnHeader} (Max)`}
+                                    value={rangeFilter.max ?? ''}
+                                    onChange={(e: any) => {
+                                        const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                        setFilters(prev => ({
+                                            ...prev,
+                                            [columnIndex]: {
+                                                ...(prev[columnIndex] as any || {}),
+                                                max: numValue
+                                            }
+                                        }));
+                                        setPage(1);
+                                    }}
+                                    hideSteppers={true}
+                                />
+                            </div>
+                        );
+                    } else {
+                        // Render select filter (default)
+                        const uniqueValues = Array.from(
+                            new Set(dataEntries.map(row => String(row[colIdx])))
+                        ).sort();
 
-                    return (
-                        <Select
-                            key={columnIndex}
-                            id={`filter-${columnIndex}`}
-                            labelText={columnHeader}
-                            value={filters[columnIndex] || 'all'}
-                            onChange={(e) => {
-                                setFilters(prev => ({
-                                    ...prev,
-                                    [columnIndex]: e.target.value
-                                }));
-                                setPage(1);
-                            }}
-                            style={{ minWidth: '200px' }}
-                        >
-                            <SelectItem value="all" text="All" />
-                            {uniqueValues.map(value => (
-                                <SelectItem key={value} value={value} text={value} />
-                            ))}
-                        </Select>
-                    );
+                        return (
+                            <Select
+                                key={columnIndex}
+                                id={`filter-${columnIndex}`}
+                                labelText={columnHeader}
+                                value={filters[columnIndex] || 'all'}
+                                onChange={(e) => {
+                                    setFilters(prev => ({
+                                        ...prev,
+                                        [columnIndex]: e.target.value
+                                    }));
+                                    setPage(1);
+                                }}
+                                style={{ minWidth: '200px' }}
+                            >
+                                <SelectItem value="all" text="All" />
+                                {uniqueValues.map(value => (
+                                    <SelectItem key={value} value={value} text={value} />
+                                ))}
+                            </Select>
+                        );
+                    }
                 })}
                 <Button 
                     kind="secondary" 
