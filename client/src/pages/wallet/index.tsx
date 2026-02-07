@@ -106,6 +106,13 @@ export default function WalletPage() {
     (value: string) => renderStatus(value)
   ];
 
+  // Filter schema for filterable columns
+  const filterSchema = {
+    1: {}, // Type (Buy/Sell)
+    2: {}, // Token (SOL, USDC, etc.)
+    7: {}  // Status (Success/Failed)
+  };
+
 
   const headers = [
     {
@@ -191,7 +198,7 @@ export default function WalletPage() {
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
@@ -202,7 +209,7 @@ export default function WalletPage() {
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
@@ -213,7 +220,7 @@ export default function WalletPage() {
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
@@ -224,7 +231,7 @@ export default function WalletPage() {
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
@@ -235,7 +242,7 @@ export default function WalletPage() {
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}

@@ -11,6 +11,8 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExportMenu, type ExportFormat } from './ExportMenu';
 import styles from './TableWrapper.module.scss';
+import { IconButton } from '@carbon/react';
+import { Filter } from '@carbon/react/icons';
 
 /**
  * Props for TableWrapper component
@@ -36,6 +38,32 @@ interface TableWrapperProps {
 
   /** Whether data is empty */
   isEmpty?: boolean;
+
+  /** Enable search/filter toolbar (default: false) */
+  enableToolbar?: boolean;
+
+  /** Search placeholder text */
+  searchPlaceholder?: string;
+
+  /** Search value */
+  searchValue?: string;
+
+  /** Search change callback */
+  onSearchChange?: (value: string) => void;
+
+  enableFilterButton?: boolean;
+
+  /** Filter panel open state */
+  isFilterOpen?: boolean;
+
+  /** Filter panel toggle callback */
+  onFilterToggle?: () => void;
+
+  /** Filter panel content */
+  filterPanel?: React.ReactNode;
+
+  /** Custom toolbar content */
+  toolbarContent?: React.ReactNode;
 }
 
 /**
@@ -61,6 +89,15 @@ export function TableWrapper({
   enableExport = true,
   onExport,
   isEmpty = false,
+  enableToolbar = false,
+  searchPlaceholder = 'Search...',
+  searchValue = '',
+  onSearchChange,
+  enableFilterButton,
+  isFilterOpen = false,
+  onFilterToggle,
+  filterPanel,
+  toolbarContent,
 }: TableWrapperProps) {
   const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
@@ -94,6 +131,30 @@ export function TableWrapper({
           {title}
         </h2>
         <div className={styles.headerActions}>
+          {/* Toolbar Search */}
+          {enableToolbar && onSearchChange && (
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className={styles.searchInput}
+              aria-label="Search table"
+            />
+          )}
+
+          {/* Toolbar buttonFilter */}
+          {enableFilterButton && onFilterToggle && (
+            <IconButton 
+              label="Filter" 
+              onClick={onFilterToggle}
+              kind={isFilterOpen ? 'primary' : 'ghost'}
+            >
+              <Filter/>
+            </IconButton>
+          )}
+          {/* Custom toolbar content */}
+          {toolbarContent}
           {actions}
           {enableExport && onExport && (
             <ExportMenu
@@ -105,6 +166,13 @@ export function TableWrapper({
           )}
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {enableFilterButton && isFilterOpen && filterPanel && (
+        <div className={styles.filterPanel}>
+          {filterPanel}
+        </div>
+      )}
 
       {/* Content area */}
       <div className={styles.content}>

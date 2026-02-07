@@ -1,7 +1,7 @@
-import type { ExportFormat } from "@/components/charts/shared/ExportMenu"
+import type { ExportFormat } from "@/components/charts/shared/ExportFormat"
 import { useState } from "react";
 import { TableWrapper } from '../charts/shared/TableWrapper';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem } from "@carbon/react";
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -35,7 +35,6 @@ export const Table: React.FC<TableProps> = ({
     title,
     headers,
     initialFilters,
-    fetcher,
     filterSchema,
     classnames = [],
     cellRenderers = [],
@@ -46,11 +45,41 @@ export const Table: React.FC<TableProps> = ({
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [sortIndex, setSortIndex] = useState(0);
+    const [searchValue, setSearchValue] = useState("");
+    const [filters, setFilters] = useState<Partial<any>>(initialFilters);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Apply search and filter to data
+    const filteredData = dataEntries.filter(row => {
+        // Apply search filter
+        if (searchValue) {
+            const matchesSearch = row.some(cell => {
+                const cellValue = String(cell).toLowerCase();
+                return cellValue.includes(searchValue.toLowerCase());
+            });
+            if (!matchesSearch) return false;
+        }
+        
+        // Apply column filters
+        if (filterSchema && Object.keys(filters).length > 0) {
+            for (const [columnIndex, filterValue] of Object.entries(filters)) {
+                if (filterValue && filterValue !== 'all') {
+                    const colIdx = parseInt(columnIndex);
+                    const cellValue = String(row[colIdx]);
+                    if (cellValue !== filterValue) {
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        return true;
+    });
 
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
 
-    const paginatedRows = dataEntries.slice(start, end);
+    const paginatedRows = filteredData.slice(start, end);
 
 
     /**
@@ -58,9 +87,9 @@ export const Table: React.FC<TableProps> = ({
      */
     const handleExport = async (format: ExportFormat) => {
         if (format === 'csv') {
-            // Export as CSV
+            // Export as CSV (filtered data)
             const csvHeaders = headers.join(',');
-            const csvRows = paginatedRows.map(row =>
+            const csvRows = filteredData.map(row =>
                 row.map(entry => 
                     typeof entry === 'string' ? `"${entry.replace(/"/g, '""')}"` : entry
                 ).join(',')
@@ -146,16 +175,81 @@ export const Table: React.FC<TableProps> = ({
                 console.log("default");
                 comparison = String(cellA).localeCompare(String(cellB), locale);
         }
-
         // 3. Apply Directionality
         return sortDirection === sortStates.DESC ? comparison * -1 : comparison;
+    };
+
+    /**
+     * Render filter panel based on filterSchema
+     */
+    const renderFilterPanel = () => {
+        if (!filterSchema || Object.keys(filterSchema).length === 0) {
+            return <div style={{ padding: '1rem' }}>No filters available</div>;
+        }
+
+        return (
+            <div style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                {Object.entries(filterSchema).map(([columnIndex, schema]: [string, any]) => {
+                    const colIdx = parseInt(columnIndex);
+                    const columnHeader = headers[colIdx] || `Column ${colIdx}`;
+                    
+                    // Get unique values for this column
+                    const uniqueValues = Array.from(
+                        new Set(dataEntries.map(row => String(row[colIdx])))
+                    ).sort();
+
+                    return (
+                        <Select
+                            key={columnIndex}
+                            id={`filter-${columnIndex}`}
+                            labelText={columnHeader}
+                            value={filters[columnIndex] || 'all'}
+                            onChange={(e) => {
+                                setFilters(prev => ({
+                                    ...prev,
+                                    [columnIndex]: e.target.value
+                                }));
+                                setPage(1);
+                            }}
+                            style={{ minWidth: '200px' }}
+                        >
+                            <SelectItem value="all" text="All" />
+                            {uniqueValues.map(value => (
+                                <SelectItem key={value} value={value} text={value} />
+                            ))}
+                        </Select>
+                    );
+                })}
+                <Button 
+                    kind="secondary" 
+                    size="sm"
+                    onClick={() => {
+                        setFilters(initialFilters);
+                        setPage(1);
+                    }}
+                >
+                    Clear Filters
+                </Button>
+            </div>
+        );
     };
 
     return (
         <TableWrapper
             title={title}
             onExport={handleExport}
-            isEmpty={dataEntries.length === 0}
+            isEmpty={filteredData.length === 0}
+            enableToolbar={true}
+            searchPlaceholder="Search table..."
+            searchValue={searchValue}
+            onSearchChange={(value) => {
+                setSearchValue(value);
+                setPage(1);
+            }}
+            enableFilterButton={filterSchema && Object.keys(filterSchema).length > 0}
+            isFilterOpen={isFilterOpen}
+            onFilterToggle={() => setIsFilterOpen(!isFilterOpen)}
+            filterPanel={renderFilterPanel()}
         >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
@@ -166,6 +260,7 @@ export const Table: React.FC<TableProps> = ({
                         >
                         {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps }) => (
                             <CarbonTable {...getTableProps()}>
+                  
                                 <TableHead>
                                     <TableRow>
                                         {headers.map((header, index) => {
@@ -196,7 +291,7 @@ export const Table: React.FC<TableProps> = ({
                                         //             <TableCell key={cell.id}>{cell.value}</TableCell>
                                         //         ))}
                                         //     </TableRow>
-                                            <TableRow {...getRowProps({ row })}>
+                                            <TableRow key={key} {...rowProps}>
                                                 {row.cells.map((cell, cellIndex) => {
                                                     // Extract raw value and apply renderer/class logic here
                                                     const rawValue = cell.value;
@@ -225,7 +320,7 @@ export const Table: React.FC<TableProps> = ({
                         page={page}
                         pageSize={pageSize}
                         pageSizes={[10, 20, 30, 50]}
-                        totalItems={paginatedRows.length}
+                        totalItems={filteredData.length}
                         onChange={({ page, pageSize }) => {
                             setPage(page);
                             setPageSize(pageSize);
