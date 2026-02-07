@@ -44,7 +44,7 @@ export default function TokenPage() {
   if ($meta.isLoading || loading) {
     return <>Loading</>;
   }
-  if (!$meta.error || !$meta.data) {
+  if ($meta.error || !$meta.data) {
     return <>Error</>;
   }
 
