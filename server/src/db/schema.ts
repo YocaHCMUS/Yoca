@@ -4,7 +4,6 @@ import {
   char,
   decimal as dec,
   integer,
-  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -27,16 +26,6 @@ export const chartGranularityOrder = {
 } as const;
 
 type ChartGranularityKey = keyof typeof chartGranularityOrder;
-
-const chartGranularity = pgEnum(
-  "chart_granularity",
-  Object.keys(chartGranularityOrder) as [
-    ChartGranularityKey,
-    ...ChartGranularityKey[],
-  ],
-  // The above type means an array of atleast one ChartGranularityKey,
-  // as pgEnum doesn't allow empty arrays
-);
 
 // #region Table definitions
 
@@ -139,7 +128,7 @@ export const tokenMarketChartDaily = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull() ,
+    unixUpdatedAt: integer("unix_updated_at").notNull(),
   },
   (table) => [
     primaryKey({
@@ -247,7 +236,6 @@ export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
-export type ChartGranularity = (typeof chartGranularity.enumValues)[number];
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 
 // #endregion
