@@ -13,6 +13,14 @@ import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
 import { Table, SortType } from "@/components/tables/Table.tsx";
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
+import { 
+  renderCode, 
+  renderBinaryValue, 
+  renderBold, 
+  renderCurrency, 
+  renderStatus,
+  renderDateTime 
+} from "@/components/tables/TableCellRenderer.tsx";
 
 // temporary interface
 interface Transaction {
@@ -46,7 +54,7 @@ export default function WalletPage() {
     amount: Math.random() * 1000,
     price: Math.random() * 200,
     total: Math.random() * 10000,
-    timestamp: new Date(Date.now() - Math.random() * 86400000).toDateString(),
+    timestamp: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString(),
     status: i % 10 === 0 ? 'Failed' : 'Success',
   }));
 
@@ -83,42 +91,19 @@ export default function WalletPage() {
     6: { type: SortType.Date }     // Time
   };
 
-  // Cell renderers for conditional styling (temporary, move to util service)
+  // Cell renderers for conditional styling
   const cellRenderers = [
-    (value: string) => (
-      <code style={{ color: 'var(--cds-text-secondary)', fontSize: '0.75rem' }} title={value}>
-        {value}
-      </code>
-    ),
-    (value: string) => (
-      <span style={{ 
-        color: value === 'Buy' ? 'var(--cds-support-success)' : 'var(--cds-support-error)',
-        fontWeight: 600 
-      }}>
-        {value}
-      </span>
-    ),
-    (value: string) => <span style={{ fontWeight: 600 }}>{value}</span>,
+    (value: string) => renderCode(value),
+    (value: string) => renderBinaryValue(value, {
+      'Buy': 'var(--cds-support-success)',
+      'Sell': 'var(--cds-support-error)'
+    }),
+    (value: string) => renderBold(value),
     null,
-    (value: string) => <span>${value}</span>,
-    (value: string) => <span>${value}</span>,
-    null,
-    // (value: string) => {
-    //   const relative = Date.now() - new Date(value).getTime();
-    //   return <span>{relative} ago</span>
-    // },
-    (value: string) => (
-      <span style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        color: value === 'Success' ? 'var(--cds-support-success)' : 'var(--cds-support-error)',
-        fontWeight: 600
-      }}>
-        {value === 'Success' ? <CheckmarkFilled size={16} /> : <CloseFilled size={16} />}
-        {value}
-      </span>
-    )
+    (value: string) => renderCurrency(value),
+    (value: string) => renderCurrency(value),
+    (value: string) => renderDateTime(value),
+    (value: string) => renderStatus(value)
   ];
 
 

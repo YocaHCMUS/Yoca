@@ -132,7 +132,11 @@ export const Table: React.FC<TableProps> = ({
                 const dateA = new Date(cellA).getTime();
                 const dateB = new Date(cellB).getTime();
                 console.log(`cellA: ${cellA} - ${dateA}; cellB: ${cellB} - ${dateB}`);
-                comparison = dateA - dateB;
+                // Handle invalid dates
+                if (isNaN(dateA) && isNaN(dateB)) comparison = 0;
+                else if (isNaN(dateA)) comparison = 1;
+                else if (isNaN(dateB)) comparison = -1;
+                else comparison = dateA - dateB;
                 break;
             case SortType.Number:
                 console.log("number");
