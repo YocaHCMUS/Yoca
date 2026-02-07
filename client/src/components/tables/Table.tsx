@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { TableWrapper, type ActiveFilter } from '../charts/shared/TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput, IconButton } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
 import styles from './Table.module.scss';
 
@@ -96,14 +96,20 @@ export const Table: React.FC<TableProps> = ({
         if (buttonElement && tableContainer) {
             const buttonRect = buttonElement.getBoundingClientRect();
             const tableRect = tableContainer.getBoundingClientRect();
-            const popupWidth = 280; // min-width from CSS
+            const popupWidth = 280; // min-width from CSS, risky value
             const spaceFromTableStart = buttonRect.right - tableRect.left;
             
             // If not enough space from table start to button right, align to left
             setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
         }
         setOpenFilterModal(columnIndex);
-        setTempFilterValue(filters[columnIndex] || null);
+        // Initialize with existing filter or empty array for Select type
+        const schema = filterSchema[columnIndex];
+        if (schema?.type === FilterType.Select) {
+            setTempFilterValue(filters[columnIndex] || []);
+        } else {
+            setTempFilterValue(filters[columnIndex] || null);
+        }
     };
 
     /**
@@ -118,7 +124,23 @@ export const Table: React.FC<TableProps> = ({
      * Apply filter from modal
      */
     const applyFilter = (columnIndex: number) => {
-        if (tempFilterValue !== null && tempFilterValue !== undefined) {
+        const schema = filterSchema[columnIndex];
+        // For Select type, only apply if array has items
+        if (schema?.type === FilterType.Select) {
+            if (Array.isArray(tempFilterValue) && tempFilterValue.length > 0) {
+                setFilters(prev => ({
+                    ...prev,
+                    [columnIndex]: tempFilterValue
+                }));
+            } else {
+                // Remove filter if no items selected
+                setFilters(prev => {
+                    const newFilters = { ...prev };
+                    delete newFilters[columnIndex];
+                    return newFilters;
+                });
+            }
+        } else if (tempFilterValue !== null && tempFilterValue !== undefined) {
             setFilters(prev => ({
                 ...prev,
                 [columnIndex]: tempFilterValue
@@ -164,11 +186,13 @@ export const Table: React.FC<TableProps> = ({
                 } else if (rangeFilter.max !== undefined) {
                     displayText = `≤ ${rangeFilter.max}`;
                 }
+            } else if (Array.isArray(filterValue)) {
+                displayText = filterValue.join(', ');
             } else {
                 displayText = String(filterValue);
             }
             
-            if (displayText && filterValue !== 'all') {
+            if (displayText && filterValue !== 'all' && !(Array.isArray(filterValue) && filterValue.length === 0)) {
                 active.push({
                     columnIndex: colIdx,
                     columnName,
@@ -215,8 +239,13 @@ export const Table: React.FC<TableProps> = ({
                         return false;
                     }
                 } else {
-                    // Handle select filter
-                    if (filterValue && filterValue !== 'all') {
+                    // Handle select filter (multi-select with OR logic)
+                    if (Array.isArray(filterValue) && filterValue.length > 0) {
+                        const cellValue = String(row[colIdx]);
+                        if (!filterValue.includes(cellValue)) {
+                            return false;
+                        }
+                    } else if (filterValue && filterValue !== 'all') {
                         const cellValue = String(row[colIdx]);
                         if (cellValue !== filterValue) {
                             return false;
@@ -353,51 +382,73 @@ export const Table: React.FC<TableProps> = ({
                         Filter: {columnHeader}
                     </div>
                     {schema.type === FilterType.Range ? (
-                        <>
-                            <NumberInput
-                                id={`filter-popup-${columnIndex}-min`}
-                                label="Minimum Value"
-                                value={tempFilterValue?.min ?? ''}
-                                onChange={(e: any) => {
-                                    const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                    setTempFilterValue((prev: any) => ({
-                                        ...(prev || {}),
-                                        min: numValue
-                                    }));
-                                }}
-                                hideSteppers={true}
-                                size="sm"
-                            />
-                            <NumberInput
-                                id={`filter-popup-${columnIndex}-max`}
-                                label="Maximum Value"
-                                value={tempFilterValue?.max ?? ''}
-                                onChange={(e: any) => {
-                                    const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                    setTempFilterValue((prev: any) => ({
-                                        ...(prev || {}),
-                                        max: numValue
-                                    }));
-                                }}
-                                hideSteppers={true}
-                                size="sm"
-                            />
-                        </>
+                        <Slider 
+                            ariaLabelInput="Minimum Value" 
+                            unstable_ariaLabelInputUpper="Maximum Value" 
+                            value={tempFilterValue?.min ?? schema.min ?? 0}
+                            unstable_valueUpper={tempFilterValue?.max ?? schema.max ?? 100}
+                            min={schema.min ?? 0}
+                            max={schema.max ?? 100}
+                            step={schema.step ?? 1}
+                            stepMultiplier={10}
+                            hideTextInput={true}
+                            onChange={(value: any) => {
+                                setTempFilterValue((prev: any) => ({
+                                    ...(prev || {}),
+                                    min: value.value,
+                                    max: value.valueUpper
+                                }));
+                            }}
+                        />
                     ) : (
-                        <Select
-                            id={`filter-popup-${columnIndex}`}
-                            labelText="Select value"
-                            value={tempFilterValue || 'all'}
-                            onChange={(e) => setTempFilterValue(e.target.value)}
-                            size="sm"
+                        <CheckboxGroup
+                            legendText="Select values (multiple allowed)"
                         >
-                            <SelectItem value="all" text="All" />
-                            {Array.from(
-                                new Set(dataEntries.map(row => String(row[columnIndex])))
-                            ).sort().map(value => (
-                                <SelectItem key={value} value={value} text={value} />
-                            ))}
-                        </Select>
+                            {(() => {
+                                const allValues = Array.from(
+                                    new Set(dataEntries.map(row => String(row[columnIndex])))
+                                ).sort();
+                                const selectedValues = Array.isArray(tempFilterValue) ? tempFilterValue : [];
+                                const allSelected = allValues.length > 0 && allValues.every(v => selectedValues.includes(v));
+                                const indeterminate = selectedValues.length > 0 && allValues.some(v => selectedValues.includes(v)) && !allSelected;
+                                
+                                return (
+                                    <>
+                                        <Checkbox
+                                            id={`filter-checkbox-${columnIndex}-select-all`}
+                                            labelText="Select All"
+                                            checked={allSelected}
+                                            indeterminate={indeterminate}
+                                            onChange={(e: any, { checked }: { checked: boolean }) => {
+                                                if (checked) {
+                                                    setTempFilterValue(allValues);
+                                                } else {
+                                                    setTempFilterValue([]);
+                                                }
+                                            }}
+                                        />
+                                        {allValues.map(value => {
+                                            return (
+                                                <Checkbox
+                                                    key={value}
+                                                    id={`filter-checkbox-${columnIndex}-${value}`}
+                                                    labelText={value}
+                                                    checked={selectedValues.includes(value)}
+                                                    onChange={(e: any, { checked }: { checked: boolean }) => {
+                                                        const currentValues = Array.isArray(tempFilterValue) ? [...tempFilterValue] : [];
+                                                        if (checked) {
+                                                            setTempFilterValue([...currentValues, value]);
+                                                        } else {
+                                                            setTempFilterValue(currentValues.filter(v => v !== value));
+                                                        }
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </>
+                                );
+                            })()}
+                        </CheckboxGroup>
                     )}
                     <div className={styles.filterPopupActions}>
                         <Button

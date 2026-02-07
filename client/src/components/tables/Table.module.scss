@@ -6,6 +6,8 @@
   top: calc(100% + 8px);
   z-index: 9999;
   min-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
   background: var(--cds-layer-01);
   border: 1px solid var(--cds-border-subtle-01);
   border-radius: 4px;
@@ -34,9 +36,9 @@
 }
 
 .filterPopupContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .filterPopupHeader {
