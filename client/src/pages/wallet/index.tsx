@@ -11,7 +11,7 @@ import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
-import { Table } from "@/components/tables/Table.tsx";
+import { Table, SortType } from "@/components/tables/Table.tsx";
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
 
 // temporary interface
@@ -46,7 +46,7 @@ export default function WalletPage() {
     amount: Math.random() * 1000,
     price: Math.random() * 200,
     total: Math.random() * 10000,
-    timestamp: new Date(Date.now() - Math.random() * 86400000).toLocaleTimeString(),
+    timestamp: new Date(Date.now() - Math.random() * 86400000).toDateString(),
     status: i % 10 === 0 ? 'Failed' : 'Success',
   }));
 
@@ -56,8 +56,8 @@ export default function WalletPage() {
     tx.type,
     tx.token,
     tx.amount.toFixed(4),
-    `$${tx.price.toFixed(2)}`,
-    `$${tx.total.toFixed(2)}`,
+    tx.price.toFixed(2),
+    tx.total.toFixed(2),
     tx.timestamp,
     tx.status
   ]);
@@ -74,6 +74,14 @@ export default function WalletPage() {
   ];
 
   const isSortable = [false, false, false, true, true, true, true, false];
+
+  // Sort configurations for sortable columns
+  const sortConfigs = {
+    3: { type: SortType.Number },  // Amount
+    4: { type: SortType.Number },  // Price
+    5: { type: SortType.Number },  // Total
+    6: { type: SortType.Date }     // Time
+  };
 
   // Cell renderers for conditional styling (temporary, move to util service)
   const cellRenderers = [
@@ -92,9 +100,13 @@ export default function WalletPage() {
     ),
     (value: string) => <span style={{ fontWeight: 600 }}>{value}</span>,
     null,
+    (value: string) => <span>${value}</span>,
+    (value: string) => <span>${value}</span>,
     null,
-    null,
-    null,
+    // (value: string) => {
+    //   const relative = Date.now() - new Date(value).getTime();
+    //   return <span>{relative} ago</span>
+    // },
     (value: string) => (
       <span style={{
         display: 'flex',
@@ -198,6 +210,7 @@ export default function WalletPage() {
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
               title="Swap"
@@ -208,6 +221,7 @@ export default function WalletPage() {
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
               title="Inflow"
@@ -218,6 +232,7 @@ export default function WalletPage() {
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
               title="Outflow"
@@ -228,6 +243,7 @@ export default function WalletPage() {
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
               title="Conterparties"
@@ -238,6 +254,7 @@ export default function WalletPage() {
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
               isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}

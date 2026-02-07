@@ -2,10 +2,21 @@ import type { ExportFormat } from "@/components/charts/shared/ExportMenu"
 import { useState } from "react";
 import { TableWrapper } from '../charts/shared/TableWrapper';
 import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination } from "@carbon/react";
-import { ArrowUp, ArrowDown, CaretUp, CaretDown } from "@carbon/icons-react";
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
+
+export enum SortType {
+    String = 'string',
+    Date = 'date',
+    Priority = 'priority',
+    Number = 'number'
+}
+
+export interface SortConfig {
+    type: SortType;
+    priorityMap?: Record<string, number>;
+}
 
 export interface TableProps {
     title: string;
@@ -17,6 +28,7 @@ export interface TableProps {
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
     isSortable?: boolean[];
+    sortConfigs?: Record<number, SortConfig>; 
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -28,43 +40,18 @@ export const Table: React.FC<TableProps> = ({
     classnames = [],
     cellRenderers = [],
     dataEntries = [],
-    isSortable = []
+    isSortable = [],
+    sortConfigs
 }) => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [sortColumn, setSortColumn] = useState<number | null>(null);
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [sortIndex, setSortIndex] = useState(0);
 
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
 
     const paginatedRows = dataEntries.slice(start, end);
 
-    // Apply sorting if a column is selected
-    const sortedData = sortColumn !== null 
-        ? [...paginatedRows].sort((a, b) => {
-            const aVal = a[sortColumn];
-            const bVal = b[sortColumn];
-            
-            // Handle null/undefined values
-            if (aVal == null && bVal == null) return 0;
-            if (aVal == null) return 1;
-            if (bVal == null) return -1;
-            
-            // Compare values
-            let comparison = 0;
-            if (typeof aVal === 'number' && typeof bVal === 'number') {
-                comparison = aVal - bVal;
-            } else {
-                comparison = String(aVal).localeCompare(String(bVal));
-            }
-            
-            return sortDirection === 'asc' ? comparison : -comparison;
-        })
-        : paginatedRows;
-
-
-    
 
     /**
      * Handle export functionality
@@ -73,7 +60,7 @@ export const Table: React.FC<TableProps> = ({
         if (format === 'csv') {
             // Export as CSV
             const csvHeaders = headers.join(',');
-            const csvRows = sortedData.map(row =>
+            const csvRows = paginatedRows.map(row =>
                 row.map(entry => 
                     typeof entry === 'string' ? `"${entry.replace(/"/g, '""')}"` : entry
                 ).join(',')
@@ -90,52 +77,75 @@ export const Table: React.FC<TableProps> = ({
         }
     };
 
-
-    /**
-     * Handle column sorting
-     */
-    const handleSort = (columnIndex: number) => {
-        if (sortColumn === columnIndex) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortColumn(columnIndex);
-            setSortDirection('asc');
-        }
-    };
-
     // Transform headers for Carbon DataTable
     const carbonHeaders = headers.map((header, index) => ({
         key: `header-${index}`,
-        header: header
+        header: header,
+        index: index,
+        sortConfig: sortConfigs?.[index], // Attach config to the header
+        isSortable: !!sortConfigs?.[index] // Only enable sort if config exists
     }));
 
-    // Constructing the rows for Carbon DataTable
-    const rows = sortedData.map((row, rowIndex) => {
-        const rowData: any = {
-            id: `row-${rowIndex}`
-        };
-        
-        // Map each entry to a corresponding header key
+    const rows = paginatedRows.map((row, rowIndex) => {
+        const rowData: any = { id: `row-${rowIndex}` };
         row.forEach((entry, index) => {
-            const renderer = cellRenderers[index];
-            const className = classnames[index] || '';
-            
-            // Use custom renderer if provided, otherwise default rendering
-            if (renderer) {
-                rowData[`header-${index}`] = renderer(entry, row, rowIndex);
-            } else if (className) {
-                rowData[`header-${index}`] = (
-                    <span className={className}>
-                        {entry}
-                    </span>
-                );
-            } else {
-                rowData[`header-${index}`] = entry;
-            }
+            // Store raw data for sorting
+            rowData[`header-${index}`] = entry; 
         });
-        
         return rowData;
     });
+
+    /**  
+    * Handle custom sorts
+    */
+    const universalSortRow = (
+        cellA: any, 
+        cellB: any, 
+        { key, sortDirection, sortStates, locale }: any
+    ) => {
+        // Guard against undefined key
+        if (!key) {
+            console.log("key not found / undefined");
+            return String(cellA).localeCompare(String(cellB), locale);
+        }
+       
+        // Find the config for the current column
+        const colIndex = parseInt(key.split('-')[1], 10);
+        const columnConfig = sortConfigs?.[colIndex];
+        
+        let comparison = 0;
+
+        if (!columnConfig) {
+            console.log("columnConfig not found / undefined");
+            return String(cellA).localeCompare(String(cellB), locale);
+        }
+
+        // 1. Dynamic Logic Selection
+        switch (columnConfig.type) {
+            case SortType.Priority:
+                console.log("priority");
+                const map = columnConfig.priorityMap || {};
+                comparison = (map[cellA] ?? 99) - (map[cellB] ?? 99);
+                break;
+            case SortType.Date:
+                console.log("date");
+                const dateA = new Date(cellA).getTime();
+                const dateB = new Date(cellB).getTime();
+                console.log(`cellA: ${cellA} - ${dateA}; cellB: ${cellB} - ${dateB}`);
+                comparison = dateA - dateB;
+                break;
+            case SortType.Number:
+                console.log("number");
+                comparison = Number(cellA) - Number(cellB);
+                break;
+            default:
+                console.log("default");
+                comparison = String(cellA).localeCompare(String(cellB), locale);
+        }
+
+        // 3. Apply Directionality
+        return sortDirection === sortStates.DESC ? comparison * -1 : comparison;
+    };
 
     return (
         <TableWrapper
@@ -145,8 +155,12 @@ export const Table: React.FC<TableProps> = ({
         >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
-                    <DataTable rows={rows} headers={carbonHeaders}>
-                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+                    <DataTable
+                        rows={rows} 
+                        headers={carbonHeaders} 
+                        sortRow={universalSortRow}
+                        >
+                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps }) => (
                             <CarbonTable {...getTableProps()}>
                                 <TableHead>
                                     <TableRow>
@@ -160,7 +174,7 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableHeader 
                                                     key={key} 
                                                     {...headerProps}
-                                                    onClick={isColumnSortable ? () => handleSort(index) : undefined}
+                                                    // onClick={() => setSortIndex(index)}
                                                     style={isColumnSortable ? { cursor: 'pointer' } : undefined}
                                                 >
                                                     {header.header}
@@ -170,14 +184,31 @@ export const Table: React.FC<TableProps> = ({
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {rows.map(row => {
+                                    {rows.map((row, rowIndex) => {
                                         const { key, ...rowProps } = getRowProps({ row });
                                         return (
-                                            <TableRow key={key} {...rowProps}>
-                                                {row.cells.map(cell => (
-                                                    <TableCell key={cell.id}>{cell.value}</TableCell>
-                                                ))}
-                                            </TableRow>
+                                        //     <TableRow key={key} {...rowProps}>
+                                        //         {row.cells.map(cell => (
+                                        //             <TableCell key={cell.id}>{cell.value}</TableCell>
+                                        //         ))}
+                                        //     </TableRow>
+                                            <TableRow {...getRowProps({ row })}>
+                                                {row.cells.map((cell, cellIndex) => {
+                                                    // Extract raw value and apply renderer/class logic here
+                                                    const rawValue = cell.value;
+                                                    const renderer = cellRenderers[cellIndex];
+                                                    const className = classnames[cellIndex];
+
+                                                    return (
+                                                        <TableCell key={cell.id}>
+                                                            {renderer 
+                                                                ? renderer(rawValue, paginatedRows[rowIndex], rowIndex) 
+                                                                : <span className={className}>{rawValue}</span>
+                                                            }
+                                                        </TableCell>
+                                                    );
+                                                })}
+                                            </TableRow>                                        
                                         );
                                     })}
                                 </TableBody>
@@ -190,7 +221,7 @@ export const Table: React.FC<TableProps> = ({
                         page={page}
                         pageSize={pageSize}
                         pageSizes={[10, 20, 30, 50]}
-                        totalItems={sortedData.length}
+                        totalItems={paginatedRows.length}
                         onChange={({ page, pageSize }) => {
                             setPage(page);
                             setPageSize(pageSize);
