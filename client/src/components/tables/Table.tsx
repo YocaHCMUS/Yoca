@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { TableWrapper, type ActiveFilter } from '../charts/shared/TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput, IconButton, Modal } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, Select, SelectItem, NumberInput, IconButton } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
+import styles from './Table.module.scss';
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -62,11 +63,42 @@ export const Table: React.FC<TableProps> = ({
     const [filters, setFilters] = useState<Partial<any>>(initialFilters);
     const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
     const [tempFilterValue, setTempFilterValue] = useState<any>(null);
+    const [popupAlignment, setPopupAlignment] = useState<'left' | 'right'>('right');
+    const filterPopupRef = useRef<HTMLDivElement>(null);
+    const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
+    // Handle click outside to close popup
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterPopupRef.current && !filterPopupRef.current.contains(event.target as Node)) {
+                // Check if click is not on a filter button
+                const target = event.target as HTMLElement;
+                if (!target.closest('[data-filter-button]')) {
+                    closeFilterModal();
+                }
+            }
+        };
+
+        if (openFilterModal !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [openFilterModal]);
 
     /**
      * Open filter modal for specific column
      */
     const openFilterForColumn = (columnIndex: number) => {
+        const buttonElement = filterButtonRefs.current[columnIndex];
+        if (buttonElement) {
+            const rect = buttonElement.getBoundingClientRect();
+            const popupWidth = 280; // min-width from CSS
+            const viewportWidth = window.innerWidth;
+            const spaceOnRight = viewportWidth - rect.right;
+            
+            // If not enough space on right, align to left
+            setPopupAlignment(spaceOnRight < popupWidth ? 'right' : 'left');
+        }
         setOpenFilterModal(columnIndex);
         setTempFilterValue(filters[columnIndex] || null);
     };
@@ -298,79 +330,95 @@ export const Table: React.FC<TableProps> = ({
     };
 
     /**
-     * Render filter modal based on filterSchema for specific column
+     * Render filter popup for specific column index
      */
-    const renderFilterModal = () => {
-        if (openFilterModal === null) return null;
+    const renderFilterPopup = (columnIndex: number) => {
+        if (openFilterModal !== columnIndex) return null;
         
-        const columnIndex = openFilterModal;
         const schema = filterSchema[columnIndex];
         const columnHeader = headers[columnIndex] || `Column ${columnIndex}`;
         
         if (!schema) return null;
 
         return (
-            <Modal
-                open={true}
-                modalHeading={`Filter: ${columnHeader}`}
-                primaryButtonText="Apply"
-                secondaryButtonText="Cancel"
-                onRequestClose={closeFilterModal}
-                onRequestSubmit={() => applyFilter(columnIndex)}
-                size="sm"
+            <div 
+                className={`${styles.filterPopup} ${popupAlignment === 'left' ? styles.filterPopupLeft : styles.filterPopupRight}`} 
+                ref={filterPopupRef}
             >
-                {schema.type === FilterType.Range ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <NumberInput
-                            id={`filter-modal-${columnIndex}-min`}
-                            label="Minimum Value"
-                            value={tempFilterValue?.min ?? ''}
-                            onChange={(e: any) => {
-                                const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                setTempFilterValue((prev: any) => ({
-                                    ...(prev || {}),
-                                    min: numValue
-                                }));
-                            }}
-                            hideSteppers={true}
-                        />
-                        <NumberInput
-                            id={`filter-modal-${columnIndex}-max`}
-                            label="Maximum Value"
-                            value={tempFilterValue?.max ?? ''}
-                            onChange={(e: any) => {
-                                const numValue = e.target.value === '' ? undefined : Number(e.target.value);
-                                setTempFilterValue((prev: any) => ({
-                                    ...(prev || {}),
-                                    max: numValue
-                                }));
-                            }}
-                            hideSteppers={true}
-                        />
+                <div className={styles.filterPopupContent}>
+                    <div className={styles.filterPopupHeader}>
+                        Filter: {columnHeader}
                     </div>
-                ) : (
-                    <Select
-                        id={`filter-modal-${columnIndex}`}
-                        labelText="Select value"
-                        value={tempFilterValue || 'all'}
-                        onChange={(e) => setTempFilterValue(e.target.value)}
-                    >
-                        <SelectItem value="all" text="All" />
-                        {Array.from(
-                            new Set(dataEntries.map(row => String(row[columnIndex])))
-                        ).sort().map(value => (
-                            <SelectItem key={value} value={value} text={value} />
-                        ))}
-                    </Select>
-                )}
-            </Modal>
+                    {schema.type === FilterType.Range ? (
+                        <>
+                            <NumberInput
+                                id={`filter-popup-${columnIndex}-min`}
+                                label="Minimum Value"
+                                value={tempFilterValue?.min ?? ''}
+                                onChange={(e: any) => {
+                                    const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                    setTempFilterValue((prev: any) => ({
+                                        ...(prev || {}),
+                                        min: numValue
+                                    }));
+                                }}
+                                hideSteppers={true}
+                                size="sm"
+                            />
+                            <NumberInput
+                                id={`filter-popup-${columnIndex}-max`}
+                                label="Maximum Value"
+                                value={tempFilterValue?.max ?? ''}
+                                onChange={(e: any) => {
+                                    const numValue = e.target.value === '' ? undefined : Number(e.target.value);
+                                    setTempFilterValue((prev: any) => ({
+                                        ...(prev || {}),
+                                        max: numValue
+                                    }));
+                                }}
+                                hideSteppers={true}
+                                size="sm"
+                            />
+                        </>
+                    ) : (
+                        <Select
+                            id={`filter-popup-${columnIndex}`}
+                            labelText="Select value"
+                            value={tempFilterValue || 'all'}
+                            onChange={(e) => setTempFilterValue(e.target.value)}
+                            size="sm"
+                        >
+                            <SelectItem value="all" text="All" />
+                            {Array.from(
+                                new Set(dataEntries.map(row => String(row[columnIndex])))
+                            ).sort().map(value => (
+                                <SelectItem key={value} value={value} text={value} />
+                            ))}
+                        </Select>
+                    )}
+                    <div className={styles.filterPopupActions}>
+                        <Button
+                            kind="secondary"
+                            size="sm"
+                            onClick={closeFilterModal}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            kind="primary"
+                            size="sm"
+                            onClick={() => applyFilter(columnIndex)}
+                        >
+                            Apply
+                        </Button>
+                    </div>
+                </div>
+            </div>
         );
     };
 
     return (
-        <>
-            {renderFilterModal()}
-            <TableWrapper
+        <TableWrapper
                 title={title}
                 onExport={handleExport}
                 isEmpty={filteredData.length === 0}
@@ -413,17 +461,24 @@ export const Table: React.FC<TableProps> = ({
                                                             {header.header}
                                                         </span>
                                                         {filterSchema[index] && (
-                                                            <IconButton 
-                                                                label={`Filter ${header.header}`}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openFilterForColumn(index);
-                                                                }}
-                                                                kind={filters[index] ? 'primary' : 'ghost'}
-                                                                size="sm"
+                                                            <div 
+                                                                className={styles.headerCell}
+                                                                ref={(el) => { filterButtonRefs.current[index] = el; }}
                                                             >
-                                                                <Filter/>
-                                                            </IconButton>
+                                                                <IconButton 
+                                                                    label={`Filter ${header.header}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openFilterForColumn(index);
+                                                                    }}
+                                                                    kind = 'ghost'
+                                                                    size="sm"
+                                                                    data-filter-button
+                                                                >
+                                                                    <Filter/>
+                                                                </IconButton>
+                                                                {renderFilterPopup(index)}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </TableHeader>
@@ -435,11 +490,6 @@ export const Table: React.FC<TableProps> = ({
                                     {rows.map((row, rowIndex) => {
                                         const { key, ...rowProps } = getRowProps({ row });
                                         return (
-                                        //     <TableRow key={key} {...rowProps}>
-                                        //         {row.cells.map(cell => (
-                                        //             <TableCell key={cell.id}>{cell.value}</TableCell>
-                                        //         ))}
-                                        //     </TableRow>
                                             <TableRow key={key} {...rowProps}>
                                                 {row.cells.map((cell, cellIndex) => {
                                                     // Extract raw value and apply renderer/class logic here
@@ -478,7 +528,6 @@ export const Table: React.FC<TableProps> = ({
                 </div>
             </div>
         </TableWrapper>
-        </>
     );
 } 
 

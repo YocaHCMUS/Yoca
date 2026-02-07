@@ -11,8 +11,7 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExportMenu, type ExportFormat } from './ExportMenu';
 import styles from './TableWrapper.module.scss';
-import { IconButton, Tag } from '@carbon/react';
-import { Filter } from '@carbon/react/icons';
+import { Tag } from '@carbon/react';
 
 /**
  * Active filter representation
@@ -159,26 +158,26 @@ export function TableWrapper({
           )}
         </div>
       </div>
-
       {/* Active Filters Display */}
-      {activeFilters.length > 0 && (
-        <div className={styles.activeFilters}>
-          {activeFilters.map((filter) => (
-            <Tag
-              key={filter.columnIndex}
-              type="blue"
-              filter
-              onClose={() => onRemoveFilter?.(filter.columnIndex)}
-              title={`Filter: ${filter.columnName} = ${filter.displayText}`}
-            >
-              {filter.columnName}: {filter.displayText}
-            </Tag>
-          ))}
-        </div>
-      )}
 
       {/* Content area */}
       <div className={styles.content}>
+        {activeFilters.length > 0 && (
+          <div className={styles.activeFilters}>
+            {activeFilters.map((filter) => (
+              <Tag
+                key={filter.columnIndex}
+                type="blue"
+                filter
+                onClose={() => onRemoveFilter?.(filter.columnIndex)}
+                title={`Filter: ${filter.columnName} = ${filter.displayText}`}
+              >
+                {filter.columnName}: {filter.displayText}
+              </Tag>
+            ))}
+          </div>
+
+        )}
         {children}
       </div>
     </div>
