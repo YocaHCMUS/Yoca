@@ -1,3 +1,4 @@
+import { api } from "@/api/main";
 import {
   MarketStats,
   PoolSelector,
@@ -7,21 +8,24 @@ import {
   TopHolders,
 } from "@/components/token";
 import PageWrapper from "@/components/wrapper/PageWrapper";
+import { useGet } from "@/hooks/useGet";
 import { useTokenPageLogic } from "@/hooks/useTokenPageLogic";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router";
 import styles from "./index.module.scss";
-
-// Dev Step 8: Final UI fix
 
 export default function TokenPage() {
   const { address, poolAddress } = useParams<{
     address: string;
-    poolAddress?: string;
+    poolAddress: string;
   }>();
+
+  if (!address) {
+    return <>Forgot to add address!</>;
+  }
+
   const {
     marketData,
-    metaData,
     poolsData,
     topHolders,
     holdersInfo,
@@ -31,102 +35,26 @@ export default function TokenPage() {
     handlePoolChange,
   } = useTokenPageLogic(address, poolAddress);
 
-  const [discordInvite, setDiscordInvite] = useState<string | null>(null);
-  const [websiteUrl, setWebsiteUrl] = useState<string | null>(null);
-  const [twitterHandle, setTwitterHandle] = useState<string | null>(null);
   const [tokenAge, setTokenAge] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (metaData?.coinGeckoId) {
-      const fetchSocials = async () => {
-        try {
-          const response = await fetch(
-            `https://api.coingecko.com/api/v3/coins/${metaData.coinGeckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`,
-          );
-          if (response.ok) {
-            const data = await response.json();
-            const chatUrls = data.links?.chat_url;
-            if (Array.isArray(chatUrls)) {
-              const discordUrl = chatUrls.find(
-                (url: string) =>
-                  url.includes("discord.com/invite/") ||
-                  url.includes("discord.gg/") ||
-                  url.includes("discordapp.com/invite/"),
-              );
-              if (discordUrl) {
-                const parts = discordUrl.split("/");
-                const invite = parts[parts.length - 1];
-                if (invite) setDiscordInvite(invite);
-              }
-            }
+  const $meta = useGet(api.tokens.meta[":addresses"], 200, {
+    param: { addresses: address },
+  });
 
-            // Website
-            if (
-              data.links?.homepage &&
-              Array.isArray(data.links.homepage) &&
-              data.links.homepage.length > 0
-            ) {
-              setWebsiteUrl(data.links.homepage[0]);
-            }
+  if ($meta.isLoading || loading) {
+    return <>Loading</>;
+  }
+  if (!$meta.error || !$meta.data) {
+    return <>Error</>;
+  }
 
-            // Twitter
-            if (data.links?.twitter_screen_name) {
-              setTwitterHandle(data.links.twitter_screen_name);
-            }
-
-            // Genesis Date / Token Age
-            let genesisDateString = data.genesis_date;
-            if (!genesisDateString && data.market_data) {
-              // Fallback to earliest of ATL/ATH date if available
-              const dates: number[] = [];
-              if (data.market_data.atl_date?.usd)
-                dates.push(new Date(data.market_data.atl_date.usd).getTime());
-              if (data.market_data.ath_date?.usd)
-                dates.push(new Date(data.market_data.ath_date.usd).getTime());
-
-              if (dates.length > 0) {
-                genesisDateString = new Date(Math.min(...dates)).toISOString();
-              }
-            }
-
-            if (genesisDateString) {
-              const genesisDate = new Date(genesisDateString);
-              const now = new Date();
-              const diffTime = Math.abs(now.getTime() - genesisDate.getTime());
-              const diffMonthsFloat = diffTime / (1000 * 60 * 60 * 24 * 30.44);
-              const diffYears = Math.floor(diffMonthsFloat / 12);
-
-              if (diffYears >= 1) {
-                setTokenAge(`>${diffYears}y`);
-              } else {
-                const diffMonths = Math.ceil(diffMonthsFloat);
-                setTokenAge(`${diffMonths}m`);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch social links", error);
-        }
-      };
-
-      fetchSocials();
-    } else {
-      setDiscordInvite(null);
-      setWebsiteUrl(null);
-      setTwitterHandle(null);
-      setTokenAge(null);
-    }
-  }, [metaData?.coinGeckoId]);
+  const metaData = $meta.data[0];
 
   if (!address) {
     return "Non existent page";
   }
 
-  if (loading) {
-    return <div className={styles.loadingContainer}>Is Loading ...</div>;
-  }
-
-  if (!metaData || !marketData) {
+  if (!marketData) {
     return (
       <div className={styles.loadingContainer}>
         <p>Token data not found.</p>
@@ -150,9 +78,9 @@ export default function TokenPage() {
               address={metaData.address}
               imageUrl={metaData.imageUrl ?? undefined}
               coinGeckoId={metaData.coinGeckoId ?? null}
-              discordInvite={discordInvite}
-              websiteUrl={websiteUrl}
-              twitterHandle={twitterHandle}
+              discordInvite={metaData.linkDiscord}
+              websiteUrl={metaData.linkHomepage}
+              twitterHandle={metaData.twitterScreenName}
               tokenAge={tokenAge}
             />
 

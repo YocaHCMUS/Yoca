@@ -10,6 +10,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import type { CG_TokenMarketChart } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdList } from "./token-list.js";
 
+// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
 export async function fetch24hTokenMarketChart(
   tokenAddress: string,
   latestUpdateUnixMs: number | null = null,

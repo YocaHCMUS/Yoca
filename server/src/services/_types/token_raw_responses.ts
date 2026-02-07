@@ -6,6 +6,7 @@ export interface CG_Token {
 }
 
 export interface CG_TokenMeta {
+  id: string,
   platforms: {
     solana: string;
   };
@@ -18,6 +19,11 @@ export interface CG_TokenMeta {
     thumb: string;
     small: string;
     large: string;
+  };
+  links?: {
+    homepage?: string[];
+    chat_url?: string[];
+    twitter_screen_name?: string;
   };
 }
 

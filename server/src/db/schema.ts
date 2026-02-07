@@ -46,6 +46,11 @@ export const tokenMeta = pgTable("token_meta", {
   symbol: varchar("symbol").notNull(),
   imageUrl: varchar("image_url"),
   description: varchar("description"),
+  coinGeckoId: varchar("coin_gecko_id"),
+
+  linkHomepage: varchar("homepage"),
+  linkDiscord: varchar("link_discord"),
+  twitterScreenName: varchar("twitter_screen_name"),
 
   updatedAt: timestamp("updated_at")
     .notNull()
