@@ -111,6 +111,10 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
       }),
     );
 
+  if (metaDataList.length === 0) {
+    return [];
+  }
+
   return await db
     .insert(tokenMeta)
     .values(metaDataList)
@@ -125,6 +129,7 @@ async function fetchTokenMetaList(tokenAddresses: string[]) {
     .returning();
 }
 
+
 export async function getTokenMetaList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return null;
@@ -132,9 +137,22 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
 
   const thresholdDate = new Date(Date.now() - TOKEN_META_TTL_MS);
 
+  // Join with coinGeckoTokenList to get coinGeckoId
   const res = await db
-    .select()
+    .select({
+      address: tokenMeta.address,
+      name: tokenMeta.name,
+      symbol: tokenMeta.symbol,
+      imageUrl: tokenMeta.imageUrl,
+      description: tokenMeta.description,
+      updatedAt: tokenMeta.updatedAt,
+      coinGeckoId: coinGeckoTokenList.coinGeckoId,
+    })
     .from(tokenMeta)
+    .leftJoin(
+      coinGeckoTokenList,
+      eq(tokenMeta.address, coinGeckoTokenList.tokenAddress)
+    )
     .where(
       and(
         gte(tokenMeta.updatedAt, thresholdDate),
@@ -156,9 +174,29 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
   if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
-    return [...res, ...refreshed];
+    // Also get coinGeckoId for refreshed tokens
+    const refreshedWithIds = await db
+      .select({
+        address: tokenMeta.address,
+        name: tokenMeta.name,
+        symbol: tokenMeta.symbol,
+        imageUrl: tokenMeta.imageUrl,
+        description: tokenMeta.description,
+        updatedAt: tokenMeta.updatedAt,
+        coinGeckoId: coinGeckoTokenList.coinGeckoId,
+      })
+      .from(tokenMeta)
+      .leftJoin(
+        coinGeckoTokenList,
+        eq(tokenMeta.address, coinGeckoTokenList.tokenAddress)
+      )
+      .where(inArray(tokenMeta.address, refreshed.map(r => r.address)))
+      .limit(refreshed.length);
+
+    return [...res, ...refreshedWithIds];
   }
 }
+
 
 async function fetchCgTokenList(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
@@ -193,13 +231,15 @@ async function fetchCgTokenList(tokenAddresses: string[]) {
         .map(({ coinGeckoId, tokenAddress }) => [tokenAddress, coinGeckoId]),
     );
 
-    await db
-      .insert(coinGeckoTokenList)
-      .values(solanaTokens)
-      .onConflictDoUpdate({
-        target: [coinGeckoTokenList.tokenAddress],
-        set: { coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId) },
-      });
+    if (solanaTokens.length > 0) {
+      await db
+        .insert(coinGeckoTokenList)
+        .values(solanaTokens)
+        .onConflictDoUpdate({
+          target: [coinGeckoTokenList.tokenAddress],
+          set: { coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId) },
+        });
+    }
 
     return idLookup;
   } else {
@@ -281,12 +321,13 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
 
     // .filter((rawMarketData) => rawMarketData.market_cap_rank != null)
     console.log(res);
-    const marketDataList = res.map(
+    const marketDataList = res
+      .filter(raw => addressLookup[raw.id])
+      .map(
       (rawMarketData): TokenMarketDataInsert => ({
         address: addressLookup[rawMarketData.id],
         priceUsd: rawMarketData.current_price,
         marketCap: rawMarketData.market_cap,
-        // marketCapRank: rawMarketData.market_cap_rank,
         fullyDilutedValuation: rawMarketData.fully_diluted_valuation,
         volume24h: rawMarketData.total_volume,
         high24h: rawMarketData.high_24h,
@@ -318,6 +359,10 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
         atlChangePercentage: rawMarketData.atl_change_percentage,
       }),
     );
+
+    if (marketDataList.length === 0) {
+      return null;
+    }
 
     return await db
       .insert(tokenMarketData)
@@ -460,6 +505,10 @@ export async function fetch24hTokenMarketChart(
         totalVolume: res.total_volumes[index][1],
       }),
     );
+    if (chartDataPoints.length === 0) {
+      return [];
+    }
+
     const chartData = await db
       .insert(tokenMarketChart24h)
       .values(chartDataPoints)
