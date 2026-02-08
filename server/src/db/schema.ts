@@ -1,9 +1,9 @@
-import { relations } from "drizzle-orm";
 import {
   bigint,
   char,
   decimal as dec,
   integer,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -19,15 +19,8 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-export const chartGranularityOrder = {
-  five_minutely: 0,
-  hourly: 1,
-  daily: 2,
-} as const;
-
-type ChartGranularityKey = keyof typeof chartGranularityOrder;
-
 // #region Table definitions
+export const tradeType = pgEnum("trade_type", ["buy", "sell"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -202,35 +195,112 @@ export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   coinGeckoId: text("coin_gecko_id").notNull(),
 });
 
-// #endregion
-// #region Relations
+// Pools data - Aggregated pool information for tokens
+export const tokenPools = pgTable("token_pools", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  network: varchar("network", { length: 32 }).notNull().default("solana"),
+  name: varchar("name").notNull(),
+  source: varchar("source").notNull(), // dex name like "raydium", "orca"
+  volume24h: decimal("volume_24h").notNull(),
+  volumeBuy24h: decimal("volume_buy_24h").notNull(),
+  volumeSell24h: decimal("volume_sell_24h").notNull(),
+  volumeNet24h: decimal("volume_net_24h").notNull(),
+  reserve: decimal("reserve").notNull(),
+  liquidity: decimal("liquidity").notNull(),
+  marketCap: decimal("market_cap"),
+  fdv: decimal("fdv"),
+  priceUsd: decimal("price_usd").notNull(),
+  priceQuoteToken: decimal("price_quote_token").notNull(),
+  quoteTokenSymbol: varchar("quote_token_symbol", { length: 16 }),
+  priceChangeM5: decimal("price_change_m5").notNull(),
+  priceChangeH1: decimal("price_change_h1").notNull(),
+  priceChangeH6: decimal("price_change_h6").notNull(),
+  priceChangeH24: decimal("price_change_h24").notNull(),
+  txns24h: integer("txns_24h").notNull(),
+  buys24h: integer("buys_24h").notNull(),
+  sells24h: integer("sells_24h").notNull(),
+  traders24h: integer("traders_24h").notNull(),
+  buyers24h: integer("buyers_24h").notNull(),
+  sellers24h: integer("sellers_24h").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
-export const tokenMarketData_tokenMeta = relations(
-  tokenMarketData,
-  ({ one }) => ({
-    tokenMeta: one(tokenMeta, {
-      fields: [tokenMarketData.address],
-      references: [tokenMeta.address],
+// Onchain token data - Aggregated from all pools (like BirdEye)
+export const onchainTokenData = pgTable("onchain_token_data", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  network: varchar("network", { length: 32 }).notNull().default("solana"),
+  name: varchar("name").notNull(),
+  symbol: varchar("symbol").notNull(),
+  priceUsd: decimal("price_usd").notNull(),
+  marketCapUsd: decimal("market_cap_usd").notNull(),
+  fdvUsd: decimal("fdv_usd"),
+  totalSupply: decimal("total_supply").notNull(),
+  volume5m: decimal("volume_5m").notNull(),
+  volume1h: decimal("volume_1h").notNull(),
+  volume24h: decimal("volume_24h").notNull(),
+  priceChange5m: decimal("price_change_5m").notNull(),
+  priceChange1h: decimal("price_change_1h").notNull(),
+  priceChange24h: decimal("price_change_24h").notNull(),
+  totalTxn24h: integer("total_txn_24h").notNull(),
+  buyTxn24h: integer("buy_txn_24h").notNull(),
+  sellTxn24h: integer("sell_txn_24h").notNull(),
+  uniqueBuyers24h: integer("unique_buyers_24h").notNull(),
+  uniqueSellers24h: integer("unique_sellers_24h").notNull(),
+  poolVolume24h: decimal("pool_volume_24h").notNull(),
+  totalLiquidityUsd: decimal("total_liquidity_usd").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// Trending tokens
+export const trendingTokens = pgTable("trending_tokens", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// Token holders info
+export const tokenHolders = pgTable("token_holders", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  holdersCount: integer("holders_count").notNull(),
+  // Percentage of market cap held by top 10%
+  top10Percent: decimal("top_10_percent").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// Pool trades - Recent trades for pools
+export const poolTrades = pgTable(
+  "pool_trades",
+  {
+    id: varchar("id", { length: 128 }).notNull(),
+    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
+    network: varchar("network", { length: 32 }).notNull().default("solana"),
+    type: varchar("type", { length: 4 }).notNull(), // "buy" or "sell"
+    kind: varchar("kind", { length: 4 }).notNull(), // "buy" or "sell"
+    priceUsd: decimal("price_usd").notNull(),
+    priceQuote: decimal("price_quote").notNull(), // price in quote token
+    volumeUsd: decimal("volume_usd").notNull(),
+    amount: decimal("amount").notNull(), // token amount
+    baseTokenAmount: decimal("base_token_amount").notNull(),
+    quoteTokenAmount: decimal("quote_token_amount").notNull(),
+    fromAddress: varchar("from_address", { length: 44 }).notNull(),
+    txHash: varchar("tx_hash", { length: 128 }).notNull(),
+    timestamp: timestamp("timestamp").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.id, table.poolAddress],
     }),
-  }),
+  ],
 );
-
-export const walletBalances_tokenMeta = relations(
-  walletBalances,
-  ({ one }) => ({
-    tokenMeta: one(tokenMeta, {
-      fields: [walletBalances.tokenAddress],
-      references: [tokenMeta.address],
-    }),
-  }),
-);
-
-export const walletBalances_wallets = relations(walletBalances, ({ one }) => ({
-  wallet: one(wallets, {
-    fields: [walletBalances.address],
-    references: [wallets.address],
-  }),
-}));
 
 // #endregion
 
@@ -242,5 +312,10 @@ export type UserInsert = typeof users.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
+export type TokenPoolInsert = typeof tokenPools.$inferInsert;
+export type OnchainTokenDataInsert = typeof onchainTokenData.$inferInsert;
+export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
+export type TokenHolderInsert = typeof tokenHolders.$inferInsert;
+export type PoolTradeInsert = typeof poolTrades.$inferInsert;
 
 // #endregion
