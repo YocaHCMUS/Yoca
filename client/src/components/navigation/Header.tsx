@@ -72,9 +72,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
           <CarbonHeader aria-label="Yoca" className={styles.header}>
             <SkipToContent />
             
-            <HeaderName href="#" prefix="" className={styles.headerName}>
-              <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
-              <h1 className={styles.appName}>Yoca</h1>
+            <HeaderName href="#" prefix="" className={styles.headerName} >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
+                <h1 className={styles.appName}>Yoca</h1>
+
+              </div>
             </HeaderName>
 
             {/* Navigation items - Desktop only */}
