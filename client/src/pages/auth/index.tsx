@@ -149,7 +149,7 @@ export default function AuthShowcase() {
     //     />
     //   )}
     // </div>  {/* g10, g90, g100 */}
-    <PageWrapper onNavigate={(path) => console.log(path)}>
+    <PageWrapper>
       <h1>Hello World</h1>
 
       {/* <div

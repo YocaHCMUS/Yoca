@@ -48,6 +48,8 @@ export const users = pgTable("users", {
   name: text("name"), 
   email: text("email").notNull().unique(),
   googleId: text("google_id"), // Dành cho Google OAuth
+  // Địa chỉ ví liên kết (ví dụ MetaMask / EVM). Để null nếu chưa liên kết.
+  walletAddress: text("wallet_address").unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().$onUpdate(() => new Date()),
 });

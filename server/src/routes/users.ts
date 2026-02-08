@@ -147,7 +147,7 @@ app.post("/validate", async (c) => {
       return c.json({ success: false, error: "Thiếu token" }, 400);
     }
 
-    const payload = await verify(token, JWT_SECRET).catch(() => null);
+    const payload = await verify(token, JWT_SECRET, 'HS256').catch(() => null);
     if (!payload || typeof payload !== "object" || !("id" in payload)) {
       return c.json({ success: false, error: "Token không hợp lệ" }, 401);
     }
@@ -162,6 +162,42 @@ app.post("/validate", async (c) => {
   } catch (err) {
     console.error("Token validate error:", err);
     return c.json({ success: false, error: "Lỗi xác thực token" }, 500);
+  }
+});
+
+
+app.post("/wallet-auth", async (c) => {
+  const { address, blockchain, walletType } = await c.req.json();
+
+  if (!address) return c.json({ success: false, error: "Thiếu địa chỉ ví" }, 400);
+
+  try {
+    // 1. Tìm xem ví này đã liên kết với user nào chưa (giả sử có bảng user_wallets hoặc cột trong users)
+    // Ở đây tôi ví dụ tìm trong bảng users có cột walletAddress
+    let [user] = await db.select().from(users).where(eq(users.walletAddress, address));
+
+    if (!user) {
+      // 2. Nếu chưa có -> ĐĂNG KÝ (Tạo user mới)
+      const username = `web3_${address.slice(0, 6)}_${Math.floor(Math.random() * 1000)}`;
+      [user] = await db.insert(users).values({
+        username,
+        email: `${address}@wallet.io`, // Email giả hoặc cho phép null
+        walletAddress: address,
+        // password để null vì login qua ví
+      }).returning();
+    }
+
+    // 3. ĐĂNG NHẬP (Tạo JWT)
+    const token = await sign({ id: user.id }, JWT_SECRET);
+    return c.json({ 
+      success: true, 
+      user, 
+      token,
+      message: "Xác thực ví thành công" 
+    });
+  } catch (err) {
+    console.error(err);
+    return c.json({ success: false, error: "Lỗi xử lý xác thực ví" }, 500);
   }
 });
 

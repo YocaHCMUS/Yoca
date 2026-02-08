@@ -27,7 +27,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const { t } = useTranslation();
   const { connectWallet } = useAuth();
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
-  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('solana');
+  // Default to Ethereum to prioritize MetaMask flow
+  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('ethereum');
   const [loading, setLoading] = useState(false);
   const [detectingWallets, setDetectingWallets] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<WalletType | null>(null);
@@ -66,28 +67,25 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   };
 
   const handleWalletSelect = async (walletType: WalletType) => {
-    setConnectingWallet(walletType);
-    setError('');
-    setLoading(true);
+  setConnectingWallet(walletType);
+  setLoading(true);
 
-    try {
-      const response = await connectWallet(walletType, selectedBlockchain);
+  try {
+    // selectedBlockchain nên là 'ethereum' khi dùng MetaMask
+    const response = await connectWallet(walletType, selectedBlockchain);
 
-      if (response.success && response.user && response.token) {
-        // Login successful - state is managed by AuthContext
-        onClose();
-      } else {
-        // Connection failed
-        setError(response.error || t('wallet.connectionFailed'));
-      }
-    } catch (err) {
-      setError(t('validation.networkError'));
-      console.error('Wallet connection error:', err);
-    } finally {
-      setLoading(false);
-      setConnectingWallet(null);
+    if (response.success) {
+      onClose(); // Đóng modal và chuyển hướng đã được AuthContext lo
+    } else {
+      setError(response.error || t('wallet.connectionFailed'));
     }
-  };
+  } catch (err) {
+    setError(t('validation.networkError'));
+  } finally {
+    setLoading(false);
+    setConnectingWallet(null);
+  }
+};
 
   const handleRetry = () => {
     setError('');
@@ -148,8 +146,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             disabled={loading || detectingWallets}
             className={styles['select-full-width']}
           >
-            <SelectItem value="solana" text={t('wallet.solana')} />
             <SelectItem value="ethereum" text={t('wallet.ethereum')} />
+            <SelectItem value="solana" text={t('wallet.solana')} />
             <SelectItem value="bitcoin" text={t('wallet.bitcoin')} />
           </Select>
         </div>

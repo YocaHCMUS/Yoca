@@ -1,6 +1,7 @@
 /**
- * Mock Wallet Service
- * Simulates wallet detection and connection for Solana wallets
+ * Wallet Service
+ * Detects and connects wallets (MetaMask on Ethereum, Phantom on Solana, etc.)
+ * For MetaMask, performs real `eth_requestAccounts` and delegates auth to backend.
  */
 
 import type {
@@ -11,48 +12,106 @@ import type {
   AuthResponse,
 } from '../../types/auth';
 
+// API base URL (keep consistent with authService)
+const API_URL = (() => {
+  const domain = import.meta.env.CLIENT_API_DOMAIN as string | undefined;
+  if (domain && domain.length > 0) {
+    return `${domain.replace(/\/+$/, '')}/api`;
+  }
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  return 'http://localhost:4000/api';
+})();
+
 /**
  * Mock delay to simulate wallet operations (ms)
  */
 const MOCK_DELAY = 800;
 
 /**
- * Available Solana wallets with metadata
+ * Wallet metadata per chain
  */
-const SOLANA_WALLETS: WalletInfo[] = [
-  {
-    name: 'Phantom',
-    type: 'phantom',
-    icon: '/icons/Phantom-Icon_Square.svg',
-    detected: false,
-    installUrl: 'https://phantom.app/',
-    blockchain: ['solana'],
-  },
-  {
-    name: 'Solflare',
-    type: 'solflare',
-    icon: '/icons/Solflare_id5j73wBTF_1.svg',
-    detected: false,
-    installUrl: 'https://solflare.com/',
-    blockchain: ['solana'],
-  },
-  {
-    name: 'Ledger',
-    type: 'ledger',
-    icon: '/icons/Ledger_idnDvP24qI_0.svg',
-    detected: false,
-    installUrl: 'https://www.ledger.com/',
-    blockchain: ['solana', 'ethereum', 'bitcoin'],
-  },
-  {
-    name: 'Trezor',
-    type: 'trezor',
-    icon: '/icons/Trezor_Logo_0.svg',
-    detected: false,
-    installUrl: 'https://trezor.io/',
-    blockchain: ['solana', 'ethereum', 'bitcoin'],
-  },
-];
+const WALLET_CATALOG: Record<BlockchainType, WalletInfo[]> = {
+  solana: [
+    {
+      name: 'Phantom',
+      type: 'phantom',
+      icon: '/icons/Phantom-Icon_Square.svg',
+      detected: false,
+      installUrl: 'https://phantom.app/',
+      blockchain: ['solana'],
+    },
+    {
+      name: 'Solflare',
+      type: 'solflare',
+      icon: '/icons/Solflare_id5j73wBTF_1.svg',
+      detected: false,
+      installUrl: 'https://solflare.com/',
+      blockchain: ['solana'],
+    },
+    {
+      name: 'Ledger',
+      type: 'ledger',
+      icon: '/icons/Ledger_idnDvP24qI_0.svg',
+      detected: false,
+      installUrl: 'https://www.ledger.com/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+    {
+      name: 'Trezor',
+      type: 'trezor',
+      icon: '/icons/Trezor_Logo_0.svg',
+      detected: false,
+      installUrl: 'https://trezor.io/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+  ],
+  ethereum: [
+    {
+      name: 'MetaMask',
+      type: 'metamask',
+      icon: '/icons/metamask.svg',
+      detected: false,
+      installUrl: 'https://metamask.io/download/',
+      blockchain: ['ethereum'],
+    },
+    {
+      name: 'Ledger',
+      type: 'ledger',
+      icon: '/icons/Ledger_idnDvP24qI_0.svg',
+      detected: false,
+      installUrl: 'https://www.ledger.com/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+    {
+      name: 'Trezor',
+      type: 'trezor',
+      icon: '/icons/Trezor_Logo_0.svg',
+      detected: false,
+      installUrl: 'https://trezor.io/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+  ],
+  bitcoin: [
+    {
+      name: 'Ledger',
+      type: 'ledger',
+      icon: '/icons/Ledger_idnDvP24qI_0.svg',
+      detected: false,
+      installUrl: 'https://www.ledger.com/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+    {
+      name: 'Trezor',
+      type: 'trezor',
+      icon: '/icons/Trezor_Logo_0.svg',
+      detected: false,
+      installUrl: 'https://trezor.io/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+  ],
+};
 
 /**
  * Mock connected wallets database
@@ -67,31 +126,24 @@ const delay = (ms: number): Promise<void> => {
 };
 
 /**
- * Detect installed Solana wallets in the browser
+ * Detect installed wallets in the browser
  * @returns List of wallet info with detection status
  */
 export const detectWallets = async (
-  blockchain: BlockchainType = 'solana'
+  blockchain: BlockchainType = 'ethereum'
 ): Promise<WalletInfo[]> => {
-  await delay(500);
+  await delay(200);
 
-  // Mock detection logic
-  // In a real implementation, this would check window.solana, window.phantom, etc.
-  const wallets = SOLANA_WALLETS.filter((w) =>
-    w.blockchain.includes(blockchain)
-  ).map((wallet) => ({
+  const catalog = WALLET_CATALOG[blockchain] || [];
+  const isMetaMaskPresent = typeof window !== 'undefined' && (window as any).ethereum && (window as any).ethereum.isMetaMask;
+
+  return catalog.map((wallet) => ({
     ...wallet,
-    // Randomly mark some wallets as detected for demo purposes
-    // In production, this would check actual browser extensions
-    detected: Math.random() > 0.5,
+    detected:
+      wallet.type === 'metamask'
+        ? Boolean(isMetaMaskPresent)
+        : wallet.detected,
   }));
-
-  // Ensure at least one wallet is detected for testing
-  if (wallets.length > 0 && !wallets.some((w) => w.detected)) {
-    wallets[0].detected = true;
-  }
-
-  return wallets;
 };
 
 /**
@@ -102,65 +154,43 @@ export const detectWallets = async (
  */
 export const connectWallet = async (
   walletType: WalletType,
-  blockchain: BlockchainType = 'solana'
+  blockchain: BlockchainType = 'ethereum'
 ): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  // Only MetaMask for Ethereum in this implementation
+  if (blockchain === 'ethereum' && walletType === 'metamask') {
+    const wallets = await detectWallets('ethereum');
+    const metamask = wallets.find((w) => w.type === 'metamask');
+    if (!metamask || !metamask.detected) {
+      return { success: false, error: 'Vui lòng cài đặt MetaMask' };
+    }
+    try {
+      const accounts: string[] = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      const address = accounts?.[0];
+      if (!address) return { success: false, error: 'Không lấy được địa chỉ ví' };
 
-  // Simulate wallet not installed
-  const wallets = await detectWallets(blockchain);
-  const wallet = wallets.find((w) => w.type === walletType);
+      // Optional: request signature of a nonce here for stronger auth.
 
-  if (!wallet) {
-    return {
-      success: false,
-      error: `${walletType} wallet is not available`,
-    };
+      const response = await fetch(`${API_URL}/users/wallet-auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, blockchain: 'ethereum', walletType: 'metamask' }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        return { success: false, error: err.error || 'Xác thực ví thất bại' };
+      }
+      return await response.json();
+    } catch (error: any) {
+      if (error?.code === 4001) {
+        return { success: false, error: 'Người dùng từ chối kết nối' };
+      }
+      return { success: false, error: 'Lỗi kết nối MetaMask' };
+    }
   }
 
-  if (!wallet.detected) {
-    return {
-      success: false,
-      error: `${wallet.name} is not installed. Please install the extension and try again.`,
-    };
-  }
-
-  // Simulate user rejection (10% chance for demo)
-  if (Math.random() < 0.1) {
-    return {
-      success: false,
-      error: 'Wallet connection was rejected by user',
-    };
-  }
-
-  // Generate mock wallet address
-  const mockAddress = generateMockWalletAddress(blockchain);
-
-  // Create wallet connection
-  const connection: WalletConnection = {
-    address: mockAddress,
-    blockchain,
-    walletType,
-    connected: true,
-    connectedAt: new Date(),
-  };
-
-  // Add to connected wallets
-  connectedWallets.push(connection);
-
-  // Return success with mock user data
-  return {
-    success: true,
-    user: {
-      id: `wallet-user-${Date.now()}`,
-      username: `user_${mockAddress.slice(0, 8)}`,
-      email: `${mockAddress.slice(0, 8)}@wallet.user`,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      wallets: [connection],
-    },
-    token: `mock-wallet-token-${mockAddress}-${Date.now()}`,
-    message: `Successfully connected to ${wallet.name}`,
-  };
+  // Fallback for other wallets: not implemented
+  return { success: false, error: 'Ví này chưa được hỗ trợ' };
 };
 
 /**
@@ -240,7 +270,12 @@ const generateMockWalletAddress = (blockchain: BlockchainType): string => {
  * @returns Wallet information or undefined
  */
 export const getWalletInfo = (walletType: WalletType): WalletInfo | undefined => {
-  return SOLANA_WALLETS.find((w) => w.type === walletType);
+  const allWallets: WalletInfo[] = [
+    ...((WALLET_CATALOG.solana ?? []) as WalletInfo[]),
+    ...((WALLET_CATALOG.ethereum ?? []) as WalletInfo[]),
+    ...((WALLET_CATALOG.bitcoin ?? []) as WalletInfo[]),
+  ];
+  return allWallets.find((w: WalletInfo) => w.type === walletType);
 };
 
 /**
@@ -249,7 +284,7 @@ export const getWalletInfo = (walletType: WalletType): WalletInfo | undefined =>
  * @returns Array of wallet info
  */
 export const getAvailableWallets = (
-  blockchain: BlockchainType = 'solana'
+  blockchain: BlockchainType = 'ethereum'
 ): WalletInfo[] => {
-  return SOLANA_WALLETS.filter((w) => w.blockchain.includes(blockchain));
+  return (WALLET_CATALOG[blockchain] || []).slice();
 };
