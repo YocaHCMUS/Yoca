@@ -511,6 +511,9 @@ export const Table: React.FC<TableProps> = ({
                                                     key={key} 
                                                     {...headerProps}
                                                     className={isColumnSortable ? styles.sortableHeader : undefined}
+                                                    // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
+                                                    // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
+                                                    style={{minWidth: `${(100 + headers.length) / headers.length}%`}}
                                                 >
                                                     <div className={styles.headerContent}>
                                                         <span className={styles.headerText}>
@@ -555,7 +558,9 @@ export const Table: React.FC<TableProps> = ({
                                                     const className = classnames[cellIndex];
 
                                                     return (
-                                                        <TableCell key={cell.id}>
+                                                        // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
+                                                        // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
+                                                        <TableCell key={cell.id} style={{minWidth: `${(100 + headers.length) / headers.length}%`}}>
                                                             {renderer 
                                                                 ? renderer(rawValue, paginatedRows[rowIndex], rowIndex) 
                                                                 : <span className={className}>{rawValue}</span>

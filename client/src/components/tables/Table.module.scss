@@ -78,11 +78,6 @@
   top: 0;
   z-index: 1;
   background-color: var(--cds-layer-01);
-  th:last-child {
-
-    width: 100% !important;
-    // flex: 1 !important;
-  }
 }
 
 .sortableHeader {
@@ -92,7 +87,7 @@
 .headerContent {
   display: flex;
   align-items: center;
-  justify-content: center;
+  // justify-content: center;
   gap: 0.25rem;
 }
 
