@@ -6,5 +6,6 @@ export const TOKEN_CHART_24H_UPDATE_THRESHOLD = 7 * 60 * 1000; // 7 minutes
 export const TOKEN_POOLS_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const ONCHAIN_TOKEN_DATA_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const TRENDING_TOKENS_TTL_MS = 15 * 60 * 1000; // 15 minutes
-export const TOKEN_HOLDERS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const TOP_TOKEN_HOLDER_STATS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const TOP_TOKEN_HOLDERS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const POOL_TRADES_TTL_MS = 1 * 60 * 1000; // 1 minute

@@ -39,7 +39,7 @@ export const tokenMeta = pgTable("token_meta", {
   symbol: varchar("symbol").notNull(),
   imageUrl: varchar("image_url"),
   description: varchar("description"),
-  coinGeckoId: varchar("coin_gecko_id"),
+  coingeckoId: varchar("coingecko_id"),
 
   linkHomepage: varchar("homepage"),
   linkDiscord: varchar("link_discord"),
@@ -52,34 +52,109 @@ export const tokenMeta = pgTable("token_meta", {
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
+  decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
-  priceChange24h: decimal("price_change_24h").notNull(),
-  priceChangePercentage1h: decimal("price_change_percentage_1h").notNull(),
-  priceChangePercentage24h: decimal("price_change_percentage_24h").notNull(),
+  priceChange24h: decimal("price_change_24h"),
+  priceChangePercentage1h: decimal("price_change_percentage_1h"),
+  priceChangePercentage24h: decimal("price_change_percentage_24h"),
   priceChangePercentage14d: decimal("price_change_percentage_14d"),
   priceChangePercentage30d: decimal("price_change_percentage_30d"),
   priceChangePercentage200d: decimal("price_change_percentage_200d"),
   priceChangePercentage1y: decimal("price_change_percentage_1y"),
   marketCap: decimal("market_cap").notNull(),
-  marketCapChange24h: decimal("market_cap_change_24h").notNull(),
-  marketCapChangePercentage24h: decimal(
-    "market_cap_change_percentage_24h",
-  ).notNull(),
-  // marketCapRank: decimal("market_cap_rank").notNull(),
-  high24h: decimal("high_24h").notNull(),
-  low24h: decimal("low_24h").notNull(),
-  fullyDilutedValuation: decimal("fully_diluted_valuation"),
+  marketCapChange24h: decimal("market_cap_change_24h"),
+  marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
+  fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
   volume24h: decimal("volume_24h").notNull(),
-  circulatingSupply: decimal("circulating_supply").notNull(),
-  totalSupply: decimal("total_supply").notNull(),
+  circulatingSupply: decimal("circulating_supply"),
   maxSupply: decimal("max_supply"),
-  ath: decimal("ath").notNull(),
-  athDate: timestamp("ath_date").notNull(),
-  athChangePercentage: decimal("ath_change_percentage").notNull(),
-  atl: decimal("atl").notNull(),
-  atlDate: timestamp("atl_date").notNull(),
-  atlChangePercentage: decimal("atl_change_percentage").notNull(),
+  totalSupply: decimal("total_supply"),
+  ath: decimal("ath"),
+  athDate: timestamp("ath_date"),
+  athChangePercentage: decimal("ath_change_percentage"),
+  atl: decimal("atl"),
+  atlDate: timestamp("atl_date"),
+  atlChangePercentage: decimal("atl_change_percentage"),
 
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const tokenPoolData = pgTable("token_pool_data", {
+  poolAddress: varchar("address", { length: 44 }).primaryKey(),
+  poolName: varchar("name"),
+
+  baseAddress: varchar("address", { length: 44 }),
+  quoteAddress: varchar("address", { length: 44 }),
+
+  dexId: varchar("dexName"),
+
+  baseToQuote: decimal("baseToQuote").notNull(),
+
+  poolCreatedAt: timestamp("pool_created_at"),
+  liquidityUsd: decimal("liquidity_usd"),
+
+  buyVolume1h: decimal("buy_volume_1h"),
+  buyVolume6h: decimal("buy_volume_6h"),
+  buyVolume24h: decimal("buy_volume_24h"),
+
+  buys1h: decimal("buys_1h"),
+  buys6h: decimal("buys_6h"),
+  buys24h: decimal("buys_24h"),
+
+  sellVolume1h: decimal("sell_volume_1h"),
+  sellVolume6h: decimal("sell_volume_6h"),
+  sellVolume24h: decimal("sell_volume_24h"),
+
+  sells1h: decimal("sells_1h"),
+  sells6h: decimal("sells_6h"),
+  sells24h: decimal("sells_24h"),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const tokenTopPools = pgTable(
+  "token_tops_pool",
+  {
+    tokenAddress: varchar("address", { length: 44 }).notNull(),
+    poolAddress: varchar("address", { length: 44 }).notNull(),
+    rank: integer("rank").notNull(),
+
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.tokenAddress, table.rank],
+    }),
+  ],
+);
+
+export const onchainTokenData = pgTable("onchain_token_data", {
+  address: varchar({ length: 44 }).primaryKey(),
+  name: varchar("name").notNull(),
+  symbol: varchar("symbol").notNull(),
+  priceUsd: decimal("price_usd").notNull(),
+  marketCapUsd: decimal("market_cap_usd").notNull(),
+  fdvUsd: decimal("fdv_usd"),
+  totalSupply: decimal("total_supply").notNull(),
+  volume5m: decimal("volume_5m").notNull(),
+  volume1h: decimal("volume_1h").notNull(),
+  volume24h: decimal("volume_24h").notNull(),
+  priceChange5m: decimal("price_change_5m").notNull(),
+  priceChange1h: decimal("price_change_1h").notNull(),
+  priceChange24h: decimal("price_change_24h").notNull(),
+  totalTxn24h: integer("total_txn_24h").notNull(),
+  buyTxn24h: integer("buy_txn_24h").notNull(),
+  sellTxn24h: integer("sell_txn_24h").notNull(),
+  uniqueBuyers24h: integer("unique_buyers_24h").notNull(),
+  uniqueSellers24h: integer("unique_sellers_24h").notNull(),
+  poolVolume24h: decimal("pool_volume_24h").notNull(),
+  totalLiquidityUsd: decimal("total_liquidity_usd").notNull(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
@@ -157,6 +232,25 @@ export const tokenTransfers = pgTable(
   ],
 );
 
+// Token holders info
+export const tokenHolderStats = pgTable("token_holder_stats", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  holdersCount: integer("holders_count").notNull(),
+  // Percentage of market cap held by top 10%
+  top10Percent: decimal("top_10_percent").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const topTokenHolders = pgTable("top_token_holders", {
+  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
+  holderAddress: varchar("holder_address", { length: 44 }).notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const wallets = pgTable("wallets", {
   address: varchar("address", { length: 44 }).primaryKey(),
   balanceCount: integer("balance_count").notNull().default(0),
@@ -228,48 +322,9 @@ export const tokenPools = pgTable("token_pools", {
     .$onUpdate(() => new Date()),
 });
 
-// Onchain token data - Aggregated from all pools (like BirdEye)
-export const onchainTokenData = pgTable("onchain_token_data", {
-  address: varchar("address", { length: 44 }).primaryKey(),
-  network: varchar("network", { length: 32 }).notNull().default("solana"),
-  name: varchar("name").notNull(),
-  symbol: varchar("symbol").notNull(),
-  priceUsd: decimal("price_usd").notNull(),
-  marketCapUsd: decimal("market_cap_usd").notNull(),
-  fdvUsd: decimal("fdv_usd"),
-  totalSupply: decimal("total_supply").notNull(),
-  volume5m: decimal("volume_5m").notNull(),
-  volume1h: decimal("volume_1h").notNull(),
-  volume24h: decimal("volume_24h").notNull(),
-  priceChange5m: decimal("price_change_5m").notNull(),
-  priceChange1h: decimal("price_change_1h").notNull(),
-  priceChange24h: decimal("price_change_24h").notNull(),
-  totalTxn24h: integer("total_txn_24h").notNull(),
-  buyTxn24h: integer("buy_txn_24h").notNull(),
-  sellTxn24h: integer("sell_txn_24h").notNull(),
-  uniqueBuyers24h: integer("unique_buyers_24h").notNull(),
-  uniqueSellers24h: integer("unique_sellers_24h").notNull(),
-  poolVolume24h: decimal("pool_volume_24h").notNull(),
-  totalLiquidityUsd: decimal("total_liquidity_usd").notNull(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
-// Token holders info
-export const tokenHolders = pgTable("token_holders", {
-  address: varchar("address", { length: 44 }).primaryKey(),
-  holdersCount: integer("holders_count").notNull(),
-  // Percentage of market cap held by top 10%
-  top10Percent: decimal("top_10_percent").notNull(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
@@ -315,7 +370,7 @@ export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenPoolInsert = typeof tokenPools.$inferInsert;
 export type OnchainTokenDataInsert = typeof onchainTokenData.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
-export type TokenHolderInsert = typeof tokenHolders.$inferInsert;
+export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type PoolTradeInsert = typeof poolTrades.$inferInsert;
 
 // #endregion
