@@ -497,10 +497,22 @@ export const Table: React.FC<TableProps> = ({
                         <CarbonTable {...getTableProps()}>
                             <TableContainer
                                 // {...getTableContainerProps()}
-                                style={{ display: 'block', flex: 1, overflowY: 'visible', maxHeight: '400px' }}
+                                style={{ 
+                                    display: 'block', 
+                                    flex: 1, 
+                                    overflowY: 'auto', 
+                                    maxHeight: '400px',
+                                    padding: 0
+                                }}
                                 >
                                 <TableHead>
-                                    <TableRow>
+                                    <TableRow
+                                        style={{
+                                            position: 'sticky',
+                                            top: 0,
+                                            zIndex: 1,
+                                            backgroundColor: 'var(--cds-layer-01)'
+                                        }}>
                                         {headers.map((header, index) => {
                                             const isColumnSortable = isSortable[index] ?? false;
                                             const { key, ...headerProps } = getHeaderProps({ 
@@ -511,7 +523,9 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableHeader 
                                                     key={key} 
                                                     {...headerProps}
-                                                    style={isColumnSortable ? { cursor: 'pointer' } : undefined}
+                                                    style={{
+                                                        ...(isColumnSortable ? { cursor: 'pointer' } : {}),
+                                                    }}
                                                 >
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem"}}>
                                                         <span style={{lineHeight: "100%"}}>
