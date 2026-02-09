@@ -1,5 +1,5 @@
 
-import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
+import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract } from '@carbon/icons-react';
 
 /**
  * Renders a value as monospace code with secondary color
@@ -105,3 +105,60 @@ export const renderDateTime = (value: string, options?: Intl.DateTimeFormatOptio
   
   return <span>{date.toLocaleString(undefined, defaultOptions)}</span>;
 };
+
+enum ValueState {
+  Positive,
+  Neutral,
+  Negative
+}
+
+/**
+ * Renders a positive/negative value with conditional coloring and optional icons
+ * @param value - The numeric value as string
+ * @param haveIcon - Whether to show up/down/neutral icons
+ * @param percentage - Whether to format as percentage
+ */
+export const renderPositiveNegative = (value: string, haveIcon: boolean = true, percentage: boolean = false) => {
+  const numValue = parseFloat(value);
+  const state = numValue > 0 ? ValueState.Positive : numValue < 0 ? ValueState.Negative : ValueState.Neutral;
+  
+  const getColor = () => {
+    switch (state) {
+      case ValueState.Positive:
+        return 'var(--cds-support-success)';
+      case ValueState.Negative:
+        return 'var(--cds-support-error)';
+      default:
+        return 'var(--cds-text-secondary)';
+    }
+  };
+  
+  const getIcon = () => {
+    if (!haveIcon) return null;
+    
+    switch (state) {
+      case ValueState.Positive:
+        return <CaretUp size={16} />;
+      case ValueState.Negative:
+        return <CaretDown size={16} />;
+      default:
+        return <Subtract size={16} />;
+    }
+  };
+  
+  const formattedValue = percentage ? `${numValue.toFixed(2)}%` : numValue.toFixed(2);
+  
+  return (
+    <span style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      color: getColor(),
+      fontWeight: 600
+    }}>
+      {state === ValueState.Positive && !percentage && '+'}
+      {formattedValue}
+      {getIcon()}
+    </span>
+  );
+}

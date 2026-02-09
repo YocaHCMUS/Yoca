@@ -19,10 +19,11 @@ import {
   renderBold, 
   renderCurrency, 
   renderStatus,
-  renderDateTime 
+  renderDateTime, 
+  renderPositiveNegative
 } from "@/components/tables/TableCellRenderer.tsx";
 
-// temporary interface
+// temporary interfaces
 interface Transaction {
   id: string;
   signature: string;
@@ -33,6 +34,14 @@ interface Transaction {
   total: number;
   timestamp: string;
   status: 'Success' | 'Failed';
+}
+
+interface Portfolio {
+  token: string;
+  price: number;
+  holding: number;
+  value: number;
+  change: number; // change in % in 24h
 }
 
 
@@ -58,6 +67,19 @@ export default function WalletPage() {
     status: i % 10 === 0 ? 'Failed' : 'Success',
   }));
 
+  const portfolios: Portfolio[] = Array.from({ length: 50 }, (_, i) => {
+    const prices = [Math.random() * 200, Math.random() * 200, Math.random() * 200, Math.random() * 200];
+    const holding = Math.random() * 999 + 0.001;
+    const index = i%4;
+    return {
+      token: ['SOL', 'USDC', 'JTO', 'BONK'][index],
+      price: prices[index],
+      holding: holding,
+      value: prices[index] * holding,
+      change: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
+    };
+  });
+
   // Transform transactions to array format for Table component
   const transactionData = transactions.map(tx => [
     tx.signature,
@@ -70,6 +92,14 @@ export default function WalletPage() {
     tx.status
   ]);
 
+  const portfolioData = portfolios.map(prt => [
+    prt.token,
+    prt.price.toFixed(2),
+    `${prt.holding.toFixed(4)} ${prt.token}`,
+    prt.value.toFixed(4),
+    prt.change.toFixed(2)
+  ])
+
   const transactionHeaders = [
     'Signature',
     'Type',
@@ -81,7 +111,12 @@ export default function WalletPage() {
     'Status'
   ];
 
+  const portfolioHeaders = [
+    'Token', 'Price', 'Holding', 'Value', 'Change (24h)'
+  ]
+
   const isSortable = [false, false, false, true, true, true, true, false];
+  const isSortablePortfolio = [false, true, true, true, true];
 
   // Sort configurations for sortable columns
   const sortConfigs = {
@@ -90,6 +125,13 @@ export default function WalletPage() {
     5: { type: SortType.Number },  // Total
     6: { type: SortType.Date }     // Time
   };
+
+  const portfolioSortConfig = {
+    1: {type: SortType.Number},
+    2: {type: SortType.Number},
+    3: {type: SortType.Number},
+    4: {type: SortType.Number} 
+  }
 
   // Cell renderers for conditional styling
   const cellRenderers = [
@@ -106,6 +148,14 @@ export default function WalletPage() {
     (value: string) => renderStatus(value)
   ];
 
+  const portfolioCellRenderers = [
+    (value: string) => renderCode(value),
+    (value: string) => renderCurrency(value),
+    null,
+    (value: string) => renderCurrency(value),
+    (value: string) => renderPositiveNegative(value, true, true)
+  ]
+
   // Filter schema for filterable columns
   const filterSchema = {
     1: { type: FilterType.Select }, // Type (Buy/Sell) - Select filter
@@ -114,6 +164,14 @@ export default function WalletPage() {
     4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
     5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
     7: { type: FilterType.Select }  // Status (Success/Failed) - Select filter
+  };
+
+  const portfolioFilterSchema = {
+    0: { type: FilterType.Select }, // Token - Select filter
+    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 }, // Price - Range filter
+    2: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Holding - Range filter
+    3: { type: FilterType.Range, min: 0, max: 100000, step: 0.01 }, // Value - Range filter
+    4: { type: FilterType.Range, min: -20, max: 20, step: 0.1 } // Change - Range filter
   };
 
 
@@ -265,23 +323,33 @@ export default function WalletPage() {
           tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
           onTabChange={(index) => setActiveTab(index)}
         />
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
+        <Table
+          title="Portfolio"
+          headers={portfolioHeaders}
+          initialFilters={{}}
+          fetcher={Promise.resolve(portfolioData)}
+          filterSchema={portfolioFilterSchema}
+          cellRenderers={portfolioCellRenderers}
+          dataEntries={portfolioData}
+          isSortable={isSortablePortfolio}
+          sortConfigs={portfolioSortConfig}
         />
       </div>
 
       <h1 className={styles.sectionTitle}>Top exchange</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <Table
+              title="Conterparties"
+              headers={transactionHeaders}
+              initialFilters={{}}
+              fetcher={Promise.resolve(transactionData)}
+              filterSchema={filterSchema}
+              cellRenderers={cellRenderers}
+              dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
+            />
       </div>
 
       <h1 className={styles.sectionTitle}>Top counterparties</h1>
