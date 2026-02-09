@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { TableWrapper, type ActiveFilter } from '../charts/shared/TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
 import styles from './Table.module.scss';
 
@@ -487,15 +487,18 @@ export const Table: React.FC<TableProps> = ({
                 onRemoveFilter={removeFilter}
             >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
-                    <DataTable
-                        rows={rows} 
-                        headers={carbonHeaders} 
-                        sortRow={universalSortRow}
-                        >
-                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps }) => (
-                            <CarbonTable {...getTableProps()}>
-                  
+                <DataTable
+                    rows={rows} 
+                    headers={carbonHeaders} 
+                    sortRow={universalSortRow}
+                    
+                    >
+                    {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
+                        <CarbonTable {...getTableProps()}>
+                            <TableContainer
+                                // {...getTableContainerProps()}
+                                style={{ display: 'block', flex: 1, overflowY: 'visible', maxHeight: '400px' }}
+                                >
                                 <TableHead>
                                     <TableRow>
                                         {headers.map((header, index) => {
@@ -505,7 +508,7 @@ export const Table: React.FC<TableProps> = ({
                                                 isSortable: isColumnSortable
                                             });
                                             return (
-                                <TableHeader 
+                                                <TableHeader 
                                                     key={key} 
                                                     {...headerProps}
                                                     style={isColumnSortable ? { cursor: 'pointer' } : undefined}
@@ -521,6 +524,7 @@ export const Table: React.FC<TableProps> = ({
                                                             >
                                                                 <IconButton 
                                                                     label={`Filter ${header.header}`}
+                                                                    align="bottom-right"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         openFilterForColumn(index);
@@ -533,7 +537,7 @@ export const Table: React.FC<TableProps> = ({
                                                                 </IconButton>
                                                                 {renderFilterPopup(index)}
                                                             </div>
-                                                        )}
+                                                        )} 
                                                     </div>
                                                 </TableHeader>
                                             );
@@ -564,10 +568,12 @@ export const Table: React.FC<TableProps> = ({
                                         );
                                     })}
                                 </TableBody>
-                            </CarbonTable>
-                        )}
-                    </DataTable>
-                </div>
+                            </TableContainer>
+                        </CarbonTable>
+                    )}
+                </DataTable>
+                {/* <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
+                </div> */}
                 <div style={{ marginTop: '1rem', borderTop: '1px solid var(--cds-border-subtle-01)', paddingTop: '1rem' }}>
                     <Pagination
                         page={page}
