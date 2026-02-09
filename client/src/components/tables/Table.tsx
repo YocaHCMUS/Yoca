@@ -486,33 +486,20 @@ export const Table: React.FC<TableProps> = ({
                 activeFilters={getActiveFilters()}
                 onRemoveFilter={removeFilter}
             >
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <DataTable
-                    rows={rows} 
-                    headers={carbonHeaders} 
-                    sortRow={universalSortRow}
-                    
-                    >
-                    {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
-                        <CarbonTable {...getTableProps()}>
-                            <TableContainer
-                                // {...getTableContainerProps()}
-                                style={{ 
-                                    display: 'block', 
-                                    flex: 1, 
-                                    overflowY: 'auto', 
-                                    maxHeight: '400px',
-                                    padding: 0
-                                }}
-                                >
+            <div className={styles.tableWrapper}>
+                <div ref={tableContainerRef}>
+                    <DataTable
+                        rows={rows} 
+                        headers={carbonHeaders} 
+                        sortRow={universalSortRow}
+                        >
+                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
+                            <CarbonTable {...getTableProps()}>
+                                <TableContainer
+                                    className={styles.tableContainer}
+                                    >
                                 <TableHead>
-                                    <TableRow
-                                        style={{
-                                            position: 'sticky',
-                                            top: 0,
-                                            zIndex: 1,
-                                            backgroundColor: 'var(--cds-layer-01)'
-                                        }}>
+                                    <TableRow className={styles.stickyHeader}>
                                         {headers.map((header, index) => {
                                             const isColumnSortable = isSortable[index] ?? false;
                                             const { key, ...headerProps } = getHeaderProps({ 
@@ -523,12 +510,10 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableHeader 
                                                     key={key} 
                                                     {...headerProps}
-                                                    style={{
-                                                        ...(isColumnSortable ? { cursor: 'pointer' } : {}),
-                                                    }}
+                                                    className={isColumnSortable ? styles.sortableHeader : undefined}
                                                 >
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem"}}>
-                                                        <span style={{lineHeight: "100%"}}>
+                                                    <div className={styles.headerContent}>
+                                                        <span className={styles.headerText}>
                                                             {header.header}
                                                         </span>
                                                         {filterSchema[index] && (
@@ -584,11 +569,12 @@ export const Table: React.FC<TableProps> = ({
                                 </TableBody>
                             </TableContainer>
                         </CarbonTable>
-                    )}
-                </DataTable>
+                        )}
+                    </DataTable>
+                </div>
                 {/* <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
                 </div> */}
-                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--cds-border-subtle-01)', paddingTop: '1rem' }}>
+                <div className={styles.paginationContainer}>
                     <Pagination
                         page={page}
                         pageSize={pageSize}

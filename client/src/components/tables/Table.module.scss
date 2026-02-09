@@ -58,3 +58,45 @@
 .headerCell {
   position: relative;
 }
+
+.tableWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tableContainer {
+  display: block;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+  padding: 0 !important;
+}
+
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--cds-layer-01);
+}
+
+.sortableHeader {
+  cursor: pointer;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.headerText {
+  line-height: 100%;
+}
+
+.paginationContainer {
+  margin-top: 1rem;
+  border-top: 1px solid var(--cds-border-subtle-01);
+  padding-top: 1rem;
+}
