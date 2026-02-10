@@ -7,20 +7,19 @@ import bcrypt from "bcryptjs";
 import { sign, verify } from "hono/jwt";
 import { OAuth2Client } from "google-auth-library";
 
-const app = new Hono();
-
 // Env configuration
 const JWT_SECRET = process.env.JWT_SECRET || "DEV_SECRET_KEY";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-app.onError((err, c) => {
-  console.error(`${err}`);
-  return c.json({ success: false, error: "Lỗi hệ thống nội bộ" }, 500);
-});
+const app = new Hono()
+  .onError((err, c) => {
+    console.error(`${err}`);
+    return c.json({ success: false, error: "Lỗi hệ thống nội bộ" }, 500);
+  })
 
 // API Đăng ký
-app.post("/signup", async (c) => {
+.post("/signup", async (c) => {
   const { email, username, password } = await c.req.json();
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -36,10 +35,10 @@ app.post("/signup", async (c) => {
   } catch (err) {
     return c.json({ success: false, error: "Email hoặc Username đã tồn tại" }, 400);
   }
-});
+})
 
 // API Đăng nhập
-app.post("/signin", async (c) => {
+.post("/signin", async (c) => {
   const { usernameOrEmail, password } = await c.req.json();
   
   const [user] = await db.select().from(users).where(
@@ -52,10 +51,10 @@ app.post("/signin", async (c) => {
 
   const token = await sign({ id: user.id }, JWT_SECRET);
   return c.json({ success: true, user, token });
-});
+})
 
 // Google OAuth Sign-in/Sign-up
-app.post("/google", async (c) => {
+.post("/google", async (c) => {
   try {
     const { credential } = await c.req.json();
     if (!credential) {
@@ -128,10 +127,10 @@ app.post("/google", async (c) => {
     console.error("Google OAuth error:", err);
     return c.json({ success: false, error: "Không thể xác thực với Google" }, 500);
   }
-});
+})
 
 // Validate JWT token and return user
-app.post("/validate", async (c) => {
+.post("/validate", async (c) => {
   try {
     // Prefer Authorization header, fallback to JSON body
     const authHeader = c.req.header("Authorization");
@@ -163,10 +162,10 @@ app.post("/validate", async (c) => {
     console.error("Token validate error:", err);
     return c.json({ success: false, error: "Lỗi xác thực token" }, 500);
   }
-});
+})
 
 
-app.post("/wallet-auth", async (c) => {
+.post("/wallet-auth", async (c) => {
   const { address, blockchain, walletType } = await c.req.json();
 
   if (!address) return c.json({ success: false, error: "Thiếu địa chỉ ví" }, 400);
