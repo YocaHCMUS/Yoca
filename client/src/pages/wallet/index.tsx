@@ -4,15 +4,11 @@ import { formatNumber } from "../../util/format.ts";
 import { useTranslation } from "react-i18next";
 import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
-import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
-import { OverviewTab } from "@/components/market/OverviewTab.tsx";
-import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
 import { Table, SortType, FilterType } from "@/components/tables/Table.tsx";
-import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
 import { 
   renderCode, 
   renderBinaryValue, 

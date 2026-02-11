@@ -9,7 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExportMenu, type ExportFormat } from './ExportMenu';
+import { ExportMenu, type ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TableWrapper.module.scss';
 import { Tag } from '@carbon/react';
 
@@ -60,12 +60,6 @@ interface TableWrapperProps {
   /** Search change callback */
   onSearchChange?: (value: string) => void;
 
-  /** Active filters to display as tags */
-  activeFilters?: ActiveFilter[];
-
-  /** Callback when a filter tag is removed */
-  onRemoveFilter?: (columnIndex: number) => void;
-
   /** Custom toolbar content */
   toolbarContent?: React.ReactNode;
 }
@@ -97,8 +91,6 @@ export function TableWrapper({
   searchPlaceholder = 'Search...',
   searchValue = '',
   onSearchChange,
-  activeFilters = [],
-  onRemoveFilter,
   toolbarContent,
 }: TableWrapperProps) {
   const { t } = useTranslation();
@@ -132,6 +124,7 @@ export function TableWrapper({
         <h2 className={styles.title} id={`table-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
           {title}
         </h2>
+        
         <div className={styles.headerActions}>
           {/* Toolbar Search */}
           {enableToolbar && onSearchChange && (
@@ -158,26 +151,8 @@ export function TableWrapper({
           )}
         </div>
       </div>
-      {/* Active Filters Display */}
-
       {/* Content area */}
       <div className={styles.content}>
-        {activeFilters.length > 0 && (
-          <div className={styles.activeFilters}>
-            {activeFilters.map((filter) => (
-              <Tag
-                key={filter.columnIndex}
-                type="blue"
-                filter
-                onClose={() => onRemoveFilter?.(filter.columnIndex)}
-                title={`Filter: ${filter.columnName} = ${filter.displayText}`}
-              >
-                {filter.columnName}: {filter.displayText}
-              </Tag>
-            ))}
-          </div>
-
-        )}
         {children}
       </div>
     </div>

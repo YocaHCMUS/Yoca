@@ -12,7 +12,7 @@ import {
 import { ArrowUp, ArrowDown } from '@carbon/icons-react';
 import type { InferResponseType } from 'hono/client';
 import client from '../../api/main.js';
-import { TableWrapper } from '../charts/shared/TableWrapper';
+import { TableWrapper } from '../tables/TableWrapper.js';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TokenPerformanceTable.module.scss';
 

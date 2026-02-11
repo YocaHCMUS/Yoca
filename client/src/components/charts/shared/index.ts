@@ -11,7 +11,7 @@ export { ChartErrorState } from './ChartErrorState';
 export { ExportMenu } from './ExportMenu';
 export { FullscreenView } from './FullscreenView';
 export { MiniPlayer } from './MiniPlayer';
-export { TableWrapper } from './TableWrapper';
+export { TableWrapper } from '../../tables/TableWrapper';
 export { TimezoneSelector } from './TimezoneSelector';
 
 export type { ExportFormat } from './ExportMenu';
