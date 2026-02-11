@@ -571,6 +571,16 @@ export const Table: React.FC<TableProps> = ({
                                             </TableRow>                                        
                                         );
                                     })}
+
+                                    {rows.length === 0 && (
+                                        <TableRow className={styles.noHover}>
+                                            <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                <div style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    No data available
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </TableContainer>
                         </CarbonTable>
