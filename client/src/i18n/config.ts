@@ -245,6 +245,7 @@ const resources = {
           daily: 'Daily',
           weekly: 'Weekly',
           monthly: 'Monthly',
+          both: 'Both', // Added
         },
         exchangeComparisonChart: {
           title: 'Exchange Activity Comparison',
@@ -540,6 +541,7 @@ const resources = {
           daily: 'Hàng ngày',
           weekly: 'Hàng tuần',
           monthly: 'Hàng tháng',
+          both: 'Cả hai', // Added
         },
         exchangeComparisonChart: {
           title: 'So sánh hoạt động sàn giao dịch',
@@ -835,6 +837,7 @@ const resources = {
           daily: '日次',
           weekly: '週次',
           monthly: '月次',
+          both: '両方', // Added
         },
         exchangeComparisonChart: {
           title: '取引所活動比較',
