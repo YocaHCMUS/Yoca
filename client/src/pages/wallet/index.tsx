@@ -22,6 +22,7 @@ import {
   renderDateTime, 
   renderPositiveNegative
 } from "@/components/tables/TableCellRenderer.tsx";
+import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 
 // temporary interfaces
 interface Transaction {
@@ -317,12 +318,7 @@ export default function WalletPage() {
       <h1 className={styles.sectionTitle}>Asset</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <AssetDistribution/>
         <Table
           title="Portfolio"
           headers={portfolioHeaders}
