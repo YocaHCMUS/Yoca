@@ -33,66 +33,69 @@ export default function WalletsComparisionPage() {
 
     return (
         <PageWrapper>
-            <div className={styles.walletsComparisonPage}>
-                <Grid className={styles.grid} fullWidth>
-                    {/* 3 columns - Wallet Selection Sidebar */}
-                    <Column lg={4} md={4} sm={4}>
-                        <div className={styles.sidebarContainer}>
-                            <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
-                            
-                            {/* Wallet Address Search */}
-                            {/* <TextInput
-                                id="wallet-search"
-                                labelText="Add Wallet Address"
-                                placeholder="Enter wallet address..."
-                                value={walletAddress}
-                                onChange={(e) => setWalletAddress(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                className={styles.walletInput}
-                            /> */}
-                            <Search
-                                id="wallet-search"
-                                labelText="Add Wallet Address"
-                                placeholder="Enter wallet address..."
-                                value={walletAddress}
-                                onChange={(e) => setWalletAddress(e.target.value)}
-                                onKeyDown={handleKeyPress}
-                                renderIcon={SearchAdvanced}
-                                />
+            <Grid className={styles.grid} fullWidth>
+                {/* 3 columns - Wallet Selection Sidebar */}
+                <Column lg={4} md={4} sm={4}>
+                    <div className={styles.sidebarContainer}>
+                        <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
+                        
+                        {/* Wallet Address Search */}
+                        {/* <TextInput
+                            id="wallet-search"
+                            labelText="Add Wallet Address"
+                            placeholder="Enter wallet address..."
+                            value={walletAddress}
+                            onChange={(e) => setWalletAddress(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className={styles.walletInput}
+                        /> */}
+                        <Search
+                            id="wallet-search"
+                            labelText="Add Wallet Address"
+                            placeholder="Enter wallet address..."
+                            value={walletAddress}
+                            onChange={(e) => setWalletAddress(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            renderIcon={SearchAdvanced}
+                            />
 
-                            {/* List of Selected Wallets */}
-                            <Stack gap={4} className={styles.walletList}>
-                                {selectedWallets.length === 0 ? (
-                                    <p className={styles.emptyState}>
-                                        No wallets selected. Add wallet addresses to compare.
-                                    </p>
-                                ) : (
-                                    selectedWallets.map((wallet) => (
-                                        <Button
-                                            className={styles.walletTag}
-                                            renderIcon={Close}
-                                            onClick={() => handleRemoveWallet(wallet)}
-                                            kind="tertiary"
-                                        >
-                                            {wallet}
-                                        </Button>
-                                    ))
-                                )}
-                            </Stack>
-                        </div>
-                    </Column>
+                        {/* List of Selected Wallets */}
+                        <Stack gap={4} className={styles.walletList}>
+                            {selectedWallets.length === 0 ? (
+                                <p className={styles.emptyState}>
+                                    No wallets selected. Add wallet addresses to compare.
+                                </p>
+                            ) : (
+                                selectedWallets.map((wallet) => (
+                                    <Button
+                                        className={styles.walletTag}
+                                        renderIcon={Close}
+                                        onClick={() => handleRemoveWallet(wallet)}
+                                        kind="tertiary"
+                                    >
+                                        {wallet}
+                                    </Button>
+                                ))
+                            )}
+                        </Stack>
+                    </div>
+                </Column>
 
-                    {/* 9 columns - Main Content Area */}
-                    <Column lg={12} md={12} sm={4}>
+                {/* 9 columns - Main Content Area */}
+                <Column lg={12} md={12} sm={4}>
+                    <div className={styles.mainContentContainer}>
                         <TabContainer
                             activeTab={activeTab}
                             names={["General", "Holdings", "Profit & Risk Management"]} // remember to refactor this to support localization (not now since we have to refactor localization hooks first)
                             tabs={[<GeneralTab walletAddresses={selectedWallets} />, <HoldingTab walletAddresses={selectedWallets}/>, <RiskTab walletAddresses={selectedWallets}/>]} //for testing purpose
                             onTabChange={(index) => setActiveTab(index)}
                         />
-                    </Column>
-                </Grid>
-            </div>
+
+                    </div>
+                </Column>
+            </Grid>
+            {/* <div className={styles.walletsComparisonPage}>
+            </div> */}
         </PageWrapper>
     )
 }
