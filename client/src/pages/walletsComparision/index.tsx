@@ -6,6 +6,8 @@ import { Add, Close, SearchAdvanced } from '@carbon/react/icons';
 import { PageWrapper } from "@/components/wrapper";
 import styles from "./index.module.scss";
 import { GeneralTab } from "@/components/wallet/WalletComparision/GeneralTab";
+import { HoldingTab } from "@/components/wallet/WalletComparision/HoldingTab";
+import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
 
 export default function WalletsComparisionPage() {
     const [activeTab, setActiveTab] = useState(0);
@@ -85,7 +87,7 @@ export default function WalletsComparisionPage() {
                         <TabContainer
                             activeTab={activeTab}
                             names={["General", "Holdings", "Profit & Risk Management"]} // remember to refactor this to support localization (not now since we have to refactor localization hooks first)
-                            tabs={[<GeneralTab walletAddresses={selectedWallets} />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
+                            tabs={[<GeneralTab walletAddresses={selectedWallets} />, <HoldingTab walletAddresses={selectedWallets}/>, <RiskTab walletAddresses={selectedWallets}/>]} //for testing purpose
                             onTabChange={(index) => setActiveTab(index)}
                         />
                     </Column>
