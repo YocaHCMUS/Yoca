@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { TableWrapper, type ActiveFilter } from '../charts/shared/TableWrapper';
+import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer } from "@carbon/react";
+import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
 import styles from './Table.module.scss';
 
@@ -483,8 +483,6 @@ export const Table: React.FC<TableProps> = ({
                     setSearchValue(value);
                     setPage(1);
                 }}
-                activeFilters={getActiveFilters()}
-                onRemoveFilter={removeFilter}
             >
             <div className={styles.tableWrapper}>
                 <div ref={tableContainerRef}>
@@ -498,6 +496,21 @@ export const Table: React.FC<TableProps> = ({
                                 <TableContainer
                                     className={styles.tableContainer}
                                     >
+                                {getActiveFilters().length > 0 && (
+                                    <div className={styles.activeFilters}>
+                                        {getActiveFilters().map((filter) => (
+                                        <Tag
+                                            key={filter.columnIndex}
+                                            type="blue"
+                                            filter
+                                            onClose={() => removeFilter(filter.columnIndex)}
+                                            title={`Filter: ${filter.columnName} = ${filter.displayText}`}
+                                        >
+                                            {filter.columnName}: {filter.displayText}
+                                        </Tag>
+                                        ))}
+                                    </div>
+                                )}        
                                 <TableHead>
                                     <TableRow className={styles.stickyHeader}>
                                         {headers.map((header, index) => {
@@ -506,6 +519,7 @@ export const Table: React.FC<TableProps> = ({
                                                 header,
                                                 isSortable: isColumnSortable
                                             });
+                                            const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
                                             return (
                                                 <TableHeader 
                                                     key={key} 
@@ -525,7 +539,7 @@ export const Table: React.FC<TableProps> = ({
                                                                 ref={(el) => { filterButtonRefs.current[index] = el; }}
                                                             >
                                                                 <IconButton 
-                                                                    label={`Filter ${header.header}`}
+                                                                    label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
                                                                     align="bottom-right"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -533,6 +547,7 @@ export const Table: React.FC<TableProps> = ({
                                                                     }}
                                                                     kind = 'ghost'
                                                                     size="sm"
+                                                                    className={activeFilter ? styles.activeFilterButton : undefined}
                                                                     data-filter-button
                                                                 >
                                                                     <Filter/>
@@ -575,7 +590,7 @@ export const Table: React.FC<TableProps> = ({
                                     {rows.length === 0 && (
                                         <TableRow className={styles.noHover}>
                                             <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     No data available
                                                 </div>
                                             </TableCell>
