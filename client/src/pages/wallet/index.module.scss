@@ -18,3 +18,10 @@
   margin-bottom: $spacing-06;
   padding: 0 $spacing-05;
 }
+
+.columnWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+}

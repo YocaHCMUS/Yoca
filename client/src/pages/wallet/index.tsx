@@ -318,7 +318,9 @@ export default function WalletPage() {
       <h1 className={styles.sectionTitle}>Asset</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <AssetDistribution/>
+        <div className={styles.columnWrapper}>
+          <AssetDistribution/>
+        </div>
         <Table
           title="Portfolio"
           headers={portfolioHeaders}
