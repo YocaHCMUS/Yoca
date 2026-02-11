@@ -17,7 +17,7 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -28,8 +28,10 @@ import { fetchAssetDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
-
+import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
+import { useChartExport } from '@/hooks/useChartExport';
+import type { ExportFormat } from '@/types/chart-filters.types';
+import type { ChartDataSeries } from '@/types/chart-data.types';
 
 export interface AssetDistributionProps {
   minHeight?: number;
@@ -80,43 +82,54 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       refreshInterval,
     });
 
+  /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'asset-distribution',
+  });
 
-  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
-  //   chartTitle,
-  //   timezone,
-  //   baseFilename: 'asset-distribution',
-  // });
-  // const handleExport = useCallback(
-  //   (format: ExportFormat) => {
-  //     if (!data) return;
+  /**
+   * Handle export based on format
+   */
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      if (!data) return;
 
-  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
+      const instance = chartRef.current?.getEchartsInstance() ?? null;
 
-  //     if (format === 'csv') {
-  //       const csv: ChartDataSeries[] = [
-  //         {
-  //           id: 'asset-distribution',
-  //           name: 'Asset Distribution',
-  //           type: 'pie',
-  //           visible: true,
-  //           data: data.data.map(a => ({
-  //             name: a.name,
-  //             value: a.value,
-  //           })),
-  //         },
-  //       ];
-  //       exportCSV(csv, filters);
-  //       return;
-  //     }
+      if (format === 'csv') {
+        // Convert asset distribution data to CSV format
+        const csv: ChartDataSeries[] = [
+          {
+            id: 'asset-distribution',
+            name: 'Asset Distribution',
+            type: 'pie',
+            visible: true,
+            data: data.data.map(a => ({
+              name: a.name,
+              value: a.value,
+            })),
+          },
+        ];
+        exportCSV(csv, filters);
+        return;
+      }
 
-  //     if (!instance) return;
+      if (!instance) {
+        console.error('Chart instance not available for export');
+        return;
+      }
 
-  //     format === 'png'
-  //       ? exportPNG(instance as any, filters)
-  //       : exportSVG(instance as any, filters);
-  //   },
-  //   [data, filters]
-  // );
+      // Export as PNG or SVG
+      format === 'png'
+        ? exportPNG(instance as any, filters)
+        : exportSVG(instance as any, filters);
+    },
+    [data, filters, exportPNG, exportSVG, exportCSV]
+  );
 
   /**
    * ECharts option = pure function of data + theme
@@ -192,12 +205,13 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   }, [data, chartTheme, t]);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
-      // height={height}
       loadingState={loadingState}
       isEmpty={!data || data.data.length === 0}
       onRetry={() => refetch(false)}
+      onExport={handleExport}
+      className={className}
     >
       {option && (
         <ReactECharts
@@ -208,7 +222,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           lazyUpdate
         />
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 };
 

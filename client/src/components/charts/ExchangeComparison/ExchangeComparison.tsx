@@ -7,19 +7,21 @@
  * @module ExchangeComparison
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartFilters } from '@/hooks/useChartFilters';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
-import type { TimePeriod } from '@/types/chart-filters.types';
+import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
+import { useChartExport } from '@/hooks/useChartExport';
+import type { ChartDataSeries } from '@/types/chart-data.types';
 
 /**
  * Props for ExchangeComparison component
@@ -127,6 +129,62 @@ export function ExchangeComparison({
     refreshInterval,
     onDataLoaded,
   });
+  
+  /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'exchange-comparison',
+  });
+  
+  /**
+   * Handle export based on format
+   */
+  const handleExport = useCallback(async (format: ExportFormat) => {
+    if (!data) return;
+
+    const instance = chartRef.current?.getEchartsInstance() ?? null;
+
+    if (format === 'csv') {
+      // Convert data to ChartDataSeries format for CSV export
+      const csvData: ChartDataSeries[] = [
+        {
+          id: 'deposits',
+          name: t('charts.exchangeComparisonChart.deposits'),
+          type: 'bar',
+          visible: true,
+          data: data.exchanges.map(ex => ({
+            name: ex.name,
+            value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
+          })),
+        },
+        {
+          id: 'withdrawals',
+          name: t('charts.exchangeComparisonChart.withdrawals'),
+          type: 'bar',
+          visible: true,
+          data: data.exchanges.map(ex => ({
+            name: ex.name,
+            value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
+          })),
+        },
+      ];
+      exportCSV(csvData, filters);
+      return;
+    }
+
+    if (!instance) {
+      console.error('Chart instance not available for export');
+      return;
+    }
+
+    // Export as PNG or SVG
+    format === 'png'
+      ? exportPNG(instance as any, filters)
+      : exportSVG(instance as any, filters);
+  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
   
   /**
    * Generate eCharts option configuration for grouped bar chart
@@ -308,12 +366,13 @@ export function ExchangeComparison({
   // };
   
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      // height={height}
-      onRetry={refetch}
       isEmpty={!data || data.exchanges.length === 0}
+      onRetry={() => refetch(false)}
+      onExport={handleExport}
+      className={className}
     >
       {chartOptions && (
         <ReactECharts
@@ -325,6 +384,6 @@ export function ExchangeComparison({
           lazyUpdate={true}
         />
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 }
