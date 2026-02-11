@@ -23,6 +23,8 @@ import {
   renderPositiveNegative
 } from "@/components/tables/TableCellRenderer.tsx";
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
+import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
+import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
 
 // temporary interfaces
 interface Transaction {
@@ -321,44 +323,31 @@ export default function WalletPage() {
         <div className={styles.columnWrapper}>
           <AssetDistribution/>
         </div>
-        <Table
-          title="Portfolio"
-          headers={portfolioHeaders}
-          initialFilters={{}}
-          fetcher={Promise.resolve(portfolioData)}
-          filterSchema={portfolioFilterSchema}
-          cellRenderers={portfolioCellRenderers}
-          dataEntries={portfolioData}
-          isSortable={isSortablePortfolio}
-          sortConfigs={portfolioSortConfig}
-        />
+        <div className={styles.columnWrapper}>
+          <Table
+            title="Portfolio"
+            headers={portfolioHeaders}
+            initialFilters={{}}
+            fetcher={Promise.resolve(portfolioData)}
+            filterSchema={portfolioFilterSchema}
+            cellRenderers={portfolioCellRenderers}
+            dataEntries={portfolioData}
+            isSortable={isSortablePortfolio}
+            sortConfigs={portfolioSortConfig}
+          />
+        </div>
       </div>
 
       <h1 className={styles.sectionTitle}>Top exchange</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <Table
-              title="Conterparties"
-              headers={transactionHeaders}
-              initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
-              filterSchema={filterSchema}
-              cellRenderers={cellRenderers}
-              dataEntries={transactionData}
-              isSortable={isSortable}
-              sortConfigs={sortConfigs}
-            />
+        <ExchangeComparison/>
       </div>
 
       <h1 className={styles.sectionTitle}>Top counterparties</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <TransactionDistribution/>
       </div>
     </PageWrapper>
   );

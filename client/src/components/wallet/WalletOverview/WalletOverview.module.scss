@@ -177,11 +177,15 @@
 }
 
 .statValuePositive {
+  font-size: 24px;
+  font-weight: bold;
   color-scheme: statValue;
   color: $support-success;
 }
 
 .statValueNegative {
+  font-size: 24px;
+  font-weight: bold;
   color-scheme: statValue;
   color: $support-error;
 }
