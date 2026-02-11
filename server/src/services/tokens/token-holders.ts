@@ -43,19 +43,22 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
 
   if (resp.ok) {
     const res = await resp.json();
+    return res;
   } else {
     return [];
   }
 }
 
 async function fetchTopHoldersForTokens(tokenAddresses: string[]) {
-  const topHolders = tokenAddresses.map((tokenAddress) =>
-    fetchTopHoldersForToken(tokenAddress),
+  const topHolders = await Promise.all(
+    tokenAddresses.map((tokenAddress) =>
+      fetchTopHoldersForToken(tokenAddress),
+    ),
   );
   return topHolders;
 }
 
-export async function getTopHoldersForTokens(tokenAddresses: string[]) {
+export async function getTopTokenHolders(tokenAddresses: string[]) {
   const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDERS_TTL_MS);
 
   const res = await db
@@ -67,6 +70,6 @@ export async function getTopHoldersForTokens(tokenAddresses: string[]) {
         inArray(topTokenHolders.tokenAddress, tokenAddresses),
       ),
     );
-  
-  return 
+
+  return res;
 }

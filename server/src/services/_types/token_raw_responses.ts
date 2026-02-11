@@ -75,7 +75,7 @@ export interface CG_TokenMarketChart {
   total_volumes: [number, number][];
 }
 
-export type CG_TokenMarketDataSingle = {
+export type CG_TokenDataByAddress = {
   data: Array<{
     id: string;
     type: string;
@@ -203,7 +203,7 @@ export type CG_TokenMarketDataSingle = {
   }>;
 };
 
-export type CG_TokenMarketDataMulti = {
+export type CG_TokenDataByAddresses = {
   data: {
     id: string;
     type: string;

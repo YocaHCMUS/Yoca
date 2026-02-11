@@ -50,6 +50,7 @@ export const tokenMeta = pgTable("token_meta", {
     .$onUpdate(() => new Date()),
 });
 
+// -------------------------------
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
   decimals: integer("decimals").notNull(),
