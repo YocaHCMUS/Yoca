@@ -2,7 +2,7 @@
 import { Hono } from "hono";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { sign, verify } from "hono/jwt";
 import { OAuth2Client } from "google-auth-library";
@@ -24,11 +24,14 @@ const app = new Hono()
   const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
-    const [newUser] = await db.insert(users).values({
-      email,
-      username,
-      password: hashedPassword,
-    }).returning();
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        email,
+        username,
+        password: hashedPassword,
+      })
+      .returning();
 
     const token = await sign({ id: newUser.id }, JWT_SECRET);
     return c.json({ success: true, user: newUser, token }, 201);
@@ -40,10 +43,11 @@ const app = new Hono()
 // API Đăng nhập
 .post("/signin", async (c) => {
   const { usernameOrEmail, password } = await c.req.json();
-  
-  const [user] = await db.select().from(users).where(
-    or(eq(users.email, usernameOrEmail), eq(users.username, usernameOrEmail))
-  );
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.email, usernameOrEmail), eq(users.username, usernameOrEmail)));
 
   if (!user || !(await bcrypt.compare(password, user.password!))) {
     return c.json({ success: false, error: "Thông tin đăng nhập không chính xác" }, 401);
@@ -164,36 +168,49 @@ const app = new Hono()
   }
 })
 
-
+// Wallet auth (MetaMask / EVM)
 .post("/wallet-auth", async (c) => {
   const { address, blockchain, walletType } = await c.req.json();
 
   if (!address) return c.json({ success: false, error: "Thiếu địa chỉ ví" }, 400);
 
   try {
-    // 1. Tìm xem ví này đã liên kết với user nào chưa (giả sử có bảng user_wallets hoặc cột trong users)
-    // Ở đây tôi ví dụ tìm trong bảng users có cột walletAddress
-    let [user] = await db.select().from(users).where(eq(users.walletAddress, address));
+    // Tìm user có chứa địa chỉ ví trong mảng walletAddress (text[])
+    let [user] = await db
+      .select()
+      .from(users)
+      .where(sql`${address} = ANY(${users.walletAddress})`);
 
     if (!user) {
-      // 2. Nếu chưa có -> ĐĂNG KÝ (Tạo user mới)
+      // Nếu chưa có -> ĐĂNG KÝ (Tạo user mới)
       const username = `web3_${address.slice(0, 6)}_${Math.floor(Math.random() * 1000)}`;
-      [user] = await db.insert(users).values({
-        username,
-        email: `${address}@wallet.io`, // Email giả hoặc cho phép null
-        walletAddress: address,
-        // password để null vì login qua ví
-      }).returning();
+      [user] = await db
+        .insert(users)
+        .values({
+          email: `${address}@wallet.io`,
+          username,
+          password: null,
+          walletAddress: [address],
+        })
+        .returning();
+    } else {
+      // Nếu đã có user nhưng chưa chứa địa chỉ ví này, thêm vào mảng
+      const hasAddress = Array.isArray(user.walletAddress)
+        ? user.walletAddress.includes(address)
+        : false;
+      if (!hasAddress) {
+        const [updated] = await db
+          .update(users)
+          .set({ walletAddress: sql`array_append(${users.walletAddress}, ${address})` })
+          .where(eq(users.id, user.id))
+          .returning();
+        if (updated) user = updated;
+      }
     }
 
-    // 3. ĐĂNG NHẬP (Tạo JWT)
+    // ĐĂNG NHẬP (Tạo JWT)
     const token = await sign({ id: user.id }, JWT_SECRET);
-    return c.json({ 
-      success: true, 
-      user, 
-      token,
-      message: "Xác thực ví thành công" 
-    });
+    return c.json({ success: true, user, token, message: "Xác thực ví thành công" });
   } catch (err) {
     console.error(err);
     return c.json({ success: false, error: "Lỗi xử lý xác thực ví" }, 500);
