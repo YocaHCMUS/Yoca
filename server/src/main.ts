@@ -22,33 +22,33 @@ process.loadEnvFile("./.env");
 // Routes
 const app = new Hono()
   // 1. Cấu hình Middleware (Đặt lên đầu)
-app.use("*", logger());
-app.use("/api/*", cors({
+.use("*", logger())
+.use("/api/*", cors({
   // Cho phép tất cả origin trong môi trường phát triển để tránh lỗi CORS
   // Cân nhắc thu hẹp origin khi triển khai production
   origin: "*",
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
-}));
+}))
 
 // 2. Định nghĩa các Route
-app.get("/", (c) => c.redirect("/api"));
-app.get("/api", (c) => c.json({ status: "ok" }));
+.get("/", (c) => c.redirect("/api"))
+.get("/api", (c) => c.json({ status: "ok" }))
 
 // Gắn các cụm API
-app.route("/api/users", users);
-app.route("/api/tokens", tokens);
-app.route("/api/balances", balances);
-app.route("/api/transfers", transfers);
-app.route("/api/charts/balance", chartBalance);
-app.route("/api/charts/distribution", chartDistribution);
-app.route("/api/charts/pnl", chartPnL);
-app.route("/api/charts/exchanges", chartExchanges);
-app.route("/api/charts/counterparties", chartCounterparties);
-app.route("/api/charts/volume", chartVolume);
-app.route("/api/charts/transactions", chartTransactions);
-app.route("/api/charts/holdings", chartHoldings);
-app.route("/api/charts/price-history", chartPriceHistory);
+.route("/api/users", users)
+.route("/api/tokens", tokens)
+.route("/api/balances", balances)
+.route("/api/transfers", transfers)
+.route("/api/charts/balance", chartBalance)
+.route("/api/charts/distribution", chartDistribution)
+.route("/api/charts/pnl", chartPnL) 
+.route("/api/charts/exchanges", chartExchanges)
+.route("/api/charts/counterparties", chartCounterparties)
+.route("/api/charts/volume", chartVolume)
+.route("/api/charts/transactions", chartTransactions)
+.route("/api/charts/holdings", chartHoldings)
+.route("/api/charts/price-history", chartPriceHistory)
 // 3. Khởi chạy Server
 const port = Number(process.env.SERVER_PORT) || 4000;
 
