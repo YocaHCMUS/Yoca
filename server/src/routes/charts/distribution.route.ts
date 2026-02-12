@@ -31,19 +31,21 @@ const app = new Hono()
    * - period: '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' (default: '30D')
    * - wallets: Comma-separated wallet addresses (optional, default: all wallets)
    * 
-   * Response:
+   * Response (single/aggregated):
    * {
-   *   data: Array<{
-   *     name: string,
-   *     value: number,
-   *     percentage: number,
-   *     color?: string
-   *   }>,
+   *   data: Array<{ name: string, value: number, percentage: number, color?: string }>,
    *   totalValue: number,
-   *   metadata: {
-   *     currency: string,
-   *     timestamp: number
-   *   }
+   *   metadata: { currency: string, timestamp: number }
+   * }
+   * 
+   * Response (multiple wallets):
+   * {
+   *   wallets: Array<{
+   *     walletAddress: string,
+   *     data: Array<{ name: string, value: number, percentage: number, color?: string }>,
+   *     totalValue: number
+   *   }>,
+   *   metadata: { currency: string, timestamp: number }
    * }
    */
   .get('/', async (c) => {

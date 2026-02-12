@@ -180,12 +180,9 @@ export function generateBalanceTrend(
 }
 
 /**
- * Generate mock asset distribution data
+ * Generate mock asset distribution data for a single wallet
  */
-export function generateAssetDistribution(
-  _period?: string,
-  _wallets?: string
-) {
+function generateSingleWalletDistribution(walletAddress: string, seed: number) {
   // Base asset allocations (will be adjusted based on randomness)
   const baseAssets = [
     { name: 'BTC', baseValue: 45000 },
@@ -198,9 +195,15 @@ export function generateAssetDistribution(
     { name: 'DOT', baseValue: 2500 },
   ];
   
-  // Add some randomness to values (±20%)
+  // Use seed for consistent but different values per wallet
+  const seededRandom = (index: number) => {
+    const x = Math.sin(seed + index) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  // Add some randomness to values (±30%) based on wallet seed
   const assets = baseAssets.map((asset, index) => {
-    const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+    const randomFactor = 0.7 + seededRandom(index) * 0.6; // 0.7 to 1.3
     const value = asset.baseValue * randomFactor;
     
     return {
@@ -220,8 +223,44 @@ export function generateAssetDistribution(
   }));
   
   return {
+    walletAddress,
     data: dataWithPercentages,
     totalValue,
+  };
+}
+
+/**
+ * Generate mock asset distribution data
+ * Returns per-wallet data if wallets specified, otherwise aggregated data
+ */
+export function generateAssetDistribution(
+  _period?: string,
+  wallets?: string
+) {
+  // Parse wallet addresses
+  const walletAddresses = wallets ? wallets.split(',').map(w => w.trim()) : [];
+  
+  if (walletAddresses.length === 0) {
+    // Generate aggregated data for all wallets
+    const aggregated = generateSingleWalletDistribution('all', 12345);
+    return {
+      data: aggregated.data,
+      totalValue: aggregated.totalValue,
+      metadata: {
+        currency: 'USD',
+        timestamp: Date.now(),
+      },
+    };
+  }
+  
+  // Generate per-wallet data
+  const walletData = walletAddresses.map((walletAddress, index) => {
+    const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+    return generateSingleWalletDistribution(walletAddress, seed);
+  });
+  
+  return {
+    wallets: walletData,
     metadata: {
       currency: 'USD',
       timestamp: Date.now(),

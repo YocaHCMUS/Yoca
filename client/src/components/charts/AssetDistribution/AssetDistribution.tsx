@@ -17,7 +17,7 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +32,6 @@ import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
-import { BorderFull, BorderTop } from '@carbon/react/icons';
 
 export interface AssetDistributionProps {
   minHeight?: number;
@@ -55,6 +54,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
 
   const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
     initialFilters,
@@ -62,14 +64,47 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   });
 
   /**
+   * Sync filters when initialFilters changes (e.g., wallet selection from parent)
+   */
+  useEffect(() => {
+    const prevFilters = prevInitialFiltersRef.current;
+    
+    // Check if wallets changed
+    if (initialFilters?.wallets) {
+      const prevWalletsStr = prevFilters?.wallets?.sort().join(',') ?? '';
+      const newWalletsStr = initialFilters.wallets.sort().join(',');
+      if (prevWalletsStr !== newWalletsStr) {
+        setWallets(initialFilters.wallets);
+      }
+    }
+    
+    // Check if time period changed
+    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
+      setTimePeriod(initialFilters.timePeriod);
+    }
+    
+    // Update ref for next comparison
+    prevInitialFiltersRef.current = initialFilters;
+  }, [initialFilters, setWallets, setTimePeriod]);
+
+  /**
+   * Memoize wallets string to prevent unnecessary re-fetches
+   * Only changes when wallet addresses actually change, not on array reference change
+   */
+  const walletsString = useMemo(() => {
+    if (!filters.wallets || filters.wallets.length === 0) return undefined;
+    return filters.wallets.sort().join(',');
+  }, [filters.wallets]);
+
+  /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo<DistributionRequestParams>(
     () => ({
       period: filters.timePeriod,
-      wallets: filters.wallets?.join(','),
+      wallets: walletsString,
     }),
-    [filters.timePeriod, filters.wallets]
+    [filters.timePeriod, walletsString]
   );
 
   /**
@@ -103,8 +138,25 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
 
       if (format === 'csv') {
         // Convert asset distribution data to CSV format
-        const csv: ChartDataSeries[] = [
-          {
+        const csv: ChartDataSeries[] = [];
+        
+        if (data.wallets) {
+          // Per-wallet data
+          data.wallets.forEach(wallet => {
+            csv.push({
+              id: `asset-distribution-${wallet.walletAddress}`,
+              name: `Asset Distribution - ${wallet.walletAddress}`,
+              type: 'pie',
+              visible: true,
+              data: wallet.data.map(a => ({
+                name: a.name,
+                value: a.value,
+              })),
+            });
+          });
+        } else if (data.data) {
+          // Aggregated data
+          csv.push({
             id: 'asset-distribution',
             name: 'Asset Distribution',
             type: 'pie',
@@ -113,8 +165,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
               name: a.name,
               value: a.value,
             })),
-          },
-        ];
+          });
+        }
+        
         exportCSV(csv, filters);
         return;
       }
@@ -133,16 +186,27 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   );
 
   /**
-   * ECharts option = pure function of data + theme
+   * Helper to create chart option for a single distribution dataset
    */
-  const option: EChartsOption | null = useMemo(() => {
-    if (!data || data.data.length === 0) return null;
-
+  const createChartOption = useCallback((
+    distributionData: { name: string; value: number; percentage: number; color?: string }[],
+    total: number,
+    walletLabel?: string
+  ): EChartsOption => {
     const base = getThemedChartBaseOption(chartTheme);
-    const total = data.totalValue;
 
     return {
       ...base,
+      title: walletLabel ? {
+        text: walletLabel,
+        left: 'center',
+        top: 10,
+        textStyle: {
+          color: chartTheme.textColor,
+          fontSize: 14,
+          fontWeight: 'normal',
+        },
+      } : undefined,
       tooltip: {
         ...base.tooltip,
         trigger: 'item',
@@ -156,14 +220,14 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         ...base.legend,
         orient: 'vertical',
         right: 0,
-        top: 'center',
+        top: walletLabel ? 'center' : 'center',
       },
       series: [
         {
           type: 'pie',
           radius: ['40%', '60%'],
           center: ['50%', '50%'],
-          data: data.data.map((a, i) => ({
+          data: distributionData.map((a, i) => ({
             name: a.name,
             value: a.value,
             percentage: a.percentage,
@@ -186,7 +250,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         {
           type: 'text',
           left: '12%',
-          top: '8%',
+          top: walletLabel ? '12%' : '8%',
           style: {
             text: t('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
@@ -196,36 +260,96 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         {
           type: 'text',
           left: '12%',
-          top: '12%',
+          top: walletLabel ? '16%' : '12%',
           style: {
             text: formatCurrency(total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
-            BorderTop
           },
         },
       ],
     };
-  }, [data, chartTheme, t]);
+  }, [chartTheme, t]);
+
+  /**
+   * ECharts options - multiple charts for per-wallet view
+   */
+  const chartOptions = useMemo(() => {
+    if (!data) return [];
+
+    // Multi-wallet view
+    if (data.wallets && data.wallets.length > 0) {
+      return data.wallets.map(wallet => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.data,
+          wallet.totalValue,
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+        ),
+      }));
+    }
+
+    // Single/aggregated view
+    if (data.data && data.data.length > 0) {
+      return [{
+        walletAddress: 'aggregated',
+        option: createChartOption(data.data, data.totalValue ?? 0),
+      }];
+    }
+
+    return [];
+  }, [data, createChartOption]);
+
+  const isEmpty = !data || (
+    (!data.wallets || data.wallets.length === 0) &&
+    (!data.data || data.data.length === 0)
+  ) || (filters.wallets && filters.wallets.length === 0);
 
   return (
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.data.length === 0}
+      isEmpty={isEmpty}
+      emptyState={filters.wallets && filters.wallets.length === 0 
+        ? {
+            title: t('charts.assetDistributionChart.noWalletsTitle', 'No Wallets Selected'),
+            message: t('charts.assetDistributionChart.noWalletsMessage', 'Please select at least one wallet to view asset distribution.'),
+          }
+        : undefined}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
     >
-      {option && (
-        <ReactECharts
-          ref={chartRef}
-          option={option}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+      {chartOptions.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: chartOptions.length > 1 ? 'repeat(auto-fit, minmax(400px, 1fr))' : '1fr',
+            gap: '1rem',
+            width: '100%',
+          }}
+        >
+          {chartOptions.map((chartData, index) => (
+            <div
+              key={chartData.walletAddress}
+              style={{
+                minHeight: `${minHeight}px`,
+                border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
+                borderRadius: '4px',
+                padding: chartOptions.length > 1 ? '0.5rem' : '0',
+              }}
+            >
+              <ReactECharts
+                ref={index === 0 ? chartRef : undefined}
+                option={chartData.option}
+                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                notMerge
+                lazyUpdate
+              />
+            </div>
+          ))}
+        </div>
       )}
     </ChartWrapper>
   );

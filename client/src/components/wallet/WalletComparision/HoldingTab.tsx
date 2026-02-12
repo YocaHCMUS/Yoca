@@ -11,14 +11,14 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
     return (
         <div className={styles.grid}>
             {/* Asset Distribution Charts */}
-            {walletAddresses.map((address, index) => (
-                <div key={`asset-${index}`} className={styles.chartContainer}>
-                    <AssetDistribution
-                        initialFilters={{ wallets: [address] }}
-                        minHeight={300}
-                    />
-                </div>
-            ))}
+            {/* {walletAddresses.map((address, index) => (
+            ))} */}
+            <div  className={styles.stableCoinChart}>
+                <AssetDistribution
+                    initialFilters={{ wallets: walletAddresses }}
+                    minHeight={300}
+                />
+            </div>
 
             {/* Stable Coin Ratio Chart - Placeholder */}
             <div className={styles.stableCoinChart}>

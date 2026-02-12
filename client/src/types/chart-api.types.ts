@@ -56,16 +56,34 @@ export interface BalanceTrendResponse extends ChartResponseBase {
 /**
  * Asset distribution API response
  * GET /api/charts/distribution
+ * 
+ * Returns either aggregated data (when no wallets or single wallet)
+ * or per-wallet data (when multiple wallets specified)
  */
 export interface AssetDistributionResponse extends ChartResponseBase {
-  /** Distribution data points */
-  data: (DistributionPoint & {
+  /** Distribution data points (for aggregated/single wallet) */
+  data?: (DistributionPoint & {
     /** Percentage of total (calculated) */
     percentage: number;
   })[];
   
-  /** Total portfolio value */
-  totalValue: number;
+  /** Total portfolio value (for aggregated/single wallet) */
+  totalValue?: number;
+  
+  /** Per-wallet distribution data (for multiple wallets) */
+  wallets?: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Distribution data for this wallet */
+    data: (DistributionPoint & {
+      /** Percentage of total (calculated) */
+      percentage: number;
+    })[];
+    
+    /** Total value for this wallet */
+    totalValue: number;
+  }[];
   
   /** Response metadata */
   metadata: {
