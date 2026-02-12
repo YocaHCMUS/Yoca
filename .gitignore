@@ -15,6 +15,7 @@ dist-ssr
 *.local
 .gitignore
 package-lock.json
+server/postgresdb
 
 # Editor directories and files
 .vscode/*
@@ -39,3 +40,5 @@ s**/.env
 # TypeScript
 *.tsbuildinfo
 .tmp
+
+
