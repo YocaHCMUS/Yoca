@@ -32,6 +32,7 @@ import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
+import { BorderFull, BorderTop } from '@carbon/react/icons';
 
 export interface AssetDistributionProps {
   minHeight?: number;
@@ -154,14 +155,14 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       legend: {
         ...base.legend,
         orient: 'vertical',
-        right: 20,
+        right: 0,
         top: 'center',
       },
       series: [
         {
           type: 'pie',
-          radius: ['50%', '70%'],
-          center: ['40%', '50%'],
+          radius: ['40%', '60%'],
+          center: ['50%', '50%'],
           data: data.data.map((a, i) => ({
             name: a.name,
             value: a.value,
@@ -170,6 +171,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
               color:
                 (a as any).color ??
                 chartTheme.colorPalette[i % chartTheme.colorPalette.length],
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              borderRadius: 6,
             },
           })),
           label: {
@@ -181,8 +185,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       graphic: [
         {
           type: 'text',
-          left: '14%',
-          top: '14%',
+          left: '12%',
+          top: '8%',
           style: {
             text: t('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
@@ -191,13 +195,14 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
         {
           type: 'text',
-          left: '14%',
-          top: '20%',
+          left: '12%',
+          top: '12%',
           style: {
             text: formatCurrency(total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
+            BorderTop
           },
         },
       ],
