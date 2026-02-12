@@ -17,7 +17,7 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +54,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Track selected assets for legend filtering
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   
   // Track previous initialFilters to detect changes
   const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
@@ -191,9 +194,22 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   const createChartOption = useCallback((
     distributionData: { name: string; value: number; percentage: number; color?: string }[],
     total: number,
-    walletLabel?: string
+    walletLabel?: string,
+    isMultiWallet?: boolean
   ): EChartsOption => {
     const base = getThemedChartBaseOption(chartTheme);
+    
+    // Filter data based on selected assets in multi-wallet view
+    const filteredData = isMultiWallet && selectedAssets.size > 0
+      ? distributionData.filter(a => selectedAssets.has(a.name))
+      : distributionData;
+    
+    // Recalculate total and percentages for filtered data
+    const filteredTotal = filteredData.reduce((sum, a) => sum + a.value, 0);
+    const dataWithRecalculatedPercentages = filteredData.map(a => ({
+      ...a,
+      percentage: filteredTotal > 0 ? (a.value / filteredTotal) * 100 : 0,
+    }));
 
     return {
       ...base,
@@ -218,18 +234,20 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           ${t('charts.assetDistributionChart.percentage')}: ${p.data.percentage.toFixed(2)}%
         `,
       },
-      legend: {
+      legend: isMultiWallet ? {
+        show: false, // Hide individual legends in multi-wallet view
+      } : {
         ...base.legend,
         orient: 'vertical',
         right: 0,
-        top: walletLabel ? 'center' : 'center',
+        top: 'center',
       },
       series: [
         {
           type: 'pie',
           radius: ['26%', '56%'],
           center: ['50%', '50%'],
-          data: distributionData.map((a, i) => ({
+          data: dataWithRecalculatedPercentages.map((a, i) => ({
             name: a.name,
             value: a.value,
             percentage: a.percentage,
@@ -264,7 +282,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: formatCurrency(total),
+            text: formatCurrency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
@@ -272,13 +290,64 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
       ],
     };
-  }, [chartTheme, t]);
+  }, [chartTheme, t, selectedAssets]);
+
+  /**
+   * Extract unique assets across all wallets for aggregated legend
+   */
+  const aggregatedLegendData = useMemo(() => {
+    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    
+    const uniqueAssets = new Map<string, { name: string; color: string }>();
+    
+    data.wallets.forEach((wallet, walletIndex) => {
+      wallet.data.forEach((asset, assetIndex) => {
+        if (!uniqueAssets.has(asset.name)) {
+          uniqueAssets.set(asset.name, {
+            name: asset.name,
+            color: (asset as any).color ?? chartTheme.colorPalette[assetIndex % chartTheme.colorPalette.length],
+          });
+        }
+      });
+    });
+    
+    return Array.from(uniqueAssets.values());
+  }, [data, chartTheme.colorPalette]);
+  
+  /**
+   * Initialize selected assets when data changes
+   */
+  useEffect(() => {
+    if (aggregatedLegendData) {
+      setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
+    }
+  }, [aggregatedLegendData]);
+  
+  /**
+   * Toggle asset selection for legend filtering
+   */
+  const toggleAssetSelection = useCallback((assetName: string) => {
+    setSelectedAssets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetName)) {
+        // Don't allow deselecting all assets
+        if (newSet.size > 1) {
+          newSet.delete(assetName);
+        }
+      } else {
+        newSet.add(assetName);
+      }
+      return newSet;
+    });
+  }, []);
 
   /**
    * ECharts options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
     if (!data) return [];
+
+    const isMultiWallet = data.wallets && data.wallets.length > 1;
 
     // Multi-wallet view
     if (data.wallets && data.wallets.length > 0) {
@@ -287,7 +356,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         option: createChartOption(
           wallet.data,
           wallet.totalValue,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`,
+          isMultiWallet
         ),
       }));
     }
@@ -296,7 +366,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
     if (data.data && data.data.length > 0) {
       return [{
         walletAddress: 'aggregated',
-        option: createChartOption(data.data, data.totalValue ?? 0),
+        option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
       }];
     }
 
@@ -324,34 +394,91 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       className={className}
     >
       {chartOptions.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: chartOptions.length > 1 ? 'repeat(3, 1fr)' : '1fr',
-            width: '100%',
-          }}
-        >
-          {chartOptions.map((chartData, index) => (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {/* Aggregated Legend for Multi-Wallet View */}
+          {aggregatedLegendData && chartOptions.length > 1 && (
             <div
-              key={chartData.walletAddress}
               style={{
-                aspectRatio: '1',
-                minHeight: `${minHeight}px`,
-                // maxHeight: '600px',
-                border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
-                borderRadius: '4px',
-                padding: chartOptions.length > 1 ? '0.5rem' : '0',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                padding: '1rem',
+                justifyContent: 'center',
+                borderBottom: '1px solid var(--cds-border-subtle)',
+                marginBottom: '1rem',
               }}
             >
-              <ReactECharts
-                ref={index === 0 ? chartRef : undefined}
-                option={chartData.option}
-                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-                notMerge
-                lazyUpdate
-              />
+              {aggregatedLegendData.map((asset) => {
+                const isSelected = selectedAssets.has(asset.name);
+                return (
+                  <div
+                    key={asset.name}
+                    onClick={() => toggleAssetSelection(asset.name)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: 'pointer',
+                      opacity: isSelected ? 1 : 0.3,
+                      transition: 'opacity 0.2s ease',
+                      userSelect: 'none',
+                    }}
+                    title={isSelected ? `Click to hide ${asset.name}` : `Click to show ${asset.name}`}
+                  >
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: asset.color,
+                        border: isSelected ? 'none' : '2px solid currentColor',
+                        opacity: isSelected ? 1 : 0.5,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        color: chartTheme.textColor,
+                      }}
+                    >
+                      {asset.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
+
+          {/* Chart Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: chartOptions.length > 1 ? 'repeat(3, 1fr)' : '1fr',
+              width: '100%',
+            }}
+          >
+            {chartOptions.map((chartData, index) => (
+              <div
+                key={chartData.walletAddress}
+                style={{
+                  aspectRatio: '1',
+                  minHeight: `${minHeight}px`,
+                  // maxHeight: '600px',
+                  border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
+                  borderRadius: '4px',
+                  padding: chartOptions.length > 1 ? '0.5rem' : '0',
+                }}
+              >
+                <ReactECharts
+                  ref={index === 0 ? chartRef : undefined}
+                  option={chartData.option}
+                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                  notMerge
+                  lazyUpdate
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </ChartWrapper>
