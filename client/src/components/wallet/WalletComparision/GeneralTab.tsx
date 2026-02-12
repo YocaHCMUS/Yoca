@@ -2,9 +2,10 @@ import React from 'react';
 import type WalletComparisionProp from "./WalletComparisionProp";
 import { AssetDistribution } from '@/components/charts/AssetDistribution';
 import { HoldingDurations } from '@/components/charts/HoldingDurations';
-import styles from './GeneralTab.module.scss'; // Assuming we create this
+import styles from './GeneralTab.module.scss';
 import { BalanceChart } from '@/components/charts/BalanceChart';
 import { VolumeBenchmark } from '@/components/charts/VolumeBenchmark';
+import { DailyTradingVolume } from '@/components/charts/DailyTradingVolume';
 
 
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
@@ -25,10 +26,13 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                     />
             </div>
 
-            {/* Daily Trading Volume Historical Chart - Placeholder */}
+            {/* Daily Trading Volume Historical Chart */}
             <div className={styles.stableCoinChart}>
-                <h3>Daily Trading Volume Historical Chart</h3>
-                <p>Temporary placeholder for daily trading volume over time visualization</p>
+                <DailyTradingVolume
+                    minHeight={400}
+                    walletAddresses={walletAddresses}
+                    selectedBenchmarks={['SOL']}
+                />
             </div>
 
             {/* Total Trading Volume Column Chart - Placeholder */}
@@ -55,6 +59,15 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                 <p>Temporary placeholder for average volume per transaction visualization</p>
             </div>
 
+            {/* Holding Durations Charts */}
+            {walletAddresses.map((address, index) => (
+                <div key={`holding-${index}`} className={styles.chartContainer}>
+                    <HoldingDurations
+                        walletIds={[address]}
+                        minHeight={300}
+                    />
+                </div>
+            ))}
         </div>
     );
 }
