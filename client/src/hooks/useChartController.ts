@@ -69,7 +69,9 @@ export function useStandardChartController<TData, TQuery>({
             // Limit cache size to prevent memory leaks (keep last 10 queries)
             if (cacheRef.current.size > 10) {
                 const firstKey = cacheRef.current.keys().next().value;
-                cacheRef.current.delete(firstKey);
+                if (firstKey !== undefined) {
+                    cacheRef.current.delete(firstKey);
+                }
             }
             
             onDataLoaded?.(result);

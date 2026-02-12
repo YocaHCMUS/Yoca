@@ -197,14 +197,16 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
 
     return {
       ...base,
+      xAxis: undefined,
+      yAxis: undefined,
       title: walletLabel ? {
         text: walletLabel,
-        left: 'center',
-        top: 10,
+        left: 8,
+        top: 8,
         textStyle: {
           color: chartTheme.textColor,
-          fontSize: 14,
-          fontWeight: 'normal',
+          fontSize: 16,
+          fontWeight: 'bold',
         },
       } : undefined,
       tooltip: {
@@ -225,7 +227,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       series: [
         {
           type: 'pie',
-          radius: ['40%', '60%'],
+          radius: ['26%', '56%'],
           center: ['50%', '50%'],
           data: distributionData.map((a, i) => ({
             name: a.name,
@@ -249,8 +251,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       graphic: [
         {
           type: 'text',
-          left: '12%',
-          top: walletLabel ? '12%' : '8%',
+          left: 'center',
+          top: '46%',
           style: {
             text: t('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
@@ -259,8 +261,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
         {
           type: 'text',
-          left: '12%',
-          top: walletLabel ? '16%' : '12%',
+          left: 'center',
+          top: '50%',
           style: {
             text: formatCurrency(total),
             fill: chartTheme.textColor,
@@ -325,8 +327,7 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: chartOptions.length > 1 ? 'repeat(auto-fit, minmax(400px, 1fr))' : '1fr',
-            gap: '1rem',
+            gridTemplateColumns: chartOptions.length > 1 ? 'repeat(3, 1fr)' : '1fr',
             width: '100%',
           }}
         >
@@ -334,7 +335,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
             <div
               key={chartData.walletAddress}
               style={{
+                aspectRatio: '1',
                 minHeight: `${minHeight}px`,
+                // maxHeight: '600px',
                 border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
                 borderRadius: '4px',
                 padding: chartOptions.length > 1 ? '0.5rem' : '0',
