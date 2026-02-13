@@ -1,24 +1,29 @@
 @use '@carbon/react/scss/spacing' as *;
 @use '@carbon/react/scss/theme' as *;
 
+// Custom variables for table component
+$filter-popup-min-width: 280px;
+$table-max-height: 400px;
+$filter-popup-z-index: 9999;
+
 .filterPopup {
   position: absolute;
-  top: calc(100% + 8px);
-  z-index: 9999;
-  min-width: 280px;
-  max-height: 400px;
+  top: calc(100% + $spacing-03);
+  z-index: $filter-popup-z-index;
+  min-width: $filter-popup-min-width;
+  max-height: $table-max-height;
   overflow-y: auto;
   background: var(--cds-layer-01);
   border: 1px solid var(--cds-border-subtle-01);
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  padding: 1rem;
+  border-radius: $spacing-02;
+  box-shadow: 0 $spacing-01 $spacing-04 rgba(0, 0, 0, 0.2);
+  padding: $spacing-05;
   animation: slideDown 0.15s ease-out;
 
   @keyframes slideDown {
     from {
       opacity: 0;
-      transform: translateY(-8px);
+      transform: translateY(-$spacing-03);
     }
     to {
       opacity: 1;
@@ -38,21 +43,21 @@
 .filterPopupContent {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: $spacing-05;
 }
 
 .filterPopupHeader {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--cds-text-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: $spacing-03;
 }
 
 .filterPopupActions {
   display: flex;
-  gap: 0.5rem;
+  gap: $spacing-03;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: $spacing-03;
 }
 
 .headerCell {
@@ -69,7 +74,7 @@
   display: block;
   flex: 1;
   overflow-y: auto;
-  max-height: 400px;
+  max-height: $table-max-height;
   padding: 0 !important;
 }
 
@@ -87,8 +92,7 @@
 .headerContent {
   display: flex;
   align-items: center;
-  // justify-content: center;
-  gap: 0.25rem;
+  gap: $spacing-02;
 }
 
 .headerText {
@@ -96,17 +100,17 @@
 }
 
 .paginationContainer {
-  margin-top: 1rem;
+  margin-top: $spacing-05;
   border-top: 1px solid var(--cds-border-subtle-01);
-  padding-top: 1rem;
+  padding-top: $spacing-05;
 }
 
 .activeFilters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
+  gap: $spacing-03;
+  margin-bottom: $spacing-05;
+  padding: $spacing-04;
   background: var(--cds-layer-02);
 }
 
