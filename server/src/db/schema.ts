@@ -89,8 +89,7 @@ export const tokenPoolData = pgTable("token_pool_data", {
   quoteAddress: varchar("address", { length: 44 }),
 
   dexId: varchar("dexName"),
-
-  baseToQuote: decimal("baseToQuote").notNull(),
+  baseToQuote: decimal("base_to_quote").notNull(),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
