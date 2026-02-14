@@ -939,3 +939,94 @@ export function generateTradingVolumeDistribution(
     },
   };
 }
+
+/**
+ * Generate box plot statistics from a seeded random distribution
+ */
+function generateBoxPlotData(seed: number, baseValue: number, variance: number) {
+  // Use seed for consistent random values
+  const seededRandom = (offset: number) => {
+    const x = Math.sin(seed + offset) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  // Generate quintile points with realistic spread
+  const min = baseValue * (0.1 + seededRandom(1) * 0.2); // 10-30% of base
+  const q1 = baseValue * (0.4 + seededRandom(2) * 0.15); // 40-55% of base
+  const median = baseValue * (0.7 + seededRandom(3) * 0.2); // 70-90% of base
+  const q3 = baseValue * (1.1 + seededRandom(4) * 0.3); // 110-140% of base
+  const max = baseValue * (1.8 + seededRandom(5) * 0.7); // 180-250% of base
+  
+  return {
+    min: Math.round(min),
+    q1: Math.round(q1),
+    median: Math.round(median),
+    q3: Math.round(q3),
+    max: Math.round(max),
+  };
+}
+
+/**
+ * Generate mock trading volume per transaction data for a single wallet
+ */
+function generateSingleWalletVolumePerTransaction(walletAddress: string, seed: number) {
+  // Base transaction volume values (will be adjusted based on randomness)
+  const baseDepositVolume = 2500 + (seed % 1000);
+  const baseWithdrawVolume = 2800 + (seed % 1200);
+  
+  // Generate box plot data for deposits and withdrawals
+  const deposit = generateBoxPlotData(seed, baseDepositVolume, 1000);
+  const withdraw = generateBoxPlotData(seed + 1000, baseWithdrawVolume, 1200);
+  
+  // Generate transaction count
+  const transactionCount = 150 + Math.floor((seed % 300));
+  
+  return {
+    walletAddress,
+    walletName: `Wallet ${walletAddress.substring(0, 8)}...`,
+    deposit,
+    withdraw,
+    transactionCount,
+  };
+}
+
+/**
+ * Generate mock trading volume per transaction data
+ * Returns per-wallet box plot data for deposit and withdrawal transactions
+ */
+export function generateTradingVolumePerTransaction(
+  period: string = '30D',
+  wallets?: string,
+  _type?: string
+) {
+  // Parse wallet addresses
+  const walletAddresses = wallets ? wallets.split(',').map(w => w.trim()) : [];
+  
+  if (walletAddresses.length === 0) {
+    // Return single default wallet if no wallets specified
+    const defaultWallet = generateSingleWalletVolumePerTransaction('default_wallet_001', 54321);
+    return {
+      wallets: [defaultWallet],
+      metadata: {
+        currency: 'USD',
+        period,
+        timestamp: Date.now(),
+      },
+    };
+  }
+  
+  // Generate per-wallet data
+  const walletData = walletAddresses.map((walletAddress, index) => {
+    const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index * 1000;
+    return generateSingleWalletVolumePerTransaction(walletAddress, seed);
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      currency: 'USD',
+      period,
+      timestamp: Date.now(),
+    },
+  };
+}

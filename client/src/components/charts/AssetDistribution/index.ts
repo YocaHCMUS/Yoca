@@ -5,4 +5,3 @@
  */
 
 export { AssetDistribution } from './AssetDistribution';
-export type { AssetDistributionProps } from './AssetDistribution';

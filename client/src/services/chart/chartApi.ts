@@ -17,6 +17,7 @@ import type {
   VolumeBenchmarkResponse,
   PriceHistoryResponse,
   TradingVolumeDistributionResponse,
+  TradingVolumePerTransactionResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -27,6 +28,7 @@ import type {
   VolumeBenchmarkRequestParams,
   PriceHistoryRequestParams,
   TradingVolumeDistributionRequestParams,
+  TradingVolumePerTransactionRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -154,6 +156,14 @@ export async function fetchTradingVolumeDistribution(params?: TradingVolumeDistr
 }
 
 /**
+ * Fetch trading volume per transaction data
+ * GET /api/charts/trading-volume-per-transaction
+ */
+export async function fetchTradingVolumePerTransaction(params?: TradingVolumePerTransactionRequestParams): Promise<TradingVolumePerTransactionResponse> {
+  return fetchAPI<TradingVolumePerTransactionResponse>('/trading-volume-per-transaction', params);
+}
+
+/**
  * Chart API service object
  */
 export const chartApi = {
@@ -167,6 +177,7 @@ export const chartApi = {
   fetchVolumeBenchmark,
   fetchPriceHistory,
   fetchTradingVolumeDistribution,
+  fetchTradingVolumePerTransaction,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -178,4 +189,5 @@ export const chartApi = {
   getVolumeBenchmark: fetchVolumeBenchmark,
   getPriceHistory: fetchPriceHistory,
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,
+  getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
 };

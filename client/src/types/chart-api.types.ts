@@ -289,6 +289,55 @@ export interface TradingVolumeDistributionResponse extends ChartResponseBase {
 }
 
 /**
+ * Box plot data point (min, Q1, median, Q3, max)
+ */
+export interface BoxPlotDataPoint {
+  /** Minimum value */
+  min: number;
+  /** First quartile (25th percentile) */
+  q1: number;
+  /** Median (50th percentile) */
+  median: number;
+  /** Third quartile (75th percentile) */
+  q3: number;
+  /** Maximum value */
+  max: number;
+}
+
+/**
+ * Trading volume per transaction API response
+ * GET /api/charts/trading-volume-per-transaction
+ * 
+ * Returns box plot data for trading volume per transaction by wallet and type
+ */
+export interface TradingVolumePerTransactionResponse extends ChartResponseBase {
+  /** Per-wallet trading volume per transaction data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName: string;
+    
+    /** Deposit transaction statistics */
+    deposit: BoxPlotDataPoint;
+    
+    /** Withdrawal transaction statistics */
+    withdraw: BoxPlotDataPoint;
+    
+    /** Total transaction count */
+    transactionCount: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    currency: string;
+    period: string;
+    timestamp: number;
+  };
+}
+
+/**
  * Generic API error response
  */
 export interface ApiErrorResponse extends ChartResponseBase {
@@ -483,6 +532,22 @@ export interface TradingVolumeDistributionRequestParams extends ChartResponseBas
   
   /** Comma-separated wallet list */
   wallets?: string;
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for trading volume per transaction endpoint
+ */
+export interface TradingVolumePerTransactionRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  /** Transaction type filter: 'all', 'deposits', 'withdrawals' */
+  type?: string;
   
   [key: string]: string | number | undefined;
 }
