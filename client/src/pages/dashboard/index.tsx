@@ -30,8 +30,11 @@ export default function DashboardPage() {
               {/* Balance Trend Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <BalanceChart
-                  height={400}
-                  initialTimePeriod="30D"
+                  minHeight={400}
+                  initialFilters={{
+                    initialTimePeriod: "30D",
+                    wallets: "test wallet" // use param
+                  }}
                   autoRefresh={true}
                 />
               </Tile>
@@ -39,7 +42,13 @@ export default function DashboardPage() {
               {/* Asset Distribution Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <AssetDistribution
-                  height={400}
+                  initialFilters = {{
+                    timePeriod: '30D',
+                    transactionType: 'all',
+                    tokens: ['All'],
+                    limit: 10,
+                  }}
+                  minHeight={400}
                   autoRefresh={true}
                 />
               </Tile>
@@ -47,7 +56,7 @@ export default function DashboardPage() {
               {/* P&L Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <PnLChart
-                  height={400}
+                  minHeight={400}
                   aggregation="daily"
                   autoRefresh={true}
                 />
@@ -56,7 +65,7 @@ export default function DashboardPage() {
               {/* Exchange Comparison Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <ExchangeComparison
-                  height={400}
+                  minHeight={400}
                   initialTimePeriod="30D"
                   metric="count"
                   autoRefresh={true}
@@ -66,10 +75,13 @@ export default function DashboardPage() {
               {/* Counterparty Activity Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <CounterpartyActivity
-                  height={400}
-                  initialTimePeriod="30D"
-                  initialTransactionType="all"
-                  limit={10}
+                  minHeight={400}
+                  initialFilters={{
+                    timePeriod: "30D",
+                    transactionType: "all",
+                    limit: 10,
+                    tokens: ['All']
+                  }}
                   autoRefresh={true}
                 />
               </Tile>
@@ -77,7 +89,7 @@ export default function DashboardPage() {
               {/* Volume Benchmark Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <VolumeBenchmark
-                  height={400}
+                  minHeight={400}
                   initialTimePeriod="30D"
                   chartType="line"
                   autoRefresh={true}
@@ -87,7 +99,7 @@ export default function DashboardPage() {
               {/* Transaction Distribution Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <TransactionDistribution
-                  height={300}
+                  minHeight={300}
                   initialTimePeriod="30D"
                   initialTransactionType="all"
                   chartMode="stacked"
@@ -98,7 +110,7 @@ export default function DashboardPage() {
               {/* Holding Durations Chart */}
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <HoldingDurations
-                  height={300}
+                  minHeight={300}
                   topN={10}
                   timeUnit="days"
                   autoRefresh={true}

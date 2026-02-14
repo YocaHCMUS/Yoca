@@ -21,37 +21,38 @@ import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import type { ChartProps } from '../shared/ChartProp';
 /**
  * Props for CounterpartyActivity component
  */
-export interface CounterpartyActivityProps {
-  /** Chart title */
-  title?: string;
+// export interface CounterpartyActivityProps {
+//   /** Chart title */
+//   title?: string;
   
-  /** Chart minimum height in pixels */
-  minHeight?: number;
+//   /** Chart minimum height in pixels */
+//   minHeight?: number;
   
-  /** Initial time period (default: 30D) */
-  initialTimePeriod?: TimePeriod;
+//   /** Initial time period (default: 30D) */
+//   initialTimePeriod?: TimePeriod;
   
-  /** Transaction type filter (default: all) */
-  initialTransactionType?: TransactionType;
+//   /** Transaction type filter (default: all) */
+//   initialTransactionType?: TransactionType;
   
-  /** Limit to top N counterparties (default: 10) */
-  limit?: number;
+//   /** Limit to top N counterparties (default: 10) */
+//   limit?: number;
   
-  /** Enable auto-refresh (default: true) */
-  autoRefresh?: boolean;
+//   /** Enable auto-refresh (default: true) */
+//   autoRefresh?: boolean;
   
-  /** Auto-refresh interval in milliseconds (default: 30000) */
-  refreshInterval?: number;
+//   /** Auto-refresh interval in milliseconds (default: 30000) */
+//   refreshInterval?: number;
   
-  /** Callback when data is loaded */
-  onDataLoaded?: (data: CounterpartyActivityResponse) => void;
+//   /** Callback when data is loaded */
+//   onDataLoaded?: (data: CounterpartyActivityResponse) => void;
   
-  /** Additional CSS class */
-  className?: string;
-}
+//   /** Additional CSS class */
+//   className?: string;
+// }
 
 /**
  * CounterpartyActivity Component
@@ -78,23 +79,34 @@ export interface CounterpartyActivityProps {
  * />
  * ```
  */
-export function CounterpartyActivity({
+export const CounterpartyActivity: React.FC<ChartProps> = ({
+  // minHeight = 400,
+  // initialFilters = {{
+  //   timePeriod = '30D',
+  //   transactionType = 'all',
+  //   limit = 10,
+  //   tokens = ['All']
+  // }},
+  // autoRefresh = true,
+  // refreshInterval = 30000,
+  // className,
+  // onDataLoaded,
+    // title,
+
   title,
   minHeight = 400,
-  initialTimePeriod = '30D',
-  initialTransactionType = 'all',
-  limit = 10,
+  initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
-  onDataLoaded,
   className,
-}: CounterpartyActivityProps) {
+  // onDataLoaded,
+}) => {
   // i18n
   const { t } = useTranslation();
   const chartTitle = title || t('charts.counterpartyActivityChart.title');
   
   // State management
-  const [currentLimit, setCurrentLimit] = useState<number>(limit);
+  const [currentLimit, setCurrentLimit] = useState<number>(initialFilters?.limit);
   
   // Chart instance refs for export
   const transactionCountChartRef = useRef<ReactECharts>(null);
@@ -112,11 +124,7 @@ export function CounterpartyActivity({
     setTimePeriod,
     setTransactionType,
   } = useChartFilters({
-    initialFilters: {
-      timePeriod: initialTimePeriod,
-      tokens: ['All'],
-      transactionType: initialTransactionType,
-    },
+    initialFilters: initialFilters
   });
   
   // Query for the controller
@@ -133,7 +141,7 @@ export function CounterpartyActivity({
     query,
     autoRefresh,
     refreshInterval,
-    onDataLoaded,
+    // onDataLoaded,
   });
   
   // Export functionality
