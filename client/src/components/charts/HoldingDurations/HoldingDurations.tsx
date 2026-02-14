@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -60,22 +60,54 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   const [selectedTopN, setSelectedTopN] = useState(initialTopN);
   const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(initialUnit);
 
-  const { filters } = useChartFilters({
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
+
+  const { filters, setWallets } = useChartFilters({
     initialFilters: { wallets: initialWallets },
     debounceDelay: 300,
   });
+
+  /**
+   * Sync filters when initialFilters changes (e.g., wallet selection from parent)
+   */
+  useEffect(() => {
+    const prevFilters = prevInitialFiltersRef.current;
+    
+    // Check if wallets changed
+    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
+      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
+      const prevWalletsStr = prevWallets.slice().sort().join(',');
+      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
+      if (prevWalletsStr !== newWalletsStr) {
+        setWallets(initialFilters.wallets);
+      }
+    }
+    
+    // Update ref for next comparison
+    prevInitialFiltersRef.current = initialFilters;
+  }, [initialFilters, setWallets]);
+
+  /**
+   * Memoize walletIds string to prevent unnecessary re-fetches
+   * Only changes when wallet addresses actually change, not on array reference change
+   */
+  const walletIds = useMemo(() => {
+    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
+    return filters.wallets.slice().sort().join(',');
+  }, [filters.wallets]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo <HoldingsRequestParams>(
     () => ({
-      walletIds: filters.wallets?.join(','),
+      walletIds: walletIds,
       topN: selectedTopN,
       timeUnit: selectedUnit,
       timezone,
     }),
-    [filters.wallets, selectedTopN, selectedUnit, timezone]
+    [walletIds, selectedTopN, selectedUnit, timezone]
   );
 
   /**
