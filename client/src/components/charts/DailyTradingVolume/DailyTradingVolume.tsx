@@ -16,6 +16,8 @@ import { formatCurrency } from '@/util/chart-helpers';
 import type { EChartsOption } from 'echarts';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import { Button } from '@carbon/react';
+import { Add, Close } from '@carbon/react/icons';
 
 /**
  * Props for DailyTradingVolume component
@@ -211,7 +213,7 @@ export function DailyTradingVolume({
         color: chartTheme.textColor,
       },
       emphasis: {
-        focus: 'series',
+        focus: 'series' as const,
       },
     }));
     
@@ -240,7 +242,7 @@ export function DailyTradingVolume({
         color: chartTheme.textColor,
       },
       emphasis: {
-        focus: 'series',
+        focus: 'series' as const,
       },
     };
     
@@ -288,12 +290,8 @@ export function DailyTradingVolume({
         data: [...data.wallets.map(w => w.name), data.benchmark.name],
         bottom: 10,
         left: 'center',
-        itemWidth: 15,
+        itemWidth: 25,
         itemHeight: 15,
-        textStyle: {
-          ...baseOption.legend.textStyle,
-          fontSize: 12,
-        },
         icon: 'rect',
         // Custom icon for line series
         formatter: (name: string) => {
@@ -304,6 +302,7 @@ export function DailyTradingVolume({
         },
         textStyle: {
           ...baseOption.legend.textStyle,
+          fontSize: 12,
           rich: {
             line: {
               width: 20,
@@ -326,7 +325,7 @@ export function DailyTradingVolume({
           show: true,
           lineStyle: {
             type: 'dotted',
-            color: chartTheme.gridLineColor,
+            color: chartTheme.borderColor,
             opacity: 0.5,
           },
         },
@@ -361,7 +360,7 @@ export function DailyTradingVolume({
             show: true,
             lineStyle: {
               type: 'dotted',
-              color: chartTheme.gridLineColor,
+              color: chartTheme.borderColor,
               opacity: 0.5,
             },
           },
@@ -452,7 +451,7 @@ export function DailyTradingVolume({
     return (
       <ChartWrapper
         title={chartTitle}
-        loadingState={{ status: 'success' }}
+        loadingState={{ status: 'success', retryCount: 0 }}
         isEmpty={true}
         enableExport={false}
         enableFullscreen={false}
@@ -475,7 +474,7 @@ export function DailyTradingVolume({
   return (
     <ChartWrapper
       title={chartTitle}
-      loadingState={{ status: 'success' }}
+      loadingState={{ status: 'success', retryCount: 0 }}
       isEmpty={false}
       enableExport={enableExport}
       enableFullscreen={enableFullscreen}
@@ -488,17 +487,30 @@ export function DailyTradingVolume({
         <span className={sharedStyles.filterLabel}>Benchmark:</span>
         <div className={sharedStyles.filterGroup}>
           {selectedBenchmarks.map((benchmark) => (
-            <button
+            <Button
               key={benchmark}
-              className={`${sharedStyles.filterPill} ${sharedStyles.active}`}
-            >
-              {benchmark}
-              <span className={sharedStyles.removeIcon}>×</span>
-            </button>
+              renderIcon={Close}
+              size='sm'>
+                {benchmark}
+            </Button>
+            // <button
+            //   key={benchmark}
+            //   className={`${sharedStyles.filterPill} ${sharedStyles.active}`}
+            // >
+            //   {benchmark}
+            //   <span className={sharedStyles.removeIcon}>×</span>
+            // </button>
           ))}
-          <button className={sharedStyles.addFilterButton}>
+
+          <Button
+            renderIcon={Add}
+            size='sm'
+            >
+            Add benchmark
+          </Button>
+          {/* <button className={sharedStyles.addFilterButton}>
             + Add benchmark
-          </button>
+          </button> */}
         </div>
       </div>
       
