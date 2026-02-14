@@ -122,55 +122,96 @@ const ASSET_COLORS = [
  */
 export function generateBalanceTrend(
   timePeriod: TimePeriod = '30D',
-  tokens?: string
+  tokens?: string,
+  wallets?: string
 ) {
   const now = Date.now();
   const startTimestamp = getStartTimestamp(timePeriod);
   const aggregation = getAggregationInterval(timePeriod);
   const intervalMs = getIntervalMs(aggregation);
   
-  const dataPoints: Array<{ timestamp: number; value: number }> = [];
+  // Parse wallets if provided
+  const walletAddresses = wallets ? wallets.split(',') : [];
+  const isMultiWallet = walletAddresses.length > 1;
   
-  // Base portfolio value
-  const baseValue = 50000;
+  // Generate series based on wallet count
+  const series = [];
   
-  // Generate data points
-  let currentTimestamp = startTimestamp;
-  while (currentTimestamp <= now) {
-    // Calculate progress (0 to 1)
-    const progress = (currentTimestamp - startTimestamp) / (now - startTimestamp);
+  if (isMultiWallet) {
+    // Generate separate series for each wallet
+    for (let walletIndex = 0; walletIndex < walletAddresses.length; walletIndex++) {
+      const walletAddress = walletAddresses[walletIndex];
+      const dataPoints: Array<{ timestamp: number; value: number }> = [];
+      
+      // Use wallet index to vary the base values
+      const baseValue = 30000 + (walletIndex * 15000);
+      const trendMultiplier = 1 + (walletIndex * 0.3);
+      
+      // Generate data points for this wallet
+      let currentTimestamp = startTimestamp;
+      while (currentTimestamp <= now) {
+        const progress = (currentTimestamp - startTimestamp) / (now - startTimestamp);
+        
+        // Upward trend component (varies per wallet)
+        const trend = progress * 20000 * trendMultiplier;
+        
+        // Daily/weekly volatility cycle (phase shifted per wallet)
+        const cycleLength = 7 * 24 * 60 * 60 * 1000;
+        const phaseShift = walletIndex * Math.PI / 3;
+        const volatility = Math.sin((currentTimestamp / cycleLength) * 2 * Math.PI + phaseShift) * 5000;
+        
+        // Random walk component (seeded by wallet index for consistency)
+        const noise = (Math.sin(currentTimestamp + walletIndex * 1000) * 0.5) * 3000;
+        
+        // Combine components
+        const value = baseValue + trend + volatility + noise;
+        
+        dataPoints.push({
+          timestamp: currentTimestamp,
+          value: Math.max(1000, value),
+        });
+        
+        currentTimestamp += intervalMs;
+      }
+      
+      series.push({
+        name: `Wallet ${walletAddress.substring(0, 8)}...`,
+        data: dataPoints,
+      });
+    }
+  } else {
+    // Single wallet or aggregated view
+    const dataPoints: Array<{ timestamp: number; value: number }> = [];
+    const baseValue = 50000;
     
-    // Upward trend component
-    const trend = progress * 20000; // Gain $20k over the period
+    let currentTimestamp = startTimestamp;
+    while (currentTimestamp <= now) {
+      const progress = (currentTimestamp - startTimestamp) / (now - startTimestamp);
+      const trend = progress * 20000;
+      const cycleLength = 7 * 24 * 60 * 60 * 1000;
+      const volatility = Math.sin((currentTimestamp / cycleLength) * 2 * Math.PI) * 5000;
+      const noise = (Math.random() - 0.5) * 3000;
+      const value = baseValue + trend + volatility + noise;
+      
+      dataPoints.push({
+        timestamp: currentTimestamp,
+        value: Math.max(1000, value),
+      });
+      
+      currentTimestamp += intervalMs;
+    }
     
-    // Daily/weekly volatility cycle
-    const cycleLength = 7 * 24 * 60 * 60 * 1000; // Weekly cycle
-    const volatility = Math.sin((currentTimestamp / cycleLength) * 2 * Math.PI) * 5000;
+    const seriesName = tokens ? tokens.split(',').join(', ') : 'Total';
     
-    // Random walk component
-    const noise = (Math.random() - 0.5) * 3000;
-    
-    // Combine components
-    const value = baseValue + trend + volatility + noise;
-    
-    dataPoints.push({
-      timestamp: currentTimestamp,
-      value: Math.max(1000, value), // Ensure non-negative with minimum
+    series.push({
+      name: seriesName,
+      data: dataPoints,
     });
-    
-    currentTimestamp += intervalMs;
   }
   
-  // Determine token name
-  const tokenName = tokens ? tokens.split(',').join(', ') : 'Total';
-  
   return {
-    series: [
-      {
-        name: tokenName,
-        data: dataPoints,
-      },
-    ],
+    series,
+    wallets: isMultiWallet ? walletAddresses : undefined,
     metadata: {
       aggregation,
       timezone: 'UTC',

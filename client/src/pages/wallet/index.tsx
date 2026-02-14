@@ -233,13 +233,19 @@ export default function WalletPage() {
           names={["Balance History", "Token Balance History", "Profit & Lost"]}
           tabs={
             [<BalanceChart
-                // height={400}
-                initialTimePeriod="30D"
+                minHeight={400}
+                initialFilters={{
+                  initialTimePeriod: "30D",
+                  wallets: [address]
+                }}
                 autoRefresh={true}
                 />,
               <BalanceChart
-                // height={400}
-                initialTimePeriod="30D"
+                minHeight={400}
+                initialFilters={{
+                  initialTimePeriod: "30D",
+                  wallets: [address]
+                }}
                 autoRefresh={true} 
                 />,
               <PnLChart 

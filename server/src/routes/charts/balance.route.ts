@@ -16,6 +16,7 @@ import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 const balanceRequestSchema = z.object({
   timePeriod: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   tokens: z.string().optional(),
+  wallets: z.string().optional(),
   timezone: z.string().optional().default('UTC'),
 });
 
@@ -55,7 +56,8 @@ const app = new Hono()
       // Generate balance trend data
       const data = generateBalanceTrend(
         params.timePeriod,
-        params.tokens
+        params.tokens,
+        params.wallets
       );
       
       // Return response

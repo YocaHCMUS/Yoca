@@ -15,7 +15,11 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
         <div className={styles.grid}>
             {/* Balance history comparision */}
             <div className={styles.stableCoinChart}>
-                <BalanceChart // TODO: update this chart to support multiple wallets
+                <BalanceChart 
+                    initialFilters={{
+                        initialTimePeriod: "30D",
+                        wallets: walletAddresses
+                    }}
                     minHeight={300}
                     />    
             </div>

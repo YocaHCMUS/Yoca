@@ -36,14 +36,17 @@ export interface ApiResponseMetadata extends ChartResponseBase {
  * GET /api/charts/balance
  */
 export interface BalanceTrendResponse extends ChartResponseBase {
-  /** Data series for each token or total */
+  /** Data series for each token or wallet */
   series: {
-    /** Token symbol or "Total" */
+    /** Token symbol, wallet identifier, or "Total" */
     name: string;
     
     /** Time series data points */
     data: TimeSeriesPoint[];
   }[];
+  
+  /** Wallet addresses when multi-wallet view (optional) */
+  wallets?: string[];
   
   /** Response metadata */
   metadata: ApiResponseMetadata & {
@@ -278,10 +281,16 @@ export interface ApiErrorResponse extends ChartResponseBase {
  */
 export interface BalanceRequestParams extends ChartResponseBase {
   /** Time period filter */
-  period?: string;
+  timePeriod?: string;
   
   /** Comma-separated token list */
   tokens?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  /** Timezone for timestamp formatting */
+  timezone?: string;
   
   /** Aggregation level */
   aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';

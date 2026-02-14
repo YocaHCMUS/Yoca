@@ -32,16 +32,17 @@ import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
+import type { ChartProps } from '../shared/ChartProp';
 
-export interface AssetDistributionProps {
-  minHeight?: number;
-  initialFilters?: Partial<any>;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
-  className?: string;
-}
+// export interface AssetDistributionProps {
+//   minHeight?: number;
+//   initialFilters?: Partial<any>;
+//   autoRefresh?: boolean;
+//   refreshInterval?: number;
+//   className?: string;
+// }
 
-export const AssetDistribution: React.FC<AssetDistributionProps> = ({
+export const AssetDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
   initialFilters,
   autoRefresh = true,
