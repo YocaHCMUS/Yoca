@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -55,10 +55,48 @@ export function BalanceChart({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const { filters, setTimePeriod, setTokens, isValid } = useChartFilters({
+  const { filters, setTimePeriod, setTokens, setWallets, isValid } = useChartFilters({
     initialFilters: initialFilters,
     debounceDelay: 300,
   });
+
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
+
+
+
+  /**
+   * Sync filters when initialFilters changes (e.g., wallet selection from parent)
+   */
+  useEffect(() => {
+    const prevFilters = prevInitialFiltersRef.current;
+    
+    // Check if wallets changed
+    if (initialFilters?.wallets) {
+      const prevWalletsStr = prevFilters?.wallets?.sort().join(',') ?? '';
+      const newWalletsStr = initialFilters.wallets.sort().join(',');
+      if (prevWalletsStr !== newWalletsStr) {
+        setWallets(initialFilters.wallets);
+      }
+    }
+    
+    // Check if time period changed
+    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
+      setTimePeriod(initialFilters.timePeriod);
+    }
+    
+    // Update ref for next comparison
+    prevInitialFiltersRef.current = initialFilters;
+  }, [initialFilters, setWallets, setTimePeriod]);
+  
+    /**
+     * Memoize wallets string to prevent unnecessary re-fetches
+     * Only changes when wallet addresses actually change, not on array reference change
+     */
+  const walletsString = useMemo(() => {
+    if (!filters.wallets || filters.wallets.length === 0) return undefined;
+    return filters.wallets.sort().join(',');
+  }, [filters.wallets]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches
@@ -67,10 +105,10 @@ export function BalanceChart({
     () => ({
       timePeriod: filters.timePeriod,
       tokens: filters.tokens?.join(','),
-      wallets: filters.wallets?.join(','),
+      wallets: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.tokens, timezone]
+    [filters.timePeriod, filters.tokens, walletsString, timezone]
   );
 
   /**
