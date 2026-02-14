@@ -698,11 +698,10 @@ export function generateHoldingDurations(
   topN: number,
   timeUnit: 'days' | 'weeks' | 'months'
 ) {
+
   // Default wallets if none specified
   const defaultWallets = [
-    { id: 'wallet-1', name: 'Main Wallet' },
-    { id: 'wallet-2', name: 'Trading Wallet' },
-    { id: 'wallet-3', name: 'Cold Storage' },
+    'wallet-1', 'wallet-2', 'wallet-3'
   ];
   
   // Available tokens with typical holding patterns
@@ -726,7 +725,7 @@ export function generateHoldingDurations(
   
   // Determine which wallets to generate data for
   const walletsToGenerate = walletIds.length > 0
-    ? defaultWallets.filter(w => walletIds.includes(w.id))
+    ? walletIds
     : defaultWallets;
   
   const wallets = walletsToGenerate.map(wallet => {
@@ -754,8 +753,7 @@ export function generateHoldingDurations(
       .slice(0, topN);
     
     return {
-      id: wallet.id,
-      name: wallet.name,
+      id: wallet,
       holdings,
     };
   });

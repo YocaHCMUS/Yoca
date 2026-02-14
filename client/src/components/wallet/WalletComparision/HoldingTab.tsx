@@ -37,15 +37,17 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
                 <p>Temporary placeholder for stable coin ratio visualization</p>
             </div>
 
-            {/* Holding Durations Charts */}
-            {walletAddresses.map((address, index) => (
-                <div key={`holding-${index}`} className={styles.chartContainer}>
-                    <HoldingDurations
-                        walletIds={[address]}
-                        minHeight={300}
-                    />
-                </div>
-            ))}
+            <div className={styles.stableCoinChart}>
+                <HoldingDurations
+                    initialFilters={{
+                        wallets: [walletAddresses],
+                        topN: 10,
+                        timeUnit: 'days',
+                    }}
+                    minHeight={300}
+                />
+            </div>
+
         </div>
     );
 }

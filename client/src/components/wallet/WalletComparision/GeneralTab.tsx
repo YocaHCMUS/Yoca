@@ -38,12 +38,6 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                     />    
             </div>
 
-            <div className={styles.stableCoinChart}>
-                <VolumeBenchmark
-                    minHeight={300}
-                    />
-            </div>
-
             {/* Daily Trading Volume Historical Chart */}
             <div className={styles.stableCoinChart}>
                 <DailyTradingVolume
@@ -59,7 +53,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                 <p>Temporary placeholder for total trading volume comparison visualization</p>
             </div>
 
-            {/* Trading Volume distribution  Chart - Placeholder */}
+            {/* Trading Volume distribution Chart */}
             <div  className={styles.stableCoinChart}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
@@ -72,18 +66,9 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                 />
-
             </div>
 
-            {/* Holding Durations Charts */}
-            {walletAddresses.map((address, index) => (
-                <div key={`holding-${index}`} className={styles.chartContainer}>
-                    <HoldingDurations
-                        walletIds={[address]}
-                        minHeight={300}
-                    />
-                </div>
-            ))}
+           
         </div>
     );
 }

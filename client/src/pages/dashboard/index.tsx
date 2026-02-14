@@ -33,7 +33,7 @@ export default function DashboardPage() {
                   minHeight={400}
                   initialFilters={{
                     initialTimePeriod: "30D",
-                    wallets: "test wallet" // use param
+                    wallets: ["test wallet"] // use param
                   }}
                   autoRefresh={true}
                 />
@@ -111,8 +111,11 @@ export default function DashboardPage() {
               <Tile style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
                 <HoldingDurations
                   minHeight={300}
-                  topN={10}
-                  timeUnit="days"
+                  initialFilters={{
+                    topN: 10,
+                    timeUnit: "days",
+                    wallets: []
+                  }}
                   autoRefresh={true}
                 />
               </Tile>

@@ -72,9 +72,10 @@ export function BalanceChart({
     const prevFilters = prevInitialFiltersRef.current;
     
     // Check if wallets changed
-    if (initialFilters?.wallets) {
-      const prevWalletsStr = prevFilters?.wallets?.sort().join(',') ?? '';
-      const newWalletsStr = initialFilters.wallets.sort().join(',');
+    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
+      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
+      const prevWalletsStr = prevWallets.slice().sort().join(',');
+      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
       if (prevWalletsStr !== newWalletsStr) {
         setWallets(initialFilters.wallets);
       }
@@ -94,8 +95,8 @@ export function BalanceChart({
      * Only changes when wallet addresses actually change, not on array reference change
      */
   const walletsString = useMemo(() => {
-    if (!filters.wallets || filters.wallets.length === 0) return undefined;
-    return filters.wallets.sort().join(',');
+    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
+    return filters.wallets.slice().sort().join(',');
   }, [filters.wallets]);
 
   /**

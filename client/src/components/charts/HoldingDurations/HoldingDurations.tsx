@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 
 import { useChartFilters } from '@/hooks/useChartFilters';
@@ -12,46 +13,55 @@ import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/ch
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import type { ChartProps } from '../shared/ChartProp';
 
 
 export type TimeUnit = 'days' | 'weeks' | 'months';
 
-export interface HoldingDurationsProps {
-  title?: string;
-  minHeight?: number;
-  walletIds?: string[];
-  topN?: number;
-  timeUnit?: TimeUnit;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
-  className?: string;
-}
+// export interface HoldingDurationsProps {
+//   title?: string;
+//   minHeight?: number;
+//   walletIds?: string[];
+//   topN?: number;
+//   timeUnit?: TimeUnit;
+//   autoRefresh?: boolean;
+//   refreshInterval?: number;
+//   className?: string;
+// }
 
-export function HoldingDurations({
+export const HoldingDurations: React.FC<ChartProps> = ({
   title,
   minHeight = 400,
-  walletIds = [],
-  topN = 10,
-  timeUnit = 'days',
+  initialFilters = {
+    wallets: [],
+    topN: 10,
+    timeUnit: 'days',
+  },
   autoRefresh = true,
   refreshInterval = 30000,
   className,
-}: HoldingDurationsProps) {
+}) => {
   const { t } = useTranslation();
   const chartTitle = title ?? t('charts.holdingDurationsChart.title');
 
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const [selectedTopN, setSelectedTopN] = useState(topN);
-  const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(timeUnit);
+  // Extract values from initialFilters
+  const initialTopN = typeof initialFilters?.topN === 'number' ? initialFilters.topN : 10;
+  const initialUnit =
+    initialFilters?.timeUnit === 'weeks' ||
+    initialFilters?.timeUnit === 'months' ||
+    initialFilters?.timeUnit === 'days'
+      ? initialFilters.timeUnit
+      : 'days';
+  const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
 
-  const chartRefs = useRef<Map<string, ReactECharts>>(new Map());
+  const [selectedTopN, setSelectedTopN] = useState(initialTopN);
+  const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(initialUnit);
 
   const { filters } = useChartFilters({
-    initialFilters: {
-      wallets: walletIds.length ? walletIds : undefined,
-    },
+    initialFilters: { wallets: initialWallets },
     debounceDelay: 300,
   });
 
@@ -142,53 +152,75 @@ export function HoldingDurations({
   // );
 
   /**
-   * Option factory (pure, deterministic)
+   * Build chart option with multiple wallets as series
    */
-  const buildOptions = useCallback(
-    (wallet: HoldingDurationsResponse['wallets'][0]) => {
-      const base = getThemedChartBaseOption(chartTheme);
+  const chartOption = useMemo<EChartsOption | null>(() => {
+    if (!data || !data.wallets || data.wallets.length === 0) return null;
+
+    const base = getThemedChartBaseOption(chartTheme);
+    
+    // Collect all unique tokens across all wallets
+    const tokenSet = new Set<string>();
+    data.wallets.forEach(wallet => {
+      wallet.holdings.forEach(holding => tokenSet.add(holding.tokenSymbol));
+    });
+
+    const categories = Array.from(tokenSet);
+    
+    // Create a series for each wallet
+    const series = data.wallets.map(wallet => {
+      const tokenToValue = new Map(
+        wallet.holdings.map(holding => [holding.tokenSymbol, convert(holding.durationDays)])
+      );
 
       return {
-        ...base,
-        grid: { top: '10%', left: '10%', right: '4%', bottom: '15%', containLabel: true },
-        xAxis: {
-          ...base.xAxis,
-          type: 'category',
-          data: wallet.holdings.map(h => h.tokenSymbol),
-          axisLabel: {
-            ...base.xAxis.axisLabel,
-            rotate: 45,
-            interval: 0,
-            formatter: (value: string) => value.length > 20 ? `${value.substring(0, 17)}...` : value,
-          },
-        },
-        yAxis: {
-          ...base.yAxis,
-          type: 'value',
-          name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
-          nameLocation: 'middle',
-          nameGap: 60,
-          nameTextStyle: { color: chartTheme.textColor },
-        },
-        tooltip: {
-          trigger: 'axis',
-          formatter: ([p]: any[]) =>
-            `<strong>${p.name}</strong><br/>${p.value.toFixed(
-              1
-            )} ${unitLabel.toLowerCase()}`,
-        },
-        series: [
-          {
-            type: 'bar',
-            data: wallet.holdings.map(h => convert(h.durationDays)),
-            itemStyle: { color: '#0f62fe' },
-            label: { show: true, position: 'top', fontSize: 10 },
-          },
-        ],
+        name: wallet.name,
+        type: 'bar' as const,
+        data: categories.map(token => tokenToValue.get(token) ?? 0),
+        emphasis: { focus: 'series' as const },
+        label: { show: false },
       };
-    },
-    [chartTheme, convert, unitLabel, t]
-  );
+    });
+
+    return {
+      ...base,
+      legend: { ...base.legend, show: true, top: '5%' },
+      grid: { top: '18%', left: '10%', right: '4%', bottom: '20%', containLabel: true },
+      xAxis: {
+        ...base.xAxis,
+        type: 'category',
+        data: categories,
+        axisLabel: {
+          ...base.xAxis.axisLabel,
+          rotate: 45,
+          interval: 0,
+          formatter: (value: string) => (value.length > 20 ? `${value.substring(0, 17)}...` : value),
+        },
+      },
+      yAxis: {
+        ...base.yAxis,
+        type: 'value',
+        name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
+        nameLocation: 'middle',
+        nameGap: 60,
+        nameTextStyle: { color: chartTheme.textColor },
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          if (items.length === 0) return '';
+          const header = `<strong>${items[0].axisValue}</strong>`;
+          const lines = items.map(
+            (p: any) => `${p.marker} ${p.seriesName}: ${Number(p.value).toFixed(1)} ${unitLabel.toLowerCase()}`
+          );
+          return [header, ...lines].join('<br/>');
+        },
+      },
+      series,
+    };
+  }, [data, chartTheme, convert, unitLabel, t]);
 
   return (
     <BaseChart
@@ -213,25 +245,14 @@ export function HoldingDurations({
         </select>
       </div>
 
-      {data?.wallets.map(wallet => (
-        <div key={wallet.id} className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{wallet.name}</h3>
-
-          <ReactECharts
-            ref={ref => {
-              if (ref) {
-                chartRefs.current.set(wallet.id, ref);
-              } else {
-                chartRefs.current.delete(wallet.id);
-              }
-            }}
-            option={buildOptions(wallet)}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            notMerge
-            lazyUpdate
-          />
-        </div>
-      ))}
+      {chartOption && (
+        <ReactECharts
+          option={chartOption}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          notMerge
+          lazyUpdate
+        />
+      )}
     </BaseChart>
   );
 }
