@@ -11,6 +11,7 @@ import chartExchanges from "./routes/charts/exchanges.route.js";
 import chartHoldings from "./routes/charts/holdings.route.js";
 import chartPnL from "./routes/charts/pnl.route.js";
 import chartPriceHistory from "./routes/charts/price-history.route.js";
+import chartTradingVolumeDistribution from "./routes/charts/trading-volume-distribution.route.js";
 import chartTransactions from "./routes/charts/transactions.route.js";
 import chartVolume from "./routes/charts/volume.route.js";
 import tokens from "./routes/tokens.js";
@@ -37,7 +38,8 @@ const app = new Hono()
   .route("/api/charts/volume", chartVolume)
   .route("/api/charts/transactions", chartTransactions)
   .route("/api/charts/holdings", chartHoldings)
-  .route("/api/charts/price-history", chartPriceHistory);
+  .route("/api/charts/price-history", chartPriceHistory)
+  .route("/api/charts/trading-volume-distribution", chartTradingVolumeDistribution);
 
 // Server
 serve(

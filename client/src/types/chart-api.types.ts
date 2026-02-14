@@ -260,6 +260,35 @@ export interface VolumeBenchmarkResponse extends ChartResponseBase {
 }
 
 /**
+ * Trading volume distribution API response
+ * GET /api/charts/trading-volume-distribution
+ * 
+ * Returns trading volume distribution by token for each wallet
+ */
+export interface TradingVolumeDistributionResponse extends ChartResponseBase {
+  /** Per-wallet trading volume distribution data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Distribution data for this wallet */
+    data: (DistributionPoint & {
+      /** Percentage of total trading volume (calculated) */
+      percentage: number;
+    })[];
+    
+    /** Total trading volume for this wallet */
+    totalVolume: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    currency: string;
+    timestamp: number;
+  };
+}
+
+/**
  * Generic API error response
  */
 export interface ApiErrorResponse extends ChartResponseBase {
@@ -441,6 +470,19 @@ export interface PriceHistoryRequestParams extends ChartResponseBase {
   
   /** Aggregation level */
   aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for trading volume distribution endpoint
+ */
+export interface TradingVolumeDistributionRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
   
   [key: string]: string | number | undefined;
 }

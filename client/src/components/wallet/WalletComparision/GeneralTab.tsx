@@ -6,6 +6,7 @@ import styles from './GeneralTab.module.scss';
 import { BalanceChart } from '@/components/charts/BalanceChart';
 import { VolumeBenchmark } from '@/components/charts/VolumeBenchmark';
 import { DailyTradingVolume } from '@/components/charts/DailyTradingVolume';
+import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution';
 
 
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
@@ -58,16 +59,12 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Trading Volume distribution  Chart - Placeholder */}
+            <div  className={styles.stableCoinChart}>
+                <TradingVolumeDistribution
+                    initialFilters={{ wallets: walletAddresses }}
+                />
+            </div>
             
-
-            {walletAddresses.map((address, index) => (
-                <div key={`asset-${index}`} className={styles.chartContainer}>
-                    <div className={styles.stableCoinChart}>
-                        <h3>Trading Volume Distribution Chart</h3>
-                        <p>Temporary placeholder for trading volume distribution analysis</p>
-                    </div>
-                </div>
-            ))}
 
             {/* Average Trading Volume per transaction Charts */}
             <div className={styles.stableCoinChart}>

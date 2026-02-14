@@ -851,3 +851,91 @@ function getTokenName(token: string): string {
   };
   return names[token] || token;
 }
+
+/**
+ * Generate mock trading volume distribution data for a single wallet
+ */
+function generateSingleWalletTradingVolume(walletAddress: string, seed: number) {
+  // Base token trading volumes (will be adjusted based on randomness)
+  const baseTokens = [
+    { name: 'SOL', baseVolume: 125000 },
+    { name: 'JTO', baseVolume: 48000 },
+    { name: 'BONK', baseVolume: 32000 },
+    { name: 'JUP', baseVolume: 28000 },
+    { name: 'WIF', baseVolume: 18000 },
+    { name: 'RAY', baseVolume: 15000 },
+    { name: 'ORCA', baseVolume: 12000 },
+    { name: 'MSOL', baseVolume: 8500 },
+  ];
+  
+  // Use seed for consistent but different values per wallet
+  const seededRandom = (index: number) => {
+    const x = Math.sin(seed + index) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  // Add some randomness to volumes (±40%) based on wallet seed
+  const tokens = baseTokens.map((token, index) => {
+    const randomFactor = 0.6 + seededRandom(index) * 0.8; // 0.6 to 1.4
+    const volume = token.baseVolume * randomFactor;
+    
+    return {
+      name: token.name,
+      value: volume,
+      color: ASSET_COLORS[index % ASSET_COLORS.length],
+    };
+  });
+  
+  // Calculate total volume
+  const totalVolume = tokens.reduce((sum, token) => sum + token.value, 0);
+  
+  // Calculate percentages
+  const dataWithPercentages = tokens.map(token => ({
+    ...token,
+    percentage: (token.value / totalVolume) * 100,
+  }));
+  
+  return {
+    walletAddress,
+    data: dataWithPercentages,
+    totalVolume,
+  };
+}
+
+/**
+ * Generate mock trading volume distribution data
+ * Returns per-wallet data showing trading volume distribution across tokens
+ */
+export function generateTradingVolumeDistribution(
+  _period?: string,
+  wallets?: string
+) {
+  // Parse wallet addresses
+  const walletAddresses = wallets ? wallets.split(',').map(w => w.trim()) : [];
+  
+  if (walletAddresses.length === 0) {
+    // Return single default wallet if no wallets specified
+    const defaultWallet = generateSingleWalletTradingVolume('default_wallet', 99999);
+    return {
+      wallets: [defaultWallet],
+      metadata: {
+        currency: 'USD',
+        timestamp: Date.now(),
+      },
+    };
+  }
+  
+  // Generate per-wallet data
+  const walletData = walletAddresses.map((walletAddress, index) => {
+    const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+    return generateSingleWalletTradingVolume(walletAddress, seed);
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      currency: 'USD',
+      timestamp: Date.now(),
+    },
+  };
+}

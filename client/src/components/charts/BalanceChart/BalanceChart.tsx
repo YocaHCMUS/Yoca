@@ -226,6 +226,7 @@ export function BalanceChart({
         containLabel: true,
       },
       legend: isMultiWallet ? {
+        ...baseOption.legend,
         show: true,
         top: '5%',
         left: 'center',
