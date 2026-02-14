@@ -17,3 +17,29 @@
   // border: 1px solid #ccc;
   border-radius: 8px;
 }
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.emptyStateContent {
+  text-align: center;
+  padding: 3rem;
+  
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--cds-text-primary, #161616);
+  }
+  
+  p {
+    font-size: 1rem;
+    color: var(--cds-text-secondary, #525252);
+    margin: 0;
+  }
+}

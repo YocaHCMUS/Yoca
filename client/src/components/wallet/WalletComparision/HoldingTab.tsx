@@ -8,6 +8,17 @@ import styles from './GeneralTab.module.scss'; // Assuming we create this
 export const HoldingTab: React.FC<WalletComparisionProp> = ({
     walletAddresses
 }) => {
+    if (!walletAddresses || walletAddresses.length === 0) {
+        return (
+            <div className={styles.emptyState}>
+                <div className={styles.emptyStateContent}>
+                    <h3>No Wallets Selected</h3>
+                    <p>Please select at least one wallet to view comparison data.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.grid}>
             {/* Asset Distribution Charts */}

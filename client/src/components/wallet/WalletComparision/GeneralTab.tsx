@@ -11,6 +11,18 @@ import { DailyTradingVolume } from '@/components/charts/DailyTradingVolume';
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
     walletAddresses
 }) => {
+    // Empty state when no wallets are selected
+    if (!walletAddresses || walletAddresses.length === 0) {
+        return (
+            <div className={styles.emptyState}>
+                <div className={styles.emptyStateContent}>
+                    <h3>No Wallets Selected</h3>
+                    <p>Please select at least one wallet to view comparison data.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.grid}>
             {/* Balance history comparision */}
