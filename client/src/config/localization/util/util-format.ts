@@ -39,5 +39,12 @@ export type NumberFormatInfo = {
     | "n- %";
   positiveInfititySymbol: string;
   negativeInfititySymbol: string;
-  NaNSymbol: string;
+  nanSymbol: string;
+};
+
+export type DatetimeFormatInfo = {
+  datePattern: string;
+  timePattern: string;
+  dateTimePattern: string;
+  utcDateTimePattern: string;
 };
