@@ -1,4 +1,4 @@
-import type { NumberFormatInfo } from "./util/util-format";
+import type { DatetimeFormatInfo, NumberFormatInfo } from "./util/util-format";
 import { defineTranslation } from "./util/util-translation";
 
 export const enNumFmtInfo: NumberFormatInfo = {
@@ -10,10 +10,17 @@ export const enNumFmtInfo: NumberFormatInfo = {
   percentSymbol: "%",
   percentPositivePattern: "n%",
   percentNegativePattern: "-n%",
-  NaNSymbol: "NaN",
+  nanSymbol: "NaN",
   positiveInfititySymbol: "∞",
   negativeInfititySymbol: "-∞",
   numberNegativePattern: "-n",
+};
+
+export const enDateTimeFmtInfo: DatetimeFormatInfo = {
+  datePattern: "MM/DD/YYYY",
+  timePattern: "hh:mm A",
+  dateTimePattern: "MMM D, YYYY hh:mm A",
+  utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
 };
 
 export const en = {

@@ -1,5 +1,5 @@
 import { define } from "./en";
-import type { NumberFormatInfo } from "./util/util-format";
+import type { DatetimeFormatInfo, NumberFormatInfo } from "./util/util-format";
 
 export const viNumFmtInfo: NumberFormatInfo = {
   thousandSeparator: ".",
@@ -10,10 +10,17 @@ export const viNumFmtInfo: NumberFormatInfo = {
   percentSymbol: "%",
   percentPositivePattern: "n%",
   percentNegativePattern: "-n%",
-  NaNSymbol: "NaN",
+  nanSymbol: "NaN",
   positiveInfititySymbol: "∞",
   negativeInfititySymbol: "-∞",
   numberNegativePattern: "-n",
+};
+
+export const viDateTimeFmtInfo: DatetimeFormatInfo = {
+  datePattern: "DD/MM/YYYY",
+  timePattern: "HH:mm",
+  dateTimePattern: "D MMM YYYY HH:mm",
+  utcDateTimePattern: "D MMM YYYY HH:mm [UTC]",
 };
 
 export const vi = define({
