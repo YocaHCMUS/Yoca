@@ -51,11 +51,11 @@ export const tokenMeta = pgTable("token_meta", {
     .$onUpdate(() => new Date()),
 });
 
-// -------------------------------
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
   decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
+
   priceChange24h: decimal("price_change_24h"),
   priceChangePercentage1h: decimal("price_change_percentage_1h"),
   priceChangePercentage24h: decimal("price_change_percentage_24h"),
@@ -63,14 +63,17 @@ export const tokenMarketData = pgTable("token_market_data", {
   priceChangePercentage30d: decimal("price_change_percentage_30d"),
   priceChangePercentage200d: decimal("price_change_percentage_200d"),
   priceChangePercentage1y: decimal("price_change_percentage_1y"),
+
   marketCap: decimal("market_cap").notNull(),
   marketCapChange24h: decimal("market_cap_change_24h"),
   marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
+
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply"),
   maxSupply: decimal("max_supply"),
   totalSupply: decimal("total_supply"),
+
   ath: decimal("ath"),
   athDate: timestamp("ath_date"),
   athChangePercentage: decimal("ath_change_percentage"),
@@ -135,32 +138,6 @@ export const tokenTopPools = pgTable(
     }),
   ],
 );
-
-export const onchainTokenData = pgTable("onchain_token_data", {
-  address: varchar({ length: 44 }).primaryKey(),
-  name: varchar("name").notNull(),
-  symbol: varchar("symbol").notNull(),
-  priceUsd: decimal("price_usd").notNull(),
-  marketCapUsd: decimal("market_cap_usd").notNull(),
-  fdvUsd: decimal("fdv_usd"),
-  totalSupply: decimal("total_supply").notNull(),
-  volume5m: decimal("volume_5m").notNull(),
-  volume1h: decimal("volume_1h").notNull(),
-  volume24h: decimal("volume_24h").notNull(),
-  priceChange5m: decimal("price_change_5m").notNull(),
-  priceChange1h: decimal("price_change_1h").notNull(),
-  priceChange24h: decimal("price_change_24h").notNull(),
-  totalTxn24h: integer("total_txn_24h").notNull(),
-  buyTxn24h: integer("buy_txn_24h").notNull(),
-  sellTxn24h: integer("sell_txn_24h").notNull(),
-  uniqueBuyers24h: integer("unique_buyers_24h").notNull(),
-  uniqueSellers24h: integer("unique_sellers_24h").notNull(),
-  poolVolume24h: decimal("pool_volume_24h").notNull(),
-  totalLiquidityUsd: decimal("total_liquidity_usd").notNull(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
 
 export const tokenMarketChart24h = pgTable(
   "token_market_chart_24h",
@@ -332,32 +309,62 @@ export const trendingTokens = pgTable("trending_tokens", {
     .$onUpdate(() => new Date()),
 });
 
-// Pool trades - Recent trades for pools
-export const poolTrades = pgTable(
-  "pool_trades",
-  {
-    id: varchar("id", { length: 128 }).notNull(),
-    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
-    network: varchar("network", { length: 32 }).notNull().default("solana"),
-    type: varchar("type", { length: 4 }).notNull(), // "buy" or "sell"
-    kind: varchar("kind", { length: 4 }).notNull(), // "buy" or "sell"
-    priceUsd: decimal("price_usd").notNull(),
-    priceQuote: decimal("price_quote").notNull(), // price in quote token
-    volumeUsd: decimal("volume_usd").notNull(),
-    amount: decimal("amount").notNull(), // token amount
-    baseTokenAmount: decimal("base_token_amount").notNull(),
-    quoteTokenAmount: decimal("quote_token_amount").notNull(),
-    fromAddress: varchar("from_address", { length: 44 }).notNull(),
-    txHash: varchar("tx_hash", { length: 128 }).notNull(),
-    timestamp: timestamp("timestamp").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.id, table.poolAddress],
-    }),
-  ],
-);
+// {
+//   "data": [
+//     {
+//       "id": "eth_19612255_0x0b8ac5a16c291832c1b4d5f0d8ef2d9d58e207cd8132c32392295617daa4d422_158_1712595165",
+//       "type": "trade",
+//       "attributes": {
+//         "block_number": 19612255,
+//         "tx_hash": "0x0b8ac5a16c291832c1b4d5f0d8ef2d9d58e207cd8132c32392295617daa4d422",
+//         "tx_from_address": "0x42c037c594eefeca741e9dd66af91e7ffd930872",
+//         token sold "from_token_amount": "1.51717616246451",
+//         token bought "to_token_amount": "5535.099061",
+//         sold token = ?? sold token "price_from_in_currency_token": "1.0",
+//         bought token = ?? sold token "price_to_in_currency_token": "0.000274100995437363",
+//         "price_from_in_usd": "3656.8970003075",
+//         "price_to_in_usd": "1.00235910799619",
+//         "block_timestamp": "2024-04-08T16:52:35Z",
+//         "kind": "buy",
+//         "volume_in_usd": "5548.15695745452",
+//         "from_token_address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+//         "to_token_address": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+//       }
+//     }
+//   ]
+// }
+
+// Client? Recent trades (24h) of [token] in [pool]
+// Server> look into [poolTrades] -> filter by [pool]
+// -> filter by sellToken == [token] : sells of [token]
+// & filter by buyToken == [token] : buys of [token]
+// trades of [token] = sells of [token] + buys of [token]
+
+export const poolTrades24h = pgTable("pool_trades", {
+  id: varchar("id", { length: 128 }).primaryKey(),
+
+  poolAddress: varchar("pool_address", { length: 44 }).notNull(),
+  transactionHash: varchar("address", { length: 44 }).primaryKey(),
+
+  signerAddress: varchar("address", { length: 44 }).primaryKey(),
+
+  sellTokenAmount: decimal("sell_token_amount").notNull(),
+  buyTokenAmount: decimal("buy_token_amount").notNull(),
+
+  sellTokenAddress: varchar("sell_token_address", { length: 44 }).primaryKey(),
+  buyTokenAddress: varchar("buy_token_address", { length: 44 }).primaryKey(),
+
+  sellTokenPriceUsd: decimal("sell_token_price_usd").notNull(),
+  buyTokenPriceUsd: decimal("buy_token_price_usd").notNull(),
+
+  blockTimestamp: timestamp("block_timestamp").notNull(),
+
+  volumeInUsd: decimal("volume_in_usd").notNull(),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
 // #endregion
 
@@ -370,9 +377,8 @@ export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenPoolInsert = typeof tokenPools.$inferInsert;
-export type OnchainTokenDataInsert = typeof onchainTokenData.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
-export type PoolTradeInsert = typeof poolTrades.$inferInsert;
+export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 
 // #endregion

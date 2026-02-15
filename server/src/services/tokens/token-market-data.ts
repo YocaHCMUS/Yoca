@@ -19,7 +19,7 @@ async function fetchOnchainMarketData(
 ): Promise<Map<string, Partial<TokenMarketDataInsert>>> {
   const result = new Map<string, Partial<TokenMarketDataInsert>>();
 
-  if (tokenAddresses.length === 0) {
+  if (tokenAddresses.length == 0) {
     return result;
   }
 
@@ -63,7 +63,7 @@ async function fetchCgMarketData(
   const result = new Map<string, Partial<TokenMarketDataInsert>>();
 
   const cgIds = Object.keys(cgIdToAddress);
-  if (cgIds.length === 0) {
+  if (cgIds.length == 0) {
     return result;
   }
 
@@ -128,12 +128,12 @@ async function fetchCgMarketData(
 }
 
 async function fetchTokenMarketData(tokenAddresses: string[]) {
-  if (tokenAddresses.length === 0) {
+  if (tokenAddresses.length == 0) {
     return null;
   }
 
   const onchainData = await fetchOnchainMarketData(tokenAddresses);
-  if (onchainData.size === 0) {
+  if (onchainData.size == 0) {
     return null;
   }
 
@@ -187,7 +187,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     });
   }
 
-  if (marketDataList.length === 0) {
+  if (marketDataList.length == 0) {
     return null;
   }
 
@@ -204,7 +204,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
 export async function getTokenMarketData(
   tokenAddresses: string[],
 ): Promise<TokenMarketDataInsert[]> {
-  if (tokenAddresses.length === 0) {
+  if (tokenAddresses.length == 0) {
     return [];
   }
 
@@ -229,7 +229,7 @@ export async function getTokenMarketData(
   );
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
-  if (!refreshed || refreshed.length === 0) {
+  if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
     return [...res, ...refreshed];

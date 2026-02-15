@@ -1,39 +1,15 @@
 import { POOL_TRADES_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { poolTrades, type PoolTradeInsert } from "@sv/db/schema.js";
+import { poolTrades24h, type PoolTrade24hInsert } from "@sv/db/schema.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { and, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
+import type { CG_24hPoolTrades } from "../_types/token_raw_responses.js";
 
-interface TradeAttributes {
-  kind: "buy" | "sell";
-  price_to_in_usd: string;
-  price_from_in_usd: string;
-  price_to_in_currency_token: string;
-  price_from_in_currency_token: string;
-  volume_in_usd: string;
-  to_token_amount: string;
-  from_token_amount: string;
-  tx_from_address: string;
-  block_timestamp: string;
-  tx_hash: string;
-}
-
-interface TradeResponse {
-  data: Array<{
-    id: string;
-    attributes: TradeAttributes;
-  }>;
-}
-
-/**
- * Fetch pool trades from CoinGecko API
- */
 async function fetchPoolTrades(
   poolAddress: string,
-  network: string = "solana",
-): Promise<PoolTradeInsert[]> {
+): Promise<PoolTrade24hInsert[]> {
   const cgEndpoint = cg.getEndpoint(
-    `/onchain/networks/${network}/pools/${poolAddress}/trades`,
+    `/onchain/networks/solana/pools/${poolAddress}/trades`,
   );
 
   cgEndpoint.search = new URLSearchParams({
@@ -48,85 +24,73 @@ async function fetchPoolTrades(
   const resp = await fetch(req);
 
   if (!resp.ok) {
-    console.error(`Pool Trades API error: ${resp.status}`);
     return [];
   }
 
-  const json: TradeResponse = await resp.json();
-  const data = json.data || [];
+  const res: CG_24hPoolTrades = await resp.json();
+  const trades = res.data.map(
+    (raw): PoolTrade24hInsert => ({
+      id: raw.id,
+      poolAddress: poolAddress,
 
-  return data.map((item) => {
-    const attr = item.attributes;
-    const kind = attr.kind || "buy";
+      signerAddress: raw.attributes.tx_from_address,
+      transactionHash: raw.attributes.tx_hash,
 
-    const priceUsd =
-      kind === "buy" ? attr.price_to_in_usd : attr.price_from_in_usd;
-    const priceQuote =
-      kind === "buy"
-        ? attr.price_to_in_currency_token
-        : attr.price_from_in_currency_token;
-    const amount =
-      kind === "buy" ? attr.to_token_amount : attr.from_token_amount;
+      blockTimestamp: new Date(raw.attributes.block_timestamp),
 
-    return {
-      id: item.id,
-      poolAddress,
-      network,
-      type: kind,
-      kind,
-      priceUsd: parseFloat(priceUsd || "0"),
-      priceQuote: parseFloat(priceQuote || "0"),
-      volumeUsd: parseFloat(attr.volume_in_usd || "0"),
-      amount: parseFloat(amount || "0"),
-      baseTokenAmount: parseFloat(attr.to_token_amount || "0"),
-      quoteTokenAmount: parseFloat(attr.from_token_amount || "0"),
-      fromAddress: attr.tx_from_address || "",
-      txHash: attr.tx_hash || "",
-      timestamp: new Date(attr.block_timestamp),
-    };
-  });
+      sellTokenAddress: raw.attributes.from_token_address,
+      buyTokenAddress: raw.attributes.to_token_address,
+
+      sellTokenAmount: Number(raw.attributes.from_token_amount),
+      buyTokenAmount: Number(raw.attributes.to_token_amount),
+
+      sellTokenPriceUsd: Number(raw.attributes.price_from_in_usd),
+      buyTokenPriceUsd: Number(raw.attributes.price_to_in_usd),
+
+      volumeInUsd: Number(raw.attributes.volume_in_usd),
+    }),
+  );
+
+  return db
+    .insert(poolTrades24h)
+    .values(trades)
+    .onConflictDoUpdate({
+      target: [poolTrades24h.id],
+      set: {
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
 }
 
-/**
- * Get pool trades with caching
- */
-export async function getPoolTrades(
-  poolAddress: string,
-  network: string = "solana",
-) {
-  const thresholdDate = new Date(Date.now() - POOL_TRADES_TTL_MS);
+export async function getPoolTrades24h(poolAddress: string) {
+  const from = new Date(Date.now() - 86_400_000);
 
-  // Check cache
-  const cached = await db
+  const res = await db
     .select()
-    .from(poolTrades)
+    .from(poolTrades24h)
     .where(
       and(
-        eq(poolTrades.poolAddress, poolAddress),
-        eq(poolTrades.network, network),
-        gte(poolTrades.createdAt, thresholdDate),
+        eq(poolTrades24h.poolAddress, poolAddress),
+        gte(poolTrades24h.blockTimestamp, from),
       ),
     )
-    .orderBy(poolTrades.timestamp)
+    .orderBy(desc(poolTrades24h.blockTimestamp))
     .limit(100);
 
-  if (cached.length > 0) {
-    return cached;
+  let stale = false;
+
+  if (res.length > 0) {
+    const latestUpdate = res.reduce((latest, cur) =>
+      cur.updatedAt > latest.updatedAt ? cur : latest,
+    );
+
+    const thresholdDate = new Date(Date.now() - POOL_TRADES_TTL_MS);
+    stale = latestUpdate.updatedAt < thresholdDate;
   }
 
-  // Fetch fresh data
-  const trades = await fetchPoolTrades(poolAddress, network);
-
-  if (trades.length === 0) {
-    return [];
+  if (stale) {
+    return await fetchPoolTrades(poolAddress);
   }
-
-  // Store in database
-  const inserted = await db
-    .insert(poolTrades)
-    .values(trades)
-    .onConflictDoNothing()
-    .returning();
-
-  return inserted.length > 0 ? inserted : trades;
+  return res;
 }

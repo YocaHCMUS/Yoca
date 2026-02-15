@@ -1,7 +1,7 @@
 import { TOKEN_POOLS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { tokenPools, type TokenPoolInsert } from "@sv/db/schema.js";
-import { excluded } from "@sv/util/orm-sql.js";
+import { excluded, excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte } from "drizzle-orm";
 
@@ -105,7 +105,7 @@ async function fetchTokenPools(
 
     if (dexId) {
       const foundDex = included.find(
-        (item) => item.type === "dex" && item.id === dexId,
+        (item) => item.type == "dex" && item.id == dexId,
       );
       if (foundDex?.attributes?.name) {
         source = foundDex.attributes.name;
@@ -116,7 +116,7 @@ async function fetchTokenPools(
     let quoteTokenSymbol = "SOL"; // default
     if (quoteTokenId) {
       const foundToken = included.find(
-        (item) => item.type === "token" && item.id === quoteTokenId,
+        (item) => item.type == "token" && item.id == quoteTokenId,
       );
       if (foundToken?.attributes?.symbol) {
         quoteTokenSymbol = foundToken.attributes.symbol;
@@ -187,7 +187,7 @@ export async function getTokenPools(
   // Fetch fresh data
   const poolsData = await fetchTokenPools(tokenAddress, network, limit);
 
-  if (poolsData.length === 0) {
+  if (poolsData.length == 0) {
     return [];
   }
 
@@ -197,31 +197,7 @@ export async function getTokenPools(
     .values(poolsData)
     .onConflictDoUpdate({
       target: [tokenPools.address],
-      set: {
-        name: excluded(tokenPools.name),
-        source: excluded(tokenPools.source),
-        volume24h: excluded(tokenPools.volume24h),
-        volumeBuy24h: excluded(tokenPools.volumeBuy24h),
-        volumeSell24h: excluded(tokenPools.volumeSell24h),
-        volumeNet24h: excluded(tokenPools.volumeNet24h),
-        reserve: excluded(tokenPools.reserve),
-        liquidity: excluded(tokenPools.liquidity),
-        marketCap: excluded(tokenPools.marketCap),
-        fdv: excluded(tokenPools.fdv),
-        priceUsd: excluded(tokenPools.priceUsd),
-        priceQuoteToken: excluded(tokenPools.priceQuoteToken),
-        quoteTokenSymbol: excluded(tokenPools.quoteTokenSymbol),
-        priceChangeM5: excluded(tokenPools.priceChangeM5),
-        priceChangeH1: excluded(tokenPools.priceChangeH1),
-        priceChangeH6: excluded(tokenPools.priceChangeH6),
-        priceChangeH24: excluded(tokenPools.priceChangeH24),
-        txns24h: excluded(tokenPools.txns24h),
-        buys24h: excluded(tokenPools.buys24h),
-        sells24h: excluded(tokenPools.sells24h),
-        traders24h: excluded(tokenPools.traders24h),
-        buyers24h: excluded(tokenPools.buyers24h),
-        sellers24h: excluded(tokenPools.sellers24h),
-      },
+      set: excludedAuto(tokenPools, tokenPools.address),
     })
     .returning();
 
@@ -292,7 +268,7 @@ export async function getPoolDetails(
   const quoteTokenId = pool.relationships?.quote_token?.data?.id;
   if (quoteTokenId && json.included) {
     const found = json.included.find(
-      (item: any) => item.type === "token" && item.id === quoteTokenId,
+      (item: any) => item.type == "token" && item.id == quoteTokenId,
     );
     if (found?.attributes?.symbol) {
       quoteTokenSymbol = found.attributes.symbol;
@@ -300,7 +276,7 @@ export async function getPoolDetails(
   }
 
   const dexSource =
-    json.included?.find((item: any) => item.type === "dex")?.attributes?.name ||
+    json.included?.find((item: any) => item.type == "dex")?.attributes?.name ||
     "unknown";
 
   const poolData: TokenPoolInsert = {
