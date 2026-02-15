@@ -191,18 +191,31 @@ export const HoldingDurations: React.FC<ChartProps> = ({
 
     const base = getThemedChartBaseOption(chartTheme);
     
+    // Filter out invalid wallets and ensure they have required properties
+    const validWallets = data.wallets.filter(
+      wallet => wallet && wallet.name && Array.isArray(wallet.holdings)
+    );
+    
+    if (validWallets.length === 0) return null;
+    
     // Collect all unique tokens across all wallets
     const tokenSet = new Set<string>();
-    data.wallets.forEach(wallet => {
-      wallet.holdings.forEach(holding => tokenSet.add(holding.tokenSymbol));
+    validWallets.forEach(wallet => {
+      wallet.holdings.forEach(holding => {
+        if (holding?.tokenSymbol) {
+          tokenSet.add(holding.tokenSymbol);
+        }
+      });
     });
 
     const categories = Array.from(tokenSet);
     
     // Create a series for each wallet
-    const series = data.wallets.map(wallet => {
+    const series = validWallets.map(wallet => {
       const tokenToValue = new Map(
-        wallet.holdings.map(holding => [holding.tokenSymbol, convert(holding.durationDays)])
+        wallet.holdings
+          .filter(holding => holding?.tokenSymbol && typeof holding.durationDays === 'number')
+          .map(holding => [holding.tokenSymbol, convert(holding.durationDays)])
       );
 
       return {
@@ -216,8 +229,20 @@ export const HoldingDurations: React.FC<ChartProps> = ({
 
     return {
       ...base,
-      legend: { ...base.legend, show: true, top: '5%' },
-      grid: { top: '18%', left: '10%', right: '4%', bottom: '20%', containLabel: true },
+      legend: { 
+        ...base.legend, 
+        show: validWallets.length > 1, 
+        top: '5%', 
+        data: validWallets.map(w => w.name),
+        textStyle: { color: chartTheme.textColor },
+      },
+      grid: { 
+        top: validWallets.length > 1 ? '18%' : '10%', 
+        left: '10%', 
+        right: '4%', 
+        bottom: '20%', 
+        containLabel: true 
+      },
       xAxis: {
         ...base.xAxis,
         type: 'category',
@@ -240,26 +265,41 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(50, 50, 50, 0.95)',
+        borderWidth: 1,
+        borderColor: chartTheme.borderColor || '#ccc',
+        textStyle: { color: chartTheme.textColor },
         formatter: (params: any) => {
           const items = Array.isArray(params) ? params : [params];
           if (items.length === 0) return '';
-          const header = `<strong>${items[0].axisValue}</strong>`;
-          const lines = items.map(
-            (p: any) => `${p.marker} ${p.seriesName}: ${Number(p.value).toFixed(1)} ${unitLabel.toLowerCase()}`
-          );
-          return [header, ...lines].join('<br/>');
+          
+          const tokenName = items[0]?.axisValue || 'Unknown';
+          const header = `<strong style="font-size: 14px;">${tokenName}</strong>`;
+          
+          const lines = items
+            .filter((p: any) => p.value !== null && p.value !== undefined)
+            .map((p: any) => {
+              const value = Number(p.value);
+              const formattedValue = value > 0 ? value.toFixed(1) : '0.0';
+              return `${p.marker} <span style="display: inline-block; min-width: 100px;">${p.seriesName}</span>: <strong>${formattedValue}</strong> ${unitLabel.toLowerCase()}`;
+            });
+          
+          return lines.length > 0 ? [header, ...lines].join('<br/>') : header;
         },
       },
       series,
     };
   }, [data, chartTheme, convert, unitLabel, t]);
 
+  // Check if we have valid data to display
+  const isEmpty = !data || !data.wallets || data.wallets.length === 0 || chartOption === null;
+
   return (
     <BaseChart
       title={chartTitle}
       // height={height * (data?.wallets.length || 1)}
       loadingState={loadingState}
-      isEmpty={!data || data.wallets.length === 0}
+      isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
