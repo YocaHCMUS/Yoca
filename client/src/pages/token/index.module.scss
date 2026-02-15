@@ -1,14 +1,16 @@
 /**
- * Token Page Styles - Light Mode
+ * Token Page Styles
  * BirdEye-inspired layout: Left Sidebar + Right Main Area
+ * Uses Carbon theme tokens for dark/light mode support
  */
 
-// ===== Layout =====
+@use '@carbon/react/scss/theme' as *;
+
 // ===== Layout =====
 .tokenPage {
     height: 100%; // Changed from 100vh to 100% to fit within PageWrapper
     overflow: hidden; // Prevent body scroll
-    background: #fff;
+    background: $background;
 }
 
 // ===== Grid Layout =====
@@ -39,7 +41,7 @@
     gap: 12px;
     order: 1;
     min-width: 0;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid $border-subtle;
     height: 100%; // Fill grid height
     overflow-y: auto; // Independent scroll
 
@@ -55,7 +57,7 @@
 
 // Unified container for all sidebar items
 .sidebarGroup {
-    background: #fff;
+    background: $background;
     border-radius: 0;
     display: flex;
     flex-direction: column;
@@ -65,7 +67,7 @@
     box-shadow: none;
 
     >* {
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid $border-subtle;
 
         &:last-child {
             border-bottom: none;
@@ -88,10 +90,10 @@
 
 // Utility
 .loadingContainer {
-    background: #fff;
+    background: $background;
     padding: 32px;
     text-align: center;
     border-radius: 8px;
-    color: #6b7280;
+    color: $text-secondary;
     font-size: 14px;
 }

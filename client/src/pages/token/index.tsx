@@ -54,13 +54,12 @@ export default function TokenPage() {
     return "Non existent page";
   }
 
-  if (!marketData) {
+  if (!metaData) {
     return (
-      <div className={styles.loadingContainer}>
-        <p>Token data not found.</p>
-        <p style={{ fontSize: "0.9rem", color: "#666", marginTop: "8px" }}>
-          The token might be new or not verified on CoinGecko. On-chain data
-          fallback failed to retrieve pools.
+      <div style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
+        <p>No metadata found for this token.</p>
+        <p style={{ fontSize: "0.9rem", marginTop: "8px" }}>
+          Address: {address}
         </p>
       </div>
     );
@@ -77,7 +76,7 @@ export default function TokenPage() {
               symbol={metaData.symbol}
               address={metaData.address}
               imageUrl={metaData.imageUrl ?? undefined}
-              coinGeckoId={metaData.coinGeckoId ?? null}
+              coinGeckoId={metaData.coingeckoId ?? null}
               discordInvite={metaData.linkDiscord}
               websiteUrl={metaData.linkHomepage}
               twitterHandle={metaData.twitterScreenName}

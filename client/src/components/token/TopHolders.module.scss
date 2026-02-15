@@ -1,6 +1,8 @@
+@use '@carbon/react/scss/theme' as *;
+
 .container {
     margin-top: 0;
-    background: #fff;
+    background: $background;
     padding: 0;
 }
 
@@ -8,18 +10,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 16px; // Increased vertical padding
+    padding: 16px 16px;
     cursor: pointer;
-    background: #fff;
+    background: $background;
     border-bottom: none;
 }
 
 .title {
     margin: 0;
-    font-size: 14px; // Changed to 14px per request
-    font-weight: 500; // Reduced to Medium (not bold)
+    font-size: 14px;
+    font-weight: 500;
     text-transform: uppercase;
-    color: #111827;
+    color: $text-primary;
 }
 
 .stats {
@@ -29,13 +31,13 @@
 }
 
 .totalPercentage {
-    font-size: 16px; // Changed to 16px per request
+    font-size: 16px;
     font-weight: 500;
-    color: #111827;
+    color: $text-primary;
 }
 
 .accordionButton {
-    background: #f3f4f6; // Keep light gray box
+    background: $layer-accent-01;
     border: none;
     border-radius: 4px;
     padding: 4px;
@@ -43,70 +45,69 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #4b5563;
+    color: $text-secondary;
     transition: background 0.2s;
     width: 24px;
     height: 24px;
 
     &:hover {
-        background: #e5e7eb;
+        background: $border-subtle;
     }
 }
 
 // Table Wrapper Overrides
 .tableWrapper {
     padding: 0;
-    background: #fff;
+    background: $background;
 
     // Deep selector to override Carbon Table styles
     :global {
         .cds--data-table-container {
             padding-top: 0;
-            background: #fff;
+            background: $background;
         }
 
         .cds--data-table {
-            background: #fff;
+            background: $background;
 
             thead {
-                background: #fff;
+                background: $background;
 
                 tr {
-                    height: 32px; // Simpler header height
+                    height: 32px;
                 }
             }
 
             th {
-                background: #fff;
-                color: #9ca3af; // Match MarketStats label color
+                background: $background;
+                color: $text-helper;
                 font-family: 'Inter', system-ui, sans-serif;
                 font-weight: 600;
                 font-size: 11px;
                 text-transform: uppercase;
-                border-bottom: none; // No border
-                padding: 4px 8px; // Default padding
+                border-bottom: none;
+                padding: 4px 8px;
                 text-align: left;
 
                 // Rank column (#)
                 &:first-child {
                     width: 40px;
-                    padding-left: 16px; // Align with Title
+                    padding-left: 16px;
                     padding-right: 0;
                 }
 
                 // Address column
                 &:nth-child(2) {
-                    padding-left: 12px; // Moved right (increased from 4px)
+                    padding-left: 12px;
                 }
 
                 // % Column (Last child)
                 &:last-child {
                     text-align: right;
-                    padding-right: 32px; // Moved left (increased padding from 16px)
-                    // Carbon headers are often flex, so we need justify-content
+                    padding-right: 32px;
                     display: flex;
                     justify-content: flex-end;
-                    flex-direction: row; // Ensure row direction
+                    flex-direction: row;
                 }
 
                 span {
@@ -116,17 +117,17 @@
 
             tbody {
                 tr {
-                    background: #fff;
-                    height: 44px; // Increased from 36px for more spacing
+                    background: $background;
+                    height: 44px;
 
-                    // Top 1 Holder Highlight (Gray Background)
+                    // Top 1 Holder Highlight
                     &:first-child td {
-                        background-color: #f3f4f6; // Light gray highlight
-                        font-weight: 600; // Make top holder text slightly bolder
+                        background-color: $layer-accent-01;
+                        font-weight: 600;
                     }
 
                     &:hover {
-                        background-color: transparent; // No hover effect requested? Or keep subtle? User said "trắng hết"
+                        background-color: transparent;
 
                         td {
                             background-color: transparent;
@@ -134,11 +135,11 @@
                     }
 
                     td {
-                        background: #fff;
+                        background: $background;
                         border-top: none;
                         border-bottom: none;
-                        padding: 4px 8px; // Default padding
-                        color: #111827;
+                        padding: 4px 8px;
+                        color: $text-primary;
                         font-family: 'Inter', system-ui, sans-serif;
                         font-size: 14px;
                         font-weight: 500;
@@ -146,19 +147,19 @@
 
                         // Rank cell
                         &:first-child {
-                            padding-left: 16px; // Align with Header #
+                            padding-left: 16px;
                             padding-right: 0;
                         }
 
                         // Address cell
                         &:nth-child(2) {
-                            padding-left: 12px; // Align with Header Address
+                            padding-left: 12px;
                         }
 
                         // % Cell
                         &:last-child {
                             text-align: right;
-                            padding-right: 32px; // Right alignment with padding
+                            padding-right: 32px;
                         }
                     }
 
@@ -172,7 +173,7 @@
 }
 
 .rank {
-    color: #6b7280;
+    color: $text-secondary;
     font-size: 14px;
     font-weight: 500;
     width: 24px;
@@ -186,11 +187,11 @@
 }
 
 .addressLink {
-    color: #3b82f6; // Blue link
+    color: $link-primary;
     text-decoration: none;
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 14px;
-    font-weight: 400; // Normal weight
+    font-weight: 400;
 
     &:hover {
         text-decoration: underline;
@@ -198,13 +199,13 @@
 }
 
 .copyButton {
-    color: #9ca3af;
+    color: $text-helper;
     cursor: pointer;
     display: flex;
     align-items: center;
 
     &:hover {
-        color: #6b7280;
+        color: $text-secondary;
     }
 }
 
@@ -212,12 +213,12 @@
     text-align: right;
     font-size: 14px;
     font-weight: 500;
-    color: #111827;
+    color: $text-primary;
 }
 
 .emptyState {
     padding: 32px;
     text-align: center;
-    color: #6b7280;
+    color: $text-secondary;
     font-size: 14px;
 }

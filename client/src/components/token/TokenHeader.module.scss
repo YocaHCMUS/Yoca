@@ -1,10 +1,11 @@
+@use '@carbon/react/scss/theme' as *;
+
 .container {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 16px;
-    background: transparent; // Was #fff
-    // Removed border and border-radius
+    background: transparent;
 }
 
 .image {
@@ -28,23 +29,23 @@
 
 .symbol {
     font-size: 18px;
-    font-weight: 500; // Regular/Medium
-    color: #111827;
+    font-weight: 500;
+    color: $text-primary;
     text-transform: uppercase;
 }
 
 .name {
     font-size: 14px;
-    font-weight: 500; // Regular/Medium
-    color: #6b7280; // Lighter gray
+    font-weight: 500;
+    color: $text-secondary;
     line-height: 1.2;
 }
 
 .ageBadge {
     font-size: 12px;
     font-weight: 600;
-    color: #4b5563;
-    background: #f3f4f6;
+    color: $text-secondary;
+    background: $layer-accent-01;
     padding: 2px 6px;
     border-radius: 4px;
     white-space: nowrap;
@@ -59,41 +60,41 @@
 
 .address {
     font-size: 12px;
-    color: #6b7280;
+    color: $text-secondary;
     font-family: 'Courier New', monospace;
-    background: #f3f4f6;
+    background: $layer-accent-01;
     padding: 4px 8px;
     border-radius: 4px;
     user-select: none;
 
     &:hover {
-        background: #e5e7eb;
+        background: $border-subtle;
     }
 }
 
 .externalLinks {
     display: flex;
     align-items: center;
-    gap: 2px; // Reduced from 6px
+    gap: 2px;
 }
 
 .iconButton {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px; // Reduced from 24px to bring icons closer
+    width: 20px;
     height: 20px;
     padding: 0;
     border: none;
     background: transparent;
-    color: #6b7280;
+    color: $text-secondary;
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.2s ease;
 
     &:hover {
-        background: #f3f4f6;
-        color: #111827;
+        background: $layer-accent-01;
+        color: $text-primary;
     }
 
     &:active {

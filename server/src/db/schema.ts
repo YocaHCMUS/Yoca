@@ -47,6 +47,7 @@ export const tokenMeta = pgTable("token_meta", {
 
   updatedAt: timestamp("updated_at")
     .notNull()
+    .defaultNow()
     .$onUpdate(() => new Date()),
 });
 
@@ -79,6 +80,7 @@ export const tokenMarketData = pgTable("token_market_data", {
 
   updatedAt: timestamp("updated_at")
     .notNull()
+    .defaultNow()
     .$onUpdate(() => new Date()),
 });
 

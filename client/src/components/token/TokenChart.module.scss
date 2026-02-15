@@ -1,23 +1,24 @@
+@use '@carbon/react/scss/theme' as *;
+
 .container {
-    background: #fff;
-    background: #fff;
-    padding: 0; // Removed padding
-    border-radius: 0; // Removed radius
-    border: none; // Removed border
+    background: $background;
+    padding: 0;
+    border-radius: 0;
+    border: none;
 }
 
 .header {
     margin-bottom: 12px;
     font-size: 14px;
     font-weight: 600;
-    color: #111827;
+    color: $text-primary;
 }
 
 .loading {
-    background: #fff;
+    background: $background;
     padding: 32px;
     text-align: center;
     border-radius: 8px;
-    color: #6b7280;
+    color: $text-secondary;
     font-size: 14px;
 }

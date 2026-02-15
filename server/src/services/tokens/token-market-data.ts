@@ -42,6 +42,7 @@ async function fetchOnchainMarketData(
 
   for (const token of json.data) {
     const attrs = token.attributes;
+    console.log(`[OnchainData] Token: ${attrs.address}, MarketCap: ${attrs.market_cap_usd}, FDV: ${attrs.fdv_usd}, Volume: ${attrs.volume_usd?.h24}`);
     result.set(attrs.address, {
       address: attrs.address,
       decimals: attrs.decimals,
@@ -61,7 +62,7 @@ async function fetchCgMarketData(
 ): Promise<Map<string, Partial<TokenMarketDataInsert>>> {
   const result = new Map<string, Partial<TokenMarketDataInsert>>();
 
-  const cgIds = Object.values(cgIdToAddress);
+  const cgIds = Object.keys(cgIdToAddress);
   if (cgIds.length === 0) {
     return result;
   }
@@ -92,6 +93,7 @@ async function fetchCgMarketData(
   for (const raw of res) {
     const address = addressLookup[raw.id];
     if (!address) continue;
+    console.log(`[CGData] Token: ${address} (ID: ${raw.id}), MarketCap: ${raw.market_cap}, CircSupply: ${raw.circulating_supply}, TotalSupply: ${raw.total_supply}`);
 
     result.set(address, {
       priceChange24h: raw.price_change_24h,
@@ -149,6 +151,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       cgIdToAddress[row.coingeckoId] = row.address;
     }
   }
+  console.log(`[TokenMarketData] Found CG IDs for: ${Object.keys(cgIdToAddress).join(", ")}`);
 
   const cgData = await fetchCgMarketData(cgIdToAddress);
   const marketDataList: TokenMarketDataInsert[] = [];

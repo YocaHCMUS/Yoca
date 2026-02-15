@@ -1,4 +1,4 @@
-import { Copy, Globe, LogoDiscord, Search } from "@carbon/icons-react";
+import { Copy, Wikis, LogoDiscord, Search } from "@carbon/icons-react";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
@@ -104,7 +104,7 @@ export const TokenHeader = ({
                 title="Website"
                 style={{ color: "#3b82f6" }}
               >
-                <Globe size={12} />
+                <Wikis size={12} />
               </button>
             )}
             {twitterHandle && (
