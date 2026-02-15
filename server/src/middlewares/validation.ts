@@ -1,6 +1,6 @@
-import z from "zod";
-import { validator } from "hono/validator";
 import type { ValidationTargets } from "hono";
+import { validator } from "hono/validator";
+import z from "zod";
 
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
@@ -36,7 +36,7 @@ export const tokenIdSchema = z.object({
 });
 
 export const userSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  email: z.email("Invalid email format"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
