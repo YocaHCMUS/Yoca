@@ -1,4 +1,20 @@
-import { defineTranslation } from "./util";
+import type { NumberFormatInfo } from "./util/util-format";
+import { defineTranslation } from "./util/util-translation";
+
+export const enNumFmtInfo: NumberFormatInfo = {
+  thousandSeparator: ",",
+  decimalSeparator: ".",
+  currencySymbol: "$",
+  currencyPositivePattern: "$n",
+  currencyNegativePattern: "-$n",
+  percentSymbol: "%",
+  percentPositivePattern: "n%",
+  percentNegativePattern: "-n%",
+  NaNSymbol: "NaN",
+  positiveInfititySymbol: "∞",
+  negativeInfititySymbol: "-∞",
+  numberNegativePattern: "-n",
+};
 
 export const en = {
   // Common

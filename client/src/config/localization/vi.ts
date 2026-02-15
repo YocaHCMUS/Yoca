@@ -1,4 +1,20 @@
 import { define } from "./en";
+import type { NumberFormatInfo } from "./util/util-format";
+
+export const viNumFmtInfo: NumberFormatInfo = {
+  thousandSeparator: ".",
+  decimalSeparator: ",",
+  currencySymbol: "VNĐ",
+  currencyPositivePattern: "n$",
+  currencyNegativePattern: "-n$",
+  percentSymbol: "%",
+  percentPositivePattern: "n%",
+  percentNegativePattern: "-n%",
+  NaNSymbol: "NaN",
+  positiveInfititySymbol: "∞",
+  negativeInfititySymbol: "-∞",
+  numberNegativePattern: "-n",
+};
 
 export const vi = define({
   // Common
