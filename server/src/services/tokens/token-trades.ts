@@ -51,7 +51,7 @@ async function fetchPoolTrades(
     }),
   );
 
-  return db
+  return await db
     .insert(poolTrades24h)
     .values(trades)
     .onConflictDoUpdate({

@@ -91,8 +91,8 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolAddress: varchar("address", { length: 44 }).primaryKey(),
   poolName: varchar("name"),
 
-  baseAddress: varchar("address", { length: 44 }),
-  quoteAddress: varchar("address", { length: 44 }),
+  baseAddress: varchar("address", { length: 44 }).notNull(),
+  quoteAddress: varchar("address", { length: 44 }).notNull(),
 
   dexId: varchar("dexName"),
   baseToQuote: decimal("base_to_quote").notNull(),
@@ -100,17 +100,13 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
 
-  buyVolume1h: decimal("buy_volume_1h"),
-  buyVolume6h: decimal("buy_volume_6h"),
-  buyVolume24h: decimal("buy_volume_24h"),
-
   buys1h: decimal("buys_1h"),
   buys6h: decimal("buys_6h"),
   buys24h: decimal("buys_24h"),
 
-  sellVolume1h: decimal("sell_volume_1h"),
-  sellVolume6h: decimal("sell_volume_6h"),
-  sellVolume24h: decimal("sell_volume_24h"),
+  volume1h: decimal("volume_1h"),
+  volume6h: decimal("volume_6h"),
+  volume24h: decimal("volume_24h"),
 
   sells1h: decimal("sells_1h"),
   sells6h: decimal("sells_6h"),
@@ -222,13 +218,22 @@ export const tokenHolderStats = pgTable("token_holder_stats", {
     .$onUpdate(() => new Date()),
 });
 
-export const topTokenHolders = pgTable("top_token_holders", {
-  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
-  holderAddress: varchar("holder_address", { length: 44 }).notNull(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const topTokenHolders = pgTable(
+  "top_token_holders",
+  {
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    holderAddress: varchar("holder_address", { length: 44 }).notNull(),
+    rank: integer("rank").notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.tokenAddress, table.rank],
+    }),
+  ],
+);
 
 export const wallets = pgTable("wallets", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -268,39 +273,6 @@ export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
   coinGeckoId: text("coin_gecko_id").notNull(),
 });
 
-// Pools data - Aggregated pool information for tokens
-export const tokenPools = pgTable("token_pools", {
-  address: varchar("address", { length: 44 }).primaryKey(),
-  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-  network: varchar("network", { length: 32 }).notNull().default("solana"),
-  name: varchar("name").notNull(),
-  source: varchar("source").notNull(), // dex name like "raydium", "orca"
-  volume24h: decimal("volume_24h").notNull(),
-  volumeBuy24h: decimal("volume_buy_24h").notNull(),
-  volumeSell24h: decimal("volume_sell_24h").notNull(),
-  volumeNet24h: decimal("volume_net_24h").notNull(),
-  reserve: decimal("reserve").notNull(),
-  liquidity: decimal("liquidity").notNull(),
-  marketCap: decimal("market_cap"),
-  fdv: decimal("fdv"),
-  priceUsd: decimal("price_usd").notNull(),
-  priceQuoteToken: decimal("price_quote_token").notNull(),
-  quoteTokenSymbol: varchar("quote_token_symbol", { length: 16 }),
-  priceChangeM5: decimal("price_change_m5").notNull(),
-  priceChangeH1: decimal("price_change_h1").notNull(),
-  priceChangeH6: decimal("price_change_h6").notNull(),
-  priceChangeH24: decimal("price_change_h24").notNull(),
-  txns24h: integer("txns_24h").notNull(),
-  buys24h: integer("buys_24h").notNull(),
-  sells24h: integer("sells_24h").notNull(),
-  traders24h: integer("traders_24h").notNull(),
-  buyers24h: integer("buyers_24h").notNull(),
-  sellers24h: integer("sellers_24h").notNull(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -308,37 +280,6 @@ export const trendingTokens = pgTable("trending_tokens", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
-
-// {
-//   "data": [
-//     {
-//       "id": "eth_19612255_0x0b8ac5a16c291832c1b4d5f0d8ef2d9d58e207cd8132c32392295617daa4d422_158_1712595165",
-//       "type": "trade",
-//       "attributes": {
-//         "block_number": 19612255,
-//         "tx_hash": "0x0b8ac5a16c291832c1b4d5f0d8ef2d9d58e207cd8132c32392295617daa4d422",
-//         "tx_from_address": "0x42c037c594eefeca741e9dd66af91e7ffd930872",
-//         token sold "from_token_amount": "1.51717616246451",
-//         token bought "to_token_amount": "5535.099061",
-//         sold token = ?? sold token "price_from_in_currency_token": "1.0",
-//         bought token = ?? sold token "price_to_in_currency_token": "0.000274100995437363",
-//         "price_from_in_usd": "3656.8970003075",
-//         "price_to_in_usd": "1.00235910799619",
-//         "block_timestamp": "2024-04-08T16:52:35Z",
-//         "kind": "buy",
-//         "volume_in_usd": "5548.15695745452",
-//         "from_token_address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-//         "to_token_address": "0xdac17f958d2ee523a2206206994597c13d831ec7"
-//       }
-//     }
-//   ]
-// }
-
-// Client? Recent trades (24h) of [token] in [pool]
-// Server> look into [poolTrades] -> filter by [pool]
-// -> filter by sellToken == [token] : sells of [token]
-// & filter by buyToken == [token] : buys of [token]
-// trades of [token] = sells of [token] + buys of [token]
 
 export const poolTrades24h = pgTable("pool_trades", {
   id: varchar("id", { length: 128 }).primaryKey(),
@@ -376,9 +317,10 @@ export type UserInsert = typeof users.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
-export type TokenPoolInsert = typeof tokenPools.$inferInsert;
+export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
-
+export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
+export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
 // #endregion

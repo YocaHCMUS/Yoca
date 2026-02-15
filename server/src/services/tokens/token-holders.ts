@@ -1,8 +1,10 @@
 import { TOP_TOKEN_HOLDERS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { topTokenHolders } from "@sv/db/schema.js";
+import { topTokenHolders, type TokenTopHolderInsert } from "@sv/db/schema.js";
+import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as mrl from "@sv/util/util-moralis.js";
 import { and, gte, inArray } from "drizzle-orm";
+import type { MRL_TopHolders } from "../_types/token_raw_responses.js";
 
 interface HoldersResponse {
   data?: {
@@ -41,19 +43,37 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
     headers: mrl.getRequiredHeaders(),
   });
 
-  if (resp.ok) {
-    const res = await resp.json();
-    return res;
-  } else {
+  if (!resp.ok) {
     return [];
   }
+  const res: MRL_TopHolders = await resp.json();
+  const topHolders = res.result.map(
+    (raw, idx): TokenTopHolderInsert => ({
+      holderAddress: raw.ownerAddress,
+      tokenAddress: tokenAddress,
+      rank: idx,
+    }),
+  );
+
+  return await db
+    .insert(topTokenHolders)
+    .values(topHolders)
+    .onConflictDoUpdate({
+      target: [topTokenHolders.tokenAddress, topTokenHolders.rank],
+      set: excludedAuto(topTokenHolders, [
+        topTokenHolders.tokenAddress,
+        topTokenHolders.rank,
+      ]),
+    })
+    .returning();
 }
 
 async function fetchTopHoldersForTokens(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return [];
+  }
   const topHolders = await Promise.all(
-    tokenAddresses.map((tokenAddress) =>
-      fetchTopHoldersForToken(tokenAddress),
-    ),
+    tokenAddresses.map((tokenAddress) => fetchTopHoldersForToken(tokenAddress)),
   );
   return topHolders;
 }
@@ -70,6 +90,18 @@ export async function getTopTokenHolders(tokenAddresses: string[]) {
         inArray(topTokenHolders.tokenAddress, tokenAddresses),
       ),
     );
+
+  const tokenAddressesToTopHolders = Object.fromEntries(
+    res.map((topHolders) => [topHolders.tokenAddress, topHolders]),
+  );
+  const staleTokenAddresses = tokenAddresses.filter(
+    (address) => !tokenAddressesToTopHolders[address],
+  );
+  const refreshed = await fetchTopHoldersForTokens(staleTokenAddresses);
+
+  if (staleTokenAddresses.length > 0) {
+    return [...res, ...refreshed];
+  }
 
   return res;
 }
