@@ -31,23 +31,22 @@ export type LitTransToShape<T> = T extends string
     ? { [K in keyof T]: LitTransToShape<T[K]> }
     : T;
 
-export type DotPaths<T, Prefix extends string = ""> = {
-  [K in keyof T]: T[K] extends object
-    ? T[K] extends string
-      ? `${Prefix}${K & string}`
-      : DotPaths<T[K], `${Prefix}${K & string}.`>
-    : `${Prefix}${K & string}`;
+type DotPathsHelper<T, Prefix extends string = ""> = {
+  [K in keyof T]: T[K] extends string
+    ? `${Prefix}${K & string}`
+    : T[K] extends object
+      ? DotPathsHelper<T[K], `${Prefix}${K & string}.`>
+      : `${Prefix}${K & string}`;
 }[keyof T];
 
-export type PathValue<
-  T,
-  P extends string,
-> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? PathValue<T[K], Rest>
-    : never
-  : P extends keyof T
-    ? T[P]
+export type DotPaths<T, Prefix extends string = ""> = DotPathsHelper<T, Prefix>;
+
+export type PathValue<T, P extends string> = P extends keyof T
+  ? T[P]
+  : P extends `${infer K}.${infer Rest}`
+    ? K extends keyof T
+      ? PathValue<T[K], Rest>
+      : never
     : never;
 
 export type ValidateTranslation<Base, Target> = Base extends string
@@ -80,4 +79,6 @@ export function defineTranslation<Base extends object>() {
   return <T>(t: T & ValidateTranslation<Base, T>): T => t;
 }
 
-type IsCorrect = "term | terms" extends `${string}|${string}` ? true : false;
+export type WithBase<T extends string> = string & {
+  __default?: T;
+};
