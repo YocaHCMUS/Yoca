@@ -3,36 +3,10 @@ import { db } from "@sv/db/index.js";
 import { topTokenHolders, type TokenTopHolderInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as mrl from "@sv/util/util-moralis.js";
-import { and, gte, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { MRL_TopHolders } from "../_types/token_raw_responses.js";
 
-interface HoldersResponse {
-  data?: {
-    attributes?: {
-      holders?: {
-        count: number;
-        distribution_percentage?: {
-          top_10: number;
-        };
-      };
-    };
-  };
-  holders?: {
-    count: number;
-    distribution_percentage?: {
-      top_10: number;
-    };
-  };
-}
-
-export interface TopHolder {
-  ownerAddress: string;
-  balance: string;
-  balanceFormatted: string;
-  percentageOfSupply: number;
-  usdValue: number;
-}
-
+// https://docs.moralis.com/web3-data-api/solana/reference/get-token-top-holders
 async function fetchTopHoldersForToken(tokenAddress: string) {
   const defaultLimit = 10;
   const mrlUrl = mrl.getEndpoint(
@@ -52,6 +26,7 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
       holderAddress: raw.ownerAddress,
       tokenAddress: tokenAddress,
       rank: idx,
+      percentage: Number(raw.percentageRelativeToTotalSupply),
     }),
   );
 
@@ -68,40 +43,28 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
     .returning();
 }
 
-async function fetchTopHoldersForTokens(tokenAddresses: string[]) {
-  if (tokenAddresses.length == 0) {
-    return [];
-  }
-  const topHolders = await Promise.all(
-    tokenAddresses.map((tokenAddress) => fetchTopHoldersForToken(tokenAddress)),
-  );
-  return topHolders;
-}
-
-export async function getTopTokenHolders(tokenAddresses: string[]) {
-  const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDERS_TTL_MS);
-
+export async function getTopTokenHolders(tokenAddress: string) {
   const res = await db
     .select()
     .from(topTokenHolders)
-    .where(
-      and(
-        gte(topTokenHolders.updatedAt, thresholdDate),
-        inArray(topTokenHolders.tokenAddress, tokenAddresses),
-      ),
+    .where(eq(topTokenHolders.tokenAddress, tokenAddress))
+    .orderBy(topTokenHolders.rank);
+
+  let stale = false;
+
+  if (res.length > 0) {
+    const latestUpdate = res.reduce((latest, cur) =>
+      cur.updatedAt > latest.updatedAt ? cur : latest,
     );
 
-  const tokenAddressesToTopHolders = Object.fromEntries(
-    res.map((topHolders) => [topHolders.tokenAddress, topHolders]),
-  );
-  const staleTokenAddresses = tokenAddresses.filter(
-    (address) => !tokenAddressesToTopHolders[address],
-  );
-  const refreshed = await fetchTopHoldersForTokens(staleTokenAddresses);
-
-  if (staleTokenAddresses.length > 0) {
-    return [...res, ...refreshed];
+    const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDERS_TTL_MS);
+    stale = latestUpdate.updatedAt < thresholdDate;
+  } else {
+    stale = true;
   }
 
+  if (stale) {
+    return await fetchTopHoldersForToken(tokenAddress);
+  }
   return res;
 }

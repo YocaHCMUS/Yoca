@@ -6,17 +6,24 @@
  * @module routes/charts/price-history.route
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { generateMockPriceHistory } from '../../services/mockChartData.service.js';
+import { Hono } from "hono";
+import { z } from "zod";
+
+async function generateMockPriceHistory(...args: any[]) {}
 
 /**
  * Request parameter schema for price history endpoint
  */
 const priceHistoryRequestSchema = z.object({
   tokens: z.string().optional(),
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
-  aggregation: z.enum(['hourly', 'daily', 'weekly', 'monthly']).optional().default('daily'),
+  period: z
+    .enum(["7D", "30D", "60D", "90D", "1Y", "All"])
+    .optional()
+    .default("30D"),
+  aggregation: z
+    .enum(["hourly", "daily", "weekly", "monthly"])
+    .optional()
+    .default("daily"),
 });
 
 /**
@@ -48,14 +55,16 @@ const app = new Hono()
    *   }
    * }
    */
-  .get('/', async (c) => {
+  .get("/", async (c) => {
     try {
       // Parse and validate query parameters
       const queryParams = c.req.query();
       const validatedParams = priceHistoryRequestSchema.parse(queryParams);
 
       // Extract parameters
-      const tokens = validatedParams.tokens ? validatedParams.tokens.split(',') : [];
+      const tokens = validatedParams.tokens
+        ? validatedParams.tokens.split(",")
+        : [];
       const period = validatedParams.period;
       const aggregation = validatedParams.aggregation;
 
@@ -66,20 +75,23 @@ const app = new Hono()
       return c.json({
         series,
         metadata: {
-          currency: 'USD',
-          timezone: 'UTC',
+          currency: "USD",
+          timezone: "UTC",
           aggregation,
           timestamp: Date.now(),
         },
       });
     } catch (error) {
-      console.error('Error fetching price history:', error);
+      console.error("Error fetching price history:", error);
 
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid query parameters', details: error.issues }, 400);
+        return c.json(
+          { error: "Invalid query parameters", details: error.issues },
+          400,
+        );
       }
 
-      return c.json({ error: 'Internal server error' }, 500);
+      return c.json({ error: "Internal server error" }, 500);
     }
   });
 

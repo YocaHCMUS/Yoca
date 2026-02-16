@@ -1,20 +1,24 @@
 /**
  * Distribution Chart API Route
- * 
+ *
  * Endpoint for fetching asset distribution data with percentage calculations
- * 
+ *
  * @module routes/charts/distribution.route
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { generateAssetDistribution } from '../../services/mockChartData.service.js';
+import { Hono } from "hono";
+import { z } from "zod";
+
+async function generateAssetDistribution(...args: any[]) {}
 
 /**
  * Request parameter schema for distribution endpoint
  */
 const distributionRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z
+    .enum(["7D", "30D", "60D", "90D", "1Y", "All"])
+    .optional()
+    .default("30D"),
   wallets: z.string().optional(),
 });
 
@@ -24,13 +28,13 @@ const distributionRequestSchema = z.object({
 const app = new Hono()
   /**
    * GET /api/charts/distribution
-   * 
+   *
    * Fetch asset distribution data with percentage calculations
-   * 
+   *
    * Query Parameters:
    * - period: '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' (default: '30D')
    * - wallets: Comma-separated wallet addresses (optional, default: all wallets)
-   * 
+   *
    * Response:
    * {
    *   data: Array<{
@@ -46,36 +50,41 @@ const app = new Hono()
    *   }
    * }
    */
-  .get('/', async (c) => {
+  .get("/", async (c) => {
     try {
       // Validate query parameters
       const query = c.req.query();
       const params = distributionRequestSchema.parse(query);
-      
+
       // Generate asset distribution data
-      const data = generateAssetDistribution(
-        params.period,
-        params.wallets
-      );
-      
+      const data = generateAssetDistribution(params.period, params.wallets);
+
       // Return response
       return c.json(data, 200);
-      
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
-        return c.json({
-          error: 'Validation error',
-          details: error.issues,
-        }, 400);
+        return c.json(
+          {
+            error: "Validation error",
+            details: error.issues,
+          },
+          400,
+        );
       }
-      
+
       // Handle other errors
-      console.error('[DistributionChart] Error fetching distribution data:', error);
-      return c.json({
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }, 500);
+      console.error(
+        "[DistributionChart] Error fetching distribution data:",
+        error,
+      );
+      return c.json(
+        {
+          error: "Internal server error",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500,
+      );
     }
   });
 

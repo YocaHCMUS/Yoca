@@ -3,8 +3,6 @@ import {
   addressSchema,
   validate,
 } from "@sv/middlewares/validation.js";
-import * as coingeckoOnchainService from "@sv/services/coingecko-onchain.js";
-import * as moralisService from "@sv/services/moralis.js";
 import * as tokenService from "@sv/services/tokens/index.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
@@ -110,32 +108,17 @@ const app = new Hono()
   .get("/holders/:address", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const holders = await moralisService.getTopHolders(address);
-      return c.json(holders, statusCode.Ok);
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        messageText.InternalServerError,
-        statusCode.InternalServerError,
-      );
-    }
-  })
-  .get("/trades/:network/:address", async (c) => {
-    try {
-      const { network, address } = c.req.param();
-      // Validation handled manually or simple check
-      if (!network || !address) {
+
+      const holders = await tokenService.getTopTokenHolders(address);
+
+      if (holders) {
+        return c.json(holders, statusCode.Ok);
+      } else {
         return c.json(
-          { error: "Missing network or address" },
-          statusCode.BadRequest,
+          messageText.FailedToFetchRequestedData,
+          statusCode.BadGateway,
         );
       }
-
-      const trades = await coingeckoOnchainService.getPoolTrades(
-        network,
-        address,
-      );
-      return c.json(trades, statusCode.Ok);
     } catch (err) {
       console.error(err);
       return c.json(
@@ -144,13 +127,11 @@ const app = new Hono()
       );
     }
   })
-  .get("/pools/:address", validate("param", addressSchema), async (c) => {
+  .get("/:address/pools", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const network = c.req.query("network") || "solana";
-      const limit = parseInt(c.req.query("limit") || "20");
 
-      const pools = await tokenService.getTokenPools(address, network, limit);
+      const pools = await tokenService.getTokenTopPools(address);
 
       return c.json(pools, statusCode.Ok);
     } catch (err) {
@@ -161,12 +142,11 @@ const app = new Hono()
       );
     }
   })
-  .get("/pool/:address", validate("param", addressSchema), async (c) => {
+  .get("/pools/:address", validate("param", addressSchema), async (c) => {
     try {
-      const { address } = c.req.valid("param");
-      const network = c.req.query("network") || "solana";
+      const { address: poolAddress } = c.req.valid("param");
 
-      const pool = await tokenService.getPoolDetails(address, network);
+      const pool = await tokenService.getTokenPoolData(poolAddress);
 
       if (pool) {
         return c.json(pool, statusCode.Ok);
@@ -184,57 +164,35 @@ const app = new Hono()
       );
     }
   })
-  .get("/onchain/:address", validate("param", addressSchema), async (c) => {
-    try {
-      const { address } = c.req.valid("param");
-      const network = c.req.query("network") || "solana";
+  .get(
+    "/pools/trades/:address",
+    validate("param", addressSchema),
+    async (c) => {
+      try {
+        const { address: poolAddress } = c.req.valid("param");
 
-      const data = await tokenService.getOnchainTokenData(address, network);
-
-      if (data) {
-        return c.json(data, statusCode.Ok);
-      } else {
+        const trades = await tokenService.getPoolTrades24h(poolAddress);
+        return c.json(trades, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
         return c.json(
-          messageText.FailedToFetchRequestedData,
-          statusCode.BadGateway,
+          messageText.InternalServerError,
+          statusCode.InternalServerError,
         );
       }
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        messageText.InternalServerError,
-        statusCode.InternalServerError,
-      );
-    }
-  })
-  .get("/trending", async (c) => {
-    try {
-      const trending = await tokenService.getTrendingTokens();
-      return c.json(trending, statusCode.Ok);
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        messageText.InternalServerError,
-        statusCode.InternalServerError,
-      );
-    }
-  })
-
-  .get("/pool-trades/:address", validate("param", addressSchema), async (c) => {
-    try {
-      const { address } = c.req.valid("param");
-      const network = c.req.query("network") || "solana";
-
-      const trades = await tokenService.getPoolTrades(address, network);
-
-      return c.json(trades, statusCode.Ok);
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        messageText.InternalServerError,
-        statusCode.InternalServerError,
-      );
-    }
-  });
+    },
+  );
+// .get("/trending", async (c) => {
+//   try {
+//     const trending = await tokenService.getTrendingTokens();
+//     return c.json(trending, statusCode.Ok);
+//   } catch (err) {
+//     console.error(err);
+//     return c.json(
+//       messageText.InternalServerError,
+//       statusCode.InternalServerError,
+//     );
+//   }
+// });
 
 export default app;

@@ -91,10 +91,10 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolAddress: varchar("address", { length: 44 }).primaryKey(),
   poolName: varchar("name"),
 
-  baseAddress: varchar("address", { length: 44 }).notNull(),
-  quoteAddress: varchar("address", { length: 44 }).notNull(),
+  baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
 
-  dexId: varchar("dexName"),
+  dexId: varchar("dex_id"),
   baseToQuote: decimal("base_to_quote").notNull(),
 
   poolCreatedAt: timestamp("pool_created_at"),
@@ -120,8 +120,8 @@ export const tokenPoolData = pgTable("token_pool_data", {
 export const tokenTopPools = pgTable(
   "token_tops_pool",
   {
-    tokenAddress: varchar("address", { length: 44 }).notNull(),
-    poolAddress: varchar("address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
     rank: integer("rank").notNull(),
 
     updatedAt: timestamp("updated_at")
@@ -224,6 +224,7 @@ export const topTokenHolders = pgTable(
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
     holderAddress: varchar("holder_address", { length: 44 }).notNull(),
     rank: integer("rank").notNull(),
+    percentage: decimal("percentage").notNull(),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),
@@ -281,19 +282,19 @@ export const trendingTokens = pgTable("trending_tokens", {
     .$onUpdate(() => new Date()),
 });
 
-export const poolTrades24h = pgTable("pool_trades", {
+export const poolTrades24h = pgTable("pool_trades_24h", {
   id: varchar("id", { length: 128 }).primaryKey(),
 
   poolAddress: varchar("pool_address", { length: 44 }).notNull(),
-  transactionHash: varchar("address", { length: 44 }).primaryKey(),
+  transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
 
-  signerAddress: varchar("address", { length: 44 }).primaryKey(),
+  signerAddress: varchar("signer_address", { length: 44 }).notNull(),
 
   sellTokenAmount: decimal("sell_token_amount").notNull(),
   buyTokenAmount: decimal("buy_token_amount").notNull(),
 
-  sellTokenAddress: varchar("sell_token_address", { length: 44 }).primaryKey(),
-  buyTokenAddress: varchar("buy_token_address", { length: 44 }).primaryKey(),
+  sellTokenAddress: varchar("sell_token_address", { length: 44 }).notNull(),
+  buyTokenAddress: varchar("buy_token_address", { length: 44 }).notNull(),
 
   sellTokenPriceUsd: decimal("sell_token_price_usd").notNull(),
   buyTokenPriceUsd: decimal("buy_token_price_usd").notNull(),

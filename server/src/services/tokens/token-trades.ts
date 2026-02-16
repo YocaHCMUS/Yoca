@@ -87,6 +87,8 @@ export async function getPoolTrades24h(poolAddress: string) {
 
     const thresholdDate = new Date(Date.now() - POOL_TRADES_TTL_MS);
     stale = latestUpdate.updatedAt < thresholdDate;
+  } else {
+    stale = true;
   }
 
   if (stale) {
