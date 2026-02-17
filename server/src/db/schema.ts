@@ -1,7 +1,8 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
   char,
+  check,
   decimal as dec,
   integer,
   pgEnum,
@@ -9,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -20,39 +22,50 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-export const chartGranularityOrder = {
-  five_minutely: 0,
-  hourly: 1,
-  daily: 2,
-} as const;
-
-type ChartGranularityKey = keyof typeof chartGranularityOrder;
-
-const chartGranularity = pgEnum(
-  "chart_granularity",
-  Object.keys(chartGranularityOrder) as [
-    ChartGranularityKey,
-    ...ChartGranularityKey[],
-  ],
-  // The above type means an array of atleast one ChartGranularityKey,
-  // as pgEnum doesn't allow empty arrays
-);
-
 // #region Table definitions
+const enumAuthProvider = pgEnum("auth_provider", [
+  "password",
+  "google",
+  "github",
+  "web3",
+]);
 
-// server/src/db/schema.ts
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  username: text("username").notNull().unique(), // Thêm username
-  password: text("password"), // Lưu mật khẩu hash
-  name: text("name"), 
-  email: text("email").notNull().unique(),
-  googleId: text("google_id"), // Dành cho Google OAuth
-  // Địa chỉ ví liên kết (ví dụ MetaMask / EVM). Để null nếu chưa liên kết.
-  walletAddress: text("wallet_address").array().default([]),
+  displayName: varchar("name"),
+  // Email is not needed for wallet users, see it as contact
+  email: varchar("email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
 });
+
+export const authAccounts = pgTable(
+  "auth_accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: enumAuthProvider("provider").notNull(),
+    providerUserId: varchar("provider_user_id"),
+    hashedPassword: varchar("hashed_password"),
+  },
+  (table) => [
+    uniqueIndex("provider_user_unique").on(
+      table.provider,
+      table.providerUserId,
+    ),
+    check(
+      "provider_password",
+      sql`${table.provider} != 'password' OR ${table.hashedPassword} IS NOT NULL`,
+    ),
+    check(
+      "provider_third_party",
+      sql`${table.provider} = 'password' OR ${table.hashedPassword} IS NULL`,
+    ),
+  ],
+);
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -81,7 +94,6 @@ export const tokenMarketData = pgTable("token_market_data", {
   marketCapChangePercentage24h: decimal(
     "market_cap_change_percentage_24h",
   ).notNull(),
-  // marketCapRank: decimal("market_cap_rank").notNull(),
   high24h: decimal("high_24h").notNull(),
   low24h: decimal("low_24h").notNull(),
   fullyDilutedValuation: decimal("fully_diluted_valuation"),
@@ -142,7 +154,7 @@ export const tokenMarketChartDaily = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull() ,
+    unixUpdatedAt: integer("unix_updated_at").notNull(),
   },
   (table) => [
     primaryKey({
@@ -248,9 +260,9 @@ export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
+export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
-export type ChartGranularity = (typeof chartGranularity.enumValues)[number];
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 
 // #endregion

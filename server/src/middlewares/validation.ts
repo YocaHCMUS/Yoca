@@ -1,6 +1,6 @@
-import z from "zod";
-import { validator } from "hono/validator";
 import type { ValidationTargets } from "hono";
+import { validator } from "hono/validator";
+import z from "zod";
 
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
@@ -35,11 +35,22 @@ export const tokenIdSchema = z.object({
   id: z.string().trim().min(1),
 });
 
-export const userSchema = z.object({
-  email: z.string().email("Invalid email format"),
+export const userCreationSchema = z.object({
+  email: z.email("Invalid email format"),
+  displayName: z.string().min(1).optional(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+export const userVerificationSchema = z.object({
+  email: z.email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const googleTokenSchema = z.object({
+  token: z.string().min(1),
+});
+
+// Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,
   U extends z.ZodType,
