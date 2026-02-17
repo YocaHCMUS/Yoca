@@ -1,5 +1,8 @@
 // server/src/routes/users.ts
-import { AUTHEN_COOKIE_TTL_MS } from "@sv/config/constants.js";
+import {
+  AUTH_COOKIE_NAME,
+  AUTHEN_COOKIE_TTL_MS,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { authAccounts, users } from "@sv/db/schema.js";
 import {
@@ -8,7 +11,7 @@ import {
   userVerificationSchema,
   validate,
 } from "@sv/middlewares/validation.js";
-import { messageText } from "@sv/util/responses.js";
+import { messageText, statusCode } from "@sv/util/responses.js";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
@@ -39,11 +42,11 @@ async function setAuthToken(c: any, userId: string) {
   const token = await sign(
     {
       id: userId,
-      exp: Math.floor(Date.now() + AUTHEN_COOKIE_TTL_MS) / 1000, // 7 days
+      exp: Math.floor(Date.now() + AUTHEN_COOKIE_TTL_MS) / 1000,
     },
     jwtSecret,
   );
-  setCookie(c, "auth_token", token, {
+  setCookie(c, AUTH_COOKIE_NAME, token, {
     secure: true,
     httpOnly: true,
     sameSite: "None",
@@ -58,11 +61,11 @@ const app = new Hono()
     jwt({
       alg: "HS256",
       secret: process.env.JWT_SECRET!,
-      cookie: "auth_token",
+      cookie: AUTH_COOKIE_NAME,
     }),
   )
   .get("/example/of/protected/url/1", async (c) => {
-    return c.json("ok you're good", 200);
+    return c.json("ok you're good", statusCode.Ok);
   })
   .post(
     "/auth/password/register",
@@ -83,7 +86,10 @@ const app = new Hono()
           .limit(1);
 
         if (existingPasswordUser) {
-          return c.json("Account already existed", 400);
+          return c.json(
+            messageText.AccountAlreadyExists,
+            statusCode.BadRequest,
+          );
         }
 
         let userId = "";
@@ -116,14 +122,17 @@ const app = new Hono()
 
         return c.json(
           {
-            message: "User created successfully",
+            message: messageText.UserCreatedSuccessfully,
             userId,
             token,
           },
-          201,
+          statusCode.Created,
         );
       } catch (err) {
-        return c.json("Email or username already existed", 400);
+        return c.json(
+          messageText.EmailOrUsernameAlreadyExists,
+          statusCode.BadRequest,
+        );
       }
     },
   )
@@ -145,7 +154,10 @@ const app = new Hono()
         .limit(1);
 
       if (!passwordUser) {
-        return c.json("Email or password was incorrect", 401);
+        return c.json(
+          messageText.InvalidEmailOrPassword,
+          statusCode.Unauthorized,
+        );
       }
 
       const passwordMatched = await bcrypt.compare(
@@ -154,18 +166,21 @@ const app = new Hono()
       );
 
       if (!passwordMatched) {
-        return c.json("Email or password was incorrect", 401);
+        return c.json(
+          messageText.InvalidEmailOrPassword,
+          statusCode.Unauthorized,
+        );
       }
 
       const token = await setAuthToken(c, passwordUser.userId);
 
       return c.json(
         {
-          message: "Logged-in Successfully",
+          message: messageText.LoggedInSuccessfully,
           userId: passwordUser.userId,
           token,
         },
-        200,
+        statusCode.Ok,
       );
     },
   )
@@ -177,7 +192,10 @@ const app = new Hono()
       const payload = await verifyGoogleToken(googleToken);
 
       if (!payload) {
-        return c.json("Could not verify Google account", 400);
+        return c.json(
+          messageText.CouldNotVerifyGoogleAccount,
+          statusCode.BadRequest,
+        );
       }
 
       const googleId = payload.sub;
@@ -216,20 +234,23 @@ const app = new Hono()
 
       return c.json(
         {
-          message: "Google Logged-in Successfully",
+          message: messageText.GoogleLoggedInSuccessfully,
           userId,
           token,
         },
-        200,
+        statusCode.Ok,
       );
     } catch (err) {
       console.error(err);
-      return c.json(messageText.InternalServerError, 500);
+      return c.json(
+        messageText.InternalServerError,
+        statusCode.InternalServerError,
+      );
     }
   })
   .delete("/auth/logout", async (c) => {
-    deleteCookie(c, "auth_token");
-    return c.json("Logged out successfully", 200);
+    deleteCookie(c, AUTH_COOKIE_NAME);
+    return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
   });
 
 // // Wallet auth (MetaMask / EVM)

@@ -23,7 +23,7 @@ function decimal(name: string) {
 }
 
 // #region Table definitions
-const enumAuthProvider = pgEnum("auth_provider", [
+export const enumAuthProvider = pgEnum("auth_provider", [
   "password",
   "google",
   "github",
@@ -32,7 +32,7 @@ const enumAuthProvider = pgEnum("auth_provider", [
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  displayName: varchar("name"),
+  displayName: varchar("display_name"),
   // Email is not needed for wallet users, see it as contact
   email: varchar("email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

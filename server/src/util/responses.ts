@@ -4,13 +4,22 @@ export const messageText = {
   FailedToFetchExternalData: "Failed to fetch data from external sources",
   InternalServerError:
     "There was a problem happened on the server. Please try again later.",
+  AccountAlreadyExists: "Account already exists",
+  EmailOrUsernameAlreadyExists: "Email or username already exists",
+  InvalidEmailOrPassword: "Email or password was incorrect",
+  CouldNotVerifyGoogleAccount: "Could not verify Google account",
+  UserCreatedSuccessfully: "User created successfully",
+  LoggedInSuccessfully: "Logged-in successfully",
+  GoogleLoggedInSuccessfully: "Google logged-in successfully",
+  LoggedOutSuccessfully: "Logged out successfully",
 } as const;
 
 export const statusCode = {
   Ok: 200,
   Created: 201,
   Accepted: 202,
+  BadRequest: 400,
+  Unauthorized: 401,
   InternalServerError: 500,
   BadGateway: 502,
-  BadRequest: 400,
 } as const;

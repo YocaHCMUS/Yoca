@@ -26,13 +26,8 @@ const app = new Hono()
   .use("*", logger())
   .use(
     "/api/*",
-    cors({
-      origin: clientDomains,
-      credentials: true,
-    }),
-    csrf({
-      origin: clientDomains,
-    }),
+    cors({ origin: clientDomains, credentials: true }),
+    csrf({ origin: clientDomains }),
   )
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }))
