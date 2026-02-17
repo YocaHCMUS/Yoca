@@ -1311,3 +1311,224 @@ export function generateAverageRollingAnnualReturn(
   };
 }
 
+/**
+ * Generate mock winrate data
+ * 
+ * Returns winrate and magnitude distribution for each wallet
+ */
+export function generateWinrateData(
+  wallets: string[] = [],
+  period: string = '30D'
+) {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = wallets.length > 0
+    ? wallets.map((addr, idx) => {
+        const defaultWallet = defaultWallets.find(w => w.address === addr);
+        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+      })
+    : defaultWallets;
+  
+  // Define magnitude bins (percentage ranges)
+  const bins = [
+    { range: '0-5%', min: 0, max: 5 },
+    { range: '5-10%', min: 5, max: 10 },
+    { range: '10-20%', min: 10, max: 20 },
+    { range: '20-50%', min: 20, max: 50 },
+    { range: '50-100%', min: 50, max: 100 },
+    { range: '100%+', min: 100, max: 200 },
+  ];
+  
+  // Generate wallet data
+  const walletData = walletsToGenerate.map((wallet, index) => {
+    // Vary winrate by wallet (45-75% range)
+    const baseWinrate = 50 + index * 5 + (Math.random() * 15);
+    const winrate = Math.min(85, Math.max(35, baseWinrate));
+    
+    // Generate total trades (50-200 range)
+    const totalTrades = Math.floor(100 + Math.random() * 100);
+    const winningTrades = Math.floor(totalTrades * (winrate / 100));
+    const losingTrades = totalTrades - winningTrades;
+    
+    // Generate winning distribution (higher concentration in lower bins)
+    const winningDistribution = bins.map((bin, binIndex) => {
+      // Exponential decay for higher bins
+      const baseCount = winningTrades * Math.exp(-binIndex * 0.6);
+      const count = Math.max(0, Math.floor(baseCount + (Math.random() * 5 - 2.5)));
+      return {
+        range: bin.range,
+        count,
+        min: bin.min,
+        max: bin.max,
+      };
+    });
+    
+    // Normalize winning distribution to match total
+    const winningSum = winningDistribution.reduce((sum, d) => sum + d.count, 0);
+    if (winningSum > 0) {
+      const scaleFactor = winningTrades / winningSum;
+      winningDistribution.forEach(d => {
+        d.count = Math.floor(d.count * scaleFactor);
+      });
+    }
+    
+    // Generate losing distribution (similar pattern)
+    const losingDistribution = bins.map((bin, binIndex) => {
+      const baseCount = losingTrades * Math.exp(-binIndex * 0.7);
+      const count = Math.max(0, Math.floor(baseCount + (Math.random() * 5 - 2.5)));
+      return {
+        range: bin.range,
+        count,
+        min: bin.min,
+        max: bin.max,
+      };
+    });
+    
+    // Normalize losing distribution to match total
+    const losingSum = losingDistribution.reduce((sum, d) => sum + d.count, 0);
+    if (losingSum > 0) {
+      const scaleFactor = losingTrades / losingSum;
+      losingDistribution.forEach(d => {
+        d.count = Math.floor(d.count * scaleFactor);
+      });
+    }
+    
+    return {
+      walletAddress: wallet.address,
+      walletName: wallet.name,
+      winrate: parseFloat(winrate.toFixed(2)),
+      totalTrades,
+      winningTrades,
+      losingTrades,
+      winningDistribution,
+      losingDistribution,
+    };
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      period,
+      timestamp: Date.now(),
+    },
+  };
+}
+
+/**
+ * Generate mock drawdown data
+ * 
+ * Returns drawdown time series and maximum drawdown info for each wallet
+ */
+export function generateDrawdownData(
+  wallets: string[] = [],
+  period: string = '30D'
+) {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = wallets.length > 0
+    ? wallets.map((addr, idx) => {
+        const defaultWallet = defaultWallets.find(w => w.address === addr);
+        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+      })
+    : defaultWallets;
+  
+  // Time range setup
+  const periodDays = parsePeriodToDays(period);
+  const now = Date.now();
+  const startTime = now - (periodDays * 24 * 60 * 60 * 1000);
+  const dataPoints = Math.min(periodDays, 100); // Max 100 data points
+  const intervalMs = (now - startTime) / dataPoints;
+  
+  // Generate wallet data
+  const walletData = walletsToGenerate.map((wallet, walletIndex) => {
+    const data: Array<{ timestamp: number; value: number }> = [];
+    
+    // Track running maximum value for drawdown calculation
+    let runningMax = 100; // Start at 100% (no drawdown)
+    let maxDrawdown = 0;
+    let maxDrawdownTimestamp = now;
+    
+    // Generate time series with realistic drawdown pattern
+    for (let i = 0; i <= dataPoints; i++) {
+      const timestamp = startTime + (i * intervalMs);
+      
+      // Simulate portfolio value changes
+      // Mix of trends, volatility, and occasional drawdowns
+      const progress = i / dataPoints;
+      
+      // Overall upward trend
+      const trend = progress * 20;
+      
+      // Add volatility
+      const volatility = Math.sin(timestamp / (1000 * 60 * 60 * 24 * 7)) * 10;
+      
+      // Random walk
+      const noise = (Math.random() - 0.5) * 5;
+      
+      // Occasional significant drawdowns
+      const drawdownEvent = Math.sin(timestamp / (1000 * 60 * 60 * 24 * 30) + walletIndex) < -0.7
+        ? -15 * (1 + Math.random())
+        : 0;
+      
+      // Calculate portfolio value
+      const portfolioValue = 100 + trend + volatility + noise + drawdownEvent;
+      
+      // Update running max
+      if (portfolioValue > runningMax) {
+        runningMax = portfolioValue;
+      }
+      
+      // Calculate drawdown as percentage from peak
+      const drawdown = ((portfolioValue - runningMax) / runningMax) * 100;
+      
+      // Track max drawdown
+      if (drawdown < maxDrawdown) {
+        maxDrawdown = drawdown;
+        maxDrawdownTimestamp = timestamp;
+      }
+      
+      data.push({
+        timestamp,
+        value: parseFloat(drawdown.toFixed(2)),
+      });
+    }
+    
+    // Calculate days since max drawdown
+    const daysSinceMax = Math.floor((now - maxDrawdownTimestamp) / (24 * 60 * 60 * 1000));
+    
+    // Current drawdown is the last value
+    const currentDrawdown = data[data.length - 1].value;
+    
+    return {
+      walletAddress: wallet.address,
+      walletName: wallet.name,
+      data,
+      maxDrawdown: parseFloat(maxDrawdown.toFixed(2)),
+      maxDrawdownTimestamp,
+      daysSinceMaxDrawdown: daysSinceMax,
+      currentDrawdown: parseFloat(currentDrawdown.toFixed(2)),
+    };
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      period,
+      timestamp: now,
+      currency: 'USD',
+    },
+  };
+}
+

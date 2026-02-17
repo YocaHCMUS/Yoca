@@ -1,0 +1,36 @@
+.winrateContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  height: 100%;
+}
+
+.overallSection {
+  width: 100%;
+  min-height: 300px;
+}
+
+.distributionSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.distributionChart {
+  min-height: 350px;
+  background: var(--cds-layer-01);
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .distributionSection {
+    grid-template-columns: 1fr;
+  }
+  
+  .distributionChart {
+    min-height: 300px;
+  }
+}

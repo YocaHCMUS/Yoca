@@ -697,3 +697,129 @@ export interface AverageRollingAnnualReturnRequestParams extends ChartResponseBa
   
   [key: string]: string | number | undefined;
 }
+
+/**
+ * Winrate chart API response
+ * GET /api/charts/winrate
+ */
+export interface WinrateResponse extends ChartResponseBase {
+  /** Per-wallet winrate data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Overall winrate percentage (0-100) */
+    winrate: number;
+    
+    /** Total number of trades */
+    totalTrades: number;
+    
+    /** Number of winning trades */
+    winningTrades: number;
+    
+    /** Number of losing trades */
+    losingTrades: number;
+    
+    /** Winning magnitude distribution (bins) */
+    winningDistribution: {
+      /** Bin range label (e.g., "0-10%", "10-20%") */
+      range: string;
+      
+      /** Count of trades in this bin */
+      count: number;
+      
+      /** Lower bound of bin (%) */
+      min: number;
+      
+      /** Upper bound of bin (%) */
+      max: number;
+    }[];
+    
+    /** Losing magnitude distribution (bins) */
+    losingDistribution: {
+      /** Bin range label (e.g., "0-10%", "10-20%") */
+      range: string;
+      
+      /** Count of trades in this bin */
+      count: number;
+      
+      /** Lower bound of bin (%) */
+      min: number;
+      
+      /** Upper bound of bin (%) */
+      max: number;
+    }[];
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    period: string;
+    timestamp: number;
+  };
+}
+
+/**
+ * Drawdown chart API response
+ * GET /api/charts/drawdown
+ */
+export interface DrawdownResponse extends ChartResponseBase {
+  /** Per-wallet drawdown data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Drawdown time series data (percentage) */
+    data: TimeSeriesPoint[];
+    
+    /** Maximum drawdown percentage (negative value) */
+    maxDrawdown: number;
+    
+    /** Timestamp when maximum drawdown occurred */
+    maxDrawdownTimestamp: number;
+    
+    /** Days since maximum drawdown */
+    daysSinceMaxDrawdown: number;
+    
+    /** Current drawdown percentage (negative value or 0) */
+    currentDrawdown: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    period: string;
+    timestamp: number;
+    currency: string;
+  };
+}
+
+/**
+ * API request parameters for winrate endpoint
+ */
+export interface WinrateRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for drawdown endpoint
+ */
+export interface DrawdownRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  [key: string]: string | number | undefined;
+}

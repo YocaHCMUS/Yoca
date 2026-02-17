@@ -20,6 +20,8 @@ import type {
   TradingVolumePerTransactionResponse,
   RollingAnnualReturnResponse,
   AverageRollingAnnualReturnResponse,
+  WinrateResponse,
+  DrawdownResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -33,6 +35,8 @@ import type {
   TradingVolumePerTransactionRequestParams,
   RollingAnnualReturnRequestParams,
   AverageRollingAnnualReturnRequestParams,
+  WinrateRequestParams,
+  DrawdownRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -183,6 +187,22 @@ export async function fetchAverageRollingAnnualReturn(params?: AverageRollingAnn
   return fetchAPI<AverageRollingAnnualReturnResponse>('/average-rolling-annual-return', params);
 }
 
+/**
+ * Fetch winrate data
+ * GET /api/charts/winrate
+ */
+export async function fetchWinrate(params?: WinrateRequestParams): Promise<WinrateResponse> {
+  return fetchAPI<WinrateResponse>('/winrate', params);
+}
+
+/**
+ * Fetch drawdown data
+ * GET /api/charts/drawdown
+ */
+export async function fetchDrawdown(params?: DrawdownRequestParams): Promise<DrawdownResponse> {
+  return fetchAPI<DrawdownResponse>('/drawdown', params);
+}
+
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
@@ -197,6 +217,8 @@ export const chartApi = {
   fetchTradingVolumePerTransaction,
   fetchRollingAnnualReturn,
   fetchAverageRollingAnnualReturn,
+  fetchWinrate,
+  fetchDrawdown,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -211,4 +233,6 @@ export const chartApi = {
   getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
   getRollingAnualReturn: fetchRollingAnnualReturn,
   getAverageRollingAnnualReturn: fetchAverageRollingAnnualReturn,
+  getWinrate: fetchWinrate,
+  getDrawdown: fetchDrawdown,
 };
