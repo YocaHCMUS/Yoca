@@ -3,19 +3,18 @@ import {
   AUTH_COOKIE_NAME,
   AUTHEN_COOKIE_TTL_MS,
 } from "@sv/config/constants.js";
-import { db } from "@sv/db/index.js";
-import { authAccounts, users } from "@sv/db/schema.js";
 import {
   googleTokenSchema,
+  solanaNounceRequestSchema,
+  solanaVerificationRequestSchema,
   userCreationSchema,
   userVerificationSchema,
   validate,
 } from "@sv/middlewares/validation.js";
+import * as userService from "@sv/services/users.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
-import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 
@@ -38,7 +37,7 @@ async function verifyGoogleToken(idToken: string) {
   return payload;
 }
 
-async function setAuthToken(c: any, userId: string) {
+async function setAuthToken(c: Context, userId: string) {
   const token = await sign(
     {
       id: userId,
@@ -73,53 +72,19 @@ const app = new Hono()
     async (c) => {
       try {
         const { email, displayName, password } = c.req.valid("json");
-
-        const [existingPasswordUser] = await db
-          .select()
-          .from(authAccounts)
-          .where(
-            and(
-              eq(authAccounts.provider, "password"),
-              eq(authAccounts.providerUserId, email),
-            ),
-          )
-          .limit(1);
-
+        const existingPasswordUser = await userService.findUserByEmail(email);
         if (existingPasswordUser) {
           return c.json(
             messageText.AccountAlreadyExists,
             statusCode.BadRequest,
           );
         }
-
-        let userId = "";
-
-        await db.transaction(async (tx) => {
-          const [newUser] = await tx
-            .insert(users)
-            .values({
-              email,
-              displayName: displayName || null,
-            })
-            .returning();
-
-          const hashedPassword = await bcrypt.hash(password, 10);
-
-          await tx
-            .insert(authAccounts)
-            .values({
-              userId: newUser.id,
-              provider: "password",
-              providerUserId: email,
-              hashedPassword,
-            })
-            .returning();
-
-          userId = newUser.id;
-        });
-
+        const userId = await userService.createUserWithPassword(
+          email,
+          displayName || null,
+          password,
+        );
         const token = await setAuthToken(c, userId);
-
         return c.json(
           {
             message: messageText.UserCreatedSuccessfully,
@@ -141,39 +106,17 @@ const app = new Hono()
     validate("json", userVerificationSchema),
     async (c) => {
       const { email, password } = c.req.valid("json");
-
-      const [passwordUser] = await db
-        .select()
-        .from(authAccounts)
-        .where(
-          and(
-            eq(authAccounts.provider, "password"),
-            eq(authAccounts.providerUserId, email),
-          ),
-        )
-        .limit(1);
-
+      const passwordUser = await userService.verifyUserPassword(
+        email,
+        password,
+      );
       if (!passwordUser) {
         return c.json(
           messageText.InvalidEmailOrPassword,
           statusCode.Unauthorized,
         );
       }
-
-      const passwordMatched = await bcrypt.compare(
-        password,
-        passwordUser.hashedPassword!,
-      );
-
-      if (!passwordMatched) {
-        return c.json(
-          messageText.InvalidEmailOrPassword,
-          statusCode.Unauthorized,
-        );
-      }
-
       const token = await setAuthToken(c, passwordUser.userId);
-
       return c.json(
         {
           message: messageText.LoggedInSuccessfully,
@@ -200,38 +143,14 @@ const app = new Hono()
 
       const googleId = payload.sub;
 
-      const [googleUser] = await db
-        .select()
-        .from(authAccounts)
-        .where(
-          and(
-            eq(authAccounts.provider, "google"),
-            eq(authAccounts.providerUserId, googleId),
-          ),
-        )
-        .limit(1);
-
+      const googleUser = await userService.findUserByGoogleId(googleId);
       let userId = "";
-
       if (googleUser) {
         userId = googleUser.userId;
       } else {
-        // Create user if not exist
-        await db.transaction(async (tx) => {
-          const [newUser] = await tx.insert(users).values({}).returning();
-
-          await tx.insert(authAccounts).values({
-            provider: "google",
-            userId: newUser.id,
-            providerUserId: googleId,
-          });
-
-          userId = newUser.id;
-        });
+        userId = await userService.createUserWithGoogle(googleId);
       }
-
       const token = await setAuthToken(c, userId);
-
       return c.json(
         {
           message: messageText.GoogleLoggedInSuccessfully,
@@ -248,66 +167,73 @@ const app = new Hono()
       );
     }
   })
+  .post(
+    "auth/solana/nounce",
+    validate("json", solanaNounceRequestSchema),
+    async (c) => {
+      const { pubKey } = c.req.valid("json");
+
+      const existingWalletUser =
+        await userService.findUserByWalletAddress(pubKey);
+
+      if (existingWalletUser) {
+        const nounce = await userService.updateWalletLoginNounce(
+          existingWalletUser.userId,
+        );
+        return c.json(
+          {
+            signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+            nounce,
+          },
+          statusCode.Ok,
+        );
+      }
+
+      const { nounce } = await userService.createUserWithWallet(pubKey);
+      return c.json(
+        {
+          signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+          nounce,
+        },
+        statusCode.Created,
+      );
+    },
+  )
+  .post(
+    "auth/solana/verify",
+    validate("json", solanaVerificationRequestSchema),
+    async (c) => {
+      const { pubKey, signature } = c.req.valid("json");
+
+      const account = await userService.verifyWalletLoginNounce(
+        pubKey,
+        signature,
+      );
+
+      if (!account) {
+        return c.json(
+          {
+            message: messageText.SolanaWalletVerificationFailed,
+          },
+          statusCode.BadRequest,
+        );
+      }
+
+      const token = await setAuthToken(c, account.userId);
+
+      return c.json(
+        {
+          message: messageText.SolanaWalletVerifiedSuccessfully,
+          userId: account.userId,
+          token,
+        },
+        statusCode.Created,
+      );
+    },
+  )
   .delete("/auth/logout", async (c) => {
     deleteCookie(c, AUTH_COOKIE_NAME);
     return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
   });
-
-// // Wallet auth (MetaMask / EVM)
-// .post("/wallet-auth", async (c) => {
-//   const { address, blockchain, walletType } = await c.req.json();
-
-//   if (!address)
-//     return c.json({ success: false, error: "Thiếu địa chỉ ví" }, 400);
-
-//   try {
-//     // Tìm user có chứa địa chỉ ví trong mảng walletAddress (text[])
-//     let [user] = await db
-//       .select()
-//       .from(users)
-//       .where(sql`${address} = ANY(${users.walletAddress})`);
-
-//     if (!user) {
-//       // Nếu chưa có -> ĐĂNG KÝ (Tạo user mới)
-//       const username = `web3_${address.slice(0, 6)}_${Math.floor(Math.random() * 1000)}`;
-//       [user] = await db
-//         .insert(users)
-//         .values({
-//           email: `${address}@wallet.io`,
-//           username,
-//           password: null,
-//           walletAddress: [address],
-//         })
-//         .returning();
-//     } else {
-//       // Nếu đã có user nhưng chưa chứa địa chỉ ví này, thêm vào mảng
-//       const hasAddress = Array.isArray(user.walletAddress)
-//         ? user.walletAddress.includes(address)
-//         : false;
-//       if (!hasAddress) {
-//         const [updated] = await db
-//           .update(users)
-//           .set({
-//             walletAddress: sql`array_append(${users.walletAddress}, ${address})`,
-//           })
-//           .where(eq(users.id, user.id))
-//           .returning();
-//         if (updated) user = updated;
-//       }
-//     }
-
-//     // ĐĂNG NHẬP (Tạo JWT)
-//     const token = await sign({ id: user.id }, JWT_SECRET);
-//     return c.json({
-//       success: true,
-//       user,
-//       token,
-//       message: "Xác thực ví thành công",
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     return c.json({ success: false, error: "Lỗi xử lý xác thực ví" }, 500);
-//   }
-// });
 
 export default app;

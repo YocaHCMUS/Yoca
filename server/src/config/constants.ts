@@ -5,3 +5,6 @@ export const WALLET_BALANCES_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const TOKEN_CHART_24H_UPDATE_THRESHOLD = 7 * 60 * 1000; // 7 minutes
 export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const AUTH_COOKIE_NAME = "auth_token";
+export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export const 

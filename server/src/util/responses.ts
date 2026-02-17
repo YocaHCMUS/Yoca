@@ -12,6 +12,10 @@ export const messageText = {
   LoggedInSuccessfully: "Logged-in successfully",
   GoogleLoggedInSuccessfully: "Google logged-in successfully",
   LoggedOutSuccessfully: "Logged out successfully",
+  SolanaNounceGeneratedSuccessfully:
+    "Solana login nounce generated successfully",
+  SolanaWalletVerificationFailed: "Solana wallet verification failed",
+  SolanaWalletVerifiedSuccessfully: "Solana wallet verified successfully",
 } as const;
 
 export const statusCode = {

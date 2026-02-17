@@ -27,7 +27,7 @@ export const enumAuthProvider = pgEnum("auth_provider", [
   "password",
   "google",
   "github",
-  "web3",
+  "solana",
 ]);
 
 export const users = pgTable("users", {
@@ -50,6 +50,8 @@ export const authAccounts = pgTable(
     provider: enumAuthProvider("provider").notNull(),
     providerUserId: varchar("provider_user_id"),
     hashedPassword: varchar("hashed_password"),
+    loginNounce: varchar("login_nounce"),
+    nounceExpiredAt: timestamp("nounce_expired_at"),
   },
   (table) => [
     uniqueIndex("provider_user_unique").on(
