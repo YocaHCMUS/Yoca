@@ -338,6 +338,61 @@ export interface TradingVolumePerTransactionResponse extends ChartResponseBase {
 }
 
 /**
+ * Rolling annual return API response
+ * GET /api/charts/rolling-annual-return
+ * 
+ * Returns rolling annual return data with cumulative values over time
+ */
+export interface RollingAnnualReturnResponse extends ChartResponseBase {
+  /** Rolling annual return data points */
+  rollingReturn: TimeSeriesPoint[];
+  
+  /** Cumulative return data points */
+  cumulativeReturn: TimeSeriesPoint[];
+  
+  /** Response metadata */
+  metadata: {
+    currency: string;
+    timeUnit: 'month' | 'quarter' | 'year' | 'custom';
+    windowSize?: number; // For custom time unit (in days)
+    startReturn: number;
+    endReturn: number;
+    totalReturnPercent: number;
+  };
+}
+
+/**
+ * Average rolling annual return API response
+ * GET /api/charts/average-rolling-annual-return
+ * 
+ * Returns box plot data for average rolling annual returns by wallet
+ */
+export interface AverageRollingAnnualReturnResponse extends ChartResponseBase {
+  /** Per-wallet rolling annual return statistics */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName: string;
+    
+    /** Rolling annual return statistics */
+    returns: BoxPlotDataPoint;
+    
+    /** Average annual return percentage */
+    averageReturn: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    period: string;
+    timeUnit: 'month' | 'quarter' | 'year' | 'custom';
+    windowSize?: number; // For custom time unit (in days)
+    timestamp: number;
+  };
+}
+
+/**
  * Generic API error response
  */
 export interface ApiErrorResponse extends ChartResponseBase {
@@ -548,6 +603,47 @@ export interface TradingVolumePerTransactionRequestParams extends ChartResponseB
   
   /** Transaction type filter: 'all', 'deposits', 'withdrawals' */
   type?: string;
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for rolling annual return endpoint
+ */
+export interface RollingAnnualReturnRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  /** Time unit for rolling window: 'month', 'quarter', 'year', or 'custom' */
+  timeUnit?: 'month' | 'quarter' | 'year' | 'custom';
+  
+  /** Window size in days (for custom time unit) */
+  windowSize?: number;
+  
+  /** Timezone string */
+  timezone?: string;
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for average rolling annual return endpoint
+ */
+export interface AverageRollingAnnualReturnRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  /** Time unit for rolling window: 'month', 'quarter', 'year', or 'custom' */
+  timeUnit?: 'month' | 'quarter' | 'year' | 'custom';
+  
+  /** Window size in days (for custom time unit) */
+  windowSize?: number;
   
   [key: string]: string | number | undefined;
 }

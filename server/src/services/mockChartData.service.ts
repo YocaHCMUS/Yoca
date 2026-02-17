@@ -103,6 +103,34 @@ function getTimePeriodDetails(timePeriod: TimePeriod): { days: number; dataPoint
 }
 
 /**
+ * Parse period string to days
+ * Supports formats like '7D', '30D', '1Y', 'All', etc.
+ */
+function parsePeriodToDays(period: string): number {
+  // Handle standard periods
+  if (period === '7D') return 7;
+  if (period === '30D') return 30;
+  if (period === '60D') return 60;
+  if (period === '90D') return 90;
+  if (period === '1Y') return 365;
+  if (period === 'All') return 730;
+  
+  // Try to parse custom formats like '45D', '2Y', etc.
+  const match = period.match(/^(\d+)([DYM])$/);
+  if (match) {
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    
+    if (unit === 'D') return value;
+    if (unit === 'M') return value * 30;
+    if (unit === 'Y') return value * 365;
+  }
+  
+  // Default to 30 days
+  return 30;
+}
+
+/**
  * Asset color palette for visualization
  */
 const ASSET_COLORS = [
@@ -1035,3 +1063,148 @@ export function generateTradingVolumePerTransaction(
     },
   };
 }
+
+/**
+ * Generate rolling annual return data
+ * Returns rolling and cumulative return data points over time
+ */
+export function generateRollingAnnualReturn(
+  wallets: string[] = [],
+  period: string = '1Y',
+  timeUnit: 'month' | 'quarter' | 'year' | 'custom' = 'month',
+  windowSize?: number
+) {
+  // Determine number of data points based on period
+  const periodDays = parsePeriodToDays(period);
+  
+  // Determine window size in days
+  let windowDays: number;
+  switch (timeUnit) {
+    case 'month':
+      windowDays = 30;
+      break;
+    case 'quarter':
+      windowDays = 90;
+      break;
+    case 'year':
+      windowDays = 365;
+      break;
+    case 'custom':
+      windowDays = windowSize || 30;
+      break;
+  }
+  
+  // Calculate number of points (one per window)
+  const numPoints = Math.floor(periodDays / windowDays);
+  const now = Date.now();
+  
+  // Generate rolling return data
+  const rollingReturn: Array<{ timestamp: number; value: number }> = [];
+  const cumulativeReturn: Array<{ timestamp: number; value: number }> = [];
+  
+  let cumulativeValue = 0;
+  const baseReturn = 5 + Math.random() * 10; // Base return between 5-15%
+  
+  for (let i = 0; i < numPoints; i++) {
+    const timestamp = now - (numPoints - i) * windowDays * 24 * 60 * 60 * 1000;
+    
+    // Generate rolling return with some volatility
+    const volatility = Math.sin(i * 0.5) * 5 + (Math.random() - 0.5) * 8;
+    const rollingValue = baseReturn + volatility;
+    
+    // Calculate cumulative return
+    cumulativeValue += rollingValue;
+    
+    rollingReturn.push({
+      timestamp,
+      value: parseFloat(rollingValue.toFixed(2)),
+    });
+    
+    cumulativeReturn.push({
+      timestamp,
+      value: parseFloat(cumulativeValue.toFixed(2)),
+    });
+  }
+  
+  const totalReturnPercent = cumulativeValue;
+  
+  return {
+    rollingReturn,
+    cumulativeReturn,
+    metadata: {
+      currency: 'USD',
+      timeUnit,
+      windowSize: timeUnit === 'custom' ? windowSize : undefined,
+      startReturn: rollingReturn[0]?.value || 0,
+      endReturn: rollingReturn[rollingReturn.length - 1]?.value || 0,
+      totalReturnPercent: parseFloat(totalReturnPercent.toFixed(2)),
+    },
+  };
+}
+
+/**
+ * Generate average rolling annual return statistics by wallet
+ * Returns box plot data for each wallet's return distribution
+ */
+export function generateAverageRollingAnnualReturn(
+  wallets: string[] = [],
+  period: string = '1Y',
+  timeUnit: 'month' | 'quarter' | 'year' | 'custom' = 'month',
+  windowSize?: number
+) {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = wallets.length > 0
+    ? wallets.map((addr, idx) => {
+        const defaultWallet = defaultWallets.find(w => w.address === addr);
+        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+      })
+    : defaultWallets;
+  
+  // Generate wallet data
+  const walletData = walletsToGenerate.map((wallet, index) => {
+    // Generate base average return with wallet-specific variation
+    const baseReturn = 5 + index * 3 + Math.random() * 5; // 5-20% range
+    
+    // Generate box plot statistics
+    // Returns should show realistic distribution
+    const median = baseReturn;
+    const q1 = median - (2 + Math.random() * 3); // Q1 below median
+    const q3 = median + (2 + Math.random() * 3); // Q3 above median
+    const min = q1 - (3 + Math.random() * 2); // Min below Q1
+    const max = q3 + (3 + Math.random() * 2); // Max above Q3
+    
+    // Calculate average (roughly median for symmetric distribution)
+    const averageReturn = (min + q1 + median + q3 + max) / 5;
+    
+    return {
+      walletAddress: wallet.address,
+      walletName: wallet.name,
+      returns: {
+        min: parseFloat(min.toFixed(2)),
+        q1: parseFloat(q1.toFixed(2)),
+        median: parseFloat(median.toFixed(2)),
+        q3: parseFloat(q3.toFixed(2)),
+        max: parseFloat(max.toFixed(2)),
+      },
+      averageReturn: parseFloat(averageReturn.toFixed(2)),
+    };
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      period,
+      timeUnit,
+      windowSize: timeUnit === 'custom' ? windowSize : undefined,
+      timestamp: Date.now(),
+    },
+  };
+}
+

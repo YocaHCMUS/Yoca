@@ -1,0 +1,334 @@
+/**
+ * RollingAnnualReturn Chart Component
+ * 
+ * Displays a dual-axis chart showing rolling annual return bars with cumulative return line overlay,
+ * delivering comprehensive return analysis over customizable time windows.
+ * 
+ * Features:
+ * - Dual-axis chart: bars (rolling annual return) + line (cumulative return)
+ * - Conditional bar coloring (green for positive, red for negative)
+ * - Tooltip showing both rolling and cumulative values with dates
+ * - Time period filtering (7D, 30D, 60D, 90D, 1Y, All)
+ * - Time unit selection (month, quarter, year, custom)
+ * - Wallet filtering support
+ * - Auto-refresh every 30 seconds
+ * 
+ * @module components/charts/RollingAnnualReturn
+ */
+
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import { useTranslation } from 'react-i18next';
+
+import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchRollingAnnualReturn } from '@/services/chart/chartApi';
+import { formatTimestampWithTimezone } from '@/util/chart-helpers';
+import type { RollingAnnualReturnResponse, RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
+
+import { useStandardChartController } from '@/hooks/useChartController';
+import { BaseChart } from '../Base/BaseChart';
+import sharedStyles from '../shared/ChartStyle.module.scss';
+import type { ChartProps } from '../shared/ChartProp';
+
+export type TimeUnit = 'month' | 'quarter' | 'year' | 'custom';
+
+/**
+ * RollingAnnualReturn Component
+ * 
+ * Displays dual-axis chart showing rolling annual return bars with cumulative return line overlay.
+ */
+export const RollingAnnualReturn: React.FC<ChartProps> = ({
+  title,
+  minHeight = 400,
+  initialFilters = {
+    timePeriod: '1Y',
+    wallets: [],
+    timeUnit: 'month',
+    windowSize: 30,
+  },
+  autoRefresh = true,
+  refreshInterval = 30000,
+  className,
+}) => {
+  const { t } = useTranslation();
+  const chartTitle = title || t('charts.rollingAnnualReturn.title', 'Rolling Annual Return');
+
+  const chartRef = useRef<ReactECharts>(null);
+  const chartTheme = useChartTheme();
+  const { selectedTimezone: timezone } = useChartContext();
+  
+  // Extract initial values
+  const initialTimeUnit = 
+    initialFilters?.timeUnit === 'month' ||
+    initialFilters?.timeUnit === 'quarter' ||
+    initialFilters?.timeUnit === 'year' ||
+    initialFilters?.timeUnit === 'custom'
+      ? initialFilters.timeUnit
+      : 'month';
+  const initialWindowSize = typeof initialFilters?.windowSize === 'number' ? initialFilters.windowSize : 30;
+  const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
+  
+  // State for time unit and window size
+  const [selectedTimeUnit, setSelectedTimeUnit] = useState<TimeUnit>(initialTimeUnit);
+  const [windowSize, setWindowSize] = useState<number>(initialWindowSize);
+
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
+
+  const { filters, setTimePeriod, setWallets } = useChartFilters({
+    initialFilters: {
+      timePeriod: initialFilters?.timePeriod || '1Y',
+      wallets: initialWallets,
+    },
+    debounceDelay: 300,
+  });
+
+  /**
+   * Sync filters when initialFilters changes
+   */
+  useEffect(() => {
+    const prevFilters = prevInitialFiltersRef.current;
+    
+    // Check if wallets changed
+    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
+      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
+      const prevWalletsStr = prevWallets.slice().sort().join(',');
+      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
+      if (prevWalletsStr !== newWalletsStr) {
+        setWallets(initialFilters.wallets);
+      }
+    }
+    
+    // Check if time period changed
+    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
+      setTimePeriod(initialFilters.timePeriod);
+    }
+    
+    // Update ref for next comparison
+    prevInitialFiltersRef.current = initialFilters;
+  }, [initialFilters, setWallets, setTimePeriod]);
+
+  /**
+   * Memoize wallets string to prevent unnecessary re-fetches
+   */
+  const walletsString = useMemo(() => {
+    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
+    return filters.wallets.slice().sort().join(',');
+  }, [filters.wallets]);
+
+  /**
+   * Memoize query to prevent unnecessary re-fetches
+   */
+  const query = useMemo<RollingAnnualReturnRequestParams>(
+    () => ({
+      period: filters.timePeriod,
+      wallets: walletsString,
+      timeUnit: selectedTimeUnit,
+      windowSize: selectedTimeUnit === 'custom' ? windowSize : undefined,
+      timezone,
+    }),
+    [filters.timePeriod, walletsString, selectedTimeUnit, windowSize, timezone]
+  );
+
+  /**
+   * Unified lifecycle controller
+   */
+  const { data, loadingState, refetch } =
+    useStandardChartController<RollingAnnualReturnResponse, RollingAnnualReturnRequestParams>({
+      fetcher: fetchRollingAnnualReturn,
+      query,
+      autoRefresh,
+      refreshInterval,
+    });
+
+  /**
+   * Generate eCharts option configuration
+   */
+  const chartOption: EChartsOption | null = useMemo(() => {
+    if (!data || data.rollingReturn.length === 0) {
+      return null;
+    }
+    
+    // Use theme colors
+    const positiveColor = chartTheme.colorPalette[1]; // Green
+    const negativeColor = chartTheme.colorPalette[2]; // Red
+    const cumulativeColor = chartTheme.colorPalette[0]; // Blue
+    
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+    
+    // Extract timestamps and values
+    const timestamps = data.rollingReturn.map(item => item.timestamp);
+    const rollingValues = data.rollingReturn.map(item => item.value);
+    const cumulativeValues = data.cumulativeReturn.map(item => item.value);
+    
+    // Format X-axis dates
+    const xAxisData = timestamps.map(ts => formatTimestampWithTimezone(ts, timezone, 'MM/dd/yyyy'));
+    
+    return {
+      ...baseOption,
+      grid: {
+        left: '10%',
+        right: '10%',
+        bottom: '15%',
+        top: '15%',
+        containLabel: true,
+      },
+      legend: {
+        ...baseOption.legend,
+        show: true,
+        top: '5%',
+        data: [
+          t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
+          t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
+        ],
+      },
+      xAxis: {
+        ...baseOption.xAxis,
+        type: 'category',
+        data: xAxisData,
+        axisLabel: {
+          ...baseOption.xAxis.axisLabel,
+          rotate: 45,
+          interval: Math.ceil(timestamps.length / 10),
+        },
+      },
+      yAxis: [
+        {
+          ...baseOption.yAxis,
+          type: 'value',
+          name: t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return') + ' (%)',
+          position: 'left',
+          axisLabel: {
+            ...baseOption.yAxis.axisLabel,
+            formatter: '{value}%',
+          },
+        },
+        {
+          ...baseOption.yAxis,
+          type: 'value',
+          name: t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return') + ' (%)',
+          position: 'right',
+          axisLabel: {
+            ...baseOption.yAxis.axisLabel,
+            formatter: '{value}%',
+          },
+        },
+      ],
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'cross',
+          crossStyle: {
+            color: chartTheme.textColor,
+          },
+        },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          if (items.length === 0) return '';
+          
+          const timestamp = timestamps[items[0].dataIndex];
+          const date = formatTimestampWithTimezone(timestamp, timezone, 'MMM dd, yyyy');
+          
+          let tooltip = `<strong>${date}</strong><br/>`;
+          
+          items.forEach((item: any) => {
+            tooltip += `${item.marker} ${item.seriesName}: <strong>${item.value.toFixed(2)}%</strong><br/>`;
+          });
+          
+          return tooltip;
+        },
+      },
+      series: [
+        {
+          name: t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
+          type: 'bar',
+          yAxisIndex: 0,
+          data: rollingValues,
+          itemStyle: {
+            color: (params: any) => {
+              return params.value >= 0 ? positiveColor : negativeColor;
+            },
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        },
+        {
+          name: t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
+          type: 'line',
+          yAxisIndex: 1,
+          data: cumulativeValues,
+          smooth: true,
+          lineStyle: {
+            color: cumulativeColor,
+            width: 2,
+          },
+          itemStyle: {
+            color: cumulativeColor,
+          },
+          symbol: 'circle',
+          symbolSize: 6,
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        },
+      ],
+    };
+  }, [data, chartTheme, timezone, t]);
+
+  return (
+    <BaseChart
+      title={chartTitle}
+      loadingState={loadingState}
+      isEmpty={!data || data.rollingReturn.length === 0}
+      onRetry={() => refetch(false)}
+    >
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
+        <select 
+          value={selectedTimeUnit} 
+          onChange={e => setSelectedTimeUnit(e.target.value as TimeUnit)} 
+          className={sharedStyles.chartSelect}
+        >
+          <option value="month">{t('charts.rollingAnnualReturn.month', 'Month')}</option>
+          <option value="quarter">{t('charts.rollingAnnualReturn.quarter', 'Quarter')}</option>
+          <option value="year">{t('charts.rollingAnnualReturn.year', 'Year')}</option>
+          <option value="custom">{t('charts.rollingAnnualReturn.custom', 'Custom')}</option>
+        </select>
+
+        {selectedTimeUnit === 'custom' && (
+          <input
+            type="number"
+            value={windowSize}
+            onChange={e => setWindowSize(Number(e.target.value))}
+            min={1}
+            max={365}
+            className={sharedStyles.chartInput}
+            placeholder={t('charts.rollingAnnualReturn.days', 'Days')}
+          />
+        )}
+      </div>
+
+      {chartOption && (
+        <ReactECharts
+          ref={chartRef}
+          option={chartOption}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          notMerge
+          lazyUpdate
+        />
+      )}
+    </BaseChart>
+  );
+};

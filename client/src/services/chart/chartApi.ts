@@ -18,6 +18,8 @@ import type {
   PriceHistoryResponse,
   TradingVolumeDistributionResponse,
   TradingVolumePerTransactionResponse,
+  RollingAnnualReturnResponse,
+  AverageRollingAnnualReturnResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -29,6 +31,8 @@ import type {
   PriceHistoryRequestParams,
   TradingVolumeDistributionRequestParams,
   TradingVolumePerTransactionRequestParams,
+  RollingAnnualReturnRequestParams,
+  AverageRollingAnnualReturnRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -164,8 +168,21 @@ export async function fetchTradingVolumePerTransaction(params?: TradingVolumePer
 }
 
 /**
- * Chart API service object
+ * Fetch rolling annual return data
+ * GET /api/charts/rolling-annual-return
  */
+export async function fetchRollingAnnualReturn(params?: RollingAnnualReturnRequestParams): Promise<RollingAnnualReturnResponse> {
+  return fetchAPI<RollingAnnualReturnResponse>('/rolling-annual-return', params);
+}
+
+/**
+ * Fetch average rolling annual return data
+ * GET /api/charts/average-rolling-annual-return
+ */
+export async function fetchAverageRollingAnnualReturn(params?: AverageRollingAnnualReturnRequestParams): Promise<AverageRollingAnnualReturnResponse> {
+  return fetchAPI<AverageRollingAnnualReturnResponse>('/average-rolling-annual-return', params);
+}
+
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
@@ -178,6 +195,8 @@ export const chartApi = {
   fetchPriceHistory,
   fetchTradingVolumeDistribution,
   fetchTradingVolumePerTransaction,
+  fetchRollingAnnualReturn,
+  fetchAverageRollingAnnualReturn,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -190,4 +209,6 @@ export const chartApi = {
   getPriceHistory: fetchPriceHistory,
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,
   getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
+  getRollingAnualReturn: fetchRollingAnnualReturn,
+  getAverageRollingAnnualReturn: fetchAverageRollingAnnualReturn,
 };
