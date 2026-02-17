@@ -22,6 +22,8 @@ import type {
   AverageRollingAnnualReturnResponse,
   WinrateResponse,
   DrawdownResponse,
+  TotalTradingVolumeResponse,
+  StablecoinRatioResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -37,6 +39,8 @@ import type {
   AverageRollingAnnualReturnRequestParams,
   WinrateRequestParams,
   DrawdownRequestParams,
+  TotalTradingVolumeRequestParams,
+  StablecoinRatioRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -203,6 +207,22 @@ export async function fetchDrawdown(params?: DrawdownRequestParams): Promise<Dra
   return fetchAPI<DrawdownResponse>('/drawdown', params);
 }
 
+/**
+ * Fetch total trading volume data
+ * GET /api/charts/total-trading-volume
+ */
+export async function fetchTotalTradingVolume(params?: TotalTradingVolumeRequestParams): Promise<TotalTradingVolumeResponse> {
+  return fetchAPI<TotalTradingVolumeResponse>('/total-trading-volume', params);
+}
+
+/**
+ * Fetch stablecoin ratio data
+ * GET /api/charts/stablecoin-ratio
+ */
+export async function fetchStablecoinRatio(params?: StablecoinRatioRequestParams): Promise<StablecoinRatioResponse> {
+  return fetchAPI<StablecoinRatioResponse>('/stablecoin-ratio', params);
+}
+
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
@@ -219,6 +239,8 @@ export const chartApi = {
   fetchAverageRollingAnnualReturn,
   fetchWinrate,
   fetchDrawdown,
+  fetchTotalTradingVolume,
+  fetchStablecoinRatio,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -235,4 +257,6 @@ export const chartApi = {
   getAverageRollingAnnualReturn: fetchAverageRollingAnnualReturn,
   getWinrate: fetchWinrate,
   getDrawdown: fetchDrawdown,
+  getTotalTradingVolume: fetchTotalTradingVolume,
+  getStablecoinRatio: fetchStablecoinRatio,
 };

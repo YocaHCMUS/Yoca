@@ -1,0 +1,1 @@
+export { StablecoinRatioChart } from './StablecoinRatioChart';

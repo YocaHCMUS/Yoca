@@ -19,6 +19,8 @@ import chartTransactions from "./routes/charts/transactions.route.js";
 import chartVolume from "./routes/charts/volume.route.js";
 import chartWinrate from "./routes/charts/winrate.route.js";
 import chartDrawdown from "./routes/charts/drawdown.route.js";
+import chartTotalTradingVolume from "./routes/charts/total-trading-volume.route.js";
+import chartStablecoinRatio from "./routes/charts/stablecoin-ratio.route.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
@@ -49,7 +51,9 @@ const app = new Hono()
   .route("/api/charts/rolling-annual-return", chartRollingAnnualReturn)
   .route("/api/charts/average-rolling-annual-return", chartAverageRollingAnnualReturn)
   .route("/api/charts/winrate", chartWinrate)
-  .route("/api/charts/drawdown", chartDrawdown);
+  .route("/api/charts/drawdown", chartDrawdown)
+  .route("/api/charts/total-trading-volume", chartTotalTradingVolume)
+  .route("/api/charts/stablecoin-ratio", chartStablecoinRatio);
 
 // Server
 serve(

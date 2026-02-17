@@ -2,6 +2,7 @@ import React from 'react';
 import type WalletComparisionProp from "./WalletComparisionProp";
 import { AssetDistribution } from '@/components/charts/AssetDistribution';
 import { HoldingDurations } from '@/components/charts/HoldingDurations';
+import { StablecoinRatioChart } from '@/components/charts/StablecoinRatio';
 import styles from './GeneralTab.module.scss'; // Assuming we create this
 
 
@@ -31,10 +32,15 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
                 />
             </div>
 
-            {/* Stable Coin Ratio Chart - Placeholder */}
+            {/* Stable Coin Ratio Chart */}
             <div className={styles.stableCoinChart}>
-                <h3>Stable Coin Ratio Chart</h3>
-                <p>Temporary placeholder for stable coin ratio visualization</p>
+                <StablecoinRatioChart
+                    minHeight={300}
+                    initialFilters={{
+                        timePeriod: '30D',
+                        wallets: walletAddresses,
+                    }}
+                />
             </div>
 
             <div className={styles.stableCoinChart}>

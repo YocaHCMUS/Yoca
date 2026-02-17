@@ -823,3 +823,97 @@ export interface DrawdownRequestParams extends ChartResponseBase {
   
   [key: string]: string | number | undefined;
 }
+
+/**
+ * Total trading volume chart API response
+ * GET /api/charts/total-trading-volume
+ */
+export interface TotalTradingVolumeResponse extends ChartResponseBase {
+  /** Per-wallet trading volume data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Total trading volume (USD) */
+    totalVolume: number;
+    
+    /** Deposit volume (USD) */
+    depositVolume: number;
+    
+    /** Withdrawal volume (USD) */
+    withdrawalVolume: number;
+    
+    /** Trade count */
+    tradeCount: number;
+    
+    /** Ranking position (1-based) */
+    rank: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    period: string;
+    timestamp: number;
+    currency: string;
+  };
+}
+
+/**
+ * Stablecoin ratio chart API response
+ * GET /api/charts/stablecoin-ratio
+ */
+export interface StablecoinRatioResponse extends ChartResponseBase {
+  /** Per-wallet stablecoin ratio data */
+  wallets: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Time series of stablecoin ratio (percentage) */
+    data: TimeSeriesPoint[];
+    
+    /** Current stablecoin ratio (%) */
+    currentRatio: number;
+    
+    /** Average stablecoin ratio over period (%) */
+    averageRatio: number;
+  }[];
+  
+  /** Response metadata */
+  metadata: {
+    period: string;
+    timestamp: number;
+    currency: string;
+  };
+}
+
+/**
+ * API request parameters for total trading volume endpoint
+ */
+export interface TotalTradingVolumeRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for stablecoin ratio endpoint
+ */
+export interface StablecoinRatioRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  period?: string;
+  
+  /** Comma-separated wallet list */
+  wallets?: string;
+  
+  [key: string]: string | number | undefined;
+}

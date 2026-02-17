@@ -1532,3 +1532,153 @@ export function generateDrawdownData(
   };
 }
 
+/**
+ * Generate mock total trading volume data
+ * 
+ * Returns ranked list of wallets by total trading volume
+ */
+export function generateTotalTradingVolumeData(
+  wallets: string[] = [],
+  period: string = '30D'
+) {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+    { address: 'wallet_004', name: 'DeFi Wallet' },
+    { address: 'wallet_005', name: 'NFT Wallet' },
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = wallets.length > 0
+    ? wallets.map((addr, idx) => {
+        const defaultWallet = defaultWallets.find(w => w.address === addr);
+        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+      })
+    : defaultWallets;
+  
+  // Generate wallet data with varied volumes
+  const walletData = walletsToGenerate.map((wallet, index) => {
+    // Vary volumes significantly between wallets
+    const baseVolume = 100000 + (Math.random() * 500000);
+    const depositRatio = 0.4 + (Math.random() * 0.2); // 40-60%
+    
+    const totalVolume = baseVolume;
+    const depositVolume = totalVolume * depositRatio;
+    const withdrawalVolume = totalVolume * (1 - depositRatio);
+    const tradeCount = Math.floor(50 + (Math.random() * 200));
+    
+    return {
+      walletAddress: wallet.address,
+      walletName: wallet.name,
+      totalVolume: parseFloat(totalVolume.toFixed(2)),
+      depositVolume: parseFloat(depositVolume.toFixed(2)),
+      withdrawalVolume: parseFloat(withdrawalVolume.toFixed(2)),
+      tradeCount,
+      rank: 0, // Will be assigned after sorting
+    };
+  });
+  
+  // Sort by total volume (descending) and assign ranks
+  walletData.sort((a, b) => b.totalVolume - a.totalVolume);
+  walletData.forEach((wallet, index) => {
+    wallet.rank = index + 1;
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      period,
+      timestamp: Date.now(),
+      currency: 'USD',
+    },
+  };
+}
+
+/**
+ * Generate mock stablecoin ratio data
+ * 
+ * Returns time series of stablecoin percentage for each wallet
+ */
+export function generateStablecoinRatioData(
+  wallets: string[] = [],
+  period: string = '30D'
+) {
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
+  
+  // Determine which wallets to generate data for
+  const walletsToGenerate = wallets.length > 0
+    ? wallets.map((addr, idx) => {
+        const defaultWallet = defaultWallets.find(w => w.address === addr);
+        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+      })
+    : defaultWallets;
+  
+  // Time range setup
+  const periodDays = parsePeriodToDays(period);
+  const now = Date.now();
+  const startTime = now - (periodDays * 24 * 60 * 60 * 1000);
+  const dataPoints = Math.min(periodDays, 100); // Max 100 data points
+  const intervalMs = (now - startTime) / dataPoints;
+  
+  // Generate wallet data
+  const walletData = walletsToGenerate.map((wallet, walletIndex) => {
+    const data: Array<{ timestamp: number; value: number }> = [];
+    
+    // Each wallet has a different base stablecoin ratio
+    const baseRatio = 20 + (walletIndex * 15) + (Math.random() * 10); // 20-65% range
+    
+    let sumRatio = 0;
+    
+    // Generate time series
+    for (let i = 0; i <= dataPoints; i++) {
+      const timestamp = startTime + (i * intervalMs);
+      const progress = i / dataPoints;
+      
+      // Add trend (can be up or down)
+      const trend = (Math.sin(walletIndex) * 10) * progress;
+      
+      // Add cyclical variation (weekly pattern)
+      const cycle = Math.sin((timestamp / (1000 * 60 * 60 * 24 * 7)) * 2 * Math.PI + walletIndex) * 5;
+      
+      // Random noise
+      const noise = (Math.random() - 0.5) * 3;
+      
+      // Calculate ratio (constrained between 0-100%)
+      const ratio = Math.max(0, Math.min(100, baseRatio + trend + cycle + noise));
+      
+      data.push({
+        timestamp,
+        value: parseFloat(ratio.toFixed(2)),
+      });
+      
+      sumRatio += ratio;
+    }
+    
+    const currentRatio = data[data.length - 1].value;
+    const averageRatio = parseFloat((sumRatio / data.length).toFixed(2));
+    
+    return {
+      walletAddress: wallet.address,
+      walletName: wallet.name,
+      data,
+      currentRatio,
+      averageRatio,
+    };
+  });
+  
+  return {
+    wallets: walletData,
+    metadata: {
+      period,
+      timestamp: now,
+      currency: 'USD',
+    },
+  };
+}

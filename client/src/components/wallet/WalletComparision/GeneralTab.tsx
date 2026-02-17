@@ -8,6 +8,7 @@ import { VolumeBenchmark } from '@/components/charts/VolumeBenchmark';
 import { DailyTradingVolume } from '@/components/charts/DailyTradingVolume';
 import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution';
 import { TradingVolumePerTransaction } from '@/components/charts/TradingVolume/TradingVolumePerTransaction';
+import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume';
 
 
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
@@ -47,10 +48,15 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                 />
             </div>
 
-            {/* Total Trading Volume Column Chart - Placeholder */}
+            {/* Total Trading Volume Column Chart */}
             <div className={styles.stableCoinChart}>
-                <h3>Total Trading Volume Column Chart</h3>
-                <p>Temporary placeholder for total trading volume comparison visualization</p>
+                <TotalTradingVolumeChart
+                    minHeight={300}
+                    initialFilters={{
+                        timePeriod: '30D',
+                        wallets: walletAddresses,
+                    }}
+                />
             </div>
 
             {/* Trading Volume distribution Chart */}
