@@ -339,8 +339,10 @@ export function generateAssetDistribution(
 
 /**
  * Generate mock P&L data
+ * Supports both single wallet and multi-wallet responses
  */
 export function generatePnLData(
+  wallets: string[] = [],
   timePeriod: TimePeriod = '30D',
   aggregation: 'daily' | 'weekly' | 'monthly' = 'daily'
 ) {
@@ -352,53 +354,105 @@ export function generatePnLData(
     : aggregation === 'weekly' ? 7 * 24 * 60 * 60 * 1000
     : 30 * 24 * 60 * 60 * 1000; // monthly
   
-  const dailyPnL: Array<{ timestamp: number; value: number }> = [];
-  const cumulativePnL: Array<{ timestamp: number; value: number }> = [];
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
   
-  let cumulativeTotal = 0;
-  let currentTimestamp = startTimestamp;
+  // Helper function to generate P&L data for a single wallet
+  const generateSingleWalletPnL = (walletAddress: string, seed: number) => {
+    const dailyPnL: Array<{ timestamp: number; value: number }> = [];
+    const cumulativePnL: Array<{ timestamp: number; value: number }> = [];
+    
+    // Base P&L value varies by wallet
+    const walletMultiplier = 0.5 + (seed % 10) / 10; // 0.5 to 1.5
+    
+    let cumulativeTotal = 0;
+    let currentTimestamp = startTimestamp;
+    let index = 0;
+    
+    // Generate data points
+    while (currentTimestamp <= now) {
+      // Use seed to make different wallets have different patterns
+      const seededRandom = (Math.sin(seed + index) + 1) / 2;
+      
+      // Generate daily P&L with 60% win rate
+      const isWin = seededRandom < 0.6;
+      
+      const basePnL = isWin 
+        ? (500 + Math.random() * 1500) * walletMultiplier  // Wins
+        : -(300 + Math.random() * 1200) * walletMultiplier; // Losses
+      
+      // Add some market volatility
+      const volatility = (Math.random() - 0.5) * 400 * walletMultiplier;
+      const dailyValue = basePnL + volatility;
+      
+      // Update cumulative total
+      cumulativeTotal += dailyValue;
+      
+      dailyPnL.push({
+        timestamp: currentTimestamp,
+        value: parseFloat(dailyValue.toFixed(2)),
+      });
+      
+      cumulativePnL.push({
+        timestamp: currentTimestamp,
+        value: parseFloat(cumulativeTotal.toFixed(2)),
+      });
+      
+      currentTimestamp += intervalMs;
+      index++;
+    }
+    
+    // Calculate start and end balance
+    const startBalance = 100000 * walletMultiplier;
+    const endBalance = startBalance + cumulativeTotal;
+    
+    return {
+      dailyPnL,
+      cumulativePnL,
+      startBalance: parseFloat(startBalance.toFixed(2)),
+      endBalance: parseFloat(endBalance.toFixed(2)),
+    };
+  };
   
-  // Generate data points
-  while (currentTimestamp <= now) {
-    // Generate daily P&L with 60% win rate
-    const isWin = Math.random() < 0.6;
-    
-    // Base P&L value
-    const basePnL = isWin 
-      ? 500 + Math.random() * 1500  // Wins: $500 to $2000
-      : -(300 + Math.random() * 1200); // Losses: -$300 to -$1500
-    
-    // Add some market volatility
-    const volatility = (Math.random() - 0.5) * 400;
-    const dailyValue = basePnL + volatility;
-    
-    // Update cumulative total
-    cumulativeTotal += dailyValue;
-    
-    dailyPnL.push({
-      timestamp: currentTimestamp,
-      value: dailyValue,
+  // Multi-wallet mode
+  if (wallets.length > 1) {
+    const walletsData = wallets.map((walletAddress, index) => {
+      const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const walletData = generateSingleWalletPnL(walletAddress, seed);
+      const walletInfo = defaultWallets[index % defaultWallets.length];
+      
+      return {
+        walletAddress,
+        walletName: walletInfo.name,
+        dailyPnL: walletData.dailyPnL,
+        cumulativePnL: walletData.cumulativePnL,
+        startBalance: walletData.startBalance,
+        endBalance: walletData.endBalance,
+      };
     });
     
-    cumulativePnL.push({
-      timestamp: currentTimestamp,
-      value: cumulativeTotal,
-    });
-    
-    currentTimestamp += intervalMs;
+    return {
+      wallets: walletsData,
+      metadata: {
+        currency: 'USD',
+      },
+    };
   }
   
-  // Calculate start and end balance
-  const startBalance = 100000;
-  const endBalance = startBalance + cumulativeTotal;
+  // Single wallet or aggregated mode
+  const singleWalletData = generateSingleWalletPnL(wallets[0] || 'default', 12345);
   
   return {
-    dailyPnL,
-    cumulativePnL,
+    dailyPnL: singleWalletData.dailyPnL,
+    cumulativePnL: singleWalletData.cumulativePnL,
     metadata: {
       currency: 'USD',
-      startBalance,
-      endBalance,
+      startBalance: singleWalletData.startBalance,
+      endBalance: singleWalletData.endBalance,
     },
   };
 }
@@ -1067,6 +1121,7 @@ export function generateTradingVolumePerTransaction(
 /**
  * Generate rolling annual return data
  * Returns rolling and cumulative return data points over time
+ * Supports both single wallet and multi-wallet responses
  */
 export function generateRollingAnnualReturn(
   wallets: string[] = [],
@@ -1098,46 +1153,94 @@ export function generateRollingAnnualReturn(
   const numPoints = Math.floor(periodDays / windowDays);
   const now = Date.now();
   
-  // Generate rolling return data
-  const rollingReturn: Array<{ timestamp: number; value: number }> = [];
-  const cumulativeReturn: Array<{ timestamp: number; value: number }> = [];
+  // Default wallets if none specified
+  const defaultWallets = [
+    { address: 'wallet_001', name: 'Main Wallet' },
+    { address: 'wallet_002', name: 'Trading Wallet' },
+    { address: 'wallet_003', name: 'Cold Storage' },
+  ];
   
-  let cumulativeValue = 0;
-  const baseReturn = 5 + Math.random() * 10; // Base return between 5-15%
+  // Helper function to generate rolling return data for a single wallet
+  const generateSingleWalletReturn = (walletAddress: string, seed: number) => {
+    const rollingReturn: Array<{ timestamp: number; value: number }> = [];
+    const cumulativeReturn: Array<{ timestamp: number; value: number }> = [];
+    
+    let cumulativeValue = 0;
+    const baseReturn = 5 + (seed % 10); // Base return between 5-15% (varies by wallet)
+    
+    for (let i = 0; i < numPoints; i++) {
+      const timestamp = now - (numPoints - i) * windowDays * 24 * 60 * 60 * 1000;
+      
+      // Generate rolling return with some volatility (seeded for consistency)
+      const volatility = Math.sin((seed + i) * 0.5) * 5 + (Math.sin((seed + i) * 0.3) - 0.5) * 8;
+      const rollingValue = baseReturn + volatility;
+      
+      // Calculate cumulative return
+      cumulativeValue += rollingValue;
+      
+      rollingReturn.push({
+        timestamp,
+        value: parseFloat(rollingValue.toFixed(2)),
+      });
+      
+      cumulativeReturn.push({
+        timestamp,
+        value: parseFloat(cumulativeValue.toFixed(2)),
+      });
+    }
+    
+    const totalReturnPercent = cumulativeValue;
+    
+    return {
+      rollingReturn,
+      cumulativeReturn,
+      startReturn: rollingReturn[0]?.value || 0,
+      endReturn: rollingReturn[rollingReturn.length - 1]?.value || 0,
+      totalReturnPercent: parseFloat(totalReturnPercent.toFixed(2)),
+    };
+  };
   
-  for (let i = 0; i < numPoints; i++) {
-    const timestamp = now - (numPoints - i) * windowDays * 24 * 60 * 60 * 1000;
-    
-    // Generate rolling return with some volatility
-    const volatility = Math.sin(i * 0.5) * 5 + (Math.random() - 0.5) * 8;
-    const rollingValue = baseReturn + volatility;
-    
-    // Calculate cumulative return
-    cumulativeValue += rollingValue;
-    
-    rollingReturn.push({
-      timestamp,
-      value: parseFloat(rollingValue.toFixed(2)),
+  // Multi-wallet mode
+  if (wallets.length > 1) {
+    const walletsData = wallets.map((walletAddress, index) => {
+      const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const walletData = generateSingleWalletReturn(walletAddress, seed);
+      const walletInfo = defaultWallets[index % defaultWallets.length];
+      
+      return {
+        walletAddress,
+        walletName: walletInfo.name,
+        rollingReturn: walletData.rollingReturn,
+        cumulativeReturn: walletData.cumulativeReturn,
+        startReturn: walletData.startReturn,
+        endReturn: walletData.endReturn,
+        totalReturnPercent: walletData.totalReturnPercent,
+      };
     });
     
-    cumulativeReturn.push({
-      timestamp,
-      value: parseFloat(cumulativeValue.toFixed(2)),
-    });
+    return {
+      wallets: walletsData,
+      metadata: {
+        currency: 'USD',
+        timeUnit,
+        windowSize: timeUnit === 'custom' ? windowSize : undefined,
+      },
+    };
   }
   
-  const totalReturnPercent = cumulativeValue;
+  // Single wallet or aggregated mode
+  const singleWalletData = generateSingleWalletReturn(wallets[0] || 'default', 12345);
   
   return {
-    rollingReturn,
-    cumulativeReturn,
+    rollingReturn: singleWalletData.rollingReturn,
+    cumulativeReturn: singleWalletData.cumulativeReturn,
     metadata: {
       currency: 'USD',
       timeUnit,
       windowSize: timeUnit === 'custom' ? windowSize : undefined,
-      startReturn: rollingReturn[0]?.value || 0,
-      endReturn: rollingReturn[rollingReturn.length - 1]?.value || 0,
-      totalReturnPercent: parseFloat(totalReturnPercent.toFixed(2)),
+      startReturn: singleWalletData.startReturn,
+      endReturn: singleWalletData.endReturn,
+      totalReturnPercent: singleWalletData.totalReturnPercent,
     },
   };
 }

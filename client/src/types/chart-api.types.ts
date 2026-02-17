@@ -156,19 +156,43 @@ export interface CounterpartyActivityResponse extends ChartResponseBase {
 /**
  * P&L chart API response
  * GET /api/charts/pnl
+ * 
+ * Returns either aggregated data (when no wallets or single wallet)
+ * or per-wallet data (when multiple wallets specified)
  */
 export interface PnLChartResponse extends ChartResponseBase {
-  /** Daily P&L data */
-  dailyPnL: TimeSeriesPoint[];
+  /** Daily P&L data (for aggregated/single wallet) */
+  dailyPnL?: TimeSeriesPoint[];
   
-  /** Cumulative P&L data */
-  cumulativePnL: TimeSeriesPoint[];
+  /** Cumulative P&L data (for aggregated/single wallet) */
+  cumulativePnL?: TimeSeriesPoint[];
+  
+  /** Per-wallet P&L data (for multiple wallets) */
+  wallets?: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Daily P&L data for this wallet */
+    dailyPnL: TimeSeriesPoint[];
+    
+    /** Cumulative P&L data for this wallet */
+    cumulativePnL: TimeSeriesPoint[];
+    
+    /** Start balance for this wallet */
+    startBalance: number;
+    
+    /** End balance for this wallet */
+    endBalance: number;
+  }[];
   
   /** Response metadata */
   metadata: {
     currency: string;
-    startBalance: number;
-    endBalance: number;
+    startBalance?: number;
+    endBalance?: number;
   };
 }
 
@@ -341,23 +365,49 @@ export interface TradingVolumePerTransactionResponse extends ChartResponseBase {
  * Rolling annual return API response
  * GET /api/charts/rolling-annual-return
  * 
- * Returns rolling annual return data with cumulative values over time
+ * Returns rolling annual return data with cumulative values over time.
+ * Supports either aggregated data (when no wallets or single wallet)
+ * or per-wallet data (when multiple wallets specified)
  */
 export interface RollingAnnualReturnResponse extends ChartResponseBase {
-  /** Rolling annual return data points */
-  rollingReturn: TimeSeriesPoint[];
+  /** Rolling annual return data points (for aggregated/single wallet) */
+  rollingReturn?: TimeSeriesPoint[];
   
-  /** Cumulative return data points */
-  cumulativeReturn: TimeSeriesPoint[];
+  /** Cumulative return data points (for aggregated/single wallet) */
+  cumulativeReturn?: TimeSeriesPoint[];
+  
+  /** Per-wallet rolling annual return data (for multiple wallets) */
+  wallets?: {
+    /** Wallet address */
+    walletAddress: string;
+    
+    /** Wallet display name */
+    walletName?: string;
+    
+    /** Rolling annual return data points for this wallet */
+    rollingReturn: TimeSeriesPoint[];
+    
+    /** Cumulative return data points for this wallet */
+    cumulativeReturn: TimeSeriesPoint[];
+    
+    /** Start return for this wallet */
+    startReturn: number;
+    
+    /** End return for this wallet */
+    endReturn: number;
+    
+    /** Total return percentage for this wallet */
+    totalReturnPercent: number;
+  }[];
   
   /** Response metadata */
   metadata: {
     currency: string;
     timeUnit: 'month' | 'quarter' | 'year' | 'custom';
     windowSize?: number; // For custom time unit (in days)
-    startReturn: number;
-    endReturn: number;
-    totalReturnPercent: number;
+    startReturn?: number;
+    endReturn?: number;
+    totalReturnPercent?: number;
   };
 }
 

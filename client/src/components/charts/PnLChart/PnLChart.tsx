@@ -17,7 +17,7 @@
  * @module components/charts/PnLChart
  */
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +61,12 @@ export interface PnLChartProps {
   
   /** Initial view mode (default: 'both') */
   initialViewMode?: 'daily' | 'cumulative' | 'both';
+  
+  /** Initial filters */
+  initialFilters?: {
+    timePeriod?: TimePeriod;
+    wallets?: string[];
+  };
 }
 
 /**
@@ -79,6 +85,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   refreshInterval = 30000,
   className,
   initialViewMode = 'both',
+  initialFilters,
 }) => {
   const { t } = useTranslation();
   const chartTitle = title || t('charts.pnlChart.title');
@@ -90,8 +97,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   // State for view mode
   const [viewMode, setViewMode] = useState<'daily' | 'cumulative' | 'both'>(initialViewMode);
 
+  // Track previous initialFilters to detect changes
+  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
+
   const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
-    initialFilters: {
+    initialFilters: initialFilters || {
       timePeriod: initialTimePeriod,
       wallets: initialWallets.length > 0 ? initialWallets : undefined,
     },
@@ -99,16 +109,59 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   });
 
   /**
+   * Sync filters when initialFilters or initialWallets changes (e.g., wallet selection from parent)
+   */
+  useEffect(() => {
+    const prevFilters = prevInitialFiltersRef.current;
+    
+    // Determine current wallets (prefer initialFilters.wallets over initialWallets)
+    const currentWallets = initialFilters?.wallets || (initialWallets.length > 0 ? initialWallets : undefined);
+    
+    // Check if wallets changed
+    if (currentWallets && Array.isArray(currentWallets)) {
+      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : 
+                          (initialWallets.length > 0 ? initialWallets : []);
+      const prevWalletsStr = prevWallets.slice().sort().join(',');
+      const newWalletsStr = currentWallets.slice().sort().join(',');
+      if (prevWalletsStr !== newWalletsStr) {
+        setWallets(currentWallets);
+      }
+    }
+    
+    // Check if time period changed
+    const currentTimePeriod = initialFilters?.timePeriod || initialTimePeriod;
+    if (currentTimePeriod && prevFilters?.timePeriod !== currentTimePeriod) {
+      setTimePeriod(currentTimePeriod);
+    }
+    
+    // Update ref for next comparison
+    prevInitialFiltersRef.current = {
+      ...prevFilters,
+      wallets: currentWallets,
+      timePeriod: currentTimePeriod,
+    };
+  }, [initialFilters, initialWallets, initialTimePeriod, setWallets, setTimePeriod]);
+
+  /**
+   * Memoize wallets string to prevent unnecessary re-fetches
+   * Only changes when wallet addresses actually change, not on array reference change
+   */
+  const walletsString = useMemo(() => {
+    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
+    return filters.wallets.slice().sort().join(',');
+  }, [filters.wallets]);
+
+  /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo<PnLRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      wallets: filters.wallets?.join(','),
+      wallets: walletsString,
       aggregation,
       timezone,
     }),
-    [filters.timePeriod, filters.wallets, aggregation, timezone]
+    [filters.timePeriod, walletsString, aggregation, timezone]
   );
 
   /**
@@ -122,62 +175,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       refreshInterval,
     });
 
-  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
-  //   chartTitle,
-  //   timezone,
-  //   baseFilename: 'pnl-chart',
-  // });
-  // const handleExport = useCallback(
-  //   (format: ExportFormat) => {
-  //     if (!data) return;
-
-
-  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
-
-  //     if (format === 'csv') {
-  //       const csv: ChartDataSeries[] = [
-  //         {
-  //           id: 'daily-pnl',
-  //           name: 'Daily P&L',
-  //           type: 'bar',
-  //           visible: true,
-  //           data: data.dailyPnL.map(d => ({
-  //             name: String(d.timestamp),
-  //             value: d.value,
-  //           })),
-  //         },
-  //         {
-  //           id: 'cumulative-pnl',
-  //           name: 'Cumulative P&L',
-  //           type: 'line',
-  //           visible: true,
-  //           data: data.cumulativePnL.map(d => ({
-  //             name: String(d.timestamp),
-  //             value: d.value,
-  //           })),
-  //         },
-  //       ];
-  //       exportCSV(csv, filters);
-  //       return;
-  //     }
-
-  //     if (!instance) return;
-
-  //     format === 'png'
-  //       ? exportPNG(instance as any, filters)
-  //       : exportSVG(instance as any, filters);
-  //   },
-  //   [data, filters]
-  // );
-
   /**
-   * Generate eCharts option configuration
+   * Helper to create chart option for a single wallet's data
    */
-  const chartOption: EChartsOption | null = useMemo(() => {
-    if (!data || data.dailyPnL.length === 0) {
-      return null;
-    }
-    
+  const createChartOption = useCallback((
+    dailyPnLData: Array<{ timestamp: number; value: number }>,
+    cumulativePnLData: Array<{ timestamp: number; value: number }>,
+    walletLabel?: string
+  ): EChartsOption => {
     // Use theme colors
     const profitColor = chartTheme.colorPalette[1]; // Green
     const lossColor = chartTheme.colorPalette[2]; // Red
@@ -187,9 +192,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Extract timestamps and values
-    const timestamps = data.dailyPnL.map((item: { timestamp: number; value: number }) => item.timestamp);
-    const dailyValues = data.dailyPnL.map((item: { timestamp: number; value: number }) => item.value);
-    const cumulativeValues = data.cumulativePnL.map((item: { timestamp: number; value: number }) => item.value);
+    const timestamps = dailyPnLData.map((item: { timestamp: number; value: number }) => item.timestamp);
+    const dailyValues = dailyPnLData.map((item: { timestamp: number; value: number }) => item.value);
+    const cumulativeValues = cumulativePnLData.map((item: { timestamp: number; value: number }) => item.value);
     
     // Format X-axis dates
     const xAxisData = timestamps.map((ts: number) => formatTimestampWithTimezone(ts, timezone, 'MM/dd'));
@@ -333,11 +338,21 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     
     return {
       ...baseOption,
+      title: walletLabel ? {
+        text: walletLabel,
+        left: 8,
+        top: 8,
+        textStyle: {
+          color: chartTheme.textColor,
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      } : undefined,
       grid: {
         left: '3%',
         right: '4%',
         bottom: '3%',
-        top: '10%',
+        top: walletLabel ? '15%' : '10%',
         containLabel: true,
       },
       tooltip: {
@@ -373,7 +388,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       legend: {
         ...baseOption.legend,
         data: legendData,
-        top: 0,
+        top: walletLabel ? '7%' : 0,
       },
       xAxis: [
         {
@@ -388,13 +403,47 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       yAxis,
       series,
     };
-  }, [data, timezone, chartTheme, t, viewMode]);
+  }, [chartTheme, timezone, t, viewMode]);
+
+  /**
+   * Generate chart options - multiple charts for per-wallet view
+   */
+  const chartOptions = useMemo(() => {
+    if (!data) return [];
+
+    // Multi-wallet view
+    if (data.wallets && data.wallets.length > 0) {
+      return data.wallets.map(wallet => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.dailyPnL,
+          wallet.cumulativePnL,
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+        ),
+      }));
+    }
+
+    // Single/aggregated view
+    if (data.dailyPnL && data.dailyPnL.length > 0) {
+      return [{
+        walletAddress: 'aggregated',
+        option: createChartOption(data.dailyPnL, data.cumulativePnL!, undefined),
+      }];
+    }
+
+    return [];
+  }, [data, createChartOption]);
+
+  const isEmpty = !data || (
+    (!data.wallets || data.wallets.length === 0) &&
+    (!data.dailyPnL || data.dailyPnL.length === 0)
+  );
 
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.dailyPnL.length === 0}
+      isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
       {/* View mode selector */}
@@ -427,14 +476,38 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         </div>
       </div>
 
-      {chartOption && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+      {chartOptions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {/* Chart Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: chartOptions.length > 1 ? 'repeat(2, 1fr)' : '1fr',
+              gap: chartOptions.length > 1 ? '1rem' : '0',
+              width: '100%',
+            }}
+          >
+            {chartOptions.map((chartData, index) => (
+              <div
+                key={chartData.walletAddress}
+                style={{
+                  minHeight: `${minHeight}px`,
+                  border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
+                  borderRadius: '4px',
+                  padding: chartOptions.length > 1 ? '0.5rem' : '0',
+                }}
+              >
+                <ReactECharts
+                  ref={index === 0 ? chartRef : undefined}
+                  option={chartData.option}
+                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                  notMerge
+                  lazyUpdate
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </BaseChart>
   );

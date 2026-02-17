@@ -15,7 +15,7 @@ import { generatePnLData } from '../../services/mockChartData.service.js';
  */
 const pnlRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
-  wallets: z.string().optional(),
+  wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
   aggregation: z.enum(['daily', 'weekly', 'monthly']).optional().default('daily'),
 });
 
@@ -52,6 +52,7 @@ const app = new Hono()
       
       // Generate P&L data
       const data = generatePnLData(
+        params.wallets,
         params.period,
         params.aggregation
       );

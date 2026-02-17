@@ -145,13 +145,13 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
     });
 
   /**
-   * Generate eCharts option configuration
+   * Helper to create chart option for a single wallet's data
    */
-  const chartOption: EChartsOption | null = useMemo(() => {
-    if (!data || data.rollingReturn.length === 0) {
-      return null;
-    }
-    
+  const createChartOption = useCallback((
+    rollingReturnData: Array<{ timestamp: number; value: number }>,
+    cumulativeReturnData: Array<{ timestamp: number; value: number }>,
+    walletLabel?: string
+  ): EChartsOption => {
     // Use theme colors
     const positiveColor = chartTheme.colorPalette[1]; // Green
     const negativeColor = chartTheme.colorPalette[2]; // Red
@@ -161,26 +161,36 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
     const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Extract timestamps and values
-    const timestamps = data.rollingReturn.map(item => item.timestamp);
-    const rollingValues = data.rollingReturn.map(item => item.value);
-    const cumulativeValues = data.cumulativeReturn.map(item => item.value);
+    const timestamps = rollingReturnData.map(item => item.timestamp);
+    const rollingValues = rollingReturnData.map(item => item.value);
+    const cumulativeValues = cumulativeReturnData.map(item => item.value);
     
     // Format X-axis dates
     const xAxisData = timestamps.map(ts => formatTimestampWithTimezone(ts, timezone, 'MM/dd/yyyy'));
     
     return {
       ...baseOption,
+      title: walletLabel ? {
+        text: walletLabel,
+        left: 8,
+        top: 8,
+        textStyle: {
+          color: chartTheme.textColor,
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      } : undefined,
       grid: {
         left: '10%',
         right: '10%',
         bottom: '15%',
-        top: '15%',
+        top: walletLabel ? '20%' : '15%',
         containLabel: true,
       },
       legend: {
         ...baseOption.legend,
         show: true,
-        top: '5%',
+        top: walletLabel ? '12%' : '5%',
         data: [
           t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
           t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
@@ -286,13 +296,47 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, timezone, t]);
+  }, [chartTheme, timezone, t]);
+
+  /**
+   * Generate chart options - multiple charts for per-wallet view
+   */
+  const chartOptions = useMemo(() => {
+    if (!data) return [];
+
+    // Multi-wallet view
+    if (data.wallets && data.wallets.length > 0) {
+      return data.wallets.map(wallet => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.rollingReturn,
+          wallet.cumulativeReturn,
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+        ),
+      }));
+    }
+
+    // Single/aggregated view
+    if (data.rollingReturn && data.cumulativeReturn && data.rollingReturn.length > 0) {
+      return [{
+        walletAddress: 'aggregated',
+        option: createChartOption(data.rollingReturn, data.cumulativeReturn, undefined),
+      }];
+    }
+
+    return [];
+  }, [data, createChartOption]);
+
+  const isEmpty = !data || (
+    (!data.wallets || data.wallets.length === 0) &&
+    (!data.rollingReturn || data.rollingReturn.length === 0)
+  );
 
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.rollingReturn.length === 0}
+      isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
@@ -320,14 +364,38 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         )}
       </div>
 
-      {chartOption && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+      {chartOptions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {/* Chart Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: chartOptions.length > 1 ? 'repeat(2, 1fr)' : '1fr',
+              gap: chartOptions.length > 1 ? '1rem' : '0',
+              width: '100%',
+            }}
+          >
+            {chartOptions.map((chartData, index) => (
+              <div
+                key={chartData.walletAddress}
+                style={{
+                  minHeight: `${minHeight}px`,
+                  border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
+                  borderRadius: '4px',
+                  padding: chartOptions.length > 1 ? '0.5rem' : '0',
+                }}
+              >
+                <ReactECharts
+                  ref={index === 0 ? chartRef : undefined}
+                  option={chartData.option}
+                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                  notMerge
+                  lazyUpdate
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </BaseChart>
   );
