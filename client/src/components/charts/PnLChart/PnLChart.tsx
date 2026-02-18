@@ -353,7 +353,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         left: '3%',
         right: '4%',
         bottom: '3%',
-        top: walletLabel ? '15%' : '10%',
+        top: walletLabel ? '25%' : '20%',
         containLabel: true,
       },
       tooltip: {

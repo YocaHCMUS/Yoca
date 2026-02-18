@@ -113,7 +113,7 @@ export function TotalTradingVolumeChart({
     const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Data is already sorted by rank, prepare for horizontal bar chart
-    const categories = data.wallets.map(w => `#${w.rank} ${w.walletName || w.walletAddress}`);
+    const categories = data.wallets.map(w => `#${w.rank} ${w.walletAddress}`);
     const totalVolumes = data.wallets.map(w => w.totalVolume);
     const depositVolumes = data.wallets.map(w => w.depositVolume);
     const withdrawalVolumes = data.wallets.map(w => w.withdrawalVolume);
@@ -121,10 +121,10 @@ export function TotalTradingVolumeChart({
     return {
       ...baseOption,
       grid: {
-        left: '20%',
-        right: '15%',
-        bottom: '10%',
-        top: '15%',
+        // left: '20%',
+        // right: '15%',
+        // bottom: '10%',
+        // top: '15%',
         containLabel: true,
       },
       legend: {
@@ -185,8 +185,9 @@ export function TotalTradingVolumeChart({
           if (!Array.isArray(params) || params.length === 0) return '';
           const wallet = data.wallets[params[0].dataIndex];
           return formatItemTooltip(
-            wallet.walletName || wallet.walletAddress,
+            wallet.walletAddress,
             [
+              // { label: 'Address', value: wallet.walletAddress },
               { label: 'Rank', value: `#${wallet.rank}` },
               { label: 'Total Volume', value: formatCurrency(wallet.totalVolume) },
               { label: 'Deposits', value: formatCurrency(wallet.depositVolume), labelColor: chartTheme.colorPalette[1] },

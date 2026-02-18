@@ -160,7 +160,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
     if (validWallets.length === 0) return null;
     
     // Prepare categories (wallet names)
-    const categories = validWallets.map(w => w.walletName);
+    const categories = validWallets.map(w => w.walletAddress);
     
     // Prepare box plot data
     const boxData = validWallets.map(w => [

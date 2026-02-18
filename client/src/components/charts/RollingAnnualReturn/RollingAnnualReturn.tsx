@@ -184,8 +184,8 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
       grid: {
         left: '10%',
         right: '10%',
-        bottom: '15%',
-        top: walletLabel ? '20%' : '15%',
+        bottom: '10%',
+        top: walletLabel ? '25%' : '20%',
         containLabel: true,
       },
       legend: {
