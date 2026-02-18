@@ -9,6 +9,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import type { CredentialResponse } from '@react-oauth/google';
 import { InlineNotification } from '@carbon/react';
 import './GoogleAuthButton.module.scss';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * GoogleAuthButton Props
@@ -52,6 +53,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation();
+  const { authState } = useAuth();
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -59,7 +61,9 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
    * Handle successful Google OAuth response
    */
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
-    if (!credentialResponse.credential) {
+    const token = credentialResponse.credential;
+
+    if (!token) {
       const errorMsg = t('auth.googleAuthFailed');
       setError(errorMsg);
       onError?.(errorMsg);
@@ -70,7 +74,8 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
     setIsLoading(true);
 
     try {
-      await onSuccess(credentialResponse.credential);
+      // TRUYỀN THAM SỐ token VÀO ĐÂY ĐỂ SỬA LỖI "Expected 1 arguments, but got 0"
+      await onSuccess(token);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : t('auth.googleAuthFailed');
       setError(errorMsg);
@@ -79,7 +84,6 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
       setIsLoading(false);
     }
   };
-
   /**
    * Handle Google OAuth error or cancellation
    */

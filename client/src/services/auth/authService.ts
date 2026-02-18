@@ -11,6 +11,7 @@ import type {
   GoogleAuthData,
   AuthErrorType,
 } from '../../types/auth';
+import client from "@/api/main";
 
 /**
  * Mock delay to simulate network latency (ms)
@@ -107,32 +108,45 @@ export const signUp = async (data: SignUpFormData): Promise<AuthResponse> => {
 /**
  * Google OAuth sign-in service (server-backed)
  */
-export const googleSignIn = async (
-  data: GoogleAuthData
-): Promise<AuthResponse> => {
+export const googleSignIn = async (data: GoogleAuthData): Promise<AuthResponse> => {
   try {
-    if (!data.credential) {
-      return { success: false, error: 'Thiếu mã xác thực Google' };
+    // Lấy Google credential từ component (GIS returns `credential`)
+    const tokenToSend =
+      (data as any).credential || (data as any).token || (data as any).idToken;
+
+    if (!tokenToSend || typeof tokenToSend !== 'string') {
+      return {
+        success: false,
+        error: 'Thiếu thông tin Google credential',
+      };
     }
 
-    const response = await fetch(`${API_URL}/users/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: data.credential }),
+    const resp = await client.api.users.auth.google.$post({
+      json: { token: tokenToSend },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return { success: false, error: errorData.error || 'Đăng nhập Google thất bại' };
+    if (resp.ok) {
+      const res = await resp.json();
+      // Dựa trên lỗi "Property 'user' does not exist", server trả về userId và token
+      return {
+        success: true,
+        user: { id: res.userId } as any, // Ép kiểu hoặc map lại cho đúng định dạng User của bạn
+        token: res.token,
+      };
     }
 
-    return await response.json();
+    return {
+      success: false,
+      error: 'Xác thực Google thất bại trên máy chủ',
+    };
   } catch (error) {
-    console.error('Google sign-in error:', error);
-    return { success: false, error: 'Không thể kết nối đến máy chủ' };
+    console.error('Google Sign-In Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Không thể kết nối đến máy chủ',
+    };
   }
 };
-
 /**
  * Mock sign-out service
  */
