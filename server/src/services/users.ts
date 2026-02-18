@@ -182,6 +182,7 @@ export async function verifyWalletLoginNounce(
     return null;
   }
 
+  // Clear nounce
   await db
     .update(authAccounts)
     .set({

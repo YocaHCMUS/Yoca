@@ -7,8 +7,6 @@ export default ({ mode: _mode }: { mode: string }) => {
   // const env = loadEnv(mode, "..", "CLIENT_");
 
   return defineConfig({
-    envDir: "..",
-    envPrefix: "CLIENT_",
     server: {
       port: 3000,
       allowedHosts: true,
