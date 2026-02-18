@@ -18,6 +18,7 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
+import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { useChartFilters } from '@/hooks/useChartFilters';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchWinrate } from '@/services/chart/chartApi';
@@ -162,25 +163,20 @@ export function WinrateChart({
         },
       ],
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         formatter: (params: any) => {
           const param = params[0];
           const wallet = data.wallets[param.dataIndex];
-          return `
-            <div style="font-weight: 600; margin-bottom: 8px;">${param.name}</div>
-            <div style="display: flex; justify-content: space-between; gap: 16px;">
-              <span>Winrate:</span><strong>${param.value}%</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px;">
-              <span>Winning Trades:</span><strong>${wallet.winningTrades}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px;">
-              <span>Losing Trades:</span><strong>${wallet.losingTrades}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px;">
-              <span>Total Trades:</span><strong>${wallet.totalTrades}</strong>
-            </div>
-          `;
+          return formatItemTooltip(
+            param.name,
+            [
+              { label: 'Winrate', value: `${param.value}%` },
+              { label: 'Winning Trades', value: wallet.winningTrades.toString() },
+              { label: 'Losing Trades', value: wallet.losingTrades.toString() },
+              { label: 'Total Trades', value: wallet.totalTrades.toString() },
+            ]
+          );
         },
       },
     };
@@ -264,6 +260,7 @@ export function WinrateChart({
           data: ['Winning', 'Losing'],
         },
         tooltip: {
+          ...baseOption.tooltip,
           trigger: 'axis',
           axisPointer: {
             type: 'shadow',

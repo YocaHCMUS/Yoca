@@ -26,6 +26,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
@@ -230,11 +231,15 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...base.tooltip,
         trigger: 'item',
-        formatter: (p: any) => `
-          <strong>${p.name}</strong><br/>
-          ${t('charts.assetDistributionChart.value')}: ${formatCurrency(p.value)}<br/>
-          ${t('charts.assetDistributionChart.percentage')}: ${p.data.percentage.toFixed(2)}%
-        `,
+        formatter: (p: any) => createTooltipHeader(p.name)
+          + createTooltipRow(
+              t('charts.assetDistributionChart.value'),
+              formatCurrency(p.value)
+            )
+          + createTooltipRow(
+              t('charts.assetDistributionChart.percentage'),
+              `${p.data.percentage.toFixed(2)}%`
+            ),
       },
       legend: isMultiWallet ? {
         show: false, // Hide individual legends in multi-wallet view

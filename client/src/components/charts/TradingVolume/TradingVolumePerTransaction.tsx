@@ -7,6 +7,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumePerTransaction } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { formatItemTooltip } from '@/util/tooltip-helpers';
 import type { TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -188,26 +189,16 @@ export function TradingVolumePerTransaction({
             borderColor: '#5470C6',
           },
           tooltip: {
+            ...baseOption.tooltip,
             formatter: (param: any) => {
               const [min, q1, median, q3, max] = param.data;
-              return `
-                <div style="font-weight: 600; margin-bottom: 8px; text-align: left;">${param.name} - Deposits</div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Max:</span><strong>${formatCurrency(max)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q3:</span><strong>${formatCurrency(q3)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Median:</span><strong>${formatCurrency(median)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q1:</span><strong>${formatCurrency(q1)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Min:</span><strong>${formatCurrency(min)}</strong>
-                </div>
-              `;
+              return formatItemTooltip(`${param.name} - Deposits`, [
+                { label: 'Max', value: formatCurrency(max) },
+                { label: 'Q3', value: formatCurrency(q3) },
+                { label: 'Median', value: formatCurrency(median) },
+                { label: 'Q1', value: formatCurrency(q1) },
+                { label: 'Min', value: formatCurrency(min) },
+              ]);
             },
           },
         },
@@ -220,26 +211,16 @@ export function TradingVolumePerTransaction({
             borderColor: '#91CC75',
           },
           tooltip: {
+            ...baseOption.tooltip,
             formatter: (param: any) => {
               const [min, q1, median, q3, max] = param.data;
-              return `
-                <div style="font-weight: 600; margin-bottom: 8px; text-align: left;">${param.name} - Withdrawals</div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Max:</span><strong>${formatCurrency(max)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q3:</span><strong>${formatCurrency(q3)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Median:</span><strong>${formatCurrency(median)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q1:</span><strong>${formatCurrency(q1)}</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Min:</span><strong>${formatCurrency(min)}</strong>
-                </div>
-              `;
+              return formatItemTooltip(`${param.name} - Withdrawals`, [
+                { label: 'Max', value: formatCurrency(max) },
+                { label: 'Q3', value: formatCurrency(q3) },
+                { label: 'Median', value: formatCurrency(median) },
+                { label: 'Q1', value: formatCurrency(q1) },
+                { label: 'Min', value: formatCurrency(min) },
+              ]);
             },
           },
         },

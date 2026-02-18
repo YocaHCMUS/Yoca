@@ -20,6 +20,7 @@ import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
+import { formatItemTooltip } from '@/util/tooltip-helpers';
 
 import { useChartFilters } from '@/hooks/useChartFilters';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -223,32 +224,20 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
             borderColor: '#5470C6',
           },
           tooltip: {
+            ...baseOption.tooltip,
             formatter: (param: any) => {
               const [min, q1, median, q3, max] = param.data;
               const wallet = validWallets[param.dataIndex];
               const avg = wallet.averageReturn;
               
-              return `
-                <div style="font-weight: 600; margin-bottom: 8px; text-align: left;">${param.name}</div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Average:</span><strong>${avg.toFixed(2)}%</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Max:</span><strong>${max.toFixed(2)}%</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q3:</span><strong>${q3.toFixed(2)}%</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Median:</span><strong>${median.toFixed(2)}%</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Q1:</span><strong>${q1.toFixed(2)}%</strong>
-                </div>
-                <div style="margin-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-                  <span>Min:</span><strong>${min.toFixed(2)}%</strong>
-                </div>
-              `;
+              return formatItemTooltip(param.name, [
+                { label: 'Average', value: `${avg.toFixed(2)}%` },
+                { label: 'Max', value: `${max.toFixed(2)}%` },
+                { label: 'Q3', value: `${q3.toFixed(2)}%` },
+                { label: 'Median', value: `${median.toFixed(2)}%` },
+                { label: 'Q1', value: `${q1.toFixed(2)}%` },
+                { label: 'Min', value: `${min.toFixed(2)}%` },
+              ]);
             },
           },
         },

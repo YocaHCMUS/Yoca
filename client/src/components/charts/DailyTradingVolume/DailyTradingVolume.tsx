@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { formatCurrency } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { EChartsOption } from 'echarts';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -261,29 +262,11 @@ export function DailyTradingVolume({
         axisPointer: {
           type: 'shadow',
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) return '';
-          
-          const date = params[0].axisValue;
-          let tooltipContent = `<strong>${date}</strong><br/>`;
-          
-          params.forEach((param: any) => {
-            const isLine = param.seriesType === 'line';
-            const value = isLine 
-              ? `$${param.value}` 
-              : formatCurrency(param.value);
-            
-            tooltipContent += `
-              <div style="display: flex; align-items: center; margin-top: 4px;">
-                <span style="display: inline-block; width: 10px; height: 10px; background-color: ${param.color}; margin-right: 8px; ${isLine ? 'border-radius: 50%;' : ''}"></span>
-                <span style="flex: 1;">${param.seriesName}:</span>
-                <strong style="margin-left: 8px;">${value}</strong>
-              </div>
-            `;
-          });
-          
-          return tooltipContent;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => p.axisValue,
+          (p) => p.seriesType === 'line' ? `$${p.value}` : formatCurrency(p.value)
+        ),
       },
       legend: {
         ...baseOption.legend,
@@ -293,13 +276,6 @@ export function DailyTradingVolume({
         itemWidth: 25,
         itemHeight: 15,
         icon: 'rect',
-        // Custom icon for line series
-        formatter: (name: string) => {
-          if (name === data.benchmark.name) {
-            return `{line|} ${name}`;
-          }
-          return name;
-        },
         textStyle: {
           ...baseOption.legend.textStyle,
           fontSize: 12,

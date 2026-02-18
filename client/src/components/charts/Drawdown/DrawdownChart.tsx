@@ -23,6 +23,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchDrawdown } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { DrawdownResponse, DrawdownRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -202,29 +203,16 @@ export function DrawdownChart({
         data: data.wallets.map(w => w.walletName || w.walletAddress),
       },
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'cross',
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const timestamp = params[0].value[0];
-          const dateStr = formatTimestampWithTimezone(timestamp, timezone, 'yyyy-MM-dd HH:mm');
-          
-          let content = `<div style="font-weight: 600; margin-bottom: 8px;">${dateStr}</div>`;
-          params.forEach((param: any) => {
-            const drawdown = param.value[1];
-            content += `
-              <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-                <span style="color: ${param.color}">● ${param.seriesName}:</span>
-                <strong>${drawdown.toFixed(2)}%</strong>
-              </div>
-            `;
-          });
-          
-          return content;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatTimestampWithTimezone(p.value[0], timezone, 'yyyy-MM-dd HH:mm'),
+          (p) => `${p.value[1].toFixed(2)}%`
+        ),
       },
     };
   }, [data, chartTheme, timezone, t]);

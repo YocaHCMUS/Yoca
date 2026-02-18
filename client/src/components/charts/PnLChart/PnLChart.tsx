@@ -27,6 +27,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 
@@ -372,14 +373,21 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           const dailyValue = dailyValues[params[0].dataIndex];
           const cumulativeValue = cumulativeValues[params[0].dataIndex];
           
-          let tooltipContent = `<strong>${date}</strong><br/>`;
+          let tooltipContent = createTooltipHeader(date);
           
           if (showDaily) {
-            tooltipContent += `${t('charts.pnlChart.dailyPnL')}: <span style="color: ${dailyValue >= 0 ? profitColor : lossColor}">${formatCurrency(dailyValue)}</span><br/>`;
+            tooltipContent += createTooltipRow(
+              t('charts.pnlChart.dailyPnL'),
+              formatCurrency(dailyValue),
+              { valueColor: dailyValue >= 0 ? profitColor : lossColor }
+            );
           }
           
           if (showCumulative) {
-            tooltipContent += `${t('charts.pnlChart.cumulativePnL')}: ${formatCurrency(cumulativeValue)}`;
+            tooltipContent += createTooltipRow(
+              t('charts.pnlChart.cumulativePnL'),
+              formatCurrency(cumulativeValue)
+            );
           }
           
           return tooltipContent;

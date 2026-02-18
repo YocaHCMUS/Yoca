@@ -7,6 +7,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -256,30 +257,13 @@ export function BalanceChart({
       },
       series: seriesConfig,
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const timestamp = params[0].value[0];
-          let tooltipContent = `
-            <div style="font-weight: 600; margin-bottom: 8px;">
-              ${formatTimestampWithTimezone(timestamp, timezone, 'PPpp')}
-            </div>
-          `;
-          
-          // Add each series value
-          params.forEach((param: any) => {
-            const value = param.value[1];
-            tooltipContent += `
-              <div style="margin-top: 4px;">
-                <span style="display:inline-block;margin-right:5px;border-radius:50%;width:10px;height:10px;background-color:${param.color};"></span>
-                ${param.seriesName}: <strong>${formatCurrency(value)}</strong>
-              </div>
-            `;
-          });
-          
-          return tooltipContent;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatTimestampWithTimezone(p.value[0], timezone, 'PPpp'),
+          (p) => formatCurrency(p.value[1])
+        ),
       },
     };
   }, [data, timezone, chartTheme, t]);

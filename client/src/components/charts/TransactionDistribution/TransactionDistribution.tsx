@@ -16,6 +16,7 @@ import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChart
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import { useStandardChartController } from '../../../hooks/useChartController';
@@ -301,22 +302,11 @@ export function TransactionDistribution({
             color: '#999',
           },
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const timestamp = params[0].value[0];
-          const dateStr = formatDate(new Date(timestamp), timezone);
-          const count = params[0].value[1];
-          
-          return `
-            <strong>${dateStr}</strong><br/>
-            <div style="display: flex; align-items: center; margin-top: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">${t('charts.transactionDistributionChart.tokens')}:</span>
-              <strong style="margin-left: 8px;">${count}</strong>
-            </div>
-          `;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatDate(new Date(p.value[0]), timezone),
+          (p) => p.value[1].toString()
+        ),
       },
       xAxis: {
         ...baseOption.xAxis,

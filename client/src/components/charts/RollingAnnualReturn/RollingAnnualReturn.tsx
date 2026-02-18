@@ -26,6 +26,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchRollingAnnualReturn } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import type { RollingAnnualReturnResponse, RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -229,6 +230,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         },
       ],
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'cross',
@@ -243,10 +245,12 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
           const timestamp = timestamps[items[0].dataIndex];
           const date = formatTimestampWithTimezone(timestamp, timezone, 'MMM dd, yyyy');
           
-          let tooltip = `<strong>${date}</strong><br/>`;
+          let tooltip = createTooltipHeader(date);
           
           items.forEach((item: any) => {
-            tooltip += `${item.marker} ${item.seriesName}: <strong>${item.value.toFixed(2)}%</strong><br/>`;
+            tooltip += `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">`
+              + `<span>${createSeriesIndicator(item.color)}${item.seriesName}:</span>`
+              + `<strong>${item.value.toFixed(2)}%</strong></div>`;
           });
           
           return tooltip;

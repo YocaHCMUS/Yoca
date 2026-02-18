@@ -16,6 +16,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
 import { formatCurrency, formatDate } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -198,27 +199,11 @@ export function VolumeBenchmark({
             color: '#999',
           },
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const timestamp = params[0].value[0];
-          const dateStr = formatDate(new Date(timestamp), timezone);
-          
-          let tooltipContent = `<strong>${dateStr}</strong><br/>`;
-          params.forEach((param: any) => {
-            const volume = param.value[1];
-            const color = param.color;
-            tooltipContent += `
-              <div style="display: flex; align-items: center; margin-top: 4px;">
-                <span style="display: inline-block; width: 10px; height: 10px; background-color: ${color}; margin-right: 8px; border-radius: 50%;"></span>
-                <span style="flex: 1;">${param.seriesName}:</span>
-                <strong style="margin-left: 8px;">${formatCurrency(volume)}</strong>
-              </div>
-            `;
-          });
-          
-          return tooltipContent;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatDate(new Date(p.value[0]), timezone),
+          (p) => formatCurrency(p.value[1])
+        ),
       },
       legend: {
         ...baseOption.legend,

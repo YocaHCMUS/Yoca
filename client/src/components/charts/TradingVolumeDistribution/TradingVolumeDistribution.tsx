@@ -26,6 +26,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import type { TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
@@ -218,11 +219,15 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...base.tooltip,
         trigger: 'item',
-        formatter: (p: any) => `
-          <strong>${p.name}</strong><br/>
-          ${t('charts.tradingVolumeDistributionChart.volume', 'Volume')}: ${formatCurrency(p.value)}<br/>
-          ${t('charts.tradingVolumeDistributionChart.percentage', 'Percentage')}: ${p.data.percentage.toFixed(2)}%
-        `,
+        formatter: (p: any) => createTooltipHeader(p.name)
+          + createTooltipRow(
+              t('charts.tradingVolumeDistributionChart.volume', 'Volume'),
+              formatCurrency(p.value)
+            )
+          + createTooltipRow(
+              t('charts.tradingVolumeDistributionChart.percentage', 'Percentage'),
+              `${p.data.percentage.toFixed(2)}%`
+            ),
       },
       legend: isMultiWallet ? {
         show: false, // Hide individual legends in multi-wallet view

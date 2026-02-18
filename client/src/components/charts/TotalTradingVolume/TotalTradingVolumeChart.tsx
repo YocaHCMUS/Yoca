@@ -21,6 +21,7 @@ import { useChartFilters } from '@/hooks/useChartFilters';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchTotalTradingVolume } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { formatItemTooltip } from '@/util/tooltip-helpers';
 import type { TotalTradingVolumeResponse, TotalTradingVolumeRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -175,6 +176,7 @@ export function TotalTradingVolumeChart({
         },
       ],
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: {
           type: 'shadow',
@@ -182,24 +184,16 @@ export function TotalTradingVolumeChart({
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
           const wallet = data.wallets[params[0].dataIndex];
-          return `
-            <div style="font-weight: 600; margin-bottom: 8px;">${wallet.walletName || wallet.walletAddress}</div>
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-              <span>Rank:</span><strong>#${wallet.rank}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-              <span>Total Volume:</span><strong>${formatCurrency(wallet.totalVolume)}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-              <span style="color: ${chartTheme.colorPalette[1]}">Deposits:</span><strong>${formatCurrency(wallet.depositVolume)}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-              <span style="color: ${chartTheme.colorPalette[2]}">Withdrawals:</span><strong>${formatCurrency(wallet.withdrawalVolume)}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 4px;">
-              <span>Trade Count:</span><strong>${wallet.tradeCount}</strong>
-            </div>
-          `;
+          return formatItemTooltip(
+            wallet.walletName || wallet.walletAddress,
+            [
+              { label: 'Rank', value: `#${wallet.rank}` },
+              { label: 'Total Volume', value: formatCurrency(wallet.totalVolume) },
+              { label: 'Deposits', value: formatCurrency(wallet.depositVolume), labelColor: chartTheme.colorPalette[1] },
+              { label: 'Withdrawals', value: formatCurrency(wallet.withdrawalVolume), labelColor: chartTheme.colorPalette[2] },
+              { label: 'Trade Count', value: wallet.tradeCount.toString() },
+            ]
+          );
         },
       },
     };

@@ -17,6 +17,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -223,13 +224,15 @@ export function ExchangeComparison({
           if (!Array.isArray(params) || params.length === 0) return '';
           
           const exchangeName = params[0].axisValue;
-          let tooltipContent = `<strong>${exchangeName}</strong><br/>`;
+          let tooltipContent = createTooltipHeader(exchangeName);
           
           params.forEach((param: any) => {
             const value = currentMetric === 'count' 
               ? `${param.value.toLocaleString()} txns`
               : formatCurrency(param.value);
-            tooltipContent += `${param.marker} ${param.seriesName}: ${value}<br/>`;
+            tooltipContent += `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">`
+              + `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>`
+              + `<strong>${value}</strong></div>`;
           });
           
           return tooltipContent;

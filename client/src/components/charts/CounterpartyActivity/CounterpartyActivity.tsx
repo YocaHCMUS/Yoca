@@ -17,6 +17,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchCounterpartyActivity } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
 import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -217,14 +218,12 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           const counterpartyName = params[0].axisValue;
           const count = params[0].value;
           
-          return `
-            <strong>${counterpartyName}</strong><br/>
-            <div style="display: flex; align-items: center; margin-top: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">${t('charts.counterpartyActivityChart.transactionCount')}:</span>
-              <strong style="margin-left: 8px;">${count.toLocaleString()}</strong>
-            </div>
-          `;
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+                t('charts.counterpartyActivityChart.transactionCount'),
+                count.toLocaleString(),
+                { color: params[0].color, showIndicator: true }
+              );
         },
       },
       legend: {
@@ -311,14 +310,12 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           const counterpartyName = params[0].axisValue;
           const volume = params[0].value;
           
-          return `
-            <strong>${counterpartyName}</strong><br/>
-            <div style="display: flex; align-items: center; margin-top: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">${t('charts.counterpartyActivityChart.totalVolume')}:</span>
-              <strong style="margin-left: 8px;">${formatCurrency(volume)}</strong>
-            </div>
-          `;
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+                t('charts.counterpartyActivityChart.totalVolume'),
+                formatCurrency(volume),
+                { color: params[0].color, showIndicator: true }
+              );
         },
       },
       legend: {

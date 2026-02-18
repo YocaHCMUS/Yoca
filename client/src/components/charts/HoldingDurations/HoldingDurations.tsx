@@ -7,6 +7,7 @@ import { useChartFilters } from '@/hooks/useChartFilters';
 import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchHoldingDurations } from '@/services/chart/chartApi';
+import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 
 import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
 
@@ -263,6 +264,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
         nameTextStyle: { color: chartTheme.textColor },
       },
       tooltip: {
+        ...base.tooltip,
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
         backgroundColor: 'rgba(50, 50, 50, 0.95)',
@@ -274,17 +276,17 @@ export const HoldingDurations: React.FC<ChartProps> = ({
           if (items.length === 0) return '';
           
           const tokenName = items[0]?.axisValue || 'Unknown';
-          const header = `<strong style="font-size: 14px;">${tokenName}</strong>`;
+          let tooltip = createTooltipHeader(tokenName, 'font-size: 14px;');
           
           const lines = items
             .filter((p: any) => p.value !== null && p.value !== undefined)
             .map((p: any) => {
               const value = Number(p.value);
               const formattedValue = value > 0 ? value.toFixed(1) : '0.0';
-              return `${p.marker} <span style="display: inline-block; min-width: 100px;">${p.seriesName}</span>: <strong>${formattedValue}</strong> ${unitLabel.toLowerCase()}`;
+              return `<div style="margin-top: 4px;">${createSeriesIndicator(p.color)}<span style="display: inline-block; min-width: 100px;">${p.seriesName}</span>: <strong>${formattedValue}</strong> ${unitLabel.toLowerCase()}</div>`;
             });
           
-          return lines.length > 0 ? [header, ...lines].join('<br/>') : header;
+          return tooltip + lines.join('');
         },
       },
       series,

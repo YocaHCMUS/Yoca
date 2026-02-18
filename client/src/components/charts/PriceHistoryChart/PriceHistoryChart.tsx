@@ -17,6 +17,7 @@ import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPriceHistory } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -189,20 +190,15 @@ export function PriceHistoryChart({
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) return '';
-
-          const date = new Date(params[0].axisValue).toLocaleDateString();
-          let tooltipText = `<strong>${date}</strong><br/>`;
-
-          params.forEach((param: any) => {
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => new Date(p.axisValue).toLocaleDateString(),
+          (p) => {
             // Use param.data[1] for original value, not param.value (which is transformed for log scale)
-            const originalValue = param.data ? param.data[1] : param.value;
-            tooltipText += `${param.marker} ${param.seriesName}: ${formatCurrency(originalValue)}<br/>`;
-          });
-
-          return tooltipText;
-        },
+            const originalValue = p.data ? p.data[1] : p.value;
+            return formatCurrency(originalValue);
+          }
+        ),
       },
       legend: {
         ...baseOption.legend,
