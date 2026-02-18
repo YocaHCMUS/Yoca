@@ -375,7 +375,6 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
             style={{
               display: 'grid',
               gridTemplateColumns: chartOptions.length > 1 ? 'repeat(2, 1fr)' : '1fr',
-              gap: chartOptions.length > 1 ? '1rem' : '0',
               width: '100%',
             }}
           >

@@ -14,15 +14,23 @@
 .distributionSection {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
+  // gap: 1.5rem;
   width: 100%;
 }
 
+// .distributionChart {
+//   min-height: 350px;
+//   background: var(--cds-layer-01);
+//   border-radius: 4px;
+//   padding: 1rem;
+// }
+
 .distributionChart {
-  min-height: 350px;
-  background: var(--cds-layer-01);
-  border-radius: 4px;
-  padding: 1rem;
+  min-height: 300px;
+  aspect-ratio: 1;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: '4px';
+  padding: 0.5rem,
 }
 
 @media (max-width: 768px) {
@@ -32,5 +40,10 @@
   
   .distributionChart {
     min-height: 300px;
+    aspect-ratio: 1;
+    border: 1px solid var(--cds-border-subtle);
+    border-radius: '4px';
+    padding: 0.5rem,
   }
 }
+
