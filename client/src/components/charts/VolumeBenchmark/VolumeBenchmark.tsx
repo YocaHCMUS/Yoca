@@ -11,7 +11,7 @@ import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
@@ -108,12 +108,8 @@ export function VolumeBenchmark({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    isValid,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
       wallets: walletIds.length > 0 ? walletIds : undefined,
@@ -130,10 +126,10 @@ export function VolumeBenchmark({
   const query = useMemo<VolumeBenchmarkRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      walletIds: filters.wallets?.join(','),
+      walletIds: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.wallets, timezone]
+    [filters.timePeriod, walletsString, timezone]
   );
   
   /**

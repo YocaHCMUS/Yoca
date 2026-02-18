@@ -12,7 +12,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison } from '@/services/chart/chartApi';
@@ -103,12 +103,8 @@ export function ExchangeComparison({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    isValid,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
     },

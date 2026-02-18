@@ -16,12 +16,12 @@
  * @module components/charts/RollingAnnualReturn
  */
 
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchRollingAnnualReturn } from '@/services/chart/chartApi';
@@ -61,25 +61,24 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
   
-  // Extract initial values
+  // Extract initial values - using type assertion for custom properties
+  const customFilters = initialFilters as any;
   const initialTimeUnit = 
-    initialFilters?.timeUnit === 'month' ||
-    initialFilters?.timeUnit === 'quarter' ||
-    initialFilters?.timeUnit === 'year' ||
-    initialFilters?.timeUnit === 'custom'
-      ? initialFilters.timeUnit
+    customFilters?.timeUnit === 'month' ||
+    customFilters?.timeUnit === 'quarter' ||
+    customFilters?.timeUnit === 'year' ||
+    customFilters?.timeUnit === 'custom'
+      ? customFilters.timeUnit
       : 'month';
-  const initialWindowSize = typeof initialFilters?.windowSize === 'number' ? initialFilters.windowSize : 30;
+  const initialWindowSize = typeof customFilters?.windowSize === 'number' ? customFilters.windowSize : 30;
   const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
   
   // State for time unit and window size
   const [selectedTimeUnit, setSelectedTimeUnit] = useState<TimeUnit>(initialTimeUnit);
   const [windowSize, setWindowSize] = useState<number>(initialWindowSize);
 
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  const { filters, setTimePeriod, setWallets } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialFilters?.timePeriod || '1Y',
       wallets: initialWallets,
@@ -88,37 +87,9 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
   });
 
   /**
-   * Sync filters when initialFilters changes
+   * Memoize query to prevent unnecessary re-fetches
    */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    // Check if wallets changed
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    // Check if time period changed
-    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
-      setTimePeriod(initialFilters.timePeriod);
-    }
-    
-    // Update ref for next comparison
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod]);
-
-  /**
-   * Memoize wallets string to prevent unnecessary re-fetches
-   */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
+  const walletsStringFormatted = walletsString;
 
   /**
    * Memoize query to prevent unnecessary re-fetches
@@ -126,12 +97,12 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
   const query = useMemo<RollingAnnualReturnRequestParams>(
     () => ({
       period: filters.timePeriod,
-      wallets: walletsString,
+      wallets: walletsStringFormatted,
       timeUnit: selectedTimeUnit,
       windowSize: selectedTimeUnit === 'custom' ? windowSize : undefined,
       timezone,
     }),
-    [filters.timePeriod, walletsString, selectedTimeUnit, windowSize, timezone]
+    [filters.timePeriod, walletsStringFormatted, selectedTimeUnit, windowSize, timezone]
   );
 
   /**

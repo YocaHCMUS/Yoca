@@ -13,5 +13,8 @@ export { FullscreenView } from './FullscreenView';
 export { MiniPlayer } from './MiniPlayer';
 export { TableWrapper } from '../../tables/TableWrapper';
 export { TimezoneSelector } from './TimezoneSelector';
+export { ChartStatsHeader } from './ChartStatsHeader';
+export { ChartContainer, ChartSection } from './ChartContainer';
 
 export type { ExportFormat } from './ExportMenu';
+export type { StatItem, StatCard } from './ChartStatsHeader';

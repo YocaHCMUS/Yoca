@@ -11,7 +11,7 @@ import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '../../../hooks/useChartFilters';
+import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
@@ -111,12 +111,8 @@ export function TransactionDistribution({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    isValid,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
       transactionType: initialTransactionType,
@@ -132,10 +128,10 @@ export function TransactionDistribution({
     () => ({
       timePeriod: filters.timePeriod,
       transactionType: filters.transactionType,
-      walletIds: filters.wallets?.join(','),
+      walletIds: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.transactionType, filters.wallets, timezone]
+    [filters.timePeriod, filters.transactionType, walletsString, timezone]
   );
   
   /**

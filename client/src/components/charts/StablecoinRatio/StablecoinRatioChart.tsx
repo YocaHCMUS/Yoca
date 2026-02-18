@@ -13,11 +13,11 @@
  * @module components/charts/StablecoinRatio
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchStablecoinRatio } from '@/services/chart/chartApi';
@@ -26,8 +26,9 @@ import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { StablecoinRatioResponse, StablecoinRatioRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartStatsHeader, ChartContainer, ChartSection } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import styles from './StablecoinRatio.module.scss';
+import type { StatCard } from '../shared/ChartStatsHeader';
 
 export function StablecoinRatioChart({
   title,
@@ -47,43 +48,11 @@ export function StablecoinRatioChart({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const { filters, setTimePeriod, setWallets } = useChartFilters({
-    initialFilters: initialFilters,
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters,
     debounceDelay: 300,
   });
-
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  /**
-   * Sync filters when initialFilters changes
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
-      setTimePeriod(initialFilters.timePeriod);
-    }
-    
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod]);
-
-  /**
-   * Memoize wallets string
-   */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query
@@ -201,38 +170,25 @@ export function StablecoinRatioChart({
   /**
    * Generate statistics header
    */
-  const statsHeader = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+  const statsCards = useMemo<StatCard[]>(() => {
+    if (!data || !data.wallets || data.wallets.length === 0) return [];
 
-    return (
-      <div className={styles.statsHeader}>
-        {data.wallets.map((wallet, index) => (
-          <div key={wallet.walletAddress} className={styles.statCard}>
-            <div className={styles.walletName}>
-              {wallet.walletName || wallet.walletAddress}
-            </div>
-            <div className={styles.statsGrid}>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Current Ratio</div>
-                <div 
-                  className={styles.statValue}
-                  style={{ color: chartTheme.colorPalette[index % chartTheme.colorPalette.length] }}
-                >
-                  {wallet.currentRatio.toFixed(2)}%
-                </div>
-              </div>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Average Ratio</div>
-                <div className={styles.statValue}>
-                  {wallet.averageRatio.toFixed(2)}%
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }, [data, chartTheme]);
+    return data.wallets.map((wallet, index) => ({
+      title: wallet.walletName || wallet.walletAddress,
+      stats: [
+        {
+          label: 'Current Ratio',
+          value: wallet.currentRatio.toFixed(2),
+          suffix: '%',
+        },
+        {
+          label: 'Average Ratio',
+          value: wallet.averageRatio.toFixed(2),
+          suffix: '%',
+        },
+      ],
+    }));
+  }, [data]);
 
   return (
     <BaseChart
@@ -241,20 +197,20 @@ export function StablecoinRatioChart({
       isEmpty={!data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
-      <div className={styles.stablecoinRatioContainer}>
-        {statsHeader}
-        <div className={styles.chartSection}>
+      <ChartContainer>
+        <ChartStatsHeader cards={statsCards} minColumnWidth="200px" />
+        <ChartSection minHeight={`${minHeight}px`}>
           {chartOption && (
             <ReactECharts
               ref={chartRef}
               option={chartOption}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              style={{ height: '100%', width: '100%' }}
               notMerge
               lazyUpdate
             />
           )}
-        </div>
-      </div>
+        </ChartSection>
+      </ChartContainer>
     </BaseChart>
   );
 }

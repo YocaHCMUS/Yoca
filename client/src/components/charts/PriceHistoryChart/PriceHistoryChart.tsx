@@ -12,7 +12,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPriceHistory } from '@/services/chart/chartApi';
@@ -106,12 +106,8 @@ export function PriceHistoryChart({
   // Get theme configuration
   const chartTheme = useChartTheme();
 
-  // Filter management with time period and tokens
-  const {
-    filters,
-    setTimePeriod,
-    setTokens,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, tokensString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
       tokens: initialTokens,
@@ -121,10 +117,10 @@ export function PriceHistoryChart({
 
   // Query for the controller
   const query = useMemo<PriceHistoryRequestParams>(() => ({
-    tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
+    tokens: tokensString || 'SOL,JTO,BONK',
     period: filters.timePeriod,
     aggregation: 'daily' as const,
-  }), [filters.tokens, filters.timePeriod]);
+  }), [tokensString, filters.timePeriod]);
 
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<PriceHistoryResponse, PriceHistoryRequestParams>({

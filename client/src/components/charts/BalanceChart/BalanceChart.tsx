@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
-import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import type { ChartProps } from '../shared/ChartProp';
@@ -40,8 +39,8 @@ export function BalanceChart({
   title,
   minHeight = 400,
   initialFilters = {
-    initialTimePeriod: '30D',
-    initialTokens: [],
+    timePeriod: '30D',
+    tokens: [],
     wallets: []
   },
   autoRefresh = true,
@@ -56,49 +55,11 @@ export function BalanceChart({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const { filters, setTimePeriod, setTokens, setWallets, isValid } = useChartFilters({
-    initialFilters: initialFilters,
+  // Use centralized filter sync hook
+  const { filters, walletsString, tokensString } = useChartFiltersSync({
+    initialFilters,
     debounceDelay: 300,
   });
-
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-
-
-  /**
-   * Sync filters when initialFilters changes (e.g., wallet selection from parent)
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    // Check if wallets changed
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    // Check if time period changed
-    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
-      setTimePeriod(initialFilters.timePeriod);
-    }
-    
-    // Update ref for next comparison
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod]);
-  
-    /**
-     * Memoize wallets string to prevent unnecessary re-fetches
-     * Only changes when wallet addresses actually change, not on array reference change
-     */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches
@@ -106,11 +67,11 @@ export function BalanceChart({
   const query = useMemo<BalanceRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      tokens: filters.tokens?.join(','),
+      tokens: tokensString,
       wallets: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.tokens, walletsString, timezone]
+    [filters.timePeriod, tokensString, walletsString, timezone]
   );
 
   /**

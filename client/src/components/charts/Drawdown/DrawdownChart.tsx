@@ -14,11 +14,11 @@
  * @module components/charts/Drawdown
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchDrawdown } from '@/services/chart/chartApi';
@@ -27,8 +27,9 @@ import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { DrawdownResponse, DrawdownRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartStatsHeader, ChartContainer, ChartSection } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import styles from './Drawdown.module.scss';
+import type { StatCard } from '../shared/ChartStatsHeader';
 
 export function DrawdownChart({
   title,
@@ -48,43 +49,11 @@ export function DrawdownChart({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const { filters, setTimePeriod, setWallets } = useChartFilters({
-    initialFilters: initialFilters,
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters,
     debounceDelay: 300,
   });
-
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  /**
-   * Sync filters when initialFilters changes
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
-      setTimePeriod(initialFilters.timePeriod);
-    }
-    
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod]);
-
-  /**
-   * Memoize wallets string
-   */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query
@@ -220,47 +189,35 @@ export function DrawdownChart({
   /**
    * Generate statistics header
    */
-  const statsHeader = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+  const statsCards = useMemo<StatCard[]>(() => {
+    if (!data || !data.wallets || data.wallets.length === 0) return [];
 
-    return (
-      <div className={styles.statsHeader}>
-        {data.wallets.map((wallet, index) => (
-          <div key={wallet.walletAddress} className={styles.statCard}>
-            <div className={styles.walletName}>
-              {wallet.walletName || wallet.walletAddress}
-            </div>
-            <div className={styles.statsGrid}>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Max Drawdown</div>
-                <div className={styles.statValue} style={{ color: chartTheme.colorPalette[2] }}>
-                  {wallet.maxDrawdown.toFixed(2)}%
-                </div>
-              </div>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Days Since Max DD</div>
-                <div className={styles.statValue}>
-                  {wallet.daysSinceMaxDrawdown} days
-                </div>
-              </div>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Current Drawdown</div>
-                <div className={styles.statValue}>
-                  {wallet.currentDrawdown.toFixed(2)}%
-                </div>
-              </div>
-              <div className={styles.statItem}>
-                <div className={styles.statLabel}>Max DD Date</div>
-                <div className={styles.statValue}>
-                  {formatTimestampWithTimezone(wallet.maxDrawdownTimestamp, timezone, 'yyyy-MM-dd')}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }, [data, chartTheme, timezone]);
+    return data.wallets.map((wallet, index) => ({
+      title: wallet.walletName || wallet.walletAddress,
+      stats: [
+        {
+          label: 'Max Drawdown',
+          value: wallet.maxDrawdown.toFixed(2),
+          suffix: '%',
+          valueClassName: 'text-danger',
+        },
+        {
+          label: 'Days Since Max DD',
+          value: wallet.daysSinceMaxDrawdown,
+          suffix: 'days',
+        },
+        {
+          label: 'Current Drawdown',
+          value: wallet.currentDrawdown.toFixed(2),
+          suffix: '%',
+        },
+        {
+          label: 'Max DD Date',
+          value: formatTimestampWithTimezone(wallet.maxDrawdownTimestamp, timezone, 'yyyy-MM-dd'),
+        },
+      ],
+    }));
+  }, [data, timezone]);
 
   return (
     <BaseChart
@@ -269,20 +226,20 @@ export function DrawdownChart({
       isEmpty={!data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
-      <div className={styles.drawdownContainer}>
-        {statsHeader}
-        <div className={styles.chartSection}>
+      <ChartContainer>
+        <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />
+        <ChartSection minHeight={`${minHeight}px`}>
           {chartOption && (
             <ReactECharts
               ref={chartRef}
               option={chartOption}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              style={{ height: '100%', width: '100%' }}
               notMerge
               lazyUpdate
             />
           )}
-        </div>
-      </div>
+        </ChartSection>
+      </ChartContainer>
     </BaseChart>
   );
 }

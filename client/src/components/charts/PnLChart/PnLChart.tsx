@@ -17,12 +17,12 @@
  * @module components/charts/PnLChart
  */
 
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart } from '@/services/chart/chartApi';
@@ -98,59 +98,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   // State for view mode
   const [viewMode, setViewMode] = useState<'daily' | 'cumulative' | 'both'>(initialViewMode);
 
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: initialFilters || {
       timePeriod: initialTimePeriod,
       wallets: initialWallets.length > 0 ? initialWallets : undefined,
     },
     debounceDelay: 300,
   });
-
-  /**
-   * Sync filters when initialFilters or initialWallets changes (e.g., wallet selection from parent)
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    // Determine current wallets (prefer initialFilters.wallets over initialWallets)
-    const currentWallets = initialFilters?.wallets || (initialWallets.length > 0 ? initialWallets : undefined);
-    
-    // Check if wallets changed
-    if (currentWallets && Array.isArray(currentWallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : 
-                          (initialWallets.length > 0 ? initialWallets : []);
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = currentWallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(currentWallets);
-      }
-    }
-    
-    // Check if time period changed
-    const currentTimePeriod = initialFilters?.timePeriod || initialTimePeriod;
-    if (currentTimePeriod && prevFilters?.timePeriod !== currentTimePeriod) {
-      setTimePeriod(currentTimePeriod);
-    }
-    
-    // Update ref for next comparison
-    prevInitialFiltersRef.current = {
-      ...prevFilters,
-      wallets: currentWallets,
-      timePeriod: currentTimePeriod,
-    };
-  }, [initialFilters, initialWallets, initialTimePeriod, setWallets, setTimePeriod]);
-
-  /**
-   * Memoize wallets string to prevent unnecessary re-fetches
-   * Only changes when wallet addresses actually change, not on array reference change
-   */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches

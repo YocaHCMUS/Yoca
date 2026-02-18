@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchHoldingDurations } from '@/services/chart/chartApi';
@@ -48,67 +48,37 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  // Extract values from initialFilters
-  const initialTopN = typeof initialFilters?.topN === 'number' ? initialFilters.topN : 10;
+  // Extract values from initialFilters - using type assertion for custom properties
+  const customFilters = initialFilters as any;
+  const initialTopN = typeof customFilters?.topN === 'number' ? customFilters.topN : 10;
   const initialUnit =
-    initialFilters?.timeUnit === 'weeks' ||
-    initialFilters?.timeUnit === 'months' ||
-    initialFilters?.timeUnit === 'days'
-      ? initialFilters.timeUnit
+    customFilters?.timeUnit === 'weeks' ||
+    customFilters?.timeUnit === 'months' ||
+    customFilters?.timeUnit === 'days'
+      ? customFilters.timeUnit
       : 'days';
   const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
 
   const [selectedTopN, setSelectedTopN] = useState(initialTopN);
   const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(initialUnit);
 
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  const { filters, setWallets } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: { wallets: initialWallets },
     debounceDelay: 300,
   });
-
-  /**
-   * Sync filters when initialFilters changes (e.g., wallet selection from parent)
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    // Check if wallets changed
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    // Update ref for next comparison
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets]);
-
-  /**
-   * Memoize walletIds string to prevent unnecessary re-fetches
-   * Only changes when wallet addresses actually change, not on array reference change
-   */
-  const walletIds = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo <HoldingsRequestParams>(
     () => ({
-      walletIds: walletIds,
+      walletIds: walletsString,
       topN: selectedTopN,
       timeUnit: selectedUnit,
       timezone,
     }),
-    [walletIds, selectedTopN, selectedUnit, timezone]
+    [walletsString, selectedTopN, selectedUnit, timezone]
   );
 
   /**

@@ -14,19 +14,20 @@
  * @module components/charts/Winrate
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchWinrate } from '@/services/chart/chartApi';
 import type { WinrateResponse, WinrateRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartContainer, ChartSection } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import styles from './Winrate.module.scss';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 export function WinrateChart({
   title,
@@ -45,43 +46,11 @@ export function WinrateChart({
   const overallChartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
 
-  const { filters, setTimePeriod, setWallets } = useChartFilters({
-    initialFilters: initialFilters,
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters,
     debounceDelay: 300,
   });
-
-  // Track previous initialFilters to detect changes
-  const prevInitialFiltersRef = useRef<typeof initialFilters | undefined>(undefined);
-
-  /**
-   * Sync filters when initialFilters changes
-   */
-  useEffect(() => {
-    const prevFilters = prevInitialFiltersRef.current;
-    
-    if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
-      const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
-      const prevWalletsStr = prevWallets.slice().sort().join(',');
-      const newWalletsStr = initialFilters.wallets.slice().sort().join(',');
-      if (prevWalletsStr !== newWalletsStr) {
-        setWallets(initialFilters.wallets);
-      }
-    }
-    
-    if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
-      setTimePeriod(initialFilters.timePeriod);
-    }
-    
-    prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod]);
-
-  /**
-   * Memoize wallets string
-   */
-  const walletsString = useMemo(() => {
-    if (!filters.wallets || !Array.isArray(filters.wallets) || filters.wallets.length === 0) return undefined;
-    return filters.wallets.slice().sort().join(',');
-  }, [filters.wallets]);
 
   /**
    * Memoize query
@@ -295,34 +264,34 @@ export function WinrateChart({
       isEmpty={!data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
-      <div className={styles.winrateContainer}>
-        {/* Row 1: Overall Winrate */}
-        <div className={styles.overallSection}>
+      <ChartContainer>
+        {/* Overall Winrate Section */}
+        <ChartSection minHeight="300px">
           {overallWinrateOption && (
             <ReactECharts
               ref={overallChartRef}
               option={overallWinrateOption}
-              style={{ height: '100%', width: '100%', minHeight: '300px' }}
+              style={{ height: '100%', width: '100%' }}
               notMerge
               lazyUpdate
             />
           )}
-        </div>
+        </ChartSection>
         
-        {/* Row 2: Distribution Histograms */}
-        <div className={styles.distributionSection}>
+        {/* Distribution Histograms Grid */}
+        <div className={sharedStyles.chartGridSection}>
           {distributionCharts.map((chart) => (
-            <div key={chart.walletAddress} className={styles.distributionChart}>
+            <div key={chart.walletAddress} className={sharedStyles.chartGridItem}>
               <ReactECharts
                 option={chart.option}
-                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                style={{ height: '100%', width: '100%' }}
                 notMerge
                 lazyUpdate
               />
             </div>
           ))}
         </div>
-      </div>
+      </ChartContainer>
     </BaseChart>
   );
 }
