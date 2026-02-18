@@ -50,7 +50,7 @@ export const solanaNounceRequestSchema = z.object({
 
 export const solanaVerificationRequestSchema = z.object({
   pubKey: solanaBase58Schema,
-  signature: solanaBase58Schema,
+  signature: z.base64(),
 });
 
 // Helper to validate using Zod schema and return if errors happen before the routes even run

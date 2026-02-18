@@ -1,6 +1,6 @@
 import {
   address,
-  getBase58Codec,
+  getBase64Encoder,
   getPublicKeyFromAddress,
   getUtf8Encoder,
   verifySignature,
@@ -175,7 +175,7 @@ export async function verifyWalletLoginNounce(
   );
 
   const pubCryptoKey = await getPublicKeyFromAddress(address(pubKey));
-  const sigBytes = getBase58Codec().encode(signature) as SignatureBytes;
+  const sigBytes = getBase64Encoder().encode(signature) as SignatureBytes;
   const verified = await verifySignature(pubCryptoKey, sigBytes, messageBytes);
 
   if (!verified) {

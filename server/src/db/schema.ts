@@ -10,7 +10,6 @@ import {
   primaryKey,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -28,6 +27,7 @@ export const enumAuthProvider = pgEnum("auth_provider", [
   "google",
   "github",
   "solana",
+  "other",
 ]);
 
 export const users = pgTable("users", {
@@ -48,23 +48,20 @@ export const authAccounts = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     provider: enumAuthProvider("provider").notNull(),
-    providerUserId: varchar("provider_user_id"),
+    providerUserId: varchar("provider_user_id").notNull(),
     hashedPassword: varchar("hashed_password"),
     loginNounce: varchar("login_nounce"),
     nounceExpiredAt: timestamp("nounce_expired_at"),
   },
   (table) => [
-    uniqueIndex("provider_user_unique").on(
-      table.provider,
-      table.providerUserId,
-    ),
+    primaryKey({
+      columns: [table.provider, table.providerUserId],
+    }),
     check(
       "provider_password",
-      sql`${table.provider} != 'password' OR ${table.hashedPassword} IS NOT NULL`,
-    ),
-    check(
-      "provider_third_party",
-      sql`${table.provider} = 'password' OR ${table.hashedPassword} IS NULL`,
+      sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
+          OR
+          (${table.provider} <> 'password' AND ${table.hashedPassword} IS NULL)`,
     ),
   ],
 );

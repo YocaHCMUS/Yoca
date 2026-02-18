@@ -66,6 +66,7 @@ const app = new Hono()
   .get("/example/of/protected/url/1", async (c) => {
     return c.json("ok you're good", statusCode.Ok);
   })
+  .get("/hello", (c) => c.json("oke usre", 200))
   .post(
     "/auth/password/register",
     validate("json", userCreationSchema),
@@ -168,7 +169,7 @@ const app = new Hono()
     }
   })
   .post(
-    "auth/solana/nounce",
+    "/auth/solana/nounce",
     validate("json", solanaNounceRequestSchema),
     async (c) => {
       const { pubKey } = c.req.valid("json");
@@ -200,7 +201,7 @@ const app = new Hono()
     },
   )
   .post(
-    "auth/solana/verify",
+    "/auth/solana/verify",
     validate("json", solanaVerificationRequestSchema),
     async (c) => {
       const { pubKey, signature } = c.req.valid("json");
