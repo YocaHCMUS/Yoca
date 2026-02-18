@@ -100,17 +100,46 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
 
+  priceUsd: decimal("price_usd"),
+  marketCapUsd: decimal("market_cap_usd"),
+  fdvUsd: decimal("fdv_usd"),
+
+  priceChangeM5: decimal("price_change_m5"),
+  priceChangeH1: decimal("price_change_h1"),
+  priceChangeH6: decimal("price_change_h6"),
+  priceChangeH24: decimal("price_change_h24"),
+
   buys1h: decimal("buys_1h"),
   buys6h: decimal("buys_6h"),
   buys24h: decimal("buys_24h"),
+
+  sells1h: decimal("sells_1h"),
+  sells6h: decimal("sells_6h"),
+  sells24h: decimal("sells_24h"),
+
+  buyers1h: decimal("buyers_1h"),
+  buyers6h: decimal("buyers_6h"),
+  buyers24h: decimal("buyers_24h"),
+
+  sellers1h: decimal("sellers_1h"),
+  sellers6h: decimal("sellers_6h"),
+  sellers24h: decimal("sellers_24h"),
 
   volume1h: decimal("volume_1h"),
   volume6h: decimal("volume_6h"),
   volume24h: decimal("volume_24h"),
 
-  sells1h: decimal("sells_1h"),
-  sells6h: decimal("sells_6h"),
-  sells24h: decimal("sells_24h"),
+  buyVolume1h: decimal("buy_volume_1h"),
+  buyVolume6h: decimal("buy_volume_6h"),
+  buyVolume24h: decimal("buy_volume_24h"),
+
+  sellVolume1h: decimal("sell_volume_1h"),
+  sellVolume6h: decimal("sell_volume_6h"),
+  sellVolume24h: decimal("sell_volume_24h"),
+
+  netBuyVolume1h: decimal("net_buy_volume_1h"),
+  netBuyVolume6h: decimal("net_buy_volume_6h"),
+  netBuyVolume24h: decimal("net_buy_volume_24h"),
 
   updatedAt: timestamp("updated_at")
     .notNull()

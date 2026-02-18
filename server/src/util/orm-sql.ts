@@ -7,9 +7,10 @@ export function excluded<T extends PgColumn>(column: T): T["_"]["data"] {
   return sql.raw(`excluded.${column.name}`);
 }
 
-export function excludedAuto<
-  Table extends PgTable,
->(table: Table, targetColumns: PgColumn | PgColumn[]) {
+export function excludedAuto<Table extends PgTable>(
+  table: Table,
+  targetColumns: PgColumn | PgColumn[],
+) {
   const targets = Array.isArray(targetColumns)
     ? targetColumns
     : [targetColumns];

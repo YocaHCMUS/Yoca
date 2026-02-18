@@ -64,16 +64,19 @@ async function fetchTokenTopPools(tokenAddress: string) {
 
         baseToQuote: Number(raw.attributes.base_token_price_quote_token),
         baseAddress: trimIdPrefix(raw.relationships.base_token.data.id),
-        quoteAddress: trimIdPrefix(raw.relationships.base_token.data.id),
+        quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
+
         buys1h: raw.attributes.transactions.h1.buys,
-        buys24h: raw.attributes.transactions.h1.buys,
         buys6h: raw.attributes.transactions.h6.buys,
+        buys24h: raw.attributes.transactions.h24.buys,
+
+        sells1h: raw.attributes.transactions.h1.sells,
+        sells6h: raw.attributes.transactions.h6.sells,
+        sells24h: raw.attributes.transactions.h24.sells,
+
         volume1h: Number(raw.attributes.volume_usd.h1),
         volume6h: Number(raw.attributes.volume_usd.h6),
         volume24h: Number(raw.attributes.volume_usd.h24),
-        sells1h: raw.attributes.transactions.h1.sells,
-        sells24h: raw.attributes.transactions.h1.sells,
-        sells6h: raw.attributes.transactions.h6.sells,
       },
     }),
   );
@@ -151,23 +154,57 @@ async function fetchPoolData(poolAddress: string) {
   const raw = res.data;
   const poolData: TokenPoolDataInsert = {
     poolAddress: raw.attributes.address,
-    dexId: raw.relationships.dex.data.id,
-    liquidityUsd: Number(raw.attributes.reserve_in_usd),
-    poolCreatedAt: new Date(raw.attributes.pool_created_at),
     poolName: raw.attributes.name,
 
-    baseToQuote: Number(raw.attributes.base_token_price_quote_token),
     baseAddress: trimIdPrefix(raw.relationships.base_token.data.id),
-    quoteAddress: trimIdPrefix(raw.relationships.base_token.data.id),
+    quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
+
+    dexId: raw.relationships.dex.data.id,
+    baseToQuote: Number(raw.attributes.base_token_price_quote_token),
+
+    poolCreatedAt: new Date(raw.attributes.pool_created_at),
+    liquidityUsd: Number(raw.attributes.reserve_in_usd),
+
+    priceUsd: Number(raw.attributes.base_token_price_usd),
+    marketCapUsd: Number(raw.attributes.market_cap_usd),
+    fdvUsd: Number(raw.attributes.fdv_usd),
+
+    priceChangeM5: Number(raw.attributes.price_change_percentage.m5),
+    priceChangeH1: Number(raw.attributes.price_change_percentage.h1),
+    priceChangeH6: Number(raw.attributes.price_change_percentage.h6),
+    priceChangeH24: Number(raw.attributes.price_change_percentage.h24),
+
     buys1h: raw.attributes.transactions.h1.buys,
-    buys24h: raw.attributes.transactions.h1.buys,
     buys6h: raw.attributes.transactions.h6.buys,
+    buys24h: raw.attributes.transactions.h24.buys,
+
+    sells1h: raw.attributes.transactions.h1.sells,
+    sells6h: raw.attributes.transactions.h6.sells,
+    sells24h: raw.attributes.transactions.h24.sells,
+
+    buyers1h: raw.attributes.transactions.h1.buyers,
+    buyers6h: raw.attributes.transactions.h6.buyers,
+    buyers24h: raw.attributes.transactions.h24.buyers,
+
+    sellers1h: raw.attributes.transactions.h1.sellers,
+    sellers6h: raw.attributes.transactions.h6.sellers,
+    sellers24h: raw.attributes.transactions.h24.sellers,
+
     volume1h: Number(raw.attributes.volume_usd.h1),
     volume6h: Number(raw.attributes.volume_usd.h6),
     volume24h: Number(raw.attributes.volume_usd.h24),
-    sells1h: raw.attributes.transactions.h1.sells,
-    sells24h: raw.attributes.transactions.h1.sells,
-    sells6h: raw.attributes.transactions.h6.sells,
+
+    buyVolume1h: Number(raw.attributes.buy_volume_usd.h1),
+    buyVolume6h: Number(raw.attributes.buy_volume_usd.h6),
+    buyVolume24h: Number(raw.attributes.buy_volume_usd.h24),
+
+    sellVolume1h: Number(raw.attributes.sell_volume_usd.h1),
+    sellVolume6h: Number(raw.attributes.sell_volume_usd.h6),
+    sellVolume24h: Number(raw.attributes.sell_volume_usd.h24),
+
+    netBuyVolume1h: Number(raw.attributes.net_buy_volume_usd.h1),
+    netBuyVolume6h: Number(raw.attributes.net_buy_volume_usd.h6),
+    netBuyVolume24h: Number(raw.attributes.net_buy_volume_usd.h24),
   };
 
   const inserted = await db.insert(tokenPoolData).values(poolData).returning();
@@ -197,4 +234,12 @@ export async function getTokenPoolData(poolAddress: string) {
   }
 
   return res[0];
+}
+
+export async function getTokenPoolDataList(poolAddresses: string[]) {
+  const results = await Promise.all(
+    poolAddresses.map((address) => getTokenPoolData(address)),
+  );
+
+  return results.filter((pool) => pool !== null);
 }

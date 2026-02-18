@@ -1,6 +1,27 @@
+import { client } from "@/api/main";
 import classNames from "classnames";
-import { type MarketData, type PoolData, type TopHoldersData, type HoldersInfo } from "../../hooks/useTokenPageData";
+import type { InferResponseType } from "hono/client";
 import styles from "./MarketStats.module.scss";
+
+type PoolData = InferResponseType<
+  typeof client.api.tokens.pools[":addresses"]["$get"],
+  200
+>[number];
+
+type MarketData = InferResponseType<
+  typeof client.api.tokens.markets[":addresses"]["$get"],
+  200
+>[number] | null;
+
+type TopHoldersData = InferResponseType<
+  typeof client.api.tokens.holders[":address"]["$get"],
+  200
+>;
+
+type HoldersInfo = InferResponseType<
+  typeof client.api.tokens.holders.stats[":addresses"]["$get"],
+  200
+>[number] | null;
 
 interface MarketStatsProps {
     data: MarketData;
@@ -45,9 +66,9 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
         return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
     };
 
-    const top10HoldersPercent = holdersInfo?.top_10_percent
-        ? holdersInfo.top_10_percent
-        : (topHolders?.reduce((acc, curr) => acc + curr.percentageOfSupply, 0) ?? 0);
+    const top10HoldersPercent = holdersInfo?.top10Percent
+        ? Number(holdersInfo.top10Percent)
+        : (topHolders?.reduce((acc, curr) => acc + curr.percentage, 0) ?? 0);
 
     return (
         <div className={classNames(styles.container, { [styles.horizontal]: layout === "horizontal" })}>
@@ -58,18 +79,18 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                     <span className={styles.label}>PRICE USD</span>
                     <div className={styles.pricesContainer}>
                         <span className={styles.valueLarge}>
-                            {formatCurrency(pool?.priceUsd || data?.priceUsd || null)}
+                            {formatCurrency(pool?.priceUsd ? Number(pool.priceUsd) : (data?.priceUsd ? Number(data.priceUsd) : null))}
                         </span>
                     </div>
                 </div>
                 {pool && (
                     <div className={styles.gridCell}>
                         <span className={styles.label}>
-                            PRICE {pool?.baseToken?.symbol?.toUpperCase() || pool?.name?.split('/')?.[0]?.trim() || "TOKEN"}/{pool?.quoteToken?.symbol?.toUpperCase() || "USD"}
+                            PRICE BASE/QUOTE
                         </span>
                         <div className={styles.pricesContainer}>
                             <span className={styles.valueLarge}>
-                                {pool.priceQuoteToken ? pool.priceQuoteToken.toFixed(6) : "-"}
+                                {pool.baseToQuote ? Number(pool.baseToQuote).toFixed(6) : "-"}
                             </span>
                         </div>
                     </div>
@@ -80,15 +101,15 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
             <div className={styles.gridRow}>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>LIQUIDITY</span>
-                    <span className={styles.valueMedium}>{formatDollarCompact(pool?.liquidity)}</span>
+                    <span className={styles.valueMedium}>{formatDollarCompact(pool?.liquidityUsd ? Number(pool.liquidityUsd) : null)}</span>
                 </div>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>MARKET CAP</span>
-                    <span className={styles.valueMedium}>{formatNumber(pool ? (pool.marketCap ?? null) : (data?.marketCap ?? null))}</span>
+                    <span className={styles.valueMedium}>{formatNumber(pool?.marketCapUsd ? Number(pool.marketCapUsd) : (data?.marketCap ? Number(data.marketCap) : null))}</span>
                 </div>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>FDV</span>
-                    <span className={styles.valueMedium}>{formatNumber(pool ? (pool.fdv ?? null) : (data?.fullyDilutedValuation ?? null))}</span>
+                    <span className={styles.valueMedium}>{formatNumber(pool?.fdvUsd ? Number(pool.fdvUsd) : (data?.fullyDilutedValuation ? Number(data.fullyDilutedValuation) : null))}</span>
                 </div>
             </div>
 
@@ -99,37 +120,37 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                         <div className={styles.gridCell}>
                             <span className={styles.label}>5M</span>
                             <span className={classNames(styles.valueMedium, {
-                                [styles.positive]: (pool.priceChange?.m5 ?? 0) >= 0,
-                                [styles.negative]: (pool.priceChange?.m5 ?? 0) < 0
+                                [styles.positive]: (pool.priceChangeM5 ? Number(pool.priceChangeM5) : 0) >= 0,
+                                [styles.negative]: (pool.priceChangeM5 ? Number(pool.priceChangeM5) : 0) < 0
                             })}>
-                                {formatPercent(pool.priceChange?.m5 ?? null)}
+                                {formatPercent(pool.priceChangeM5 ? Number(pool.priceChangeM5) : null)}
                             </span>
                         </div>
                         <div className={styles.gridCell}>
                             <span className={styles.label}>1H</span>
                             <span className={classNames(styles.valueMedium, {
-                                [styles.positive]: (pool.priceChange?.h1 ?? 0) >= 0,
-                                [styles.negative]: (pool.priceChange?.h1 ?? 0) < 0
+                                [styles.positive]: (pool.priceChangeH1 ? Number(pool.priceChangeH1) : 0) >= 0,
+                                [styles.negative]: (pool.priceChangeH1 ? Number(pool.priceChangeH1) : 0) < 0
                             })}>
-                                {formatPercent(pool.priceChange?.h1 ?? null)}
+                                {formatPercent(pool.priceChangeH1 ? Number(pool.priceChangeH1) : null)}
                             </span>
                         </div>
                         <div className={styles.gridCell}>
                             <span className={styles.label}>6H</span>
                             <span className={classNames(styles.valueMedium, {
-                                [styles.positive]: (pool.priceChange?.h6 ?? 0) >= 0,
-                                [styles.negative]: (pool.priceChange?.h6 ?? 0) < 0
+                                [styles.positive]: (pool.priceChangeH6 ? Number(pool.priceChangeH6) : 0) >= 0,
+                                [styles.negative]: (pool.priceChangeH6 ? Number(pool.priceChangeH6) : 0) < 0
                             })}>
-                                {formatPercent(pool.priceChange?.h6 ?? null)}
+                                {formatPercent(pool.priceChangeH6 ? Number(pool.priceChangeH6) : null)}
                             </span>
                         </div>
                         <div className={styles.gridCell}>
                             <span className={styles.label}>24H</span>
                             <span className={classNames(styles.valueMedium, {
-                                [styles.positive]: (pool.priceChange?.h24 ?? 0) >= 0,
-                                [styles.negative]: (pool.priceChange?.h24 ?? 0) < 0
+                                [styles.positive]: (pool.priceChangeH24 ? Number(pool.priceChangeH24) : 0) >= 0,
+                                [styles.negative]: (pool.priceChangeH24 ? Number(pool.priceChangeH24) : 0) < 0
                             })}>
-                                {formatPercent(pool.priceChange?.h24 ?? null)}
+                                {formatPercent(pool.priceChangeH24 ? Number(pool.priceChangeH24) : null)}
                             </span>
                         </div>
                     </>
@@ -137,10 +158,10 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                     <div className={styles.gridCell}>
                         <span className={styles.label}>24H CHANGE</span>
                         <span className={classNames(styles.valueMedium, {
-                            [styles.positive]: (data?.priceChangePercentage24h ?? 0) >= 0,
-                            [styles.negative]: (data?.priceChangePercentage24h ?? 0) < 0
+                            [styles.positive]: (data?.priceChangePercentage24h ? Number(data.priceChangePercentage24h) : 0) >= 0,
+                            [styles.negative]: (data?.priceChangePercentage24h ? Number(data.priceChangePercentage24h) : 0) < 0
                         })}>
-                            {formatPercent(data?.priceChangePercentage24h ?? null)}
+                            {formatPercent(data?.priceChangePercentage24h ? Number(data.priceChangePercentage24h) : null)}
                         </span>
                     </div>
                 )}
@@ -151,26 +172,26 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                 <div className={styles.gridRow}>
                     <div className={styles.gridCellLeft}>
                         <span className={styles.label}>24H VOL</span>
-                        <span className={styles.valueMedium}>{formatDollarCompact(pool.volume24h)}</span>
+                        <span className={styles.valueMedium}>{formatDollarCompact(pool.volume24h ? Number(pool.volume24h) : null)}</span>
                     </div>
                     {/* Buy */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>BUY</span>
-                        <span className={styles.buyColor}>{formatDollarCompact(pool.volumeBuy24h)}</span>
+                        <span className={styles.buyColor}>{formatDollarCompact(pool.buyVolume24h ? Number(pool.buyVolume24h) : null)}</span>
                     </div>
                     {/* Sell */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>SELL</span>
-                        <span className={styles.sellColor}>{formatDollarCompact(pool.volumeSell24h)}</span>
+                        <span className={styles.sellColor}>{formatDollarCompact(pool.sellVolume24h ? Number(pool.sellVolume24h) : null)}</span>
                     </div>
                     {/* Net */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>NET</span>
                         <span className={classNames(styles.valueSmall, {
-                            [styles.positive]: pool.volumeNet24h != null && pool.volumeNet24h >= 0,
-                            [styles.negative]: pool.volumeNet24h != null && pool.volumeNet24h < 0
+                            [styles.positive]: pool.netBuyVolume24h != null && Number(pool.netBuyVolume24h) >= 0,
+                            [styles.negative]: pool.netBuyVolume24h != null && Number(pool.netBuyVolume24h) < 0
                         })}>
-                            {formatDollarCompact(pool.volumeNet24h)}
+                            {formatDollarCompact(pool.netBuyVolume24h ? Number(pool.netBuyVolume24h) : null)}
                         </span>
                     </div>
                 </div>
@@ -181,26 +202,26 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                 <div className={styles.gridRow}>
                     <div className={styles.gridCellLeft}>
                         <span className={styles.label}>24H TXNS</span>
-                        <span className={styles.valueMedium}>{formatNumberCompact(pool.txns24h ?? null)}</span>
+                        <span className={styles.valueMedium}>{formatNumberCompact(pool.buys24h && pool.sells24h ? Number(pool.buys24h) + Number(pool.sells24h) : null)}</span>
                     </div>
                     {/* Buy */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>BUY</span>
-                        <span className={styles.buyColor}>{formatNumberCompact(pool.buys24h ?? null)}</span>
+                        <span className={styles.buyColor}>{formatNumberCompact(pool.buys24h ? Number(pool.buys24h) : null)}</span>
                     </div>
                     {/* Sell */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>SELL</span>
-                        <span className={styles.sellColor}>{formatNumberCompact(pool.sells24h ?? null)}</span>
+                        <span className={styles.sellColor}>{formatNumberCompact(pool.sells24h ? Number(pool.sells24h) : null)}</span>
                     </div>
                     {/* Net */}
                     <div className={styles.gridCellRight}>
                         <span className={styles.label}>NET</span>
                         <span className={classNames(styles.valueSmall, {
-                            [styles.positive]: pool.buys24h != null && pool.sells24h != null && pool.buys24h >= pool.sells24h,
-                            [styles.negative]: pool.buys24h != null && pool.sells24h != null && pool.buys24h < pool.sells24h
+                            [styles.positive]: pool.buys24h != null && pool.sells24h != null && Number(pool.buys24h) >= Number(pool.sells24h),
+                            [styles.negative]: pool.buys24h != null && pool.sells24h != null && Number(pool.buys24h) < Number(pool.sells24h)
                         })}>
-                            {pool.buys24h != null && pool.sells24h != null ? formatNumberCompact(pool.buys24h - pool.sells24h) : "-"}
+                            {pool.buys24h != null && pool.sells24h != null ? formatNumberCompact(Number(pool.buys24h) - Number(pool.sells24h)) : "-"}
                         </span>
                     </div>
                 </div>
@@ -210,7 +231,7 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
             {pool && (
                 <div className={classNames(styles.gridRow, styles.singleItemRow)}>
                     <span className={styles.label}>24H TRADERS</span>
-                    <span className={styles.valueLarge}>{formatNumberCompact(pool.traders24h ?? null)}</span>
+                    <span className={styles.valueLarge}>{formatNumberCompact(pool.buyers24h && pool.sellers24h ? Number(pool.buyers24h) + Number(pool.sellers24h) : null)}</span>
                 </div>
             )}
 
@@ -222,7 +243,7 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
                 </div>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>HOLDERS</span>
-                    <span className={styles.valueMedium}>{holdersInfo?.holders_count ? formatNumberCompact(holdersInfo.holders_count) : "-"}</span>
+                    <span className={styles.valueMedium}>{holdersInfo?.holdersCount ? formatNumberCompact(holdersInfo.holdersCount) : "-"}</span>
                 </div>
             </div>
 
@@ -230,11 +251,11 @@ export const MarketStats = ({ data, pool, topHolders, holdersInfo, marketsCount,
             <div className={styles.gridRow}>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>CIRC SUPPLY</span>
-                    <span className={styles.valueMedium}>{formatNumberCompact(data?.circulatingSupply ?? null)}</span>
+                    <span className={styles.valueMedium}>{formatNumberCompact(data?.circulatingSupply ? Number(data.circulatingSupply) : null)}</span>
                 </div>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>TOTAL SUPPLY</span>
-                    <span className={styles.valueMedium}>{formatNumberCompact(data?.totalSupply ?? null)}</span>
+                    <span className={styles.valueMedium}>{formatNumberCompact(data?.totalSupply ? Number(data.totalSupply) : null)}</span>
                 </div>
                 <div className={styles.gridCell}>
                     <span className={styles.label}>MARKETS</span>

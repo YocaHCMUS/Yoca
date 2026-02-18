@@ -142,14 +142,14 @@ const app = new Hono()
       );
     }
   })
-  .get("/pools/:address", validate("param", addressSchema), async (c) => {
+  .get("/pools/:addresses", validate("param", addressListSchema), async (c) => {
     try {
-      const { address: poolAddress } = c.req.valid("param");
+      const { addresses } = c.req.valid("param");
 
-      const pool = await tokenService.getTokenPoolData(poolAddress);
+      const pools = await tokenService.getTokenPoolDataList(addresses);
 
-      if (pool) {
-        return c.json(pool, statusCode.Ok);
+      if (pools) {
+        return c.json(pools, statusCode.Ok);
       } else {
         return c.json(
           messageText.FailedToFetchRequestedData,

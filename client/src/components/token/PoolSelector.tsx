@@ -1,9 +1,15 @@
-import type { PoolData } from "@/hooks/useTokenPageData";
+import { client } from "@/api/main";
 import { formatLargeNumber } from "@/services/coingecko";
 import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import classNames from "classnames";
+import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import styles from "./PoolSelector.module.scss";
+
+type PoolData = InferResponseType<
+  typeof client.api.tokens.pools[":addresses"]["$get"],
+  200
+>[number];
 
 interface PoolSelectorProps {
   pools: PoolData[];
@@ -40,10 +46,9 @@ export const PoolSelector = ({
     setIsOpen(false);
   };
 
-  const formatSource = (source?: string): string | null => {
-    if (!source || source.toLowerCase() === "unknown") return null;
-    // Capitalize first letter of each word
-    return source
+  const formatDexId = (dexId: string | null): string | null => {
+    if (!dexId || dexId.toLowerCase() === "unknown") return null;
+    return dexId
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
@@ -57,11 +62,11 @@ export const PoolSelector = ({
       >
         <div className={styles.selectedContent}>
           <span className={styles.selectedName}>
-            {selectedPool?.name || "Select Pool"}
+            {selectedPool?.poolName || "Select Pool"}
           </span>
-          {selectedPool?.source && formatSource(selectedPool.source) && (
+          {selectedPool?.dexId && formatDexId(selectedPool.dexId) && (
             <span className={styles.sourceTag}>
-              {formatSource(selectedPool.source)}
+              {formatDexId(selectedPool.dexId)}
             </span>
           )}
         </div>
@@ -79,25 +84,25 @@ export const PoolSelector = ({
           <div className={styles.list}>
             {pools.map((pool) => (
               <div
-                key={pool.address}
+                key={pool.poolAddress}
                 className={classNames(styles.listItem, {
-                  [styles.selected]: selectedPool?.address === pool.address,
+                  [styles.selected]: selectedPool?.poolAddress === pool.poolAddress,
                 })}
                 onClick={() => handleSelect(pool)}
               >
                 <div className={styles.colPair}>
                   <div className={styles.pairInfo}>
-                    <div className={styles.pairName}>{pool.name}</div>
+                    <div className={styles.pairName}>{pool.poolName}</div>
                     <div className={styles.pairSource}>
-                      {formatSource(pool.source)}
+                      {formatDexId(pool.dexId)}
                     </div>
                   </div>
                 </div>
                 <div className={styles.colVol}>
-                  {formatLargeNumber(pool.volume24h)}
+                  {formatLargeNumber(Number(pool.volume24h) || 0)}
                 </div>
                 <div className={styles.colLiq}>
-                  {formatLargeNumber(pool.liquidity || 0)}
+                  {formatLargeNumber(Number(pool.liquidityUsd) || 0)}
                 </div>
               </div>
             ))}

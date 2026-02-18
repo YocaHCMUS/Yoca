@@ -1,22 +1,23 @@
-// client/src/components/token/TopHolders.tsx
-
+import { client } from "@/api/main";
+import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
+import classNames from "classnames";
+import type { InferResponseType } from "hono/client";
 import { useState } from "react";
-import { Copy, ChevronUp, ChevronDown } from "@carbon/icons-react";
 import Tble from "../Tble";
 import styles from "./TopHolders.module.scss";
-import classNames from "classnames";
-import { type HoldersInfo } from "../../hooks/useTokenPageData";
 
-interface TopHolder {
-    ownerAddress: string;
-    balance: string;
-    balanceFormatted: string;
-    percentageOfSupply: number;
-    usdValue: number;
-}
+type TopHoldersData = InferResponseType<
+  typeof client.api.tokens.holders[":address"]["$get"],
+  200
+>;
+
+type HoldersInfo = InferResponseType<
+  typeof client.api.tokens.holders.stats[":addresses"]["$get"],
+  200
+>[number] | null;
 
 interface TopHoldersProps {
-    holders: TopHolder[];
+    holders: TopHoldersData;
     holdersInfo?: HoldersInfo | null;
 }
 
@@ -40,9 +41,9 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
 
     // Tính tổng phần trăm top 10
     // Ưu tiên lấy từ API (holdersInfo), nếu không có thì tính tổng từ danh sách holders
-    const totalPercentage = holdersInfo?.top_10_percent
-        ? holdersInfo.top_10_percent
-        : holders.reduce((acc, curr) => acc + curr.percentageOfSupply, 0);
+    const totalPercentage = holdersInfo?.top10Percent
+        ? Number(holdersInfo.top10Percent)
+        : holders.reduce((acc, curr) => acc + curr.percentage, 0);
 
     const toggleExpand = () => setIsExpanded(!isExpanded);
 
@@ -78,21 +79,21 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                         headers={[
                             { key: "rank", header: "#" },
                             { key: "address", header: "ADDRESS" },
-                            { key: "percentage", header: "%", style: { textAlign: "right" } },
+                            { key: "percentage", header: "%" },
                         ]}
                         loading={false}
                         rows={holders.map((holder, index) => ({
-                            id: holder.ownerAddress,
+                            id: holder.holderAddress,
                             rank: <span className={styles.rank}>{index + 1}</span>,
                             address: (
                                 <div className={styles.addressWrapper}>
                                     <a
-                                        href={`https://solscan.io/account/${holder.ownerAddress}`}
+                                        href={`https://solscan.io/account/${holder.holderAddress}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={styles.addressLink}
                                     >
-                                        {shortenAddress(holder.ownerAddress)}
+                                        {shortenAddress(holder.holderAddress)}
                                     </a>
                                     <div
                                         role="button"
@@ -100,7 +101,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                                         onClick={(e: React.MouseEvent) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            copyToClipboard(holder.ownerAddress);
+                                            copyToClipboard(holder.holderAddress);
                                         }}
                                         className={styles.copyButton}
                                     >
@@ -108,7 +109,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                                     </div>
                                 </div>
                             ),
-                            percentage: <div className={styles.percentage}>{holder.percentageOfSupply.toFixed(2)}%</div>,
+                            percentage: <div className={styles.percentage}>{holder.percentage.toFixed(2)}%</div>,
                         }))}
                     />
                 </div>

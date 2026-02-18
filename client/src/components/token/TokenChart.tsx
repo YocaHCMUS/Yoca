@@ -1,6 +1,12 @@
+import { client } from "@/api/main";
 import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
-import type { PoolData } from "@/hooks/useTokenPageData";
+import type { InferResponseType } from "hono/client";
 import styles from "./TokenChart.module.scss";
+
+type PoolData = InferResponseType<
+  typeof client.api.tokens.pools[":addresses"]["$get"],
+  200
+>[number];
 
 interface TokenChartProps {
     pool: PoolData | null;
@@ -17,7 +23,7 @@ export const TokenChart = ({ pool }: TokenChartProps) => {
 
     return (
         <div className={styles.container}>
-            <GeckoTerminalChart poolAddress={pool.address} height="600" />
+            <GeckoTerminalChart poolAddress={pool.poolAddress} height="600" />
         </div>
     );
 };
