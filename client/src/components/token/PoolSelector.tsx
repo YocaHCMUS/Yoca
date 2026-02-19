@@ -1,27 +1,30 @@
-import { client } from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { formatLargeNumber } from "@/services/coingecko";
 import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import classNames from "classnames";
-import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import styles from "./PoolSelector.module.scss";
 
-type TopPoolData = InferResponseType<
-  (typeof client.api.tokens)[":address"]["pools"]["$get"],
-  200
->[number];
+type TopPoolData = {
+  poolAddress: string;
+  poolName: string;
+  dexId: string | null;
+  volumeUsd24h: string | null;
+  liquidityUsd: string | null;
+};
 
 interface PoolSelectorProps {
   pools: TopPoolData[];
-  selectedPool: TopPoolData | null;
+  selectedPool: TopPoolData;
   onPoolChange: (item: { selectedItem: TopPoolData | null }) => void;
 }
 
-export const PoolSelector = ({
+export function PoolSelector({
   pools,
   selectedPool,
   onPoolChange,
-}: PoolSelectorProps) => {
+}: PoolSelectorProps) {
+  const {} = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -39,19 +42,11 @@ export const PoolSelector = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!pools || pools.length === 0) return null;
+  if (!pools || pools.length == 0) return null;
 
   const handleSelect = (pool: TopPoolData) => {
     onPoolChange({ selectedItem: pool });
     setIsOpen(false);
-  };
-
-  const formatDexId = (dexId: string | null): string | null => {
-    if (!dexId || dexId.toLowerCase() === "unknown") return null;
-    return dexId
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
   };
 
   return (
@@ -62,11 +57,11 @@ export const PoolSelector = ({
       >
         <div className={styles.selectedContent}>
           <span className={styles.selectedName}>
-            {selectedPool?.data.poolName || "Select Pool"}
+            {selectedPool.poolName || "Select Pool"}
           </span>
-          {selectedPool?.data.dexId && formatDexId(selectedPool.data.dexId) && (
+          {selectedPool.dexId && formatDexId(selectedPool.dexId) && (
             <span className={styles.sourceTag}>
-              {formatDexId(selectedPool.data.dexId)}
+              {formatDexId(selectedPool.dexId)}
             </span>
           )}
         </div>
@@ -84,26 +79,26 @@ export const PoolSelector = ({
           <div className={styles.list}>
             {pools.map((pool) => (
               <div
-                key={pool.data.poolAddress}
+                key={pool.poolAddress}
                 className={classNames(styles.listItem, {
                   [styles.selected]:
-                    selectedPool?.data.poolAddress === pool.data.poolAddress,
+                    selectedPool?.poolAddress == pool.poolAddress,
                 })}
                 onClick={() => handleSelect(pool)}
               >
                 <div className={styles.colPair}>
                   <div className={styles.pairInfo}>
-                    <div className={styles.pairName}>{pool.data.poolName}</div>
+                    <div className={styles.pairName}>{pool.poolName}</div>
                     <div className={styles.pairSource}>
-                      {formatDexId(pool.data.dexId ?? null)}
+                      {pool.dexId || null}
                     </div>
                   </div>
                 </div>
                 <div className={styles.colVol}>
-                  {formatLargeNumber(Number(pool.data.volumeUsd24h) || 0)}
+                  {formatLargeNumber(Number(pool.volumeUsd24h) || 0)}
                 </div>
                 <div className={styles.colLiq}>
-                  {formatLargeNumber(Number(pool.data.liquidityUsd) || 0)}
+                  {formatLargeNumber(Number(pool.liquidityUsd) || 0)}
                 </div>
               </div>
             ))}
@@ -112,4 +107,4 @@ export const PoolSelector = ({
       )}
     </div>
   );
-};
+}

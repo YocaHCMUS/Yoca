@@ -9,15 +9,35 @@ import {
 } from "@/components/token";
 import PageWrapper from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
-import type { InferResponseType } from "hono/client";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
-type TopPoolData = InferResponseType<
-  (typeof client.api.tokens)[":address"]["pools"]["$get"],
-  200
->[number];
+function useTokenApi(address: string) {
+  const meta = useGet(client.api.tokens.meta[":addresses"], 200, {
+    param: { addresses: address },
+  });
+
+  const topPools = useGet(client.api.tokens[":address"].pools, 200, {
+    param: { address },
+  });
+
+  const holders = useGet(client.api.tokens.holders[":address"], 200, {
+    param: { address },
+  });
+
+  const holdersStats = useGet(
+    client.api.tokens.holders.stats[":addresses"],
+    200,
+    { param: { addresses: address } },
+  );
+
+  const marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
+    param: { addresses: address },
+  });
+
+  return { meta, topPools, holders, holdersStats, marketData };
+}
 
 export default function TokenPage() {
   const navigate = useNavigate();
@@ -31,25 +51,13 @@ export default function TokenPage() {
     return <>Forgot to add address!</>;
   }
 
-  const $meta = useGet(client.api.tokens.meta[":addresses"], 200, {
-    param: { addresses: address },
-  });
-  const $topPools = useGet(client.api.tokens[":address"].pools, 200, {
-    param: { address },
-  });
-  const $holders = useGet(client.api.tokens.holders[":address"], 200, {
-    param: { address },
-  });
-  const $holdersStats = useGet(
-    client.api.tokens.holders.stats[":addresses"],
-    200,
-    {
-      param: { addresses: address },
-    },
-  );
-  const $marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
-    param: { addresses: address },
-  });
+  const {
+    meta: $meta,
+    topPools: $topPools,
+    holders: $holders,
+    holdersStats: $holdersStats,
+    marketData: $marketData,
+  } = useTokenApi(address);
 
   const [selectedPoolAddress, setSelectedPoolAddress] = useState<string | null>(
     null,
