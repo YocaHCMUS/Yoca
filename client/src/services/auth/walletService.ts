@@ -87,12 +87,13 @@ const getEthereumProviderFromWalletType = (
     return null;
   }
 
-  const availableProviders = Array.isArray(injectedProvider.providers)
+  const availableProviders: EthereumBrowserProvider[] = Array.isArray(injectedProvider.providers)
     ? injectedProvider.providers
     : [injectedProvider];
 
   const metamaskProvider = availableProviders.find(
-    (provider) => provider?.isMetaMask && !provider?.isPhantom,
+    (provider: EthereumBrowserProvider) =>
+      provider?.isMetaMask && !provider?.isPhantom,
   );
 
   return metamaskProvider ?? null;
