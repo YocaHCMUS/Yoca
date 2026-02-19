@@ -84,7 +84,7 @@ export const MarketStats = ({
   return (
     <div
       className={classNames(styles.container, {
-        [styles.horizontal]: layout === "horizontal",
+        [styles.horizontal]: layout == "horizontal",
       })}
     >
       {/* ROW 1: Prices */}
@@ -94,8 +94,8 @@ export const MarketStats = ({
           <div className={styles.pricesContainer}>
             <span className={styles.valueLarge}>
               {formatCurrency(
-                pool?.priceUsd
-                  ? Number(pool.priceUsd)
+                pool?.baseTokenPriceUsd
+                  ? Number(pool.baseTokenPriceUsd)
                   : data?.priceUsd
                     ? Number(data.priceUsd)
                     : null,
@@ -108,7 +108,12 @@ export const MarketStats = ({
             <span className={styles.label}>PRICE BASE/QUOTE</span>
             <div className={styles.pricesContainer}>
               <span className={styles.valueLarge}>
-                {pool.baseToQuote ? Number(pool.baseToQuote).toFixed(6) : "-"}
+                {pool.baseTokenPriceUsd != null &&
+                pool.quoteTokenPriceUsd != null
+                  ? (pool.baseTokenPriceUsd / pool.quoteTokenPriceUsd).toFixed(
+                      6,
+                    )
+                  : "-"}
               </span>
             </div>
           </div>
@@ -156,64 +161,36 @@ export const MarketStats = ({
         {pool ? (
           <>
             <div className={styles.gridCell}>
-              <span className={styles.label}>5M</span>
-              <span
-                className={classNames(styles.valueMedium, {
-                  [styles.positive]:
-                    (pool.priceChangeM5 ? Number(pool.priceChangeM5) : 0) >= 0,
-                  [styles.negative]:
-                    (pool.priceChangeM5 ? Number(pool.priceChangeM5) : 0) < 0,
-                })}
-              >
-                {formatPercent(
-                  pool.priceChangeM5 ? Number(pool.priceChangeM5) : null,
-                )}
-              </span>
-            </div>
-            <div className={styles.gridCell}>
               <span className={styles.label}>1H</span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]:
-                    (pool.priceChangeH1 ? Number(pool.priceChangeH1) : 0) >= 0,
-                  [styles.negative]:
-                    (pool.priceChangeH1 ? Number(pool.priceChangeH1) : 0) < 0,
+                  [styles.positive]: (pool.priceChangePercentage1h ?? 0) >= 0,
+                  [styles.negative]: (pool.priceChangePercentage1h ?? 0) < 0,
                 })}
               >
-                {formatPercent(
-                  pool.priceChangeH1 ? Number(pool.priceChangeH1) : null,
-                )}
+                {formatPercent(pool.priceChangePercentage1h)}
               </span>
             </div>
             <div className={styles.gridCell}>
               <span className={styles.label}>6H</span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]:
-                    (pool.priceChangeH6 ? Number(pool.priceChangeH6) : 0) >= 0,
-                  [styles.negative]:
-                    (pool.priceChangeH6 ? Number(pool.priceChangeH6) : 0) < 0,
+                  [styles.positive]: (pool.priceChangePercentage6h || 0) >= 0,
+                  [styles.negative]: (pool.priceChangePercentage6h || 0) < 0,
                 })}
               >
-                {formatPercent(
-                  pool.priceChangeH6 ? Number(pool.priceChangeH6) : null,
-                )}
+                {formatPercent(pool.priceChangePercentage6h)}
               </span>
             </div>
             <div className={styles.gridCell}>
               <span className={styles.label}>24H</span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]:
-                    (pool.priceChangeH24 ? Number(pool.priceChangeH24) : 0) >=
-                    0,
-                  [styles.negative]:
-                    (pool.priceChangeH24 ? Number(pool.priceChangeH24) : 0) < 0,
+                  [styles.positive]: (pool.priceChangePercentage24h || 0) >= 0,
+                  [styles.negative]: (pool.priceChangePercentage24h || 0) < 0,
                 })}
               >
-                {formatPercent(
-                  pool.priceChangeH24 ? Number(pool.priceChangeH24) : null,
-                )}
+                {formatPercent(pool.priceChangePercentage24h)}
               </span>
             </div>
           </>
@@ -248,27 +225,21 @@ export const MarketStats = ({
           <div className={styles.gridCellLeft}>
             <span className={styles.label}>24H VOL</span>
             <span className={styles.valueMedium}>
-              {formatDollarCompact(
-                pool.volume24h ? Number(pool.volume24h) : null,
-              )}
+              {formatDollarCompact(pool.volumeUsd24h)}
             </span>
           </div>
           {/* Buy */}
           <div className={styles.gridCellRight}>
             <span className={styles.label}>BUY</span>
             <span className={styles.buyColor}>
-              {formatDollarCompact(
-                pool.buyVolume24h ? Number(pool.buyVolume24h) : null,
-              )}
+              {formatDollarCompact(pool.buyVolumeUsd24h)}
             </span>
           </div>
           {/* Sell */}
           <div className={styles.gridCellRight}>
             <span className={styles.label}>SELL</span>
             <span className={styles.sellColor}>
-              {formatDollarCompact(
-                pool.sellVolume24h ? Number(pool.sellVolume24h) : null,
-              )}
+              {formatDollarCompact(pool.sellVolumeUsd24h)}
             </span>
           </div>
           {/* Net */}
@@ -277,16 +248,24 @@ export const MarketStats = ({
             <span
               className={classNames(styles.valueSmall, {
                 [styles.positive]:
-                  pool.netBuyVolume24h != null &&
-                  Number(pool.netBuyVolume24h) >= 0,
+                  pool.buyVolumeUsd24h != null &&
+                  pool.sellVolumeUsd24h != null &&
+                  Number(pool.buyVolumeUsd24h) -
+                    Number(pool.sellVolumeUsd24h) >=
+                    0,
                 [styles.negative]:
-                  pool.netBuyVolume24h != null &&
-                  Number(pool.netBuyVolume24h) < 0,
+                  pool.buyVolumeUsd24h != null &&
+                  pool.sellVolumeUsd24h != null &&
+                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) <
+                    0,
               })}
             >
-              {formatDollarCompact(
-                pool.netBuyVolume24h ? Number(pool.netBuyVolume24h) : null,
-              )}
+              {pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
+                ? formatDollarCompact(
+                    Number(pool.buyVolumeUsd24h) -
+                      Number(pool.sellVolumeUsd24h),
+                  )
+                : "-"}
             </span>
           </div>
         </div>
