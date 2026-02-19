@@ -1,29 +1,38 @@
-import { define } from "./en";
-import type { DatetimeFormatInfo, NumberFormatInfo } from "./util/util-format";
+import { defineTranslation } from "./en";
+import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
 
-export const viNumFmtInfo: NumberFormatInfo = {
-  thousandSeparator: ".",
-  decimalSeparator: ",",
-  currencySymbol: "VNĐ",
-  currencyPositivePattern: "n$",
-  currencyNegativePattern: "-n$",
-  percentSymbol: "%",
-  percentPositivePattern: "n%",
-  percentNegativePattern: "-n%",
-  nanSymbol: "NaN",
-  positiveInfititySymbol: "∞",
-  negativeInfititySymbol: "-∞",
-  numberNegativePattern: "-n",
+export const langCode = "vi-VN";
+
+export const format = {
+  num: defineNumberFormat(langCode, {
+    currency: {
+      currency: "VND",
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    decimal: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    percent: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    unit: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+  }),
+  datetime: defineDateTimeFormat(langCode, {
+    datePattern: "DD/MM/YYYY",
+    timePattern: "HH:mm",
+    dateTimePattern: "D MMM YYYY HH:mm",
+    utcDateTimePattern: "D MMM YYYY HH:mm [UTC]",
+  }),
 };
 
-export const viDateTimeFmtInfo: DatetimeFormatInfo = {
-  datePattern: "DD/MM/YYYY",
-  timePattern: "HH:mm",
-  dateTimePattern: "D MMM YYYY HH:mm",
-  utcDateTimePattern: "D MMM YYYY HH:mm [UTC]",
-};
-
-export const vi = define({
+export const translation = defineTranslation({
   // Common
   common: {
     cancel: "Hủy",

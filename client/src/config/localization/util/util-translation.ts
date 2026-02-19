@@ -75,7 +75,7 @@ export type LitToType<LitObj extends object> = {
       : LitObj[Key];
 };
 
-export function defineTranslation<Base extends object>() {
+export function defineTranslationWithBase<Base extends object>() {
   return <T>(t: T & ValidateTranslation<Base, T>): T => t;
 }
 
