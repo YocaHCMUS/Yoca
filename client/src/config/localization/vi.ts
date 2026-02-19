@@ -9,19 +9,19 @@ export const format = {
       currency: "VND",
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     },
     decimal: {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     },
     percent: {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     },
     unit: {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     },
   }),
   datetime: defineDateTimeFormat(langCode, {

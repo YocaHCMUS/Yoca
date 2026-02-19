@@ -1,13 +1,14 @@
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useState } from "react";
 import styles from "./RecentTransactions.module.scss";
 
 type PoolTrade = {
   id: string;
   kind: "buy" | "sell";
-  priceUsd: string;
-  priceQuote: string;
-  volumeUsd: string;
-  amount: string;
+  priceUsd: number;
+  priceQuote: number;
+  volumeUsd: number;
+  amount: number;
   fromAddress: string;
   timestamp: string;
   txHash: string;
@@ -15,59 +16,27 @@ type PoolTrade = {
 
 interface RecentTransactionsProps {
   trades: PoolTrade[];
-  baseTokenSymbol?: string;
-  tokenAddress?: string;
-  tokenSymbol?: string;
-  poolAddress?: string;
+  tokenAddress: string;
+  tokenSymbol: string;
+  baseMeta: {
+    address: string;
+    symbol: string;
+    imageUrl: string | null;
+  };
+  quoteMeta: {
+    address: string;
+    symbol: string;
+    imageUrl: string | null;
+  };
 }
 
 export const RecentTransactions = ({
   trades,
-  baseTokenSymbol,
-  tokenAddress,
-  tokenSymbol,
-  poolAddress,
+  baseMeta,
+  quoteMeta,
 }: RecentTransactionsProps) => {
   const [showBubbleMapModal, setShowBubbleMapModal] = useState(false);
-
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
-
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return date
-      .toLocaleDateString("en-US", { month: "short", day: "2-digit" })
-      .toUpperCase();
-  };
-
-  const formatPrice = (price: string) => {
-    const p = parseFloat(price);
-    if (isNaN(p)) return "0";
-    if (p < 0.000001) return p.toExponential(4);
-    return p.toLocaleString("en-US", {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 6,
-    });
-  };
-
-  const formatAmount = (amount: string) => {
-    const a = parseFloat(amount);
-    if (isNaN(a)) return "0";
-    return a.toLocaleString("en-US", { maximumFractionDigits: 2 });
-  };
-
-  const formatValue = (value: string) => {
-    const v = parseFloat(value);
-    if (isNaN(v)) return "$0.00";
-    return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const { fmt } = useLocalization();
 
   const shortenAddress = (addr: string) => {
     if (!addr) return "";
@@ -94,9 +63,8 @@ export const RecentTransactions = ({
             <tr>
               <th>Time</th>
               <th>Type</th>
-              <th>Price {(baseTokenSymbol || "SOL").toUpperCase()}</th>
+              <th>Price {quoteMeta.symbol}</th>
               <th>Price USD</th>
-              <th>{(tokenSymbol || "Token").toUpperCase()}</th>
               <th>Value</th>
               <th>From</th>
               <th>TX</th>
@@ -105,13 +73,13 @@ export const RecentTransactions = ({
           <tbody>
             {trades.length == 0 ? (
               <tr>
-                <td colSpan={8} className={styles.emptyState}>
+                <td colSpan={7} className={styles.emptyState}>
                   Loading trades...
                 </td>
               </tr>
-            ) : trades.length === 0 ? (
+            ) : trades.length == 0 ? (
               <tr>
-                <td colSpan={8} className={styles.emptyState}>
+                <td colSpan={7} className={styles.emptyState}>
                   No recent transactions
                 </td>
               </tr>
@@ -119,37 +87,34 @@ export const RecentTransactions = ({
               trades.map((trade) => (
                 <tr key={trade.id}>
                   <td className={styles.timeCell}>
-                    <span className={styles.dateBadge}>
-                      {formatDate(trade.timestamp)}
-                    </span>
                     <span className={styles.timeText}>
-                      {formatTime(trade.timestamp)}
+                      {fmt.datetime.datetime(trade.timestamp)}
                     </span>
                   </td>
                   <td
-                    className={`${styles.type} ${trade.kind === "buy" ? styles.buy : styles.sell}`}
+                    className={`${styles.type} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
                     {trade.kind.toUpperCase()}
                   </td>
                   <td
-                    className={`${styles.price} ${trade.kind === "buy" ? styles.buy : styles.sell}`}
+                    className={`${styles.price} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {formatPrice(trade.priceQuote)}
+                    {fmt.num.compact.unit(trade.priceQuote, quoteMeta.symbol)}
                   </td>
                   <td
-                    className={`${styles.price} ${trade.kind === "buy" ? styles.buy : styles.sell}`}
+                    className={`${styles.price} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    ${formatPrice(trade.priceUsd)}
+                    {fmt.num.compact.currency(trade.priceUsd)}
                   </td>
                   <td
-                    className={`${styles.amount} ${trade.kind === "buy" ? styles.buy : styles.sell}`}
+                    className={`${styles.amount} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {formatAmount(trade.amount)}
+                    {fmt.num.compact.unit(trade.amount, baseMeta.symbol)}
                   </td>
                   <td
-                    className={`${styles.value} ${trade.kind === "buy" ? styles.buy : styles.sell}`}
+                    className={`${styles.value} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {formatValue(trade.volumeUsd)}
+                    {fmt.num.compact.currency(trade.volumeUsd)}
                   </td>
                   <td>
                     <a
@@ -212,9 +177,9 @@ export const RecentTransactions = ({
               </button>
             </div>
             <div className={styles.bubblemapsContainer}>
-              {tokenAddress ? (
+              {baseMeta.address ? (
                 <iframe
-                  src={`https://app.bubblemaps.io/sol/token/${tokenAddress}?theme=light`}
+                  src={`https://app.bubblemaps.io/sol/token/${baseMeta.address}?theme=light`}
                   title="BubbleMaps"
                   className={styles.bubblemapsIframe}
                 />

@@ -9,12 +9,11 @@ import {
 } from "@/components/token";
 import PageWrapper from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
-import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
-function useTokenApi(address: string) {
-  const meta = useGet(client.api.tokens.meta[":addresses"], 200, {
+function useTokenPageData(address: string, poolAddress: string) {
+  const baseMeta = useGet(client.api.tokens.meta[":addresses"], 200, {
     param: { addresses: address },
   });
 
@@ -29,14 +28,67 @@ function useTokenApi(address: string) {
   const holdersStats = useGet(
     client.api.tokens.holders.stats[":addresses"],
     200,
-    { param: { addresses: address } },
+    {
+      param: { addresses: address },
+    },
   );
 
   const marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
     param: { addresses: address },
   });
 
-  return { meta, topPools, holders, holdersStats, marketData };
+  const trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
+    param: { address: poolAddress },
+  });
+
+  const poolData = useGet(client.api.tokens.pools[":addresses"], 200, {
+    param: { addresses: poolAddress },
+  });
+
+  const isLoading =
+    baseMeta.isLoading ||
+    topPools.isLoading ||
+    holders.isLoading ||
+    holdersStats.isLoading ||
+    marketData.isLoading ||
+    trades.isLoading ||
+    poolData.isLoading;
+
+  const error =
+    baseMeta.error ||
+    topPools.error ||
+    holders.error ||
+    holdersStats.error ||
+    marketData.error ||
+    trades.error ||
+    poolData.error;
+
+  if (isLoading || error) {
+    return {
+      isLoading,
+      error,
+      data: null as null,
+    };
+  }
+
+  // Safe unwrap after loading/error gate
+  const [meta] = baseMeta.data!;
+  const [holdersInfo] = holdersStats.data!;
+  const pool = poolData.data![0];
+
+  return {
+    isLoading: false,
+    error: null,
+    data: {
+      meta,
+      topPools: topPools.data!,
+      holders: holders.data!,
+      holdersInfo,
+      market: marketData.data?.[address] ?? null,
+      trades: trades.data!,
+      pool,
+    },
+  };
 }
 
 export default function TokenPage() {
@@ -47,175 +99,113 @@ export default function TokenPage() {
     poolAddress: string;
   }>();
 
-  if (!address) {
+  if (!address || !poolAddress) {
     return <>Forgot to add address!</>;
   }
 
-  const {
-    meta: $meta,
-    topPools: $topPools,
-    holders: $holders,
-    holdersStats: $holdersStats,
-    marketData: $marketData,
-  } = useTokenApi(address);
+  const result = useTokenPageData(address, poolAddress);
 
-  const [selectedPoolAddress, setSelectedPoolAddress] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    console.log("refresh");
-    if (poolAddress) {
-      setSelectedPoolAddress(poolAddress);
-    } else if (
-      $topPools.data &&
-      $topPools.data.length > 0 &&
-      !selectedPoolAddress
-    ) {
-      setSelectedPoolAddress($topPools.data[0].data.poolAddress);
-    }
-  }, [$topPools.data, poolAddress]);
-
-  const $trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
-    param: { address: selectedPoolAddress ?? "" },
-  });
-
-  const $selectedPoolData = useGet(client.api.tokens.pools[":addresses"], 200, {
-    param: { addresses: selectedPoolAddress ?? "" },
-  });
-
-  if (!selectedPoolAddress) {
-    return <>Not Selected</>;
-  }
-
-  const selectedPool = $selectedPoolData.data?.[0] ?? null;
-
-  const handlePoolChange = ({
-    selectedItem,
-  }: {
-    selectedItem: TopPoolData | null;
-  }) => {
-    if (selectedItem) {
-      setSelectedPoolAddress(selectedItem.data.poolAddress);
-      navigate(`/tokens/${address}/${selectedItem.data.poolAddress}`);
-    }
-  };
-
-  const isLoading =
-    $meta.isLoading ||
-    $topPools.isLoading ||
-    $holders.isLoading ||
-    $holdersStats.isLoading ||
-    $marketData.isLoading;
-
-  if (isLoading) {
+  if (result.isLoading) {
     return <>Loading</>;
   }
-  if ($meta.error || !$meta.data) {
+
+  if (result.error || !result.data) {
     return <>Error</>;
   }
 
-  const [metaData] = $meta.data;
-
-  // Prepare data for components
-  const topPoolsData = $topPools.data ?? [];
-  const topHolders = $holders.data ?? [];
-  const holdersInfo = $holdersStats.data?.[0] ?? null;
-  const marketData = $marketData.data?.[0] ?? null;
-  const trades = $trades.data ?? [];
-
-  // Find selected pool in top pools list for display
-  const selectedTopPool =
-    topPoolsData.find((p) => p.data.poolAddress == selectedPoolAddress) ?? null;
-
-  if (!address) {
-    return "Non existent page";
-  }
-
-  if (!metaData) {
-    return (
-      <div style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
-        <p>No metadata found for this token.</p>
-        <p style={{ fontSize: "0.9rem", marginTop: "8px" }}>
-          Address: {address}
-        </p>
-      </div>
-    );
-  }
+  const { meta, topPools, holders, holdersInfo, market, trades, pool } =
+    result.data;
 
   return (
     <PageWrapper>
       <div className={styles.tokenPageGrid}>
-        {/* Left Column: Sidebar (Info, Stats, Holders) */}
         <div className={styles.leftColumn}>
           <div className={styles.sidebarGroup}>
             <TokenHeader
-              name={metaData.name}
-              symbol={metaData.symbol}
-              address={metaData.address}
-              imageUrl={metaData.imageUrl ?? undefined}
-              coinGeckoId={metaData.coingeckoId ?? null}
-              discordInvite={metaData.linkDiscord}
-              websiteUrl={metaData.linkHomepage}
-              twitterHandle={metaData.twitterScreenName}
+              name={meta.name}
+              symbol={meta.symbol}
+              address={meta.address}
+              imageUrl={meta.imageUrl ?? undefined}
+              coinGeckoId={meta.coingeckoId ?? null}
+              discordInvite={meta.linkDiscord}
+              websiteUrl={meta.linkHomepage}
+              twitterHandle={meta.twitterScreenName}
             />
 
             <PoolSelector
-              pools={topPoolsData}
-              selectedPool={selectedTopPool}
-              onPoolChange={handlePoolChange}
+              pools={topPools.map((p) => ({
+                dexId: p.data.dexId,
+                poolAddress: p.data.poolAddress,
+                poolName: p.data.poolName,
+                liquidityUsd: p.data.liquidityUsd,
+                volumeUsd24h: p.data.volumeUsd24h,
+              }))}
+              selectedPool={{
+                poolAddress: pool.poolAddress,
+                dexId: pool.dexId,
+                liquidityUsd: pool.liquidityUsd,
+                poolName: pool.poolName,
+                volumeUsd24h: pool.volumeUsd24h,
+              }}
+              onPoolChange={(newPoolAddress) =>
+                navigate(`/tokens/${address}/${newPoolAddress}`)
+              }
             />
 
-            {/* Vertical layout for sidebar */}
             <MarketStats
-              data={marketData}
-              pool={selectedPool}
-              topHolders={topHolders}
+              data={market}
+              pool={pool}
+              topHolders={holders}
               holdersInfo={holdersInfo}
-              marketsCount={topPoolsData.length}
+              marketsCount={topPools.length}
             />
 
-            <TopHolders holders={topHolders} holdersInfo={holdersInfo} />
+            <TopHolders holders={holders} holdersInfo={holdersInfo} />
           </div>
         </div>
 
-        {/* Right Column: Chart & Transactions */}
         <div className={styles.rightColumn}>
-          <TokenChart pool={selectedPool} />
+          <TokenChart pool={pool} />
 
-          {selectedPool && (
-            <RecentTransactions
-              trades={trades.map((trade) => {
-                const kind = trade.buyTokenAddress == address ? "buy" : "sell";
-                const amount =
-                  kind == "buy" ? trade.buyTokenAmount : trade.sellTokenAmount;
-                const priceUsd =
-                  kind == "buy"
-                    ? trade.buyTokenPriceUsd
-                    : trade.sellTokenPriceUsd;
-                const priceQuote =
-                  kind == "buy"
-                    ? trade.buyTokenPriceUsd
-                    : trade.sellTokenPriceUsd;
+          <RecentTransactions
+            trades={trades.map((trade) => {
+              const kind = trade.buyTokenAddress == address ? "buy" : "sell";
 
-                return {
-                  kind,
-                  amount: amount.toString(),
-                  fromAddress: trade.signerAddress,
-                  id: trade.id,
-                  timestamp: trade.blockTimestamp,
-                  txHash: trade.transactionHash,
-                  volumeUsd: trade.volumeInUsd.toString(),
-                  priceUsd: priceUsd.toString(),
-                  priceQuote: priceQuote.toString(),
-                };
-              })}
-              baseTokenSymbol="SOL"
-              tokenAddress={address}
-              tokenSymbol={metaData.symbol}
-              poolAddress={selectedPool.poolAddress}
-            />
-          )}
+              const amount =
+                kind == "buy" ? trade.buyTokenAmount : trade.sellTokenAmount;
+
+              const priceUsd =
+                kind == "buy"
+                  ? trade.buyTokenPriceUsd
+                  : trade.sellTokenPriceUsd;
+
+              const priceQuote = priceUsd;
+
+              return {
+                kind,
+                amount,
+                fromAddress: trade.signerAddress,
+                id: trade.id,
+                timestamp: trade.blockTimestamp,
+                txHash: trade.transactionHash,
+                volumeUsd: trade.volumeInUsd,
+                priceUsd,
+                priceQuote,
+              };
+            })}
+            baseMeta={{
+              address,
+              symbol: meta.symbol,
+              imageUrl: meta.imageUrl,
+            }}
+            tokenAddress={""}
+            tokenSymbol={""}
+            quoteMeta={{
+              address: "",
+              symbol: "",
+              imageUrl: null,
+            }}
+          />
         </div>
       </div>
     </PageWrapper>

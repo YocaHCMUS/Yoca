@@ -1,5 +1,4 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatLargeNumber } from "@/services/coingecko";
 import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
@@ -7,16 +6,16 @@ import styles from "./PoolSelector.module.scss";
 
 type TopPoolData = {
   poolAddress: string;
-  poolName: string;
+  poolName: string | null;
   dexId: string | null;
-  volumeUsd24h: string | null;
-  liquidityUsd: string | null;
+  volumeUsd24h: number | null;
+  liquidityUsd: number | null;
 };
 
 interface PoolSelectorProps {
   pools: TopPoolData[];
   selectedPool: TopPoolData;
-  onPoolChange: (item: { selectedItem: TopPoolData | null }) => void;
+  onPoolChange: (address: string) => void;
 }
 
 export function PoolSelector({
@@ -24,7 +23,7 @@ export function PoolSelector({
   selectedPool,
   onPoolChange,
 }: PoolSelectorProps) {
-  const {} = useLocalization();
+  const { fmt } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +44,7 @@ export function PoolSelector({
   if (!pools || pools.length == 0) return null;
 
   const handleSelect = (pool: TopPoolData) => {
-    onPoolChange({ selectedItem: pool });
+    onPoolChange(pool.poolAddress);
     setIsOpen(false);
   };
 
@@ -59,10 +58,8 @@ export function PoolSelector({
           <span className={styles.selectedName}>
             {selectedPool.poolName || "Select Pool"}
           </span>
-          {selectedPool.dexId && formatDexId(selectedPool.dexId) && (
-            <span className={styles.sourceTag}>
-              {formatDexId(selectedPool.dexId)}
-            </span>
+          {selectedPool.dexId && (
+            <span className={styles.sourceTag}>{selectedPool.dexId}</span>
           )}
         </div>
         {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -89,16 +86,14 @@ export function PoolSelector({
                 <div className={styles.colPair}>
                   <div className={styles.pairInfo}>
                     <div className={styles.pairName}>{pool.poolName}</div>
-                    <div className={styles.pairSource}>
-                      {pool.dexId || null}
-                    </div>
+                    <div className={styles.pairSource}>{pool.dexId}</div>
                   </div>
                 </div>
                 <div className={styles.colVol}>
-                  {formatLargeNumber(Number(pool.volumeUsd24h) || 0)}
+                  {fmt.num.compact.currency(pool.volumeUsd24h, true)}
                 </div>
                 <div className={styles.colLiq}>
-                  {formatLargeNumber(Number(pool.liquidityUsd) || 0)}
+                  {fmt.num.compact.currency(pool.liquidityUsd, true)}
                 </div>
               </div>
             ))}
