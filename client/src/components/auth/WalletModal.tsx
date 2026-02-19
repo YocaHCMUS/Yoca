@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Select, SelectItem, Loading, ButtonSkeleton  } from '@carbon/react';
+import { Modal, Loading, ButtonSkeleton } from '@carbon/react';
 import { Wallet } from '@carbon/icons-react';
 import { useTranslation } from 'react-i18next';
 import type { WalletInfo, BlockchainType, WalletType } from '../../types/auth';
@@ -27,8 +27,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const { t } = useTranslation();
   const { connectWallet } = useAuth();
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
-  // Default to Ethereum to prioritize MetaMask flow
-  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('ethereum');
+  const selectedBlockchain: BlockchainType = 'solana';
   const [loading, setLoading] = useState(false);
   const [detectingWallets, setDetectingWallets] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<WalletType | null>(null);
@@ -50,13 +49,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     if (open) {
       loadWallets();
     }
-  }, [open, selectedBlockchain]);
+  }, [open]);
 
   const loadWallets = async () => {
     setDetectingWallets(true);
     setError('');
     try {
-      const detectedWallets = await detectWallets(selectedBlockchain);
+      const detectedWallets = await detectWallets('solana');
       setWallets(detectedWallets);
     } catch (err) {
       setError(t('wallet.detectionFailed'));
@@ -71,7 +70,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   setLoading(true);
 
   try {
-    // selectedBlockchain nên là 'ethereum' khi dùng MetaMask
     const response = await connectWallet(walletType, selectedBlockchain);
 
     if (response.success) {
@@ -136,22 +134,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       aria-describedby="wallet-modal-description"
     >
       <div className={styles['modal-content']} id="wallet-modal-description">
-        {/* Blockchain Selector */}
-        <div className={styles['blockchain-selector']}>
-          <Select
-            id="blockchain-selector"
-            labelText={t('wallet.selectBlockchain')}
-            value={selectedBlockchain}
-            onChange={(e) => setSelectedBlockchain(e.target.value as BlockchainType)}
-            disabled={loading || detectingWallets}
-            className={styles['select-full-width']}
-          >
-            <SelectItem value="ethereum" text={t('wallet.ethereum')} />
-            <SelectItem value="solana" text={t('wallet.solana')} />
-            <SelectItem value="bitcoin" text={t('wallet.bitcoin')} />
-          </Select>
-        </div>
-
         {/* Loading State - Detecting Wallets */}
         {detectingWallets && (
           <div className={styles['wallets-section']}>
@@ -283,7 +265,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       </div>
                       <div className={styles['warning-text-wrapper']}>
                         <h3 className={styles['warning-title']}>
-                          {t('wallet.noWalletsFound', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}
+                          {t('wallet.noWalletsFound', { blockchain: 'Solana' })}
                         </h3>
                         <p className={styles['warning-message']}>
                           {t('wallet.installWalletPrompt')}

@@ -217,6 +217,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
 
         {/* Wallet authentication button */}
         <Button
+          type="button"
           kind="secondary"
           onClick={onOpenWalletModal}
           disabled={isSubmitting}
