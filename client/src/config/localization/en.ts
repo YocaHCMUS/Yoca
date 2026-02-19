@@ -1,29 +1,38 @@
-import type { DatetimeFormatInfo, NumberFormatInfo } from "./util/util-format";
-import { defineTranslation } from "./util/util-translation";
+import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import { defineTranslationWithBase } from "./util/util-translation";
 
-export const enNumFmtInfo: NumberFormatInfo = {
-  thousandSeparator: ",",
-  decimalSeparator: ".",
-  currencySymbol: "$",
-  currencyPositivePattern: "$n",
-  currencyNegativePattern: "-$n",
-  percentSymbol: "%",
-  percentPositivePattern: "n%",
-  percentNegativePattern: "-n%",
-  nanSymbol: "NaN",
-  positiveInfititySymbol: "∞",
-  negativeInfititySymbol: "-∞",
-  numberNegativePattern: "-n",
+export const langCode = "en-US";
+
+export const format = {
+  num: defineNumberFormat(langCode, {
+    currency: {
+      currency: "USD",
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    decimal: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    percent: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    unit: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+  }),
+  datetime: defineDateTimeFormat(langCode, {
+    datePattern: "MM/DD/YYYY",
+    timePattern: "hh:mm A",
+    dateTimePattern: "MMM D, YYYY hh:mm A",
+    utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
+  }),
 };
 
-export const enDateTimeFmtInfo: DatetimeFormatInfo = {
-  datePattern: "MM/DD/YYYY",
-  timePattern: "hh:mm A",
-  dateTimePattern: "MMM D, YYYY hh:mm A",
-  utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
-};
-
-export const en = {
+export const translation = {
   // Common
   common: {
     cancel: "Cancel",
@@ -324,4 +333,5 @@ export const en = {
 } as const;
 
 // English as base translation
-export const define = defineTranslation<typeof en>();
+export const defineTranslation =
+  defineTranslationWithBase<typeof translation>();

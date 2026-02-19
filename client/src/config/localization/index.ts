@@ -1,32 +1,17 @@
-import { en, enNumFmtInfo } from "./en.ts";
+import * as en from "./en.ts";
 import type { DotPaths, LitTransToShape } from "./util/util-translation.ts";
-import { vi, viDateTimeFmtInfo, viNumFmtInfo } from "./vi.ts";
+import * as vi from "./vi.ts";
 
 export const locale = {
-  en: {
-    translation: en,
-    format: {
-      num: enNumFmtInfo,
-      datetime: viDateTimeFmtInfo,
-    },
-  },
-  vi: {
-    translation: vi,
-    format: {
-      num: viNumFmtInfo,
-      datetime: viDateTimeFmtInfo,
-    },
-  },
+  en,
+  vi,
 };
 
-export type BaseTranslation = typeof en;
+export type LangKeys = keyof typeof locale;
+export type BaseTranslation = typeof en.translation;
 export type TranslationSchema = LitTransToShape<BaseTranslation>;
 export type TranslationKeyPath = DotPaths<BaseTranslation>;
 
-export type {
-  DatetimeFormatInfo,
-  NumberFormatInfo,
-} from "./util/util-format.ts";
 export type {
   FmtStrParams,
   PathValue,
