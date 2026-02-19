@@ -28,6 +28,13 @@ interface SolanaBrowserProvider {
   signMessage?: (message: Uint8Array) => Promise<Uint8Array | { signature: Uint8Array }>;
 }
 
+interface EthereumBrowserProvider {
+  isMetaMask?: boolean;
+  isPhantom?: boolean;
+  providers?: EthereumBrowserProvider[];
+  request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
 const toBase64 = (bytes: Uint8Array): string => {
   let binary = '';
   for (let index = 0; index < bytes.length; index += 1) {
@@ -58,6 +65,37 @@ const getProviderFromWalletType = (walletType: WalletType): SolanaBrowserProvide
     default:
       return null;
   }
+};
+
+const getEthereumProviderFromWalletType = (
+  walletType: WalletType,
+): EthereumBrowserProvider | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const providerWindow = window as typeof window & {
+    ethereum?: EthereumBrowserProvider;
+  };
+
+  if (walletType !== 'metamask') {
+    return null;
+  }
+
+  const injectedProvider = providerWindow.ethereum;
+  if (!injectedProvider) {
+    return null;
+  }
+
+  const availableProviders = Array.isArray(injectedProvider.providers)
+    ? injectedProvider.providers
+    : [injectedProvider];
+
+  const metamaskProvider = availableProviders.find(
+    (provider) => provider?.isMetaMask && !provider?.isPhantom,
+  );
+
+  return metamaskProvider ?? null;
 };
 
 /**
@@ -152,6 +190,7 @@ export const detectWallets = async (
   const catalog = WALLET_CATALOG[blockchain] || [];
   const phantomProvider = getProviderFromWalletType('phantom');
   const solflareProvider = getProviderFromWalletType('solflare');
+  const metamaskProvider = getEthereumProviderFromWalletType('metamask');
 
   return catalog.map((wallet) => ({
     ...wallet,
@@ -159,8 +198,144 @@ export const detectWallets = async (
       ? Boolean(phantomProvider)
       : wallet.type === 'solflare'
         ? Boolean(solflareProvider)
+        : wallet.type === 'metamask'
+          ? Boolean(metamaskProvider)
         : wallet.detected,
   }));
+};
+
+const connectSolanaWallet = async (
+  walletType: WalletType,
+): Promise<AuthResponse> => {
+  const provider = getProviderFromWalletType(walletType);
+  if (!provider) {
+    return { success: false, error: 'Ví chưa được cài đặt hoặc không được hỗ trợ' };
+  }
+
+  if (!provider.connect || !provider.signMessage) {
+    return { success: false, error: 'Ví không hỗ trợ đăng nhập bằng chữ ký' };
+  }
+
+  const connectedResult = await provider.connect();
+  const connectedPubKey =
+    provider.publicKey?.toBase58?.() ?? connectedResult?.publicKey?.toBase58?.();
+
+  if (!connectedPubKey) {
+    return { success: false, error: 'Không lấy được địa chỉ ví' };
+  }
+
+  const nonceResponse = await client.api.users.auth.solana.nounce.$post({
+    json: {
+      pubKey: connectedPubKey,
+    },
+  });
+
+  if (!nonceResponse.ok) {
+    return { success: false, error: 'Không lấy được thông điệp xác thực' };
+  }
+
+  const { signMessage } = await nonceResponse.json();
+  const signMessageBytes = new TextEncoder().encode(signMessage);
+  const signed = await provider.signMessage(signMessageBytes);
+  const signatureBytes = signed instanceof Uint8Array ? signed : signed.signature;
+
+  const verifyResponse = await client.api.users.auth.solana.verify.$post({
+    json: {
+      pubKey: connectedPubKey,
+      signature: toBase64(signatureBytes),
+    },
+  });
+
+  if (!verifyResponse.ok) {
+    return { success: false, error: 'Xác thực chữ ký ví thất bại' };
+  }
+
+  const verifyData = await verifyResponse.json();
+  const connection: WalletConnection = {
+    address: connectedPubKey,
+    blockchain: 'solana',
+    walletType,
+    connected: true,
+    connectedAt: new Date(),
+  };
+  connectedWallets.push(connection);
+
+  return {
+    success: true,
+    user: {
+      id: verifyData.userId,
+    } as AuthResponse['user'],
+    token: verifyData.token,
+    message: verifyData.message,
+  };
+};
+
+const connectEthereumWallet = async (
+  walletType: WalletType,
+): Promise<AuthResponse> => {
+  const provider = getEthereumProviderFromWalletType(walletType);
+  if (!provider?.request) {
+    return { success: false, error: 'MetaMask chưa được cài đặt hoặc không được hỗ trợ' };
+  }
+
+  const accounts = (await provider.request({
+    method: 'eth_requestAccounts',
+  })) as string[];
+
+  const selectedAddress = accounts?.[0]?.toLowerCase();
+  if (!selectedAddress) {
+    return { success: false, error: 'Không lấy được địa chỉ MetaMask' };
+  }
+
+  const nonceResponse = await client.api.users.auth.ethereum.nounce.$post({
+    json: {
+      address: selectedAddress,
+    },
+  });
+
+  if (!nonceResponse.ok) {
+    return { success: false, error: 'Không lấy được thông điệp xác thực' };
+  }
+
+  const { signMessage } = await nonceResponse.json();
+  const signature = (await provider.request({
+    method: 'personal_sign',
+    params: [signMessage, selectedAddress],
+  })) as string;
+
+  if (!signature) {
+    return { success: false, error: 'Không lấy được chữ ký từ MetaMask' };
+  }
+
+  const verifyResponse = await client.api.users.auth.ethereum.verify.$post({
+    json: {
+      address: selectedAddress,
+      signature,
+    },
+  });
+
+  if (!verifyResponse.ok) {
+    return { success: false, error: 'Xác thực chữ ký MetaMask thất bại' };
+  }
+
+  const verifyData = await verifyResponse.json();
+  const connection: WalletConnection = {
+    address: selectedAddress,
+    blockchain: 'ethereum',
+    walletType,
+    connected: true,
+    connectedAt: new Date(),
+  };
+  connectedWallets.push(connection);
+
+  return {
+    success: true,
+    user: {
+      id: verifyData.userId,
+    } as AuthResponse['user'],
+    token: verifyData.token,
+    message: verifyData.message,
+  };
 };
 
 /**
@@ -173,72 +348,16 @@ export const connectWallet = async (
   walletType: WalletType,
   blockchain: BlockchainType = 'solana'
 ): Promise<AuthResponse> => {
-  if (blockchain !== 'solana') {
-    return { success: false, error: 'Hiện tại chỉ hỗ trợ đăng nhập ví Solana' };
-  }
-
-  const provider = getProviderFromWalletType(walletType);
-  if (!provider) {
-    return { success: false, error: 'Ví chưa được cài đặt hoặc không được hỗ trợ' };
-  }
-
-  if (!provider.connect || !provider.signMessage) {
-    return { success: false, error: 'Ví không hỗ trợ đăng nhập bằng chữ ký' };
-  }
-
   try {
-    const connectedResult = await provider.connect();
-    const connectedPubKey =
-      provider.publicKey?.toBase58?.() ?? connectedResult?.publicKey?.toBase58?.();
-
-    if (!connectedPubKey) {
-      return { success: false, error: 'Không lấy được địa chỉ ví' };
+    if (blockchain === 'solana') {
+      return await connectSolanaWallet(walletType);
     }
 
-    const nonceResponse = await client.api.users.auth.solana.nounce.$post({
-      json: {
-        pubKey: connectedPubKey,
-      },
-    });
-
-    if (!nonceResponse.ok) {
-      return { success: false, error: 'Không lấy được thông điệp xác thực' };
+    if (blockchain === 'ethereum') {
+      return await connectEthereumWallet(walletType);
     }
 
-    const { signMessage } = await nonceResponse.json();
-    const signMessageBytes = new TextEncoder().encode(signMessage);
-    const signed = await provider.signMessage(signMessageBytes);
-    const signatureBytes = signed instanceof Uint8Array ? signed : signed.signature;
-
-    const verifyResponse = await client.api.users.auth.solana.verify.$post({
-      json: {
-        pubKey: connectedPubKey,
-        signature: toBase64(signatureBytes),
-      },
-    });
-
-    if (!verifyResponse.ok) {
-      return { success: false, error: 'Xác thực chữ ký ví thất bại' };
-    }
-
-    const verifyData = await verifyResponse.json();
-    const connection: WalletConnection = {
-      address: connectedPubKey,
-      blockchain: 'solana',
-      walletType,
-      connected: true,
-      connectedAt: new Date(),
-    };
-    connectedWallets.push(connection);
-
-    return {
-      success: true,
-      user: {
-        id: verifyData.userId,
-      } as AuthResponse['user'],
-      token: verifyData.token,
-      message: verifyData.message,
-    };
+    return { success: false, error: 'Blockchain chưa được hỗ trợ đăng nhập' };
   } catch (error: unknown) {
     const walletError = error as { code?: number; message?: string };
     if (walletError?.code === 4001) {

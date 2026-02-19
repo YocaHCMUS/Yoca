@@ -16,6 +16,10 @@ export const messageText = {
     "Solana login nounce generated successfully",
   SolanaWalletVerificationFailed: "Solana wallet verification failed",
   SolanaWalletVerifiedSuccessfully: "Solana wallet verified successfully",
+  EthereumNounceGeneratedSuccessfully:
+    "Ethereum login nounce generated successfully",
+  EthereumWalletVerificationFailed: "Ethereum wallet verification failed",
+  EthereumWalletVerifiedSuccessfully: "Ethereum wallet verified successfully",
 } as const;
 
 export const statusCode = {

@@ -4,6 +4,8 @@ import {
   AUTHEN_COOKIE_TTL_MS,
 } from "@sv/config/constants.js";
 import {
+  ethereumNounceRequestSchema,
+  ethereumVerificationRequestSchema,
   googleTokenSchema,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
@@ -225,6 +227,79 @@ const app = new Hono()
       return c.json(
         {
           message: messageText.SolanaWalletVerifiedSuccessfully,
+          userId: account.userId,
+          token,
+        },
+        statusCode.Created,
+      );
+    },
+  )
+  .post(
+    "/auth/ethereum/nounce",
+    validate("json", ethereumNounceRequestSchema),
+    async (c) => {
+      const { address } = c.req.valid("json");
+      const normalizedAddress = address.toLowerCase();
+
+      const existingWalletUser =
+        await userService.findUserByEthereumAddress(normalizedAddress);
+
+      if (existingWalletUser) {
+        const nounce = await userService.updateEthereumWalletLoginNounce(
+          existingWalletUser.userId,
+        );
+        return c.json(
+          {
+            signMessage: userService.getEthereumLoginMessage(
+              nounce,
+              normalizedAddress,
+            ),
+            nounce,
+          },
+          statusCode.Ok,
+        );
+      }
+
+      const { nounce } =
+        await userService.createUserWithEthereumWallet(normalizedAddress);
+      return c.json(
+        {
+          signMessage: userService.getEthereumLoginMessage(
+            nounce,
+            normalizedAddress,
+          ),
+          nounce,
+        },
+        statusCode.Created,
+      );
+    },
+  )
+  .post(
+    "/auth/ethereum/verify",
+    validate("json", ethereumVerificationRequestSchema),
+    async (c) => {
+      const { address, signature } = c.req.valid("json");
+      const normalizedAddress = address.toLowerCase();
+
+      const account = await userService.verifyEthereumWalletLoginNounce(
+        normalizedAddress,
+        signature,
+      );
+
+      if (!account) {
+        return c.json(
+          {
+            message: messageText.EthereumWalletVerificationFailed,
+          },
+          statusCode.BadRequest,
+        );
+      }
+
+      const token = await setAuthToken(c, account.userId);
+
+      return c.json(
+        {
+          message: messageText.EthereumWalletVerifiedSuccessfully,
           userId: account.userId,
           token,
         },

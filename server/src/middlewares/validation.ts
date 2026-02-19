@@ -9,6 +9,11 @@ export const solanaBase58Schema = z
   .max(44)
   .regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
 
+export const ethereumAddressSchema = z
+  .string()
+  .trim()
+  .regex(/^0x[a-fA-F0-9]{40}$/);
+
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
   offset: z.coerce.number(),
@@ -51,6 +56,15 @@ export const solanaNounceRequestSchema = z.object({
 export const solanaVerificationRequestSchema = z.object({
   pubKey: solanaBase58Schema,
   signature: z.base64(),
+});
+
+export const ethereumNounceRequestSchema = z.object({
+  address: ethereumAddressSchema,
+});
+
+export const ethereumVerificationRequestSchema = z.object({
+  address: ethereumAddressSchema,
+  signature: z.string().trim().min(1),
 });
 
 // Helper to validate using Zod schema and return if errors happen before the routes even run
