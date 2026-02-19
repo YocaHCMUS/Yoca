@@ -130,7 +130,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
     }),
   );
 
-  await db
+  const rankInfo = await db
     .insert(tokenTopPools)
     .values(poolDataList.map((pool) => pool.rankInfo))
     .onConflictDoUpdate({
@@ -139,16 +139,29 @@ async function fetchTokenTopPools(tokenAddress: string) {
         tokenTopPools.tokenAddress,
         tokenTopPools.rank,
       ]),
-    });
-  await db
+    })
+    .returning();
+  const data = await db
     .insert(tokenPoolData)
     .values(poolDataList.map((poolData) => poolData.data))
     .onConflictDoUpdate({
       target: [tokenPoolData.poolAddress],
       set: excludedAuto(tokenPoolData, [tokenPoolData.poolAddress]),
-    });
+    })
+    .returning();
+  const addressToPoolRank = Object.fromEntries(
+    rankInfo.map((poolRank) => [poolRank.poolAddress, poolRank]),
+  );
+  const addressToPoolData = Object.fromEntries(
+    data.map((poolData) => [poolData.poolAddress, poolData]),
+  );
 
-  return poolDataList;
+  return Object.keys(addressToPoolRank)
+    .filter((address) => addressToPoolData[address])
+    .map((address) => ({
+      rankInfo: addressToPoolRank[address],
+      data: addressToPoolData[address],
+    }));
 }
 
 export async function getTokenTopPools(tokenAddress: string) {

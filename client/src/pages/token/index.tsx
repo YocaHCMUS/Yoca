@@ -21,6 +21,7 @@ type TopPoolData = InferResponseType<
 
 export default function TokenPage() {
   const navigate = useNavigate();
+
   const { address, poolAddress } = useParams<{
     address: string;
     poolAddress: string;
@@ -36,31 +37,6 @@ export default function TokenPage() {
   const $topPools = useGet(client.api.tokens[":address"].pools, 200, {
     param: { address },
   });
-  const [selectedPoolAddress, setSelectedPoolAddress] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (poolAddress) {
-      setSelectedPoolAddress(poolAddress);
-    } else if (
-      $topPools.data &&
-      $topPools.data.length > 0 &&
-      !selectedPoolAddress
-    ) {
-      setSelectedPoolAddress($topPools.data[0].data.poolAddress);
-    }
-  }, [$topPools.data, poolAddress, selectedPoolAddress]);
-
-  const $selectedPoolData = useGet(client.api.tokens.pools[":addresses"], 200, {
-    param: { addresses: selectedPoolAddress || "none" },
-  });
-
-  const selectedPool = $selectedPoolData.data?.[0] ?? null;
-
-  const $trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
-    param: { address: selectedPoolAddress || "none" },
-  });
   const $holders = useGet(client.api.tokens.holders[":address"], 200, {
     param: { address },
   });
@@ -74,6 +50,37 @@ export default function TokenPage() {
   const $marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
     param: { addresses: address },
   });
+
+  const [selectedPoolAddress, setSelectedPoolAddress] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    console.log("refresh");
+    if (poolAddress) {
+      setSelectedPoolAddress(poolAddress);
+    } else if (
+      $topPools.data &&
+      $topPools.data.length > 0 &&
+      !selectedPoolAddress
+    ) {
+      setSelectedPoolAddress($topPools.data[0].data.poolAddress);
+    }
+  }, [$topPools.data, poolAddress]);
+
+  const $trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
+    param: { address: selectedPoolAddress ?? "" },
+  });
+
+  const $selectedPoolData = useGet(client.api.tokens.pools[":addresses"], 200, {
+    param: { addresses: selectedPoolAddress ?? "" },
+  });
+
+  if (!selectedPoolAddress) {
+    return <>Not Selected</>;
+  }
+
+  const selectedPool = $selectedPoolData.data?.[0] ?? null;
 
   const handlePoolChange = ({
     selectedItem,
@@ -111,8 +118,7 @@ export default function TokenPage() {
 
   // Find selected pool in top pools list for display
   const selectedTopPool =
-    topPoolsData.find((p) => p.data.poolAddress === selectedPoolAddress) ??
-    null;
+    topPoolsData.find((p) => p.data.poolAddress == selectedPoolAddress) ?? null;
 
   if (!address) {
     return "Non existent page";
@@ -171,7 +177,31 @@ export default function TokenPage() {
 
           {selectedPool && (
             <RecentTransactions
-              trades={trades}
+              trades={trades.map((trade) => {
+                const kind = trade.buyTokenAddress == address ? "buy" : "sell";
+                const amount =
+                  kind == "buy" ? trade.buyTokenAmount : trade.sellTokenAmount;
+                const priceUsd =
+                  kind == "buy"
+                    ? trade.buyTokenPriceUsd
+                    : trade.sellTokenPriceUsd;
+                const priceQuote =
+                  kind == "buy"
+                    ? trade.buyTokenPriceUsd
+                    : trade.sellTokenPriceUsd;
+
+                return {
+                  kind,
+                  amount: amount.toString(),
+                  fromAddress: trade.signerAddress,
+                  id: trade.id,
+                  timestamp: trade.blockTimestamp,
+                  txHash: trade.transactionHash,
+                  volumeUsd: trade.volumeInUsd.toString(),
+                  priceUsd: priceUsd.toString(),
+                  priceQuote: priceQuote.toString(),
+                };
+              })}
               baseTokenSymbol="SOL"
               tokenAddress={address}
               tokenSymbol={metaData.symbol}

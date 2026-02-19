@@ -1,6 +1,6 @@
-import z from "zod";
-import { validator } from "hono/validator";
 import type { ValidationTargets } from "hono";
+import { validator } from "hono/validator";
+import z from "zod";
 
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
