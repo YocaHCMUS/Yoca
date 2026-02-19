@@ -27,6 +27,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchRollingAnnualReturn } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getDualAxisLegend } from '@/util/chart-legend-config';
 import type { RollingAnnualReturnResponse, RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -159,15 +160,14 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         top: walletLabel ? '25%' : '20%',
         containLabel: true,
       },
-      legend: {
-        ...baseOption.legend,
-        show: true,
-        top: walletLabel ? '12%' : '5%',
-        data: [
+      legend: getDualAxisLegend(
+        chartTheme,
+        [
           t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
           t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
         ],
-      },
+        !!walletLabel
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

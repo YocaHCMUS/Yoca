@@ -28,6 +28,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 
@@ -348,11 +349,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           return tooltipContent;
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: legendData,
-        top: walletLabel ? '7%' : 0,
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        legendData,
+        !!walletLabel
+      ),
       xAxis: [
         {
           ...baseOption.xAxis,

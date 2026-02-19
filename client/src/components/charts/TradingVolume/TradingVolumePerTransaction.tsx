@@ -8,6 +8,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumePerTransaction } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -105,13 +106,11 @@ export function TradingVolumePerTransaction({
       },
     //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
     //   barCategoryGap: '60%', // Gap between wallet categories
-      legend: {
-        ...baseOption.legend,
-        show: true,
-        top: '5%',
-        left: 'center',
-        data: ['Deposits', 'Withdrawals'],
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        ['Deposits', 'Withdrawals'],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

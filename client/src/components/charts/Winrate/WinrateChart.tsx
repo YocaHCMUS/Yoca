@@ -19,6 +19,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchWinrate } from '@/services/chart/chartApi';
@@ -222,12 +223,11 @@ export function WinrateChart({
             },
           },
         ],
-        legend: {
-          ...baseOption.legend,
-          show: true,
-          top: '5%',
-          data: ['Winning', 'Losing'],
-        },
+        legend: getMultiSeriesLegend(
+          chartTheme,
+          ['Winning', 'Losing'],
+          false
+        ),
         tooltip: {
           ...baseOption.tooltip,
           trigger: 'axis',

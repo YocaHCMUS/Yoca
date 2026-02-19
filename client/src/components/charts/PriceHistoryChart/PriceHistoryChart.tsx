@@ -18,6 +18,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPriceHistory } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -196,12 +197,11 @@ export function PriceHistoryChart({
           }
         ),
       },
-      legend: {
-        ...baseOption.legend,
-        data: data.series.map(series => series.name),
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        data.series.map(series => series.name),
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',

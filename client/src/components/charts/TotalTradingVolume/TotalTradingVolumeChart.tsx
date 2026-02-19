@@ -21,6 +21,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchTotalTradingVolume } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import type { TotalTradingVolumeResponse, TotalTradingVolumeRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -95,12 +96,11 @@ export function TotalTradingVolumeChart({
         // top: '15%',
         containLabel: true,
       },
-      legend: {
-        ...baseOption.legend,
-        show: true,
-        top: '5%',
-        data: ['Total Volume', 'Deposits', 'Withdrawals'],
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        ['Total Volume', 'Deposits', 'Withdrawals'],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'value',

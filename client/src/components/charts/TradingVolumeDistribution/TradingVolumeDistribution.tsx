@@ -27,6 +27,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
+import { getPieLegend } from '@/util/chart-legend-config';
 import type { TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
@@ -193,14 +194,11 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
               `${p.data.percentage.toFixed(2)}%`
             ),
       },
-      legend: isMultiWallet ? {
-        show: false, // Hide individual legends in multi-wallet view
-      } : {
-        ...base.legend,
-        orient: 'vertical',
-        right: 0,
-        top: 'center',
-      },
+      legend: getPieLegend(
+        chartTheme,
+        distributionData.map(d => d.name),
+        !isMultiWallet
+      ),
       series: [
         {
           type: 'pie',

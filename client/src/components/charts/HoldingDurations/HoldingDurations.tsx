@@ -8,6 +8,7 @@ import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchHoldingDurations } from '@/services/chart/chartApi';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getConditionalLegend } from '@/util/chart-legend-config';
 
 import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
 
@@ -200,13 +201,12 @@ export const HoldingDurations: React.FC<ChartProps> = ({
 
     return {
       ...base,
-      legend: { 
-        ...base.legend, 
-        show: validWallets.length > 1, 
-        top: '5%', 
-        data: validWallets.map(w => w.name),
-        textStyle: { color: chartTheme.textColor },
-      },
+      legend: getConditionalLegend(
+        chartTheme,
+        validWallets.map(w => w.name),
+        2,
+        false
+      ),
       grid: { 
         top: validWallets.length > 1 ? '18%' : '10%', 
         left: '10%', 

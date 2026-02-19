@@ -17,6 +17,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
 import { formatCurrency, formatDate } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -201,12 +202,11 @@ export function VolumeBenchmark({
           (p) => formatCurrency(p.value[1])
         ),
       },
-      legend: {
-        ...baseOption.legend,
-        data: data.wallets.map(w => w.name),
-        top: 10,
-        type: 'scroll',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        data.wallets.map(w => w.name),
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',

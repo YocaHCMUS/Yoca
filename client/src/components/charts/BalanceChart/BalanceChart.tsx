@@ -8,6 +8,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -188,15 +189,12 @@ export function BalanceChart({
         top: isMultiWallet ? '15%' : '10%', // More space for legend when multiple series
         containLabel: true,
       },
-      legend: isMultiWallet ? {
-        ...baseOption.legend,
-        show: true,
-        top: '5%',
-        left: 'center',
-        // textStyle: {
-        //   color: chartTheme.mode === 'dark' ? '#fff' : '#000',
-        // },
-      } : undefined,
+      legend: getConditionalLegend(
+        chartTheme,
+        data.series.map(s => s.name),
+        2,
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',

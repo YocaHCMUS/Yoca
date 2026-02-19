@@ -23,6 +23,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchStablecoinRatio } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { StablecoinRatioResponse, StablecoinRatioRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -146,12 +147,12 @@ export function StablecoinRatioChart({
         },
       },
       series: series,
-      legend: {
-        ...baseOption.legend,
-        show: data.wallets.length > 1,
-        top: '5%',
-        data: data.wallets.map(w => w.walletName || w.walletAddress),
-      },
+      legend: getConditionalLegend(
+        chartTheme,
+        data.wallets.map(w => w.walletName || w.walletAddress),
+        2,
+        false
+      ),
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',

@@ -14,6 +14,7 @@ import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getBottomLegend } from '@/util/chart-legend-config';
 import type { EChartsOption } from 'echarts';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -268,26 +269,11 @@ export function DailyTradingVolume({
           (p) => p.seriesType === 'line' ? `$${p.value}` : formatCurrency(p.value)
         ),
       },
-      legend: {
-        ...baseOption.legend,
-        data: [...data.wallets.map(w => w.name), data.benchmark.name],
-        bottom: 10,
-        left: 'center',
-        itemWidth: 25,
-        itemHeight: 15,
-        icon: 'rect',
-        textStyle: {
-          ...baseOption.legend.textStyle,
-          fontSize: 12,
-          rich: {
-            line: {
-              width: 20,
-              height: 2,
-              backgroundColor: data.benchmark.color,
-            },
-          },
-        },
-      },
+      legend: getBottomLegend(
+        chartTheme,
+        [...data.wallets.map(w => w.name), data.benchmark.name],
+        'rect'
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

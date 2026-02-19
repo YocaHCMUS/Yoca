@@ -18,6 +18,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchCounterpartyActivity } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -222,12 +223,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
               );
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.counterpartyActivityChart.transactionCount')],
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [t('charts.counterpartyActivityChart.transactionCount')],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',
@@ -314,12 +314,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
               );
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.counterpartyActivityChart.totalVolume')],
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [t('charts.counterpartyActivityChart.totalVolume')],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

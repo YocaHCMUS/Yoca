@@ -21,6 +21,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
+import { getSingleSeriesLegend } from '@/util/chart-legend-config';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -147,10 +148,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
         top: '15%',
         containLabel: true,
       },
-      legend: {
-        ...baseOption.legend,
-        show: false,
-      },
+      legend: getSingleSeriesLegend(chartTheme),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

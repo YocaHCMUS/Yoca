@@ -17,6 +17,7 @@ import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import { useStandardChartController } from '../../../hooks/useChartController';
@@ -225,12 +226,11 @@ export function TransactionDistribution({
           return tooltipContent;
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: data.transactionCounts.map(w => w.walletName),
-        top: 10,
-        type: 'scroll',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        data.transactionCounts.map(w => w.walletName),
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',
