@@ -14,8 +14,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
-type PoolData = InferResponseType<
-  typeof client.api.tokens.pools[":addresses"]["$get"],
+type TopPoolData = InferResponseType<
+  (typeof client.api.tokens)[":address"]["pools"]["$get"],
   200
 >[number];
 
@@ -30,73 +30,68 @@ export default function TokenPage() {
     return <>Forgot to add address!</>;
   }
 
-  // Fetch all data using useGet hooks
   const $meta = useGet(client.api.tokens.meta[":addresses"], 200, {
     param: { addresses: address },
   });
-
-  const $pools = useGet(client.api.tokens[":address"].pools, 200, {
+  const $topPools = useGet(client.api.tokens[":address"].pools, 200, {
     param: { address },
   });
-
-  // Fetch detailed pool data for all pools
-  const poolAddresses =
-    $pools.data?.map((p: { poolAddress: string }) => p.poolAddress).join(",") ?? "";
-  const $poolsData = useGet(client.api.tokens.pools[":addresses"], 200, {
-    param: { addresses: poolAddresses || "none" },
-  });
-
-  // Local state for selected pool
   const [selectedPoolAddress, setSelectedPoolAddress] = useState<string | null>(
-    null
+    null,
   );
 
-  // Auto-select pool from URL or first available pool
   useEffect(() => {
     if (poolAddress) {
       setSelectedPoolAddress(poolAddress);
     } else if (
-      $poolsData.data &&
-      $poolsData.data.length > 0 &&
+      $topPools.data &&
+      $topPools.data.length > 0 &&
       !selectedPoolAddress
     ) {
-      setSelectedPoolAddress($poolsData.data[0].poolAddress);
+      setSelectedPoolAddress($topPools.data[0].data.poolAddress);
     }
-  }, [$poolsData.data, poolAddress, selectedPoolAddress]);
+  }, [$topPools.data, poolAddress, selectedPoolAddress]);
 
-  // Find the selected pool object
-  const selectedPool =
-    $poolsData.data?.find((p: PoolData) => p.poolAddress === selectedPoolAddress) ?? null;
+  const $selectedPoolData = useGet(client.api.tokens.pools[":addresses"], 200, {
+    param: { addresses: selectedPoolAddress || "none" },
+  });
 
-  // Fetch pool trades
+  const selectedPool = $selectedPoolData.data?.[0] ?? null;
+
   const $trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
     param: { address: selectedPoolAddress || "none" },
   });
-
-  // Fetch holders data
   const $holders = useGet(client.api.tokens.holders[":address"], 200, {
     param: { address },
   });
-
-  const $holdersStats = useGet(client.api.tokens.holders.stats[":addresses"], 200, {
-    param: { addresses: address },
-  });
-
-  // Fetch market data
+  const $holdersStats = useGet(
+    client.api.tokens.holders.stats[":addresses"],
+    200,
+    {
+      param: { addresses: address },
+    },
+  );
   const $marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
     param: { addresses: address },
   });
 
-  // Handler for pool selection
-  const handlePoolChange = ({ selectedItem }: { selectedItem: PoolData | null }) => {
+  const handlePoolChange = ({
+    selectedItem,
+  }: {
+    selectedItem: TopPoolData | null;
+  }) => {
     if (selectedItem) {
-      setSelectedPoolAddress(selectedItem.poolAddress);
-      navigate(`/tokens/${address}/${selectedItem.poolAddress}`);
+      setSelectedPoolAddress(selectedItem.data.poolAddress);
+      navigate(`/tokens/${address}/${selectedItem.data.poolAddress}`);
     }
   };
 
-  // Check loading states
-  const isLoading = $meta.isLoading || $pools.isLoading || $holders.isLoading || $holdersStats.isLoading || $marketData.isLoading;
+  const isLoading =
+    $meta.isLoading ||
+    $topPools.isLoading ||
+    $holders.isLoading ||
+    $holdersStats.isLoading ||
+    $marketData.isLoading;
 
   if (isLoading) {
     return <>Loading</>;
@@ -108,11 +103,16 @@ export default function TokenPage() {
   const [metaData] = $meta.data;
 
   // Prepare data for components
-  const poolsData = $poolsData.data ?? [];
+  const topPoolsData = $topPools.data ?? [];
   const topHolders = $holders.data ?? [];
   const holdersInfo = $holdersStats.data?.[0] ?? null;
   const marketData = $marketData.data?.[0] ?? null;
   const trades = $trades.data ?? [];
+
+  // Find selected pool in top pools list for display
+  const selectedTopPool =
+    topPoolsData.find((p) => p.data.poolAddress === selectedPoolAddress) ??
+    null;
 
   if (!address) {
     return "Non existent page";
@@ -147,8 +147,8 @@ export default function TokenPage() {
             />
 
             <PoolSelector
-              pools={poolsData}
-              selectedPool={selectedPool}
+              pools={topPoolsData}
+              selectedPool={selectedTopPool}
               onPoolChange={handlePoolChange}
             />
 
@@ -158,7 +158,7 @@ export default function TokenPage() {
               pool={selectedPool}
               topHolders={topHolders}
               holdersInfo={holdersInfo}
-              marketsCount={poolsData.length}
+              marketsCount={topPoolsData.length}
             />
 
             <TopHolders holders={topHolders} holdersInfo={holdersInfo} />

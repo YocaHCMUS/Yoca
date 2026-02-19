@@ -68,6 +68,7 @@ export const tokenMarketData = pgTable("token_market_data", {
   marketCapChange24h: decimal("market_cap_change_24h"),
   marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
+  totalLiquidity: decimal("total_liquidity").notNull(),
 
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply"),
@@ -76,10 +77,8 @@ export const tokenMarketData = pgTable("token_market_data", {
 
   ath: decimal("ath"),
   athDate: timestamp("ath_date"),
-  athChangePercentage: decimal("ath_change_percentage"),
   atl: decimal("atl"),
   atlDate: timestamp("atl_date"),
-  atlChangePercentage: decimal("atl_change_percentage"),
 
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -95,19 +94,22 @@ export const tokenPoolData = pgTable("token_pool_data", {
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
 
   dexId: varchar("dex_id"),
-  baseToQuote: decimal("base_to_quote").notNull(),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
 
-  priceUsd: decimal("price_usd"),
+  baseTokenPriceUsd: decimal("base_token_price_usd"),
+  quoteTokenPriceUsd: decimal("quote_token_price_usd"),
+
+  baseTokenPriceSol: decimal("base_token_price_sol"),
+  quoteTokenPriceSol: decimal("quote_token_price_sol"),
+
   marketCapUsd: decimal("market_cap_usd"),
   fdvUsd: decimal("fdv_usd"),
 
-  priceChangeM5: decimal("price_change_m5"),
-  priceChangeH1: decimal("price_change_h1"),
-  priceChangeH6: decimal("price_change_h6"),
-  priceChangeH24: decimal("price_change_h24"),
+  priceChangePercentage1h: decimal("price_change_percentage_1h"),
+  priceChangePercentage6h: decimal("price_change_percentage_6h"),
+  priceChangePercentage24h: decimal("price_change_percentage_24h"),
 
   buys1h: decimal("buys_1h"),
   buys6h: decimal("buys_6h"),
@@ -125,21 +127,17 @@ export const tokenPoolData = pgTable("token_pool_data", {
   sellers6h: decimal("sellers_6h"),
   sellers24h: decimal("sellers_24h"),
 
-  volume1h: decimal("volume_1h"),
-  volume6h: decimal("volume_6h"),
-  volume24h: decimal("volume_24h"),
+  volumeUsd1h: decimal("volume_usd_1h"),
+  volumeUsd6h: decimal("volume_usd_6h"),
+  volumeUsd24h: decimal("volume_usd_24h"),
 
-  buyVolume1h: decimal("buy_volume_1h"),
-  buyVolume6h: decimal("buy_volume_6h"),
-  buyVolume24h: decimal("buy_volume_24h"),
+  buyVolumeUsd1h: decimal("buy_volume_usd_1h"),
+  buyVolumeUsd6h: decimal("buy_volume_usd_6h"),
+  buyVolumeUsd24h: decimal("buy_volume_usd_24h"),
 
-  sellVolume1h: decimal("sell_volume_1h"),
-  sellVolume6h: decimal("sell_volume_6h"),
-  sellVolume24h: decimal("sell_volume_24h"),
-
-  netBuyVolume1h: decimal("net_buy_volume_1h"),
-  netBuyVolume6h: decimal("net_buy_volume_6h"),
-  netBuyVolume24h: decimal("net_buy_volume_24h"),
+  sellVolumeUsd1h: decimal("sell_volume_usd_1h"),
+  sellVolumeUsd6h: decimal("sell_volume_usd_6h"),
+  sellVolumeUsd24h: decimal("sell_volume_usd_24h"),
 
   updatedAt: timestamp("updated_at")
     .notNull()

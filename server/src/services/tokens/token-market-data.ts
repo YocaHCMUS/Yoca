@@ -1,31 +1,54 @@
 import { TOKEN_MARKET_DATA_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
+  coinGeckoTokenList,
   tokenMarketData,
-  tokenMeta,
   type TokenMarketDataInsert,
 } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
 import type {
-  CG_TokenDataByAddress,
-  CG_TokenMarketData,
+  CG_CoinMarkets,
+  CG_TokenDataByAddresses,
 } from "../_types/token_raw_responses.js";
 
-// https://docs.coingecko.com/reference/tokens-token-address-multi
-async function fetchOnchainMarketData(
-  tokenAddresses: string[],
-): Promise<Map<string, Partial<TokenMarketDataInsert>>> {
-  const result = new Map<string, Partial<TokenMarketDataInsert>>();
+type OnChainCgResult = Required<
+  Pick<
+    TokenMarketDataInsert,
+    | "address"
+    | "decimals"
+    | "priceUsd"
+    | "marketCap"
+    | "fullyDilutedValuation"
+    | "volume24h"
+    | "totalSupply"
+    | "totalLiquidity"
+    | "updatedAt"
+  >
+>;
 
+type CgResult = Required<
+  Pick<
+    TokenMarketDataInsert,
+    Exclude<keyof TokenMarketDataInsert, keyof OnChainCgResult>
+  >
+>;
+
+// https://docs.coingecko.com/reference/tokens-data-contract-addresses
+async function fetchOnchainMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
-    return result;
+    return null;
   }
 
   const cgEndpoint = cg.getOnchainEndpoint(
     `/networks/solana/tokens/multi/${tokenAddresses.join(",")}`,
   );
+
+  cgEndpoint.search = new URLSearchParams({
+    include: "top_pools",
+    include_composition: "true",
+  }).toString();
 
   const req = new Request(cgEndpoint, {
     method: "GET",
@@ -35,36 +58,34 @@ async function fetchOnchainMarketData(
   const resp = await fetch(req);
 
   if (!resp.ok) {
-    return result;
+    return null;
   }
 
-  const json: CG_TokenDataByAddress = await resp.json();
+  const res: CG_TokenDataByAddresses = await resp.json();
 
-  for (const token of json.data) {
-    const attrs = token.attributes;
-    console.log(`[OnchainData] Token: ${attrs.address}, MarketCap: ${attrs.market_cap_usd}, FDV: ${attrs.fdv_usd}, Volume: ${attrs.volume_usd?.h24}`);
-    result.set(attrs.address, {
-      address: attrs.address,
-      decimals: attrs.decimals,
-      priceUsd: parseFloat(attrs.price_usd || "0"),
-      marketCap: parseFloat(attrs.market_cap_usd || "0"),
-      fullyDilutedValuation: parseFloat(attrs.fdv_usd || "0"),
-      volume24h: parseFloat(attrs.volume_usd?.h24 || "0"),
-    });
-  }
-
-  return result;
+  return Object.fromEntries(
+    res.data.map((raw): [string, OnChainCgResult] => [
+      raw.attributes.address,
+      {
+        address: raw.attributes.address,
+        decimals: raw.attributes.decimals,
+        priceUsd: Number(raw.attributes.price_usd),
+        marketCap: Number(raw.attributes.market_cap_usd),
+        fullyDilutedValuation: Number(raw.attributes.fdv_usd),
+        volume24h: Number(raw.attributes.volume_usd.h24),
+        totalSupply: Number(raw.attributes.total_supply),
+        totalLiquidity: Number(raw.attributes.total_reserve_in_usd),
+        updatedAt: new Date(),
+      },
+    ]),
+  );
 }
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
-async function fetchCgMarketData(
-  cgIdToAddress: Record<string, string>,
-): Promise<Map<string, Partial<TokenMarketDataInsert>>> {
-  const result = new Map<string, Partial<TokenMarketDataInsert>>();
-
+async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   const cgIds = Object.keys(cgIdToAddress);
   if (cgIds.length == 0) {
-    return result;
+    return null;
   }
 
   const cgEndpoint = cg.getEndpoint(`/coins/markets`);
@@ -82,49 +103,33 @@ async function fetchCgMarketData(
 
   const resp = await fetch(req);
   if (!resp.ok) {
-    return result;
+    return null;
   }
 
-  const res: CG_TokenMarketData[] = await resp.json();
-  const addressLookup = Object.fromEntries(
-    Object.entries(cgIdToAddress).map(([cgId, address]) => [cgId, address]),
+  const res: CG_CoinMarkets = await resp.json();
+
+  return Object.fromEntries(
+    res.map((raw): [string, CgResult] => [
+      cgIdToAddress[raw.id],
+      {
+        priceChangePercentage1h: raw.price_change_percentage_1h_in_currency,
+        priceChange24h: raw.price_change_24h,
+        priceChangePercentage24h: raw.price_change_percentage_24h_in_currency,
+        priceChangePercentage14d: raw.price_change_percentage_14d_in_currency,
+        priceChangePercentage30d: raw.price_change_percentage_30d_in_currency,
+        priceChangePercentage200d: raw.price_change_percentage_200d_in_currency,
+        priceChangePercentage1y: raw.price_change_percentage_1y_in_currency,
+        marketCapChange24h: raw.market_cap_change_24h,
+        marketCapChangePercentage24h: raw.market_cap_change_percentage_24h,
+        circulatingSupply: raw.circulating_supply,
+        maxSupply: raw.max_supply,
+        ath: raw.ath,
+        athDate: new Date(raw.ath_date),
+        atl: raw.atl,
+        atlDate: new Date(raw.atl_date),
+      },
+    ]),
   );
-
-  for (const raw of res) {
-    const address = addressLookup[raw.id];
-    if (!address) continue;
-    console.log(`[CGData] Token: ${address} (ID: ${raw.id}), MarketCap: ${raw.market_cap}, CircSupply: ${raw.circulating_supply}, TotalSupply: ${raw.total_supply}`);
-
-    result.set(address, {
-      priceChange24h: raw.price_change_24h,
-      priceChangePercentage1h:
-        raw.price_change_percentage_1h_in_currency,
-      priceChangePercentage24h:
-        raw.price_change_percentage_24h_in_currency,
-      priceChangePercentage14d:
-        raw.price_change_percentage_14d_in_currency,
-      priceChangePercentage30d:
-        raw.price_change_percentage_30d_in_currency,
-      priceChangePercentage200d:
-        raw.price_change_percentage_200d_in_currency,
-      priceChangePercentage1y:
-        raw.price_change_percentage_1y_in_currency,
-      marketCapChange24h: raw.market_cap_change_24h,
-      marketCapChangePercentage24h:
-        raw.market_cap_change_percentage_24h,
-      circulatingSupply: raw.circulating_supply,
-      totalSupply: raw.total_supply,
-      maxSupply: raw.max_supply,
-      ath: raw.ath,
-      athDate: new Date(raw.ath_date),
-      athChangePercentage: raw.ath_change_percentage,
-      atl: raw.atl,
-      atlDate: new Date(raw.atl_date),
-      atlChangePercentage: raw.atl_change_percentage,
-    });
-  }
-
-  return result;
 }
 
 async function fetchTokenMarketData(tokenAddresses: string[]) {
@@ -132,66 +137,45 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     return null;
   }
 
+  // Onchain data takes priority as it's more accurate to operating DEXs
   const onchainData = await fetchOnchainMarketData(tokenAddresses);
-  if (onchainData.size == 0) {
+
+  if (!onchainData) {
     return null;
   }
 
-  const metaRows = await db
-    .select({
-      address: tokenMeta.address,
-      coingeckoId: tokenMeta.coingeckoId,
-    })
-    .from(tokenMeta)
-    .where(inArray(tokenMeta.address, tokenAddresses));
+  const res = await db
+    .select()
+    .from(coinGeckoTokenList)
+    .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
 
-  const cgIdToAddress: Record<string, string> = {};
-  for (const row of metaRows) {
-    if (row.coingeckoId) {
-      cgIdToAddress[row.coingeckoId] = row.address;
-    }
-  }
-  console.log(`[TokenMarketData] Found CG IDs for: ${Object.keys(cgIdToAddress).join(", ")}`);
+  const idToAddress = Object.fromEntries(
+    res
+      .filter((entry) => entry.coinGeckoId)
+      .map((entry) => [entry.coinGeckoId, entry.tokenAddress]),
+  );
 
-  const cgData = await fetchCgMarketData(cgIdToAddress);
-  const marketDataList: TokenMarketDataInsert[] = [];
+  const cgData = await fetchCgMarketData(idToAddress);
 
-  for (const [address, onchainEntry] of onchainData) {
-    const cgEntry = cgData.get(address) ?? {};
-    marketDataList.push({
-      address,
-      decimals: onchainEntry.decimals!,
-      priceUsd: onchainEntry.priceUsd!,
-      marketCap: onchainEntry.marketCap!,
-      fullyDilutedValuation: onchainEntry.fullyDilutedValuation!,
-      volume24h: onchainEntry.volume24h!,
-      priceChange24h: cgEntry.priceChange24h ?? null,
-      priceChangePercentage1h: cgEntry.priceChangePercentage1h ?? null,
-      priceChangePercentage24h: cgEntry.priceChangePercentage24h ?? null,
-      priceChangePercentage14d: cgEntry.priceChangePercentage14d ?? null,
-      priceChangePercentage30d: cgEntry.priceChangePercentage30d ?? null,
-      priceChangePercentage200d: cgEntry.priceChangePercentage200d ?? null,
-      priceChangePercentage1y: cgEntry.priceChangePercentage1y ?? null,
-      marketCapChange24h: cgEntry.marketCapChange24h ?? null,
-      marketCapChangePercentage24h:
-        cgEntry.marketCapChangePercentage24h ?? null,
-      circulatingSupply: cgEntry.circulatingSupply ?? null,
-      totalSupply: cgEntry.totalSupply ?? null,
-      maxSupply: cgEntry.maxSupply ?? null,
-      ath: cgEntry.ath ?? null,
-      athDate: cgEntry.athDate ?? null,
-      athChangePercentage: cgEntry.athChangePercentage ?? null,
-      atl: cgEntry.atl ?? null,
-      atlDate: cgEntry.atlDate ?? null,
-      atlChangePercentage: cgEntry.atlChangePercentage ?? null,
-    });
-  }
-
-  if (marketDataList.length == 0) {
+  if (!cgData) {
     return null;
   }
 
-  return await db
+  const addressToMarketData = Object.fromEntries(
+    tokenAddresses
+      .filter((address) => onchainData[address] && cgData[address])
+      .map((address) => [
+        address,
+        {
+          ...onchainData[address],
+          ...cgData[address],
+        },
+      ]),
+  );
+
+  const marketDataList = Object.values(addressToMarketData);
+
+  await db
     .insert(tokenMarketData)
     .values(marketDataList)
     .onConflictDoUpdate({
@@ -199,13 +183,12 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       set: excludedAuto(tokenMarketData, tokenMarketData.address),
     })
     .returning();
-}
 
-export async function getTokenMarketData(
-  tokenAddresses: string[],
-): Promise<TokenMarketDataInsert[]> {
+  return addressToMarketData;
+}
+export async function getTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
-    return [];
+    return null;
   }
 
   const thresholdDate = new Date(Date.now() - TOKEN_MARKET_DATA_TTL_MS);
@@ -220,18 +203,23 @@ export async function getTokenMarketData(
     )
     .limit(tokenAddresses.length);
 
-  const marketDataLookup = Object.fromEntries(
-    res.map((marketData) => [marketData.address, marketData]),
+  const addressToMarketData = Object.fromEntries(
+    res.map((item) => [item.address, item]),
   );
 
   const staleAddresses = tokenAddresses.filter(
-    (address) => !marketDataLookup[address],
+    (address) => !addressToMarketData[address],
   );
+
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
-  if (!refreshed || refreshed.length == 0) {
-    return res;
-  } else {
-    return [...res, ...refreshed];
+  if (!refreshed) {
+    return addressToMarketData;
   }
+
+  for (const [address, data] of Object.entries(refreshed)) {
+    addressToMarketData[address] = data;
+  }
+
+  return addressToMarketData;
 }

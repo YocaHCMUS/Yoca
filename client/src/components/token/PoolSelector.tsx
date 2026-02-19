@@ -6,15 +6,15 @@ import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import styles from "./PoolSelector.module.scss";
 
-type PoolData = InferResponseType<
-  typeof client.api.tokens.pools[":addresses"]["$get"],
+type TopPoolData = InferResponseType<
+  (typeof client.api.tokens)[":address"]["pools"]["$get"],
   200
 >[number];
 
 interface PoolSelectorProps {
-  pools: PoolData[];
-  selectedPool: PoolData | null;
-  onPoolChange: (item: { selectedItem: PoolData | null }) => void;
+  pools: TopPoolData[];
+  selectedPool: TopPoolData | null;
+  onPoolChange: (item: { selectedItem: TopPoolData | null }) => void;
 }
 
 export const PoolSelector = ({
@@ -41,7 +41,7 @@ export const PoolSelector = ({
 
   if (!pools || pools.length === 0) return null;
 
-  const handleSelect = (pool: PoolData) => {
+  const handleSelect = (pool: TopPoolData) => {
     onPoolChange({ selectedItem: pool });
     setIsOpen(false);
   };
@@ -62,11 +62,11 @@ export const PoolSelector = ({
       >
         <div className={styles.selectedContent}>
           <span className={styles.selectedName}>
-            {selectedPool?.poolName || "Select Pool"}
+            {selectedPool?.data.poolName || "Select Pool"}
           </span>
-          {selectedPool?.dexId && formatDexId(selectedPool.dexId) && (
+          {selectedPool?.data.dexId && formatDexId(selectedPool.data.dexId) && (
             <span className={styles.sourceTag}>
-              {formatDexId(selectedPool.dexId)}
+              {formatDexId(selectedPool.data.dexId)}
             </span>
           )}
         </div>
@@ -84,25 +84,26 @@ export const PoolSelector = ({
           <div className={styles.list}>
             {pools.map((pool) => (
               <div
-                key={pool.poolAddress}
+                key={pool.data.poolAddress}
                 className={classNames(styles.listItem, {
-                  [styles.selected]: selectedPool?.poolAddress === pool.poolAddress,
+                  [styles.selected]:
+                    selectedPool?.data.poolAddress === pool.data.poolAddress,
                 })}
                 onClick={() => handleSelect(pool)}
               >
                 <div className={styles.colPair}>
                   <div className={styles.pairInfo}>
-                    <div className={styles.pairName}>{pool.poolName}</div>
+                    <div className={styles.pairName}>{pool.data.poolName}</div>
                     <div className={styles.pairSource}>
-                      {formatDexId(pool.dexId)}
+                      {formatDexId(pool.data.dexId ?? null)}
                     </div>
                   </div>
                 </div>
                 <div className={styles.colVol}>
-                  {formatLargeNumber(Number(pool.volume24h) || 0)}
+                  {formatLargeNumber(Number(pool.data.volumeUsd24h) || 0)}
                 </div>
                 <div className={styles.colLiq}>
-                  {formatLargeNumber(Number(pool.liquidityUsd) || 0)}
+                  {formatLargeNumber(Number(pool.data.liquidityUsd) || 0)}
                 </div>
               </div>
             ))}

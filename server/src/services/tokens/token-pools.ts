@@ -17,6 +17,15 @@ import type {
   CG_TopPoolData,
 } from "../_types/token_raw_responses.js";
 
+const complementaryFields: (keyof TokenPoolDataInsert)[] = [
+  "buyVolumeUsd1h",
+  "buyVolumeUsd6h",
+  "buyVolumeUsd24h",
+  "sellVolumeUsd1h",
+  "sellVolumeUsd6h",
+  "sellVolumeUsd24h",
+];
+
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
   return id.startsWith(prefix) ? id.slice(prefix.length) : id;
 }
@@ -57,14 +66,38 @@ async function fetchTokenTopPools(tokenAddress: string) {
       },
       data: {
         poolAddress: raw.attributes.address,
-        dexId: raw.relationships.dex.data.id,
-        liquidityUsd: Number(raw.attributes.reserve_in_usd),
-        poolCreatedAt: new Date(raw.attributes.pool_created_at),
         poolName: raw.attributes.name,
 
-        baseToQuote: Number(raw.attributes.base_token_price_quote_token),
         baseAddress: trimIdPrefix(raw.relationships.base_token.data.id),
         quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
+
+        dexId: raw.relationships.dex.data.id,
+
+        poolCreatedAt: new Date(raw.attributes.pool_created_at),
+        liquidityUsd: Number(raw.attributes.reserve_in_usd),
+
+        marketCapUsd: Number(raw.attributes.market_cap_usd),
+        fdvUsd: Number(raw.attributes.fdv_usd),
+
+        baseTokenPriceUsd: Number(raw.attributes.base_token_price_usd),
+        quoteTokenPriceUsd: Number(raw.attributes.quote_token_price_usd),
+
+        baseTokenPriceSol: Number(
+          raw.attributes.base_token_price_native_currency,
+        ),
+        quoteTokenPriceSol: Number(
+          raw.attributes.quote_token_price_native_currency,
+        ),
+
+        priceChangePercentage1h: Number(
+          raw.attributes.price_change_percentage.h1,
+        ),
+        priceChangePercentage6h: Number(
+          raw.attributes.price_change_percentage.h6,
+        ),
+        priceChangePercentage24h: Number(
+          raw.attributes.price_change_percentage.h24,
+        ),
 
         buys1h: raw.attributes.transactions.h1.buys,
         buys6h: raw.attributes.transactions.h6.buys,
@@ -74,22 +107,30 @@ async function fetchTokenTopPools(tokenAddress: string) {
         sells6h: raw.attributes.transactions.h6.sells,
         sells24h: raw.attributes.transactions.h24.sells,
 
-        volume1h: Number(raw.attributes.volume_usd.h1),
-        volume6h: Number(raw.attributes.volume_usd.h6),
-        volume24h: Number(raw.attributes.volume_usd.h24),
+        buyers1h: raw.attributes.transactions.h1.buyers,
+        buyers6h: raw.attributes.transactions.h6.buyers,
+        buyers24h: raw.attributes.transactions.h24.buyers,
+
+        sellers1h: raw.attributes.transactions.h1.sellers,
+        sellers6h: raw.attributes.transactions.h6.sellers,
+        sellers24h: raw.attributes.transactions.h24.sellers,
+
+        volumeUsd1h: Number(raw.attributes.volume_usd.h1),
+        volumeUsd6h: Number(raw.attributes.volume_usd.h6),
+        volumeUsd24h: Number(raw.attributes.volume_usd.h24),
+
+        buyVolumeUsd1h: null,
+        buyVolumeUsd6h: null,
+        buyVolumeUsd24h: null,
+
+        sellVolumeUsd1h: null,
+        sellVolumeUsd6h: null,
+        sellVolumeUsd24h: null,
       },
     }),
   );
 
   await db
-    .insert(tokenPoolData)
-    .values(poolDataList.map((pool) => pool.data))
-    .onConflictDoUpdate({
-      target: [tokenPoolData.poolAddress],
-      set: excludedAuto(tokenPoolData, [tokenPoolData.poolAddress]),
-    });
-
-  return await db
     .insert(tokenTopPools)
     .values(poolDataList.map((pool) => pool.rankInfo))
     .onConflictDoUpdate({
@@ -98,14 +139,29 @@ async function fetchTokenTopPools(tokenAddress: string) {
         tokenTopPools.tokenAddress,
         tokenTopPools.rank,
       ]),
-    })
-    .returning();
+    });
+  await db
+    .insert(tokenPoolData)
+    .values(poolDataList.map((poolData) => poolData.data))
+    .onConflictDoUpdate({
+      target: [tokenPoolData.poolAddress],
+      set: excludedAuto(tokenPoolData, [tokenPoolData.poolAddress]),
+    });
+
+  return poolDataList;
 }
 
 export async function getTokenTopPools(tokenAddress: string) {
   const res = await db
-    .select()
+    .select({
+      rankInfo: tokenTopPools,
+      data: tokenPoolData,
+    })
     .from(tokenTopPools)
+    .innerJoin(
+      tokenPoolData,
+      eq(tokenTopPools.poolAddress, tokenPoolData.poolAddress),
+    )
     .where(eq(tokenTopPools.tokenAddress, tokenAddress))
     .orderBy(tokenTopPools.rank);
 
@@ -113,11 +169,11 @@ export async function getTokenTopPools(tokenAddress: string) {
 
   if (res.length > 0) {
     const latestUpdate = res.reduce((latest, cur) =>
-      cur.updatedAt > latest.updatedAt ? cur : latest,
+      cur.rankInfo.updatedAt > latest.rankInfo.updatedAt ? cur : latest,
     );
 
     const thresholdDate = new Date(Date.now() - TOKEN_TOP_POOLS_TTL_MS);
-    stale = latestUpdate.updatedAt < thresholdDate;
+    stale = latestUpdate.rankInfo.updatedAt < thresholdDate;
   } else {
     stale = true;
   }
@@ -125,6 +181,7 @@ export async function getTokenTopPools(tokenAddress: string) {
   if (stale) {
     return await fetchTokenTopPools(tokenAddress);
   }
+
   return res;
 }
 
@@ -160,19 +217,26 @@ async function fetchPoolData(poolAddress: string) {
     quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
 
     dexId: raw.relationships.dex.data.id,
-    baseToQuote: Number(raw.attributes.base_token_price_quote_token),
 
     poolCreatedAt: new Date(raw.attributes.pool_created_at),
     liquidityUsd: Number(raw.attributes.reserve_in_usd),
 
-    priceUsd: Number(raw.attributes.base_token_price_usd),
     marketCapUsd: Number(raw.attributes.market_cap_usd),
     fdvUsd: Number(raw.attributes.fdv_usd),
 
-    priceChangeM5: Number(raw.attributes.price_change_percentage.m5),
-    priceChangeH1: Number(raw.attributes.price_change_percentage.h1),
-    priceChangeH6: Number(raw.attributes.price_change_percentage.h6),
-    priceChangeH24: Number(raw.attributes.price_change_percentage.h24),
+    baseTokenPriceUsd: Number(raw.attributes.base_token_price_usd),
+    quoteTokenPriceUsd: Number(raw.attributes.quote_token_price_usd),
+
+    baseTokenPriceSol: Number(raw.attributes.base_token_price_native_currency),
+    quoteTokenPriceSol: Number(
+      raw.attributes.quote_token_price_native_currency,
+    ),
+
+    priceChangePercentage1h: Number(raw.attributes.price_change_percentage.h1),
+    priceChangePercentage6h: Number(raw.attributes.price_change_percentage.h6),
+    priceChangePercentage24h: Number(
+      raw.attributes.price_change_percentage.h24,
+    ),
 
     buys1h: raw.attributes.transactions.h1.buys,
     buys6h: raw.attributes.transactions.h6.buys,
@@ -190,41 +254,45 @@ async function fetchPoolData(poolAddress: string) {
     sellers6h: raw.attributes.transactions.h6.sellers,
     sellers24h: raw.attributes.transactions.h24.sellers,
 
-    volume1h: Number(raw.attributes.volume_usd.h1),
-    volume6h: Number(raw.attributes.volume_usd.h6),
-    volume24h: Number(raw.attributes.volume_usd.h24),
+    volumeUsd1h: Number(raw.attributes.volume_usd.h1),
+    volumeUsd6h: Number(raw.attributes.volume_usd.h6),
+    volumeUsd24h: Number(raw.attributes.volume_usd.h24),
 
-    buyVolume1h: Number(raw.attributes.buy_volume_usd.h1),
-    buyVolume6h: Number(raw.attributes.buy_volume_usd.h6),
-    buyVolume24h: Number(raw.attributes.buy_volume_usd.h24),
+    buyVolumeUsd1h: Number(raw.attributes.buy_volume_usd.h1),
+    buyVolumeUsd6h: Number(raw.attributes.buy_volume_usd.h6),
+    buyVolumeUsd24h: Number(raw.attributes.buy_volume_usd.h24),
 
-    sellVolume1h: Number(raw.attributes.sell_volume_usd.h1),
-    sellVolume6h: Number(raw.attributes.sell_volume_usd.h6),
-    sellVolume24h: Number(raw.attributes.sell_volume_usd.h24),
-
-    netBuyVolume1h: Number(raw.attributes.net_buy_volume_usd.h1),
-    netBuyVolume6h: Number(raw.attributes.net_buy_volume_usd.h6),
-    netBuyVolume24h: Number(raw.attributes.net_buy_volume_usd.h24),
+    sellVolumeUsd1h: Number(raw.attributes.sell_volume_usd.h1),
+    sellVolumeUsd6h: Number(raw.attributes.sell_volume_usd.h6),
+    sellVolumeUsd24h: Number(raw.attributes.sell_volume_usd.h24),
   };
 
-  const inserted = await db.insert(tokenPoolData).values(poolData).returning();
+  const [inserted] = await db
+    .insert(tokenPoolData)
+    .values(poolData)
+    .onConflictDoUpdate({
+      target: [tokenPoolData.poolAddress],
+      set: excludedAuto(tokenPoolData, tokenPoolData.poolAddress),
+    })
+    .returning();
 
-  return inserted.at(0) || null;
+  return inserted || null;
 }
 
 export async function getTokenPoolData(poolAddress: string) {
-  const res = await db
+  const [poolData] = await db
     .select()
     .from(tokenPoolData)
     .where(eq(tokenPoolData.poolAddress, poolAddress))
     .limit(1);
 
   let stale = false;
-  if (res.length > 0) {
-    const poolData = res[0];
+  if (poolData) {
     const thresholdDate = new Date(Date.now() - TOKEN_POOL_DATA_TTL_MS);
-
-    stale = poolData.updatedAt < thresholdDate;
+    const incomplete = complementaryFields.some(
+      (field) => poolData[field] == null,
+    );
+    stale = poolData.updatedAt < thresholdDate || incomplete;
   } else {
     stale = true;
   }
@@ -233,7 +301,7 @@ export async function getTokenPoolData(poolAddress: string) {
     return await fetchPoolData(poolAddress);
   }
 
-  return res[0];
+  return poolData;
 }
 
 export async function getTokenPoolDataList(poolAddresses: string[]) {
@@ -241,5 +309,5 @@ export async function getTokenPoolDataList(poolAddresses: string[]) {
     poolAddresses.map((address) => getTokenPoolData(address)),
   );
 
-  return results.filter((pool) => pool !== null);
+  return results.filter((pool) => pool != null);
 }
