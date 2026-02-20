@@ -96,11 +96,13 @@ export type WithBase<T extends string> = string & {
   __default?: T;
 };
 
-export type HasNodeParam<F extends string> =
-  ExtractFmtStrParams<F> extends infer Params
-    ? Params extends string
-      ? Params extends `$${string}`
-        ? true
+export type HasNodeParam<T extends string> =
+  ExtractFmtStrParams<T> extends infer Params
+    ? [Params] extends [never]
+      ? false
+      : Params extends string
+        ? Params extends `$${string}`
+          ? true
+          : false
         : false
-      : false
     : false;
