@@ -20,27 +20,18 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     "signin",
   );
 
-  /**
-   * Handle opening sign in modal
-   */
   const handleOpenSignIn = () => {
     setSignUpModalOpen(false);
     setWalletModalOpen(false);
     setSignInModalOpen(true);
   };
 
-  /**
-   * Handle opening sign up modal
-   */
   const handleOpenSignUp = () => {
     setSignInModalOpen(false);
     setWalletModalOpen(false);
     setSignUpModalOpen(true);
   };
 
-  /**
-   * Handle opening wallet modal
-   */
   const handleOpenWalletModal = (mode: "signin" | "signup") => {
     setWalletModalMode(mode);
     setSignInModalOpen(false);
@@ -48,18 +39,12 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     setWalletModalOpen(true);
   };
 
-  /**
-   * Handle closing all modals
-   */
   const handleCloseModals = () => {
     setSignInModalOpen(false);
     setSignUpModalOpen(false);
     setWalletModalOpen(false);
   };
 
-  /**
-   * Handle successful authentication
-   */
   const handleAuthSuccess = () => {
     handleCloseModals();
     navigate("/dashboard");
