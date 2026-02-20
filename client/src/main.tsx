@@ -5,6 +5,7 @@ import "./App.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ChartProvider } from "./contexts/ChartContext";
+import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./i18n/config.ts";
@@ -20,11 +21,13 @@ function Root() {
       <GoogleOAuthProvider clientId={googleClientId}>
         <SolanaProvider>
           <ThemeProvider>
-            <AuthProvider>
-              <ChartProvider>
-                <App />
-              </ChartProvider>
-            </AuthProvider>
+            <LocalizationProvider>
+              <AuthProvider>
+                <ChartProvider>
+                  <App />
+                </ChartProvider>
+              </AuthProvider>
+            </LocalizationProvider>
           </ThemeProvider>
         </SolanaProvider>
       </GoogleOAuthProvider>

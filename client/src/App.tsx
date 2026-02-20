@@ -4,13 +4,6 @@ import "./App.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import Index from "./pages";
 import AuthShowcase from "./pages/auth";
-import { WalletAuthenButton } from "./pages/auth_demo";
-import { GoogleAuthDemo } from "./pages/auth_google_demo";
-import DashboardPage from "./pages/dashboard";
-import MarketPage from "./pages/market";
-import TokenPage from "./pages/token";
-import WalletPage from "./pages/wallet";
-import WalletsComparisionPage from "./pages/walletsComparision";
 
 function App() {
   return (
@@ -18,18 +11,18 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthShowcase />} />
-        <Route path="/auth_demo" element={<WalletAuthenButton />} />
-        <Route path="/google_auth_demo" element={<GoogleAuthDemo />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        {/* <Route path="/auth_demo" element={<WalletAuthenButton />} /> */}
+        {/* <Route path="/google_auth_demo" element={<GoogleAuthDemo />} /> */}
+        {/* <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/market" element={<MarketPage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenPage />} />
-        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
-        <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route
+        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} /> */}
+        {/* <Route path="/wallets/:address" element={<WalletPage />} /> */}
+        {/* <Route
           path="/comparision/wallets"
           element={<WalletsComparisionPage />}
-        />
+        /> */}
       </Routes>
     </BrowserRouter>
   );

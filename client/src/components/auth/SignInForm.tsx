@@ -11,20 +11,14 @@ import {
   TextInput,
 } from "@carbon/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import styles from "./SignInForm.module.scss";
 import { WalletAuthenButton } from "./WalletAuthButton";
 
-interface SignInFormProps {
-  onSuccess?: () => void;
-  onOpenWalletModal?: () => void;
-  onNavigateToSignUp?: () => void;
-}
-
-export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
+export function SignInForm() {
   const { tr, fmt } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -143,6 +137,6 @@ export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
       />
     </div>
   );
-};
+}
 
 export default SignInForm;
