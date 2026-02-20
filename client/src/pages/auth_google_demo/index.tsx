@@ -38,7 +38,11 @@ function GoogleAuth() {
 
   return (
     <div>
-      <GoogleLogin onSuccess={handleSuccess} onError={handleError} />
+      <GoogleLogin
+        onSuccess={handleSuccess}
+        onError={handleError}
+        locale="en-US"
+      />
       <div>{status}</div>
     </div>
   );

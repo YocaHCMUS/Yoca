@@ -6,7 +6,7 @@ import { SolanaProvider } from "./SolanaProvider";
 
 function WalletAuth() {
   const { publicKey, signMessage, connected } = useWallet();
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     const verifyWallet = async () => {
@@ -47,12 +47,12 @@ function WalletAuth() {
   return (
     <div>
       <WalletMultiButton />
-      <div>{status && <p>{status}</p>}</div>
+      <div style={{ display: "none" }}>{status}</div>
     </div>
   );
 }
 
-export function AuthDemo() {
+export function WalletAuthenButton() {
   return (
     <SolanaProvider>
       <WalletAuth />

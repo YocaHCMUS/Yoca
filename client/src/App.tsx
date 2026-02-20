@@ -4,7 +4,7 @@ import "./App.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import Index from "./pages";
 import AuthShowcase from "./pages/auth";
-import { AuthDemo } from "./pages/auth_demo";
+import { WalletAuthenButton } from "./pages/auth_demo";
 import { GoogleAuthDemo } from "./pages/auth_google_demo";
 import DashboardPage from "./pages/dashboard";
 import MarketPage from "./pages/market";
@@ -18,7 +18,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthShowcase />} />
-        <Route path="/auth_demo" element={<AuthDemo />} />
+        <Route path="/auth_demo" element={<WalletAuthenButton />} />
         <Route path="/google_auth_demo" element={<GoogleAuthDemo />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/market" element={<MarketPage />} />
