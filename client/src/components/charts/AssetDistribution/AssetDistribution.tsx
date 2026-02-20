@@ -400,7 +400,6 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                         height: '12px',
                         borderRadius: '50%',
                         backgroundColor: asset.color,
-                        border: '1px solid #ffff',
                         opacity: isSelected ? 1 : 0.5,
                       }}
                     />

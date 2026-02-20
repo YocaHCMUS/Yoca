@@ -183,10 +183,10 @@ export function VolumeBenchmark({
     return {
       ...baseOption,
       grid: {
-        top: 60,
-        right: 40,
-        bottom: 60,
-        left: 80,
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {

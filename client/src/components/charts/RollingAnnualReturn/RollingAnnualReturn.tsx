@@ -155,10 +155,10 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         },
       } : undefined,
       grid: {
-        left: '10%',
-        right: '10%',
-        bottom: '10%',
-        top: walletLabel ? '25%' : '20%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       legend: getDualAxisLegend(

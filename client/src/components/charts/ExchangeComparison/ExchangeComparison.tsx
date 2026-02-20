@@ -206,10 +206,10 @@ export function ExchangeComparison({
     return {
       ...baseOption,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '10%',
-        top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {

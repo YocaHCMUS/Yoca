@@ -186,10 +186,10 @@ export function TransactionDistribution({
     return {
       ...baseOption,
       grid: {
-        top: 50,
-        right: 40,
-        bottom: 60,
-        left: 60,
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
@@ -285,10 +285,10 @@ export function TransactionDistribution({
     return {
       ...baseOption,
       grid: {
-        top: 50,
-        right: 40,
-        bottom: 60,
-        left: 60,
+        left: '4%',
+        right: '4%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {

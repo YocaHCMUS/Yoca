@@ -209,10 +209,10 @@ export const HoldingDurations: React.FC<ChartProps> = ({
         false
       ),
       grid: { 
-        top: validWallets.length > 1 ? '18%' : '10%', 
-        left: '10%', 
-        right: '4%', 
-        bottom: '20%', 
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true 
       },
       xAxis: {

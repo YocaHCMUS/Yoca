@@ -91,10 +91,10 @@ export function TotalTradingVolumeChart({
     return {
       ...baseOption,
       grid: {
-        // left: '20%',
-        // right: '15%',
-        // bottom: '10%',
-        // top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       legend: getMultiSeriesLegend(

@@ -99,10 +99,10 @@ export function TradingVolumePerTransaction({
       ...baseOption,
       color: ['#5470C6', '#91CC75'], // Blue for deposits, Green for withdrawals
       grid: {
-        left: '10%',
-        right: '10%',
-        bottom: '15%',
-        top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
     //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes

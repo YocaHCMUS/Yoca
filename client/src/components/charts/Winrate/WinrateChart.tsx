@@ -29,6 +29,7 @@ import { BaseChart } from '../Base/BaseChart';
 import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import { nonnegative } from 'zod';
 
 export function WinrateChart({
   title,
@@ -89,10 +90,10 @@ export function WinrateChart({
     return {
       ...baseOption,
       grid: {
-        left: '10%',
-        right: '10%',
-        bottom: '15%',
-        top: '10%',
+        left: '4%',
+        right: '4%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       xAxis: {
@@ -132,6 +133,7 @@ export function WinrateChart({
           },
         },
       ],
+      legend: undefined,
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
@@ -178,9 +180,9 @@ export function WinrateChart({
           },
         },
         grid: {
-          left: '15%',
-          right: '10%',
-          bottom: '15%',
+          left: '8%',
+          right: '8%',
+          bottom: '12%',
           top: '20%',
           containLabel: true,
         },
@@ -264,7 +266,7 @@ export function WinrateChart({
       isEmpty={!data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
-      <ChartContainer>
+      <ChartContainer gap='0'>
         {/* Overall Winrate Section */}
         <ChartSection minHeight="300px">
           {overallWinrateOption && (

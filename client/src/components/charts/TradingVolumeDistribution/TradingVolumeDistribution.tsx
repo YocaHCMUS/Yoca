@@ -379,7 +379,6 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
                         height: '12px',
                         borderRadius: '50%',
                         backgroundColor: asset.color,
-                        border: isSelected ? 'none' : '2px solid currentColor',
                         opacity: isSelected ? 1 : 0.5,
                       }}
                     />

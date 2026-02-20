@@ -114,10 +114,10 @@ export function StablecoinRatioChart({
     return {
       ...baseOption,
       grid: {
-        left: '10%',
-        right: '10%',
-        bottom: '15%',
-        top: '10%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       xAxis: {
