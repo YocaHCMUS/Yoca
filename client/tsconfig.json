@@ -23,6 +23,7 @@
     },
     
     "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": true,
   },
   "include": ["src/**/*", "vite-env.d.ts"],

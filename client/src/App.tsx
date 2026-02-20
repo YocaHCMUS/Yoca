@@ -24,6 +24,7 @@ function App() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenPage />} />
+        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
           path="/comparision/wallets"

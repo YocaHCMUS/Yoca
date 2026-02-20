@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+// Variables
+$color-bg: #fff;
+$color-border: #e5e7eb; // Light gray border
+$color-text-main: #111827; // Dark almost black
+$color-text-label: #9ca3af; // Gray 400
+$color-success: #10b981; // Emerald 500
+$color-danger: #ef4444; // Red 500
+$font-family: 'Inter', system-ui, sans-serif;
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $font-family;
+    // border: 1px solid $color-border; // Removed outer border to flush with sidebar
+    border-radius: 0; // Removed radius
+    background: $color-bg;
+    overflow: visible; // Allow overflow if needed
+    box-sizing: border-box;
+
+    &.horizontal {
+        flex-direction: row;
+    }
+}
+
+// Grid Row - Generic container for a row of stats
+.gridRow {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid $color-border;
+    min-height: 60px; // Minimum height for rows
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    // Special styling for single item rows (like Traders)
+    &.singleItemRow {
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 16px;
+    }
+}
+
+// Grid Cell - Generic cell
+.gridCell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border-right: 1px solid $color-border;
+    gap: 4px;
+
+    &:last-child {
+        border-right: none;
+    }
+}
+
+// Special Cells for Vol/Txns Row (Left aligned first col, Right aligned others)
+.gridCellLeft {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; // Left align
+    justify-content: center;
+    padding: 12px 16px; // More padding on left
+    // border-right: 1px solid $color-border; // Removed per user request
+    gap: 4px;
+}
+
+.gridCellRight {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; // Right align
+    justify-content: center;
+    padding: 12px 16px; // More padding on right
+    // border-right: 1px solid $color-border; // Removed per user request
+    gap: 4px;
+
+
+}
+
+// Labels & Values
+
+.label {
+    font-size: 13px;
+    font-weight: 400;
+    color: $color-text-label;
+    text-transform: uppercase;
+    letter-spacing: -0.1px;
+    white-space: nowrap;
+}
+
+.pricesContainer {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.subtext {
+    font-size: 12px;
+    color: $color-text-label;
+    font-weight: 500;
+}
+
+.valueLarge {
+    font-size: 15px;
+    font-weight: 600;
+    color: $color-text-main;
+}
+
+.valueMedium {
+    font-size: 15px;
+    font-weight: 500;
+    color: $color-text-main;
+}
+
+.valueSmall {
+    font-size: 15px;
+    font-weight: 500;
+    color: $color-text-main;
+}
+
+// Utility Colors
+
+.buyColor {
+    color: $color-success !important;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sellColor {
+    color: $color-danger !important;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.positive {
+    color: $color-success !important;
+}
+
+.negative {
+    color: $color-danger !important;
+}

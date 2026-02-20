@@ -1,0 +1,337 @@
+import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import { defineTranslationWithBase } from "./util/util-translation";
+
+export const langCode = "en-US";
+
+export const format = {
+  num: defineNumberFormat(langCode, {
+    currency: {
+      currency: "USD",
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    decimal: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    percent: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+    unit: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    },
+  }),
+  datetime: defineDateTimeFormat(langCode, {
+    datePattern: "MM/DD/YYYY",
+    timePattern: "hh:mm A",
+    dateTimePattern: "MMM D, YYYY hh:mm A",
+    utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
+  }),
+};
+
+export const translation = {
+  // Common
+  common: {
+    cancel: "Cancel",
+    confirm: "Confirm",
+    submit: "Submit",
+    loading: "Loading...",
+    error: "Error",
+    success: "Success",
+    or: "or",
+    and: "and",
+  },
+  // Authentication
+  auth: {
+    or: "Or continue with",
+    signIn: "Sign In",
+    signUp: "Sign Up",
+    signOut: "Sign Out",
+    email: "Email",
+    username: "Username",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+    retypePassword: "Retype Password",
+    forgotPassword: "Forgot password?",
+    alreadyHaveAccount: "Already have an account?",
+    wantAccount: "Want to have an account?",
+    createAccount: "Create Account",
+    continueWithGoogle: "Continue with Google",
+    signUpWithGoogle: "Sign up with Google",
+    continueWithWallet: "Continue with a linked wallet",
+    signUpWithWallet: "Sign up with an existing wallet(s)",
+    termsAndPrivacy:
+      "By signing up, you agree to our {{terms}} and {{privacy}}",
+    termsPrefix: "By signing up, you agree to our",
+    termsOfService: "Terms of Service",
+    privacyPolicy: "Privacy Policy",
+    terms: "Terms of Service",
+    privacy: "Privacy Policy",
+    googleAuthFailed: "Google authentication failed. Please try again.",
+    googleAuthCancelled: "Google authentication was cancelled.",
+  },
+  // Wallet
+  wallet: {
+    connectWallet: "Connect Wallet",
+    selectWallet: "Select a wallet",
+    detected: "Detected",
+    notDetected: "No wallet detected",
+    installWallet: "Please install a Solana wallet extension",
+    blockchain: "Blockchain",
+    connecting: "Connecting...",
+    connectionFailed: "Connection Failed",
+    retry: "Retry",
+    popularWallets: "Popular Solana Wallets",
+    connectToSignIn: "Connect Wallet to Sign In",
+    connectToSignUp: "Connect Wallet to Sign Up",
+    web3Auth: "Web3 Authentication",
+    selectBlockchain: "Select Blockchain",
+    solana: "Solana",
+    ethereum: "Ethereum",
+    bitcoin: "Bitcoin",
+    detectingWallets: "Detecting wallets...",
+    scanningWallets: "Scanning for installed {{blockchain}} wallets...",
+    detectedWallets: "Detected Wallets",
+    otherWallets: "Other Wallets",
+    noWalletsDetected: "No Wallets Detected",
+    noWalletsFound: "No {{blockchain}} Wallets Found",
+    installWalletPrompt:
+      "Please install a wallet extension to continue. Click on a wallet below to visit its installation page.",
+    install: "Install →",
+    termsAgreement:
+      "By connecting your wallet, you agree to our Terms of Service and Privacy Policy.",
+    detectionFailed: "Failed to detect wallets. Please try again.",
+  },
+  // Navigation
+  nav: {
+    market: "Market",
+    alert: "Alert",
+    dashboard: "Dashboard",
+    profile: "Profile",
+    settings: "Settings",
+    language: "Language",
+    theme: "Theme",
+  },
+  // Validation errors
+  validation: {
+    required: "This field is required",
+    identifierRequired: "Username or email is required",
+    identifierInvalid:
+      "Please enter a valid email or username (minimum 3 characters)",
+    emailRequired: "Email is required",
+    invalidEmail: "Please enter a valid email address",
+    usernameRequired: "Username is required",
+    usernameTooShort: "Username must be at least 3 characters",
+    usernameTooLong: "Username must be at most 20 characters",
+    usernameInvalidChars:
+      "Username can only contain letters, numbers, and underscores",
+    passwordRequired: "Password is required",
+    passwordTooShort: "Password must be at least {{min}} characters",
+    passwordComplexity:
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+    confirmPasswordRequired: "Please confirm your password",
+    passwordsDoNotMatch: "Passwords do not match",
+    invalidCredentials: "Invalid username or password",
+    accountExists: "An account with this email already exists",
+    networkError: "Network error. Please try again.",
+    registrationFailed: "Registration failed. Please try again.",
+  },
+  // Showcase page
+  showcase: {
+    title: "Yoca Component Showcase",
+    subtitle: "Authentication & Navigation UI Components",
+    signInSection: "Sign In Component",
+    signUpSection: "Sign Up Component",
+    walletSection: "Wallet Connection",
+    googleAuthSection: "Google OAuth",
+    navigationSection: "Navigation Header",
+    placeholderContent: "This is placeholder content for demonstration.",
+  },
+  // Charts
+  charts: {
+    // Common
+    loading: "Loading chart data...",
+    refreshing: "Refreshing...",
+    retry: "Try Again",
+    export: "Export",
+    fullscreen: "Fullscreen",
+    miniPlayer: "Mini Player",
+    exitFullscreen: "Exit Fullscreen",
+
+    // Viewing modes
+    enterFullscreenMode: "Enter fullscreen mode",
+    openMiniPlayer: "Open mini player",
+    chartViewingModes: "Chart viewing modes",
+    fullscreenView: "Fullscreen View",
+    exitFullscreenEsc: "Exit fullscreen (ESC)",
+    closeMiniPlayer: "Close mini-player",
+    closeMiniPlayerEsc: "Close mini-player (ESC)",
+    dragToMove: "Drag to move",
+    maximize: "Maximize",
+    minimize: "Minimize",
+
+    // Timezone
+    selectTimezone: "Select timezone",
+    timezone: "Timezone",
+    timezoneOptions: "Timezone options",
+    searchTimezones: "Search timezones...",
+    noTimezonesFound: "No timezones found",
+    localTime: "Local Time",
+    utc: "UTC",
+
+    // Loading states
+    loadingChartData: "Loading {{title}} chart data",
+    refreshingChartData: "Refreshing {{title}} chart data",
+    chartLoadedSuccessfully: "{{title}} chart loaded successfully",
+    errorLoadingChart: "Error loading {{title}} chart",
+    noDataForChart: "No data available for {{title}} chart",
+
+    // Empty state
+    noDataTitle: "No Data Available",
+    noDataMessage: "There is no data to display for the selected filters.",
+    resetFilters: "Reset Filters",
+    adjustFilters: "Try adjusting your filters or date range",
+
+    // Error state
+    errorTitle: "Unable to Load Chart",
+    errorMessage: "An error occurred while loading the chart data.",
+    technicalDetails: "Technical Details",
+    networkError: "Network error. Please check your connection.",
+    serverError: "Server error. Please try again later.",
+
+    // Export
+    exportChart: "Export chart",
+    exportFormatOptions: "Export format options",
+    exportPNG: "Export as PNG",
+    exportSVG: "Export as SVG",
+    exportCSV: "Export as CSV",
+    pngFormat: "PNG",
+    svgFormat: "SVG",
+    csvFormat: "CSV",
+    retinaBadge: "Image",
+    vectorBadge: "Vector",
+    dataBadge: "Data",
+    exportSuccess: "Chart exported successfully",
+    exportFailed: "Export failed. Please try again.",
+
+    // Filters
+    timePeriod: "Time Period",
+    last7Days: "Last 7 Days",
+    last30Days: "Last 30 Days",
+    last60Days: "Last 60 Days",
+    last90Days: "Last 90 Days",
+    lastYear: "Last Year",
+    allTime: "All Time",
+    customRange: "Custom Range",
+    tokens: "Tokens",
+    allTokens: "All Tokens",
+    transactionType: "Transaction Type",
+    allTypes: "All Types",
+    trades: "Trades",
+    transfers: "Transfers",
+    deposits: "Deposits",
+    withdrawals: "Withdrawals",
+    wallets: "Wallets",
+
+    // Chart titles
+    balanceTrend: "Balance Trend",
+    assetDistribution: "Asset Distribution",
+    profitLoss: "Profit & Loss",
+    exchangeComparison: "Exchange Comparison",
+    counterpartyActivity: "Counterparty Activity",
+    volumeBenchmark: "Volume Benchmark",
+    transactionDistribution: "Transaction Distribution",
+    holdingDurations: "Holding Durations",
+
+    // Chart specific
+    balanceChart: {
+      title: "Balance Trend",
+      totalBalance: "Total Balance",
+      change: "Change",
+      date: "Date",
+      balance: "Balance",
+    },
+    assetDistributionChart: {
+      title: "Asset Distribution",
+      totalValue: "Total Value",
+      asset: "Asset",
+      value: "Value",
+      percentage: "Percentage",
+    },
+    pnlChart: {
+      title: "Profit & Loss",
+      dailyPnL: "Daily P&L",
+      cumulativePnL: "Cumulative P&L",
+      profit: "Profit",
+      loss: "Loss",
+      date: "Date",
+      totalProfit: "Total Profit",
+      totalLoss: "Total Loss",
+      netPnL: "Net P&L",
+      aggregation: "Aggregation",
+      daily: "Daily",
+      weekly: "Weekly",
+      monthly: "Monthly",
+    },
+    exchangeComparisonChart: {
+      title: "Exchange Activity Comparison",
+      exchange: "Exchange",
+      deposits: "Deposits",
+      withdrawals: "Withdrawals",
+      count: "Transaction Count",
+      volume: "Volume (USD)",
+      metric: "Metric",
+      transactionCount: "Transaction Count",
+      volumeUSD: "Volume (USD)",
+    },
+    counterpartyActivityChart: {
+      title: "Counterparty Activity Analysis",
+      counterparty: "Counterparty",
+      transactionCount: "Transaction Count",
+      totalVolume: "Total Volume",
+      limit: "Show Top",
+      top10: "Top 10",
+      top20: "Top 20",
+      top50: "Top 50",
+    },
+    volumeBenchmarkChart: {
+      title: "Trading Volume Comparison",
+      volume: "Volume",
+      date: "Date",
+      wallet: "Wallet",
+      chartType: "Chart Type",
+      line: "Line",
+      bar: "Bar",
+      showLabels: "Show Labels",
+    },
+    transactionDistributionChart: {
+      title: "Transaction Activity Analysis",
+      transactionCounts: "Transaction Counts",
+      uniqueTokens: "Unique Tokens Traded",
+      date: "Date",
+      count: "Count",
+      tokens: "Tokens",
+      chartMode: "Chart Mode",
+      stacked: "Stacked",
+      grouped: "Grouped",
+    },
+    holdingDurationsChart: {
+      title: "Token Holding Durations",
+      token: "Token",
+      duration: "Duration",
+      days: "Days",
+      weeks: "Weeks",
+      months: "Months",
+      timeUnit: "Time Unit",
+      topN: "Show Top",
+      wallet: "Wallet",
+    },
+  },
+} as const;
+
+// English as base translation
+export const defineTranslation =
+  defineTranslationWithBase<typeof translation>();

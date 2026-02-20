@@ -1,10 +1,20 @@
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
+import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
 import { OverviewTab } from "@/components/market/OverviewTab.tsx";
 import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { Table } from "@/components/tables/Table.tsx";
+import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
+import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
+import { CheckmarkFilled, CloseFilled } from "@carbon/icons-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams } from "react-router";
+import { formatNumber } from "../../util/format.ts";
+import styles from "./index.module.scss";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
 import { CheckmarkFilled, CloseFilled } from "@carbon/icons-react";
@@ -19,11 +29,13 @@ interface Transaction {
   id: string;
   signature: string;
   type: "Buy" | "Sell";
+  type: "Buy" | "Sell";
   token: string;
   amount: number;
   price: number;
   total: number;
   timestamp: string;
+  status: "Success" | "Failed";
   status: "Success" | "Failed";
 }
 
@@ -42,6 +54,8 @@ export default function WalletPage() {
     signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
     type: i % 2 === 0 ? "Buy" : "Sell",
     token: ["SOL", "USDC", "JTO", "BONK"][i % 4],
+    type: i % 2 === 0 ? "Buy" : "Sell",
+    token: ["SOL", "USDC", "JTO", "BONK"][i % 4],
     amount: Math.random() * 1000,
     price: Math.random() * 200,
     total: Math.random() * 10000,
@@ -49,9 +63,14 @@ export default function WalletPage() {
       Date.now() - Math.random() * 86400000,
     ).toLocaleTimeString(),
     status: i % 10 === 0 ? "Failed" : "Success",
+    timestamp: new Date(
+      Date.now() - Math.random() * 86400000,
+    ).toLocaleTimeString(),
+    status: i % 10 === 0 ? "Failed" : "Success",
   }));
 
   // Transform transactions to array format for Table component
+  const transactionData = transactions.map((tx) => [
   const transactionData = transactions.map((tx) => [
     tx.signature,
     tx.type,
@@ -61,9 +80,18 @@ export default function WalletPage() {
     `$${tx.total.toFixed(2)}`,
     tx.timestamp,
     tx.status,
+    tx.status,
   ]);
 
   const transactionHeaders = [
+    "Signature",
+    "Type",
+    "Token",
+    "Amount",
+    "Price",
+    "Total",
+    "Time",
+    "Status",
     "Signature",
     "Type",
     "Token",
@@ -81,10 +109,23 @@ export default function WalletPage() {
         style={{ color: "var(--cds-text-secondary)", fontSize: "0.75rem" }}
         title={value}
       >
+      <code
+        style={{ color: "var(--cds-text-secondary)", fontSize: "0.75rem" }}
+        title={value}
+      >
         {value}
       </code>
     ),
     (value: string) => (
+      <span
+        style={{
+          color:
+            value === "Buy"
+              ? "var(--cds-support-success)"
+              : "var(--cds-support-error)",
+          fontWeight: 600,
+        }}
+      >
       <span
         style={{
           color:
@@ -120,8 +161,26 @@ export default function WalletPage() {
         ) : (
           <CloseFilled size={16} />
         )}
+      <span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          color:
+            value === "Success"
+              ? "var(--cds-support-success)"
+              : "var(--cds-support-error)",
+          fontWeight: 600,
+        }}
+      >
+        {value === "Success" ? (
+          <CheckmarkFilled size={16} />
+        ) : (
+          <CloseFilled size={16} />
+        )}
         {value}
       </span>
+    ),
     ),
   ];
 
@@ -177,11 +236,29 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <WalletOverview walletAddress={address} />
+      <WalletOverview walletAddress={address} />
       <h1 className={styles.sectionTitle}>Activity</h1>
       <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
           names={["Balance History", "Token Balance History", "Profit & Lost"]}
+          tabs={[
+            <BalanceChart
+              // height={400}
+              initialTimePeriod="30D"
+              autoRefresh={true}
+            />,
+            <BalanceChart
+              // height={400}
+              initialTimePeriod="30D"
+              autoRefresh={true}
+            />,
+            <PnLChart
+              // height={400}
+              aggregation="daily"
+              autoRefresh={true}
+            />,
+          ]} //for testing purpose
           tabs={[
             <BalanceChart
               // height={400}
@@ -249,6 +326,7 @@ export default function WalletPage() {
               filterSchema={{}}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+            />,
             />,
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}

@@ -12,6 +12,7 @@ import {
 interface TblHdr {
   header: string;
   key: string;
+  style?: React.CSSProperties;
 }
 
 interface TblRw {
@@ -47,7 +48,7 @@ export default function Tble(props: TblProps) {
             <TableHead>
               <TableRow>
                 {headers.map((header) => (
-                  <TableHeader {...getHeaderProps({ header })}>
+                  <TableHeader {...getHeaderProps({ header })} style={(header as any).style}>
                     {header.header}
                   </TableHeader>
                 ))}
