@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Login } from "@carbon/icons-react";
 import {
   Button,
@@ -12,7 +13,6 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import z from "zod";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import styles from "./SignInForm.module.scss";
@@ -25,16 +25,15 @@ interface SignInFormProps {
 }
 
 export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
-  const { t } = useTranslation();
+  const { tr, fmt } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const formSchema = z.object({
-    email: z.email("Incorrect email format"),
+    email: z.email(tr("validation.invalidEmail")),
     password: z
       .string()
-      .min(1, "validation.passwordRequired")
-      .min(8, "validation.passwordTooShort"),
+      .min(8, tr("validation.passwordTooShort", { min: `${1}` })),
   });
   type FormSchema = z.infer<typeof formSchema>;
   const {
@@ -67,10 +66,10 @@ export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
         const res = await resp.json();
         // redirect
       } else {
-        setErrorMessage(t("validation.invalidCredentials"));
+        setErrorMessage(tr("validation.invalidCredentials"));
       }
     } catch (error) {
-      setErrorMessage(t("validation.networkError"));
+      setErrorMessage(tr("validation.networkError"));
       console.error("Sign in error:", error);
     } finally {
       setIsSubmitting(false);
@@ -100,9 +99,9 @@ export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
           <PasswordInput
             id="password"
             labelText={"Password*"}
-            placeholder={t("auth.password")}
+            placeholder={tr("auth.password")}
             invalid={!!errors.password}
-            invalidText={t(errors.password?.message || "")}
+            invalidText={errors.password?.message || ""}
             disabled={isSubmitting}
             {...register("password")}
           />
@@ -128,7 +127,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
           <div className={styles["divider-border"]}></div>
         </div>
         <div className={styles["divider-text-container"]}>
-          <span className={styles["divider-text"]}>{t("auth.or")}</span>
+          <span className={styles["divider-text"]}>{tr("auth.or")}</span>
         </div>
       </div>
 
