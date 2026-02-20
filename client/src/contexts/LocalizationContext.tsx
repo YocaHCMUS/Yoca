@@ -2,29 +2,34 @@ import {
   locale,
   type BaseTranslation,
   type FmtStrParams,
+  type HasNodeParam,
   type PathValue,
   type TranslationKeyPath,
   type TranslationSchema,
-  type WithBase,
 } from "@/config/localization";
 import React, { useMemo, useState } from "react";
 
 type LangCode = keyof typeof locale;
+
+type TranslationReturn<K extends TranslationKeyPath> =
+  HasNodeParam<PathValue<BaseTranslation, K>> extends true
+    ? React.ReactNode
+    : string;
 
 // This helps the error when you mistype the key (eg. tr("non_existent_key")) will be at the key name itself.
 // Though if you continue to type in the second argument, it'd both show the error at the wrong key
 // and hint the type of second argument as all the format variables of the translation
 type TranslateFunction = {
   <K extends TranslationKeyPath>(
-    key: K,
-  ): FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
-    ? WithBase<PathValue<BaseTranslation, K>>
-    : never;
+    key: FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
+      ? K
+      : never,
+  ): TranslationReturn<K>;
 
   <K extends TranslationKeyPath>(
     key: K,
     params: FmtStrParams<PathValue<BaseTranslation, K>>,
-  ): WithBase<PathValue<BaseTranslation, K>>;
+  ): TranslationReturn<K>;
 };
 
 type NumberFormatter = typeof locale.en.format.num;
@@ -71,23 +76,58 @@ function getTranslationValue(
     .split(".")
     .reduce((acc, part) => (acc as any)[part], translation as any) as string;
 }
-
 function interpolate(
   template: string,
-  params: Record<string, string | number>,
-) {
+  params: Record<string, unknown>,
+): string | React.ReactNode {
   const count = Number(params.count);
+  const hasCount = "count" in params && !Number.isNaN(count);
 
-  return template.replace(/{{(.*?)}}/g, (_, key) => {
-    const hasCount = Number.isNaN(count);
+  const parts: React.ReactNode[] = [];
 
-    const res = tryGetPluralSelection(key);
-    if (res.ok && !hasCount) {
-      return count != 1 ? res.selection.plural : res.selection.singular;
+  let lastIndex = 0;
+  const regex = /{{(.*?)}}/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(template)) != null) {
+    const rawKey = match[1].trim();
+
+    if (match.index > lastIndex) {
+      parts.push(template.slice(lastIndex, match.index));
     }
 
-    return String(params[key.trim()]) ?? "";
-  });
+    const plural: PluralSelection = hasCount
+      ? tryGetPluralSelection(rawKey)
+      : { ok: false };
+
+    if (plural.ok) {
+      parts.push(
+        count != 1 ? plural.selection.plural : plural.selection.singular,
+      );
+    } else {
+      const value = params[rawKey];
+
+      if (React.isValidElement(value)) {
+        parts.push(value);
+      } else if (value != null) {
+        parts.push(String(value));
+      } else {
+        parts.push("");
+      }
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < template.length) {
+    parts.push(template.slice(lastIndex));
+  }
+
+  const hasNode = parts.some((p) => typeof p != "string");
+
+  return hasNode
+    ? React.createElement(React.Fragment, null, ...parts)
+    : parts.join("");
 }
 
 export function LocalizationProvider({
@@ -98,21 +138,26 @@ export function LocalizationProvider({
   const [lang, setLang] = useState<LangCode>("en");
 
   function tr<K extends TranslationKeyPath>(
-    key: K,
-  ): FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
-    ? string
-    : never;
+    key: FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
+      ? K
+      : never,
+  ): TranslationReturn<K>;
 
   function tr<K extends TranslationKeyPath>(
     key: K,
     params: FmtStrParams<PathValue<BaseTranslation, K>>,
-  ): string;
+  ): TranslationReturn<K>;
 
-  function tr(key: TranslationKeyPath, params?: any): string {
+  function tr(
+    key: TranslationKeyPath,
+    params?: Record<string, unknown>,
+  ): string | React.ReactNode {
     const template = getTranslationValue(locale[lang].translation, key);
+
     if (params) {
       return interpolate(template, params);
     }
+
     return template;
   }
 
