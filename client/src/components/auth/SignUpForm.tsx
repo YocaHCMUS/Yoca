@@ -1,274 +1,200 @@
-/**
- * Sign Up Form Component
- * Provides user registration with email, username, password validation
- */
+import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { UserFollow } from "@carbon/icons-react";
+import {
+  Button,
+  Heading,
+  InlineNotification,
+  PasswordInput,
+  TextInput,
+} from "@carbon/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import z from "zod";
+import { GoogleAuthButton } from "./GoogleAuthButton";
+import styles from "./SignUpForm.module.scss";
+import { WalletAuthenButton } from "./WalletAuthButton";
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslation } from 'react-i18next';
-import { TextInput, PasswordInput, Button, InlineNotification } from '@carbon/react';
-import { UserFollow, Wallet } from '@carbon/icons-react';
-import { signUpSchema, type SignUpFormData } from './schemas/signUpSchema';
-import { GoogleAuthButton } from './GoogleAuthButton';
-import { useAuth } from '../../contexts';
-import styles from './SignUpForm.module.scss';
-
-/**
- * SignUpForm Props
- */
-interface SignUpFormProps {
-  /**
-   * Callback function called after successful sign-up
-   */
-  onSuccess?: () => void;
-  /**
-   * Callback function to open wallet modal
-   */
-  onOpenWalletModal?: () => void;
-  /**
-   * Callback to navigate to sign-in page
-   */
-  onNavigateToSignIn?: () => void;
-}
-
-/**
- * SignUpForm Component
- * Handles user registration with email, username, password
- * 
- * @example
- * ```tsx
- * <SignUpForm onSuccess={() => navigate('/dashboard')} />
- * ```
- */
-export const SignUpForm: React.FC<SignUpFormProps> = ({
-  onSuccess,
-  onOpenWalletModal,
-  onNavigateToSignIn,
-}) => {
-  const { t } = useTranslation();
-  const { signUp, googleSignIn } = useAuth();
+export function SignUpForm() {
+  const { tr } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Helper to translate error messages from Zod
-  const translateError = (message: string | undefined): string | undefined => {
-    if (!message) return undefined;
-    // Check if it's a translation key (starts with 'validation.')
-    if (message.startsWith('validation.')) {
-      return t(message, { min: message.includes('passwordTooShort') ? '8' : '3' });
-    }
-    return message;
-  };
+  const formSchema = z
+    .object({
+      email: z.email(tr("validation.invalidEmail")),
+      displayName: z.string().min(1).optional(),
+      password: z
+        .string()
+        .min(8, tr("validation.passwordTooShort", { min: 8 })),
+      retypePassword: z.string(),
+    })
+    .refine((data) => data.password == data.retypePassword, {
+      message: tr("validation.passwordsDoNotMatch"),
+      path: ["retypePassword"],
+    });
 
-  // Initialize React Hook Form with Zod validation
+  type FormSchema = z.infer<typeof formSchema>;
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
-    mode: 'onBlur', // Validate on blur for better UX
+  } = useForm<FormSchema>({
+    resolver: zodResolver(formSchema),
+    mode: "onBlur",
   });
 
-  /**
-   * Handle form submission
-   * Creates new user account and handles success/error states
-   */
-  const onSubmit = async (data: SignUpFormData) => {
+  const onSubmit = async (data: FormSchema) => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      // Pass the full form data including retypePassword for validation
-      const response = await signUp(data);
+      const resp = await client.api.users.auth.password.register.$post({
+        json: {
+          email: data.email,
+          displayName: data.displayName,
+          password: data.password,
+        },
+      });
 
-      if (response.success) {
-        // Call success callback if provided
-        onSuccess?.();
+      if (resp.ok) {
+        const res = await resp.json();
       } else {
-        // Display error message from authentication service
-        setErrorMessage(response.error || t('validation.registrationFailed'));
+        setErrorMessage(tr("validation.registrationFailed"));
       }
     } catch (error) {
-      setErrorMessage(t('validation.networkError'));
-      console.error('Sign up error:', error);
+      setErrorMessage(tr("validation.networkError"));
+      console.error("Sign up error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * Handle Google OAuth success
-   */
   const handleGoogleSuccess = async (credential: string) => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      const response = await googleSignIn({ credential, clientId: '' });
+      const response = await client.api.users.auth.google.$post({
+        json: { token: credential },
+      });
 
-      if (response.success) {
-        onSuccess?.();
+      if (response.ok) {
+        const res = await response.json();
       } else {
-        setErrorMessage(response.error || t('auth.googleAuthFailed'));
+        setErrorMessage(tr("auth.googleAuthFailed"));
       }
     } catch (error) {
-      setErrorMessage(t('auth.googleAuthFailed'));
-      console.error('Google sign up error:', error);
+      setErrorMessage(tr("auth.googleAuthFailed"));
+      console.error("Google sign up error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * Handle Google OAuth error
-   */
   const handleGoogleError = (error: string) => {
     setErrorMessage(error);
   };
 
   return (
-    <div className={styles['sign-up-form-container']}>
-      <div className={styles['sign-up-form-header']}>
-        <h2 className={styles['header-title']}>{t('auth.signUp')}</h2>
-      </div>
+    <div className={styles["sign-up-form-container"]}>
+      <Heading>{tr("auth.signUp")}</Heading>
 
-      {/* Error notification */}
       {errorMessage && (
         <InlineNotification
           kind="error"
-          title={t('common.error')}
+          title={tr("common.error")}
           subtitle={errorMessage}
           onCloseButtonClick={() => setErrorMessage(null)}
-          className={styles['error-notification']}
+          className={styles["error-notification"]}
           lowContrast
         />
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className={styles['form']}>
-        {/* Email field */}
+      <form onSubmit={handleSubmit(onSubmit)} className={styles["form"]}>
         <TextInput
           id="email"
-          labelText={t('auth.email')}
-          placeholder={t('auth.email')}
+          labelText={tr("auth.email")}
+          placeholder={tr("auth.email")}
           type="email"
-          {...register('email')}
+          {...register("email")}
           invalid={!!errors.email}
-          invalidText={translateError(errors.email?.message)}
+          invalidText={errors.email?.message || ""}
           disabled={isSubmitting}
         />
 
-        {/* Username field */}
         <TextInput
-          id="username"
-          labelText={t('auth.username')}
-          placeholder={t('auth.username')}
-          {...register('username')}
-          invalid={!!errors.username}
-          invalidText={translateError(errors.username?.message)}
+          id="displayName"
+          labelText={tr("auth.username")}
+          placeholder={tr("auth.username")}
+          {...register("displayName")}
+          invalid={!!errors.displayName}
+          invalidText={errors.displayName?.message || ""}
           disabled={isSubmitting}
         />
 
-        {/* Password field */}
         <PasswordInput
           id="password"
-          labelText={t('auth.password')}
-          placeholder={t('auth.password')}
-          {...register('password')}
+          labelText={tr("auth.password")}
+          placeholder={tr("auth.password")}
+          {...register("password")}
           invalid={!!errors.password}
-          invalidText={translateError(errors.password?.message)}
+          invalidText={errors.password?.message || ""}
           disabled={isSubmitting}
         />
 
-        {/* Confirm password field */}
         <PasswordInput
           id="retypePassword"
-          labelText={t('auth.confirmPassword')}
-          placeholder={t('auth.confirmPassword')}
-          {...register('retypePassword')}
+          labelText={tr("auth.confirmPassword")}
+          placeholder={tr("auth.confirmPassword")}
+          {...register("retypePassword")}
           invalid={!!errors.retypePassword}
-          invalidText={translateError(errors.retypePassword?.message)}
+          invalidText={errors.retypePassword?.message || ""}
           disabled={isSubmitting}
         />
 
-        {/* Terms and Privacy Policy */}
-        <div className={styles['terms-text']}>
-          {t('auth.termsPrefix')}{' '}
-          <a
-            href="/terms"
-            tabIndex={isSubmitting ? -1 : 0}
-          >
-            {t('auth.termsOfService')}
-          </a>{' '}
-          {t('common.and')}{' '}
-          <a
-            href="/privacy"
-            tabIndex={isSubmitting ? -1 : 0}
-          >
-            {t('auth.privacyPolicy')}
+        <div className={styles["terms-text"]}>
+          {tr("auth.termsPrefix")}{" "}
+          <a href="/terms" tabIndex={isSubmitting ? -1 : 0}>
+            {tr("auth.termsOfService")}
+          </a>{" "}
+          {tr("common.and")}{" "}
+          <a href="/privacy" tabIndex={isSubmitting ? -1 : 0}>
+            {tr("auth.privacyPolicy")}
           </a>
         </div>
 
-        {/* Submit button */}
         <Button
           type="submit"
           disabled={isSubmitting}
           size="lg"
           renderIcon={UserFollow}
         >
-          {isSubmitting ? t('common.loading') : t('auth.createAccount')}
+          {isSubmitting ? tr("common.loading") : tr("auth.createAccount")}
         </Button>
 
-        {/* Divider */}
-        <div className={styles['divider']}>
-          <div className={styles['divider-line']}>
-            <div className={styles['divider-border']}></div>
+        <div className={styles["divider"]}>
+          <div className={styles["divider-line"]}>
+            <div className={styles["divider-border"]}></div>
           </div>
-          <div className={styles['divider-text-container']}>
-            <span className={styles['divider-text']}>
-              {t('auth.or')}
-            </span>
+          <div className={styles["divider-text-container"]}>
+            <span className={styles["divider-text"]}>{tr("auth.or")}</span>
           </div>
         </div>
 
-        {/* Google OAuth button */}
         <GoogleAuthButton
-          mode="signup"
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
           disabled={isSubmitting}
         />
 
-        {/* Wallet authentication button */}
-        <Button
-          type="button"
-          kind="secondary"
-          onClick={onOpenWalletModal}
-          disabled={isSubmitting}
-          size="lg"
-          renderIcon={Wallet}
-        >
-          {t('auth.signUpWithWallet')}
-        </Button>
-
-        {/* Sign in link */}
-        <div className={styles['sign-in-section']}>
-          <span className={styles['sign-in-text']}>
-            {t('auth.alreadyHaveAccount')}{' '}
-          </span>
-          <button
-            type="button"
-            onClick={onNavigateToSignIn}
-            className={styles['sign-in-button']}
-            disabled={isSubmitting}
-          >
-            {t('auth.signIn')}
-          </button>
-        </div>
+        <WalletAuthenButton
+          onSuccess={() => {}}
+          onError={(err) => setErrorMessage(err.message)}
+        />
       </form>
     </div>
   );
-};
-
-export default SignUpForm;
+}

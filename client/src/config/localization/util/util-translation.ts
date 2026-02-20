@@ -1,4 +1,8 @@
-type ParamValue<K extends string> = K extends "count" ? number : string;
+const numVariables = ["count", "min", "max"] as const;
+
+type NumVariables = (typeof numVariables)[number];
+
+type ParamValue<K extends string> = K extends NumVariables ? number : string;
 
 type ExtractFmtStrParams<T extends string> =
   T extends `${string}{{${infer Param}}}${infer Rest}`

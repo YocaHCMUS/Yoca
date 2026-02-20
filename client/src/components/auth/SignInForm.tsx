@@ -25,10 +25,9 @@ export function SignInForm() {
 
   const formSchema = z.object({
     email: z.email(tr("validation.invalidEmail")),
-    password: z
-      .string()
-      .min(8, tr("validation.passwordTooShort", { min: `${1}` })),
+    password: z.string().min(8, tr("validation.passwordTooShort", { min: 8 })),
   });
+
   type FormSchema = z.infer<typeof formSchema>;
   const {
     register,

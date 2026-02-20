@@ -68,11 +68,7 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
         className={styles.authModal}
         size="lg"
       >
-        <SignInForm
-          onSuccess={handleAuthSuccess}
-          onOpenWalletModal={() => handleOpenWalletModal("signin")}
-          onNavigateToSignUp={handleOpenSignUp}
-        />
+        <SignInForm />
       </Modal>
 
       {/* Sign Up Modal */}
