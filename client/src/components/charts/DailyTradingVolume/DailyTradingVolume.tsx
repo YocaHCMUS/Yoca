@@ -20,6 +20,7 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { Button } from '@carbon/react';
 import { Add, Close } from '@carbon/react/icons';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for DailyTradingVolume component
@@ -477,14 +478,16 @@ export function DailyTradingVolume({
       </div>
       
       {/* Chart */}
-      <ReactECharts
-        ref={chartRef}
-        option={chartOptions}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-        lazyUpdate={true}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          ref={chartRef}
+          option={chartOptions}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+          lazyUpdate={true}
+        />
+      </ChartGridItem>
     </ChartWrapper>
   );
 }

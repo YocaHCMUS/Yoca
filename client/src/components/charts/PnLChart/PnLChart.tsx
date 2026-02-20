@@ -34,6 +34,7 @@ import type { TimePeriod } from '@/types/chart-filters.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 
 export interface PnLChartProps {
@@ -443,22 +444,12 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {/* Chart Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: chartOptions.length > 1 ? 'repeat(2, 1fr)' : '1fr',
-              width: '100%',
-            }}
-          >
+          <ChartGrid itemCount={chartOptions.length} multiItemColumns={2}>
             {chartOptions.map((chartData, index) => (
-              <div
+              <ChartGridItem
                 key={chartData.walletAddress}
-                style={{
-                  minHeight: `${minHeight}px`,
-                  border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
-                  borderRadius: '4px',
-                  padding: chartOptions.length > 1 ? '0.5rem' : '0',
-                }}
+                itemKey={chartData.walletAddress}
+                minHeight={minHeight}
               >
                 <ReactECharts
                   ref={index === 0 ? chartRef : undefined}
@@ -467,9 +458,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                   notMerge
                   lazyUpdate
                 />
-              </div>
+              </ChartGridItem>
             ))}
-          </div>
+          </ChartGrid>
         </div>
       )}
     </BaseChart>

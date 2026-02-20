@@ -24,6 +24,7 @@ import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ChartDataSeries } from '@/types/chart-data.types';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for ExchangeComparison component
@@ -374,14 +375,16 @@ export function ExchangeComparison({
       className={className}
     >
       {chartOptions && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOptions}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          opts={{ renderer: 'canvas' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
     </ChartWrapper>
   );

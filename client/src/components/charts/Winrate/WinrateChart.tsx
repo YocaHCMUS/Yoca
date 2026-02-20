@@ -26,7 +26,7 @@ import { fetchWinrate } from '@/services/chart/chartApi';
 import type { WinrateResponse, WinrateRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
-import { ChartContainer, ChartSection } from '../shared';
+import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 
@@ -268,29 +268,35 @@ export function WinrateChart({
         {/* Overall Winrate Section */}
         <ChartSection minHeight="300px">
           {overallWinrateOption && (
-            <ReactECharts
-              ref={overallChartRef}
-              option={overallWinrateOption}
-              style={{ height: '100%', width: '100%' }}
-              notMerge
-              lazyUpdate
-            />
+            <ChartGridItem minHeight={300}>
+              <ReactECharts
+                ref={overallChartRef}
+                option={overallWinrateOption}
+                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                notMerge
+                lazyUpdate
+              />
+            </ChartGridItem>
           )}
         </ChartSection>
         
         {/* Distribution Histograms Grid */}
-        <div className={sharedStyles.chartGridSection}>
+        <ChartGrid itemCount={distributionCharts.length} autoFit minColumnWidth="400px">
           {distributionCharts.map((chart) => (
-            <div key={chart.walletAddress} className={sharedStyles.chartGridItem}>
+            <ChartGridItem
+              key={chart.walletAddress}
+              itemKey={chart.walletAddress}
+              minHeight={300}
+            >
               <ReactECharts
                 option={chart.option}
                 style={{ height: '100%', width: '100%' }}
                 notMerge
                 lazyUpdate
               />
-            </div>
+            </ChartGridItem>
           ))}
-        </div>
+        </ChartGrid>
       </ChartContainer>
     </BaseChart>
   );

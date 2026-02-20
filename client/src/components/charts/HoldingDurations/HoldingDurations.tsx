@@ -15,6 +15,7 @@ import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/ch
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 
 
@@ -290,12 +291,14 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       </div>
 
       {chartOption && (
-        <ReactECharts
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            option={chartOption}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            notMerge
+            lazyUpdate
+          />
+        </ChartGridItem>
       )}
     </BaseChart>
   );

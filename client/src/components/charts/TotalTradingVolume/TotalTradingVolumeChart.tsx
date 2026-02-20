@@ -26,6 +26,7 @@ import { formatItemTooltip } from '@/util/tooltip-helpers';
 import type { TotalTradingVolumeResponse, TotalTradingVolumeRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 
 export function TotalTradingVolumeChart({
@@ -176,13 +177,15 @@ export function TotalTradingVolumeChart({
       onRetry={() => refetch(false)}
     >
       {chartOption && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOption}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            notMerge
+            lazyUpdate
+          />
+        </ChartGridItem>
       )}
     </BaseChart>
   );

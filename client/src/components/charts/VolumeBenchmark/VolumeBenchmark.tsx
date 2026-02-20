@@ -22,6 +22,7 @@ import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/ty
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for VolumeBenchmark component
@@ -331,14 +332,16 @@ export function VolumeBenchmark({
       
       {/* Chart */}
       {data && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOptions}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          opts={{ renderer: 'canvas' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
     </BaseChart>
   );

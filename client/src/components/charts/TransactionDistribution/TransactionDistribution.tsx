@@ -11,6 +11,7 @@ import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { ChartGridItem } from '@/components/charts/shared';
 import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
@@ -480,14 +481,16 @@ export function TransactionDistribution({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
-          <ReactECharts
-            ref={transactionChartRef}
-            option={transactionCountsOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-            lazyUpdate={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={transactionChartRef}
+              option={transactionCountsOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+              lazyUpdate={true}
+            />
+          </ChartGridItem>
         </div>
       )}
       
@@ -495,14 +498,16 @@ export function TransactionDistribution({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
-          <ReactECharts
-            ref={tokenChartRef}
-            option={uniqueTokenCountsOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-            lazyUpdate={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={tokenChartRef}
+              option={uniqueTokenCountsOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+              lazyUpdate={true}
+            />
+          </ChartGridItem>
         </div>
       )}
     </BaseChart>

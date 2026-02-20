@@ -22,6 +22,7 @@ import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for PriceHistoryChart component
@@ -247,13 +248,15 @@ export function PriceHistoryChart({
       isEmpty={!data || data.series.length === 0}
       onRetry={refetch}
     >
-      <ReactECharts
-        ref={chartRef}
-        option={chartOptions}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          ref={chartRef}
+          option={chartOptions}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+        />
+      </ChartGridItem>
     </BaseChart>
   );
 }

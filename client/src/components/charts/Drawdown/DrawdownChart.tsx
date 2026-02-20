@@ -28,7 +28,7 @@ import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { DrawdownResponse, DrawdownRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
-import { ChartStatsHeader, ChartContainer, ChartSection } from '../shared';
+import { ChartStatsHeader, ChartContainer, ChartSection, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import type { StatCard } from '../shared/ChartStatsHeader';
 
@@ -231,13 +231,15 @@ export function DrawdownChart({
         <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />
         <ChartSection minHeight={`${minHeight}px`}>
           {chartOption && (
-            <ReactECharts
-              ref={chartRef}
-              option={chartOption}
-              style={{ height: '100%', width: '100%' }}
-              notMerge
-              lazyUpdate
-            />
+            <ChartGridItem minHeight={minHeight}>
+              <ReactECharts
+                ref={chartRef}
+                option={chartOption}
+                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                notMerge
+                lazyUpdate
+              />
+            </ChartGridItem>
           )}
         </ChartSection>
       </ChartContainer>

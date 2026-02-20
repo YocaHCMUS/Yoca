@@ -30,7 +30,7 @@ import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
+import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
@@ -400,7 +400,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                         height: '12px',
                         borderRadius: '50%',
                         backgroundColor: asset.color,
-                        border: isSelected ? 'none' : '2px solid currentColor',
+                        border: '1px solid #ffff',
                         opacity: isSelected ? 1 : 0.5,
                       }}
                     />
@@ -419,24 +419,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           )}
 
           {/* Chart Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: chartOptions.length > 1 ? 'repeat(3, 1fr)' : '1fr',
-              width: '100%',
-            }}
-          >
+          <ChartGrid itemCount={chartOptions.length} multiItemColumns={3}>
             {chartOptions.map((chartData, index) => (
-              <div
+              <ChartGridItem
                 key={chartData.walletAddress}
-                style={{
-                  aspectRatio: '1',
-                  minHeight: `${minHeight}px`,
-                  // maxHeight: '600px',
-                  border: chartOptions.length > 1 ? '1px solid var(--cds-border-subtle)' : 'none',
-                  borderRadius: '4px',
-                  padding: chartOptions.length > 1 ? '0.5rem' : '0',
-                }}
+                itemKey={chartData.walletAddress}
+                minHeight={minHeight}
+                aspectRatio="1"
               >
                 <ReactECharts
                   ref={index === 0 ? chartRef : undefined}
@@ -445,9 +434,9 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                   notMerge
                   lazyUpdate
                 />
-              </div>
+              </ChartGridItem>
             ))}
-          </div>
+          </ChartGrid>
         </div>
       )}
     </ChartWrapper>

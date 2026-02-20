@@ -12,6 +12,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
+import { ChartGridItem } from '../shared';
 import { formatCurrency } from '../../../util/chart-helpers';
 import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
 import styles from './TokenPriceChart.module.scss';
@@ -239,12 +240,14 @@ export function TokenPriceChart({
 
   return (
     <div className={`${styles.container} ${className || ''}`}>
-      <ReactECharts
-        option={chartOptions}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          option={chartOptions}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+        />
+      </ChartGridItem>
     </div>
   );
 }

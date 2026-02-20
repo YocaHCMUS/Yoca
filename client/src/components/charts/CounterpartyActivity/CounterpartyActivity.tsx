@@ -24,6 +24,7 @@ import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import type { ChartProps } from '../shared/ChartProp';
+import { ChartGridItem } from '../shared';
 /**
  * Props for CounterpartyActivity component
  */
@@ -108,7 +109,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   const chartTitle = title || t('charts.counterpartyActivityChart.title');
   
   // State management
-  const [currentLimit, setCurrentLimit] = useState<number>(initialFilters?.limit);
+  const [currentLimit, setCurrentLimit] = useState<number>(10);
   
   // Chart instance refs for export
   const transactionCountChartRef = useRef<ReactECharts>(null);
@@ -397,13 +398,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.transactionCount')}</h3>
-          <ReactECharts
-            ref={transactionCountChartRef}
-            option={transactionCountOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={transactionCountChartRef}
+              option={transactionCountOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
         </div>
       )}
       
@@ -411,13 +414,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.totalVolume')}</h3>
-          <ReactECharts
-            ref={totalVolumeChartRef}
-            option={totalVolumeOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={totalVolumeChartRef}
+              option={totalVolumeOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
         </div>
       )}
     </BaseChart>

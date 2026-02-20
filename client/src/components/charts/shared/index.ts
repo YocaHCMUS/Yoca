@@ -15,6 +15,8 @@ export { TableWrapper } from '../../tables/TableWrapper';
 export { TimezoneSelector } from './TimezoneSelector';
 export { ChartStatsHeader } from './ChartStatsHeader';
 export { ChartContainer, ChartSection } from './ChartContainer';
+export { ChartGrid } from './ChartGrid';
+export { ChartGridItem } from './ChartGridItem';
 
 export type { ExportFormat } from './ExportMenu';
 export type { StatItem, StatCard } from './ChartStatsHeader';
