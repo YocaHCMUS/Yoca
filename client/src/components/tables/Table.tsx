@@ -43,6 +43,7 @@ export interface TableProps {
     dataEntries?: any[][];
     isSortable?: boolean[];
     sortConfigs?: Record<number, SortConfig>; 
+    maxHeight?: number;
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -54,11 +55,12 @@ export const Table: React.FC<TableProps> = ({
     cellRenderers = [],
     dataEntries = [],
     isSortable = [],
-    sortConfigs
+    sortConfigs,
+    maxHeight
 }) => {
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [sortIndex, setSortIndex] = useState(0);
+    const [pageSize, setPageSize] = useState(20);
+    // const [sortIndex, setSortIndex] = useState(0);
     const [searchValue, setSearchValue] = useState("");
     const [filters, setFilters] = useState<Partial<any>>(initialFilters);
     const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
@@ -495,6 +497,7 @@ export const Table: React.FC<TableProps> = ({
                             <CarbonTable {...getTableProps()}>
                                 <TableContainer
                                     className={styles.tableContainer}
+                                    style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
                                     >
                                 {getActiveFilters().length > 0 && (
                                     <div className={styles.activeFilters}>
@@ -608,7 +611,7 @@ export const Table: React.FC<TableProps> = ({
                     <Pagination
                         page={page}
                         pageSize={pageSize}
-                        pageSizes={[10, 20, 30, 50]}
+                        pageSizes={[20, 30, 40, 50]}
                         totalItems={filteredData.length}
                         onChange={({ page, pageSize }) => {
                             setPage(page);

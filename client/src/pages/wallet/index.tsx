@@ -7,7 +7,7 @@ import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.ts
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
-import TabContainer from "@/components/tabContainer/TabContainer.tsx";
+import TabContainer from "@/components/TabContainer/TabContainer.tsx";
 import { Table, SortType, FilterType } from "@/components/tables/Table.tsx";
 import { 
   renderCode, 
@@ -233,23 +233,23 @@ export default function WalletPage() {
           names={["Balance History", "Token Balance History", "Profit & Lost"]}
           tabs={
             [<BalanceChart
-                minHeight={400}
+                minHeight={460}
                 initialFilters={{
-                  initialTimePeriod: "30D",
+                  timePeriod: "30D",
                   wallets: [address]
                 }}
                 autoRefresh={true}
                 />,
               <BalanceChart
-                minHeight={400}
+                minHeight={460}
                 initialFilters={{
-                  initialTimePeriod: "30D",
+                  timePeriod: "30D",
                   wallets: [address]
                 }}
                 autoRefresh={true} 
                 />,
               <PnLChart 
-                // height={400}
+                minHeight={400}
                 aggregation="daily"
                 autoRefresh={true}              
                 />]} //for testing purpose
@@ -260,6 +260,7 @@ export default function WalletPage() {
           names={["Transfer", "Swap", "Inflow", "Outflow", "Conterparties"]}
           tabs={[
             <Table
+              maxHeight={400}
               title="Transfer"
               headers={transactionHeaders}
               initialFilters={{}}
@@ -271,6 +272,7 @@ export default function WalletPage() {
               sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Swap"
               headers={transactionHeaders}
               initialFilters={{}}
@@ -282,6 +284,7 @@ export default function WalletPage() {
               sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Inflow"
               headers={transactionHeaders}
               initialFilters={{}}
@@ -293,6 +296,7 @@ export default function WalletPage() {
               sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Outflow"
               headers={transactionHeaders}
               initialFilters={{}}
@@ -304,6 +308,7 @@ export default function WalletPage() {
               sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Conterparties"
               headers={transactionHeaders}
               initialFilters={{}}
@@ -327,6 +332,7 @@ export default function WalletPage() {
         </div>
         <div className={styles.columnWrapper}>
           <Table
+            maxHeight={800}
             title="Portfolio"
             headers={portfolioHeaders}
             initialFilters={{}}
