@@ -158,17 +158,18 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         left: '8%',
         right: '8%',
         bottom: '12%',
-        top: '20%',
+        top: '24%',
         containLabel: true,
       },
-      legend: getDualAxisLegend(
-        chartTheme,
-        [
-          t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
-          t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
-        ],
-        !!walletLabel
-      ),
+      legend: undefined,
+      // legend: getDualAxisLegend(
+      //   chartTheme,
+      //   [
+      //     t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
+      //     t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
+      //   ],
+      //   !!walletLabel
+      // ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',

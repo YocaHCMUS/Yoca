@@ -238,15 +238,12 @@ export function TransactionDistribution({
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatDate(new Date(value), timezone, 'MMM dd'),
-          rotate: 45,
         },
       },
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.transactionDistributionChart.count'),
-        nameLocation: 'middle',
-        nameGap: 45,
+        name: 'Transaction count',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
@@ -285,8 +282,8 @@ export function TransactionDistribution({
     return {
       ...baseOption,
       grid: {
-        left: '4%',
-        right: '4%',
+        left: '8%',
+        right: '8%',
         bottom: '12%',
         top: '20%',
         containLabel: true,
@@ -311,15 +308,13 @@ export function TransactionDistribution({
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatDate(new Date(value), timezone, 'MMM dd'),
-          rotate: 45,
         },
       },
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.transactionDistributionChart.tokens'),
-        nameLocation: 'middle',
-        nameGap: 45,
+        name: 'Unique token traded',
+        // nameLocation: 'middle',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
@@ -480,7 +475,6 @@ export function TransactionDistribution({
       {/* Transaction counts chart */}
       {data && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.transactionCounts')}</h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={transactionChartRef}
@@ -497,7 +491,6 @@ export function TransactionDistribution({
       {/* Unique token counts chart */}
       {data && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{t('charts.transactionDistributionChart.uniqueTokens')}</h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={tokenChartRef}

@@ -230,8 +230,6 @@ export const HoldingDurations: React.FC<ChartProps> = ({
         ...base.yAxis,
         type: 'value',
         name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
-        nameLocation: 'middle',
-        nameGap: 60,
         nameTextStyle: { color: chartTheme.textColor },
       },
       tooltip: {

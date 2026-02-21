@@ -247,7 +247,6 @@ export function ExchangeComparison({
         data: exchangeNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          rotate: 30,
           interval: 0,
         },
       },

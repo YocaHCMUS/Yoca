@@ -310,7 +310,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         left: '8%',
         right: '8%',
         bottom: '12%',
-        top: '20%',
+        top: '24%',
         containLabel: true,
       },
       tooltip: {
@@ -350,11 +350,12 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           return tooltipContent;
         },
       },
-      legend: getMultiSeriesLegend(
-        chartTheme,
-        legendData,
-        !!walletLabel
-      ),
+      legend: undefined,
+      // legend: getMultiSeriesLegend(
+      //   chartTheme,
+      //   legendData,
+      //   !!walletLabel
+      // ),
       xAxis: [
         {
           ...baseOption.xAxis,

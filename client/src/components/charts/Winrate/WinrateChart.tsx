@@ -170,20 +170,30 @@ export function WinrateChart({
       
       const option: EChartsOption = {
         ...baseOption,
-        title: {
-          text: wallet.walletName || wallet.walletAddress,
-          left: 'center',
+        // title: {
+        //   text: wallet.walletName || wallet.walletAddress,
+        //   left: 'center',
+        //   textStyle: {
+        //     color: chartTheme.textColor,
+        //     fontSize: 14,
+        //     fontWeight: 'normal',
+        //   },
+        // },
+        title: wallet.walletAddress ? {
+          text: wallet.walletAddress,
+          left: 8,
+          top: 8,
           textStyle: {
             color: chartTheme.textColor,
-            fontSize: 14,
-            fontWeight: 'normal',
+            fontSize: 16,
+            fontWeight: 'bold',
           },
-        },
+        } : undefined,
         grid: {
           left: '8%',
           right: '8%',
           bottom: '12%',
-          top: '20%',
+          top: '24%',
           containLabel: true,
         },
         xAxis: {
