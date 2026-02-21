@@ -1,99 +1,129 @@
-import { Modal } from "@carbon/react";
-import React, { useState } from "react";
-import { useNavigate } from "react-router";
-import { SignInForm } from "../auth/SignInForm";
-import { SignUpForm } from "../auth/SignUpForm";
-import { WalletModal } from "../auth/WalletModal";
-import Header from "../navigation/Header";
-import styles from "./PageWrapper.module.scss";
+import appLogo from "@/assets/app-logo.png";
+import {
+  Content,
+  Header,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
+  HeaderMenuButton,
+  HeaderMenuItem,
+  HeaderName,
+  HeaderNavigation,
+  HeaderPanel,
+  HeaderSideNavItems,
+  Heading,
+  SideNav,
+  SideNavItems,
+  SkipToContent,
+  Stack,
+  Switcher,
+  SwitcherDivider,
+  SwitcherItem,
+} from "@carbon/react";
+import { Search, User, Wikis } from "@carbon/react/icons";
+import { useState, type ReactNode } from "react";
+import styles from "./Header.module.scss";
 
-interface PageWrapperProps {
-  children: React.ReactNode;
+type PageWrapperProps = {
+  children?: ReactNode;
+};
+
+function NavHeaderItems() {
+  return (
+    <>
+      <HeaderMenuItem href="#">Dashboard</HeaderMenuItem>
+      <HeaderMenuItem href="#">Alerts</HeaderMenuItem>
+      <HeaderMenuItem href="#">Profile</HeaderMenuItem>
+    </>
+  );
 }
 
-export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
-  const navigate = useNavigate();
-  const [signInModalOpen, setSignInModalOpen] = useState(false);
-  const [signUpModalOpen, setSignUpModalOpen] = useState(false);
-  const [walletModalOpen, setWalletModalOpen] = useState(false);
-  const [walletModalMode, setWalletModalMode] = useState<"signin" | "signup">(
-    "signin",
-  );
+export default function PageWrapper({ children }: PageWrapperProps) {
+  const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
 
-  const handleOpenSignIn = () => {
-    setSignUpModalOpen(false);
-    setWalletModalOpen(false);
-    setSignInModalOpen(true);
+  const toggleSideNav = () => {
+    setIsSideNavExpanded((prev) => !prev);
   };
 
-  const handleOpenSignUp = () => {
-    setSignInModalOpen(false);
-    setWalletModalOpen(false);
-    setSignUpModalOpen(true);
-  };
-
-  const handleOpenWalletModal = (mode: "signin" | "signup") => {
-    setWalletModalMode(mode);
-    setSignInModalOpen(false);
-    setSignUpModalOpen(false);
-    setWalletModalOpen(true);
-  };
-
-  const handleCloseModals = () => {
-    setSignInModalOpen(false);
-    setSignUpModalOpen(false);
-    setWalletModalOpen(false);
-  };
-
-  const handleAuthSuccess = () => {
-    handleCloseModals();
-    navigate("/dashboard");
+  const toggleLang = () => {
+    setIsLangOpen((prev) => !prev);
   };
 
   return (
-    <div className={styles.pageWrapper}>
-      <Header
-        onNavigate={navigate}
-        handleSignIn={handleOpenSignIn}
-        handleSignUp={handleOpenSignUp}
-      />
+    <>
+      <Header>
+        <SkipToContent />
 
-      <main className={styles.pageContent}>{children}</main>
-
-      {/* Sign In Modal */}
-      <Modal
-        open={signInModalOpen}
-        onRequestClose={handleCloseModals}
-        passiveModal
-        className={styles.authModal}
-        size="lg"
-      >
-        <SignInForm />
-      </Modal>
-
-      {/* Sign Up Modal */}
-      <Modal
-        open={signUpModalOpen}
-        onRequestClose={handleCloseModals}
-        passiveModal
-        className={styles.authModal}
-        size="lg"
-      >
-        <SignUpForm
-          onSuccess={handleAuthSuccess}
-          onOpenWalletModal={() => handleOpenWalletModal("signup")}
-          onNavigateToSignIn={handleOpenSignIn}
+        <HeaderMenuButton
+          aria-label={isSideNavExpanded ? "Close menu" : "Open menu"}
+          isActive={isSideNavExpanded}
+          aria-expanded={isSideNavExpanded}
+          onClick={toggleSideNav}
         />
-      </Modal>
 
-      {/* Wallet Modal */}
-      <WalletModal
-        open={walletModalOpen}
-        onClose={handleCloseModals}
-        mode={walletModalMode}
-      />
-    </div>
+        <HeaderName href="#" prefix="">
+          <Stack
+            orientation="horizontal"
+            style={{ alignItems: "center", fontWeight: "bold" }}
+          >
+            <img src={appLogo} alt="Logo" style={{ height: 36 }} />
+            <Heading style={{ fontSize: 21 }}>YOCA</Heading>
+          </Stack>
+        </HeaderName>
+
+        <HeaderNavigation>
+          <NavHeaderItems />
+        </HeaderNavigation>
+
+        <HeaderGlobalBar>
+          <HeaderGlobalAction aria-label="Search">
+            <Search size={20} />
+          </HeaderGlobalAction>
+
+          <HeaderGlobalAction
+            aria-label="Language"
+            isActive={isLangOpen}
+            onClick={toggleLang}
+          >
+            <Wikis size={20} />
+          </HeaderGlobalAction>
+
+          <HeaderGlobalAction aria-label="Account">
+            <User size={20} />
+          </HeaderGlobalAction>
+        </HeaderGlobalBar>
+
+        <HeaderPanel
+          className={styles.headerPanel}
+          expanded={isLangOpen}
+          aria-label="Language Selection"
+        >
+          <Switcher aria-label="Language Switcher">
+            <SwitcherItem aria-labelledby="switcher-item-vietnamese">
+              <p>Vietname - Tiếng Việt (Vietnamese)</p>
+            </SwitcherItem>
+            <SwitcherDivider />
+            <SwitcherItem aria-labelledby="switcher-item-english">
+              <p>United States - English (English)</p>
+            </SwitcherItem>
+          </Switcher>
+        </HeaderPanel>
+
+        <SideNav
+          aria-label="Side navigation"
+          expanded={isSideNavExpanded}
+          isPersistent={false}
+          onSideNavBlur={() => setIsSideNavExpanded(false)}
+        >
+          <SideNavItems>
+            <HeaderSideNavItems hasDivider>
+              <NavHeaderItems />
+            </HeaderSideNavItems>
+          </SideNavItems>
+        </SideNav>
+      </Header>
+
+      <Content id="main-content">{children}</Content>
+    </>
   );
-};
-
-export default PageWrapper;
+}

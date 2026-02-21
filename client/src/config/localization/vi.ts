@@ -64,7 +64,7 @@ export const translation = defineTranslation({
     continueWithWallet: "Tiếp tục với ví đã liên kết",
     signUpWithWallet: "Đăng ký với ví hiện có",
     termsAndPrivacy:
-      "Bằng việc đăng ký, bạn đồng ý với {{terms}} và {{privacy}} của chúng tôi",
+      "Bằng việc đăng ký, bạn đồng ý với {{$terms}} và {{$privacy}} của chúng tôi",
     termsPrefix: "Bằng việc đăng ký, bạn đồng ý với",
     termsOfService: "Điều khoản dịch vụ",
     privacyPolicy: "Chính sách bảo mật",

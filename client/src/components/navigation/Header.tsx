@@ -5,6 +5,7 @@
 
 import appLogo from "@/assets/app-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { Login, Logout, UserAvatar } from "@carbon/icons-react";
 import {
   Header as CarbonHeader,
@@ -20,8 +21,7 @@ import {
   SideNavLink,
   SkipToContent,
 } from "@carbon/react";
-import React from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState } from "react";
 import styles from "./Header.module.scss";
 import LanguageSelector from "./LanguageSelector.tsx";
 import ThemeToggle from "./ThemeToggle.tsx";
@@ -37,10 +37,10 @@ const Header: React.FC<HeaderProps> = ({
   handleSignIn,
   handleSignUp,
 }) => {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const { authState, signOut } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleNavigation = (path: string) => {
     if (onNavigate) {
@@ -81,19 +81,19 @@ const Header: React.FC<HeaderProps> = ({
                 className={styles.headerMenuItem}
                 onClick={() => handleNavigation("/market")}
               >
-                {t("nav.market")}
+                {tr("nav.market")}
               </HeaderMenuItem>
               <HeaderMenuItem
                 className={styles.headerMenuItem}
                 onClick={() => handleNavigation("/alert")}
               >
-                {t("nav.alert")}
+                {tr("nav.alert")}
               </HeaderMenuItem>
               <HeaderMenuItem
                 className={styles.headerMenuItem}
                 onClick={() => handleNavigation("/dashboard")}
               >
-                {t("nav.dashboard")}
+                {tr("nav.dashboard")}
               </HeaderMenuItem>
             </HeaderNavigation>
 
@@ -105,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({
               {authState.isAuthenticated ? (
                 <div className={styles.profileWrapper}>
                   <HeaderGlobalAction
-                    aria-label={t("nav.profile")}
+                    aria-label={tr("nav.profile")}
                     tooltipAlignment="end"
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                     className={styles.profileButton}
@@ -133,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({
                           className={styles.signOutButton}
                           onClick={handleSignOut}
                         >
-                          {t("auth.signOut")}
+                          {tr("auth.signOut")}
                         </button>
                       </div>
                     </>
@@ -143,13 +143,13 @@ const Header: React.FC<HeaderProps> = ({
                 <div className={styles.authButtons}>
                   <button className={styles.loginButton} onClick={handleSignIn}>
                     <Login size={16} />
-                    {t("auth.signIn")}
+                    {tr("auth.signIn")}
                   </button>
                   <button
                     className={styles.signUpButton}
                     onClick={handleSignUp}
                   >
-                    {t("auth.signUp")}
+                    {tr("auth.signUp")}
                   </button>
                 </div>
               )}
@@ -189,7 +189,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
               >
-                {t("nav.market")}
+                {tr("nav.market")}
               </SideNavLink>
               <SideNavLink
                 onClick={() => {
@@ -197,7 +197,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
               >
-                {t("nav.alert")}
+                {tr("nav.alert")}
               </SideNavLink>
               <SideNavLink
                 onClick={() => {
@@ -205,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({
                   setIsMenuOpen(false);
                 }}
               >
-                {t("nav.dashboard")}
+                {tr("nav.dashboard")}
               </SideNavLink>
 
               {/* Divider */}
@@ -215,13 +215,13 @@ const Header: React.FC<HeaderProps> = ({
               <div className={styles.mobileSettings}>
                 <div className={styles.mobileSettingItem}>
                   <span className={styles.mobileSettingLabel}>
-                    {t("nav.language")}
+                    {tr("nav.language")}
                   </span>
                   <LanguageSelector />
                 </div>
                 <div className={styles.mobileSettingItem}>
                   <span className={styles.mobileSettingLabel}>
-                    {t("nav.theme")}
+                    {tr("nav.theme")}
                   </span>
                   <ThemeToggle />
                 </div>
@@ -241,7 +241,7 @@ const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <Logout size={20} />
-                    {t("auth.signOut")}
+                    {tr("auth.signOut")}
                   </button>
                 </div>
               ) : (
@@ -254,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     <Login size={20} />
-                    {t("auth.signIn")}
+                    {tr("auth.signIn")}
                   </button>
                   <button
                     className={styles.mobileSignUpButton}
@@ -263,7 +263,7 @@ const Header: React.FC<HeaderProps> = ({
                       setIsMenuOpen(false);
                     }}
                   >
-                    {t("auth.signUp")}
+                    {tr("auth.signUp")}
                   </button>
                 </div>
               )}

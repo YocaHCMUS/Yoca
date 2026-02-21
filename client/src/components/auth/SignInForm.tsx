@@ -1,11 +1,13 @@
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Login } from "@carbon/icons-react";
+import { ArrowRight } from "@carbon/icons-react";
 import {
   Button,
+  ComposedModal,
   Form,
-  Heading,
   Link,
+  ModalBody,
+  ModalHeader,
   PasswordInput,
   Stack,
   TextInput,
@@ -18,7 +20,12 @@ import { GoogleAuthButton } from "./GoogleAuthButton";
 import styles from "./SignInForm.module.scss";
 import { WalletAuthenButton } from "./WalletAuthButton";
 
-export function SignInForm() {
+type SignInModalProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function SignInModal({ open, onClose }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,7 +64,7 @@ export function SignInForm() {
 
       if (resp.ok) {
         const res = await resp.json();
-        // redirect
+        onClose();
       } else {
         setErrorMessage(tr("validation.invalidCredentials"));
       }
@@ -76,66 +83,68 @@ export function SignInForm() {
   };
 
   return (
-    <div className={styles["sign-in-form-container"]}>
-      <Heading>Sign In</Heading>
-      <Form onSubmit={handleSubmit(onSubmit)}>
-        <Stack gap={7}>
-          <TextInput
-            id="email"
-            labelText="Email*"
-            placeholder="Email"
-            invalid={!!errors.email}
-            invalidText={errors.email?.message || ""}
-            {...register("email")}
-          />
+    <ComposedModal open={open} onClose={onClose}>
+      <ModalHeader label="Account" title="Sign In" />
+      <ModalBody hasScrollingContent>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+          <Stack gap={7}>
+            <TextInput
+              id="email"
+              labelText="Email*"
+              placeholder="Email"
+              invalid={!!errors.email}
+              invalidText={errors.email?.message || ""}
+              {...register("email")}
+            />
 
-          <PasswordInput
-            id="password"
-            labelText={"Password*"}
-            placeholder={tr("auth.password")}
-            invalid={!!errors.password}
-            invalidText={errors.password?.message || ""}
+            <PasswordInput
+              id="password"
+              labelText={"Password*"}
+              placeholder={tr("auth.password")}
+              invalid={!!errors.password}
+              invalidText={errors.password?.message || ""}
+              disabled={isSubmitting}
+              {...register("password")}
+            />
+
+            <Link>Forgot password?</Link>
+
+            <Button
+              type="submit"
+              size="lg"
+              renderIcon={ArrowRight}
+              style={{
+                inlineSize: "100%",
+                maxInlineSize: "100%",
+              }}
+            >
+              Continue
+            </Button>
+          </Stack>
+        </Form>
+
+        <div className={styles["divider"]}>
+          <div className={styles["divider-line"]}>
+            <div className={styles["divider-border"]}></div>
+          </div>
+          <div className={styles["divider-text-container"]}>
+            <span className={styles["divider-text"]}>{tr("auth.or")}</span>
+          </div>
+        </div>
+
+        <Stack gap={4}>
+          <GoogleAuthButton
             disabled={isSubmitting}
-            {...register("password")}
+            onSuccess={onGoogleSignInSuccess}
+            onError={onGoogleSignInError}
           />
 
-          <Link>Forgot password?</Link>
-
-          <Button
-            type="submit"
-            size="lg"
-            renderIcon={Login}
-            style={{
-              inlineSize: "100%",
-              maxInlineSize: "100%",
-            }}
-          >
-            Continue
-          </Button>
+          <WalletAuthenButton
+            onSuccess={() => {}}
+            onError={(err) => setErrorMessage(err.message)}
+          />
         </Stack>
-      </Form>
-
-      <div className={styles["divider"]}>
-        <div className={styles["divider-line"]}>
-          <div className={styles["divider-border"]}></div>
-        </div>
-        <div className={styles["divider-text-container"]}>
-          <span className={styles["divider-text"]}>{tr("auth.or")}</span>
-        </div>
-      </div>
-
-      <GoogleAuthButton
-        disabled={isSubmitting}
-        onSuccess={onGoogleSignInSuccess}
-        onError={onGoogleSignInError}
-      />
-
-      <WalletAuthenButton
-        onSuccess={() => {}}
-        onError={(err) => setErrorMessage(err.message)}
-      />
-    </div>
+      </ModalBody>
+    </ComposedModal>
   );
 }
-
-export default SignInForm;

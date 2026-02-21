@@ -64,7 +64,7 @@ export const translation = {
     continueWithWallet: "Continue with a linked wallet",
     signUpWithWallet: "Sign up with an existing wallet(s)",
     termsAndPrivacy:
-      "By signing up, you agree to our {{terms}} and {{privacy}}",
+      "By signing up, you agree to our {{$terms}} and {{$privacy}}",
     termsPrefix: "By signing up, you agree to our",
     termsOfService: "Terms of Service",
     privacyPolicy: "Privacy Policy",

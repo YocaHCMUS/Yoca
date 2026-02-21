@@ -15,6 +15,39 @@ type WalletAuthButtonProps = {
   onError: (error: Error) => void;
 };
 
+type WalletContentProps = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  walletModalVisible: boolean;
+  setWalletModalVisibility: (visible: boolean) => void;
+};
+
+function WalletModalContent({
+  open,
+  setOpen,
+  walletModalVisible,
+  setWalletModalVisibility,
+}: WalletContentProps) {
+  useEffect(() => {
+    if (!walletModalVisible) {
+      setOpen(false);
+    }
+  }, [walletModalVisible, setOpen]);
+
+  return (
+    <ComposedModal
+      open={open}
+      onClose={() => {
+        setOpen(false);
+        setWalletModalVisibility(false);
+      }}
+      className={styles.walletModalContainer}
+    >
+      <ModalBody id="wallet-modal-container" style={{ height: "100vh" }} />
+    </ComposedModal>
+  );
+}
+
 function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
   const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
   const { visible: walletModalVisible, setVisible: setWalletModalVisibility } =
@@ -106,29 +139,14 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
           </Button>
         )}
       >
-        {({ open, setOpen }) => {
-          useEffect(() => {
-            if (!walletModalVisible) {
-              setOpen(false);
-            }
-          }, [walletModalVisible, setOpen]);
-
-          return (
-            <ComposedModal
-              open={open}
-              onClose={() => {
-                setOpen(false);
-                setWalletModalVisibility(false);
-              }}
-              className={styles.walletModalContainer}
-            >
-              <ModalBody
-                id="wallet-modal-container"
-                style={{ height: "100vh" }}
-              />
-            </ComposedModal>
-          );
-        }}
+        {({ open, setOpen }) => (
+          <WalletModalContent
+            open={open}
+            setOpen={setOpen}
+            walletModalVisible={walletModalVisible}
+            setWalletModalVisibility={setWalletModalVisibility}
+          />
+        )}
       </ModalStateManager>
 
       <div ref={walletConnectBtnRef} style={{ display: "none" }}>
