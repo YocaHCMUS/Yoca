@@ -1,54 +1,17 @@
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Button, ComposedModal, ModalBody } from "@carbon/react";
+import { useSolanaContext } from "@/contexts/SolanaWalletContext";
+import { Button } from "@carbon/react";
 import { Wallet } from "@carbon/react/icons";
 import { useWallet } from "@solana/wallet-adapter-react";
-import {
-  useWalletModal,
-  WalletMultiButton,
-} from "@solana/wallet-adapter-react-ui";
-import { useEffect, useRef } from "react";
-import { ModalStateManager } from "../ModelStateManager";
-import styles from "./WalletAuthButton.module.scss";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useRef, useState } from "react";
 
 type WalletAuthButtonProps = {
   disabled: boolean;
   onSuccess: () => void;
   onError: (error: string) => void;
 };
-
-type WalletContentProps = {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  walletModalVisible: boolean;
-  setWalletModalVisibility: (visible: boolean) => void;
-};
-
-function WalletModalContent({
-  open,
-  setOpen,
-  walletModalVisible,
-  setWalletModalVisibility,
-}: WalletContentProps) {
-  useEffect(() => {
-    if (!walletModalVisible) {
-      setOpen(false);
-    }
-  }, [walletModalVisible, setOpen]);
-
-  return (
-    <ComposedModal
-      open={open}
-      onClose={() => {
-        setOpen(false);
-        setWalletModalVisibility(false);
-      }}
-      className={styles.walletModalContainer}
-    >
-      <ModalBody id="wallet-modal-container" style={{ height: "100vh" }} />
-    </ComposedModal>
-  );
-}
 
 export function WalletAuthButton({
   disabled,
@@ -57,9 +20,9 @@ export function WalletAuthButton({
 }: WalletAuthButtonProps) {
   const { tr, fmt } = useLocalization();
   const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
-  const { visible: walletModalVisible, setVisible: setWalletModalVisibility } =
-    useWalletModal();
+  const { isModalOpen, openModal, closeModal } = useSolanaContext();
   const walletConnectBtnRef = useRef<HTMLDivElement>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const triggerWalletMultiBtn = () => {
     const container = walletConnectBtnRef.current;
@@ -77,6 +40,7 @@ export function WalletAuthButton({
     if (!publicKey || !signMessage) {
       return;
     }
+    setIsVerifying(true);
     try {
       const nonceRes = await client.api.users.auth.solana.nounce.$post({
         json: {
@@ -98,6 +62,7 @@ export function WalletAuthButton({
         });
 
         if (resp.ok) {
+          closeModal();
           onSuccess();
         } else {
           onError("Verification failed");
@@ -108,57 +73,46 @@ export function WalletAuthButton({
     } catch (err) {
       console.error("Wallet verification error:", err);
       onError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsVerifying(false);
     }
   }
 
   async function onBtnClick() {
     if (!connected) {
       triggerWalletMultiBtn();
+      openModal();
     }
     await verifyWallet();
   }
 
   return (
     <>
-      <ModalStateManager
-        renderLauncher={({ open, setOpen }) => (
-          <Button
-            kind="tertiary"
-            renderIcon={Wallet}
-            disabled={disabled || open || connecting}
-            onClick={() => {
-              onBtnClick();
-              setOpen(true);
-            }}
-            style={{
-              inlineSize: "100%",
-              maxInlineSize: "100%",
-            }}
-          >
-            {wallet
-              ? connected
-                ? tr("auth.continueWithConnectedWallet", {
-                    connectedWalletAddress: publicKey?.toString() || "",
-                    connectedWalletName: wallet.adapter.name,
-                  })
-                : connecting
-                  ? tr("auth.connectingWithWallet")
-                  : tr("auth.continueWithSelectedWallet", {
-                      walletName: wallet.adapter.name,
-                    })
-              : tr("auth.continueWithWallet")}
-          </Button>
-        )}
+      <Button
+        kind="tertiary"
+        renderIcon={Wallet}
+        disabled={disabled || isModalOpen || connecting || isVerifying}
+        onClick={() => {
+          onBtnClick();
+        }}
+        style={{
+          inlineSize: "100%",
+          maxInlineSize: "100%",
+        }}
       >
-        {({ open, setOpen }) => (
-          <WalletModalContent
-            open={open}
-            setOpen={setOpen}
-            walletModalVisible={walletModalVisible}
-            setWalletModalVisibility={setWalletModalVisibility}
-          />
-        )}
-      </ModalStateManager>
+        {wallet
+          ? connected
+            ? tr("auth.continueWithConnectedWallet", {
+                connectedWalletAddress: publicKey?.toString() || "",
+                connectedWalletName: wallet.adapter.name,
+              })
+            : connecting
+              ? tr("auth.connectingWithWallet")
+              : tr("auth.continueWithSelectedWallet", {
+                  walletName: wallet.adapter.name,
+                })
+          : tr("auth.continueWithWallet")}
+      </Button>
 
       <div ref={walletConnectBtnRef}>
         <WalletMultiButton style={{ display: "none" }} />
