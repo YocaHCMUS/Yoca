@@ -1,8 +1,21 @@
-type ParamValue<K extends string> = K extends "count" ? number : string;
+import type { ReactNode } from "react";
+
+const numVariables = ["count", "min", "max"] as const;
+
+type NumVariable = (typeof numVariables)[number];
+
+type ParamValue<K extends string> = K extends NumVariable
+  ? number
+  : // ReactNode pattern
+    K extends `$${string}`
+    ? ReactNode
+    : string;
+
+type PluralSelection = `${string}|${string}`;
 
 type ExtractFmtStrParams<T extends string> =
   T extends `${string}{{${infer Param}}}${infer Rest}`
-    ? Param extends `${string}|${string}`
+    ? Param extends PluralSelection
       ? ExtractFmtStrParams<Rest>
       : Param | ExtractFmtStrParams<Rest>
     : never;
@@ -82,3 +95,14 @@ export function defineTranslationWithBase<Base extends object>() {
 export type WithBase<T extends string> = string & {
   __default?: T;
 };
+
+export type HasNodeParam<T extends string> =
+  ExtractFmtStrParams<T> extends infer Params
+    ? [Params] extends [never]
+      ? false
+      : Params extends string
+        ? Params extends `$${string}`
+          ? true
+          : false
+        : false
+    : false;

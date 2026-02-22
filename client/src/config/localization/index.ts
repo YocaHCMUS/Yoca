@@ -14,6 +14,7 @@ export type TranslationKeyPath = DotPaths<BaseTranslation>;
 
 export type {
   FmtStrParams,
+  HasNodeParam,
   PathValue,
   WithBase,
 } from "./util/util-translation.ts";
