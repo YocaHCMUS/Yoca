@@ -3,19 +3,29 @@
 
 .walletPage {
   min-height: 100vh;
-  background: $background;
 }
 
 .sectionTitle {
   margin: $spacing-06 0 $spacing-05 0;
-  padding: 0 $spacing-05;
+  padding: 0 $spacing-06;
   color: $text-primary;
 }
 
 .chartContainer {
   display: flex;
   flex-direction: row;
-  gap: $spacing-05;
-  margin-bottom: $spacing-06;
-  padding: 0 $spacing-05;
+  margin-bottom: $spacing-12;
+  padding: 0 $spacing-06;
+  gap: $spacing-04;
+
+  > * {
+    border: 1px solid $border-subtle;
+  }
+}
+
+.columnWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
 }

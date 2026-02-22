@@ -12,7 +12,9 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
+import { ChartGridItem } from '../shared';
 import { formatCurrency } from '../../../util/chart-helpers';
+import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
 import styles from './TokenPriceChart.module.scss';
 
 /**
@@ -108,10 +110,10 @@ export function TokenPriceChart({
     return {
       ...baseOption,
       grid: {
-        left: '3%',
-        right: '4%',
+        left: '8%',
+        right: '8%',
         bottom: '12%',
-        top: '10%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
@@ -139,15 +141,12 @@ export function TokenPriceChart({
           const value = point.data[1];
           const formattedValue = formatCurrency(value);
 
-          return `
-            <div style="padding: 8px;">
-              <div style="font-weight: 600; margin-bottom: 4px;">${dateStr}</div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                ${point.marker}
-                <span>${chartTitle}: ${formattedValue}</span>
-              </div>
-            </div>
-          `;
+          return createTooltipHeader(dateStr)
+            + createTooltipRow(
+                chartTitle,
+                formattedValue,
+                { color: point.color, showIndicator: true }
+              );
         },
       },
       xAxis: {
@@ -241,12 +240,14 @@ export function TokenPriceChart({
 
   return (
     <div className={`${styles.container} ${className || ''}`}>
-      <ReactECharts
-        option={chartOptions}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          option={chartOptions}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+        />
+      </ChartGridItem>
     </div>
   );
 }

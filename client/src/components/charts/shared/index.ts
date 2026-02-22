@@ -11,7 +11,12 @@ export { ChartErrorState } from './ChartErrorState';
 export { ExportMenu } from './ExportMenu';
 export { FullscreenView } from './FullscreenView';
 export { MiniPlayer } from './MiniPlayer';
-export { TableWrapper } from './TableWrapper';
+export { TableWrapper } from '../../tables/TableWrapper';
 export { TimezoneSelector } from './TimezoneSelector';
+export { ChartStatsHeader } from './ChartStatsHeader';
+export { ChartContainer, ChartSection } from './ChartContainer';
+export { ChartGrid } from './ChartGrid';
+export { ChartGridItem } from './ChartGridItem';
 
 export type { ExportFormat } from './ExportMenu';
+export type { StatItem, StatCard } from './ChartStatsHeader';

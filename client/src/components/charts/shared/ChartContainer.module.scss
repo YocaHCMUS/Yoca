@@ -1,0 +1,39 @@
+/**
+ * ChartContainer Styles
+ * 
+ * Shared styles for chart container component
+ * 
+ * @module ChartContainer.module.scss
+ */
+
+.container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: var(--gap, 1.5rem);
+  
+  &.direction-column {
+    flex-direction: column;
+  }
+  
+  &.direction-row {
+    flex-direction: row;
+  }
+}
+
+.section {
+  width: 100%;
+  flex-shrink: 0;
+  
+  // Ensure proper sizing in grid/flex layouts
+  min-width: 0;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .container {
+    &.direction-row {
+      flex-direction: column;
+    }
+  }
+}

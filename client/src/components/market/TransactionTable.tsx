@@ -10,7 +10,7 @@ import {
   Pagination,
 } from '@carbon/react';
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
-import { TableWrapper } from '../charts/shared/TableWrapper';
+import { TableWrapper } from '../tables/TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TransactionTable.module.scss';
 

@@ -19,7 +19,10 @@ const pnlRequestSchema = z.object({
     .enum(["7D", "30D", "60D", "90D", "1Y", "All"])
     .optional()
     .default("30D"),
-  wallets: z.string().optional(),
+  wallets: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
   aggregation: z
     .enum(["daily", "weekly", "monthly"])
     .optional()
@@ -58,7 +61,11 @@ const app = new Hono()
       const params = pnlRequestSchema.parse(query);
 
       // Generate P&L data
-      const data = generatePnLData(params.period, params.aggregation);
+      const data = generatePnLData(
+        params.wallets,
+        params.period,
+        params.aggregation,
+      );
 
       // Return response
       return c.json(data);

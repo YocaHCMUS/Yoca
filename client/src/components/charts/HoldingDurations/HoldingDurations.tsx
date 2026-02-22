@@ -1,57 +1,72 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchHoldingDurations } from '@/services/chart/chartApi';
+import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getConditionalLegend } from '@/util/chart-legend-config';
 
 import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
 
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGridItem } from '../shared';
+import type { ChartProps } from '../shared/ChartProp';
 
 
 export type TimeUnit = 'days' | 'weeks' | 'months';
 
-export interface HoldingDurationsProps {
-  title?: string;
-  minHeight?: number;
-  walletIds?: string[];
-  topN?: number;
-  timeUnit?: TimeUnit;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
-  className?: string;
-}
+// export interface HoldingDurationsProps {
+//   title?: string;
+//   minHeight?: number;
+//   walletIds?: string[];
+//   topN?: number;
+//   timeUnit?: TimeUnit;
+//   autoRefresh?: boolean;
+//   refreshInterval?: number;
+//   className?: string;
+// }
 
-export function HoldingDurations({
+export const HoldingDurations: React.FC<ChartProps> = ({
   title,
   minHeight = 400,
-  walletIds = [],
-  topN = 10,
-  timeUnit = 'days',
+  initialFilters = {
+    wallets: [],
+    topN: 10,
+    timeUnit: 'days',
+  },
   autoRefresh = true,
   refreshInterval = 30000,
   className,
-}: HoldingDurationsProps) {
+}) => {
   const { t } = useTranslation();
   const chartTitle = title ?? t('charts.holdingDurationsChart.title');
 
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const [selectedTopN, setSelectedTopN] = useState(topN);
-  const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(timeUnit);
+  // Extract values from initialFilters - using type assertion for custom properties
+  const customFilters = initialFilters as any;
+  const initialTopN = typeof customFilters?.topN === 'number' ? customFilters.topN : 10;
+  const initialUnit =
+    customFilters?.timeUnit === 'weeks' ||
+    customFilters?.timeUnit === 'months' ||
+    customFilters?.timeUnit === 'days'
+      ? customFilters.timeUnit
+      : 'days';
+  const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
 
-  const chartRefs = useRef<Map<string, ReactECharts>>(new Map());
+  const [selectedTopN, setSelectedTopN] = useState(initialTopN);
+  const [selectedUnit, setSelectedUnit] = useState<TimeUnit>(initialUnit);
 
-  const { filters } = useChartFilters({
-    initialFilters: {
-      wallets: walletIds.length ? walletIds : undefined,
-    },
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters: { wallets: initialWallets },
     debounceDelay: 300,
   });
 
@@ -60,12 +75,12 @@ export function HoldingDurations({
    */
   const query = useMemo <HoldingsRequestParams>(
     () => ({
-      walletIds: filters.wallets?.join(','),
+      walletIds: walletsString,
       topN: selectedTopN,
       timeUnit: selectedUnit,
       timezone,
     }),
-    [filters.wallets, selectedTopN, selectedUnit, timezone]
+    [walletsString, selectedTopN, selectedUnit, timezone]
   );
 
   /**
@@ -142,60 +157,120 @@ export function HoldingDurations({
   // );
 
   /**
-   * Option factory (pure, deterministic)
+   * Build chart option with multiple wallets as series
    */
-  const buildOptions = useCallback(
-    (wallet: HoldingDurationsResponse['wallets'][0]) => {
-      const base = getThemedChartBaseOption(chartTheme);
+  const chartOption = useMemo<EChartsOption | null>(() => {
+    if (!data || !data.wallets || data.wallets.length === 0) return null;
+
+    const base = getThemedChartBaseOption(chartTheme);
+    
+    // Filter out invalid wallets and ensure they have required properties
+    const validWallets = data.wallets.filter(
+      wallet => wallet && wallet.name && Array.isArray(wallet.holdings)
+    );
+    
+    if (validWallets.length === 0) return null;
+    
+    // Collect all unique tokens across all wallets
+    const tokenSet = new Set<string>();
+    validWallets.forEach(wallet => {
+      wallet.holdings.forEach(holding => {
+        if (holding?.tokenSymbol) {
+          tokenSet.add(holding.tokenSymbol);
+        }
+      });
+    });
+
+    const categories = Array.from(tokenSet);
+    
+    // Create a series for each wallet
+    const series = validWallets.map(wallet => {
+      const tokenToValue = new Map(
+        wallet.holdings
+          .filter(holding => holding?.tokenSymbol && typeof holding.durationDays === 'number')
+          .map(holding => [holding.tokenSymbol, convert(holding.durationDays)])
+      );
 
       return {
-        ...base,
-        grid: { top: '10%', left: '10%', right: '4%', bottom: '15%', containLabel: true },
-        xAxis: {
-          ...base.xAxis,
-          type: 'category',
-          data: wallet.holdings.map(h => h.tokenSymbol),
-          axisLabel: {
-            ...base.xAxis.axisLabel,
-            rotate: 45,
-            interval: 0,
-            formatter: (value: string) => value.length > 20 ? `${value.substring(0, 17)}...` : value,
-          },
-        },
-        yAxis: {
-          ...base.yAxis,
-          type: 'value',
-          name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
-          nameLocation: 'middle',
-          nameGap: 60,
-          nameTextStyle: { color: chartTheme.textColor },
-        },
-        tooltip: {
-          trigger: 'axis',
-          formatter: ([p]: any[]) =>
-            `<strong>${p.name}</strong><br/>${p.value.toFixed(
-              1
-            )} ${unitLabel.toLowerCase()}`,
-        },
-        series: [
-          {
-            type: 'bar',
-            data: wallet.holdings.map(h => convert(h.durationDays)),
-            itemStyle: { color: '#0f62fe' },
-            label: { show: true, position: 'top', fontSize: 10 },
-          },
-        ],
+        name: wallet.name,
+        type: 'bar' as const,
+        data: categories.map(token => tokenToValue.get(token) ?? 0),
+        emphasis: { focus: 'series' as const },
+        label: { show: false },
       };
-    },
-    [chartTheme, convert, unitLabel, t]
-  );
+    });
+
+    return {
+      ...base,
+      legend: getConditionalLegend(
+        chartTheme,
+        validWallets.map(w => w.name),
+        2,
+        false
+      ),
+      grid: { 
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
+        containLabel: true 
+      },
+      xAxis: {
+        ...base.xAxis,
+        type: 'category',
+        data: categories,
+        axisLabel: {
+          ...base.xAxis.axisLabel,
+          rotate: 45,
+          interval: 0,
+          formatter: (value: string) => (value.length > 20 ? `${value.substring(0, 17)}...` : value),
+        },
+      },
+      yAxis: {
+        ...base.yAxis,
+        type: 'value',
+        name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
+        nameTextStyle: { color: chartTheme.textColor },
+      },
+      tooltip: {
+        ...base.tooltip,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(50, 50, 50, 0.95)',
+        borderWidth: 1,
+        borderColor: chartTheme.borderColor || '#ccc',
+        textStyle: { color: chartTheme.textColor },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          if (items.length === 0) return '';
+          
+          const tokenName = items[0]?.axisValue || 'Unknown';
+          let tooltip = createTooltipHeader(tokenName, 'font-size: 14px;');
+          
+          const lines = items
+            .filter((p: any) => p.value !== null && p.value !== undefined)
+            .map((p: any) => {
+              const value = Number(p.value);
+              const formattedValue = value > 0 ? value.toFixed(1) : '0.0';
+              return `<div style="margin-top: 4px;">${createSeriesIndicator(p.color)}<span style="display: inline-block; min-width: 100px;">${p.seriesName}</span>: <strong>${formattedValue}</strong> ${unitLabel.toLowerCase()}</div>`;
+            });
+          
+          return tooltip + lines.join('');
+        },
+      },
+      series,
+    };
+  }, [data, chartTheme, convert, unitLabel, t]);
+
+  // Check if we have valid data to display
+  const isEmpty = !data || !data.wallets || data.wallets.length === 0 || chartOption === null;
 
   return (
     <BaseChart
       title={chartTitle}
       // height={height * (data?.wallets.length || 1)}
       loadingState={loadingState}
-      isEmpty={!data || data.wallets.length === 0}
+      isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
@@ -213,25 +288,16 @@ export function HoldingDurations({
         </select>
       </div>
 
-      {data?.wallets.map(wallet => (
-        <div key={wallet.id} className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{wallet.name}</h3>
-
+      {chartOption && (
+        <ChartGridItem minHeight={minHeight}>
           <ReactECharts
-            ref={ref => {
-              if (ref) {
-                chartRefs.current.set(wallet.id, ref);
-              } else {
-                chartRefs.current.delete(wallet.id);
-              }
-            }}
-            option={buildOptions(wallet)}
+            option={chartOption}
             style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
             notMerge
             lazyUpdate
           />
-        </div>
-      ))}
+        </ChartGridItem>
+      )}
     </BaseChart>
   );
 }

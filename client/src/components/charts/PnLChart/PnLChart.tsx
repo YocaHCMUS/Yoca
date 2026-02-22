@@ -17,20 +17,25 @@
  * @module components/charts/PnLChart
  */
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGrid, ChartGridItem } from '@/components/charts/shared';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 export interface PnLChartProps {
   /** Chart title */
@@ -56,6 +61,15 @@ export interface PnLChartProps {
   
   /** Custom CSS class */
   className?: string;
+  
+  /** Initial view mode (default: 'both') */
+  initialViewMode?: 'daily' | 'cumulative' | 'both';
+  
+  /** Initial filters */
+  initialFilters?: {
+    timePeriod?: TimePeriod;
+    wallets?: string[];
+  };
 }
 
 /**
@@ -73,6 +87,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   autoRefresh = true,
   refreshInterval = 30000,
   className,
+  initialViewMode = 'both',
+  initialFilters,
 }) => {
   const { t } = useTranslation();
   const chartTitle = title || t('charts.pnlChart.title');
@@ -80,9 +96,13 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // State for view mode
+  const [viewMode, setViewMode] = useState<'daily' | 'cumulative' | 'both'>(initialViewMode);
 
-  const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
-    initialFilters: {
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters: initialFilters || {
       timePeriod: initialTimePeriod,
       wallets: initialWallets.length > 0 ? initialWallets : undefined,
     },
@@ -95,11 +115,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const query = useMemo<PnLRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      wallets: filters.wallets?.join(','),
+      wallets: walletsString,
       aggregation,
       timezone,
     }),
-    [filters.timePeriod, filters.wallets, aggregation, timezone]
+    [filters.timePeriod, walletsString, aggregation, timezone]
   );
 
   /**
@@ -113,62 +133,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       refreshInterval,
     });
 
-  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
-  //   chartTitle,
-  //   timezone,
-  //   baseFilename: 'pnl-chart',
-  // });
-  // const handleExport = useCallback(
-  //   (format: ExportFormat) => {
-  //     if (!data) return;
-
-
-  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
-
-  //     if (format === 'csv') {
-  //       const csv: ChartDataSeries[] = [
-  //         {
-  //           id: 'daily-pnl',
-  //           name: 'Daily P&L',
-  //           type: 'bar',
-  //           visible: true,
-  //           data: data.dailyPnL.map(d => ({
-  //             name: String(d.timestamp),
-  //             value: d.value,
-  //           })),
-  //         },
-  //         {
-  //           id: 'cumulative-pnl',
-  //           name: 'Cumulative P&L',
-  //           type: 'line',
-  //           visible: true,
-  //           data: data.cumulativePnL.map(d => ({
-  //             name: String(d.timestamp),
-  //             value: d.value,
-  //           })),
-  //         },
-  //       ];
-  //       exportCSV(csv, filters);
-  //       return;
-  //     }
-
-  //     if (!instance) return;
-
-  //     format === 'png'
-  //       ? exportPNG(instance as any, filters)
-  //       : exportSVG(instance as any, filters);
-  //   },
-  //   [data, filters]
-  // );
-
   /**
-   * Generate eCharts option configuration
+   * Helper to create chart option for a single wallet's data
    */
-  const chartOption: EChartsOption | null = useMemo(() => {
-    if (!data || data.dailyPnL.length === 0) {
-      return null;
-    }
-    
+  const createChartOption = useCallback((
+    dailyPnLData: Array<{ timestamp: number; value: number }>,
+    cumulativePnLData: Array<{ timestamp: number; value: number }>,
+    walletLabel?: string
+  ): EChartsOption => {
     // Use theme colors
     const profitColor = chartTheme.colorPalette[1]; // Green
     const lossColor = chartTheme.colorPalette[2]; // Red
@@ -178,20 +150,167 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Extract timestamps and values
-    const timestamps = data.dailyPnL.map((item: { timestamp: number; value: number }) => item.timestamp);
-    const dailyValues = data.dailyPnL.map((item: { timestamp: number; value: number }) => item.value);
-    const cumulativeValues = data.cumulativePnL.map((item: { timestamp: number; value: number }) => item.value);
+    const timestamps = dailyPnLData.map((item: { timestamp: number; value: number }) => item.timestamp);
+    const dailyValues = dailyPnLData.map((item: { timestamp: number; value: number }) => item.value);
+    const cumulativeValues = cumulativePnLData.map((item: { timestamp: number; value: number }) => item.value);
     
     // Format X-axis dates
     const xAxisData = timestamps.map((ts: number) => formatTimestampWithTimezone(ts, timezone, 'MM/dd'));
     
+    // Determine which series to show
+    const showDaily = viewMode === 'daily' || viewMode === 'both';
+    const showCumulative = viewMode === 'cumulative' || viewMode === 'both';
+    
+    // Build series array
+    const series: any[] = [];
+    
+    if (showDaily) {
+      series.push({
+        name: t('charts.pnlChart.dailyPnL'),
+        type: 'bar',
+        yAxisIndex: viewMode === 'both' ? 0 : undefined,
+        data: dailyValues,
+        itemStyle: {
+          color: (params: any) => {
+            return params.value >= 0 ? profitColor : lossColor;
+          },
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      });
+    }
+    
+    if (showCumulative) {
+      series.push({
+        name: t('charts.pnlChart.cumulativePnL'),
+        type: 'line',
+        yAxisIndex: viewMode === 'both' ? 1 : undefined,
+        data: cumulativeValues,
+        smooth: true,
+        lineStyle: {
+          color: cumulativeColor,
+          width: 2,
+        },
+        itemStyle: {
+          color: cumulativeColor,
+        },
+        symbol: 'circle',
+        symbolSize: 6,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      });
+    }
+    
+    // Build yAxis configuration
+    const yAxis: any[] = [];
+    
+    if (viewMode === 'both') {
+      // Dual-axis mode
+      yAxis.push({
+        ...baseOption.yAxis,
+        type: 'value',
+        name: t('charts.pnlChart.dailyPnL'),
+        position: 'left',
+        axisLine: {
+          ...baseOption.yAxis.axisLine,
+          show: true,
+        },
+        axisLabel: {
+          ...baseOption.yAxis.axisLabel,
+          formatter: (value: number) => {
+            if (Math.abs(value) >= 1000000) {
+              return `$${(value / 1000000).toFixed(1)}M`;
+            } else if (Math.abs(value) >= 1000) {
+              return `$${(value / 1000).toFixed(1)}K`;
+            }
+            return formatCurrency(value);
+          },
+        },
+        splitLine: {
+          ...baseOption.yAxis.splitLine,
+          lineStyle: {
+            ...baseOption.yAxis.splitLine?.lineStyle,
+            opacity: 0.2,
+          },
+        },
+      });
+      
+      yAxis.push({
+        ...baseOption.yAxis,
+        type: 'value',
+        name: t('charts.pnlChart.cumulativePnL'),
+        position: 'right',
+        axisLine: {
+          ...baseOption.yAxis.axisLine,
+          show: true,
+        },
+        axisLabel: {
+          ...baseOption.yAxis.axisLabel,
+          formatter: (value: number) => {
+            if (Math.abs(value) >= 1000000) {
+              return `$${(value / 1000000).toFixed(1)}M`;
+            } else if (Math.abs(value) >= 1000) {
+              return `$${(value / 1000).toFixed(1)}K`;
+            }
+            return formatCurrency(value);
+          },
+        },
+        splitLine: {
+          show: false,
+        },
+      });
+    } else {
+      // Single-axis mode
+      yAxis.push({
+        ...baseOption.yAxis,
+        type: 'value',
+        name: viewMode === 'daily' ? t('charts.pnlChart.dailyPnL') : t('charts.pnlChart.cumulativePnL'),
+        axisLabel: {
+          ...baseOption.yAxis.axisLabel,
+          formatter: (value: number) => {
+            if (Math.abs(value) >= 1000000) {
+              return `$${(value / 1000000).toFixed(1)}M`;
+            } else if (Math.abs(value) >= 1000) {
+              return `$${(value / 1000).toFixed(1)}K`;
+            }
+            return formatCurrency(value);
+          },
+        },
+      });
+    }
+    
+    // Build legend data
+    const legendData: string[] = [];
+    if (showDaily) legendData.push(t('charts.pnlChart.dailyPnL'));
+    if (showCumulative) legendData.push(t('charts.pnlChart.cumulativePnL'));
+    
     return {
       ...baseOption,
+      title: walletLabel ? {
+        text: walletLabel,
+        left: 8,
+        top: 8,
+        textStyle: {
+          color: chartTheme.textColor,
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      } : undefined,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: '10%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '24%',
         containLabel: true,
       },
       tooltip: {
@@ -211,18 +330,32 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           const dailyValue = dailyValues[params[0].dataIndex];
           const cumulativeValue = cumulativeValues[params[0].dataIndex];
           
-          return `
-            <strong>${date}</strong><br/>
-            ${t('charts.pnlChart.dailyPnL')}: <span style="color: ${dailyValue >= 0 ? profitColor : lossColor}">${formatCurrency(dailyValue)}</span><br/>
-            ${t('charts.pnlChart.cumulativePnL')}: ${formatCurrency(cumulativeValue)}
-          `;
+          let tooltipContent = createTooltipHeader(date);
+          
+          if (showDaily) {
+            tooltipContent += createTooltipRow(
+              t('charts.pnlChart.dailyPnL'),
+              formatCurrency(dailyValue),
+              { valueColor: dailyValue >= 0 ? profitColor : lossColor }
+            );
+          }
+          
+          if (showCumulative) {
+            tooltipContent += createTooltipRow(
+              t('charts.pnlChart.cumulativePnL'),
+              formatCurrency(cumulativeValue)
+            );
+          }
+          
+          return tooltipContent;
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.pnlChart.dailyPnL'), t('charts.pnlChart.cumulativePnL')],
-        top: 0,
-      },
+      legend: undefined,
+      // legend: getMultiSeriesLegend(
+      //   chartTheme,
+      //   legendData,
+      //   !!walletLabel
+      // ),
       xAxis: [
         {
           ...baseOption.xAxis,
@@ -233,123 +366,103 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           },
         },
       ],
-      yAxis: [
-        {
-          ...baseOption.yAxis,
-          type: 'value',
-          name: t('charts.pnlChart.dailyPnL'),
-          position: 'left',
-          axisLine: {
-            ...baseOption.yAxis.axisLine,
-            show: true,
-          },
-          axisLabel: {
-            ...baseOption.yAxis.axisLabel,
-            formatter: (value: number) => {
-              // Format with K/M suffix for large numbers
-              if (Math.abs(value) >= 1000000) {
-                return `$${(value / 1000000).toFixed(1)}M`;
-              } else if (Math.abs(value) >= 1000) {
-                return `$${(value / 1000).toFixed(1)}K`;
-              }
-              return formatCurrency(value);
-            },
-          },
-          splitLine: {
-            ...baseOption.yAxis.splitLine,
-            lineStyle: {
-              ...baseOption.yAxis.splitLine?.lineStyle,
-              opacity: 0.2,
-            },
-          },
-        },
-        {
-          ...baseOption.yAxis,
-          type: 'value',
-          name: t('charts.pnlChart.cumulativePnL'),
-          position: 'right',
-          axisLine: {
-            ...baseOption.yAxis.axisLine,
-            show: true,
-          },
-          axisLabel: {
-            ...baseOption.yAxis.axisLabel,
-            formatter: (value: number) => {
-              // Format with K/M suffix for large numbers
-              if (Math.abs(value) >= 1000000) {
-                return `$${(value / 1000000).toFixed(1)}M`;
-              } else if (Math.abs(value) >= 1000) {
-                return `$${(value / 1000).toFixed(1)}K`;
-              }
-              return formatCurrency(value);
-            },
-          },
-          splitLine: {
-            show: false,
-          },
-        },
-      ],
-      series: [
-        {
-          name: t('charts.pnlChart.dailyPnL'),
-          type: 'bar',
-          data: dailyValues,
-          itemStyle: {
-            color: (params: any) => {
-              return params.value >= 0 ? profitColor : lossColor;
-            },
-          },
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
-            },
-          },
-        },
-        {
-          name: t('charts.pnlChart.cumulativePnL'),
-          type: 'line',
-          yAxisIndex: 1,
-          data: cumulativeValues,
-          smooth: true,
-          lineStyle: {
-            color: cumulativeColor,
-            width: 2,
-          },
-          itemStyle: {
-            color: cumulativeColor,
-          },
-          symbol: 'circle',
-          symbolSize: 6,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
-            },
-          },
-        },
-      ],
+      yAxis,
+      series,
     };
-  }, [data, timezone, chartTheme, t]);
+  }, [chartTheme, timezone, t, viewMode]);
+
+  /**
+   * Generate chart options - multiple charts for per-wallet view
+   */
+  const chartOptions = useMemo(() => {
+    if (!data) return [];
+
+    // Multi-wallet view
+    if (data.wallets && data.wallets.length > 0) {
+      return data.wallets.map(wallet => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.dailyPnL,
+          wallet.cumulativePnL,
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+        ),
+      }));
+    }
+
+    // Single/aggregated view
+    if (data.dailyPnL && data.dailyPnL.length > 0) {
+      return [{
+        walletAddress: 'aggregated',
+        option: createChartOption(data.dailyPnL, data.cumulativePnL!, undefined),
+      }];
+    }
+
+    return [];
+  }, [data, createChartOption]);
+
+  const isEmpty = !data || (
+    (!data.wallets || data.wallets.length === 0) &&
+    (!data.dailyPnL || data.dailyPnL.length === 0)
+  );
 
   return (
     <BaseChart
       title={chartTitle}
-      // height="100%"
       loadingState={loadingState}
-      isEmpty={!data || data.dailyPnL.length === 0}
+      isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
-      {chartOption && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+      {/* View mode selector */}
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
+        <div className={sharedStyles['chartToggle--padded']}>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${viewMode === 'daily' ? sharedStyles.active : ''}`}
+            onClick={() => setViewMode('daily')}
+            aria-label={t('charts.pnlChart.dailyPnL')}
+            title={t('charts.pnlChart.dailyPnL')}
+          >
+            {t('charts.pnlChart.dailyPnL')}
+          </button>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${viewMode === 'cumulative' ? sharedStyles.active : ''}`}
+            onClick={() => setViewMode('cumulative')}
+            aria-label={t('charts.pnlChart.cumulativePnL')}
+            title={t('charts.pnlChart.cumulativePnL')}
+          >
+            {t('charts.pnlChart.cumulativePnL')}
+          </button>
+          <button
+            className={`${sharedStyles.chartToggleButton} ${viewMode === 'both' ? sharedStyles.active : ''}`}
+            onClick={() => setViewMode('both')}
+            aria-label={t('charts.pnlChart.both', 'Both')}
+            title={t('charts.pnlChart.both', 'Both')}
+          >
+            {t('charts.pnlChart.both', 'Both')}
+          </button>
+        </div>
+      </div>
+
+      {chartOptions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {/* Chart Grid */}
+          <ChartGrid itemCount={chartOptions.length} multiItemColumns={2}>
+            {chartOptions.map((chartData, index) => (
+              <ChartGridItem
+                key={chartData.walletAddress}
+                itemKey={chartData.walletAddress}
+                minHeight={minHeight}
+              >
+                <ReactECharts
+                  ref={index === 0 ? chartRef : undefined}
+                  option={chartData.option}
+                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                  notMerge
+                  lazyUpdate
+                />
+              </ChartGridItem>
+            ))}
+          </ChartGrid>
+        </div>
       )}
     </BaseChart>
   );

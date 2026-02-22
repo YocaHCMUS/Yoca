@@ -16,6 +16,14 @@ import type {
   HoldingDurationsResponse,
   VolumeBenchmarkResponse,
   PriceHistoryResponse,
+  TradingVolumeDistributionResponse,
+  TradingVolumePerTransactionResponse,
+  RollingAnnualReturnResponse,
+  AverageRollingAnnualReturnResponse,
+  WinrateResponse,
+  DrawdownResponse,
+  TotalTradingVolumeResponse,
+  StablecoinRatioResponse,
   BalanceRequestParams,
   DistributionRequestParams,
   ExchangesRequestParams,
@@ -25,6 +33,14 @@ import type {
   HoldingsRequestParams,
   VolumeBenchmarkRequestParams,
   PriceHistoryRequestParams,
+  TradingVolumeDistributionRequestParams,
+  TradingVolumePerTransactionRequestParams,
+  RollingAnnualReturnRequestParams,
+  AverageRollingAnnualReturnRequestParams,
+  WinrateRequestParams,
+  DrawdownRequestParams,
+  TotalTradingVolumeRequestParams,
+  StablecoinRatioRequestParams,
 } from '../../types/chart-api.types';
 
 /**
@@ -144,8 +160,69 @@ export async function fetchPriceHistory(params?: PriceHistoryRequestParams): Pro
 }
 
 /**
- * Chart API service object
+ * Fetch trading volume distribution data
+ * GET /api/charts/trading-volume-distribution
  */
+export async function fetchTradingVolumeDistribution(params?: TradingVolumeDistributionRequestParams): Promise<TradingVolumeDistributionResponse> {
+  return fetchAPI<TradingVolumeDistributionResponse>('/trading-volume-distribution', params);
+}
+
+/**
+ * Fetch trading volume per transaction data
+ * GET /api/charts/trading-volume-per-transaction
+ */
+export async function fetchTradingVolumePerTransaction(params?: TradingVolumePerTransactionRequestParams): Promise<TradingVolumePerTransactionResponse> {
+  return fetchAPI<TradingVolumePerTransactionResponse>('/trading-volume-per-transaction', params);
+}
+
+/**
+ * Fetch rolling annual return data
+ * GET /api/charts/rolling-annual-return
+ */
+export async function fetchRollingAnnualReturn(params?: RollingAnnualReturnRequestParams): Promise<RollingAnnualReturnResponse> {
+  return fetchAPI<RollingAnnualReturnResponse>('/rolling-annual-return', params);
+}
+
+/**
+ * Fetch average rolling annual return data
+ * GET /api/charts/average-rolling-annual-return
+ */
+export async function fetchAverageRollingAnnualReturn(params?: AverageRollingAnnualReturnRequestParams): Promise<AverageRollingAnnualReturnResponse> {
+  return fetchAPI<AverageRollingAnnualReturnResponse>('/average-rolling-annual-return', params);
+}
+
+/**
+ * Fetch winrate data
+ * GET /api/charts/winrate
+ */
+export async function fetchWinrate(params?: WinrateRequestParams): Promise<WinrateResponse> {
+  return fetchAPI<WinrateResponse>('/winrate', params);
+}
+
+/**
+ * Fetch drawdown data
+ * GET /api/charts/drawdown
+ */
+export async function fetchDrawdown(params?: DrawdownRequestParams): Promise<DrawdownResponse> {
+  return fetchAPI<DrawdownResponse>('/drawdown', params);
+}
+
+/**
+ * Fetch total trading volume data
+ * GET /api/charts/total-trading-volume
+ */
+export async function fetchTotalTradingVolume(params?: TotalTradingVolumeRequestParams): Promise<TotalTradingVolumeResponse> {
+  return fetchAPI<TotalTradingVolumeResponse>('/total-trading-volume', params);
+}
+
+/**
+ * Fetch stablecoin ratio data
+ * GET /api/charts/stablecoin-ratio
+ */
+export async function fetchStablecoinRatio(params?: StablecoinRatioRequestParams): Promise<StablecoinRatioResponse> {
+  return fetchAPI<StablecoinRatioResponse>('/stablecoin-ratio', params);
+}
+
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
@@ -156,6 +233,14 @@ export const chartApi = {
   fetchHoldingDurations,
   fetchVolumeBenchmark,
   fetchPriceHistory,
+  fetchTradingVolumeDistribution,
+  fetchTradingVolumePerTransaction,
+  fetchRollingAnnualReturn,
+  fetchAverageRollingAnnualReturn,
+  fetchWinrate,
+  fetchDrawdown,
+  fetchTotalTradingVolume,
+  fetchStablecoinRatio,
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
@@ -166,4 +251,12 @@ export const chartApi = {
   getHoldings: fetchHoldingDurations,
   getVolumeBenchmark: fetchVolumeBenchmark,
   getPriceHistory: fetchPriceHistory,
+  getTradingVolumeDistribution: fetchTradingVolumeDistribution,
+  getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
+  getRollingAnualReturn: fetchRollingAnnualReturn,
+  getAverageRollingAnnualReturn: fetchAverageRollingAnnualReturn,
+  getWinrate: fetchWinrate,
+  getDrawdown: fetchDrawdown,
+  getTotalTradingVolume: fetchTotalTradingVolume,
+  getStablecoinRatio: fetchStablecoinRatio,
 };

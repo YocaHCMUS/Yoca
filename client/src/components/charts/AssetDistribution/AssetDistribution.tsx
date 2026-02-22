@@ -17,29 +17,34 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
+import { getPieLegend } from '@/util/chart-legend-config';
 import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
+import { useChartExport } from '@/hooks/useChartExport';
+import type { ExportFormat } from '@/types/chart-filters.types';
+import type { ChartDataSeries } from '@/types/chart-data.types';
+import type { ChartProps } from '../shared/ChartProp';
 
+// export interface AssetDistributionProps {
+//   minHeight?: number;
+//   initialFilters?: Partial<any>;
+//   autoRefresh?: boolean;
+//   refreshInterval?: number;
+//   className?: string;
+// }
 
-export interface AssetDistributionProps {
-  minHeight?: number;
-  initialFilters?: Partial<any>;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
-  className?: string;
-}
-
-export const AssetDistribution: React.FC<AssetDistributionProps> = ({
+export const AssetDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
   initialFilters,
   autoRefresh = true,
@@ -52,8 +57,12 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
+  
+  // Track selected assets for legend filtering
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
-  const { filters, setTimePeriod, setWallets, isValid } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
@@ -64,9 +73,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   const query = useMemo<DistributionRequestParams>(
     () => ({
       period: filters.timePeriod,
-      wallets: filters.wallets?.join(','),
+      wallets: walletsString,
     }),
-    [filters.timePeriod, filters.wallets]
+    [filters.timePeriod, walletsString]
   );
 
   /**
@@ -80,76 +89,134 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       refreshInterval,
     });
 
-
-  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
-  //   chartTitle,
-  //   timezone,
-  //   baseFilename: 'asset-distribution',
-  // });
-  // const handleExport = useCallback(
-  //   (format: ExportFormat) => {
-  //     if (!data) return;
-
-  //     const instance = chartRef.current?.getEchartsInstance() ?? null;
-
-  //     if (format === 'csv') {
-  //       const csv: ChartDataSeries[] = [
-  //         {
-  //           id: 'asset-distribution',
-  //           name: 'Asset Distribution',
-  //           type: 'pie',
-  //           visible: true,
-  //           data: data.data.map(a => ({
-  //             name: a.name,
-  //             value: a.value,
-  //           })),
-  //         },
-  //       ];
-  //       exportCSV(csv, filters);
-  //       return;
-  //     }
-
-  //     if (!instance) return;
-
-  //     format === 'png'
-  //       ? exportPNG(instance as any, filters)
-  //       : exportSVG(instance as any, filters);
-  //   },
-  //   [data, filters]
-  // );
+  /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'asset-distribution',
+  });
 
   /**
-   * ECharts option = pure function of data + theme
+   * Handle export based on format
    */
-  const option: EChartsOption | null = useMemo(() => {
-    if (!data || data.data.length === 0) return null;
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      if (!data) return;
 
+      const instance = chartRef.current?.getEchartsInstance() ?? null;
+
+      if (format === 'csv') {
+        // Convert asset distribution data to CSV format
+        const csv: ChartDataSeries[] = [];
+        
+        if (data.wallets) {
+          // Per-wallet data
+          data.wallets.forEach(wallet => {
+            csv.push({
+              id: `asset-distribution-${wallet.walletAddress}`,
+              name: `Asset Distribution - ${wallet.walletAddress}`,
+              type: 'pie',
+              visible: true,
+              data: wallet.data.map(a => ({
+                name: a.name,
+                value: a.value,
+              })),
+            });
+          });
+        } else if (data.data) {
+          // Aggregated data
+          csv.push({
+            id: 'asset-distribution',
+            name: 'Asset Distribution',
+            type: 'pie',
+            visible: true,
+            data: data.data.map(a => ({
+              name: a.name,
+              value: a.value,
+            })),
+          });
+        }
+        
+        exportCSV(csv, filters);
+        return;
+      }
+
+      if (!instance) {
+        console.error('Chart instance not available for export');
+        return;
+      }
+
+      // Export as PNG or SVG
+      format === 'png'
+        ? exportPNG(instance as any, filters)
+        : exportSVG(instance as any, filters);
+    },
+    [data, filters, exportPNG, exportSVG, exportCSV]
+  );
+
+  /**
+   * Helper to create chart option for a single distribution dataset
+   */
+  const createChartOption = useCallback((
+    distributionData: { name: string; value: number; percentage: number; color?: string }[],
+    total: number,
+    walletLabel?: string,
+    isMultiWallet?: boolean
+  ): EChartsOption => {
     const base = getThemedChartBaseOption(chartTheme);
-    const total = data.totalValue;
+    
+    // Filter data based on selected assets in multi-wallet view
+    const filteredData = isMultiWallet && selectedAssets.size > 0
+      ? distributionData.filter(a => selectedAssets.has(a.name))
+      : distributionData;
+    
+    // Recalculate total and percentages for filtered data
+    const filteredTotal = filteredData.reduce((sum, a) => sum + a.value, 0);
+    const dataWithRecalculatedPercentages = filteredData.map(a => ({
+      ...a,
+      percentage: filteredTotal > 0 ? (a.value / filteredTotal) * 100 : 0,
+    }));
 
     return {
       ...base,
+      xAxis: undefined,
+      yAxis: undefined,
+      title: walletLabel ? {
+        text: walletLabel,
+        left: 8,
+        top: 8,
+        textStyle: {
+          color: chartTheme.textColor,
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      } : undefined,
       tooltip: {
         ...base.tooltip,
         trigger: 'item',
-        formatter: (p: any) => `
-          <strong>${p.name}</strong><br/>
-          ${t('charts.assetDistributionChart.value')}: ${formatCurrency(p.value)}<br/>
-          ${t('charts.assetDistributionChart.percentage')}: ${p.data.percentage.toFixed(2)}%
-        `,
+        formatter: (p: any) => createTooltipHeader(p.name)
+          + createTooltipRow(
+              t('charts.assetDistributionChart.value'),
+              formatCurrency(p.value)
+            )
+          + createTooltipRow(
+              t('charts.assetDistributionChart.percentage'),
+              `${p.data.percentage.toFixed(2)}%`
+            ),
       },
-      legend: {
-        ...base.legend,
-        orient: 'vertical',
-        right: 20,
-        top: 'center',
-      },
+      legend: getPieLegend(
+        chartTheme,
+        distributionData.map(d => d.name),
+        !isMultiWallet
+      ),
       series: [
         {
           type: 'pie',
-          radius: ['50%', '70%'],
-          center: ['40%', '50%'],
-          data: data.data.map((a, i) => ({
+          radius: ['26%', '56%'],
+          center: ['50%', '50%'],
+          data: dataWithRecalculatedPercentages.map((a, i) => ({
             name: a.name,
             value: a.value,
             percentage: a.percentage,
@@ -157,6 +224,9 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
               color:
                 (a as any).color ??
                 chartTheme.colorPalette[i % chartTheme.colorPalette.length],
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              borderRadius: 6,
             },
           })),
           label: {
@@ -168,8 +238,8 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
       graphic: [
         {
           type: 'text',
-          left: '14%',
-          top: '14%',
+          left: 'center',
+          top: '46%',
           style: {
             text: t('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
@@ -178,10 +248,10 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
         {
           type: 'text',
-          left: '14%',
-          top: '20%',
+          left: 'center',
+          top: '50%',
           style: {
-            text: formatCurrency(total),
+            text: formatCurrency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
@@ -189,26 +259,186 @@ export const AssetDistribution: React.FC<AssetDistributionProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, t]);
+  }, [chartTheme, t, selectedAssets]);
+
+  /**
+   * Extract unique assets across all wallets for aggregated legend
+   */
+  const aggregatedLegendData = useMemo(() => {
+    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    
+    const uniqueAssets = new Map<string, { name: string; color: string }>();
+    
+    data.wallets.forEach((wallet, walletIndex) => {
+      wallet.data.forEach((asset, assetIndex) => {
+        if (!uniqueAssets.has(asset.name)) {
+          uniqueAssets.set(asset.name, {
+            name: asset.name,
+            color: (asset as any).color ?? chartTheme.colorPalette[assetIndex % chartTheme.colorPalette.length],
+          });
+        }
+      });
+    });
+    
+    return Array.from(uniqueAssets.values());
+  }, [data, chartTheme.colorPalette]);
+  
+  /**
+   * Initialize selected assets when data changes
+   */
+  useEffect(() => {
+    if (aggregatedLegendData) {
+      setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
+    }
+  }, [aggregatedLegendData]);
+  
+  /**
+   * Toggle asset selection for legend filtering
+   */
+  const toggleAssetSelection = useCallback((assetName: string) => {
+    setSelectedAssets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetName)) {
+        // Don't allow deselecting all assets
+        if (newSet.size > 1) {
+          newSet.delete(assetName);
+        }
+      } else {
+        newSet.add(assetName);
+      }
+      return newSet;
+    });
+  }, []);
+
+  /**
+   * ECharts options - multiple charts for per-wallet view
+   */
+  const chartOptions = useMemo(() => {
+    if (!data) return [];
+
+    const isMultiWallet = data.wallets && data.wallets.length > 1;
+
+    // Multi-wallet view
+    if (data.wallets && data.wallets.length > 0) {
+      return data.wallets.map(wallet => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.data,
+          wallet.totalValue,
+          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`,
+          isMultiWallet
+        ),
+      }));
+    }
+
+    // Single/aggregated view
+    if (data.data && data.data.length > 0) {
+      return [{
+        walletAddress: 'aggregated',
+        option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
+      }];
+    }
+
+    return [];
+  }, [data, createChartOption]);
+
+  const isEmpty = !data || (
+    (!data.wallets || data.wallets.length === 0) &&
+    (!data.data || data.data.length === 0)
+  ) || (filters.wallets && filters.wallets.length === 0);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
-      // height={height}
       loadingState={loadingState}
-      isEmpty={!data || data.data.length === 0}
+      isEmpty={isEmpty}
+      emptyState={filters.wallets && filters.wallets.length === 0 
+        ? {
+            title: t('charts.assetDistributionChart.noWalletsTitle', 'No Wallets Selected'),
+            message: t('charts.assetDistributionChart.noWalletsMessage', 'Please select at least one wallet to view asset distribution.'),
+          }
+        : undefined}
       onRetry={() => refetch(false)}
+      onExport={handleExport}
+      className={className}
     >
-      {option && (
-        <ReactECharts
-          ref={chartRef}
-          option={option}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+      {chartOptions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          {/* Aggregated Legend for Multi-Wallet View */}
+          {aggregatedLegendData && chartOptions.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                padding: '1rem',
+                justifyContent: 'center',
+                borderBottom: '1px solid var(--cds-border-subtle)',
+                marginBottom: '1rem',
+              }}
+            >
+              {aggregatedLegendData.map((asset) => {
+                const isSelected = selectedAssets.has(asset.name);
+                return (
+                  <div
+                    key={asset.name}
+                    onClick={() => toggleAssetSelection(asset.name)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: 'pointer',
+                      opacity: isSelected ? 1 : 0.3,
+                      transition: 'opacity 0.2s ease',
+                      userSelect: 'none',
+                    }}
+                    title={isSelected ? `Click to hide ${asset.name}` : `Click to show ${asset.name}`}
+                  >
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: asset.color,
+                        opacity: isSelected ? 1 : 0.5,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        color: chartTheme.textColor,
+                      }}
+                    >
+                      {asset.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Chart Grid */}
+          <ChartGrid itemCount={chartOptions.length} multiItemColumns={3}>
+            {chartOptions.map((chartData, index) => (
+              <ChartGridItem
+                key={chartData.walletAddress}
+                itemKey={chartData.walletAddress}
+                minHeight={minHeight}
+                aspectRatio="1"
+              >
+                <ReactECharts
+                  ref={index === 0 ? chartRef : undefined}
+                  option={chartData.option}
+                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                  notMerge
+                  lazyUpdate
+                />
+              </ChartGridItem>
+            ))}
+          </ChartGrid>
+        </div>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 };
 

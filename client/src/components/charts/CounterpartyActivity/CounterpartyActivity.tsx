@@ -12,46 +12,50 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchCounterpartyActivity } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import type { ChartProps } from '../shared/ChartProp';
+import { ChartGridItem } from '../shared';
 /**
  * Props for CounterpartyActivity component
  */
-export interface CounterpartyActivityProps {
-  /** Chart title */
-  title?: string;
+// export interface CounterpartyActivityProps {
+//   /** Chart title */
+//   title?: string;
   
-  /** Chart minimum height in pixels */
-  minHeight?: number;
+//   /** Chart minimum height in pixels */
+//   minHeight?: number;
   
-  /** Initial time period (default: 30D) */
-  initialTimePeriod?: TimePeriod;
+//   /** Initial time period (default: 30D) */
+//   initialTimePeriod?: TimePeriod;
   
-  /** Transaction type filter (default: all) */
-  initialTransactionType?: TransactionType;
+//   /** Transaction type filter (default: all) */
+//   initialTransactionType?: TransactionType;
   
-  /** Limit to top N counterparties (default: 10) */
-  limit?: number;
+//   /** Limit to top N counterparties (default: 10) */
+//   limit?: number;
   
-  /** Enable auto-refresh (default: true) */
-  autoRefresh?: boolean;
+//   /** Enable auto-refresh (default: true) */
+//   autoRefresh?: boolean;
   
-  /** Auto-refresh interval in milliseconds (default: 30000) */
-  refreshInterval?: number;
+//   /** Auto-refresh interval in milliseconds (default: 30000) */
+//   refreshInterval?: number;
   
-  /** Callback when data is loaded */
-  onDataLoaded?: (data: CounterpartyActivityResponse) => void;
+//   /** Callback when data is loaded */
+//   onDataLoaded?: (data: CounterpartyActivityResponse) => void;
   
-  /** Additional CSS class */
-  className?: string;
-}
+//   /** Additional CSS class */
+//   className?: string;
+// }
 
 /**
  * CounterpartyActivity Component
@@ -78,23 +82,34 @@ export interface CounterpartyActivityProps {
  * />
  * ```
  */
-export function CounterpartyActivity({
+export const CounterpartyActivity: React.FC<ChartProps> = ({
+  // minHeight = 400,
+  // initialFilters = {{
+  //   timePeriod = '30D',
+  //   transactionType = 'all',
+  //   limit = 10,
+  //   tokens = ['All']
+  // }},
+  // autoRefresh = true,
+  // refreshInterval = 30000,
+  // className,
+  // onDataLoaded,
+    // title,
+
   title,
   minHeight = 400,
-  initialTimePeriod = '30D',
-  initialTransactionType = 'all',
-  limit = 10,
+  initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
-  onDataLoaded,
   className,
-}: CounterpartyActivityProps) {
+  // onDataLoaded,
+}) => {
   // i18n
   const { t } = useTranslation();
   const chartTitle = title || t('charts.counterpartyActivityChart.title');
   
   // State management
-  const [currentLimit, setCurrentLimit] = useState<number>(limit);
+  const [currentLimit, setCurrentLimit] = useState<number>(10);
   
   // Chart instance refs for export
   const transactionCountChartRef = useRef<ReactECharts>(null);
@@ -106,17 +121,9 @@ export function CounterpartyActivity({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Filter management with time period and transaction type
-  const {
-    filters,
-    setTimePeriod,
-    setTransactionType,
-  } = useChartFilters({
-    initialFilters: {
-      timePeriod: initialTimePeriod,
-      tokens: ['All'],
-      transactionType: initialTransactionType,
-    },
+  // Use centralized filter sync hook
+  const { filters } = useChartFiltersSync({
+    initialFilters: initialFilters
   });
   
   // Query for the controller
@@ -133,7 +140,7 @@ export function CounterpartyActivity({
     query,
     autoRefresh,
     refreshInterval,
-    onDataLoaded,
+    // onDataLoaded,
   });
   
   // Export functionality
@@ -191,10 +198,10 @@ export function CounterpartyActivity({
     return {
       ...baseOption,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
@@ -209,22 +216,19 @@ export function CounterpartyActivity({
           const counterpartyName = params[0].axisValue;
           const count = params[0].value;
           
-          return `
-            <strong>${counterpartyName}</strong><br/>
-            <div style="display: flex; align-items: center; margin-top: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">${t('charts.counterpartyActivityChart.transactionCount')}:</span>
-              <strong style="margin-left: 8px;">${count.toLocaleString()}</strong>
-            </div>
-          `;
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+                t('charts.counterpartyActivityChart.transactionCount'),
+                count.toLocaleString(),
+                { color: params[0].color, showIndicator: true }
+              );
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.counterpartyActivityChart.transactionCount')],
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [t('charts.counterpartyActivityChart.transactionCount')],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',
@@ -303,22 +307,19 @@ export function CounterpartyActivity({
           const counterpartyName = params[0].axisValue;
           const volume = params[0].value;
           
-          return `
-            <strong>${counterpartyName}</strong><br/>
-            <div style="display: flex; align-items: center; margin-top: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background-color: ${params[0].color}; margin-right: 8px; border-radius: 50%;"></span>
-              <span style="flex: 1;">${t('charts.counterpartyActivityChart.totalVolume')}:</span>
-              <strong style="margin-left: 8px;">${formatCurrency(volume)}</strong>
-            </div>
-          `;
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+                t('charts.counterpartyActivityChart.totalVolume'),
+                formatCurrency(volume),
+                { color: params[0].color, showIndicator: true }
+              );
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.counterpartyActivityChart.totalVolume')],
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [t('charts.counterpartyActivityChart.totalVolume')],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',
@@ -397,13 +398,15 @@ export function CounterpartyActivity({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.transactionCount')}</h3>
-          <ReactECharts
-            ref={transactionCountChartRef}
-            option={transactionCountOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={transactionCountChartRef}
+              option={transactionCountOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
         </div>
       )}
       
@@ -411,13 +414,15 @@ export function CounterpartyActivity({
       {data && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.totalVolume')}</h3>
-          <ReactECharts
-            ref={totalVolumeChartRef}
-            option={totalVolumeOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
-            notMerge={true}
-          />
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={totalVolumeChartRef}
+              option={totalVolumeOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
         </div>
       )}
     </BaseChart>

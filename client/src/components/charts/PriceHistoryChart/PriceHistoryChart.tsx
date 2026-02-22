@@ -12,14 +12,17 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPriceHistory } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { PriceHistoryResponse, PriceHistoryRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for PriceHistoryChart component
@@ -105,12 +108,8 @@ export function PriceHistoryChart({
   // Get theme configuration
   const chartTheme = useChartTheme();
 
-  // Filter management with time period and tokens
-  const {
-    filters,
-    setTimePeriod,
-    setTokens,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, tokensString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
       tokens: initialTokens,
@@ -120,10 +119,10 @@ export function PriceHistoryChart({
 
   // Query for the controller
   const query = useMemo<PriceHistoryRequestParams>(() => ({
-    tokens: filters.tokens?.join(',') || 'SOL,JTO,BONK',
+    tokens: tokensString || 'SOL,JTO,BONK',
     period: filters.timePeriod,
     aggregation: 'daily' as const,
-  }), [filters.tokens, filters.timePeriod]);
+  }), [tokensString, filters.timePeriod]);
 
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<PriceHistoryResponse, PriceHistoryRequestParams>({
@@ -180,36 +179,30 @@ export function PriceHistoryChart({
     return {
       ...baseOption,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) return '';
-
-          const date = new Date(params[0].axisValue).toLocaleDateString();
-          let tooltipText = `<strong>${date}</strong><br/>`;
-
-          params.forEach((param: any) => {
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => new Date(p.axisValue).toLocaleDateString(),
+          (p) => {
             // Use param.data[1] for original value, not param.value (which is transformed for log scale)
-            const originalValue = param.data ? param.data[1] : param.value;
-            tooltipText += `${param.marker} ${param.seriesName}: ${formatCurrency(originalValue)}<br/>`;
-          });
-
-          return tooltipText;
-        },
+            const originalValue = p.data ? p.data[1] : p.value;
+            return formatCurrency(originalValue);
+          }
+        ),
       },
-      legend: {
-        ...baseOption.legend,
-        data: data.series.map(series => series.name),
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        data.series.map(series => series.name),
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',
@@ -255,13 +248,15 @@ export function PriceHistoryChart({
       isEmpty={!data || data.series.length === 0}
       onRetry={refetch}
     >
-      <ReactECharts
-        ref={chartRef}
-        option={chartOptions}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-        notMerge={true}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          ref={chartRef}
+          option={chartOptions}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+          notMerge={true}
+        />
+      </ChartGridItem>
     </BaseChart>
   );
 }

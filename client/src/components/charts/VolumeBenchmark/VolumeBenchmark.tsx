@@ -11,15 +11,18 @@ import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
 import { formatCurrency, formatDate } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for VolumeBenchmark component
@@ -107,12 +110,8 @@ export function VolumeBenchmark({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    isValid,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
       wallets: walletIds.length > 0 ? walletIds : undefined,
@@ -129,10 +128,10 @@ export function VolumeBenchmark({
   const query = useMemo<VolumeBenchmarkRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      walletIds: filters.wallets?.join(','),
+      walletIds: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.wallets, timezone]
+    [filters.timePeriod, walletsString, timezone]
   );
   
   /**
@@ -184,10 +183,10 @@ export function VolumeBenchmark({
     return {
       ...baseOption,
       grid: {
-        top: 60,
-        right: 40,
-        bottom: 60,
-        left: 80,
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
@@ -198,34 +197,17 @@ export function VolumeBenchmark({
             color: '#999',
           },
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const timestamp = params[0].value[0];
-          const dateStr = formatDate(new Date(timestamp), timezone);
-          
-          let tooltipContent = `<strong>${dateStr}</strong><br/>`;
-          params.forEach((param: any) => {
-            const volume = param.value[1];
-            const color = param.color;
-            tooltipContent += `
-              <div style="display: flex; align-items: center; margin-top: 4px;">
-                <span style="display: inline-block; width: 10px; height: 10px; background-color: ${color}; margin-right: 8px; border-radius: 50%;"></span>
-                <span style="flex: 1;">${param.seriesName}:</span>
-                <strong style="margin-left: 8px;">${formatCurrency(volume)}</strong>
-              </div>
-            `;
-          });
-          
-          return tooltipContent;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatDate(new Date(p.value[0]), timezone),
+          (p) => formatCurrency(p.value[1])
+        ),
       },
-      legend: {
-        ...baseOption.legend,
-        data: data.wallets.map(w => w.name),
-        top: 10,
-        type: 'scroll',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        data.wallets.map(w => w.name),
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',
@@ -350,14 +332,16 @@ export function VolumeBenchmark({
       
       {/* Chart */}
       {data && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOptions}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          opts={{ renderer: 'canvas' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
     </BaseChart>
   );

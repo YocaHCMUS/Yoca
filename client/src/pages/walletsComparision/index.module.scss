@@ -6,19 +6,31 @@
   min-height: 100vh;
   background: $background;
   margin: 0;
+  padding: 0 $header-height 0 0;
 }
 
 .sidebarContainer {
   position: sticky;
-  top: $spacing-xl;
+  top: $header-height;
   display: flex;
   flex-direction: column;
   gap: $spacing-04;
   padding-top: $spacing-02;
+  padding-left: $spacing-06;
+  border-left: 1px solid $border-subtle;
+  height: calc(100vh - $header-height);
+  overflow-y: auto;
+}
+
+.mainContentContainer {
+  min-height: calc(100vh - $header-height - $spacing-05);
+  border: 1px solid $border-subtle;
 }
 
 .grid {
   width: 100%;
+  padding: 0 !important;
+  min-height: calc(100vh - $header-height);
 }
 
 .sidebarTitle {

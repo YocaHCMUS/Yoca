@@ -19,6 +19,7 @@ import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { ChartGridItem } from '@/components/charts/shared';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import {
   fetchRealHeatmapData,
@@ -263,12 +264,14 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
       isEmpty={!data || data.length === 0}
       onRetry={refetch}
     >
-      <ReactECharts
-        ref={chartRef}
-        option={chartOption}
-        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-        opts={{ renderer: 'canvas' }}
-      />
+      <ChartGridItem minHeight={minHeight}>
+        <ReactECharts
+          ref={chartRef}
+          option={chartOption}
+          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+          opts={{ renderer: 'canvas' }}
+        />
+      </ChartGridItem>
     </BaseChart>
   );
 };

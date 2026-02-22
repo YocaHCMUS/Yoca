@@ -225,7 +225,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         <div className={styles.statLabel}>
                             Tokens traded
                         </div>
-                        <div className={styles.statLabel}>
+                        <div className={styles.statValue}>
                             {tokenTraded}
                         </div>
                     </div>

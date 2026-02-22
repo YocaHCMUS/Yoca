@@ -20,6 +20,7 @@ const balanceRequestSchema = z.object({
     .optional()
     .default("30D"),
   tokens: z.string().optional(),
+  wallets: z.string().optional(),
   timezone: z.string().optional().default("UTC"),
 });
 
@@ -55,7 +56,11 @@ const app = new Hono()
       const params = balanceRequestSchema.parse(query);
 
       // Generate balance trend data
-      const data = generateBalanceTrend(params.timePeriod, params.tokens);
+      const data = generateBalanceTrend(
+        params.timePeriod,
+        params.tokens,
+        params.wallets,
+      );
 
       // Return response
       return c.json(data, 200);

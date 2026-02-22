@@ -1,20 +1,28 @@
+import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
-import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
-import { OverviewTab } from "@/components/market/OverviewTab.tsx";
-import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
-import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
-import { Table } from "@/components/tables/Table.tsx";
+import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
+import TabContainer from "@/components/TabContainer/TabContainer.tsx";
+import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
+import {
+  renderBinaryValue,
+  renderBold,
+  renderCode,
+  renderCurrency,
+  renderDateTime,
+  renderPositiveNegative,
+  renderStatus,
+} from "@/components/tables/TableCellRenderer.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
-import { CheckmarkFilled, CloseFilled } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
 import styles from "./index.module.scss";
 
-// temporary interface
+// temporary interfaces
 interface Transaction {
   id: string;
   signature: string;
@@ -25,6 +33,14 @@ interface Transaction {
   total: number;
   timestamp: string;
   status: "Success" | "Failed";
+}
+
+interface Portfolio {
+  token: string;
+  price: number;
+  holding: number;
+  value: number;
+  change: number; // change in % in 24h
 }
 
 export default function WalletPage() {
@@ -46,10 +62,28 @@ export default function WalletPage() {
     price: Math.random() * 200,
     total: Math.random() * 10000,
     timestamp: new Date(
-      Date.now() - Math.random() * 86400000,
-    ).toLocaleTimeString(),
+      Date.now() - Math.random() * 86400000 * 30,
+    ).toISOString(),
     status: i % 10 === 0 ? "Failed" : "Success",
   }));
+
+  const portfolios: Portfolio[] = Array.from({ length: 50 }, (_, i) => {
+    const prices = [
+      Math.random() * 200,
+      Math.random() * 200,
+      Math.random() * 200,
+      Math.random() * 200,
+    ];
+    const holding = Math.random() * 999 + 0.001;
+    const index = i % 4;
+    return {
+      token: ["SOL", "USDC", "JTO", "BONK"][index],
+      price: prices[index],
+      holding: holding,
+      value: prices[index] * holding,
+      change: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
+    };
+  });
 
   // Transform transactions to array format for Table component
   const transactionData = transactions.map((tx) => [
@@ -57,10 +91,18 @@ export default function WalletPage() {
     tx.type,
     tx.token,
     tx.amount.toFixed(4),
-    `$${tx.price.toFixed(2)}`,
-    `$${tx.total.toFixed(2)}`,
+    tx.price.toFixed(2),
+    tx.total.toFixed(2),
     tx.timestamp,
     tx.status,
+  ]);
+
+  const portfolioData = portfolios.map((prt) => [
+    prt.token,
+    prt.price.toFixed(2),
+    `${prt.holding.toFixed(4)} ${prt.token}`,
+    prt.value.toFixed(4),
+    prt.change.toFixed(2),
   ]);
 
   const transactionHeaders = [
@@ -74,56 +116,73 @@ export default function WalletPage() {
     "Status",
   ];
 
-  // Cell renderers for conditional styling (temporary, move to util service)
-  const cellRenderers = [
-    (value: string) => (
-      <code
-        style={{ color: "var(--cds-text-secondary)", fontSize: "0.75rem" }}
-        title={value}
-      >
-        {value}
-      </code>
-    ),
-    (value: string) => (
-      <span
-        style={{
-          color:
-            value === "Buy"
-              ? "var(--cds-support-success)"
-              : "var(--cds-support-error)",
-          fontWeight: 600,
-        }}
-      >
-        {value}
-      </span>
-    ),
-    (value: string) => <span style={{ fontWeight: 600 }}>{value}</span>,
-    null,
-    null,
-    null,
-    null,
-    (value: string) => (
-      <span
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          color:
-            value === "Success"
-              ? "var(--cds-support-success)"
-              : "var(--cds-support-error)",
-          fontWeight: 600,
-        }}
-      >
-        {value === "Success" ? (
-          <CheckmarkFilled size={16} />
-        ) : (
-          <CloseFilled size={16} />
-        )}
-        {value}
-      </span>
-    ),
+  const portfolioHeaders = [
+    "Token",
+    "Price",
+    "Holding",
+    "Value",
+    "Change (24h)",
   ];
+
+  const isSortable = [false, false, false, true, true, true, true, false];
+  const isSortablePortfolio = [false, true, true, true, true];
+
+  // Sort configurations for sortable columns
+  const sortConfigs = {
+    3: { type: SortType.Number }, // Amount
+    4: { type: SortType.Number }, // Price
+    5: { type: SortType.Number }, // Total
+    6: { type: SortType.Date }, // Time
+  };
+
+  const portfolioSortConfig = {
+    1: { type: SortType.Number },
+    2: { type: SortType.Number },
+    3: { type: SortType.Number },
+    4: { type: SortType.Number },
+  };
+
+  // Cell renderers for conditional styling
+  const cellRenderers = [
+    (value: string) => renderCode(value),
+    (value: string) =>
+      renderBinaryValue(value, {
+        Buy: "var(--cds-support-success)",
+        Sell: "var(--cds-support-error)",
+      }),
+    (value: string) => renderBold(value),
+    null,
+    (value: string) => renderCurrency(value),
+    (value: string) => renderCurrency(value),
+    (value: string) => renderDateTime(value),
+    (value: string) => renderStatus(value),
+  ];
+
+  const portfolioCellRenderers = [
+    (value: string) => renderCode(value),
+    (value: string) => renderCurrency(value),
+    null,
+    (value: string) => renderCurrency(value),
+    (value: string) => renderPositiveNegative(value, true, true),
+  ];
+
+  // Filter schema for filterable columns
+  const filterSchema = {
+    1: { type: FilterType.Select }, // Type (Buy/Sell) - Select filter
+    2: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
+    3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
+    4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
+    5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
+    7: { type: FilterType.Select }, // Status (Success/Failed) - Select filter
+  };
+
+  const portfolioFilterSchema = {
+    0: { type: FilterType.Select }, // Token - Select filter
+    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 }, // Price - Range filter
+    2: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Holding - Range filter
+    3: { type: FilterType.Range, min: 0, max: 100000, step: 0.01 }, // Value - Range filter
+    4: { type: FilterType.Range, min: -20, max: 20, step: 0.1 }, // Change - Range filter
+  };
 
   const headers = [
     {
@@ -184,20 +243,22 @@ export default function WalletPage() {
           names={["Balance History", "Token Balance History", "Profit & Lost"]}
           tabs={[
             <BalanceChart
-              // height={400}
-              initialTimePeriod="30D"
+              minHeight={460}
+              initialFilters={{
+                timePeriod: "30D",
+                wallets: [address],
+              }}
               autoRefresh={true}
             />,
             <BalanceChart
-              // height={400}
-              initialTimePeriod="30D"
+              minHeight={460}
+              initialFilters={{
+                timePeriod: "30D",
+                wallets: [address],
+              }}
               autoRefresh={true}
             />,
-            <PnLChart
-              // height={400}
-              aggregation="daily"
-              autoRefresh={true}
-            />,
+            <PnLChart minHeight={400} aggregation="daily" autoRefresh={true} />,
           ]} //for testing purpose
           onTabChange={(index) => setActiveTab(index)}
         />
@@ -206,49 +267,64 @@ export default function WalletPage() {
           names={["Transfer", "Swap", "Inflow", "Outflow", "Conterparties"]}
           tabs={[
             <Table
+              maxHeight={400}
               title="Transfer"
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Swap"
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Inflow"
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Outflow"
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
             <Table
+              maxHeight={400}
               title="Conterparties"
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
-              filterSchema={{}}
+              filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transactionData}
+              isSortable={isSortable}
+              sortConfigs={sortConfigs}
             />,
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}
@@ -258,40 +334,35 @@ export default function WalletPage() {
       <h1 className={styles.sectionTitle}>Asset</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <div className={styles.columnWrapper}>
+          <AssetDistribution />
+        </div>
+        <div className={styles.columnWrapper}>
+          <Table
+            maxHeight={800}
+            title="Portfolio"
+            headers={portfolioHeaders}
+            initialFilters={{}}
+            fetcher={Promise.resolve(portfolioData)}
+            filterSchema={portfolioFilterSchema}
+            cellRenderers={portfolioCellRenderers}
+            dataEntries={portfolioData}
+            isSortable={isSortablePortfolio}
+            sortConfigs={portfolioSortConfig}
+          />
+        </div>
       </div>
 
       <h1 className={styles.sectionTitle}>Top exchange</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <ExchangeComparison />
       </div>
 
       <h1 className={styles.sectionTitle}>Top counterparties</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <TabContainer
-          activeTab={activeTab}
-          names={["Overview", "Transactions", "Holdings"]}
-          tabs={[<OverviewTab />, <FundamentalTab />, <ProfitLossTab />]} //for testing purpose
-          onTabChange={(index) => setActiveTab(index)}
-        />
+        <TransactionDistribution />
       </div>
     </PageWrapper>
   );

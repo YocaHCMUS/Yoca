@@ -7,19 +7,24 @@
  * @module ExchangeComparison
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
+import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
-import type { TimePeriod } from '@/types/chart-filters.types';
+import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
+import { useChartExport } from '@/hooks/useChartExport';
+import type { ChartDataSeries } from '@/types/chart-data.types';
+import { ChartGridItem } from '../shared';
 
 /**
  * Props for ExchangeComparison component
@@ -100,12 +105,8 @@ export function ExchangeComparison({
   // Get theme configuration
   const chartTheme = useChartTheme();
   
-  // Chart filters with debouncing
-  const {
-    filters,
-    setTimePeriod,
-    isValid,
-  } = useChartFilters({
+  // Use centralized filter sync hook
+  const { filters } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
     },
@@ -129,6 +130,62 @@ export function ExchangeComparison({
   });
   
   /**
+   * Setup chart export
+   */
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'exchange-comparison',
+  });
+  
+  /**
+   * Handle export based on format
+   */
+  const handleExport = useCallback(async (format: ExportFormat) => {
+    if (!data) return;
+
+    const instance = chartRef.current?.getEchartsInstance() ?? null;
+
+    if (format === 'csv') {
+      // Convert data to ChartDataSeries format for CSV export
+      const csvData: ChartDataSeries[] = [
+        {
+          id: 'deposits',
+          name: t('charts.exchangeComparisonChart.deposits'),
+          type: 'bar',
+          visible: true,
+          data: data.exchanges.map(ex => ({
+            name: ex.name,
+            value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
+          })),
+        },
+        {
+          id: 'withdrawals',
+          name: t('charts.exchangeComparisonChart.withdrawals'),
+          type: 'bar',
+          visible: true,
+          data: data.exchanges.map(ex => ({
+            name: ex.name,
+            value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
+          })),
+        },
+      ];
+      exportCSV(csvData, filters);
+      return;
+    }
+
+    if (!instance) {
+      console.error('Chart instance not available for export');
+      return;
+    }
+
+    // Export as PNG or SVG
+    format === 'png'
+      ? exportPNG(instance as any, filters)
+      : exportSVG(instance as any, filters);
+  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
+  
+  /**
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
@@ -149,10 +206,10 @@ export function ExchangeComparison({
     return {
       ...baseOption,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '10%',
-        top: '15%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
       tooltip: {
@@ -165,31 +222,31 @@ export function ExchangeComparison({
           if (!Array.isArray(params) || params.length === 0) return '';
           
           const exchangeName = params[0].axisValue;
-          let tooltipContent = `<strong>${exchangeName}</strong><br/>`;
+          let tooltipContent = createTooltipHeader(exchangeName);
           
           params.forEach((param: any) => {
             const value = currentMetric === 'count' 
               ? `${param.value.toLocaleString()} txns`
               : formatCurrency(param.value);
-            tooltipContent += `${param.marker} ${param.seriesName}: ${value}<br/>`;
+            tooltipContent += `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">`
+              + `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>`
+              + `<strong>${value}</strong></div>`;
           });
           
           return tooltipContent;
         },
       },
-      legend: {
-        ...baseOption.legend,
-        data: [t('charts.exchangeComparisonChart.deposits'), t('charts.exchangeComparisonChart.withdrawals')],
-        top: '5%',
-        left: 'center',
-      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [t('charts.exchangeComparisonChart.deposits'), t('charts.exchangeComparisonChart.withdrawals')],
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',
         data: exchangeNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          rotate: 30,
           interval: 0,
         },
       },
@@ -308,23 +365,26 @@ export function ExchangeComparison({
   // };
   
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      // height={height}
-      onRetry={refetch}
       isEmpty={!data || data.exchanges.length === 0}
+      onRetry={() => refetch(false)}
+      onExport={handleExport}
+      className={className}
     >
       {chartOptions && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOptions}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          opts={{ renderer: 'canvas' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 }

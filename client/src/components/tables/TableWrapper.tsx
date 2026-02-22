@@ -9,8 +9,19 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExportMenu, type ExportFormat } from './ExportMenu';
+import { ExportMenu, type ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TableWrapper.module.scss';
+import { Tag } from '@carbon/react';
+
+/**
+ * Active filter representation
+ */
+export interface ActiveFilter {
+  columnIndex: number;
+  columnName: string;
+  value: any;
+  displayText: string;
+}
 
 /**
  * Props for TableWrapper component
@@ -36,6 +47,21 @@ interface TableWrapperProps {
 
   /** Whether data is empty */
   isEmpty?: boolean;
+
+  /** Enable search/filter toolbar (default: false) */
+  enableToolbar?: boolean;
+
+  /** Search placeholder text */
+  searchPlaceholder?: string;
+
+  /** Search value */
+  searchValue?: string;
+
+  /** Search change callback */
+  onSearchChange?: (value: string) => void;
+
+  /** Custom toolbar content */
+  toolbarContent?: React.ReactNode;
 }
 
 /**
@@ -61,6 +87,11 @@ export function TableWrapper({
   enableExport = true,
   onExport,
   isEmpty = false,
+  enableToolbar = false,
+  searchPlaceholder = 'Search...',
+  searchValue = '',
+  onSearchChange,
+  toolbarContent,
 }: TableWrapperProps) {
   const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
@@ -93,7 +124,22 @@ export function TableWrapper({
         <h2 className={styles.title} id={`table-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
           {title}
         </h2>
+        
         <div className={styles.headerActions}>
+          {/* Toolbar Search */}
+          {enableToolbar && onSearchChange && (
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className={styles.searchInput}
+              aria-label="Search table"
+            />
+          )}
+
+          {/* Custom toolbar content */}
+          {toolbarContent}
           {actions}
           {enableExport && onExport && (
             <ExportMenu
@@ -105,7 +151,6 @@ export function TableWrapper({
           )}
         </div>
       </div>
-
       {/* Content area */}
       <div className={styles.content}>
         {children}

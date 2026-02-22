@@ -2,78 +2,54 @@ import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from 'react-i18next';
-import { useChartFilters } from '@/hooks/useChartFilters';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { formatAxisTooltip } from '@/util/tooltip-helpers';
+import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { BalanceTrendResponse, BalanceRequestParams } from '@/types/chart-api.types';
-import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
+import { ChartGridItem } from '../shared';
+import type { ChartProps } from '../shared/ChartProp';
 
-/**
- * Props for BalanceChart component
- */
-export interface BalanceChartProps {
-  /** Chart title */
-  title?: string;
-  
-  /** Chart height in pixels */
-  minHeight?: number;
-  
-  /** Initial time period (default: 30D) */
-  initialTimePeriod?: TimePeriod;
-  
-  /** Initial tokens filter (default: All tokens) */
-  initialTokens?: string[];
-  
-  /** Enable auto-refresh (default: true) */
-  autoRefresh?: boolean;
-  
-  /** Auto-refresh interval in milliseconds (default: 30000) */
-  refreshInterval?: number;
-  
-  /** Callback when data is loaded */
-  onDataLoaded?: (data: BalanceTrendResponse) => void;
-  
-  /** Additional CSS class */
-  className?: string;
-}
 
-/**
- * BalanceChart Component
- * 
- * User Story 1: View Crypto Balance Trends (Priority: P1) 🎯 MVP
- * 
- * Displays line/area chart showing balance history with:
- * - Time period filters (7D, 30D, 60D, 90D, 1Y, All)
- * - Token filtering (All tokens or specific selection)
- * - Hover tooltips with timezone-aware timestamps
- * - Auto-refresh every 30 seconds (pause-aware)
- * - LTTB sampling for large datasets (>2000 points)
- * 
- * @example
- * ```tsx
- * <BalanceChart
- *   title="Portfolio Balance Trend"
- *   minHeight={400}
- *   initialTimePeriod="30D"
- *   enableAutoRefresh={true}
- * />
- * ```
- */
+// export interface BalanceChartProps {
+//   title?: string;
+//   minHeight?: number;
+//   initialTimePeriod?: TimePeriod;
+  
+//   /** Initial tokens filter (default: All tokens) */
+//   initialTokens?: string[];
+  
+//   /** Enable auto-refresh (default: true) */
+//   autoRefresh?: boolean;
+  
+//   /** Auto-refresh interval in milliseconds (default: 30000) */
+//   refreshInterval?: number;
+  
+//   /** Callback when data is loaded */
+//   onDataLoaded?: (data: BalanceTrendResponse) => void;
+  
+//   /** Additional CSS class */
+//   className?: string;
+// }
 
 export function BalanceChart({
   title,
   minHeight = 400,
-  initialTimePeriod = '30D',
-  initialTokens = [],
+  initialFilters = {
+    timePeriod: '30D',
+    tokens: [],
+    wallets: []
+  },
   autoRefresh = true,
   refreshInterval = 30000,
-  onDataLoaded,
+  // onDataLoaded,
   className,
-}: BalanceChartProps) {
+}: ChartProps) {
   const { t } = useTranslation();
   const chartTitle = title || t('charts.balanceChart.title');
 
@@ -81,11 +57,9 @@ export function BalanceChart({
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
 
-  const { filters, setTimePeriod, setTokens, isValid } = useChartFilters({
-    initialFilters: {
-      timePeriod: initialTimePeriod,
-      tokens: initialTokens.length > 0 ? initialTokens : undefined,
-    },
+  // Use centralized filter sync hook
+  const { filters, walletsString, tokensString } = useChartFiltersSync({
+    initialFilters,
     debounceDelay: 300,
   });
 
@@ -95,10 +69,11 @@ export function BalanceChart({
   const query = useMemo<BalanceRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      tokens: filters.tokens?.join(','),
+      tokens: tokensString,
+      wallets: walletsString,
       timezone,
     }),
-    [filters.timePeriod, filters.tokens, timezone]
+    [filters.timePeriod, tokensString, walletsString, timezone]
   );
 
   /**
@@ -110,7 +85,7 @@ export function BalanceChart({
       query,
       autoRefresh,
       refreshInterval,
-      onDataLoaded,
+      // onDataLoaded,
     });
 
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
@@ -152,28 +127,75 @@ export function BalanceChart({
    * Generate eCharts option configuration
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || data.series.length === 0 || data.series[0].data.length === 0) return null;
-    
-    // Extract timestamps and values from first series (or combined total)
-    const seriesData = data.series[0].data;
-    const timestamps = seriesData.map((point: any) => point.timestamp);
-    const values = seriesData.map((point: any) => point.value);
-    
-    // Determine if LTTB sampling is needed (>2000 points)
-    const enableSampling = seriesData.length > 2000;
+    if (!data) return null;
+
+    const isMultiWallet = data.wallets && data.wallets.length > 1;
     
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
     
+    // Generate colors for multiple wallets
+    const colors = [
+      '#1890ff', '#52c41a', '#faad14', '#f5222d', 
+      '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
+    ];
+    
+    // Build series array - one series per wallet or token
+    const seriesConfig = data.series.map((series, index) => {
+      // Determine if LTTB sampling is needed (>2000 points)
+      const enableSampling = series.data.length > 2000;
+      
+      // Extract timestamps and values
+      const timestamps = series.data.map((point: any) => point.timestamp);
+      const values = series.data.map((point: any) => point.value);
+      
+      const color = colors[index % colors.length];
+      
+      return {
+        name: series.name,
+        type: 'line' as const,
+        smooth: true,
+        sampling: enableSampling ? ('lttb' as const) : undefined,
+        data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+        areaStyle: isMultiWallet ? undefined : {
+          color: {
+            type: 'linear' as const,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: `${color}4D` }, // 30% opacity
+              { offset: 1, color: `${color}0D` }, // 5% opacity
+            ],
+          },
+        },
+        lineStyle: {
+          color: color,
+          width: 2,
+        },
+        itemStyle: {
+          color: color,
+        },
+      };
+    });
+    
     return {
       ...baseOption,
+      color: colors,
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: '10%',
+        left: '8%',
+        right: '8%',
+        bottom: '12%',
+        top: '20%',
         containLabel: true,
       },
+      legend: getConditionalLegend(
+        chartTheme,
+        data.series.map(s => s.name),
+        2,
+        false
+      ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',
@@ -193,53 +215,15 @@ export function BalanceChart({
           formatter: (value: number) => formatCurrency(value),
         },
       },
-      series: [
-        {
-          name: t('charts.balanceChart.balance'),
-          type: 'line',
-          smooth: true,
-          sampling: enableSampling ? 'lttb' : undefined,
-          data: timestamps.map((timestamp: number, index: number) => [timestamp, values[index]]),
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-                { offset: 1, color: 'rgba(24, 144, 255, 0.05)' },
-              ],
-            },
-          },
-          lineStyle: {
-            color: '#1890ff',
-            width: 2,
-          },
-          itemStyle: {
-            color: '#1890ff',
-          },
-        },
-      ],
+      series: seriesConfig,
       tooltip: {
+        ...baseOption.tooltip,
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          
-          const param = params[0];
-          const timestamp = param.value[0];
-          const value = param.value[1];
-          
-          return `
-            <div style="font-weight: 600; margin-bottom: 4px;">
-              ${formatTimestampWithTimezone(timestamp, timezone, 'PPpp')}
-            </div>
-            <div>
-              ${t('charts.balanceChart.balance')}: <strong>${formatCurrency(value)}</strong>
-            </div>
-          `;
-        },
+        formatter: (params: any) => formatAxisTooltip(
+          params,
+          (p) => formatTimestampWithTimezone(p.value[0], timezone, 'PPpp'),
+          (p) => formatCurrency(p.value[1])
+        ),
       },
     };
   }, [data, timezone, chartTheme, t]);
@@ -253,13 +237,15 @@ export function BalanceChart({
       onRetry={() => refetch(false)}
     >
       {chartOption && (
-        <ReactECharts
-          ref={chartRef}
-          option={chartOption}
-          style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-          notMerge
-          lazyUpdate
-        />
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={chartRef}
+            option={chartOption}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            notMerge
+            lazyUpdate
+          />
+        </ChartGridItem>
       )}
     </BaseChart>
   );

@@ -5,4 +5,3 @@
  */
 
 export { BalanceChart } from './BalanceChart';
-export type { BalanceChartProps } from './BalanceChart';

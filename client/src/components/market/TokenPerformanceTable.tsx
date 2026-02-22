@@ -8,9 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@carbon/react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ExportFormat } from "../charts/shared/ExportMenu";
-import { TableWrapper } from "../charts/shared/TableWrapper";
+import { TableWrapper } from "../tables/TableWrapper.js";
 import styles from "./TokenPerformanceTable.module.scss";
 
 // Define types explicitly based on the API response structure
