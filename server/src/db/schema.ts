@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   char,
+  check,
   decimal as dec,
   integer,
   pgEnum,
@@ -20,18 +22,49 @@ function decimal(name: string) {
 }
 
 // #region Table definitions
-export const tradeType = pgEnum("trade_type", ["buy", "sell"]);
+export const enumAuthProvider = pgEnum("auth_provider", [
+  "password",
+  "google",
+  "github",
+  "solana",
+  "other",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  age: integer("age").notNull(),
-  email: text("email").notNull().unique(),
+  displayName: varchar("display_name"),
+  // Email is not needed for wallet users, see it as contact
+  email: varchar("email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const authAccounts = pgTable(
+  "auth_accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: enumAuthProvider("provider").notNull(),
+    providerUserId: varchar("provider_user_id").notNull(),
+    hashedPassword: varchar("hashed_password"),
+    loginNounce: varchar("login_nounce"),
+    nounceExpiredAt: timestamp("nounce_expired_at"),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.provider, table.providerUserId],
+    }),
+    check(
+      "provider_password",
+      sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
+          OR
+          (${table.provider} <> 'password' AND ${table.hashedPassword} IS NULL)`,
+    ),
+  ],
+);
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -342,6 +375,7 @@ export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
+export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;

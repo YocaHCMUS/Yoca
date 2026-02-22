@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Select, SelectItem, Loading, ButtonSkeleton  } from '@carbon/react';
+import { Modal, Loading, ButtonSkeleton } from '@carbon/react';
 import { Wallet } from '@carbon/icons-react';
 import { useTranslation } from 'react-i18next';
 import type { WalletInfo, BlockchainType, WalletType } from '../../types/auth';
@@ -27,7 +27,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const { t } = useTranslation();
   const { connectWallet } = useAuth();
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
-  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('solana');
   const [loading, setLoading] = useState(false);
   const [detectingWallets, setDetectingWallets] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<WalletType | null>(null);
@@ -49,14 +48,37 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     if (open) {
       loadWallets();
     }
-  }, [open, selectedBlockchain]);
+  }, [open]);
 
   const loadWallets = async () => {
     setDetectingWallets(true);
     setError('');
     try {
-      const detectedWallets = await detectWallets(selectedBlockchain);
-      setWallets(detectedWallets);
+      const [solanaWallets, ethereumWallets] = await Promise.all([
+        detectWallets('solana'),
+        detectWallets('ethereum'),
+      ]);
+
+      const mergedWallets = [...solanaWallets, ...ethereumWallets].reduce<WalletInfo[]>(
+        (accumulator, wallet) => {
+          const existingIndex = accumulator.findIndex((item) => item.type === wallet.type);
+          if (existingIndex === -1) {
+            accumulator.push(wallet);
+            return accumulator;
+          }
+
+          const existingWallet = accumulator[existingIndex];
+          accumulator[existingIndex] = {
+            ...existingWallet,
+            detected: existingWallet.detected || wallet.detected,
+            blockchain: Array.from(new Set([...existingWallet.blockchain, ...wallet.blockchain])) as BlockchainType[],
+          };
+          return accumulator;
+        },
+        [],
+      );
+
+      setWallets(mergedWallets);
     } catch (err) {
       setError(t('wallet.detectionFailed'));
       console.error('Wallet detection error:', err);
@@ -65,34 +87,38 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     }
   };
 
-  const handleWalletSelect = async (walletType: WalletType) => {
-    setConnectingWallet(walletType);
-    setError('');
-    setLoading(true);
+  const handleWalletSelect = async (wallet: WalletInfo) => {
+  setConnectingWallet(wallet.type);
+  setLoading(true);
 
-    try {
-      const response = await connectWallet(walletType, selectedBlockchain);
+  try {
+    const primaryBlockchain = wallet.blockchain.includes('ethereum')
+      ? 'ethereum'
+      : wallet.blockchain[0];
+    const response = await connectWallet(wallet.type, primaryBlockchain);
 
-      if (response.success && response.user && response.token) {
-        // Login successful - state is managed by AuthContext
-        onClose();
-      } else {
-        // Connection failed
-        setError(response.error || t('wallet.connectionFailed'));
-      }
-    } catch (err) {
-      setError(t('validation.networkError'));
-      console.error('Wallet connection error:', err);
-    } finally {
-      setLoading(false);
-      setConnectingWallet(null);
+    if (response.success) {
+      onClose(); // Đóng modal và chuyển hướng đã được AuthContext lo
+    } else {
+      setError(response.error || t('wallet.connectionFailed'));
     }
-  };
+  } catch (err) {
+    setError(t('validation.networkError'));
+  } finally {
+    setLoading(false);
+    setConnectingWallet(null);
+  }
+};
 
   const handleRetry = () => {
     setError('');
     if (connectingWallet) {
-      handleWalletSelect(connectingWallet);
+      const walletToRetry = wallets.find((wallet) => wallet.type === connectingWallet);
+      if (walletToRetry) {
+        handleWalletSelect(walletToRetry);
+        return;
+      }
+      loadWallets();
     } else {
       loadWallets();
     }
@@ -109,11 +135,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   // Keyboard navigation handler for wallet buttons
   const handleWalletKeyDown = (
     e: React.KeyboardEvent<HTMLButtonElement>,
-    walletType: WalletType
+    wallet: WalletInfo
   ) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleWalletSelect(walletType);
+      handleWalletSelect(wallet);
     }
   };
 
@@ -138,22 +164,6 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       aria-describedby="wallet-modal-description"
     >
       <div className={styles['modal-content']} id="wallet-modal-description">
-        {/* Blockchain Selector */}
-        <div className={styles['blockchain-selector']}>
-          <Select
-            id="blockchain-selector"
-            labelText={t('wallet.selectBlockchain')}
-            value={selectedBlockchain}
-            onChange={(e) => setSelectedBlockchain(e.target.value as BlockchainType)}
-            disabled={loading || detectingWallets}
-            className={styles['select-full-width']}
-          >
-            <SelectItem value="solana" text={t('wallet.solana')} />
-            <SelectItem value="ethereum" text={t('wallet.ethereum')} />
-            <SelectItem value="bitcoin" text={t('wallet.bitcoin')} />
-          </Select>
-        </div>
-
         {/* Loading State - Detecting Wallets */}
         {detectingWallets && (
           <div className={styles['wallets-section']}>
@@ -208,8 +218,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                     <button
                       key={wallet.type}
                       ref={index === 0 ? firstWalletButtonRef : null}
-                      onClick={() => handleWalletSelect(wallet.type)}
-                      onKeyDown={(e) => handleWalletKeyDown(e, wallet.type)}
+                      onClick={() => handleWalletSelect(wallet)}
+                      onKeyDown={(e) => handleWalletKeyDown(e, wallet)}
                       disabled={loading}
                       aria-label={t('wallet.connectWith', { wallet: wallet.name })}
                       aria-busy={loading && connectingWallet === wallet.type}
@@ -285,7 +295,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                       </div>
                       <div className={styles['warning-text-wrapper']}>
                         <h3 className={styles['warning-title']}>
-                          {t('wallet.noWalletsFound', { blockchain: selectedBlockchain.charAt(0).toUpperCase() + selectedBlockchain.slice(1) })}
+                          {t('wallet.noWalletsFound', { blockchain: 'Solana' })}
                         </h3>
                         <p className={styles['warning-message']}>
                           {t('wallet.installWalletPrompt')}

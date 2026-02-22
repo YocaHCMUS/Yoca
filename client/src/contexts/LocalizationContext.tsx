@@ -7,7 +7,7 @@ import {
   type TranslationKeyPath,
   type TranslationSchema,
 } from "@/config/localization";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, type ReactNode } from "react";
 
 type LangCode = keyof typeof locale;
 
@@ -76,6 +76,11 @@ function getTranslationValue(
     .split(".")
     .reduce((acc, part) => (acc as any)[part], translation as any) as string;
 }
+
+function reactFromParts(parts: ReactNode[]) {
+  return React.createElement(React.Fragment, null, ...parts);
+}
+
 function interpolate(
   template: string,
   params: Record<string, unknown>,
@@ -119,15 +124,14 @@ function interpolate(
     lastIndex = regex.lastIndex;
   }
 
+  // Add final part
   if (lastIndex < template.length) {
     parts.push(template.slice(lastIndex));
   }
 
   const hasNode = parts.some((p) => typeof p != "string");
 
-  return hasNode
-    ? React.createElement(React.Fragment, null, ...parts)
-    : parts.join("");
+  return hasNode ? reactFromParts(parts) : parts.join("");
 }
 
 export function LocalizationProvider({

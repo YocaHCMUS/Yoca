@@ -3,65 +3,56 @@
  * Navigation header with user profile, language selector, and theme toggle
  */
 
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import appLogo from "@/assets/app-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import { Login, Logout, UserAvatar } from "@carbon/icons-react";
 import {
   Header as CarbonHeader,
   HeaderContainer,
-  HeaderName,
-  HeaderNavigation,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
   HeaderMenuButton,
   HeaderMenuItem,
-  HeaderGlobalBar,
-  HeaderGlobalAction,
-  SkipToContent,
+  HeaderName,
+  HeaderNavigation,
   SideNav,
   SideNavItems,
   SideNavLink,
-} from '@carbon/react';
-import { UserAvatar, Login, Logout } from '@carbon/icons-react';
-import { useAuth } from '../../contexts/AuthContext';
-import appLogo from '../../assets/app-logo.png';
-import LanguageSelector from './LanguageSelector.tsx';
-import ThemeToggle from './ThemeToggle.tsx';
-import styles from './Header.module.scss';
+  SkipToContent,
+} from "@carbon/react";
+import React, { useState } from "react";
+import styles from "./Header.module.scss";
+import LanguageSelector from "./LanguageSelector.tsx";
+import ThemeToggle from "./ThemeToggle.tsx";
 
-/**
- * Header component props
- */
 interface HeaderProps {
   onNavigate?: (path: string) => void;
-  handleSignIn?: () => void; // open modal, navigate,...
-  handleSignUp?: () => void; // open modal, navigate,...
+  handleSignIn?: () => void;
+  handleSignUp?: () => void;
 }
 
-/**
- * Header Component
- * Displays navigation items, user profile, language selector, and theme toggle
- */
-const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp }) => {
-  const { t } = useTranslation();
+const Header: React.FC<HeaderProps> = ({
+  onNavigate,
+  handleSignIn,
+  handleSignUp,
+}) => {
+  const { tr } = useLocalization();
   const { authState, signOut } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  /**
-   * Handle navigation item click
-   */
   const handleNavigation = (path: string) => {
     if (onNavigate) {
       onNavigate(path);
     }
   };
 
-  /**
-   * Handle sign out
-   */
   const handleSignOut = () => {
     signOut();
     setIsProfileOpen(false);
     if (onNavigate) {
-      onNavigate('/auth');
+      onNavigate("/auth");
     }
   };
 
@@ -71,44 +62,50 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
         <>
           <CarbonHeader aria-label="Yoca" className={styles.header}>
             <SkipToContent />
-            
+
             <HeaderName href="#" prefix="" className={styles.headerName}>
-              <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
-              <h1 className={styles.appName}>Yoca</h1>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <img src={appLogo} alt="Yoca Logo" className={styles.logo} />
+                <h1 className={styles.appName}>Yoca</h1>
+              </div>
             </HeaderName>
 
             {/* Navigation items - Desktop only */}
-            <HeaderNavigation aria-label="Main navigation" className={styles.desktopNav}>
-              <HeaderMenuItem className={styles.headerMenuItem}
-                onClick={() => handleNavigation('/market')}
+            <HeaderNavigation
+              aria-label="Main navigation"
+              className={styles.desktopNav}
+            >
+              <HeaderMenuItem
+                className={styles.headerMenuItem}
+                onClick={() => handleNavigation("/market")}
               >
-                {t('nav.market')}
+                {tr("nav.market")}
               </HeaderMenuItem>
-              <HeaderMenuItem className={styles.headerMenuItem}
-                onClick={() => handleNavigation('/alert')}
+              <HeaderMenuItem
+                className={styles.headerMenuItem}
+                onClick={() => handleNavigation("/alert")}
               >
-                {t('nav.alert')}
+                {tr("nav.alert")}
               </HeaderMenuItem>
-              <HeaderMenuItem className={styles.headerMenuItem}
-                onClick={() => handleNavigation('/dashboard')}
+              <HeaderMenuItem
+                className={styles.headerMenuItem}
+                onClick={() => handleNavigation("/dashboard")}
               >
-                {t('nav.dashboard')}
+                {tr("nav.dashboard")}
               </HeaderMenuItem>
             </HeaderNavigation>
 
             {/* Global actions - Desktop only */}
             <HeaderGlobalBar className={styles.desktopGlobalBar}>
-              {/* Language selector */}
               <LanguageSelector />
-
-              {/* Theme toggle */}
               <ThemeToggle />
 
-              {/* User profile or auth buttons */}
               {authState.isAuthenticated ? (
                 <div className={styles.profileWrapper}>
                   <HeaderGlobalAction
-                    aria-label={t('nav.profile')}
+                    aria-label={tr("nav.profile")}
                     tooltipAlignment="end"
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                     className={styles.profileButton}
@@ -136,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
                           className={styles.signOutButton}
                           onClick={handleSignOut}
                         >
-                          {t('auth.signOut')}
+                          {tr("auth.signOut")}
                         </button>
                       </div>
                     </>
@@ -144,18 +141,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
                 </div>
               ) : (
                 <div className={styles.authButtons}>
-                  <button
-                    className={styles.loginButton}
-                    onClick= {handleSignIn}
-                  >
+                  <button className={styles.loginButton} onClick={handleSignIn}>
                     <Login size={16} />
-                    {t('auth.signIn')}
+                    {tr("auth.signIn")}
                   </button>
                   <button
                     className={styles.signUpButton}
                     onClick={handleSignUp}
                   >
-                    {t('auth.signUp')}
+                    {tr("auth.signUp")}
                   </button>
                 </div>
               )}
@@ -191,27 +185,27 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
               {/* Navigation Links */}
               <SideNavLink
                 onClick={() => {
-                  handleNavigation('/market');
+                  handleNavigation("/market");
                   setIsMenuOpen(false);
                 }}
               >
-                {t('nav.market')}
+                {tr("nav.market")}
               </SideNavLink>
               <SideNavLink
                 onClick={() => {
-                  handleNavigation('/alert');
+                  handleNavigation("/alert");
                   setIsMenuOpen(false);
                 }}
               >
-                {t('nav.alert')}
+                {tr("nav.alert")}
               </SideNavLink>
               <SideNavLink
                 onClick={() => {
-                  handleNavigation('/dashboard');
+                  handleNavigation("/dashboard");
                   setIsMenuOpen(false);
                 }}
               >
-                {t('nav.dashboard')}
+                {tr("nav.dashboard")}
               </SideNavLink>
 
               {/* Divider */}
@@ -220,11 +214,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
               {/* Settings Section */}
               <div className={styles.mobileSettings}>
                 <div className={styles.mobileSettingItem}>
-                  <span className={styles.mobileSettingLabel}>{t('nav.language')}</span>
+                  <span className={styles.mobileSettingLabel}>
+                    {tr("nav.language")}
+                  </span>
                   <LanguageSelector />
                 </div>
                 <div className={styles.mobileSettingItem}>
-                  <span className={styles.mobileSettingLabel}>{t('nav.theme')}</span>
+                  <span className={styles.mobileSettingLabel}>
+                    {tr("nav.theme")}
+                  </span>
                   <ThemeToggle />
                 </div>
               </div>
@@ -243,7 +241,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
                     }}
                   >
                     <Logout size={20} />
-                    {t('auth.signOut')}
+                    {tr("auth.signOut")}
                   </button>
                 </div>
               ) : (
@@ -256,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
                     }}
                   >
                     <Login size={20} />
-                    {t('auth.signIn')}
+                    {tr("auth.signIn")}
                   </button>
                   <button
                     className={styles.mobileSignUpButton}
@@ -265,7 +263,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, handleSignIn, handleSignUp 
                       setIsMenuOpen(false);
                     }}
                   >
-                    {t('auth.signUp')}
+                    {tr("auth.signUp")}
                   </button>
                 </div>
               )}

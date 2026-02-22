@@ -35,11 +35,13 @@
   },
   "dependencies": {
     "@coingecko/coingecko-typescript": "^2.5.0",
+    "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.19",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^24.10.1",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",

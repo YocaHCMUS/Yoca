@@ -1,129 +1,101 @@
-/**
- * Google OAuth Authentication Button Component
- * Provides Google Sign-In functionality with custom Carbon Design System styling
- */
+import client from "@/api/main";
+import Google from "@/components/icons/Google.svg?react";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { Button } from "@carbon/react";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useRef, useState } from "react";
 
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { GoogleLogin } from '@react-oauth/google';
-import type { CredentialResponse } from '@react-oauth/google';
-import { InlineNotification } from '@carbon/react';
-import './GoogleAuthButton.module.scss';
-
-/**
- * GoogleAuthButton Props
- */
 interface GoogleAuthButtonProps {
-  /**
-   * Mode of authentication (sign-in or sign-up)
-   */
-  mode: 'signin' | 'signup';
-  /**
-   * Callback function called when Google authentication succeeds
-   */
-  onSuccess: (credential: string) => Promise<void>;
-  /**
-   * Callback function called when Google authentication fails or is cancelled
-   */
-  onError?: (error: string) => void;
-  /**
-   * Whether the button is disabled
-   */
-  disabled?: boolean;
+  disabled: boolean;
+  onSuccess: () => void;
+  onError: (err: string) => void;
 }
 
-/**
- * GoogleAuthButton Component
- * Integrates Google OAuth with Carbon Design System styling
- * 
- * @example
- * ```tsx
- * <GoogleAuthButton
- *   mode="signin"
- *   onSuccess={handleGoogleSuccess}
- *   onError={handleGoogleError}
- * />
- * ```
- */
-export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
-  mode,
+export function GoogleAuthButton({
+  disabled,
   onSuccess,
   onError,
-  disabled = false,
-}) => {
-  const { t } = useTranslation();
-  const [error, setError] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
+}: GoogleAuthButtonProps) {
+  const { tr } = useLocalization();
+  const [googleErr, setError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const googleButtonContainerRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Handle successful Google OAuth response
-   */
-  const handleSuccess = async (credentialResponse: CredentialResponse) => {
-    if (!credentialResponse.credential) {
-      const errorMsg = t('auth.googleAuthFailed');
-      setError(errorMsg);
-      onError?.(errorMsg);
-      return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
+  const onGoogleSignInSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
     try {
-      await onSuccess(credentialResponse.credential);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : t('auth.googleAuthFailed');
+      const token = credentialResponse.credential;
+
+      if (!token) {
+        const errMsg = tr("auth.googleAuthFailed");
+        setError(errMsg);
+        onError(errMsg);
+        return;
+      }
+
+      const resp = await client.api.users.auth.google.$post({
+        json: {
+          token,
+        },
+      });
+
+      if (resp.ok) {
+        setError(null);
+        onSuccess();
+        return;
+      } else {
+        const errorMsg = tr("auth.googleAuthFailed");
+        setError(errorMsg);
+        onError(errorMsg);
+        return;
+      }
+    } catch (error) {
+      const errorMsg = tr("auth.googleAuthFailed");
       setError(errorMsg);
-      onError?.(errorMsg);
-    } finally {
-      setIsLoading(false);
+      onError(errorMsg);
+      return;
     }
   };
 
-  /**
-   * Handle Google OAuth error or cancellation
-   */
-  const handleError = () => {
-    const errorMsg = t('auth.googleAuthCancelled');
+  const onGoogleSignInError = () => {
+    console.log("google close");
+    const errorMsg = tr("auth.googleAuthCancelled");
     setError(errorMsg);
-    onError?.(errorMsg);
+    onError(errorMsg);
+  };
+
+  // Hacky stuff to override google login button because it sucks
+  const onGoogleBtnClick = () => {
+    const container = googleButtonContainerRef.current;
+    if (!container) return;
+    const googleButton = container.querySelector("div[role=button]");
+    if (googleButton instanceof HTMLElement) {
+      googleButton.click();
+      setIsSigningIn(true);
+    }
   };
 
   return (
-    <div className="google-auth-button-container">
-      {/* Error notification */}
-      {error && (
-        <InlineNotification
-          kind="error"
-          title={t('common.error')}
-          subtitle={error}
-          onCloseButtonClick={() => setError(null)}
-          className="mb-4"
-          lowContrast
-        />
-      )}
-
-      {/* Google OAuth Button */}
-      <div 
-        className={`google-login-wrapper ${disabled || isLoading ? 'disabled' : ''}`}
-        data-loading={isLoading}
-        style={{ pointerEvents: disabled || isLoading ? 'none' : 'auto' }}
+    <div>
+      <Button
+        kind="tertiary"
+        renderIcon={Google}
+        onClick={onGoogleBtnClick}
+        disabled={disabled}
+        style={{
+          inlineSize: "100%",
+          maxInlineSize: "100%",
+        }}
       >
+        {tr("auth.continueWithGoogle")}
+      </Button>
+      <div ref={googleButtonContainerRef} style={{ display: "none" }}>
         <GoogleLogin
-          onSuccess={handleSuccess}
-          onError={handleError}
-          text={mode === 'signin' ? 'signin_with' : 'signup_with'}
-          shape="rectangular"
-          theme="outline"
-          size="large"
-          width="100%"
+          onSuccess={onGoogleSignInSuccess}
+          onError={onGoogleSignInError}
         />
       </div>
-
-      {/* Custom styled button overlay (optional - for Carbon integration)
-      <div className="google-button-label">
-        {getButtonText()}
-      </div> */}
     </div>
   );
-};
+}
