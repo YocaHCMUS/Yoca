@@ -18,7 +18,7 @@ import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
-import { jwt, sign } from "hono/jwt";
+import { sign } from "hono/jwt";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const googleClientId = process.env.GOOGLE_CLIENT_ID!;
@@ -57,18 +57,18 @@ async function setAuthToken(c: Context, userId: string) {
 }
 
 const app = new Hono()
-  .use(
-    "/example/of/protected/url/*",
-    jwt({
-      alg: "HS256",
-      secret: process.env.JWT_SECRET!,
-      cookie: AUTH_COOKIE_NAME,
-    }),
-  )
-  .get("/example/of/protected/url/1", async (c) => {
-    return c.json("ok you're good", statusCode.Ok);
-  })
-  .get("/hello", (c) => c.json("oke usre", 200))
+  // .use(
+  //   "/example/of/protected/url/*",
+  //   jwt({
+  //     alg: "HS256",
+  //     secret: process.env.JWT_SECRET!,
+  //     cookie: AUTH_COOKIE_NAME,
+  //   }),
+  // )
+  // .get("/example/of/protected/url/1", async (c) => {
+  //   return c.json("ok you're good", statusCode.Ok);
+  // })
+  // .get("/hello", (c) => c.json("oke usre", 200))
   .post(
     "/auth/password/register",
     validate("json", userCreationSchema),

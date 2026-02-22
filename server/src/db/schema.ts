@@ -238,7 +238,6 @@ export const tokenMarketChartDaily = pgTable(
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
     unixUpdatedAt: integer("unix_updated_at").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
   },
   (table) => [
     primaryKey({

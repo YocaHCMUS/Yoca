@@ -51,18 +51,22 @@ export const translation = {
     signUp: "Sign Up",
     signOut: "Sign Out",
     email: "Email",
-    username: "Username",
+    displayName: "Display Name",
     password: "Password",
     continueWithPassword: "Continue",
     continueWithGoogle: "Continue with Google",
-    continueWithWallet: "Continue with an exisitng wallet",
+    continueWithWallet: "Continue with an existing wallet",
+    continueWithSelectedWallet: "Continue with {{walletName}}",
+    continueWithConnectedWallet:
+      "Continue with {{connectedWalletName}} - {{connectedWalletAddress}}",
     confirmPassword: "Confirm Password",
     retypePassword: "Retype Password",
     forgotPassword: "Forgot password?",
     connectingWithWallet: "Connecting...",
-    alreadyHaveAccount: "Already have an account?",
+    dontHaveAccount: "I don't have an account",
     wantAccount: "Want to have an account?",
-    createAccount: "Create Account",
+    signUpSuggestion: "Don't have an account? {{$createAccount}}",
+    createAccount: "Create a new account",
     signUpWithGoogle: "Sign up with Google",
     signUpWithWallet: "Sign up with an existing wallet(s)",
     termsAndPrivacy:
@@ -110,7 +114,7 @@ export const translation = {
   // Navigation
   nav: {
     market: "Market",
-    alert: "Alert",
+    alerts: "Alerts",
     dashboard: "Dashboard",
     profile: "Profile",
     settings: "Settings",
@@ -121,7 +125,7 @@ export const translation = {
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
-    en: "United States - English (English)",
+    en: "United Statesen - English (English)",
   },
   // Validation errors
   validation: {

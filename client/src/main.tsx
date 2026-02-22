@@ -3,7 +3,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./App.css";
 import App from "./App.tsx";
-import { AuthProvider } from "./contexts/AuthContext";
 import { ChartProvider } from "./contexts/ChartContext";
 import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
@@ -19,17 +18,15 @@ function Root() {
   return (
     <StrictMode>
       <GoogleOAuthProvider clientId={googleClientId}>
-        <SolanaProvider>
-          <ThemeProvider>
+        <ThemeProvider>
+          <SolanaProvider>
             <LocalizationProvider>
-              <AuthProvider>
-                <ChartProvider>
-                  <App />
-                </ChartProvider>
-              </AuthProvider>
+              <ChartProvider>
+                <App />
+              </ChartProvider>
             </LocalizationProvider>
-          </ThemeProvider>
-        </SolanaProvider>
+          </SolanaProvider>
+        </ThemeProvider>
       </GoogleOAuthProvider>
     </StrictMode>
   );

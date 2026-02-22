@@ -7,6 +7,7 @@ import {
   Form,
   Link,
   ModalBody,
+  ModalFooter,
   ModalHeader,
   PasswordInput,
   Stack,
@@ -16,9 +17,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { ModalStateManager } from "../ModelStateManager";
 import { Divider } from "../partials/Divider/Divider";
-import { WalletAuthenButton } from ".//WalletAuthButton";
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { SignUpModal } from "./SignUpModal";
+import { WalletAuthButton } from "./WalletAuthButton";
 
 type SignInModalProps = {
   open: boolean;
@@ -84,10 +87,10 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
   return (
     <ComposedModal open={open} onClose={onClose}>
-      <ModalHeader label="Account" title="Sign In" />
+      <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
       <ModalBody hasScrollingContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
-          <Stack gap={7}>
+          <Stack gap={6}>
             <TextInput
               id="email"
               labelText={`${tr("auth.email")}*`}
@@ -123,19 +126,52 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
           </Stack>
         </Form>
         <Divider text={tr("common.or")} />
-        <Stack gap={4}>
+        <Stack gap={4} style={{ marginBottom: "2rem" }}>
           <GoogleAuthButton
             disabled={isSubmitting}
             onSuccess={onGoogleSignInSuccess}
             onError={onGoogleSignInError}
           />
 
-          <WalletAuthenButton
+          <WalletAuthButton
+            disabled={isSubmitting}
             onSuccess={() => {}}
-            onError={(err) => setErrorMessage(err.message)}
+            onError={(err) => setErrorMessage(err)}
           />
         </Stack>
       </ModalBody>
+      <ModalFooter>
+        <ModalStateManager
+          renderLauncher={({ setOpen }) => (
+            <div
+              style={{
+                flex: "1",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {tr("auth.signUpSuggestion", {
+                $createAccount: (
+                  <Link
+                    onClick={() => {
+                      setOpen(true);
+                      onClose();
+                    }}
+                  >
+                    {tr("auth.createAccount")}
+                  </Link>
+                ),
+              })}
+            </div>
+          )}
+        >
+          {({ open, setOpen }) => (
+            <SignUpModal open={open} onClose={() => setOpen(false)} />
+          )}
+        </ModalStateManager>
+      </ModalFooter>
     </ComposedModal>
   );
 }

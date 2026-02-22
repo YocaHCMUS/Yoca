@@ -7,13 +7,14 @@ import {
   useWalletModal,
   WalletMultiButton,
 } from "@solana/wallet-adapter-react-ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ModalStateManager } from "../ModelStateManager";
 import styles from "./WalletAuthButton.module.scss";
 
 type WalletAuthButtonProps = {
+  disabled: boolean;
   onSuccess: () => void;
-  onError: (error: Error) => void;
+  onError: (error: string) => void;
 };
 
 type WalletContentProps = {
@@ -49,18 +50,22 @@ function WalletModalContent({
   );
 }
 
-function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
-  const { tr } = useLocalization();
+export function WalletAuthButton({
+  disabled,
+  onSuccess,
+  onError,
+}: WalletAuthButtonProps) {
+  const { tr, fmt } = useLocalization();
   const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
   const { visible: walletModalVisible, setVisible: setWalletModalVisibility } =
     useWalletModal();
   const walletConnectBtnRef = useRef<HTMLDivElement>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const hasVerifiedRef = useRef(false);
 
-  const triggerWalletModal = () => {
+  const triggerWalletMultiBtn = () => {
     const container = walletConnectBtnRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     const btn = container.querySelector("button");
     if (btn instanceof HTMLElement) {
@@ -68,53 +73,50 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
     }
   };
 
-  useEffect(() => {
-    if (!connected || !publicKey || !signMessage) return;
-    if (hasVerifiedRef.current) return;
+  async function verifyWallet() {
+    if (!publicKey || !signMessage) {
+      return;
+    }
+    try {
+      const nonceRes = await client.api.users.auth.solana.nounce.$post({
+        json: {
+          pubKey: publicKey.toBase58(),
+        },
+      });
 
-    const verify = async () => {
-      setIsVerifying(true);
-      hasVerifiedRef.current = true;
-
-      try {
-        const pubKey = publicKey.toBase58();
-
-        const nonceRes = await client.api.users.auth.solana.nounce.$post({
-          json: { pubKey: pubKey },
-        });
-
-        if (!nonceRes.ok) {
-          throw new Error("Failed to retrieve nonce");
-        }
-
+      if (nonceRes.ok) {
         const { signMessage: message } = await nonceRes.json();
-        const messageBytes = new TextEncoder().encode(message);
-        const signatureBytes = await signMessage(messageBytes);
+        const signMessageBytes = new TextEncoder().encode(message);
+        const signatureBytes = await signMessage(signMessageBytes);
         const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
 
-        const verifyRes = await client.api.users.auth.solana.verify.$post({
+        const resp = await client.api.users.auth.solana.verify.$post({
           json: {
-            pubKey: pubKey,
+            pubKey: publicKey.toBase58(),
             signature: signatureBase64,
           },
         });
 
-        if (!verifyRes.ok) {
-          throw new Error("Wallet verification failed");
+        if (resp.ok) {
+          onSuccess();
+        } else {
+          onError("Verification failed");
         }
-
-        onSuccess();
-      } catch (err) {
-        onError(
-          err instanceof Error ? err : new Error("Unknown verification error"),
-        );
-      } finally {
-        setIsVerifying(false);
+      } else {
+        onError("Failed to get nonce");
       }
-    };
+    } catch (err) {
+      console.error("Wallet verification error:", err);
+      onError(err instanceof Error ? err.message : "Unknown error");
+    }
+  }
 
-    verify();
-  }, [connected, publicKey, signMessage, onSuccess, onError]);
+  async function onBtnClick() {
+    if (!connected) {
+      triggerWalletMultiBtn();
+    }
+    await verifyWallet();
+  }
 
   return (
     <>
@@ -123,9 +125,9 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
           <Button
             kind="tertiary"
             renderIcon={Wallet}
-            disabled={open || connecting || isVerifying}
+            disabled={disabled || open || connecting}
             onClick={() => {
-              triggerWalletModal();
+              onBtnClick();
               setOpen(true);
             }}
             style={{
@@ -133,11 +135,18 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
               maxInlineSize: "100%",
             }}
           >
-            {connected && wallet
-              ? wallet.adapter.name
-              : connecting
-                ? tr("auth.connectingWithWallet")
-                : tr("auth.continueWithGoogle")}
+            {wallet
+              ? connected
+                ? tr("auth.continueWithConnectedWallet", {
+                    connectedWalletAddress: publicKey?.toString() || "",
+                    connectedWalletName: wallet.adapter.name,
+                  })
+                : connecting
+                  ? tr("auth.connectingWithWallet")
+                  : tr("auth.continueWithSelectedWallet", {
+                      walletName: wallet.adapter.name,
+                    })
+              : tr("auth.continueWithWallet")}
           </Button>
         )}
       >
@@ -151,16 +160,9 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
         )}
       </ModalStateManager>
 
-      <div ref={walletConnectBtnRef} style={{ display: "none" }}>
-        <WalletMultiButton />
+      <div ref={walletConnectBtnRef}>
+        <WalletMultiButton style={{ display: "none" }} />
       </div>
     </>
   );
-}
-
-export function WalletAuthenButton({
-  onSuccess,
-  onError,
-}: WalletAuthButtonProps) {
-  return <WalletAuth onSuccess={onSuccess} onError={onError} />;
 }

@@ -1,20 +1,21 @@
+import client from "@/api/main";
 import Google from "@/components/icons/Google.svg?react";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Button, InlineNotification } from "@carbon/react";
+import { Button } from "@carbon/react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 interface GoogleAuthButtonProps {
   disabled: boolean;
-  onSuccess?: (...args: any[]) => any;
-  onError?: (...args: any[]) => any;
+  onSuccess: () => void;
+  onError: (err: string) => void;
 }
 
-export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
+export function GoogleAuthButton({
   disabled,
   onSuccess,
   onError,
-}) => {
+}: GoogleAuthButtonProps) {
   const { tr } = useLocalization();
   const [googleErr, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -23,24 +24,45 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   const onGoogleSignInSuccess = async (
     credentialResponse: CredentialResponse,
   ) => {
-    const token = credentialResponse.credential;
+    try {
+      const token = credentialResponse.credential;
 
-    if (!token) {
+      if (!token) {
+        const errMsg = tr("auth.googleAuthFailed");
+        setError(errMsg);
+        onError(errMsg);
+        return;
+      }
+
+      const resp = await client.api.users.auth.google.$post({
+        json: {
+          token,
+        },
+      });
+
+      if (resp.ok) {
+        setError(null);
+        onSuccess();
+        return;
+      } else {
+        const errorMsg = tr("auth.googleAuthFailed");
+        setError(errorMsg);
+        onError(errorMsg);
+        return;
+      }
+    } catch (error) {
       const errorMsg = tr("auth.googleAuthFailed");
       setError(errorMsg);
-      onError?.();
+      onError(errorMsg);
       return;
     }
-
-    setError(null);
-    setIsSigningIn(false);
-    onSuccess?.(token);
   };
 
   const onGoogleSignInError = () => {
+    console.log("google close");
     const errorMsg = tr("auth.googleAuthCancelled");
     setError(errorMsg);
-    onError?.();
+    onError(errorMsg);
   };
 
   // Hacky stuff to override google login button because it sucks
@@ -56,18 +78,11 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
 
   return (
     <div>
-      {googleErr && (
-        <InlineNotification
-          kind="error"
-          title={tr("common.error")}
-          subtitle={googleErr}
-        />
-      )}
       <Button
         kind="tertiary"
         renderIcon={Google}
         onClick={onGoogleBtnClick}
-        disabled={disabled || isSigningIn}
+        disabled={disabled}
         style={{
           inlineSize: "100%",
           maxInlineSize: "100%",
@@ -83,4 +98,4 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
       </div>
     </div>
   );
-};
+}

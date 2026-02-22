@@ -47,7 +47,7 @@ function WalletAuth() {
   return (
     <div>
       <WalletMultiButton />
-      <div style={{ display: "none" }}>{status}</div>
+      <div style={{}}>{status}</div>
     </div>
   );
 }

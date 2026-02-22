@@ -10,7 +10,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
-import { type FC, type ReactNode, useMemo } from "react";
+import { type FC, type ReactNode, useEffect, useMemo } from "react";
 
 interface SolanaProviderProps {
   children: ReactNode;
@@ -25,9 +25,13 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
     [],
   );
 
+  useEffect(() => {
+    localStorage.removeItem("walletName");
+  }, []);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets}>
+      <WalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider container="#wallet-modal-container">
           {children}
         </WalletModalProvider>

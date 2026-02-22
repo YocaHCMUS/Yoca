@@ -1,4 +1,5 @@
 import appLogo from "@/assets/app-logo.png";
+import { ModalStateManager } from "@/components/ModelStateManager";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   Content,
@@ -21,8 +22,7 @@ import {
 } from "@carbon/react";
 import { Checkmark, Search, User, Wikis } from "@carbon/react/icons";
 import { useState, type ReactNode } from "react";
-import { SignInModal } from "../auth/SignInForm";
-import { ModalStateManager } from "../ModelStateManager";
+import { SignInModal } from "../auth/SignInModal";
 import { Divider } from "../partials/Divider/Divider";
 import styles from "./Header.module.scss";
 
@@ -47,7 +47,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
     return (
       <>
         <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.alert")}</HeaderMenuItem>
+        <HeaderMenuItem href="#">{tr("nav.alerts")}</HeaderMenuItem>
         <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
