@@ -16,9 +16,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { Divider } from "../partials/Divider/Divider";
+import { WalletAuthenButton } from ".//WalletAuthButton";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import styles from "./SignInForm.module.scss";
-import { WalletAuthenButton } from "./WalletAuthButton";
 
 type SignInModalProps = {
   open: boolean;
@@ -90,8 +90,8 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
           <Stack gap={7}>
             <TextInput
               id="email"
-              labelText="Email*"
-              placeholder="Email"
+              labelText={`${tr("auth.email")}*`}
+              placeholder={tr("auth.email")}
               invalid={!!errors.email}
               invalidText={errors.email?.message || ""}
               {...register("email")}
@@ -99,7 +99,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
             <PasswordInput
               id="password"
-              labelText={"Password*"}
+              labelText={`${tr("auth.password")}*`}
               placeholder={tr("auth.password")}
               invalid={!!errors.password}
               invalidText={errors.password?.message || ""}
@@ -107,7 +107,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
               {...register("password")}
             />
 
-            <Link>Forgot password?</Link>
+            <Link>{tr("auth.forgotPassword")}</Link>
 
             <Button
               type="submit"
@@ -118,20 +118,11 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
                 maxInlineSize: "100%",
               }}
             >
-              Continue
+              {tr("auth.continueWithPassword")}
             </Button>
           </Stack>
         </Form>
-
-        <div className={styles["divider"]}>
-          <div className={styles["divider-line"]}>
-            <div className={styles["divider-border"]}></div>
-          </div>
-          <div className={styles["divider-text-container"]}>
-            <span className={styles["divider-text"]}>{tr("auth.or")}</span>
-          </div>
-        </div>
-
+        <Divider text={tr("common.or")} />
         <Stack gap={4}>
           <GoogleAuthButton
             disabled={isSubmitting}

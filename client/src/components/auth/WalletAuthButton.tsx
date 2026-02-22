@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button, ComposedModal, ModalBody } from "@carbon/react";
 import { Wallet } from "@carbon/react/icons";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -49,6 +50,7 @@ function WalletModalContent({
 }
 
 function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
+  const { tr } = useLocalization();
   const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
   const { visible: walletModalVisible, setVisible: setWalletModalVisibility } =
     useWalletModal();
@@ -134,8 +136,8 @@ function WalletAuth({ onSuccess, onError }: WalletAuthButtonProps) {
             {connected && wallet
               ? wallet.adapter.name
               : connecting
-                ? "Connecting..."
-                : "Continue with an existing wallet"}
+                ? tr("auth.connectingWithWallet")
+                : tr("auth.continueWithGoogle")}
           </Button>
         )}
       >

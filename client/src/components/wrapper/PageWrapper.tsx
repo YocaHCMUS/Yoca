@@ -1,4 +1,5 @@
 import appLogo from "@/assets/app-logo.png";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   Content,
   Header,
@@ -16,29 +17,22 @@ import {
   SkipToContent,
   Stack,
   Switcher,
-  SwitcherDivider,
   SwitcherItem,
 } from "@carbon/react";
-import { Search, User, Wikis } from "@carbon/react/icons";
+import { Checkmark, Search, User, Wikis } from "@carbon/react/icons";
 import { useState, type ReactNode } from "react";
+import { SignInModal } from "../auth/SignInForm";
+import { ModalStateManager } from "../ModelStateManager";
+import { Divider } from "../partials/Divider/Divider";
 import styles from "./Header.module.scss";
 
 type PageWrapperProps = {
   children?: ReactNode;
 };
 
-function NavHeaderItems() {
-  return (
-    <>
-      <HeaderMenuItem href="#">Dashboard</HeaderMenuItem>
-      <HeaderMenuItem href="#">Alerts</HeaderMenuItem>
-      <HeaderMenuItem href="#">Profile</HeaderMenuItem>
-    </>
-  );
-}
-
-export default function PageWrapper({ children }: PageWrapperProps) {
+export function PageWrapper({ children }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
+  const { tr, lang, setLang } = useLocalization();
   const [isLangOpen, setIsLangOpen] = useState(false);
 
   const toggleSideNav = () => {
@@ -48,6 +42,16 @@ export default function PageWrapper({ children }: PageWrapperProps) {
   const toggleLang = () => {
     setIsLangOpen((prev) => !prev);
   };
+
+  function NavHeaderItems() {
+    return (
+      <>
+        <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="#">{tr("nav.alert")}</HeaderMenuItem>
+        <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
+      </>
+    );
+  }
 
   return (
     <>
@@ -76,21 +80,33 @@ export default function PageWrapper({ children }: PageWrapperProps) {
         </HeaderNavigation>
 
         <HeaderGlobalBar>
-          <HeaderGlobalAction aria-label="Search">
+          <HeaderGlobalAction aria-label={tr("nav.search")}>
             <Search size={20} />
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
-            aria-label="Language"
+            aria-label={tr("nav.language")}
             isActive={isLangOpen}
             onClick={toggleLang}
           >
             <Wikis size={20} />
           </HeaderGlobalAction>
 
-          <HeaderGlobalAction aria-label="Account">
-            <User size={20} />
-          </HeaderGlobalAction>
+          <ModalStateManager
+            renderLauncher={({ open, setOpen }) => (
+              <HeaderGlobalAction
+                aria-label={tr("nav.account")}
+                isActive={open}
+                onClick={() => setOpen(true)}
+              >
+                <User size={20} />
+              </HeaderGlobalAction>
+            )}
+          >
+            {({ open, setOpen }) => (
+              <SignInModal open={open} onClose={() => setOpen(false)} />
+            )}
+          </ModalStateManager>
         </HeaderGlobalBar>
 
         <HeaderPanel
@@ -98,13 +114,39 @@ export default function PageWrapper({ children }: PageWrapperProps) {
           expanded={isLangOpen}
           aria-label="Language Selection"
         >
-          <Switcher aria-label="Language Switcher">
-            <SwitcherItem aria-labelledby="switcher-item-vietnamese">
-              <p>Vietname - Tiếng Việt (Vietnamese)</p>
+          <Switcher aria-label="Language Switcher" expanded={isLangOpen}>
+            <SwitcherItem
+              aria-labelledby="lang-vi"
+              onClick={() => {
+                setLang("vi");
+                setIsLangOpen(false);
+              }}
+            >
+              <Stack
+                orientation="horizontal"
+                gap={4}
+                style={{ alignItems: "center" }}
+              >
+                <p>{tr("lang.vi")}</p>
+                {lang == "vi" && <Checkmark size={16} />}
+              </Stack>
             </SwitcherItem>
-            <SwitcherDivider />
-            <SwitcherItem aria-labelledby="switcher-item-english">
-              <p>United States - English (English)</p>
+            <Divider />
+            <SwitcherItem
+              aria-labelledby="lang-en"
+              onClick={() => {
+                setLang("en");
+                setIsLangOpen(false);
+              }}
+            >
+              <Stack
+                orientation="horizontal"
+                gap={4}
+                style={{ alignItems: "center" }}
+              >
+                <p>{tr("lang.en")}</p>
+                {lang == "en" && <Checkmark size={16} />}
+              </Stack>
             </SwitcherItem>
           </Switcher>
         </HeaderPanel>

@@ -1,8 +1,8 @@
 import Google from "@/components/icons/Google.svg?react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button, InlineNotification } from "@carbon/react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import React, { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 interface GoogleAuthButtonProps {
   disabled: boolean;
@@ -15,7 +15,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   onSuccess,
   onError,
 }) => {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const [googleErr, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const googleButtonContainerRef = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
     const token = credentialResponse.credential;
 
     if (!token) {
-      const errorMsg = t("auth.googleAuthFailed");
+      const errorMsg = tr("auth.googleAuthFailed");
       setError(errorMsg);
       onError?.();
       return;
@@ -38,7 +38,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   };
 
   const onGoogleSignInError = () => {
-    const errorMsg = t("auth.googleAuthCancelled");
+    const errorMsg = tr("auth.googleAuthCancelled");
     setError(errorMsg);
     onError?.();
   };
@@ -59,7 +59,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
       {googleErr && (
         <InlineNotification
           kind="error"
-          title={t("common.error")}
+          title={tr("common.error")}
           subtitle={googleErr}
         />
       )}
@@ -73,7 +73,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
           maxInlineSize: "100%",
         }}
       >
-        Continue with Google
+        {tr("auth.continueWithGoogle")}
       </Button>
       <div ref={googleButtonContainerRef} style={{ display: "none" }}>
         <GoogleLogin
