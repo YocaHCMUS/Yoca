@@ -1,0 +1,155 @@
+.container {
+    width: 100%;
+    background: transparent;
+    padding: 12px 16px;
+    position: relative;
+    font-family: 'Inter', sans-serif;
+}
+
+.label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.selector {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb; // Light gray border
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: #9ca3af;
+    }
+
+    &.active {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+}
+
+.selectedContent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.selectedName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.sourceTag {
+    font-size: 11px;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+// Dropdown
+.dropdown {
+    position: absolute;
+    top: calc(100% - 5px); // Just below content
+    left: 16px; // Match container padding
+    right: 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.headerRow {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr; // Grid columns
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+
+    span {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+    }
+}
+
+.colPair {
+    text-align: left;
+}
+
+.colVol,
+.colLiq {
+    text-align: right;
+}
+
+.list {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.listItem {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    padding: 10px 12px;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #f9fafb;
+    }
+
+    &.selected {
+        background: #eff6ff;
+    }
+}
+
+// Inside List Item
+.pairInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pairName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pairSource {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.colVol,
+.colLiq {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+}
+
+// Global override for dropdown behavior if needed
+:global(.cds--dropdown) {
+    display: none; // Hide old carbon dropdown if any remains
+}

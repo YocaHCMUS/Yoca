@@ -11,6 +11,7 @@ import type {
   GoogleAuthData,
   AuthErrorType,
 } from '../../types/auth';
+import client from "@/api/main";
 
 /**
  * Mock delay to simulate network latency (ms)
@@ -43,148 +44,109 @@ const mockUsers: User[] = [
 const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
+// client/src/services/auth/authService.ts
+// Tự động xác định API base URL
+const API_URL = (() => {
+  const domain = import.meta.env.CLIENT_API_DOMAIN as string | undefined;
+  if (domain && domain.length > 0) {
+    return `${domain.replace(/\/+$/, '')}/api`;
+  }
+  // Trong môi trường dev, dùng proxy của Vite
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  // Fallback an toàn khi không có cấu hình
+  return 'http://localhost:4000/api';
+})();
 
-/**
- * Mock sign-in service
- * @param data Sign-in form data
- * @returns Authentication response
- */
+
 export const signIn = async (data: SignInFormData): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    const response = await fetch(`${API_URL}/users/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-  // Simulate validation
-  if (!data.usernameOrEmail || !data.password) {
-    return {
-      success: false,
-      error: 'Username/email and password are required',
-    };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.error || 'Đăng nhập thất bại' 
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return { success: false, error: "Không thể kết nối đến máy chủ" };
   }
-
-  // Find user by username or email
-  const user = mockUsers.find(
-    (u) =>
-      u.username === data.usernameOrEmail || u.email === data.usernameOrEmail
-  );
-
-  // Simulate invalid credentials
-  if (!user || data.password !== 'password123') {
-    return {
-      success: false,
-      error: 'Invalid credentials. Please check your username/email and password.',
-    };
-  }
-
-  // Successful authentication
-  return {
-    success: true,
-    user: {
-      ...user,
-      lastLogin: new Date(),
-    },
-    token: `mock-token-${user.id}-${Date.now()}`,
-    message: 'Sign in successful',
-  };
 };
-
-/**
- * Mock sign-up service
- * @param data Sign-up form data
- * @returns Authentication response
- */
 export const signUp = async (data: SignUpFormData): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    const response = await fetch(`${API_URL}/users/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-  // Simulate validation
-  if (!data.email || !data.username || !data.password) {
-    return {
-      success: false,
-      error: 'All fields are required',
-    };
+    // Thêm kiểm tra response.ok để tránh lỗi "Unexpected end of JSON input"
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.error || 'Đăng ký thất bại' 
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Signup error:", error);
+    return { success: false, error: "Không thể kết nối đến máy chủ" };
   }
-
-  // Check if email already exists
-  const emailExists = mockUsers.some((u) => u.email === data.email);
-  if (emailExists) {
-    return {
-      success: false,
-      error: 'Email already registered. Please use a different email or sign in.',
-    };
-  }
-
-  // Check if username already exists
-  const usernameExists = mockUsers.some((u) => u.username === data.username);
-  if (usernameExists) {
-    return {
-      success: false,
-      error: 'Username is already taken. Please choose a different username.',
-    };
-  }
-
-  // Password strength check
-  if (data.password.length < 8) {
-    return {
-      success: false,
-      error: 'Password must be at least 8 characters long.',
-    };
-  }
-
-  // Create new user
-  const newUser: User = {
-    id: `${mockUsers.length + 1}`,
-    username: data.username,
-    email: data.email,
-    createdAt: new Date(),
-    lastLogin: new Date(),
-  };
-
-  // Add to mock database
-  mockUsers.push(newUser);
-
-  // Successful registration
-  return {
-    success: true,
-    user: newUser,
-    token: `mock-token-${newUser.id}-${Date.now()}`,
-    message: 'Account created successfully',
-  };
 };
-
 /**
- * Mock Google OAuth sign-in service
- * @param data Google authentication data
- * @returns Authentication response
+ * Google OAuth sign-in service (server-backed)
  */
-export const googleSignIn = async (
-  data: GoogleAuthData
-): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+export const googleSignIn = async (data: GoogleAuthData): Promise<AuthResponse> => {
+  try {
+    // Lấy Google credential từ component (GIS returns `credential`)
+    const tokenToSend =
+      (data as any).credential || (data as any).token || (data as any).idToken;
 
-  // Simulate validation
-  if (!data.credential) {
+    if (!tokenToSend || typeof tokenToSend !== 'string') {
+      return {
+        success: false,
+        error: 'Thiếu thông tin Google credential',
+      };
+    }
+
+    const resp = await client.api.users.auth.google.$post({
+      json: { token: tokenToSend },
+    });
+
+    if (resp.ok) {
+      const res = await resp.json();
+      // Dựa trên lỗi "Property 'user' does not exist", server trả về userId và token
+      return {
+        success: true,
+        user: { id: res.userId } as any, // Ép kiểu hoặc map lại cho đúng định dạng User của bạn
+        token: res.token,
+      };
+    }
+
     return {
       success: false,
-      error: 'Google authentication failed. Please try again.',
+      error: 'Xác thực Google thất bại trên máy chủ',
+    };
+  } catch (error) {
+    console.error('Google Sign-In Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Không thể kết nối đến máy chủ',
     };
   }
-
-  // Simulate Google user creation/login
-  const googleUser: User = {
-    id: 'google-user-1',
-    username: 'google_user',
-    email: 'user@gmail.com',
-    createdAt: new Date(),
-    lastLogin: new Date(),
-    googleAuth: true,
-  };
-
-  return {
-    success: true,
-    user: googleUser,
-    token: `mock-google-token-${Date.now()}`,
-    message: 'Google sign in successful',
-  };
 };
-
 /**
  * Mock sign-out service
  */
@@ -199,26 +161,28 @@ export const signOut = async (): Promise<void> => {
  * @param token Authentication token
  * @returns User data if token is valid
  */
-export const validateToken = async (
-  token: string
-): Promise<AuthResponse> => {
-  await delay(500);
+export const validateToken = async (token: string): Promise<AuthResponse> => {
+  try {
+    const response = await fetch(`${API_URL}/users/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      // Allow server to also accept body token
+      body: JSON.stringify({ token }),
+    });
 
-  // Simple mock validation - check if token format is correct
-  if (!token || !token.startsWith('mock-token-') && !token.startsWith('mock-google-token-')) {
-    return {
-      success: false,
-      error: 'Invalid or expired token',
-    };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Token không hợp lệ' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Token validate error:', error);
+    return { success: false, error: 'Không thể kết nối đến máy chủ' };
   }
-
-  // Return mock user for valid token
-  const user = mockUsers[0]; // Return first user for demo
-  return {
-    success: true,
-    user,
-    token,
-  };
 };
 
 /**

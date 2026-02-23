@@ -1,8 +1,20 @@
+import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
+import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
+import { FundamentalTab } from "@/components/market/FundamentalTab.tsx";
+import { OverviewTab } from "@/components/market/OverviewTab.tsx";
+import { ProfitLossTab } from "@/components/market/ProfitLossTab.tsx";
+import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import { Table } from "@/components/tables/Table.tsx";
+import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
+import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
+import { CheckmarkFilled, CloseFilled } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
-import { useTranslation } from "react-i18next";
-import PageWrapper from "@/components/wrapper/PageWrapper.tsx";
+import styles from "./index.module.scss";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
@@ -26,13 +38,15 @@ import { TransactionDistribution } from "@/components/charts/TransactionDistribu
 interface Transaction {
   id: string;
   signature: string;
-  type: 'Buy' | 'Sell';
+  type: "Buy" | "Sell";
+  type: "Buy" | "Sell";
   token: string;
   amount: number;
   price: number;
   total: number;
   timestamp: string;
-  status: 'Success' | 'Failed';
+  status: "Success" | "Failed";
+  status: "Success" | "Failed";
 }
 
 interface Portfolio {
@@ -57,8 +71,10 @@ export default function WalletPage() {
   const transactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
     id: `tx-${i}`,
     signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
-    type: i % 2 === 0 ? 'Buy' : 'Sell',
-    token: ['SOL', 'USDC', 'JTO', 'BONK'][i % 4],
+    type: i % 2 === 0 ? "Buy" : "Sell",
+    token: ["SOL", "USDC", "JTO", "BONK"][i % 4],
+    type: i % 2 === 0 ? "Buy" : "Sell",
+    token: ["SOL", "USDC", "JTO", "BONK"][i % 4],
     amount: Math.random() * 1000,
     price: Math.random() * 200,
     total: Math.random() * 10000,
@@ -80,7 +96,8 @@ export default function WalletPage() {
   });
 
   // Transform transactions to array format for Table component
-  const transactionData = transactions.map(tx => [
+  const transactionData = transactions.map((tx) => [
+  const transactionData = transactions.map((tx) => [
     tx.signature,
     tx.type,
     tx.token,
@@ -88,7 +105,8 @@ export default function WalletPage() {
     tx.price.toFixed(2),
     tx.total.toFixed(2),
     tx.timestamp,
-    tx.status
+    tx.status,
+    tx.status,
   ]);
 
   const portfolioData = portfolios.map(prt => [
@@ -100,14 +118,22 @@ export default function WalletPage() {
   ])
 
   const transactionHeaders = [
-    'Signature',
-    'Type',
-    'Token',
-    'Amount',
-    'Price',
-    'Total',
-    'Time',
-    'Status'
+    "Signature",
+    "Type",
+    "Token",
+    "Amount",
+    "Price",
+    "Total",
+    "Time",
+    "Status",
+    "Signature",
+    "Type",
+    "Token",
+    "Amount",
+    "Price",
+    "Total",
+    "Time",
+    "Status",
   ];
 
   const portfolioHeaders = [
@@ -225,7 +251,8 @@ export default function WalletPage() {
 
   return (
     <PageWrapper>
-      <WalletOverview walletAddress={address}/>
+      <WalletOverview walletAddress={address} />
+      <WalletOverview walletAddress={address} />
       <h1 className={styles.sectionTitle}>Activity</h1>
       <div className={styles.chartContainer}>
         <TabContainer

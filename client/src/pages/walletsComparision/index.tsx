@@ -1,35 +1,74 @@
-import { OverviewTab, FundamentalTab, ProfitLossTab } from "@/components/market";
-import TabContainer from "@/components/tabContainer/TabContainer";
-import { useState } from "react";
-import { Grid, Column, TextInput, Tag, Stack, DismissibleTag, Button, Search } from "@carbon/react";
-import { Add, Close, SearchAdvanced } from '@carbon/react/icons';
+import {
+  FundamentalTab,
+  OverviewTab,
+  ProfitLossTab,
+} from "@/components/market";
+import TabContainer from "@/components/tabContainer/tabContainer";
 import { PageWrapper } from "@/components/wrapper";
+import { Button, Column, Grid, Search, Stack } from "@carbon/react";
+import { Close, SearchAdvanced } from "@carbon/react/icons";
+import { useState } from "react";
+import { Button, Column, Grid, Search, Stack } from "@carbon/react";
+import { Close, SearchAdvanced } from "@carbon/react/icons";
+import { useState } from "react";
 import styles from "./index.module.scss";
 import { GeneralTab } from "@/components/wallet/WalletComparision/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparision/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
 
 export default function WalletsComparisionPage() {
-    const [activeTab, setActiveTab] = useState(0);
-    const [walletAddress, setWalletAddress] = useState("");
-    const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
 
-    const handleAddWallet = () => {
-        if (walletAddress.trim() && !selectedWallets.includes(walletAddress.trim())) {
-            setSelectedWallets([...selectedWallets, walletAddress.trim()]);
-            setWalletAddress("");
-        }
-    };
+  const handleAddWallet = () => {
+    if (
+      walletAddress.trim() &&
+      !selectedWallets.includes(walletAddress.trim())
+    ) {
+      setSelectedWallets([...selectedWallets, walletAddress.trim()]);
+      setWalletAddress("");
+    }
+  };
+  const handleAddWallet = () => {
+    if (
+      walletAddress.trim() &&
+      !selectedWallets.includes(walletAddress.trim())
+    ) {
+      setSelectedWallets([...selectedWallets, walletAddress.trim()]);
+      setWalletAddress("");
+    }
+  };
 
-    const handleRemoveWallet = (address: string) => {
-        setSelectedWallets(selectedWallets.filter(w => w !== address));
-    };
+  const handleRemoveWallet = (address: string) => {
+    setSelectedWallets(selectedWallets.filter((w) => w !== address));
+  };
+  const handleRemoveWallet = (address: string) => {
+    setSelectedWallets(selectedWallets.filter((w) => w !== address));
+  };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleAddWallet();
-        }
-    };
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddWallet();
+    }
+  };
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddWallet();
+    }
+  };
+
+  return (
+    <PageWrapper>
+      <div className={styles.walletsComparisonPage}>
+        <Grid className={styles.grid} fullWidth>
+          {/* 3 columns - Wallet Selection Sidebar */}
+          <Column lg={4} md={4} sm={4}>
+            <div className={styles.sidebarContainer}>
+              <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
 
     return (
         <PageWrapper>

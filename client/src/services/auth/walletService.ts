@@ -1,6 +1,7 @@
 /**
- * Mock Wallet Service
- * Simulates wallet detection and connection for Solana wallets
+ * Wallet Service
+ * Detects and connects Solana wallets in browser (Phantom, Solflare)
+ * Authentication flow: request nonce -> sign message -> verify signature.
  */
 
 import type {
@@ -10,49 +11,161 @@ import type {
   WalletConnection,
   AuthResponse,
 } from '../../types/auth';
+import client from '@/api/main';
 
 /**
  * Mock delay to simulate wallet operations (ms)
  */
 const MOCK_DELAY = 800;
 
+interface SolanaBrowserProvider {
+  isPhantom?: boolean;
+  isSolflare?: boolean;
+  publicKey?: {
+    toBase58?: () => string;
+  };
+  connect?: () => Promise<{ publicKey?: { toBase58?: () => string } } | void>;
+  signMessage?: (message: Uint8Array) => Promise<Uint8Array | { signature: Uint8Array }>;
+}
+
+interface EthereumBrowserProvider {
+  isMetaMask?: boolean;
+  isPhantom?: boolean;
+  providers?: EthereumBrowserProvider[];
+  request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+const toBase64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary);
+};
+
+const getProviderFromWalletType = (walletType: WalletType): SolanaBrowserProvider | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const providerWindow = window as typeof window & {
+    solana?: SolanaBrowserProvider;
+    solflare?: SolanaBrowserProvider;
+  };
+
+  switch (walletType) {
+    case 'phantom': {
+      const provider = providerWindow.solana;
+      return provider?.isPhantom ? provider : null;
+    }
+    case 'solflare': {
+      const provider = providerWindow.solflare ?? providerWindow.solana;
+      return provider?.isSolflare ? provider : null;
+    }
+    default:
+      return null;
+  }
+};
+
+const getEthereumProviderFromWalletType = (
+  walletType: WalletType,
+): EthereumBrowserProvider | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const providerWindow = window as typeof window & {
+    ethereum?: EthereumBrowserProvider;
+  };
+
+  if (walletType !== 'metamask') {
+    return null;
+  }
+
+  const injectedProvider = providerWindow.ethereum;
+  if (!injectedProvider) {
+    return null;
+  }
+
+  const availableProviders: EthereumBrowserProvider[] = Array.isArray(injectedProvider.providers)
+    ? injectedProvider.providers
+    : [injectedProvider];
+
+  const metamaskProvider = availableProviders.find(
+    (provider: EthereumBrowserProvider) =>
+      provider?.isMetaMask && !provider?.isPhantom,
+  );
+
+  return metamaskProvider ?? null;
+};
+
 /**
- * Available Solana wallets with metadata
+ * Wallet metadata per chain
  */
-const SOLANA_WALLETS: WalletInfo[] = [
-  {
-    name: 'Phantom',
-    type: 'phantom',
-    icon: '/icons/Phantom-Icon_Square.svg',
-    detected: false,
-    installUrl: 'https://phantom.app/',
-    blockchain: ['solana'],
-  },
-  {
-    name: 'Solflare',
-    type: 'solflare',
-    icon: '/icons/Solflare_id5j73wBTF_1.svg',
-    detected: false,
-    installUrl: 'https://solflare.com/',
-    blockchain: ['solana'],
-  },
-  {
-    name: 'Ledger',
-    type: 'ledger',
-    icon: '/icons/Ledger_idnDvP24qI_0.svg',
-    detected: false,
-    installUrl: 'https://www.ledger.com/',
-    blockchain: ['solana', 'ethereum', 'bitcoin'],
-  },
-  {
-    name: 'Trezor',
-    type: 'trezor',
-    icon: '/icons/Trezor_Logo_0.svg',
-    detected: false,
-    installUrl: 'https://trezor.io/',
-    blockchain: ['solana', 'ethereum', 'bitcoin'],
-  },
-];
+const WALLET_CATALOG: Record<BlockchainType, WalletInfo[]> = {
+  solana: [
+    {
+      name: 'Phantom',
+      type: 'phantom',
+      icon: '/icons/Phantom-Icon_Square.svg',
+      detected: false,
+      installUrl: 'https://phantom.app/',
+      blockchain: ['solana'],
+    },
+    {
+      name: 'Solflare',
+      type: 'solflare',
+      icon: '/icons/Solflare_id5j73wBTF_1.svg',
+      detected: false,
+      installUrl: 'https://solflare.com/',
+      blockchain: ['solana'],
+    },
+  ],
+  ethereum: [
+    {
+      name: 'MetaMask',
+      type: 'metamask',
+      icon: '/icons/metamask.svg',
+      detected: false,
+      installUrl: 'https://metamask.io/download/',
+      blockchain: ['ethereum'],
+    },
+    {
+      name: 'Ledger',
+      type: 'ledger',
+      icon: '/icons/Ledger_idnDvP24qI_0.svg',
+      detected: false,
+      installUrl: 'https://www.ledger.com/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+    {
+      name: 'Trezor',
+      type: 'trezor',
+      icon: '/icons/Trezor_Logo_0.svg',
+      detected: false,
+      installUrl: 'https://trezor.io/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+  ],
+  bitcoin: [
+    {
+      name: 'Ledger',
+      type: 'ledger',
+      icon: '/icons/Ledger_idnDvP24qI_0.svg',
+      detected: false,
+      installUrl: 'https://www.ledger.com/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+    {
+      name: 'Trezor',
+      type: 'trezor',
+      icon: '/icons/Trezor_Logo_0.svg',
+      detected: false,
+      installUrl: 'https://trezor.io/',
+      blockchain: ['solana', 'ethereum', 'bitcoin'],
+    },
+  ],
+};
 
 /**
  * Mock connected wallets database
@@ -67,31 +180,163 @@ const delay = (ms: number): Promise<void> => {
 };
 
 /**
- * Detect installed Solana wallets in the browser
+ * Detect installed wallets in the browser
  * @returns List of wallet info with detection status
  */
 export const detectWallets = async (
   blockchain: BlockchainType = 'solana'
 ): Promise<WalletInfo[]> => {
-  await delay(500);
+  await delay(200);
 
-  // Mock detection logic
-  // In a real implementation, this would check window.solana, window.phantom, etc.
-  const wallets = SOLANA_WALLETS.filter((w) =>
-    w.blockchain.includes(blockchain)
-  ).map((wallet) => ({
+  const catalog = WALLET_CATALOG[blockchain] || [];
+  const phantomProvider = getProviderFromWalletType('phantom');
+  const solflareProvider = getProviderFromWalletType('solflare');
+  const metamaskProvider = getEthereumProviderFromWalletType('metamask');
+
+  return catalog.map((wallet) => ({
     ...wallet,
-    // Randomly mark some wallets as detected for demo purposes
-    // In production, this would check actual browser extensions
-    detected: Math.random() > 0.5,
+    detected: wallet.type === 'phantom'
+      ? Boolean(phantomProvider)
+      : wallet.type === 'solflare'
+        ? Boolean(solflareProvider)
+        : wallet.type === 'metamask'
+          ? Boolean(metamaskProvider)
+        : wallet.detected,
   }));
+};
 
-  // Ensure at least one wallet is detected for testing
-  if (wallets.length > 0 && !wallets.some((w) => w.detected)) {
-    wallets[0].detected = true;
+const connectSolanaWallet = async (
+  walletType: WalletType,
+): Promise<AuthResponse> => {
+  const provider = getProviderFromWalletType(walletType);
+  if (!provider) {
+    return { success: false, error: 'Ví chưa được cài đặt hoặc không được hỗ trợ' };
   }
 
-  return wallets;
+  if (!provider.connect || !provider.signMessage) {
+    return { success: false, error: 'Ví không hỗ trợ đăng nhập bằng chữ ký' };
+  }
+
+  const connectedResult = await provider.connect();
+  const connectedPubKey =
+    provider.publicKey?.toBase58?.() ?? connectedResult?.publicKey?.toBase58?.();
+
+  if (!connectedPubKey) {
+    return { success: false, error: 'Không lấy được địa chỉ ví' };
+  }
+
+  const nonceResponse = await client.api.users.auth.solana.nounce.$post({
+    json: {
+      pubKey: connectedPubKey,
+    },
+  });
+
+  if (!nonceResponse.ok) {
+    return { success: false, error: 'Không lấy được thông điệp xác thực' };
+  }
+
+  const { signMessage } = await nonceResponse.json();
+  const signMessageBytes = new TextEncoder().encode(signMessage);
+  const signed = await provider.signMessage(signMessageBytes);
+  const signatureBytes = signed instanceof Uint8Array ? signed : signed.signature;
+
+  const verifyResponse = await client.api.users.auth.solana.verify.$post({
+    json: {
+      pubKey: connectedPubKey,
+      signature: toBase64(signatureBytes),
+    },
+  });
+
+  if (!verifyResponse.ok) {
+    return { success: false, error: 'Xác thực chữ ký ví thất bại' };
+  }
+
+  const verifyData = await verifyResponse.json();
+  const connection: WalletConnection = {
+    address: connectedPubKey,
+    blockchain: 'solana',
+    walletType,
+    connected: true,
+    connectedAt: new Date(),
+  };
+  connectedWallets.push(connection);
+
+  return {
+    success: true,
+    user: {
+      id: verifyData.userId,
+    } as AuthResponse['user'],
+    token: verifyData.token,
+    message: verifyData.message,
+  };
+};
+
+const connectEthereumWallet = async (
+  walletType: WalletType,
+): Promise<AuthResponse> => {
+  const provider = getEthereumProviderFromWalletType(walletType);
+  if (!provider?.request) {
+    return { success: false, error: 'MetaMask chưa được cài đặt hoặc không được hỗ trợ' };
+  }
+
+  const accounts = (await provider.request({
+    method: 'eth_requestAccounts',
+  })) as string[];
+
+  const selectedAddress = accounts?.[0]?.toLowerCase();
+  if (!selectedAddress) {
+    return { success: false, error: 'Không lấy được địa chỉ MetaMask' };
+  }
+
+  const nonceResponse = await client.api.users.auth.ethereum.nounce.$post({
+    json: {
+      address: selectedAddress,
+    },
+  });
+
+  if (!nonceResponse.ok) {
+    return { success: false, error: 'Không lấy được thông điệp xác thực' };
+  }
+
+  const { signMessage } = await nonceResponse.json();
+  const signature = (await provider.request({
+    method: 'personal_sign',
+    params: [signMessage, selectedAddress],
+  })) as string;
+
+  if (!signature) {
+    return { success: false, error: 'Không lấy được chữ ký từ MetaMask' };
+  }
+
+  const verifyResponse = await client.api.users.auth.ethereum.verify.$post({
+    json: {
+      address: selectedAddress,
+      signature,
+    },
+  });
+
+  if (!verifyResponse.ok) {
+    return { success: false, error: 'Xác thực chữ ký MetaMask thất bại' };
+  }
+
+  const verifyData = await verifyResponse.json();
+  const connection: WalletConnection = {
+    address: selectedAddress,
+    blockchain: 'ethereum',
+    walletType,
+    connected: true,
+    connectedAt: new Date(),
+  };
+  connectedWallets.push(connection);
+
+  return {
+    success: true,
+    user: {
+      id: verifyData.userId,
+    } as AuthResponse['user'],
+    token: verifyData.token,
+    message: verifyData.message,
+  };
 };
 
 /**
@@ -104,63 +349,27 @@ export const connectWallet = async (
   walletType: WalletType,
   blockchain: BlockchainType = 'solana'
 ): Promise<AuthResponse> => {
-  await delay(MOCK_DELAY);
+  try {
+    if (blockchain === 'solana') {
+      return await connectSolanaWallet(walletType);
+    }
 
-  // Simulate wallet not installed
-  const wallets = await detectWallets(blockchain);
-  const wallet = wallets.find((w) => w.type === walletType);
+    if (blockchain === 'ethereum') {
+      return await connectEthereumWallet(walletType);
+    }
 
-  if (!wallet) {
+    return { success: false, error: 'Blockchain chưa được hỗ trợ đăng nhập' };
+  } catch (error: unknown) {
+    const walletError = error as { code?: number; message?: string };
+    if (walletError?.code === 4001) {
+      return { success: false, error: 'Người dùng từ chối ký thông điệp' };
+    }
+
     return {
       success: false,
-      error: `${walletType} wallet is not available`,
+      error: walletError?.message || 'Lỗi kết nối ví Solana',
     };
   }
-
-  if (!wallet.detected) {
-    return {
-      success: false,
-      error: `${wallet.name} is not installed. Please install the extension and try again.`,
-    };
-  }
-
-  // Simulate user rejection (10% chance for demo)
-  if (Math.random() < 0.1) {
-    return {
-      success: false,
-      error: 'Wallet connection was rejected by user',
-    };
-  }
-
-  // Generate mock wallet address
-  const mockAddress = generateMockWalletAddress(blockchain);
-
-  // Create wallet connection
-  const connection: WalletConnection = {
-    address: mockAddress,
-    blockchain,
-    walletType,
-    connected: true,
-    connectedAt: new Date(),
-  };
-
-  // Add to connected wallets
-  connectedWallets.push(connection);
-
-  // Return success with mock user data
-  return {
-    success: true,
-    user: {
-      id: `wallet-user-${Date.now()}`,
-      username: `user_${mockAddress.slice(0, 8)}`,
-      email: `${mockAddress.slice(0, 8)}@wallet.user`,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      wallets: [connection],
-    },
-    token: `mock-wallet-token-${mockAddress}-${Date.now()}`,
-    message: `Successfully connected to ${wallet.name}`,
-  };
 };
 
 /**
@@ -240,7 +449,12 @@ const generateMockWalletAddress = (blockchain: BlockchainType): string => {
  * @returns Wallet information or undefined
  */
 export const getWalletInfo = (walletType: WalletType): WalletInfo | undefined => {
-  return SOLANA_WALLETS.find((w) => w.type === walletType);
+  const allWallets: WalletInfo[] = [
+    ...((WALLET_CATALOG.solana ?? []) as WalletInfo[]),
+    ...((WALLET_CATALOG.ethereum ?? []) as WalletInfo[]),
+    ...((WALLET_CATALOG.bitcoin ?? []) as WalletInfo[]),
+  ];
+  return allWallets.find((w: WalletInfo) => w.type === walletType);
 };
 
 /**
@@ -249,7 +463,7 @@ export const getWalletInfo = (walletType: WalletType): WalletInfo | undefined =>
  * @returns Array of wallet info
  */
 export const getAvailableWallets = (
-  blockchain: BlockchainType = 'solana'
+  blockchain: BlockchainType = 'ethereum'
 ): WalletInfo[] => {
-  return SOLANA_WALLETS.filter((w) => w.blockchain.includes(blockchain));
+  return (WALLET_CATALOG[blockchain] || []).slice();
 };

@@ -1,0 +1,5 @@
+.headerPanel {
+  &:global(.cds--header-panel--expanded) {
+    inline-size: 22rem !important;
+  }
+}

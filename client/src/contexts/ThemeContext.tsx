@@ -1,95 +1,73 @@
-/**
- * Theme Context Provider
- * Manages global theme state (light/dark mode)
- */
+import { THEME_LOCAL_STORAGE_KEY } from "@/config/constants";
+import { GlobalTheme, Theme } from "@carbon/react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ComponentProps,
+} from "react";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+type SupportedTheme = ComponentProps<typeof Theme>["theme"];
+const userThemes = {
+  light: "white",
+  dark: "g100",
+} as const satisfies Record<string, SupportedTheme>;
+type ThemeMode = keyof typeof userThemes;
 
-/**
- * Available theme modes
- */
-export type ThemeMode = 'light' | 'dark';
+function isValidTheme(value: string): value is ThemeMode {
+  return Object.keys(userThemes).includes(value);
+}
 
-/**
- * Theme context type
- */
 interface ThemeContextType {
   theme: ThemeMode;
   toggleTheme: () => void;
 }
 
-/**
- * Local storage key for theme preference
- */
-const THEME_STORAGE_KEY = 'yoca_theme_preference';
-
-/**
- * Theme context
- */
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-/**
- * Props for ThemeProvider component
- */
 interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Get initial theme from localStorage or system preference
- */
-const getInitialTheme = (): ThemeMode => {
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-  if (storedTheme === 'light' || storedTheme === 'dark') {
-    return storedTheme;
+function getInitialTheme(): ThemeMode {
+  const previousTheme = localStorage.getItem(THEME_LOCAL_STORAGE_KEY);
+  if (previousTheme && isValidTheme(previousTheme)) {
+    return previousTheme;
   }
+  return "light";
+}
 
-  // Check system preference
-  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
-
-  return 'light';
-};
-
-/**
- * Theme Provider Component
- * Wraps the application to provide theme state and methods
- */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
 
-  /**
-   * Persist theme to localStorage when it changes
-   */
   useEffect(() => {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    localStorage.setItem(THEME_LOCAL_STORAGE_KEY, theme);
   }, [theme]);
 
-  /**
-   * Toggle between light and dark themes
-   */
   const toggleTheme = useCallback(() => {
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+    setTheme((prevTheme) => (prevTheme == "light" ? "dark" : "light"));
   }, []);
 
-  const contextValue: ThemeContextType = {
-    theme,
-    toggleTheme,
-  };
-
-  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider
+      value={{
+        theme,
+        toggleTheme,
+      }}
+    >
+      <GlobalTheme theme={userThemes[theme]}>
+        <Theme theme={userThemes[theme]}>{children}</Theme>
+      </GlobalTheme>
+    </ThemeContext.Provider>
+  );
 };
 
-/**
- * Hook to use theme context
- * @returns Theme context
- * @throws Error if used outside ThemeProvider
- */
-export const useTheme = (): ThemeContextType => {
+export function useUserTheme() {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+  if (context == undefined) {
+    throw new Error("useUserTheme must be used within a ThemeProvider");
   }
   return context;
-};
+}

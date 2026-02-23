@@ -2,7 +2,9 @@ import { serve } from "@hono/node-server";
 import "@sv/util/load-env.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import { clientDomains } from "./config/security.js";
 import balances from "./routes/balances.js";
 import chartBalance from "./routes/charts/balance.route.js";
 import chartCounterparties from "./routes/charts/counterparties.route.js";
@@ -29,8 +31,12 @@ process.loadEnvFile("./.env");
 
 // Routes
 const app = new Hono()
-  .use(cors())
-  .use(logger())
+  .use("*", logger())
+  .use(
+    "/api/*",
+    cors({ origin: clientDomains, credentials: true }),
+    csrf({ origin: clientDomains }),
+  )
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }))
   .route("/api/users", users)
