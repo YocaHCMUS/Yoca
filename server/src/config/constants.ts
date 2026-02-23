@@ -9,3 +9,6 @@ export const TRENDING_TOKENS_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const TOP_TOKEN_HOLDER_STATS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const TOP_TOKEN_HOLDERS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const POOL_TRADES_TTL_MS = 1 * 60 * 1000; // 1 minute
+export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+export const AUTH_COOKIE_NAME = "auth_token";
+export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes

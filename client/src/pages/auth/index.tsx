@@ -4,12 +4,6 @@ export default function AuthShowcase() {
   return (
     <PageWrapper>
       <h1>Hello World</h1>
-
-      {/* <div
-        className={styles.mainContent}
-      > 
-        <h1>Hello World</h1>
-      </div> */}
     </PageWrapper>
   );
 }

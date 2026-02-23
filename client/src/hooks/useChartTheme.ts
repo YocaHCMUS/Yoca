@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { ThemeMode } from "../contexts/ThemeContext";
-import { useTheme } from "../contexts/ThemeContext";
+import { useUserTheme } from "../contexts/ThemeContext";
 
 export interface ChartThemeConfig {
   backgroundColor: string;
@@ -65,7 +65,7 @@ function getThemeConfig(theme: ThemeMode): ChartThemeConfig {
 }
 
 export function useChartTheme(): ChartThemeConfig {
-  const { theme } = useTheme();
+  const { theme } = useUserTheme();
 
   return useMemo(() => getThemeConfig(theme), [theme]);
 }

@@ -1,39 +1,21 @@
-/**
- * ThemeToggle Component
- * Button to toggle between light and dark themes
- */
+import { useUserTheme } from "@/contexts";
+import { Asleep, Light } from "@carbon/icons-react";
+import { HeaderGlobalAction } from "@carbon/react";
+import React from "react";
+import styles from "./ThemeToggle.module.scss";
 
-import React from 'react';
-import { HeaderGlobalAction } from '@carbon/react';
-import { Asleep, Light } from '@carbon/icons-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import styles from './ThemeToggle.module.scss';
-
-/**
- * ThemeToggle Component
- * Displays sun/moon icon and toggles theme on click
- */
 const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
-
-  /**
-   * Handle theme toggle
-   */
-  const handleToggle = () => {
-    toggleTheme();
-  };
-
-  const isDark = theme === 'dark';
+  const { theme, toggleTheme } = useUserTheme();
 
   return (
     <div className={styles.themeToggleWrapper}>
       <HeaderGlobalAction
-        aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+        aria-label={`Switch to ${theme == "dark" ? "light" : "dark"} mode`}
         tooltipAlignment="end"
-        onClick={handleToggle}
+        onClick={toggleTheme}
         className={styles.themeToggle}
       >
-        {isDark ? <Light size={20} /> : <Asleep size={20} />}
+        {theme == "dark" ? <Light size={20} /> : <Asleep size={20} />}
       </HeaderGlobalAction>
     </div>
   );
