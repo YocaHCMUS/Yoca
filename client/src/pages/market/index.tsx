@@ -1,29 +1,25 @@
-import React, { useState } from 'react';
-import { Header } from '../../components/navigation';
 import {
-  TickerBar,
+  FundamentalTab,
+  FuturesTab,
   MarketTabs,
   OverviewTab,
-  FundamentalTab,
   ProfitLossTab,
-  FuturesTab,
+  TickerBar,
   type TabType,
-} from '@/components/market';
-import styles from './index.module.scss';
-import { PageWrapper } from '@/components/wrapper';
+} from "@/components/market";
+import { PageWrapper } from "@/components/wrapper";
+import { useState } from "react";
+import styles from "./index.module.scss";
 
 export default function MarketPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   return (
     <PageWrapper>
       <div className={styles.marketPage}>
         <TickerBar />
         <main className={styles.content}>
-          <MarketTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          >
+          <MarketTabs activeTab={activeTab} onTabChange={setActiveTab}>
             {{
               overview: <OverviewTab />,
               fundamental: <FundamentalTab />,

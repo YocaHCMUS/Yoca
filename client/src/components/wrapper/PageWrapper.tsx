@@ -1,6 +1,8 @@
 import appLogo from "@/assets/app-logo.png";
 import { ModalStateManager } from "@/components/ModelStateManager";
+import { useUserTheme } from "@/contexts";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { Asleep, Light } from "@carbon/icons-react";
 import {
   Content,
   Header,
@@ -26,11 +28,21 @@ import { SignInModal } from "../auth/SignInModal";
 import { Divider } from "../partials/Divider/Divider";
 import styles from "./Header.module.scss";
 
-type PageWrapperProps = {
-  children?: ReactNode;
-};
+function ThemeToggleGlobalAction() {
+  const { theme, toggleTheme } = useUserTheme();
 
-export function PageWrapper({ children }: PageWrapperProps) {
+  return (
+    <HeaderGlobalAction
+      aria-label={`Switch to ${theme == "dark" ? "light" : "dark"} mode`}
+      tooltipAlignment="end"
+      onClick={toggleTheme}
+    >
+      {theme == "dark" ? <Light size={20} /> : <Asleep size={20} />}
+    </HeaderGlobalAction>
+  );
+}
+
+export function PageWrapper({ children }: { children: ReactNode }) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const [isLangOpen, setIsLangOpen] = useState(false);
@@ -107,13 +119,10 @@ export function PageWrapper({ children }: PageWrapperProps) {
               <SignInModal open={open} onClose={() => setOpen(false)} />
             )}
           </ModalStateManager>
+          <ThemeToggleGlobalAction />
         </HeaderGlobalBar>
 
-        <HeaderPanel
-          className={styles.headerPanel}
-          expanded={isLangOpen}
-          aria-label="Language Selection"
-        >
+        <HeaderPanel className={styles.headerPanel} expanded={isLangOpen}>
           <Switcher aria-label="Language Switcher" expanded={isLangOpen}>
             <SwitcherItem
               aria-labelledby="lang-vi"
@@ -165,7 +174,9 @@ export function PageWrapper({ children }: PageWrapperProps) {
         </SideNav>
       </Header>
 
-      <Content id="main-content">{children}</Content>
+      <Content style={{ height: "100vh" }} id="main-content">
+        {children}
+      </Content>
     </>
   );
 }
