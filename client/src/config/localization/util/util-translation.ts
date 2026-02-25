@@ -92,7 +92,7 @@ export function defineTranslationWithBase<Base extends object>() {
   return <T>(t: T & ValidateTranslation<Base, T>): T => t;
 }
 
-export type WithBase<T extends string> = string & {
+export type WithBase<T extends string, P> = P & {
   __default?: T;
 };
 

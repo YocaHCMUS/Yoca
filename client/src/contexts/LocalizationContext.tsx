@@ -6,6 +6,7 @@ import {
   type PathValue,
   type TranslationKeyPath,
   type TranslationSchema,
+  type WithBase,
 } from "@/config/localization";
 import React, { useMemo, useState, type ReactNode } from "react";
 
@@ -24,12 +25,12 @@ type TranslateFunction = {
     key: FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
       ? K
       : never,
-  ): TranslationReturn<K>;
+  ): WithBase<PathValue<BaseTranslation, K>, TranslationReturn<K>>;
 
   <K extends TranslationKeyPath>(
     key: K,
     params: FmtStrParams<PathValue<BaseTranslation, K>>,
-  ): TranslationReturn<K>;
+  ): WithBase<PathValue<BaseTranslation, K>, TranslationReturn<K>>;
 };
 
 type NumberFormatter = typeof locale.en.format.num;

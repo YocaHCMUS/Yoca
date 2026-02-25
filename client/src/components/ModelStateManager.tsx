@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 
 type StateManagementProps = {
@@ -16,13 +16,20 @@ export const ModalStateManager = ({
   children: ModalContent,
 }: ModalStateManagerProps) => {
   const [open, setOpen] = useState(false);
+  const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const mRoot = document.getElementById("modal-root");
+    setModalRoot(mRoot);
+  }, []);
 
   return (
     <>
-      {ReactDOM.createPortal(
-        <ModalContent open={open} setOpen={setOpen} />,
-        document.body,
-      )}
+      {modalRoot &&
+        ReactDOM.createPortal(
+          <ModalContent open={open} setOpen={setOpen} />,
+          modalRoot,
+        )}
       <LauncherContent open={open} setOpen={setOpen} />
     </>
   );
