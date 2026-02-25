@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateTransactionDistribution(...args: any[]) {}
+import { generateTransactionDistribution } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for transaction distribution endpoint

@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateExchangeData(...args: any[]) {}
+import { generateExchangeData } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for exchange comparison endpoint

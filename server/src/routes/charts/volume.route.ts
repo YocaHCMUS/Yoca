@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateVolumeBenchmark(...args: any[]) {}
+import { generateVolumeBenchmark } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for volume benchmark endpoint

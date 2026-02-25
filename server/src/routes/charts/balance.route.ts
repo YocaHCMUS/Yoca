@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateBalanceTrend(...args: any[]) {}
+import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for balance trend endpoint

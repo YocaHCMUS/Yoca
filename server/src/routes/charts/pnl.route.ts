@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generatePnLData(...args: any[]) {}
+import { generatePnLData } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for P&L endpoint
