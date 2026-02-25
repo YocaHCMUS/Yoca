@@ -202,7 +202,9 @@ export default function WalletPage() {
   useEffect(() => {
     (async () => {
       try {
-        const response = await fetch(`/api/v0/balances/${address}`);
+        const response = await fetch(
+          `http://localhost:4000/api/balances/${address}`,
+        );
         const data = await response.json();
         const balances = data.map(
           (

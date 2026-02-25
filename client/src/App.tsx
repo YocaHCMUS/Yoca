@@ -3,6 +3,11 @@ import "./App.css";
 
 import Index from "./pages";
 import AuthShowcase from "./pages/auth";
+import DashboardPage from "./pages/dashboard";
+import MarketPage from "./pages/market";
+import TokenPage from "./pages/token";
+import WalletPage from "./pages/wallet";
+import WalletsComparisionPage from "./pages/walletsComparision";
 
 function App() {
   return (

@@ -1,4 +1,4 @@
-import { client } from "@/api/main";
+import client from "@/api/main";
 import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import type { InferResponseType } from "hono/client";
 import styles from "./TokenChart.module.scss";

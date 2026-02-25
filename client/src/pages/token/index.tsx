@@ -1,4 +1,4 @@
-import { client } from "@/api/main";
+import client from "@/api/main";
 import {
   MarketStats,
   PoolSelector,
@@ -7,7 +7,7 @@ import {
   TokenHeader,
   TopHolders,
 } from "@/components/token";
-import PageWrapper from "@/components/wrapper/PageWrapper";
+import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";

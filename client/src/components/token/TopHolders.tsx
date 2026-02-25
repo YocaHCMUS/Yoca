@@ -1,4 +1,4 @@
-import { client } from "@/api/main";
+import client from "@/api/main";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
 import type { InferResponseType } from "hono/client";
