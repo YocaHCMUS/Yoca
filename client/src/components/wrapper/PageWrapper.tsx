@@ -174,7 +174,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
         </SideNav>
       </Header>
 
-      <Content style={{ height: "100vh" }} id="main-content">
+      <Content className={styles.mainContent} id="main-content">
         {children}
       </Content>
     </>
