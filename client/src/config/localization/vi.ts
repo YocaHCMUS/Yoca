@@ -110,6 +110,22 @@ export const translation = defineTranslation({
     termsAgreement:
       "Bằng việc kết nối ví, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của chúng tôi.",
     detectionFailed: "Không thể phát hiện ví. Vui lòng thử lại.",
+    // Wallet Overview
+    shareWallet: "Chia sẻ ví này",
+    compareWallet: "So sánh ví này",
+    createAlert: "Tạo thông báo cho ví này",
+    bookmarked: "Đã lưu",
+    bookmarkWallet: "Lưu ví này",
+    totalAssetValue: "Tổng giá trị tài sản",
+    tradingVolume: "Khối lượng giao dịch",
+    totalPnL: "Tổng lãi/lỗ",
+    tokensTraded: "Số Token đã giao dịch",
+    tokensHolding: "Số Token đang sở hữu",
+    filter24h: "24H",
+    filter7d: "7 ngày",
+    filter30d: "30 ngày",
+    filterCustom: "Tùy chỉnh",
+    filterCustomDateUnit: " Ngày",
   },
   // Navigation
   nav: {

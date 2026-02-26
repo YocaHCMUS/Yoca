@@ -3,7 +3,7 @@ import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx"
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
-import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import TabContainer from "@/components/TabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
   renderBinaryValue,

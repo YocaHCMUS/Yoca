@@ -110,6 +110,22 @@ export const translation = {
     termsAgreement:
       "By connecting your wallet, you agree to our Terms of Service and Privacy Policy.",
     detectionFailed: "Failed to detect wallets. Please try again.",
+    // Wallet Overview
+    shareWallet: "Share this wallet",
+    compareWallet: "Compare this wallet",
+    createAlert: "Create alert for this wallet",
+    bookmarked: "Bookmarked",
+    bookmarkWallet: "Bookmark this wallet",
+    totalAssetValue: "Total Asset Value",
+    tradingVolume: "Trading Volume",
+    totalPnL: "Total PnL",
+    tokensTraded: "Tokens traded",
+    tokensHolding: "Tokens Holding",
+    filter24h: "24H",
+    filter7d: "7D",
+    filter30d: "30D",
+    filterCustom: "Custom",
+    filterCustomDateUnit: "D",
   },
   // Navigation
   nav: {
