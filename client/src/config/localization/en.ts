@@ -125,7 +125,7 @@ export const translation = {
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
-    en: "United Statesen - English (English)",
+    en: "United States - English (English)",
   },
   // Validation errors
   validation: {
