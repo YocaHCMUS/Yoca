@@ -71,12 +71,7 @@ export function StablecoinRatioChart({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<StablecoinRatioResponse, StablecoinRatioRequestParams>({
-      fetcher: (query: StablecoinRatioRequestParams) => fetchStablecoinRatio({ 
-        query: {
-          period: String(query.period),
-          wallets: String(query.wallets),
-        }
-      }),
+      fetcher: fetchStablecoinRatio,
       query,
       autoRefresh,
       refreshInterval,

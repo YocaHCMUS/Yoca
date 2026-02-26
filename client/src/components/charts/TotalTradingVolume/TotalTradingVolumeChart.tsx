@@ -68,7 +68,7 @@ export function TotalTradingVolumeChart({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TotalTradingVolumeResponse, TotalTradingVolumeRequestParams>({
-      fetcher: (q) => fetchTotalTradingVolume({ query: q as Record<string, string> }),
+      fetcher: fetchTotalTradingVolume,
       query,
       autoRefresh,
       refreshInterval,

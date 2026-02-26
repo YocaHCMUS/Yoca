@@ -58,7 +58,7 @@ export function TradingVolumePerTransaction({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams>({
-      fetcher: (q) => fetchTradingVolumePerTransaction({ query: q as Record<string, string> }),
+      fetcher: fetchTradingVolumePerTransaction,
       query,
       autoRefresh,
       refreshInterval,

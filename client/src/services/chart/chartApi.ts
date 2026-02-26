@@ -164,17 +164,18 @@ export async function fetchVolumeBenchmark(params?: Parameters<typeof client.api
  * Fetch trading volume distribution data
  * GET /api/charts/trading-volume-distribution
  */
-export async function fetchTradingVolumeDistribution(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['trading-volume-distribution'].$get(params);
+export async function fetchTradingVolumeDistribution(params?: Parameters<typeof client.api.charts.tradingVolumeDistribution.$get>[0]) {
+  const response = await client.api.charts.tradingVolumeDistribution.$get(params);
   return processResponse(response);
 }
+
 
 /**
  * Fetch trading volume per transaction data
  * GET /api/charts/trading-volume-per-transaction
  */
-export async function fetchTradingVolumePerTransaction(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['trading-volume-per-transaction'].$get(params);
+export async function fetchTradingVolumePerTransaction(params?:  Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
+  const response = await client.api.charts.tradingVolumePerTransaction.$get(params);
   return processResponse(response);
 }
 
@@ -182,8 +183,8 @@ export async function fetchTradingVolumePerTransaction(params?: { query?: Record
  * Fetch rolling annual return data
  * GET /api/charts/rolling-annual-return
  */
-export async function fetchRollingAnnualReturn(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['rolling-annual-return'].$get(params);
+export async function fetchRollingAnnualReturn(params?: Parameters<typeof client.api.charts.rollingAnnualReturn.$get>[0]) {
+  const response = await client.api.charts.rollingAnnualReturn.$get(params);
   return processResponse(response);
 }
 
@@ -191,8 +192,8 @@ export async function fetchRollingAnnualReturn(params?: { query?: Record<string,
  * Fetch average rolling annual return data
  * GET /api/charts/average-rolling-annual-return
  */
-export async function fetchAverageRollingAnnualReturn(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['average-rolling-annual-return'].$get(params);
+export async function fetchAverageRollingAnnualReturn(params?: Parameters<typeof client.api.charts.averageRollingAnnualReturn.$get>[0]) {
+  const response = await client.api.charts.averageRollingAnnualReturn.$get(params);
   return processResponse(response);
 }
 
@@ -218,8 +219,8 @@ export async function fetchDrawdown(params?: Parameters<typeof client.api.charts
  * Fetch total trading volume data
  * GET /api/charts/total-trading-volume
  */
-export async function fetchTotalTradingVolume(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['total-trading-volume'].$get(params);
+export async function fetchTotalTradingVolume(params?: Parameters<typeof client.api.charts.totalTradingVolume.$get>[0]) {
+  const response = await client.api.charts.totalTradingVolume.$get(params);
   return processResponse(response);
 }
 
@@ -227,8 +228,8 @@ export async function fetchTotalTradingVolume(params?: { query?: Record<string, 
  * Fetch stablecoin ratio data
  * GET /api/charts/stablecoin-ratio
  */
-export async function fetchStablecoinRatio(params?: { query?: Record<string, string> }) {
-  const response = await client.api.charts['stablecoin-ratio'].$get(params);
+export async function fetchStablecoinRatio(params?: Parameters<typeof client.api.charts.stablecoinRatio.$get>[0]) {
+  const response = await client.api.charts.stablecoinRatio.$get(params);
   return processResponse(response);
 }
 

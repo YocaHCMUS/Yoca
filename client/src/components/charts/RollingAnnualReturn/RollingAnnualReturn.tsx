@@ -112,7 +112,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<RollingAnnualReturnResponse, RollingAnnualReturnRequestParams>({
-      fetcher: (q: RollingAnnualReturnRequestParams) => fetchRollingAnnualReturn({ query: q as any }),
+      fetcher: fetchRollingAnnualReturn,
       query,
       autoRefresh,
       refreshInterval,

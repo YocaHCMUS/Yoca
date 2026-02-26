@@ -105,7 +105,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<AverageRollingAnnualReturnResponse, AverageRollingAnnualReturnRequestParams>({
-      fetcher: (q) => fetchAverageRollingAnnualReturn({ query: q as Record<string, string> }),
+      fetcher: fetchAverageRollingAnnualReturn,
       query,
       autoRefresh,
       refreshInterval,

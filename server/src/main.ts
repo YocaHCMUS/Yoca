@@ -53,22 +53,22 @@ const app = new Hono()
   .route("/api/charts/holdings", chartHoldings)
   .route("/api/charts/price-history", chartPriceHistory)
   .route(
-    "/api/charts/trading-volume-distribution",
+    "/api/charts/tradingVolumeDistribution",
     chartTradingVolumeDistribution,
   )
   .route(
-    "/api/charts/trading-volume-per-transaction",
+    "/api/charts/tradingVolumePerTransaction",
     chartTradingVolumePerTransaction,
   )
-  .route("/api/charts/rolling-annual-return", chartRollingAnnualReturn)
+  .route("/api/charts/rollingAnnualReturn", chartRollingAnnualReturn)
   .route(
-    "/api/charts/average-rolling-annual-return",
+    "/api/charts/averageRollingAnnualReturn",
     chartAverageRollingAnnualReturn,
   )
   .route("/api/charts/winrate", chartWinrate)
   .route("/api/charts/drawdown", chartDrawdown)
-  .route("/api/charts/total-trading-volume", chartTotalTradingVolume)
-  .route("/api/charts/stablecoin-ratio", chartStablecoinRatio);
+  .route("/api/charts/totalTradingVolume", chartTotalTradingVolume)
+  .route("/api/charts/stablecoinRatio", chartStablecoinRatio);
 
 // Server
 serve(

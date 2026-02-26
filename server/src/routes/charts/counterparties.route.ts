@@ -74,7 +74,7 @@ const app = new Hono()
       );
 
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error("Error fetching counterparty activity data:", error);
       return c.json(

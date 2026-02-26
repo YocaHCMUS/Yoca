@@ -83,7 +83,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams>({
-      fetcher: (q) => fetchTradingVolumeDistribution({ query: q as Record<string, string> }),
+      fetcher: fetchTradingVolumeDistribution,
       query,
       autoRefresh,
       refreshInterval,
