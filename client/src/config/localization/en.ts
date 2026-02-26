@@ -155,6 +155,16 @@ export const translation = {
     value: "Value",
     change24h: "Change (24h)",
   },
+  // Wallet Comparison Page
+  walletComparison: {
+    selectedWallets: "Selected Wallets",
+    addWalletAddress: "Add Wallet Address",
+    enterWalletAddress: "Enter wallet address...",
+    noWalletsSelected: "No wallets selected. Add wallet addresses to compare.",
+    general: "General",
+    holdings: "Holdings",
+    profitRiskManagement: "Profit & Risk Management",
+  },
   // Navigation
   nav: {
     market: "Market",

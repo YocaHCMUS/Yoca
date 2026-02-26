@@ -1,4 +1,4 @@
-import { TabContainer } from "@/components/tabContainer/tabContainer";
+import { TabContainer } from "@/components/TabContainer/tabContainer";
 import { GeneralTab } from "@/components/wallet/WalletComparision/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparision/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
@@ -6,12 +6,14 @@ import { PageWrapper } from "@/components/wrapper";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
 import { Close, SearchAdvanced } from "@carbon/react/icons";
 import { useState } from "react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./index.module.scss";
 
 export default function WalletsComparisionPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const { tr } = useLocalization();
 
   const handleAddWallet = () => {
     if (
@@ -39,7 +41,7 @@ export default function WalletsComparisionPage() {
         {/* 3 columns - Wallet Selection Sidebar */}
         <Column lg={4} md={4} sm={4}>
           <div className={styles.sidebarContainer}>
-            <h3 className={styles.sidebarTitle}>Selected Wallets</h3>
+            <h3 className={styles.sidebarTitle}>{tr('walletComparison.selectedWallets')}</h3>
 
             {/* Wallet Address Search */}
             {/* <TextInput
@@ -53,8 +55,8 @@ export default function WalletsComparisionPage() {
                         /> */}
             <Search
               id="wallet-search"
-              labelText="Add Wallet Address"
-              placeholder="Enter wallet address..."
+              labelText={tr('walletComparison.addWalletAddress')}
+              placeholder={tr('walletComparison.enterWalletAddress')}
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               onKeyDown={handleKeyPress}
@@ -65,7 +67,7 @@ export default function WalletsComparisionPage() {
             <Stack gap={4} className={styles.walletList}>
               {selectedWallets.length === 0 ? (
                 <p className={styles.emptyState}>
-                  No wallets selected. Add wallet addresses to compare.
+                  {tr('walletComparison.noWalletsSelected')}
                 </p>
               ) : (
                 selectedWallets.map((wallet) => (
@@ -88,7 +90,7 @@ export default function WalletsComparisionPage() {
           <div className={styles.mainContentContainer}>
             <TabContainer
               activeTab={activeTab}
-              names={["General", "Holdings", "Profit & Risk Management"]} // remember to refactor this to support localization (not now since we have to refactor localization hooks first)
+              names={[tr('walletComparison.general'), tr('walletComparison.holdings'), tr('walletComparison.profitRiskManagement')]}
               tabs={[
                 <GeneralTab walletAddresses={selectedWallets} />,
                 <HoldingTab walletAddresses={selectedWallets} />,

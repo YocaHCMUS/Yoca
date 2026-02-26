@@ -155,6 +155,16 @@ export const translation = defineTranslation({
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
   },
+  // Wallet Comparison Page
+  walletComparison: {
+    selectedWallets: "Ví đã chọn",
+    addWalletAddress: "Thêm địa chỉ ví",
+    enterWalletAddress: "Nhập địa chỉ ví...",
+    noWalletsSelected: "Chưa chọn ví nào. Thêm địa chỉ ví để so sánh.",
+    general: "Tổng quan",
+    holdings: "Tài sản nắm giữ",
+    profitRiskManagement: "Quản lý lợi nhuận & rủi ro",
+  },
   // Navigation
   nav: {
     market: "Thị trường",
