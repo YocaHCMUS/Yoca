@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -50,8 +50,8 @@ export function BalanceChart({
   // onDataLoaded,
   className,
 }: ChartProps) {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.balanceChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.balanceChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -226,7 +226,7 @@ export function BalanceChart({
         ),
       },
     };
-  }, [data, timezone, chartTheme, t]);
+  }, [data, timezone, chartTheme, tr]);
 
   return (
     <BaseChart

@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { ChartGridItem } from '@/components/charts/shared';
 import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
@@ -97,8 +97,8 @@ export function TransactionDistribution({
   className,
 }: TransactionDistributionProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.transactionDistributionChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.transactionDistributionChart.title');
   
   // State for chart mode
   const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
@@ -266,7 +266,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, selectedChartMode, timezone, chartTheme, t]);
+  }, [data, selectedChartMode, timezone, chartTheme, tr]);
   
   /**
    * Generate eCharts options for unique token counts chart
@@ -322,7 +322,7 @@ export function TransactionDistribution({
       },
       series: [
         {
-          name: t('charts.transactionDistributionChart.tokens'),
+          name: tr('charts.transactionDistributionChart.tokens'),
           type: 'line',
           data: data.uniqueTokenCounts.map(point => [point.timestamp, point.value]),
           smooth: 0.3,
@@ -368,7 +368,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, timezone, chartTheme, t]);
+  }, [data, timezone, chartTheme, tr]);
   
   // Export functionality
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
@@ -456,18 +456,18 @@ export function TransactionDistribution({
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'stacked' ? sharedStyles.active : ''}`}
             onClick={() => handleChartModeChange('stacked')}
-            aria-label={t('charts.transactionDistributionChart.stacked')}
-            title={t('charts.transactionDistributionChart.stacked')}
+            aria-label={tr('charts.transactionDistributionChart.stacked')}
+            title={tr('charts.transactionDistributionChart.stacked')}
           >
-            {t('charts.transactionDistributionChart.stacked')}
+            {tr('charts.transactionDistributionChart.stacked')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'grouped' ? sharedStyles.active : ''}`}
             onClick={() => handleChartModeChange('grouped')}
-            aria-label={t('charts.transactionDistributionChart.grouped')}
-            title={t('charts.transactionDistributionChart.grouped')}
+            aria-label={tr('charts.transactionDistributionChart.grouped')}
+            title={tr('charts.transactionDistributionChart.grouped')}
           >
-            {t('charts.transactionDistributionChart.grouped')}
+            {tr('charts.transactionDistributionChart.grouped')}
           </button>
         </div>
       </div>

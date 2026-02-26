@@ -6,7 +6,7 @@
  * @module ChartErrorState
  */
 
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import type { ChartError } from '../../../types/chart.types';
 import styles from './ChartErrorState.module.scss';
 
@@ -44,7 +44,7 @@ export function ChartErrorState({
   onRetry,
   height = 400,
 }: ChartErrorStateProps) {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   
   return (
     <div
@@ -63,7 +63,7 @@ export function ChartErrorState({
           <path d="M15 8h2v11h-2zM15 21h2v2h-2z" />
         </svg>
         
-        <h3 className={styles.title}>{t('charts.errorTitle')}</h3>
+        <h3 className={styles.title}>{tr('charts.errorTitle')}</h3>
         <p className={styles.message}>{error.message}</p>
         
         {error.retryable && onRetry && (
@@ -72,13 +72,13 @@ export function ChartErrorState({
             onClick={onRetry}
             type="button"
           >
-            {t('charts.retry')}
+            {tr('charts.retry')}
           </button>
         )}
         
         {error.technical && (
           <details className={styles.details}>
-            <summary className={styles.detailsSummary}>{t('charts.technicalDetails')}</summary>
+            <summary className={styles.detailsSummary}>{tr('charts.technicalDetails')}</summary>
             <pre className={styles.technicalError}>{error.technical}</pre>
           </details>
         )}

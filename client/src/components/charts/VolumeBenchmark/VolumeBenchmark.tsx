@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -98,8 +98,8 @@ export function VolumeBenchmark({
   className,
 }: VolumeBenchmarkProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.volumeBenchmarkChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.volumeBenchmarkChart.title');
   
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -220,7 +220,7 @@ export function VolumeBenchmark({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.volumeBenchmarkChart.volume'),
+        name: tr('charts.volumeBenchmarkChart.volume'),
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
@@ -314,18 +314,18 @@ export function VolumeBenchmark({
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'line' ? sharedStyles.active : ''}`}
             onClick={() => handleChartTypeChange('line')}
-            aria-label={t('charts.volumeBenchmarkChart.line')}
-            title={t('charts.volumeBenchmarkChart.line')}
+            aria-label={tr('charts.volumeBenchmarkChart.line')}
+            title={tr('charts.volumeBenchmarkChart.line')}
           >
-            {t('charts.volumeBenchmarkChart.line')}
+            {tr('charts.volumeBenchmarkChart.line')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'bar' ? sharedStyles.active : ''}`}
             onClick={() => handleChartTypeChange('bar')}
-            aria-label={t('charts.volumeBenchmarkChart.bar')}
-            title={t('charts.volumeBenchmarkChart.bar')}
+            aria-label={tr('charts.volumeBenchmarkChart.bar')}
+            title={tr('charts.volumeBenchmarkChart.bar')}
           >
-            {t('charts.volumeBenchmarkChart.bar')}
+            {tr('charts.volumeBenchmarkChart.bar')}
           </button>
         </div>
       </div>

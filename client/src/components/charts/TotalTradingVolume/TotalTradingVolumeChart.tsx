@@ -16,7 +16,7 @@
 import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { fetchTotalTradingVolume } from '@/services/chart/chartApi';
@@ -40,8 +40,8 @@ export function TotalTradingVolumeChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.totalTradingVolumeChart.title', 'Total Trading Volume Ranking');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.totalTradingVolumeChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -68,7 +68,7 @@ export function TotalTradingVolumeChart({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TotalTradingVolumeResponse, TotalTradingVolumeRequestParams>({
-      fetcher: fetchTotalTradingVolume,
+      fetcher: (q) => fetchTotalTradingVolume({ query: q as Record<string, string> }),
       query,
       autoRefresh,
       refreshInterval,
@@ -167,7 +167,7 @@ export function TotalTradingVolumeChart({
         },
       },
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
 
   return (
     <BaseChart

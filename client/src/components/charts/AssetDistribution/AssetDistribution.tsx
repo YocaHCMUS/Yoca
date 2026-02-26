@@ -20,7 +20,7 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -51,8 +51,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = t('charts.assetDistributionChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = tr('charts.assetDistributionChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -198,11 +198,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
-              t('charts.assetDistributionChart.value'),
+              tr('charts.assetDistributionChart.value'),
               formatCurrency(p.value)
             )
           + createTooltipRow(
-              t('charts.assetDistributionChart.percentage'),
+              tr('charts.assetDistributionChart.percentage'),
               `${p.data.percentage.toFixed(2)}%`
             ),
       },
@@ -241,7 +241,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '46%',
           style: {
-            text: t('charts.assetDistributionChart.totalValue'),
+            text: tr('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
             fontSize: 14,
           },
@@ -259,7 +259,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, t, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
@@ -354,8 +354,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0 
         ? {
-            title: t('charts.assetDistributionChart.noWalletsTitle', 'No Wallets Selected'),
-            message: t('charts.assetDistributionChart.noWalletsMessage', 'Please select at least one wallet to view asset distribution.'),
+            title: tr('charts.noWalletsTitle'),
+            message: tr('charts.assetDistributionChart.noWalletsMessage'),
           }
         : undefined}
       onRetry={() => refetch(false)}

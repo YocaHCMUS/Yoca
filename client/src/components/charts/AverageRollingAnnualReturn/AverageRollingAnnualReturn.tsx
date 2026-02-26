@@ -19,7 +19,7 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getSingleSeriesLegend } from '@/util/chart-legend-config';
 
@@ -55,8 +55,8 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.averageRollingAnnualReturn.title', 'Average Rolling Annual Return');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.averageRollingAnnualReturn.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -105,7 +105,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<AverageRollingAnnualReturnResponse, AverageRollingAnnualReturnRequestParams>({
-      fetcher: fetchAverageRollingAnnualReturn,
+      fetcher: (q) => fetchAverageRollingAnnualReturn({ query: q as Record<string, string> }),
       query,
       autoRefresh,
       refreshInterval,
@@ -166,7 +166,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.averageRollingAnnualReturn.returnPercent', 'Return') + ' (%)',
+        name: tr('charts.averageRollingAnnualReturn.returnPercent') + ' (%)',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => `${value.toFixed(1)}%`,
@@ -181,7 +181,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: t('charts.averageRollingAnnualReturn.returns', 'Returns'),
+          // name: tr('chart', 'Returns'),
           type: 'boxplot',
           data: boxData,
           itemStyle: {
@@ -214,7 +214,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
         },
       },
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
 
   return (
     <BaseChart
@@ -229,10 +229,10 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
           onChange={e => setSelectedTimeUnit(e.target.value as TimeUnit)} 
           className={sharedStyles.chartSelect}
         >
-          <option value="month">{t('charts.averageRollingAnnualReturn.month', 'Month')}</option>
-          <option value="quarter">{t('charts.averageRollingAnnualReturn.quarter', 'Quarter')}</option>
-          <option value="year">{t('charts.averageRollingAnnualReturn.year', 'Year')}</option>
-          <option value="custom">{t('charts.averageRollingAnnualReturn.custom', 'Custom')}</option>
+          <option value="month">{tr('charts.averageRollingAnnualReturn.month')}</option>
+          <option value="quarter">{tr('charts.averageRollingAnnualReturn.quarter')}</option>
+          <option value="year">{tr('charts.averageRollingAnnualReturn.year')}</option>
+          <option value="custom">{tr('charts.averageRollingAnnualReturn.custom')}</option>
         </select>
 
         {selectedTimeUnit === 'custom' && (
@@ -243,7 +243,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
             min={1}
             max={365}
             className={sharedStyles.chartInput}
-            placeholder={t('charts.averageRollingAnnualReturn.days', 'Days')}
+            placeholder={tr('charts.averageRollingAnnualReturn.days')}
           />
         )}
       </div>

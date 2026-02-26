@@ -10,7 +10,7 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -90,8 +90,8 @@ export function ExchangeComparison({
   className,
 }: ExchangeComparisonProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.exchangeComparisonChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.exchangeComparisonChart.title');
   
   // State management
   const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
@@ -151,7 +151,7 @@ export function ExchangeComparison({
       const csvData: ChartDataSeries[] = [
         {
           id: 'deposits',
-          name: t('charts.exchangeComparisonChart.deposits'),
+          name: tr('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           visible: true,
           data: data.exchanges.map(ex => ({
@@ -161,7 +161,7 @@ export function ExchangeComparison({
         },
         {
           id: 'withdrawals',
-          name: t('charts.exchangeComparisonChart.withdrawals'),
+          name: tr('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           visible: true,
           data: data.exchanges.map(ex => ({
@@ -183,7 +183,7 @@ export function ExchangeComparison({
     format === 'png'
       ? exportPNG(instance as any, filters)
       : exportSVG(instance as any, filters);
-  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
+  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, tr]);
   
   /**
    * Generate eCharts option configuration for grouped bar chart
@@ -238,7 +238,7 @@ export function ExchangeComparison({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [t('charts.exchangeComparisonChart.deposits'), t('charts.exchangeComparisonChart.withdrawals')],
+        [tr('charts.exchangeComparisonChart.deposits'), tr('charts.exchangeComparisonChart.withdrawals')],
         false
       ),
       xAxis: {
@@ -253,7 +253,7 @@ export function ExchangeComparison({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: currentMetric === 'count' ? t('charts.exchangeComparisonChart.count') : t('charts.exchangeComparisonChart.volume'),
+        name: currentMetric === 'count' ? tr('charts.exchangeComparisonChart.count') : tr('charts.exchangeComparisonChart.volume'),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
@@ -266,7 +266,7 @@ export function ExchangeComparison({
       },
       series: [
         {
-          name: t('charts.exchangeComparisonChart.deposits'),
+          name: tr('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           data: deposits,
           itemStyle: {
@@ -288,7 +288,7 @@ export function ExchangeComparison({
           barMaxWidth: 50,
         },
         {
-          name: t('charts.exchangeComparisonChart.withdrawals'),
+          name: tr('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           data: withdrawals,
           itemStyle: {
@@ -311,7 +311,7 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric, chartTheme, t]);
+  }, [data, currentMetric, chartTheme, tr]);
   
   /**
    * Setup chart export

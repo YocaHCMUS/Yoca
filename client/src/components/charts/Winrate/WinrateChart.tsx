@@ -17,7 +17,7 @@
 import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
@@ -42,8 +42,8 @@ export function WinrateChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.winrateChart.title', 'Winrate Analysis');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.winrateChart.title');
 
   const overallChartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -152,7 +152,7 @@ export function WinrateChart({
         },
       },
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
 
   /**
    * Generate distribution charts for each wallet

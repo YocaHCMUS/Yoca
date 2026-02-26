@@ -8,7 +8,7 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartSkeleton } from './ChartSkeleton';
 import { ChartEmptyState } from './ChartEmptyState';
 import { ChartErrorState } from './ChartErrorState';
@@ -109,7 +109,7 @@ export function ChartWrapper({
   enableFullscreen = true,
   enableMiniPlayer = true,
 }: ChartWrapperProps) {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMiniPlayer, setIsMiniPlayer] = useState(false);
@@ -205,13 +205,13 @@ export function ChartWrapper({
    * Render viewing mode controls
    */
   const renderControls = () => (
-    <div className={styles.controls} role="toolbar" aria-label={t('charts.chartViewingModes')}>
+    <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
       {enableFullscreen && (
         <button
           className={styles.controlButton}
           onClick={enterFullscreen}
-          aria-label={t('charts.enterFullscreenMode')}
-          title={t('charts.fullscreen')}
+          aria-label={tr('charts.enterFullscreenMode')}
+          title={tr('charts.fullscreen')}
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
@@ -229,8 +229,8 @@ export function ChartWrapper({
         <button
           className={styles.controlButton}
           onClick={enterMiniPlayer}
-          aria-label={t('charts.openMiniPlayer')}
-          title={t('charts.miniPlayer')}
+          aria-label={tr('charts.openMiniPlayer')}
+          title={tr('charts.miniPlayer')}
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
@@ -301,11 +301,11 @@ export function ChartWrapper({
       >
         {/* Screen reader announcements */}
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {loadingState.status === 'loading' && t('charts.loadingChartData', { title })}
-          {loadingState.status === 'refreshing' && t('charts.refreshingChartData', { title })}
-          {loadingState.status === 'success' && !isEmpty && t('charts.chartLoadedSuccessfully', { title })}
-          {loadingState.status === 'error' && t('charts.errorLoadingChart', { title })}
-          {isEmpty && t('charts.noDataForChart', { title })}
+          {loadingState.status === 'loading' && tr('charts.loadingChartData', { title })}
+          {loadingState.status === 'refreshing' && tr('charts.refreshingChartData', { title })}
+          {loadingState.status === 'success' && !isEmpty && tr('charts.chartLoadedSuccessfully', { title })}
+          {loadingState.status === 'error' && tr('charts.errorLoadingChart', { title })}
+          {isEmpty && tr('charts.noDataForChart', { title })}
         </div>
         
         {/* Header */}

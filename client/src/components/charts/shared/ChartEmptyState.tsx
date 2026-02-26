@@ -6,7 +6,7 @@
  * @module ChartEmptyState
  */
 
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './ChartEmptyState.module.scss';
 
 /**
@@ -51,10 +51,10 @@ export function ChartEmptyState({
   action,
   height = 400,
 }: ChartEmptyStateProps) {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   
-  const defaultTitle = title || t('charts.noDataTitle');
-  const defaultMessage = message || t('charts.noDataMessage');
+  const defaultTitle = title || tr('charts.noDataTitle');
+  const defaultMessage = message || tr('charts.noDataMessage');
   
   return (
     <div

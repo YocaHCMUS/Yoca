@@ -19,7 +19,7 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -56,8 +56,8 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.rollingAnnualReturn.title', 'Rolling Annual Return');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.rollingAnnualReturn.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -112,7 +112,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<RollingAnnualReturnResponse, RollingAnnualReturnRequestParams>({
-      fetcher: fetchRollingAnnualReturn,
+      fetcher: (q: RollingAnnualReturnRequestParams) => fetchRollingAnnualReturn({ query: q as any }),
       query,
       autoRefresh,
       refreshInterval,
@@ -184,7 +184,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return') + ' (%)',
+          name: tr('charts.rollingAnnualReturn.rollingReturn') + ' (%)',
           position: 'left',
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
@@ -194,7 +194,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         {
           ...baseOption.yAxis,
           type: 'value',
-          name: t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return') + ' (%)',
+          name: tr('charts.rollingAnnualReturn.cumulativeReturn') + ' (%)',
           position: 'right',
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
@@ -231,7 +231,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: t('charts.rollingAnnualReturn.rollingReturn', 'Rolling Return'),
+          name: tr('charts.rollingAnnualReturn.rollingReturn'),
           type: 'bar',
           yAxisIndex: 0,
           data: rollingValues,
@@ -249,7 +249,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
           },
         },
         {
-          name: t('charts.rollingAnnualReturn.cumulativeReturn', 'Cumulative Return'),
+          name: tr('charts.rollingAnnualReturn.cumulativeReturn'),
           type: 'line',
           yAxisIndex: 1,
           data: cumulativeValues,
@@ -273,7 +273,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, timezone, t]);
+  }, [chartTheme, timezone, tr]);
 
   /**
    * Generate chart options - multiple charts for per-wallet view
@@ -322,10 +322,10 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
           onChange={e => setSelectedTimeUnit(e.target.value as TimeUnit)} 
           className={sharedStyles.chartSelect}
         >
-          <option value="month">{t('charts.rollingAnnualReturn.month', 'Month')}</option>
-          <option value="quarter">{t('charts.rollingAnnualReturn.quarter', 'Quarter')}</option>
-          <option value="year">{t('charts.rollingAnnualReturn.year', 'Year')}</option>
-          <option value="custom">{t('charts.rollingAnnualReturn.custom', 'Custom')}</option>
+          <option value="month">{tr('charts.rollingAnnualReturn.month')}</option>
+          <option value="quarter">{tr('charts.rollingAnnualReturn.quarter')}</option>
+          <option value="year">{tr('charts.rollingAnnualReturn.year')}</option>
+          <option value="custom">{tr('charts.rollingAnnualReturn.custom')}</option>
         </select>
 
         {selectedTimeUnit === 'custom' && (
@@ -336,7 +336,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
             min={1}
             max={365}
             className={sharedStyles.chartInput}
-            placeholder={t('charts.rollingAnnualReturn.days', 'Days')}
+            placeholder={tr('charts.rollingAnnualReturn.days')}
           />
         )}
       </div>

@@ -10,7 +10,7 @@
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -105,8 +105,8 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // onDataLoaded,
 }) => {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.counterpartyActivityChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.counterpartyActivityChart.title');
   
   // State management
   const [currentLimit, setCurrentLimit] = useState<number>(10);
@@ -144,7 +144,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   });
   
   // Export functionality
-  // const { exportChart } = useChartExport({
+  // const { exportChart } = useChartExportr({
   //   chartTitle,
   //   timezone,
   //   baseFilename: 'counterparty-activity',
@@ -179,7 +179,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   //     }
   //   ] : [];
     
-  //   exportChart(format, chartInstance, csvData, filters);
+  //   exportChartr(format, chartInstance, csvData, filters);
   // };
   
   // Generate chart options for transaction counts
@@ -218,7 +218,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           
           return createTooltipHeader(counterpartyName)
             + createTooltipRow(
-                t('charts.counterpartyActivityChart.transactionCount'),
+                tr('charts.counterpartyActivityChart.transactionCount'),
                 count.toLocaleString(),
                 { color: params[0].color, showIndicator: true }
               );
@@ -226,7 +226,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [t('charts.counterpartyActivityChart.transactionCount')],
+        [tr('charts.counterpartyActivityChart.transactionCount')],
         false
       ),
       xAxis: {
@@ -246,7 +246,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.counterpartyActivityChart.transactionCount'),
+        name: tr('charts.counterpartyActivityChart.transactionCount'),
         position: 'left',
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
@@ -256,7 +256,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: t('charts.counterpartyActivityChart.transactionCount'),
+          name: tr('charts.counterpartyActivityChart.transactionCount'),
           type: 'bar',
           data: transactionCounts,
           itemStyle: {
@@ -271,7 +271,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
   
   // Generate chart options for total volume
   const totalVolumeOptions: EChartsOption = useMemo(() => {
@@ -309,7 +309,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           
           return createTooltipHeader(counterpartyName)
             + createTooltipRow(
-                t('charts.counterpartyActivityChart.totalVolume'),
+                tr('charts.counterpartyActivityChart.totalVolume'),
                 formatCurrency(volume),
                 { color: params[0].color, showIndicator: true }
               );
@@ -317,7 +317,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [t('charts.counterpartyActivityChart.totalVolume')],
+        [tr('charts.counterpartyActivityChart.totalVolume')],
         false
       ),
       xAxis: {
@@ -337,7 +337,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.counterpartyActivityChart.totalVolume'),
+        name: tr('charts.counterpartyActivityChart.totalVolume'),
         position: 'left',
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
@@ -347,7 +347,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: t('charts.counterpartyActivityChart.totalVolume'),
+          name: tr('charts.counterpartyActivityChart.totalVolume'),
           type: 'bar',
           data: totalVolumes,
           itemStyle: {
@@ -362,7 +362,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
   
   // Handle limit change
   const handleLimitChange = (newLimit: number) => {
@@ -397,7 +397,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {/* Transaction counts chart */}
       {data && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.transactionCount')}</h3>
+          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.transactionCount')}</h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={transactionCountChartRef}
@@ -413,7 +413,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {/* Total volume chart */}
       {data && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{t('charts.counterpartyActivityChart.totalVolume')}</h3>
+          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.totalVolume')}</h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={totalVolumeChartRef}

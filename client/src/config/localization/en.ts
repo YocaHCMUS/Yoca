@@ -206,6 +206,8 @@ export const translation = {
     noDataMessage: "There is no data to display for the selected filters.",
     resetFilters: "Reset Filters",
     adjustFilters: "Try adjusting your filters or date range",
+    noWalletsTitle: "No Wallets Selected",
+    noData: "No data available",
 
     // Error state
     errorTitle: "Unable to Load Chart",
@@ -272,6 +274,7 @@ export const translation = {
       asset: "Asset",
       value: "Value",
       percentage: "Percentage",
+      noWalletsMessage: "Please select at least one wallet to view asset distribution.",
     },
     pnlChart: {
       title: "Profit & Loss",
@@ -287,6 +290,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
+      both: "Both",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",
@@ -340,6 +344,60 @@ export const translation = {
       timeUnit: "Time Unit",
       topN: "Show Top",
       wallet: "Wallet",
+    },
+    totalTradingVolumeChart: {
+      title: "Total Trading Volume Ranking",
+    },
+    tradingVolumePerTransactionChart: {
+      title: "Trading Volume Per Transaction",
+      volume: "Volume (USD)",
+    },
+    tradingVolumeDistributionChart: {
+      title: "Trading Volume Distribution",
+      volume: "Volume",
+      percentage: "Percentage",
+      totalVolume: "Total Volume",
+      noWalletsTitle: "No Wallets Selected",
+      noWalletsMessage: "Please select at least one wallet to view trading volume distribution.",
+    },
+    tokenPriceChart: {
+      price: "{{tokenSymbol}} Price",
+      volume: "{{tokenSymbol}} Volume",
+      marketCap: "{{tokenSymbol}} Market Cap",
+    },
+    stablecoinRatioChart: {
+      title: "Stablecoin Ratio",
+    },
+    rollingAnnualReturn: {
+      title: "Rolling Annual Return",
+      rollingReturn: "Rolling Return",
+      cumulativeReturn: "Cumulative Return",
+      month: "Month",
+      quarter: "Quarter",
+      year: "Year",
+      custom: "Custom",
+      days: "Days",
+    },
+    priceHistoryChart: {
+      title: "Price History",
+    },
+    marketHeatmap: {
+      title: "Market Heatmap",
+    },
+    winrateChart: {
+      title: "Winrate Analysis",
+    },
+    drawdownChart: {
+      title: "Drawdown Analysis",
+    },
+    averageRollingAnnualReturn: {
+      title: "Average Rolling Annual Return",
+      returnPercent: "Return",
+      month: "Month",
+      quarter: "Quarter",
+      year: "Year",
+      custom: "Custom",
+      days: "Days",
     },
   },
 } as const;

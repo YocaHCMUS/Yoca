@@ -16,7 +16,7 @@
 import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -42,8 +42,8 @@ export function StablecoinRatioChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.stablecoinRatioChart.title', 'Stablecoin Ratio');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.stablecoinRatioChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -71,7 +71,12 @@ export function StablecoinRatioChart({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<StablecoinRatioResponse, StablecoinRatioRequestParams>({
-      fetcher: fetchStablecoinRatio,
+      fetcher: (query: StablecoinRatioRequestParams) => fetchStablecoinRatio({ 
+        query: {
+          period: String(query.period),
+          wallets: String(query.wallets),
+        }
+      }),
       query,
       autoRefresh,
       refreshInterval,
@@ -166,7 +171,7 @@ export function StablecoinRatioChart({
         ),
       },
     };
-  }, [data, chartTheme, timezone, t]);
+  }, [data, chartTheme, timezone, tr]);
 
   /**
    * Generate statistics header

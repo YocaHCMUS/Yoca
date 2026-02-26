@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -28,8 +28,8 @@ export function TradingVolumePerTransaction({
   // onDataLoaded,
   className,
 }: ChartProps) {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.tradingVolumePerTransactionChart.title', 'Trading Volume Per Transaction');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.tradingVolumePerTransactionChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -58,7 +58,7 @@ export function TradingVolumePerTransaction({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams>({
-      fetcher: fetchTradingVolumePerTransaction,
+      fetcher: (q) => fetchTradingVolumePerTransaction({ query: q as Record<string, string> }),
       query,
       autoRefresh,
       refreshInterval,
@@ -128,7 +128,7 @@ export function TradingVolumePerTransaction({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.tradingVolumePerTransactionChart.volume', 'Volume (USD)'),
+        name: tr('charts.tradingVolumePerTransactionChart.volume'),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => formatCurrency(value),
@@ -194,7 +194,7 @@ export function TradingVolumePerTransaction({
         },
       },
     };
-  }, [data, chartTheme, t]);
+  }, [data, chartTheme, tr]);
 
   return (
     <BaseChart

@@ -206,6 +206,8 @@ export const translation = defineTranslation({
     noDataMessage: "Không có dữ liệu để hiển thị cho bộ lọc đã chọn.",
     resetFilters: "Đặt lại bộ lọc",
     adjustFilters: "Thử điều chỉnh bộ lọc hoặc khoảng thời gian",
+    noWalletsTitle: "Chưa chọn ví",
+    noData: "Không có dữ liệu",
 
     // Error state
     errorTitle: "Không thể tải biểu đồ",
@@ -272,6 +274,7 @@ export const translation = defineTranslation({
       asset: "Tài sản",
       value: "Giá trị",
       percentage: "Phần trăm",
+      noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản.",
     },
     pnlChart: {
       title: "Lãi & Lỗ",
@@ -287,6 +290,7 @@ export const translation = defineTranslation({
       daily: "Hàng ngày",
       weekly: "Hàng tuần",
       monthly: "Hàng tháng",
+      both: "Cả hai",
     },
     exchangeComparisonChart: {
       title: "So sánh hoạt động sàn giao dịch",
@@ -340,6 +344,60 @@ export const translation = defineTranslation({
       timeUnit: "Đơn vị thời gian",
       topN: "Hiển thị top",
       wallet: "Ví",
+    },
+    totalTradingVolumeChart: {
+      title: "Xếp hạng tổng khối lượng giao dịch",
+    },
+    tradingVolumePerTransactionChart: {
+      title: "Khối lượng giao dịch trên mỗi giao dịch",
+      volume: "Khối lượng (USD)",
+    },
+    tradingVolumeDistributionChart: {
+      title: "Phân bổ khối lượng giao dịch",
+      volume: "Khối lượng",
+      percentage: "Phần trăm",
+      totalVolume: "Tổng khối lượng",
+      noWalletsTitle: "Chưa chọn ví",
+      noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ khối lượng giao dịch.",
+    },
+    tokenPriceChart: {
+      price: "Giá {{tokenSymbol}}",
+      volume: "Khối lượng {{tokenSymbol}}",
+      marketCap: "Vốn hóa thị trường {{tokenSymbol}}",
+    },
+    stablecoinRatioChart: {
+      title: "Tỷ lệ Stablecoin",
+    },
+    rollingAnnualReturn: {
+      title: "Lợi nhuận hàng năm lăn",
+      rollingReturn: "Lợi nhuận lăn",
+      cumulativeReturn: "Lợi nhuận tích lũy",
+      month: "Tháng",
+      quarter: "Quý",
+      year: "Năm",
+      custom: "Tùy chỉnh",
+      days: "Ngày",
+    },
+    priceHistoryChart: {
+      title: "Lịch sử giá",
+    },
+    marketHeatmap: {
+      title: "Bản đồ nhiệt thị trường",
+    },
+    winrateChart: {
+      title: "Phân tích tỷ lệ thắng",
+    },
+    drawdownChart: {
+      title: "Phân tích sụt giảm",
+    },
+    averageRollingAnnualReturn: {
+      title: "Lợi nhuận hàng năm lăn trung bình",
+      returnPercent: "Lợi nhuận",
+      month: "Tháng",
+      quarter: "Quý",
+      year: "Năm",
+      custom: "Tùy chỉnh",
+      days: "Ngày",
     },
   },
 });

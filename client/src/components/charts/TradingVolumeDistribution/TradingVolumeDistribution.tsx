@@ -20,7 +20,7 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -51,8 +51,8 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = t('charts.tradingVolumeDistributionChart.title', 'Trading Volume Distribution');
+  const { tr } = useLocalization();
+  const chartTitle = tr('charts.tradingVolumeDistributionChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -83,7 +83,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    */
   const { data, loadingState, refetch } =
     useStandardChartController<TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams>({
-      fetcher: fetchTradingVolumeDistribution,
+      fetcher: (q) => fetchTradingVolumeDistribution({ query: q as Record<string, string> }),
       query,
       autoRefresh,
       refreshInterval,
@@ -186,11 +186,11 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
-              t('charts.tradingVolumeDistributionChart.volume', 'Volume'),
+              tr('charts.tradingVolumeDistributionChart.volume'),
               formatCurrency(p.value)
             )
           + createTooltipRow(
-              t('charts.tradingVolumeDistributionChart.percentage', 'Percentage'),
+              tr('charts.tradingVolumeDistributionChart.percentage'),
               `${p.data.percentage.toFixed(2)}%`
             ),
       },
@@ -229,7 +229,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '46%',
           style: {
-            text: t('charts.tradingVolumeDistributionChart.totalVolume', 'Total Volume'),
+            text: tr('charts.tradingVolumeDistributionChart.totalVolume'),
             fill: chartTheme.textColorSecondary,
             fontSize: 14,
           },
@@ -247,7 +247,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, t, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
@@ -333,8 +333,8 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0 
         ? {
-            title: t('charts.tradingVolumeDistributionChart.noWalletsTitle', 'No Wallets Selected'),
-            message: t('charts.tradingVolumeDistributionChart.noWalletsMessage', 'Please select at least one wallet to view trading volume distribution.'),
+            title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),
+            message: tr('charts.tradingVolumeDistributionChart.noWalletsMessage'),
           }
         : undefined}
       onRetry={() => refetch(false)}
