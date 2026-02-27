@@ -25,11 +25,14 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchPnLChart } from '@/services/chart/chartApi';
+import { fetchPnLChart, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
+import type { PnLRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 import type { TimePeriod } from '@/types/chart-filters.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -126,7 +129,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<PnLChartResponse, PnLRequestParams>({
+    useStandardChartController<PnLChartData, PnLRequestParams>({
       fetcher: fetchPnLChart,
       query,
       autoRefresh,
@@ -375,10 +378,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
    * Generate chart options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!data || 'error' in data) return [];
 
     // Multi-wallet view
-    if (data.wallets && data.wallets.length > 0) {
+    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
       return data.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
@@ -390,7 +393,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     }
 
     // Single/aggregated view
-    if (data.dailyPnL && data.dailyPnL.length > 0) {
+    if ('dailyPnL' in data && data.dailyPnL && data.dailyPnL.length > 0) {
       return [{
         walletAddress: 'aggregated',
         option: createChartOption(data.dailyPnL, data.cumulativePnL!, undefined),
@@ -400,9 +403,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0) &&
-    (!data.dailyPnL || data.dailyPnL.length === 0)
+  const isEmpty = !data || 'error' in data || (
+    (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
+    (!('dailyPnL' in data) || !data.dailyPnL || data.dailyPnL.length === 0)
   );
 
   return (

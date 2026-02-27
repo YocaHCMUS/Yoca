@@ -15,11 +15,14 @@ import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchExchangeComparison } from '@/services/chart/chartApi';
+import { fetchExchangeComparison, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
+import type { ExchangesRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type ExchangeComparisonData = InferFetcherData<typeof fetchExchangeComparison>;
 import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';

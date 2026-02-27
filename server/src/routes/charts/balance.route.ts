@@ -52,7 +52,10 @@ const app = new Hono()
     try {
       // Validate query parameters
       const query = c.req.query();
+      console.log('[balance.route] Raw query:', query);
+      
       const params = balanceRequestSchema.parse(query);
+      console.log('[balance.route] Parsed params:', params);
 
       // Generate balance trend data
       const data = generateBalanceTrend(

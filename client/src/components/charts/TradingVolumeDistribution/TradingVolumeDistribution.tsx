@@ -82,7 +82,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams>({
+    useStandardChartController<TradingVolumeDistributionData, TradingVolumeDistributionRequestParams>({
       fetcher: fetchTradingVolumeDistribution,
       query,
       autoRefresh,

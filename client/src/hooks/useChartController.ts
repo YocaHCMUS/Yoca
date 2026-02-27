@@ -39,18 +39,22 @@ export function useStandardChartController<TData, TQuery>({
 
         // Skip fetch if query hasn't changed and we have data (unless refreshing)
         if (!isRefreshing && queryKey === lastQueryRef.current && data !== null) {
+            console.log('[useChartController] Skipping fetch - query unchanged and data exists', { query });
             return;
         }
 
         // Check cache for non-refreshing requests
         if (!isRefreshing && cacheRef.current.has(queryKey)) {
             const cachedData = cacheRef.current.get(queryKey)!;
+            console.log('[useChartController] Using cached data', { query, cachedData });
             setData(cachedData);
             setLoadingState({ status: 'success', retryCount: 0 });
             onDataLoaded?.(cachedData);
             lastQueryRef.current = queryKey;
             return;
         }
+
+        console.log('[useChartController] Fetching fresh data', { query, isRefreshing });
 
         setLoadingState(prev => ({
             status: isRefreshing ? 'refreshing' : 'loading',
@@ -59,6 +63,7 @@ export function useStandardChartController<TData, TQuery>({
 
         try {
             const result = await fetcher(query);
+            console.log('[useChartController] Fetch successful', { query, result });
             setData(result);
             setLoadingState({ status: 'success', retryCount: 0 });
             
@@ -76,6 +81,7 @@ export function useStandardChartController<TData, TQuery>({
             
             onDataLoaded?.(result);
         } catch (error) {
+            console.error('[useChartController] Fetch failed', { query, error });
             setLoadingState(prev => ({
                 status: 'error',
                 retryCount: prev.retryCount,

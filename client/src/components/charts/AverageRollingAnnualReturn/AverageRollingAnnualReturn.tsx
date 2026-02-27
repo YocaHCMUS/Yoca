@@ -26,8 +26,11 @@ import { getSingleSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchAverageRollingAnnualReturn } from '@/services/chart/chartApi';
-import type { AverageRollingAnnualReturnResponse, AverageRollingAnnualReturnRequestParams } from '@/types/chart-api.types';
+import { fetchAverageRollingAnnualReturn, type InferFetcherData } from '@/services/chart/chartApi';
+import type { AverageRollingAnnualReturnRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type AverageRollingAnnualReturnData = InferFetcherData<typeof fetchAverageRollingAnnualReturn>;
 
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -104,7 +107,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<AverageRollingAnnualReturnResponse, AverageRollingAnnualReturnRequestParams>({
+    useStandardChartController<AverageRollingAnnualReturnData, AverageRollingAnnualReturnRequestParams>({
       fetcher: fetchAverageRollingAnnualReturn,
       query,
       autoRefresh,
@@ -115,7 +118,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
    * Generate eCharts option configuration for box plot
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!data || 'error' in data || !data.wallets || data.wallets.length === 0) return null;
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
@@ -220,7 +223,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={!data || 'error' in data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>

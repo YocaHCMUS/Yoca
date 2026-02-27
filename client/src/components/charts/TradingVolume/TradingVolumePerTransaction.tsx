@@ -57,7 +57,7 @@ export function TradingVolumePerTransaction({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams>({
+    useStandardChartController<TradingVolumePerTransactionData, TradingVolumePerTransactionRequestParams>({
       fetcher: fetchTradingVolumePerTransaction,
       query,
       autoRefresh,

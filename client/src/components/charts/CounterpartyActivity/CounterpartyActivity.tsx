@@ -15,11 +15,14 @@ import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchCounterpartyActivity } from '@/services/chart/chartApi';
+import { fetchCounterpartyActivity, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { CounterpartyActivityResponse, CounterpartiesRequestParams } from '@/types/chart-api.types';
+import type { CounterpartiesRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type CounterpartyActivityData = InferFetcherData<typeof fetchCounterpartyActivity>;
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -135,7 +138,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   }), [filters.timePeriod, filters.transactionType, currentLimit, timezone]);
   
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityResponse, CounterpartiesRequestParams>({
+  const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
     fetcher: fetchCounterpartyActivity,
     query,
     autoRefresh,
@@ -181,10 +184,14 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     
   //   exportChartr(format, chartInstance, csvData, filters);
   // };
-  
+
+  const isSuccessResponse = (data: any): data is { counterparties: any[]; metadata: any } => {
+    return data && 'counterparties' in data && !('error' in data);
+  };
+    
   // Generate chart options for transaction counts
   const transactionCountOptions: EChartsOption = useMemo(() => {
-    if (!data || data.counterparties.length === 0) {
+    if (!isSuccessResponse(data) || data.counterparties.length === 0) {
       return {};
     }
     
@@ -275,7 +282,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   
   // Generate chart options for total volume
   const totalVolumeOptions: EChartsOption = useMemo(() => {
-    if (!data || data.counterparties.length === 0) {
+    if (!isSuccessResponse(data) || data.counterparties.length === 0) {
       return {};
     }
     
@@ -375,7 +382,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       onRetry={refetch}
-      isEmpty={!data || data.counterparties.length === 0}
+      isEmpty={isSuccessResponse(data)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
         <div className={sharedStyles.limitSelector} >
@@ -395,7 +402,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       </div>
       
       {/* Transaction counts chart */}
-      {data && (
+      {isSuccessResponse(data) && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.transactionCount')}</h3>
           <ChartGridItem minHeight={minHeight}>
@@ -411,7 +418,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       )}
       
       {/* Total volume chart */}
-      {data && (
+      {isSuccessResponse(data) && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.totalVolume')}</h3>
           <ChartGridItem minHeight={minHeight}>

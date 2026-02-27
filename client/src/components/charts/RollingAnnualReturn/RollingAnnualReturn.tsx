@@ -24,11 +24,14 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchRollingAnnualReturn } from '@/services/chart/chartApi';
+import { fetchRollingAnnualReturn, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getDualAxisLegend } from '@/util/chart-legend-config';
-import type { RollingAnnualReturnResponse, RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
+import type { RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type RollingAnnualReturnData = InferFetcherData<typeof fetchRollingAnnualReturn>;
 
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -111,7 +114,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<RollingAnnualReturnResponse, RollingAnnualReturnRequestParams>({
+    useStandardChartController<RollingAnnualReturnData, RollingAnnualReturnRequestParams>({
       fetcher: fetchRollingAnnualReturn,
       query,
       autoRefresh,

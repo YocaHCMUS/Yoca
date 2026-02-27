@@ -15,11 +15,14 @@ import { ChartGridItem } from '@/components/charts/shared';
 import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
+import { fetchTransactionDistribution, type InferFetcherData } from '../../../services/chart/chartApi';
 import { formatDate } from '../../../util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
+import type { TransactionDistributionRequestParams } from '../../../types/chart-api.types';
+
+// Infer response type from fetcher
+type TransactionDistributionData = InferFetcherData<typeof fetchTransactionDistribution>;
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import { useStandardChartController } from '../../../hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -140,7 +143,7 @@ export function TransactionDistribution({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TransactionDistributionResponse, TransactionDistributionRequestParams>({
+    useStandardChartController<TransactionDistributionData, TransactionDistributionRequestParams>({
       fetcher: fetchTransactionDistribution,
       query,
       autoRefresh,

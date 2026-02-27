@@ -67,7 +67,7 @@ export function TotalTradingVolumeChart({
    * Lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TotalTradingVolumeResponse, TotalTradingVolumeRequestParams>({
+    useStandardChartController<TotalTradingVolumeData, TotalTradingVolumeRequestParams>({
       fetcher: fetchTotalTradingVolume,
       query,
       autoRefresh,

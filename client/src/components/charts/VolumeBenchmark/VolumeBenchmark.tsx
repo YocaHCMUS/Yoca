@@ -138,7 +138,7 @@ export function VolumeBenchmark({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<VolumeBenchmarkResponse, VolumeBenchmarkRequestParams>({
+    useStandardChartController<VolumeBenchmarkData, VolumeBenchmarkRequestParams>({
       fetcher: fetchVolumeBenchmark,
       query,
       autoRefresh,

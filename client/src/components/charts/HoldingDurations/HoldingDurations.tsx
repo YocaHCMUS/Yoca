@@ -87,7 +87,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<HoldingDurationsResponse, HoldingsRequestParams>({
+    useStandardChartController<HoldingDurationsData, HoldingsRequestParams>({
       fetcher: fetchHoldingDurations,
       query,
       autoRefresh,

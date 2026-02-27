@@ -69,7 +69,7 @@ export function WinrateChart({
    * Lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<WinrateResponse, WinrateRequestParams>({
+    useStandardChartController<WinrateData, WinrateRequestParams>({
       fetcher: fetchWinrate,
       query,
       autoRefresh,

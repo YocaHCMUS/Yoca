@@ -21,11 +21,15 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchDrawdown } from '@/services/chart/chartApi';
+import { fetchDrawdown, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
-import type { DrawdownResponse, DrawdownRequestParams } from '@/types/chart-api.types';
+import type { DrawdownRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type DrawdownData = InferFetcherData<typeof fetchDrawdown>;
+
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartStatsHeader, ChartContainer, ChartSection, ChartGridItem } from '../shared';
@@ -71,7 +75,7 @@ export function DrawdownChart({
    * Lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<DrawdownResponse, DrawdownRequestParams>({
+    useStandardChartController<DrawdownData, DrawdownRequestParams>({
       fetcher: fetchDrawdown,
       query,
       autoRefresh,
@@ -82,7 +86,7 @@ export function DrawdownChart({
    * Generate drawdown chart option
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!data || 'error' in data || !data.wallets || data.wallets.length === 0) return null;
 
     const baseOption = getThemedChartBaseOption(chartTheme);
     
@@ -191,7 +195,7 @@ export function DrawdownChart({
    * Generate statistics header
    */
   const statsCards = useMemo<StatCard[]>(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return [];
+    if (!data || 'error' in data || !data.wallets || data.wallets.length === 0) return [];
 
     return data.wallets.map((wallet, index) => ({
       title: wallet.walletName || wallet.walletAddress,
@@ -224,7 +228,7 @@ export function DrawdownChart({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={!data || 'error' in data || !data.wallets || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
       <ChartContainer gap='0'>

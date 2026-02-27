@@ -70,7 +70,7 @@ export function StablecoinRatioChart({
    * Lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<StablecoinRatioResponse, StablecoinRatioRequestParams>({
+    useStandardChartController<StablecoinRatioData, StablecoinRatioRequestParams>({
       fetcher: fetchStablecoinRatio,
       query,
       autoRefresh,
