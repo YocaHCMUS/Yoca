@@ -291,7 +291,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
         option: createChartOption(
           wallet.rollingReturn,
           wallet.cumulativeReturn,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+          `${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
         ),
       }));
     }

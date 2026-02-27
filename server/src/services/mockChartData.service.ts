@@ -815,7 +815,7 @@ export function generateHoldingDurations(
     ? walletIds.map(id => {
         // Try to find in default wallets or create generic name
         const defaultWallet = defaultWallets.find(w => w.id === id);
-        return defaultWallet || { id, name: `Wallet ${id}` };
+        return defaultWallet || { id, name: `${id}` };
       })
     : defaultWallets;
   
@@ -1334,7 +1334,7 @@ export function generateWinrateData(
   const walletsToGenerate = wallets.length > 0
     ? wallets.map((addr, idx) => {
         const defaultWallet = defaultWallets.find(w => w.address === addr);
-        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+        return defaultWallet || { address: addr, name: addr };
       })
     : defaultWallets;
   
@@ -1443,7 +1443,7 @@ export function generateDrawdownData(
   const walletsToGenerate = wallets.length > 0
     ? wallets.map((addr, idx) => {
         const defaultWallet = defaultWallets.find(w => w.address === addr);
-        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+        return defaultWallet || { address: addr, name: addr };
       })
     : defaultWallets;
   
@@ -1619,7 +1619,7 @@ export function generateStablecoinRatioData(
   const walletsToGenerate = wallets.length > 0
     ? wallets.map((addr, idx) => {
         const defaultWallet = defaultWallets.find(w => w.address === addr);
-        return defaultWallet || { address: addr, name: `Wallet ${idx + 1}` };
+        return defaultWallet || { address: addr, name: addr };
       })
     : defaultWallets;
   

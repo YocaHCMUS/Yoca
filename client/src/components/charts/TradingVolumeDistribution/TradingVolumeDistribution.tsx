@@ -316,7 +316,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         option: createChartOption(
           wallet.data,
           wallet.totalVolume,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`,
+          `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),
       }));

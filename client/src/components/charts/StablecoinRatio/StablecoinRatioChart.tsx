@@ -154,7 +154,7 @@ export function StablecoinRatioChart({
       series: series,
       legend: getConditionalLegend(
         chartTheme,
-        data.wallets.map(w => w.walletName || w.walletAddress),
+        data.wallets.map(w => w.walletAddress),
         2,
         false
       ),

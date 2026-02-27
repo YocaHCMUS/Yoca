@@ -387,7 +387,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         option: createChartOption(
           wallet.dailyPnL,
           wallet.cumulativePnL,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+          `${wallet.walletAddress.slice(0, 8)}...`
         ),
       }));
     }
