@@ -6,11 +6,12 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchHoldingDurations } from '@/services/chart/chartApi';
+import { fetchHoldingDurations, type InferFetcherData } from '@/services/chart/chartApi';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
+import { isChartSuccess } from '@/util/chart-helpers';
 
-import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
+import type { HoldingsRequestParams } from '@/types/chart-api.types';
 
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -20,6 +21,7 @@ import type { ChartProps } from '../shared/ChartProp';
 
 
 export type TimeUnit = 'days' | 'weeks' | 'months';
+type HoldingDurationsData = InferFetcherData<typeof fetchHoldingDurations>
 
 // export interface HoldingDurationsProps {
 //   title?: string;
@@ -160,7 +162,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
    * Build chart option with multiple wallets as series
    */
   const chartOption = useMemo<EChartsOption | null>(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     const base = getThemedChartBaseOption(chartTheme);
     
@@ -263,7 +265,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   }, [data, chartTheme, convert, unitLabel, tr]);
 
   // Check if we have valid data to display
-  const isEmpty = !data || !data.wallets || data.wallets.length === 0 || chartOption === null;
+  const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || chartOption === null;
 
   return (
     <BaseChart

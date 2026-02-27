@@ -20,7 +20,8 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchStablecoinRatio } from '@/services/chart/chartApi';
+import { fetchStablecoinRatio, type InferFetcherData } from '@/services/chart/chartApi';
+import { isChartSuccess } from '@/util/chart-helpers';
 import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
@@ -30,6 +31,8 @@ import { BaseChart } from '../Base/BaseChart';
 import { ChartStatsHeader, ChartContainer, ChartSection, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import type { StatCard } from '../shared/ChartStatsHeader';
+
+type StablecoinRatioData = InferFetcherData<typeof fetchStablecoinRatio>
 
 export function StablecoinRatioChart({
   title,
@@ -81,11 +84,13 @@ export function StablecoinRatioChart({
    * Generate chart option
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    // if (!data || !data.wallets || data.wallets.length === 0) return null;
 
     const baseOption = getThemedChartBaseOption(chartTheme);
     
     // Prepare series data (one per wallet)
+    if (!isChartSuccess(data, 'wallets')) return null;
+
     const series = data.wallets.map((wallet, index) => {
       const color = chartTheme.colorPalette[index % chartTheme.colorPalette.length];
       
@@ -172,9 +177,9 @@ export function StablecoinRatioChart({
    * Generate statistics header
    */
   const statsCards = useMemo<StatCard[]>(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return [];
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return [];
 
-    return data.wallets.map((wallet, index) => ({
+    return data.wallets.map((wallet, _index) => ({
       title: wallet.walletName || wallet.walletAddress,
       stats: [
         {
@@ -195,7 +200,7 @@ export function StablecoinRatioChart({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
       <ChartContainer>

@@ -14,11 +14,13 @@ import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
-import { formatCurrency, formatDate } from '@/util/chart-helpers';
+import { fetchVolumeBenchmark, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, formatDate, isChartSuccess } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
+import type { VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
+
+type VolumeBenchmarkData = InferFetcherData<typeof fetchVolumeBenchmark>;
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -53,7 +55,7 @@ export interface VolumeBenchmarkProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: VolumeBenchmarkResponse) => void;
+  onDataLoaded?: (data: VolumeBenchmarkData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -150,7 +152,7 @@ export function VolumeBenchmark({
    * Generate eCharts options for volume benchmark visualization
    */
   const chartOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'wallets')) {
       return {};
     }
     
@@ -304,7 +306,7 @@ export function VolumeBenchmark({
       // height={height}
       loadingState={loadingState}
       onRetry={handleRetry}
-      isEmpty={!data || data.wallets.length === 0}
+      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
     >
       {/* <div className={styles.volumeBenchmark}>
       </div> */}
@@ -331,7 +333,7 @@ export function VolumeBenchmark({
       </div>
       
       {/* Chart */}
-      {data && (
+      {isChartSuccess(data, 'wallets') && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts
             ref={chartRef}

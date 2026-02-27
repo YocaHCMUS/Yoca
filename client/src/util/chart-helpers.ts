@@ -280,6 +280,28 @@ export function isValidTimezone(timezone: string): boolean {
 }
 
 /**
+ * Generic type guard for chart API success responses.
+ * Checks that `data` is a non-null object containing `requiredKey` and no `error` field.
+ *
+ * @example
+ * if (isChartSuccess<StablecoinRatioData>(data, 'wallets')) {
+ *   // data.wallets is safely accessible here
+ * }
+ */
+export function isChartSuccess<T>(
+  data: T,
+  requiredKey: string
+): data is Exclude<NonNullable<T>, { error: string }> {
+  return (
+    data !== null &&
+    data !== undefined &&
+    typeof data === 'object' &&
+    requiredKey in (data as object) &&
+    !('error' in (data as object))
+  );
+}
+
+/**
  * Chart helper utilities object
  */
 export const chartHelpers = {

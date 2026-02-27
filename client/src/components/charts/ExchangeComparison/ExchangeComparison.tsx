@@ -16,7 +16,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchExchangeComparison, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { ExchangesRequestParams } from '@/types/chart-api.types';
@@ -28,6 +28,7 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import { ChartGridItem } from '../shared';
+
 
 /**
  * Props for ExchangeComparison component
@@ -52,7 +53,7 @@ export interface ExchangeComparisonProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: ExchangeComparisonResponse) => void;
+  onDataLoaded?: (data: ExchangeComparisonData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -124,7 +125,7 @@ export function ExchangeComparison({
   }), [filters.timePeriod, currentMetric, timezone]);
   
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonResponse, ExchangesRequestParams>({
+  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({
     fetcher: fetchExchangeComparison,
     query,
     autoRefresh,
@@ -145,7 +146,7 @@ export function ExchangeComparison({
    * Handle export based on format
    */
   const handleExport = useCallback(async (format: ExportFormat) => {
-    if (!data) return;
+    if (!isChartSuccess(data, 'exchanges')) return;
 
     const instance = chartRef.current?.getEchartsInstance() ?? null;
 
@@ -192,7 +193,7 @@ export function ExchangeComparison({
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
-    if (!data || data.exchanges.length === 0) return null;
+    if (!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0) return null;
     
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
@@ -371,7 +372,7 @@ export function ExchangeComparison({
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.exchanges.length === 0}
+      isEmpty={!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}

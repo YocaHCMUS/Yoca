@@ -5,11 +5,13 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchTradingVolumePerTransaction } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
+import { fetchTradingVolumePerTransaction, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { TradingVolumePerTransactionResponse, TradingVolumePerTransactionRequestParams } from '@/types/chart-api.types';
+import type { TradingVolumePerTransactionRequestParams } from '@/types/chart-api.types';
+
+type TradingVolumePerTransactionData = InferFetcherData<typeof fetchTradingVolumePerTransaction>;
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGridItem } from '../shared';
@@ -69,7 +71,7 @@ export function TradingVolumePerTransaction({
    * Generate eCharts option configuration for box plot
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
@@ -201,7 +203,7 @@ export function TradingVolumePerTransaction({
       title={chartTitle}
       // height="100%"
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
       {chartOption && (

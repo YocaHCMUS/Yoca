@@ -16,7 +16,7 @@ import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution, type InferFetcherData } from '../../../services/chart/chartApi';
-import { formatDate } from '../../../util/chart-helpers';
+import { formatDate, isChartSuccess } from '../../../util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { TransactionDistributionRequestParams } from '../../../types/chart-api.types';
@@ -56,7 +56,7 @@ export interface TransactionDistributionProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: TransactionDistributionResponse) => void;
+  onDataLoaded?: (data: TransactionDistributionData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -155,7 +155,7 @@ export function TransactionDistribution({
    * Generate eCharts options for transaction counts chart
    */
   const transactionCountsOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
     
@@ -275,7 +275,7 @@ export function TransactionDistribution({
    * Generate eCharts options for unique token counts chart
    */
   const uniqueTokenCountsOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
     
@@ -449,7 +449,7 @@ export function TransactionDistribution({
       loadingState={loadingState}
       // height={height * 2 + 40}
       onRetry={handleRetry}
-      isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
+      isEmpty={!isChartSuccess(data, 'transactionCounts') || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
     >
       {/* <div className={styles.transactionDistribution}>
       </div> */}

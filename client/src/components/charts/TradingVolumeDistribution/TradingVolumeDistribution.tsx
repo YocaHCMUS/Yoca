@@ -24,11 +24,13 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchTradingVolumeDistribution } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
+import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
-import type { TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+
+type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import { useChartExport } from '@/hooks/useChartExport';
@@ -103,7 +105,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    */
   const handleExport = useCallback(
     async (format: ExportFormat) => {
-      if (!data) return;
+      if (!isChartSuccess(data, 'wallets')) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
 
@@ -253,7 +255,8 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * Extract unique assets across all wallets for aggregated legend
    */
   const aggregatedLegendData = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    if (!isChartSuccess(data, 'wallets')) return null;
+    if (data.wallets.length <= 1) return null;
     
     const uniqueAssets = new Map<string, { name: string; color: string }>();
     
@@ -302,12 +305,12 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * ECharts options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!isChartSuccess(data, 'wallets')) return [];
 
-    const isMultiWallet = data.wallets && data.wallets.length > 1;
+    const isMultiWallet = data.wallets.length > 1;
 
     // Multi-wallet or single wallet view
-    if (data.wallets && data.wallets.length > 0) {
+    if (data.wallets.length > 0) {
       return data.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
@@ -322,9 +325,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0)
-  ) || (filters.wallets && filters.wallets.length === 0);
+  const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || (filters.wallets && filters.wallets.length === 0);
 
   return (
     <ChartWrapper

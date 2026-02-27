@@ -22,8 +22,11 @@ import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
-import { fetchWinrate } from '@/services/chart/chartApi';
-import type { WinrateResponse, WinrateRequestParams } from '@/types/chart-api.types';
+import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
+import { isChartSuccess } from '@/util/chart-helpers';
+import type { WinrateRequestParams } from '@/types/chart-api.types';
+
+type WinrateData = InferFetcherData<typeof fetchWinrate>;
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
@@ -80,7 +83,7 @@ export function WinrateChart({
    * Generate overall winrate column chart
    */
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     const baseOption = getThemedChartBaseOption(chartTheme);
     
@@ -158,7 +161,7 @@ export function WinrateChart({
    * Generate distribution charts for each wallet
    */
   const distributionCharts = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return [];
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return [];
 
     return data.wallets.map((wallet) => {
       const baseOption = getThemedChartBaseOption(chartTheme);
@@ -273,7 +276,7 @@ export function WinrateChart({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
       onRetry={() => refetch(false)}
     >
       <ChartContainer gap='0'>

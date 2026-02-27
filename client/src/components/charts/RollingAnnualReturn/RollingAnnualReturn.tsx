@@ -25,7 +25,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchRollingAnnualReturn, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { formatTimestampWithTimezone, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getDualAxisLegend } from '@/util/chart-legend-config';
 import type { RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
@@ -282,10 +282,10 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
    * Generate chart options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!isChartSuccess(data, 'wallets') && !isChartSuccess(data, 'rollingReturn')) return [];
 
     // Multi-wallet view
-    if (data.wallets && data.wallets.length > 0) {
+    if ('wallets' in data && data.wallets.length > 0) {
       return data.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
@@ -297,7 +297,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
     }
 
     // Single/aggregated view
-    if (data.rollingReturn && data.cumulativeReturn && data.rollingReturn.length > 0) {
+    if ('rollingReturn' in data && data.rollingReturn.length > 0) {
       return [{
         walletAddress: 'aggregated',
         option: createChartOption(data.rollingReturn, data.cumulativeReturn, undefined),
@@ -307,10 +307,7 @@ export const RollingAnnualReturn: React.FC<ChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0) &&
-    (!data.rollingReturn || data.rollingReturn.length === 0)
-  );
+  const isEmpty = chartOptions.length === 0;
 
   return (
     <BaseChart

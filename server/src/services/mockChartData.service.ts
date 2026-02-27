@@ -203,7 +203,7 @@ export function generateBalanceTrend(
       }
       
       series.push({
-        name: `Wallet ${walletAddress.substring(0, 8)}...`,
+        name: `${walletAddress.substring(0, 8)}...`,
         data: dataPoints,
       });
     }
