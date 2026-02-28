@@ -189,7 +189,9 @@ export async function updateEthereumWalletLoginNounce(userId: string) {
       loginNounce: nounce,
       nounceExpiredAt: new Date(Date.now() + SOLANA_LOGIN_NOUNCE_TTL_MS),
     })
-    .where(and(eq(authAccounts.provider, "other"), eq(authAccounts.userId, userId)));
+    .where(
+      and(eq(authAccounts.provider, "other"), eq(authAccounts.userId, userId)),
+    );
   return nounce;
 }
 
@@ -271,7 +273,10 @@ export async function verifyEthereumWalletLoginNounce(
     return null;
   }
 
-  const message = getEthereumLoginMessage(account.loginNounce, address.toLowerCase());
+  const message = getEthereumLoginMessage(
+    account.loginNounce,
+    address.toLowerCase(),
+  );
   const recoveredAddress = verifyMessage(message, signature);
 
   if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
@@ -295,9 +300,9 @@ export async function verifyEthereumWalletLoginNounce(
 }
 
 export function getSolanaLoginMessage(nonce: string, address: string) {
-  return `Login to MyApp\nWallet: ${address}\nNonce: ${nonce}`;
+  return `Login to Yoca\nWallet: ${address}\nNonce: ${nonce}`;
 }
 
 export function getEthereumLoginMessage(nonce: string, address: string) {
-  return `Login to MyApp\nWallet: ${address}\nNonce: ${nonce}`;
+  return `Login to Yoca\nWallet: ${address}\nNonce: ${nonce}`;
 }

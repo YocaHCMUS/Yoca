@@ -102,9 +102,7 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
     [],
   );
 
-  useEffect(() => {
-    localStorage.removeItem("walletName");
-  }, []);
+  localStorage.removeItem("walletName");
 
   return (
     <ConnectionProvider endpoint={endpoint}>

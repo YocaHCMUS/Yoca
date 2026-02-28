@@ -5,7 +5,7 @@ import { Button } from "@carbon/react";
 import { Wallet } from "@carbon/react/icons";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type WalletAuthButtonProps = {
   disabled: boolean;
@@ -24,12 +24,17 @@ export function WalletAuthButton({
   const walletConnectBtnRef = useRef<HTMLDivElement>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  useEffect(() => {
+    if (connected && isModalOpen) {
+      closeModal();
+    }
+  }, [connected, isModalOpen, closeModal]);
+
   const triggerWalletMultiBtn = () => {
     const container = walletConnectBtnRef.current;
     if (!container) {
       return;
     }
-
     const btn = container.querySelector("button");
     if (btn instanceof HTMLElement) {
       btn.click();
