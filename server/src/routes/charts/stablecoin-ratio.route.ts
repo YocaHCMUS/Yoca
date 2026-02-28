@@ -56,7 +56,7 @@ const app = new Hono()
       );
       
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching stablecoin ratio data:', error);
       return c.json(

@@ -17,7 +17,7 @@
 
 import React, { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { ChartGridItem } from '@/components/charts/shared';
 import { useChartTheme } from '@/hooks/useChartTheme';
@@ -82,8 +82,8 @@ export const MarketHeatmap: React.FC<MarketHeatmapProps> = ({
   className,
 }) => {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.marketHeatmap.title', 'Market Heatmap');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.marketHeatmap.title');
   
   // Chart instance ref for export
   const chartRef = useRef<any>(null);

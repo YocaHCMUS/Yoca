@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generatePnLData(...args: any[]) {}
+import { generatePnLData } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for P&L endpoint
@@ -68,7 +67,7 @@ const app = new Hono()
       );
 
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error("Error fetching P&L data:", error);
       return c.json(

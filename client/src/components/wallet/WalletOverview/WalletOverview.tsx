@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -40,6 +41,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [filterValue, setFilterValue] = useState(1); // 24h
     const [showCustomControl, setShowCustomControl] = useState(false);
     const [customDays, setCustomDays] = useState(30);
+
+    const { tr } = useLocalization();
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -136,25 +139,25 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
                             onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
                         >
-                            24H
+                            {tr('wallet.filter24h')}
                         </button>
                         <button 
                             className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
                             onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
                         >
-                            7D
+                            {tr('wallet.filter7d')}
                         </button>
                         <button 
                             className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.month ? styles.active : ''}`}
                             onClick={() => handleFilterClick(OverviewFilterSelection.month, 30)}
                         >
-                            30D
+                            {tr('wallet.filter30d')}
                         </button>
                         <button 
                             className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
                             onClick={handleCustomFilter}
                         >
-                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}D` : "Custom"}
+                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
                             {showCustomControl && (
                                 <div className={styles.customControl}>
                                     <Slider
@@ -171,17 +174,17 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     </div>
                     <div className={styles.utilityButtons}>
                         <Link onClick={handleShare} renderIcon={Share}>
-                            Share this wallet
+                            {tr('wallet.shareWallet')}
                         </Link>
                         <Link onClick={handleCompare} renderIcon={Repeat}>
-                            Compare this wallet
+                            {tr('wallet.compareWallet')}
                         </Link>
                         <Link onClick={handleCreateAlert} renderIcon={Notification}>
-                            Create alert for this wallet
+                            {tr('wallet.createAlert')}
                         </Link>
                         <Link onClick={handleBookmark} 
                             renderIcon={bookmark ? BookmarkFilled : Bookmark}>
-                            {bookmark ? 'Bookmarked' : 'Bookmark this wallet'}
+                            {bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}
                         </Link>
                     </div>
                 </div>
@@ -193,7 +196,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Total Asset Value */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Total Asset Value
+                            {tr('wallet.totalAssetValue')}
                         </div>
                         <div className={styles.statValue}>
                             ${totalAssetValue.toLocaleString()}
@@ -203,7 +206,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Trading Volume */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Trading Volume
+                            {tr('wallet.tradingVolume')}
                         </div>
                         <div className={styles.statValue}>
                             ${tradingVolumn.toLocaleString()}
@@ -213,7 +216,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Total PnL */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Total PnL
+                            {tr('wallet.totalPnL')}
                         </div>
                         <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
                             ${totalPnL.toLocaleString()}
@@ -223,7 +226,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Transaction Count */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Tokens traded
+                            {tr('wallet.tokensTraded')}
                         </div>
                         <div className={styles.statValue}>
                             {tokenTraded}
@@ -233,7 +236,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     {/* Tokens Holding */}
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>
-                            Tokens Holding
+                            {tr('wallet.tokensHolding')}
                         </div>
                         <div className={styles.statValue}>
                             {numberOfTokenHolding}

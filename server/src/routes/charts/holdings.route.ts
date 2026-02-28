@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateHoldingDurations(...args: any[]) {}
+import { generateHoldingDurations } from '../../services/mockChartData.service.js';
 /**
  * Request parameter schema for holding durations endpoint
  */
@@ -71,7 +70,7 @@ const app = new Hono()
       );
 
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error("Error fetching holding durations data:", error);
       return c.json(

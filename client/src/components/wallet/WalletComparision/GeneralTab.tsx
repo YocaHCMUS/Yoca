@@ -32,7 +32,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             <div className={styles.stableCoinChart}>
                 <BalanceChart 
                     initialFilters={{
-                        initialTimePeriod: "30D",
+                        timePeriod: "30D",
                         wallets: walletAddresses
                     }}
                     minHeight={300}

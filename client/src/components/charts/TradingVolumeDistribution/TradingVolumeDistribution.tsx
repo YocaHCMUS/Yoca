@@ -20,15 +20,17 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchTradingVolumeDistribution } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
+import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
-import type { TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+
+type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import { useChartExport } from '@/hooks/useChartExport';
@@ -51,8 +53,8 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = t('charts.tradingVolumeDistributionChart.title', 'Trading Volume Distribution');
+  const { tr } = useLocalization();
+  const chartTitle = tr('charts.tradingVolumeDistributionChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -82,7 +84,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TradingVolumeDistributionResponse, TradingVolumeDistributionRequestParams>({
+    useStandardChartController<TradingVolumeDistributionData, TradingVolumeDistributionRequestParams>({
       fetcher: fetchTradingVolumeDistribution,
       query,
       autoRefresh,
@@ -103,7 +105,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    */
   const handleExport = useCallback(
     async (format: ExportFormat) => {
-      if (!data) return;
+      if (!isChartSuccess(data, 'wallets')) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
 
@@ -186,11 +188,11 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
-              t('charts.tradingVolumeDistributionChart.volume', 'Volume'),
+              tr('charts.tradingVolumeDistributionChart.volume'),
               formatCurrency(p.value)
             )
           + createTooltipRow(
-              t('charts.tradingVolumeDistributionChart.percentage', 'Percentage'),
+              tr('charts.tradingVolumeDistributionChart.percentage'),
               `${p.data.percentage.toFixed(2)}%`
             ),
       },
@@ -229,7 +231,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '46%',
           style: {
-            text: t('charts.tradingVolumeDistributionChart.totalVolume', 'Total Volume'),
+            text: tr('charts.tradingVolumeDistributionChart.totalVolume'),
             fill: chartTheme.textColorSecondary,
             fontSize: 14,
           },
@@ -247,13 +249,14 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, t, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
    */
   const aggregatedLegendData = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    if (!isChartSuccess(data, 'wallets')) return null;
+    if (data.wallets.length <= 1) return null;
     
     const uniqueAssets = new Map<string, { name: string; color: string }>();
     
@@ -302,18 +305,18 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * ECharts options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!isChartSuccess(data, 'wallets')) return [];
 
-    const isMultiWallet = data.wallets && data.wallets.length > 1;
+    const isMultiWallet = data.wallets.length > 1;
 
     // Multi-wallet or single wallet view
-    if (data.wallets && data.wallets.length > 0) {
+    if (data.wallets.length > 0) {
       return data.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
           wallet.totalVolume,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`,
+          `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),
       }));
@@ -322,9 +325,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0)
-  ) || (filters.wallets && filters.wallets.length === 0);
+  const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || (filters.wallets && filters.wallets.length === 0);
 
   return (
     <ChartWrapper
@@ -333,8 +334,8 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0 
         ? {
-            title: t('charts.tradingVolumeDistributionChart.noWalletsTitle', 'No Wallets Selected'),
-            message: t('charts.tradingVolumeDistributionChart.noWalletsMessage', 'Please select at least one wallet to view trading volume distribution.'),
+            title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),
+            message: tr('charts.tradingVolumeDistributionChart.noWalletsMessage'),
           }
         : undefined}
       onRetry={() => refetch(false)}

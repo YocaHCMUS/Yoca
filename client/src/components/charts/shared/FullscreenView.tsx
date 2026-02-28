@@ -16,7 +16,7 @@
 import { Theme } from "@carbon/react";
 import React, { useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "../../../contexts/ThemeContext";
 import styles from "./FullscreenView.module.scss";
 
@@ -46,7 +46,7 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
   children,
   title = "Chart",
 }) => {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const { theme } = useUserTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -193,7 +193,7 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
         className={styles.fullscreenView}
         role="dialog"
         aria-modal="true"
-        aria-label={`${title} - ${t("charts.fullscreenView")}`}
+        aria-label={`${title} - ${tr("charts.fullscreenView")}`}
         tabIndex={-1}
       >
         <div className={styles.header}>
@@ -201,8 +201,8 @@ export const FullscreenView: React.FC<FullscreenViewProps> = ({
           <button
             className={styles.exitButton}
             onClick={onExit}
-            aria-label={t("charts.exitFullscreen")}
-            title={t("charts.exitFullscreenEsc")}
+            aria-label={tr("charts.exitFullscreen")}
+            title={tr("charts.exitFullscreenEsc")}
           >
             <svg
               width="24"

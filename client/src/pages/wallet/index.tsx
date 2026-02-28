@@ -3,7 +3,7 @@ import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx"
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
-import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import TabContainer from "@/components/TabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
   renderBinaryValue,
@@ -17,7 +17,7 @@ import {
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
 import styles from "./index.module.scss";
@@ -44,7 +44,7 @@ interface Portfolio {
 }
 
 export default function WalletPage() {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const { address } = useParams<{ address: string }>();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,22 +106,22 @@ export default function WalletPage() {
   ]);
 
   const transactionHeaders = [
-    "Signature",
-    "Type",
-    "Token",
-    "Amount",
-    "Price",
-    "Total",
-    "Time",
-    "Status",
+    tr('walletPage.signature'),
+    tr('walletPage.type'),
+    tr('walletPage.token'),
+    tr('walletPage.amount'),
+    tr('walletPage.price'),
+    tr('walletPage.total'),
+    tr('walletPage.time'),
+    tr('walletPage.status'),
   ];
 
   const portfolioHeaders = [
-    "Token",
-    "Price",
-    "Holding",
-    "Value",
-    "Change (24h)",
+    tr('walletPage.token'),
+    tr('walletPage.price'),
+    tr('walletPage.holding'),
+    tr('walletPage.value'),
+    tr('walletPage.change24h'),
   ];
 
   const isSortable = [false, false, false, true, true, true, true, false];
@@ -187,15 +187,15 @@ export default function WalletPage() {
   const headers = [
     {
       key: "token",
-      header: "Token",
+      header: tr('walletPage.token'),
     },
     {
       key: "balance",
-      header: "Balance",
+      header: tr('walletPage.amount'),
     },
     {
       key: "valueUsd",
-      header: "Value",
+      header: tr('walletPage.value'),
     },
   ];
 
@@ -230,7 +230,7 @@ export default function WalletPage() {
   if (!address) {
     return (
       <PageWrapper>
-        <div>Address not found</div>
+        <div>{tr('walletPage.addressNotFound')}</div>
       </PageWrapper>
     );
   }
@@ -238,11 +238,11 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <WalletOverview walletAddress={address} />
-      <h1 className={styles.sectionTitle}>Activity</h1>
+      <h1 className={styles.sectionTitle}>{tr('walletPage.activity')}</h1>
       <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
-          names={["Balance History", "Token Balance History", "Profit & Lost"]}
+          names={[tr('walletPage.balanceHistory'), tr('walletPage.tokenBalanceHistory'), tr('walletPage.profitLoss')]}
           tabs={[
             <BalanceChart
               minHeight={460}
@@ -266,11 +266,11 @@ export default function WalletPage() {
         />
         <TabContainer
           activeTab={secondaryActiveTab}
-          names={["Transfer", "Swap", "Inflow", "Outflow", "Conterparties"]}
+          names={[tr('walletPage.transfer'), tr('walletPage.swap'), tr('walletPage.inflow'), tr('walletPage.outflow'), tr('walletPage.counterparties')]}
           tabs={[
             <Table
               maxHeight={400}
-              title="Transfer"
+              title={tr('walletPage.transfer')}
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
@@ -282,7 +282,7 @@ export default function WalletPage() {
             />,
             <Table
               maxHeight={400}
-              title="Swap"
+              title={tr('walletPage.swap')}
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
@@ -294,7 +294,7 @@ export default function WalletPage() {
             />,
             <Table
               maxHeight={400}
-              title="Inflow"
+              title={tr('walletPage.inflow')}
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
@@ -306,7 +306,7 @@ export default function WalletPage() {
             />,
             <Table
               maxHeight={400}
-              title="Outflow"
+              title={tr('walletPage.outflow')}
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
@@ -318,7 +318,7 @@ export default function WalletPage() {
             />,
             <Table
               maxHeight={400}
-              title="Conterparties"
+              title={tr('walletPage.counterparties')}
               headers={transactionHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transactionData)}
@@ -333,7 +333,7 @@ export default function WalletPage() {
         />
       </div>
 
-      <h1 className={styles.sectionTitle}>Asset</h1>
+      <h1 className={styles.sectionTitle}>{tr('walletPage.asset')}</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
         <div className={styles.columnWrapper}>
@@ -342,7 +342,7 @@ export default function WalletPage() {
         <div className={styles.columnWrapper}>
           <Table
             maxHeight={800}
-            title="Portfolio"
+            title={tr('walletPage.portfolio')}
             headers={portfolioHeaders}
             initialFilters={{}}
             fetcher={Promise.resolve(portfolioData)}
@@ -355,13 +355,13 @@ export default function WalletPage() {
         </div>
       </div>
 
-      <h1 className={styles.sectionTitle}>Top exchange</h1>
+      <h1 className={styles.sectionTitle}>{tr('walletPage.topExchange')}</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
         <ExchangeComparison />
       </div>
 
-      <h1 className={styles.sectionTitle}>Top counterparties</h1>
+      <h1 className={styles.sectionTitle}>{tr('walletPage.topCounterparties')}</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
         <TransactionDistribution />

@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateBalanceTrend(...args: any[]) {}
+import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for balance trend endpoint
@@ -53,7 +52,10 @@ const app = new Hono()
     try {
       // Validate query parameters
       const query = c.req.query();
+      console.log('[balance.route] Raw query:', query);
+      
       const params = balanceRequestSchema.parse(query);
+      console.log('[balance.route] Parsed params:', params);
 
       // Generate balance trend data
       const data = generateBalanceTrend(

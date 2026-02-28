@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateMockPriceHistory(...args: any[]) {}
+import { generateMockPriceHistory } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for price history endpoint

@@ -1,16 +1,17 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchHoldingDurations } from '@/services/chart/chartApi';
+import { fetchHoldingDurations, type InferFetcherData } from '@/services/chart/chartApi';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
+import { isChartSuccess } from '@/util/chart-helpers';
 
-import type { HoldingDurationsResponse, HoldingsRequestParams } from '@/types/chart-api.types';
+import type { HoldingsRequestParams } from '@/types/chart-api.types';
 
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -20,6 +21,7 @@ import type { ChartProps } from '../shared/ChartProp';
 
 
 export type TimeUnit = 'days' | 'weeks' | 'months';
+type HoldingDurationsData = InferFetcherData<typeof fetchHoldingDurations>
 
 // export interface HoldingDurationsProps {
 //   title?: string;
@@ -44,8 +46,8 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = title ?? t('charts.holdingDurationsChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title ?? tr('charts.holdingDurationsChart.title');
 
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
@@ -87,7 +89,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<HoldingDurationsResponse, HoldingsRequestParams>({
+    useStandardChartController<HoldingDurationsData, HoldingsRequestParams>({
       fetcher: fetchHoldingDurations,
       query,
       autoRefresh,
@@ -110,11 +112,11 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   const unitLabel = useMemo(
     () =>
       selectedUnit === 'weeks'
-        ? t('charts.holdingDurationsChart.weeks')
+        ? tr('charts.holdingDurationsChart.weeks')
         : selectedUnit === 'months'
-        ? t('charts.holdingDurationsChart.months')
-        : t('charts.holdingDurationsChart.days'),
-    [selectedUnit, t]
+        ? tr('charts.holdingDurationsChart.months')
+        : tr('charts.holdingDurationsChart.days'),
+    [selectedUnit, tr]
   );
 
   /**
@@ -160,7 +162,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
    * Build chart option with multiple wallets as series
    */
   const chartOption = useMemo<EChartsOption | null>(() => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     const base = getThemedChartBaseOption(chartTheme);
     
@@ -229,7 +231,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       yAxis: {
         ...base.yAxis,
         type: 'value',
-        name: `${t('charts.holdingDurationsChart.duration')} (${unitLabel})`,
+        name: `${tr('charts.holdingDurationsChart.duration')} (${unitLabel})`,
         nameTextStyle: { color: chartTheme.textColor },
       },
       tooltip: {
@@ -260,10 +262,10 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       },
       series,
     };
-  }, [data, chartTheme, convert, unitLabel, t]);
+  }, [data, chartTheme, convert, unitLabel, tr]);
 
   // Check if we have valid data to display
-  const isEmpty = !data || !data.wallets || data.wallets.length === 0 || chartOption === null;
+  const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || chartOption === null;
 
   return (
     <BaseChart
@@ -275,9 +277,9 @@ export const HoldingDurations: React.FC<ChartProps> = ({
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
         <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value as TimeUnit)} className={sharedStyles.chartSelect}>
-          <option value="days">{t('charts.holdingDurationsChart.days')}</option>
-          <option value="weeks">{t('charts.holdingDurationsChart.weeks')}</option>
-          <option value="months">{t('charts.holdingDurationsChart.months')}</option>
+          <option value="days">{tr('charts.holdingDurationsChart.days')}</option>
+          <option value="weeks">{tr('charts.holdingDurationsChart.weeks')}</option>
+          <option value="months">{tr('charts.holdingDurationsChart.months')}</option>
         </select>
 
         <select value={selectedTopN} onChange={e => setSelectedTopN(+e.target.value)} className={sharedStyles.chartSelect}>

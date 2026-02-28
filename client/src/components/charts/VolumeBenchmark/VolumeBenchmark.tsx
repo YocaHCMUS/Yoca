@@ -9,16 +9,18 @@
 
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchVolumeBenchmark } from '@/services/chart/chartApi';
-import { formatCurrency, formatDate } from '@/util/chart-helpers';
+import { fetchVolumeBenchmark, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, formatDate, isChartSuccess } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { VolumeBenchmarkResponse, VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
+import type { VolumeBenchmarkRequestParams } from '@/types/chart-api.types';
+
+type VolumeBenchmarkData = InferFetcherData<typeof fetchVolumeBenchmark>;
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -53,7 +55,7 @@ export interface VolumeBenchmarkProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: VolumeBenchmarkResponse) => void;
+  onDataLoaded?: (data: VolumeBenchmarkData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -98,8 +100,8 @@ export function VolumeBenchmark({
   className,
 }: VolumeBenchmarkProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.volumeBenchmarkChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.volumeBenchmarkChart.title');
   
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -138,7 +140,7 @@ export function VolumeBenchmark({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<VolumeBenchmarkResponse, VolumeBenchmarkRequestParams>({
+    useStandardChartController<VolumeBenchmarkData, VolumeBenchmarkRequestParams>({
       fetcher: fetchVolumeBenchmark,
       query,
       autoRefresh,
@@ -150,7 +152,7 @@ export function VolumeBenchmark({
    * Generate eCharts options for volume benchmark visualization
    */
   const chartOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'wallets')) {
       return {};
     }
     
@@ -220,7 +222,7 @@ export function VolumeBenchmark({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.volumeBenchmarkChart.volume'),
+        name: tr('charts.volumeBenchmarkChart.volume'),
         nameLocation: 'middle',
         nameGap: 60,
         axisLabel: {
@@ -304,7 +306,7 @@ export function VolumeBenchmark({
       // height={height}
       loadingState={loadingState}
       onRetry={handleRetry}
-      isEmpty={!data || data.wallets.length === 0}
+      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
     >
       {/* <div className={styles.volumeBenchmark}>
       </div> */}
@@ -314,24 +316,24 @@ export function VolumeBenchmark({
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'line' ? sharedStyles.active : ''}`}
             onClick={() => handleChartTypeChange('line')}
-            aria-label={t('charts.volumeBenchmarkChart.line')}
-            title={t('charts.volumeBenchmarkChart.line')}
+            aria-label={tr('charts.volumeBenchmarkChart.line')}
+            title={tr('charts.volumeBenchmarkChart.line')}
           >
-            {t('charts.volumeBenchmarkChart.line')}
+            {tr('charts.volumeBenchmarkChart.line')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartType === 'bar' ? sharedStyles.active : ''}`}
             onClick={() => handleChartTypeChange('bar')}
-            aria-label={t('charts.volumeBenchmarkChart.bar')}
-            title={t('charts.volumeBenchmarkChart.bar')}
+            aria-label={tr('charts.volumeBenchmarkChart.bar')}
+            title={tr('charts.volumeBenchmarkChart.bar')}
           >
-            {t('charts.volumeBenchmarkChart.bar')}
+            {tr('charts.volumeBenchmarkChart.bar')}
           </button>
         </div>
       </div>
       
       {/* Chart */}
-      {data && (
+      {isChartSuccess(data, 'wallets') && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts
             ref={chartRef}

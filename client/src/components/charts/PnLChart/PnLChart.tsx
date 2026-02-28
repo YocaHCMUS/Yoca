@@ -20,16 +20,19 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchPnLChart } from '@/services/chart/chartApi';
+import { fetchPnLChart, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { PnLChartResponse, PnLRequestParams } from '@/types/chart-api.types';
+import type { PnLRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 import type { TimePeriod } from '@/types/chart-filters.types';
 
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -90,8 +93,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   initialViewMode = 'both',
   initialFilters,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.pnlChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.pnlChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -126,7 +129,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
    * Unified lifecycle controller
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<PnLChartResponse, PnLRequestParams>({
+    useStandardChartController<PnLChartData, PnLRequestParams>({
       fetcher: fetchPnLChart,
       query,
       autoRefresh,
@@ -166,7 +169,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     
     if (showDaily) {
       series.push({
-        name: t('charts.pnlChart.dailyPnL'),
+        name: tr('charts.pnlChart.dailyPnL'),
         type: 'bar',
         yAxisIndex: viewMode === 'both' ? 0 : undefined,
         data: dailyValues,
@@ -187,7 +190,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     
     if (showCumulative) {
       series.push({
-        name: t('charts.pnlChart.cumulativePnL'),
+        name: tr('charts.pnlChart.cumulativePnL'),
         type: 'line',
         yAxisIndex: viewMode === 'both' ? 1 : undefined,
         data: cumulativeValues,
@@ -219,7 +222,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       yAxis.push({
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.pnlChart.dailyPnL'),
+        name: tr('charts.pnlChart.dailyPnL'),
         position: 'left',
         axisLine: {
           ...baseOption.yAxis.axisLine,
@@ -248,7 +251,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       yAxis.push({
         ...baseOption.yAxis,
         type: 'value',
-        name: t('charts.pnlChart.cumulativePnL'),
+        name: tr('charts.pnlChart.cumulativePnL'),
         position: 'right',
         axisLine: {
           ...baseOption.yAxis.axisLine,
@@ -274,7 +277,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       yAxis.push({
         ...baseOption.yAxis,
         type: 'value',
-        name: viewMode === 'daily' ? t('charts.pnlChart.dailyPnL') : t('charts.pnlChart.cumulativePnL'),
+        name: viewMode === 'daily' ? tr('charts.pnlChart.dailyPnL') : tr('charts.pnlChart.cumulativePnL'),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
@@ -291,8 +294,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     
     // Build legend data
     const legendData: string[] = [];
-    if (showDaily) legendData.push(t('charts.pnlChart.dailyPnL'));
-    if (showCumulative) legendData.push(t('charts.pnlChart.cumulativePnL'));
+    if (showDaily) legendData.push(tr('charts.pnlChart.dailyPnL'));
+    if (showCumulative) legendData.push(tr('charts.pnlChart.cumulativePnL'));
     
     return {
       ...baseOption,
@@ -334,7 +337,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           
           if (showDaily) {
             tooltipContent += createTooltipRow(
-              t('charts.pnlChart.dailyPnL'),
+              tr('charts.pnlChart.dailyPnL'),
               formatCurrency(dailyValue),
               { valueColor: dailyValue >= 0 ? profitColor : lossColor }
             );
@@ -342,7 +345,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           
           if (showCumulative) {
             tooltipContent += createTooltipRow(
-              t('charts.pnlChart.cumulativePnL'),
+              tr('charts.pnlChart.cumulativePnL'),
               formatCurrency(cumulativeValue)
             );
           }
@@ -369,28 +372,28 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       yAxis,
       series,
     };
-  }, [chartTheme, timezone, t, viewMode]);
+  }, [chartTheme, timezone, tr, viewMode]);
 
   /**
    * Generate chart options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!data || 'error' in data) return [];
 
     // Multi-wallet view
-    if (data.wallets && data.wallets.length > 0) {
+    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
       return data.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.dailyPnL,
           wallet.cumulativePnL,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`
+          `${wallet.walletAddress.slice(0, 8)}...`
         ),
       }));
     }
 
     // Single/aggregated view
-    if (data.dailyPnL && data.dailyPnL.length > 0) {
+    if ('dailyPnL' in data && data.dailyPnL && data.dailyPnL.length > 0) {
       return [{
         walletAddress: 'aggregated',
         option: createChartOption(data.dailyPnL, data.cumulativePnL!, undefined),
@@ -400,9 +403,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0) &&
-    (!data.dailyPnL || data.dailyPnL.length === 0)
+  const isEmpty = !data || 'error' in data || (
+    (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
+    (!('dailyPnL' in data) || !data.dailyPnL || data.dailyPnL.length === 0)
   );
 
   return (
@@ -418,26 +421,26 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           <button
             className={`${sharedStyles.chartToggleButton} ${viewMode === 'daily' ? sharedStyles.active : ''}`}
             onClick={() => setViewMode('daily')}
-            aria-label={t('charts.pnlChart.dailyPnL')}
-            title={t('charts.pnlChart.dailyPnL')}
+            aria-label={tr('charts.pnlChart.dailyPnL')}
+            title={tr('charts.pnlChart.dailyPnL')}
           >
-            {t('charts.pnlChart.dailyPnL')}
+            {tr('charts.pnlChart.dailyPnL')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${viewMode === 'cumulative' ? sharedStyles.active : ''}`}
             onClick={() => setViewMode('cumulative')}
-            aria-label={t('charts.pnlChart.cumulativePnL')}
-            title={t('charts.pnlChart.cumulativePnL')}
+            aria-label={tr('charts.pnlChart.cumulativePnL')}
+            title={tr('charts.pnlChart.cumulativePnL')}
           >
-            {t('charts.pnlChart.cumulativePnL')}
+            {tr('charts.pnlChart.cumulativePnL')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${viewMode === 'both' ? sharedStyles.active : ''}`}
             onClick={() => setViewMode('both')}
-            aria-label={t('charts.pnlChart.both', 'Both')}
-            title={t('charts.pnlChart.both', 'Both')}
+            aria-label={tr('charts.pnlChart.both')}
+            title={tr('charts.pnlChart.both')}
           >
-            {t('charts.pnlChart.both', 'Both')}
+            {tr('charts.pnlChart.both')}
           </button>
         </div>
       </div>

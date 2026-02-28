@@ -20,21 +20,24 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchAssetDistribution } from '@/services/chart/chartApi';
+import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
-import type { AssetDistributionResponse, DistributionRequestParams } from '@/types/chart-api.types';
+import type { DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
+
+// Infer the response type from the fetcher function automatically
+type AssetDistributionData = InferFetcherData<typeof fetchAssetDistribution>;
 
 // export interface AssetDistributionProps {
 //   minHeight?: number;
@@ -51,8 +54,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   className,
 }) => {
-  const { t } = useTranslation();
-  const chartTitle = t('charts.assetDistributionChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = tr('charts.assetDistributionChart.title');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -82,7 +85,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<AssetDistributionResponse, DistributionRequestParams>({
+    useStandardChartController<AssetDistributionData, DistributionRequestParams>({
       fetcher: fetchAssetDistribution,
       query,
       autoRefresh,
@@ -111,28 +114,29 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         // Convert asset distribution data to CSV format
         const csv: ChartDataSeries[] = [];
         
-        if (data.wallets) {
+        // Type guard: check if response has wallets array
+        if ('wallets' in data && data.wallets) {
           // Per-wallet data
-          data.wallets.forEach(wallet => {
+          data.wallets.forEach((wallet) => {
             csv.push({
               id: `asset-distribution-${wallet.walletAddress}`,
               name: `Asset Distribution - ${wallet.walletAddress}`,
               type: 'pie',
               visible: true,
-              data: wallet.data.map(a => ({
+              data: wallet.data.map((a) => ({
                 name: a.name,
                 value: a.value,
               })),
             });
           });
-        } else if (data.data) {
+        } else if ('data' in data && data.data) {
           // Aggregated data
           csv.push({
             id: 'asset-distribution',
             name: 'Asset Distribution',
             type: 'pie',
             visible: true,
-            data: data.data.map(a => ({
+            data: data.data.map((a) => ({
               name: a.name,
               value: a.value,
             })),
@@ -198,11 +202,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
-              t('charts.assetDistributionChart.value'),
+              tr('charts.assetDistributionChart.value'),
               formatCurrency(p.value)
             )
           + createTooltipRow(
-              t('charts.assetDistributionChart.percentage'),
+              tr('charts.assetDistributionChart.percentage'),
               `${p.data.percentage.toFixed(2)}%`
             ),
       },
@@ -241,7 +245,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '46%',
           style: {
-            text: t('charts.assetDistributionChart.totalValue'),
+            text: tr('charts.assetDistributionChart.totalValue'),
             fill: chartTheme.textColorSecondary,
             fontSize: 14,
           },
@@ -259,13 +263,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, t, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
    */
   const aggregatedLegendData = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    if (!data || !('wallets' in data) || !data.wallets || data.wallets.length <= 1) return null;
     
     const uniqueAssets = new Map<string, { name: string; color: string }>();
     
@@ -316,23 +320,23 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const chartOptions = useMemo(() => {
     if (!data) return [];
 
-    const isMultiWallet = data.wallets && data.wallets.length > 1;
+    const isMultiWallet = 'wallets' in data && data.wallets && data.wallets.length > 1;
 
     // Multi-wallet view
-    if (data.wallets && data.wallets.length > 0) {
-      return data.wallets.map(wallet => ({
+    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
+      return data.wallets.map((wallet) => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
           wallet.totalValue,
-          `Wallet: ${wallet.walletAddress.slice(0, 6)}...${wallet.walletAddress.slice(-4)}`,
+          `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),
       }));
     }
 
     // Single/aggregated view
-    if (data.data && data.data.length > 0) {
+    if ('data' in data && data.data && data.data.length > 0) {
       return [{
         walletAddress: 'aggregated',
         option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
@@ -343,8 +347,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   }, [data, createChartOption]);
 
   const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0) &&
-    (!data.data || data.data.length === 0)
+    (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
+    (!('data' in data) || !data.data || data.data.length === 0)
   ) || (filters.wallets && filters.wallets.length === 0);
 
   return (
@@ -354,8 +358,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0 
         ? {
-            title: t('charts.assetDistributionChart.noWalletsTitle', 'No Wallets Selected'),
-            message: t('charts.assetDistributionChart.noWalletsMessage', 'Please select at least one wallet to view asset distribution.'),
+            title: tr('charts.noWalletsTitle'),
+            message: tr('charts.assetDistributionChart.noWalletsMessage'),
           }
         : undefined}
       onRetry={() => refetch(false)}

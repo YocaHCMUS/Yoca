@@ -10,21 +10,25 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
-import { fetchExchangeComparison } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
+import { fetchExchangeComparison, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { ExchangeComparisonResponse, ExchangesRequestParams } from '@/types/chart-api.types';
+import type { ExchangesRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type ExchangeComparisonData = InferFetcherData<typeof fetchExchangeComparison>;
 import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import { ChartGridItem } from '../shared';
+
 
 /**
  * Props for ExchangeComparison component
@@ -49,7 +53,7 @@ export interface ExchangeComparisonProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: ExchangeComparisonResponse) => void;
+  onDataLoaded?: (data: ExchangeComparisonData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -90,8 +94,8 @@ export function ExchangeComparison({
   className,
 }: ExchangeComparisonProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.exchangeComparisonChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.exchangeComparisonChart.title');
   
   // State management
   const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
@@ -121,7 +125,7 @@ export function ExchangeComparison({
   }), [filters.timePeriod, currentMetric, timezone]);
   
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonResponse, ExchangesRequestParams>({
+  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({
     fetcher: fetchExchangeComparison,
     query,
     autoRefresh,
@@ -142,7 +146,7 @@ export function ExchangeComparison({
    * Handle export based on format
    */
   const handleExport = useCallback(async (format: ExportFormat) => {
-    if (!data) return;
+    if (!isChartSuccess(data, 'exchanges')) return;
 
     const instance = chartRef.current?.getEchartsInstance() ?? null;
 
@@ -151,7 +155,7 @@ export function ExchangeComparison({
       const csvData: ChartDataSeries[] = [
         {
           id: 'deposits',
-          name: t('charts.exchangeComparisonChart.deposits'),
+          name: tr('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           visible: true,
           data: data.exchanges.map(ex => ({
@@ -161,7 +165,7 @@ export function ExchangeComparison({
         },
         {
           id: 'withdrawals',
-          name: t('charts.exchangeComparisonChart.withdrawals'),
+          name: tr('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           visible: true,
           data: data.exchanges.map(ex => ({
@@ -183,13 +187,13 @@ export function ExchangeComparison({
     format === 'png'
       ? exportPNG(instance as any, filters)
       : exportSVG(instance as any, filters);
-  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
+  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, tr]);
   
   /**
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
-    if (!data || data.exchanges.length === 0) return null;
+    if (!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0) return null;
     
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
@@ -238,7 +242,7 @@ export function ExchangeComparison({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [t('charts.exchangeComparisonChart.deposits'), t('charts.exchangeComparisonChart.withdrawals')],
+        [tr('charts.exchangeComparisonChart.deposits'), tr('charts.exchangeComparisonChart.withdrawals')],
         false
       ),
       xAxis: {
@@ -253,7 +257,7 @@ export function ExchangeComparison({
       yAxis: {
         ...baseOption.yAxis,
         type: 'value',
-        name: currentMetric === 'count' ? t('charts.exchangeComparisonChart.count') : t('charts.exchangeComparisonChart.volume'),
+        name: currentMetric === 'count' ? tr('charts.exchangeComparisonChart.count') : tr('charts.exchangeComparisonChart.volume'),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
@@ -266,7 +270,7 @@ export function ExchangeComparison({
       },
       series: [
         {
-          name: t('charts.exchangeComparisonChart.deposits'),
+          name: tr('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           data: deposits,
           itemStyle: {
@@ -288,7 +292,7 @@ export function ExchangeComparison({
           barMaxWidth: 50,
         },
         {
-          name: t('charts.exchangeComparisonChart.withdrawals'),
+          name: tr('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           data: withdrawals,
           itemStyle: {
@@ -311,7 +315,7 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric, chartTheme, t]);
+  }, [data, currentMetric, chartTheme, tr]);
   
   /**
    * Setup chart export
@@ -368,7 +372,7 @@ export function ExchangeComparison({
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.exchanges.length === 0}
+      isEmpty={!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}

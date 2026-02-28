@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateVolumeBenchmark(...args: any[]) {}
+import { generateVolumeBenchmark } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for volume benchmark endpoint
@@ -68,7 +67,7 @@ const app = new Hono()
       );
 
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error("Error fetching volume benchmark data:", error);
       return c.json(

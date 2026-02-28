@@ -129,6 +129,60 @@ export const translation = {
     termsAgreement:
       "By connecting your wallet, you agree to our Terms of Service and Privacy Policy.",
     detectionFailed: "Failed to detect wallets. Please try again.",
+    // Wallet Overview
+    shareWallet: "Share this wallet",
+    compareWallet: "Compare this wallet",
+    createAlert: "Create alert for this wallet",
+    bookmarked: "Bookmarked",
+    bookmarkWallet: "Bookmark this wallet",
+    totalAssetValue: "Total Asset Value",
+    tradingVolume: "Trading Volume",
+    totalPnL: "Total PnL",
+    tokensTraded: "Tokens traded",
+    tokensHolding: "Tokens Holding",
+    filter24h: "24H",
+    filter7d: "7D",
+    filter30d: "30D",
+    filterCustom: "Custom",
+    filterCustomDateUnit: "D",
+  },
+  // Wallet Page
+  walletPage: {
+    addressNotFound: "Address not found",
+    activity: "Activity",
+    asset: "Asset",
+    topExchange: "Top exchange",
+    topCounterparties: "Top counterparties",
+    balanceHistory: "Balance History",
+    tokenBalanceHistory: "Token Balance History",
+    profitLoss: "Profit & Loss",
+    transfer: "Transfer",
+    swap: "Swap",
+    inflow: "Inflow",
+    outflow: "Outflow",
+    counterparties: "Counterparties",
+    portfolio: "Portfolio",
+    signature: "Signature",
+    type: "Type",
+    token: "Token",
+    amount: "Amount",
+    price: "Price",
+    total: "Total",
+    time: "Time",
+    status: "Status",
+    holding: "Holding",
+    value: "Value",
+    change24h: "Change (24h)",
+  },
+  // Wallet Comparison Page
+  walletComparison: {
+    selectedWallets: "Selected Wallets",
+    addWalletAddress: "Add Wallet Address",
+    enterWalletAddress: "Enter wallet address...",
+    noWalletsSelected: "No wallets selected. Add wallet addresses to compare.",
+    general: "General",
+    holdings: "Holdings",
+    profitRiskManagement: "Profit & Risk Management",
   },
   // Navigation
   nav: {
@@ -144,7 +198,7 @@ export const translation = {
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
-    en: "United Statesen - English (English)",
+    en: "United States - English (English)",
   },
   // Validation errors
   validation: {
@@ -225,6 +279,8 @@ export const translation = {
     noDataMessage: "There is no data to display for the selected filters.",
     resetFilters: "Reset Filters",
     adjustFilters: "Try adjusting your filters or date range",
+    noWalletsTitle: "No Wallets Selected",
+    noData: "No data available",
 
     // Error state
     errorTitle: "Unable to Load Chart",
@@ -291,6 +347,7 @@ export const translation = {
       asset: "Asset",
       value: "Value",
       percentage: "Percentage",
+      noWalletsMessage: "Please select at least one wallet to view asset distribution.",
     },
     pnlChart: {
       title: "Profit & Loss",
@@ -306,6 +363,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
+      both: "Both",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",
@@ -359,6 +417,60 @@ export const translation = {
       timeUnit: "Time Unit",
       topN: "Show Top",
       wallet: "Wallet",
+    },
+    totalTradingVolumeChart: {
+      title: "Total Trading Volume Ranking",
+    },
+    tradingVolumePerTransactionChart: {
+      title: "Trading Volume Per Transaction",
+      volume: "Volume (USD)",
+    },
+    tradingVolumeDistributionChart: {
+      title: "Trading Volume Distribution",
+      volume: "Volume",
+      percentage: "Percentage",
+      totalVolume: "Total Volume",
+      noWalletsTitle: "No Wallets Selected",
+      noWalletsMessage: "Please select at least one wallet to view trading volume distribution.",
+    },
+    tokenPriceChart: {
+      price: "{{tokenSymbol}} Price",
+      volume: "{{tokenSymbol}} Volume",
+      marketCap: "{{tokenSymbol}} Market Cap",
+    },
+    stablecoinRatioChart: {
+      title: "Stablecoin Ratio",
+    },
+    rollingAnnualReturn: {
+      title: "Rolling Annual Return",
+      rollingReturn: "Rolling Return",
+      cumulativeReturn: "Cumulative Return",
+      month: "Month",
+      quarter: "Quarter",
+      year: "Year",
+      custom: "Custom",
+      days: "Days",
+    },
+    priceHistoryChart: {
+      title: "Price History",
+    },
+    marketHeatmap: {
+      title: "Market Heatmap",
+    },
+    winrateChart: {
+      title: "Winrate Analysis",
+    },
+    drawdownChart: {
+      title: "Drawdown Analysis",
+    },
+    averageRollingAnnualReturn: {
+      title: "Average Rolling Annual Return",
+      returnPercent: "Return",
+      month: "Month",
+      quarter: "Quarter",
+      year: "Year",
+      custom: "Custom",
+      days: "Days",
     },
   },
   ERROR,

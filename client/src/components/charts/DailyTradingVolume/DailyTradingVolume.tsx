@@ -9,12 +9,12 @@
 
 import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
-import { getBottomLegend, getMultiSeriesLegend } from '@/util/chart-legend-config';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { EChartsOption } from 'echarts';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -160,7 +160,7 @@ export function DailyTradingVolume({
   className,
 }: DailyTradingVolumeProps) {
   // i18n
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const chartTitle = title || 'Daily Trading Volume Historical Chart';
   
   // Chart instance ref

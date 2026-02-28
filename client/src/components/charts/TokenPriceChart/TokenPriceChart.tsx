@@ -10,7 +10,7 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { ChartGridItem } from '../shared';
 import { formatCurrency } from '../../../util/chart-helpers';
@@ -74,13 +74,20 @@ export function TokenPriceChart({
   showArea = true,
   className,
 }: TokenPriceChartProps) {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const chartTheme = useChartTheme();
 
   // Default title based on metric
-  const chartTitle = title || t(`charts.tokenPriceChart.${metric}`, {
-    defaultValue: metric === 'price' ? 'Price History' : metric === 'marketCap' ? 'Market Cap' : 'Volume',
-  });
+  // const chartTitle = title || tr(`charts.tokenPriceChart.${metric}`, {
+  //   defaultValue: metric === 'price' ? 'Price History' : metric === 'marketCap' ? 'Market Cap' : 'Volume',
+  // });
+  const chartTitle = title ||''
+  // const chartTitle = {
+  //   switch (metric) {
+  //     case 'price':
+  //       return tr('charts.tokenPriceChart.price');
+  //   }
+  // } 
 
   // Generate chart options
   const chartOptions: EChartsOption = useMemo(() => {
@@ -232,7 +239,7 @@ export function TokenPriceChart({
     return (
       <div className={`${styles.container} ${className || ''}`} style={{ minHeight: `${minHeight}px` }}>
         <div className={styles.emptyState}>
-          <p>{t('charts.noData', 'No data available')}</p>
+          <p>{tr('charts.noData')}</p>
         </div>
       </div>
     );

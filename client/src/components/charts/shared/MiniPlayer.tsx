@@ -17,7 +17,7 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { Theme } from "@carbon/react";
 import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Rnd } from "react-rnd";
 import styles from "./MiniPlayer.module.scss";
 
@@ -69,7 +69,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     height: MINI_PLAYER_DEFAULTS.HEIGHT,
   },
 }) => {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const { theme } = useUserTheme();
   const [isMinimized, setIsMinimized] = useState(false);
   const [size, setSize] = useState(defaultSize);
@@ -204,14 +204,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           onKeyDown={handleKeyDown}
           role="dialog"
           aria-modal="false"
-          aria-label={`${title} - ${t("charts.miniPlayer")}`}
+          aria-label={`${title} - ${tr("charts.miniPlayer")}`}
           tabIndex={-1}
         >
           <div className={styles.header}>
             <div className={styles.headerLeft}>
               <div
                 className={styles.dragHandle}
-                aria-label={t("charts.dragToMove")}
+                aria-label={tr("charts.dragToMove")}
               >
                 <svg
                   width="16"
@@ -235,10 +235,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 className={styles.minimizeButton}
                 onClick={toggleMinimize}
                 aria-label={
-                  isMinimized ? t("charts.maximize") : t("charts.minimize")
+                  isMinimized ? tr("charts.maximize") : tr("charts.minimize")
                 }
                 title={
-                  isMinimized ? t("charts.maximize") : t("charts.minimize")
+                  isMinimized ? tr("charts.maximize") : tr("charts.minimize")
                 }
               >
                 {isMinimized ? (
@@ -269,8 +269,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               <button
                 className={styles.closeButton}
                 onClick={onClose}
-                aria-label={t("charts.closeMiniPlayer")}
-                title={t("charts.closeMiniPlayerEsc")}
+                aria-label={tr("charts.closeMiniPlayer")}
+                title={tr("charts.closeMiniPlayerEsc")}
               >
                 <svg
                   width="16"

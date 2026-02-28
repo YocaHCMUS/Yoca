@@ -8,8 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-
-async function generateExchangeData(...args: any[]) {}
+import { generateExchangeData } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for exchange comparison endpoint
@@ -62,7 +61,7 @@ const app = new Hono()
       const data = generateExchangeData(params.timePeriod, params.metric);
 
       // Return response
-      return c.json(data);
+      return c.json(data, 200);
     } catch (error) {
       console.error("Error fetching exchange comparison data:", error);
       return c.json(

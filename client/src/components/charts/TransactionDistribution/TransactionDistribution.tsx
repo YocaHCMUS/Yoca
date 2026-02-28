@@ -9,17 +9,20 @@
 
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { useTranslation } from 'react-i18next';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { ChartGridItem } from '@/components/charts/shared';
 import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchTransactionDistribution } from '../../../services/chart/chartApi';
-import { formatDate } from '../../../util/chart-helpers';
+import { fetchTransactionDistribution, type InferFetcherData } from '../../../services/chart/chartApi';
+import { formatDate, isChartSuccess } from '../../../util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { TransactionDistributionResponse, TransactionDistributionRequestParams } from '../../../types/chart-api.types';
+import type { TransactionDistributionRequestParams } from '../../../types/chart-api.types';
+
+// Infer response type from fetcher
+type TransactionDistributionData = InferFetcherData<typeof fetchTransactionDistribution>;
 import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
 import { useStandardChartController } from '../../../hooks/useChartController';
 import sharedStyles from '../shared/ChartStyle.module.scss';
@@ -53,7 +56,7 @@ export interface TransactionDistributionProps {
   refreshInterval?: number;
   
   /** Callback when data is loaded */
-  onDataLoaded?: (data: TransactionDistributionResponse) => void;
+  onDataLoaded?: (data: TransactionDistributionData) => void;
   
   /** Additional CSS class */
   className?: string;
@@ -97,8 +100,8 @@ export function TransactionDistribution({
   className,
 }: TransactionDistributionProps) {
   // i18n
-  const { t } = useTranslation();
-  const chartTitle = title || t('charts.transactionDistributionChart.title');
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.transactionDistributionChart.title');
   
   // State for chart mode
   const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
@@ -140,7 +143,7 @@ export function TransactionDistribution({
    * Centralized lifecycle handling
    */
   const { data, loadingState, refetch } =
-    useStandardChartController<TransactionDistributionResponse, TransactionDistributionRequestParams>({
+    useStandardChartController<TransactionDistributionData, TransactionDistributionRequestParams>({
       fetcher: fetchTransactionDistribution,
       query,
       autoRefresh,
@@ -152,7 +155,7 @@ export function TransactionDistribution({
    * Generate eCharts options for transaction counts chart
    */
   const transactionCountsOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
     
@@ -266,13 +269,13 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, selectedChartMode, timezone, chartTheme, t]);
+  }, [data, selectedChartMode, timezone, chartTheme, tr]);
   
   /**
    * Generate eCharts options for unique token counts chart
    */
   const uniqueTokenCountsOptions = useMemo(() => {
-    if (!data) {
+    if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
     
@@ -322,7 +325,7 @@ export function TransactionDistribution({
       },
       series: [
         {
-          name: t('charts.transactionDistributionChart.tokens'),
+          name: tr('charts.transactionDistributionChart.tokens'),
           type: 'line',
           data: data.uniqueTokenCounts.map(point => [point.timestamp, point.value]),
           smooth: 0.3,
@@ -368,7 +371,7 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, timezone, chartTheme, t]);
+  }, [data, timezone, chartTheme, tr]);
   
   // Export functionality
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
@@ -446,7 +449,7 @@ export function TransactionDistribution({
       loadingState={loadingState}
       // height={height * 2 + 40}
       onRetry={handleRetry}
-      isEmpty={!data || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
+      isEmpty={!isChartSuccess(data, 'transactionCounts') || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
     >
       {/* <div className={styles.transactionDistribution}>
       </div> */}
@@ -456,18 +459,18 @@ export function TransactionDistribution({
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'stacked' ? sharedStyles.active : ''}`}
             onClick={() => handleChartModeChange('stacked')}
-            aria-label={t('charts.transactionDistributionChart.stacked')}
-            title={t('charts.transactionDistributionChart.stacked')}
+            aria-label={tr('charts.transactionDistributionChart.stacked')}
+            title={tr('charts.transactionDistributionChart.stacked')}
           >
-            {t('charts.transactionDistributionChart.stacked')}
+            {tr('charts.transactionDistributionChart.stacked')}
           </button>
           <button
             className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'grouped' ? sharedStyles.active : ''}`}
             onClick={() => handleChartModeChange('grouped')}
-            aria-label={t('charts.transactionDistributionChart.grouped')}
-            title={t('charts.transactionDistributionChart.grouped')}
+            aria-label={tr('charts.transactionDistributionChart.grouped')}
+            title={tr('charts.transactionDistributionChart.grouped')}
           >
-            {t('charts.transactionDistributionChart.grouped')}
+            {tr('charts.transactionDistributionChart.grouped')}
           </button>
         </div>
       </div>
