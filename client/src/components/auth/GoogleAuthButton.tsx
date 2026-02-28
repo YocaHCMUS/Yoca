@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 
 interface GoogleAuthButtonProps {
   disabled: boolean;
-  onSuccess: () => void;
+  onSuccess: (userId: string) => void;
   onError: (err: string) => void;
 }
 
@@ -41,8 +41,9 @@ export function GoogleAuthButton({
       });
 
       if (resp.ok) {
+        const res = await resp.json();
         setError(null);
-        onSuccess();
+        onSuccess(res.userId);
         return;
       } else {
         const errorMsg = tr("auth.googleAuthFailed");

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 type WalletAuthButtonProps = {
   disabled: boolean;
-  onSuccess: () => void;
+  onSuccess: (userId: string) => void;
   onError: (error: string) => void;
 };
 
@@ -67,8 +67,9 @@ export function WalletAuthButton({
         });
 
         if (resp.ok) {
+          const res = await resp.json();
           closeModal();
-          onSuccess();
+          onSuccess(res.userId);
         } else {
           onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
         }

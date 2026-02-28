@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ArrowRight } from "@carbon/icons-react";
 import {
@@ -29,6 +30,7 @@ type SignUpModalProps = {
 
 export function SignUpModal({ open, onClose }: SignUpModalProps) {
   const { tr, fmt } = useLocalization();
+  const { setUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -72,8 +74,8 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
 
       if (resp.status == 201) {
         const res = await resp.json();
-        // Save user id
-        // Redirect / Open sign in modal
+        setUser({ userId: res.userId });
+        onClose();
       } else if (resp.status == 400 || resp.status == 422) {
         const res = await resp.json();
         const errorCode = res.errorCode;
@@ -166,14 +168,20 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         <Divider text={tr("common.or")} />
         <Stack gap={4} style={{ marginBottom: "2rem" }}>
           <GoogleAuthButton
-            onSuccess={() => {}}
+            onSuccess={(userId) => {
+              setUser({ userId });
+              onClose();
+            }}
             onError={(msg) => setErrMsg(msg)}
             disabled={isSubmitting}
           />
 
           <WalletAuthButton
             disabled={isSubmitting}
-            onSuccess={() => {}}
+            onSuccess={(userId) => {
+              setUser({ userId });
+              onClose();
+            }}
             onError={(msg) => setErrMsg(msg)}
           />
         </Stack>

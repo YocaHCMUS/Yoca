@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ArrowRight } from "@carbon/icons-react";
 import {
@@ -31,6 +32,7 @@ type SignInModalProps = {
 
 export function SignInModal({ open, onClose }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
+  const { setUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -76,7 +78,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
       if (resp.status == 200) {
         const res = await resp.json();
-        // Redirect here
+        setUser({ userId: res.userId });
         close();
       } else if (resp.status == 401 || resp.status == 422) {
         const res = await resp.json();
@@ -93,8 +95,9 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
     }
   }
 
-  function onGoogleSignInSuccess() {
-    // Redirect here
+  function onGoogleSignInSuccess(userId: string) {
+    setUser({ userId });
+    close();
   }
 
   function onGoogleSignInError(_error: string) {
@@ -161,7 +164,10 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
           <WalletAuthButton
             disabled={isSubmitting}
-            onSuccess={() => {}}
+            onSuccess={(userId) => {
+              setUser({ userId });
+              close();
+            }}
             onError={(err) => setErrMsg(err)}
           />
         </Stack>
