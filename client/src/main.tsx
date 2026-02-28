@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./App.css";
 import App from "./App.tsx";
 import { ID_MODAL_ROOT } from "./config/constants.ts";
+import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { ChartProvider } from "./contexts/ChartContext";
 import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
@@ -23,16 +24,18 @@ function Root() {
   return (
     <StrictMode>
       <ThemeProvider>
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <SolanaProvider>
-            <LocalizationProvider>
-              <ChartProvider>
-                <App />
-              </ChartProvider>
-            </LocalizationProvider>
-          </SolanaProvider>
-        </GoogleOAuthProvider>
-        <ModalRoot />
+        <AuthProvider>
+          <GoogleOAuthProvider clientId={googleClientId}>
+            <SolanaProvider>
+              <LocalizationProvider>
+                <ChartProvider>
+                  <App />
+                </ChartProvider>
+              </LocalizationProvider>
+            </SolanaProvider>
+          </GoogleOAuthProvider>
+          <ModalRoot />/
+        </AuthProvider>
       </ThemeProvider>
     </StrictMode>
   );

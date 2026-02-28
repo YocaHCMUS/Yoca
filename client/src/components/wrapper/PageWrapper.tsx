@@ -1,6 +1,6 @@
 import appLogo from "@/assets/app-logo.png";
-import { ModalStateManager } from "@/components/ModelStateManager";
 import { useUserTheme } from "@/contexts";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Asleep, Light } from "@carbon/icons-react";
 import {
@@ -20,9 +20,10 @@ import {
   SkipToContent,
   Stack,
   Switcher,
+  SwitcherDivider,
   SwitcherItem,
 } from "@carbon/react";
-import { Checkmark, Search, User, Wikis } from "@carbon/react/icons";
+import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
 import { useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import { Divider } from "../partials/Divider/Divider";
@@ -45,14 +46,16 @@ function ThemeToggleGlobalAction() {
 export function PageWrapper({ children }: { children: ReactNode }) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
-  const [isLangOpen, setIsLangOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
   };
 
-  const toggleLang = () => {
-    setIsLangOpen((prev) => !prev);
+  const togglePanel = (panel: "lang" | "account") => {
+    setOpenPanel((prev) => (prev === panel ? null : panel));
   };
 
   function NavHeaderItems() {
@@ -98,37 +101,43 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
           <HeaderGlobalAction
             aria-label={tr("nav.language")}
-            isActive={isLangOpen}
-            onClick={toggleLang}
+            isActive={openPanel === "lang"}
+            onClick={() => togglePanel("lang")}
           >
             <Wikis size={20} />
           </HeaderGlobalAction>
 
-          <ModalStateManager
-            renderLauncher={({ open, setOpen }) => (
-              <HeaderGlobalAction
-                aria-label={tr("nav.account")}
-                isActive={open}
-                onClick={() => setOpen(true)}
-              >
-                <User size={20} />
-              </HeaderGlobalAction>
-            )}
+          <HeaderGlobalAction
+            aria-label={tr("nav.account")}
+            isActive={openPanel === "account"}
+            onClick={() => {
+              if (user) {
+                togglePanel("account");
+              } else {
+                setOpenPanel(null);
+                setIsSignInOpen(true);
+              }
+            }}
           >
-            {({ open, setOpen }) => (
-              <SignInModal open={open} onClose={() => setOpen(false)} />
-            )}
-          </ModalStateManager>
+            <User size={20} />
+          </HeaderGlobalAction>
+
           <ThemeToggleGlobalAction />
         </HeaderGlobalBar>
 
-        <HeaderPanel className={styles.headerPanel} expanded={isLangOpen}>
-          <Switcher aria-label="Language Switcher" expanded={isLangOpen}>
+        <HeaderPanel
+          className={styles.headerPanel}
+          expanded={openPanel === "lang"}
+        >
+          <Switcher
+            aria-label="Language Switcher"
+            expanded={openPanel === "lang"}
+          >
             <SwitcherItem
               aria-labelledby="lang-vi"
               onClick={() => {
                 setLang("vi");
-                setIsLangOpen(false);
+                setOpenPanel(null);
               }}
             >
               <Stack
@@ -145,7 +154,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
               aria-labelledby="lang-en"
               onClick={() => {
                 setLang("en");
-                setIsLangOpen(false);
+                setOpenPanel(null);
               }}
             >
               <Stack
@@ -155,6 +164,43 @@ export function PageWrapper({ children }: { children: ReactNode }) {
               >
                 <p>{tr("lang.en")}</p>
                 {lang == "en" && <Checkmark size={16} />}
+              </Stack>
+            </SwitcherItem>
+          </Switcher>
+        </HeaderPanel>
+
+        <HeaderPanel
+          className={styles.headerPanel}
+          expanded={openPanel === "account"}
+        >
+          <Switcher aria-label="Account" expanded={openPanel === "account"}>
+            <SwitcherItem aria-labelledby="account-id" isSelected={false}>
+              <Stack
+                orientation="horizontal"
+                gap={4}
+                style={{ alignItems: "center" }}
+              >
+                <User size={16} />
+                <p style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                  {user?.userId}
+                </p>
+              </Stack>
+            </SwitcherItem>
+            <SwitcherDivider />
+            <SwitcherItem
+              aria-labelledby="account-signout"
+              onClick={async () => {
+                setOpenPanel(null);
+                await signOut();
+              }}
+            >
+              <Stack
+                orientation="horizontal"
+                gap={4}
+                style={{ alignItems: "center" }}
+              >
+                <Logout size={16} />
+                <p>{tr("auth.signOut")}</p>
               </Stack>
             </SwitcherItem>
           </Switcher>
@@ -173,6 +219,8 @@ export function PageWrapper({ children }: { children: ReactNode }) {
           </SideNavItems>
         </SideNav>
       </Header>
+
+      <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
 
       <Content className={styles.mainContent} id="main-content">
         {children}

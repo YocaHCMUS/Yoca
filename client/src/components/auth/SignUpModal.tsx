@@ -18,6 +18,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router";
 import z from "zod";
 import { Divider } from "../partials/Divider/Divider";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -31,6 +32,7 @@ type SignUpModalProps = {
 export function SignUpModal({ open, onClose }: SignUpModalProps) {
   const { tr, fmt } = useLocalization();
   const { setUser } = useAuth();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -76,6 +78,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         const res = await resp.json();
         setUser({ userId: res.userId });
         onClose();
+        navigate("/");
       } else if (resp.status == 400 || resp.status == 422) {
         const res = await resp.json();
         const errorCode = res.errorCode;
@@ -171,6 +174,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
             onSuccess={(userId) => {
               setUser({ userId });
               onClose();
+              navigate("/");
             }}
             onError={(msg) => setErrMsg(msg)}
             disabled={isSubmitting}
@@ -181,6 +185,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
             onSuccess={(userId) => {
               setUser({ userId });
               onClose();
+              navigate("/");
             }}
             onError={(msg) => setErrMsg(msg)}
           />

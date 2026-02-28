@@ -18,6 +18,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router";
 import z from "zod";
 import { ModalStateManager } from "../ModelStateManager";
 import { Divider } from "../partials/Divider/Divider";
@@ -33,6 +34,7 @@ type SignInModalProps = {
 export function SignInModal({ open, onClose }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
   const { setUser } = useAuth();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -64,11 +66,6 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
     setErrMsg(null);
 
     try {
-      const authData = {
-        email: data.email,
-        password: data.password,
-      };
-
       const resp = await client.api.users.auth.password.login.$post({
         json: {
           email: data.email,
@@ -80,6 +77,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
         const res = await resp.json();
         setUser({ userId: res.userId });
         close();
+        navigate("/");
       } else if (resp.status == 401 || resp.status == 422) {
         const res = await resp.json();
         const errCode = res.errorCode;
@@ -98,6 +96,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   function onGoogleSignInSuccess(userId: string) {
     setUser({ userId });
     close();
+    navigate("/");
   }
 
   function onGoogleSignInError(_error: string) {
@@ -167,6 +166,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
             onSuccess={(userId) => {
               setUser({ userId });
               close();
+              navigate("/");
             }}
             onError={(err) => setErrMsg(err)}
           />
