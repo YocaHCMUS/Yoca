@@ -81,7 +81,7 @@ const app = new Hono()
     validate("json", userCreationSchema),
     async (c) => {
       try {
-        const { email, displayName, password }: any = c.req.param;
+        const { email, displayName, password } = c.req.valid("json");
         const existingPasswordUser = await userService.findUserByEmail(email);
         if (existingPasswordUser) {
           return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
@@ -101,9 +101,11 @@ const app = new Hono()
           statusCode.Created,
         );
       } catch (error) {
+        console.error(error);
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
+
         );
       }
     },
