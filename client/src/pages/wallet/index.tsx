@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,29 @@ import {
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
+
+interface WalletApiTransaction {
+  hash: string;
+  timestamp: string;
+  from: string;
+  to: string;
+  status: boolean | null;
+  direction?: "in" | "out" | "self" | "unknown";
+  primaryTokenSymbol?: string;
+  primaryTokenAmount?: number;
+  priceUsd?: number;
+  totalUsd?: number;
+}
+
+interface WalletPortfolioApiItem {
+  tokenAddress: string;
+  symbol: string;
+  name?: string;
+  amount: number;
+  priceUsd?: number;
+  valueUsd: number;
+  change24hPercent?: number;
+}
 
 // temporary interfaces
 interface Transaction {
@@ -47,57 +70,52 @@ interface Portfolio {
 export default function WalletPage() {
   const { t } = useTranslation();
   const { address } = useParams<{ address: string }>();
-  const [transfers, setTransfers] = useState([]);
+  const [portfolio, setPortfolio] = useState<WalletPortfolioApiItem[]>([]);
+  const [transactions, setTransactions] = useState<WalletApiTransaction[]>([]);
+  const [exchangeData, setExchangeData] = useState<{
+    exchanges: { name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }[];
+    metadata: { period: string; metric: "count" | "volume" };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0); // TODO: implement a hook to scale these state
 
-  // Mock data - replace with actual API call
-  const transactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `tx-${i}`,
-    signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
-    type: i % 2 === 0 ? 'Buy' : 'Sell',
-    token: ['SOL', 'USDC', 'JTO', 'BONK'][i % 4],
-    amount: Math.random() * 1000,
-    price: Math.random() * 200,
-    total: Math.random() * 10000,
-    timestamp: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString(),
-    status: i % 10 === 0 ? 'Failed' : 'Success',
-  }));
-
-  const portfolios: Portfolio[] = Array.from({ length: 50 }, (_, i) => {
-    const prices = [Math.random() * 200, Math.random() * 200, Math.random() * 200, Math.random() * 200];
-    const holding = Math.random() * 999 + 0.001;
-    const index = i%4;
-    return {
-      token: ['SOL', 'USDC', 'JTO', 'BONK'][index],
-      price: prices[index],
-      holding: holding,
-      value: prices[index] * holding,
-      change: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
-    };
-  });
-
-  // Transform transactions to array format for Table component
-  const transactionData = transactions.map(tx => [
-    tx.signature,
-    tx.type,
-    tx.token,
-    tx.amount.toFixed(4),
-    tx.price.toFixed(2),
-    tx.total.toFixed(2),
+  const transactionData = transactions.map((tx) => [
+    tx.hash,
+    tx.direction === "in" ? "Inflow" : tx.direction === "out" ? "Outflow" : "Transfer",
+    tx.primaryTokenSymbol ?? "",
+    tx.primaryTokenAmount != null ? tx.primaryTokenAmount.toFixed(4) : "",
+    tx.priceUsd != null ? `$${tx.priceUsd.toFixed(4)}` : "-",
+    tx.totalUsd != null ? `$${tx.totalUsd.toFixed(2)}` : "-",
     tx.timestamp,
-    tx.status
+    tx.status === null ? "Unknown" : tx.status ? "Success" : "Failed",
   ]);
 
-  const portfolioData = portfolios.map(prt => [
-    prt.token,
-    prt.price.toFixed(2),
-    `${prt.holding.toFixed(4)} ${prt.token}`,
-    prt.value.toFixed(4),
-    prt.change.toFixed(2)
-  ])
+  const inflowData = transactionData.filter((row) => row[1] === "Inflow");
+  const outflowData = transactionData.filter((row) => row[1] === "Outflow");
+
+  const portfolioData = portfolio.map((prt) => [
+    prt.symbol || prt.tokenAddress,
+    prt.priceUsd !== undefined ? prt.priceUsd.toFixed(4) : "-",
+    `${prt.amount.toFixed(4)} ${prt.symbol || ""}`,
+    prt.valueUsd.toFixed(4),
+    prt.change24hPercent !== undefined && !Number.isNaN(prt.change24hPercent)
+      ? `${prt.change24hPercent >= 0 ? "+" : ""}${prt.change24hPercent.toFixed(2)}%`
+      : "-",
+  ]);
+
+  const assetDistributionFromPortfolio = useMemo(() => {
+    const totalValue = portfolio.reduce((s, p) => s + p.valueUsd, 0);
+    const data = portfolio
+      .filter((p) => p.valueUsd > 0)
+      .map((p) => ({
+        name: p.symbol || `${p.tokenAddress.slice(0, 6)}...${p.tokenAddress.slice(-4)}`,
+        value: p.valueUsd,
+        percentage: totalValue > 0 ? (p.valueUsd / totalValue) * 100 : 0,
+      }));
+    return { data, totalValue };
+  }, [portfolio]);
 
   const transactionHeaders = [
     'Signature',
@@ -174,41 +192,48 @@ export default function WalletPage() {
   };
 
 
-  const headers = [
-    {
-      key: "token",
-      header: "Token",
-    },
-    {
-      key: "balance",
-      header: "Balance",
-    },
-    {
-      key: "valueUsd",
-      header: "Value",
-    },
-  ];
-
   useEffect(() => {
     (async () => {
       try {
-        const response = await fetch(`/api/v0/balances/${address}`);
-        const data = await response.json();
-        const balances = data.map(
-          (
-            balance: { symbol: string; balance: string; valueUsd: string },
-            index: number,
-          ) => ({
-            id: index,
-            token: balance.symbol,
-            balance: formatNumber(Number(balance.balance)),
-            valueUsd: formatNumber(Number(balance.valueUsd)),
-          }),
-        );
+        if (!address) {
+          return;
+        }
 
-        setTransfers(balances);
+        const chainParam = "solana";
+        const [portfolioResp, txResp, exchangesResp] = await Promise.all([
+          fetch(`/api/wallets/${address}/portfolio?chain=${chainParam}`),
+          fetch(`/api/wallets/${address}/transactions?chain=${chainParam}&limit=100`),
+          fetch(`/api/wallets/${address}/exchanges?chain=${chainParam}&limit=500`),
+        ]);
+
+        if (!portfolioResp.ok) {
+          throw new Error(`Failed to load portfolio: ${portfolioResp.status}`);
+        }
+        if (!txResp.ok) {
+          throw new Error(`Failed to load transactions: ${txResp.status}`);
+        }
+
+        const portfolioJson = (await portfolioResp.json()) as {
+          portfolio: WalletPortfolioApiItem[];
+        };
+        const txJson = (await txResp.json()) as {
+          transactions: WalletApiTransaction[];
+        };
+
+        setPortfolio(portfolioJson.portfolio ?? []);
+        setTransactions(txJson.transactions ?? []);
+
+        if (exchangesResp.ok) {
+          const exchangesJson = (await exchangesResp.json()) as {
+            exchanges: { name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }[];
+            metadata: { period: string; metric: "count" | "volume" };
+          };
+          setExchangeData(exchangesJson);
+        } else {
+          setExchangeData(null);
+        }
       } catch (error) {
-        console.error("Failed to fetch transfers:", error);
+        console.error("Failed to fetch wallet data:", error);
       } finally {
         setLoading(false);
       }
@@ -285,10 +310,10 @@ export default function WalletPage() {
               title="Inflow"
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(inflowData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={inflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
@@ -296,10 +321,10 @@ export default function WalletPage() {
               title="Outflow"
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(outflowData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={outflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
@@ -320,10 +345,11 @@ export default function WalletPage() {
       </div>
 
       <h1 className={styles.sectionTitle}>Asset</h1>
-      {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
         <div className={styles.columnWrapper}>
-          <AssetDistribution/>
+          <AssetDistribution
+            portfolioOverride={assetDistributionFromPortfolio}
+          />
         </div>
         <div className={styles.columnWrapper}>
           <Table
@@ -341,9 +367,8 @@ export default function WalletPage() {
       </div>
 
       <h1 className={styles.sectionTitle}>Top exchange</h1>
-      {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <ExchangeComparison/>
+        <ExchangeComparison exchangesOverride={exchangeData} />
       </div>
 
       <h1 className={styles.sectionTitle}>Top counterparties</h1>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import styles from './WalletOverview.module.scss';
@@ -18,6 +18,17 @@ export interface WalletOverviewProps {
     refreshInterval?: number;
 }
 
+interface WalletOverviewApiResponse {
+    address: string;
+    chain: string;
+    totalAssetValueUsd: number;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+}
+
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = "null",
     height = 400,
@@ -25,21 +36,55 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     autoRefresh = true,
     refreshInterval = 30000
 }) => {
-    // mock data, need to create a hook to fetch these information
-    const name = "Wallet A"; 
-    const tags = ["whale", "early x holder", "early y holder", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user"];
-    const totalAssetValue = 14199;
-    const tradingVolumn = 1822333;
-    const totalPnL = 140000;
-    const transactionCount = 1133;
-    const tokenTraded = 54;
-    const numberOfTokenHolding = 32;
+    // basic static metadata for now; can be enriched from DB later
+    const name = "Wallet"; 
+    const tags = ["whale"]; 
+
+    const [overview, setOverview] = useState<WalletOverviewApiResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [bookmark, setBookmark] = useState(false);
     const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
     const [filterValue, setFilterValue] = useState(1); // 24h
     const [showCustomControl, setShowCustomControl] = useState(false);
     const [customDays, setCustomDays] = useState(30);
+
+    useEffect(() => {
+        if (!walletAddress) return;
+
+        let cancelled = false;
+
+        const fetchOverview = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const resp = await fetch(`/api/wallets/${walletAddress}/overview?chain=solana`);
+                if (!resp.ok) {
+                    throw new Error(`Failed to load wallet overview: ${resp.status}`);
+                }
+                const data: WalletOverviewApiResponse = await resp.json();
+                if (!cancelled) {
+                    setOverview(data);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error("Failed to fetch wallet overview", err);
+                    setError("Failed to load wallet overview");
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchOverview();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [walletAddress]);
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -196,7 +241,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             Total Asset Value
                         </div>
                         <div className={styles.statValue}>
-                            ${totalAssetValue.toLocaleString()}
+                            {loading && !overview ? "Loading..." : `$${(overview?.totalAssetValueUsd ?? 0).toLocaleString()}`}
                         </div>
                     </div>
                     
@@ -206,7 +251,9 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             Trading Volume
                         </div>
                         <div className={styles.statValue}>
-                            ${tradingVolumn.toLocaleString()}
+                            {overview?.tradingVolumeUsd24h != null
+                                ? `$${overview.tradingVolumeUsd24h.toLocaleString()}`
+                                : "-"}
                         </div>
                     </div>
                     
@@ -215,8 +262,10 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         <div className={styles.statLabel}>
                             Total PnL
                         </div>
-                        <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                            ${totalPnL.toLocaleString()}
+                        <div className={(overview?.pnlUsdTotal ?? 0) >= 0 ? styles.statValuePositive : styles.statValueNegative}>
+                            {overview?.pnlUsdTotal != null
+                                ? `$${overview.pnlUsdTotal.toLocaleString()}`
+                                : "-"}
                         </div>
                     </div>
                     
@@ -226,7 +275,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             Tokens traded
                         </div>
                         <div className={styles.statValue}>
-                            {tokenTraded}
+                            {overview?.tokensTradedCount ?? "-"}
                         </div>
                     </div>
                     
@@ -236,7 +285,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             Tokens Holding
                         </div>
                         <div className={styles.statValue}>
-                            {numberOfTokenHolding}
+                            {overview?.tokensHoldingCount ?? "-"}
                         </div>
                     </div>
                 </div>

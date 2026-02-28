@@ -24,6 +24,7 @@ import chartStablecoinRatio from "./routes/charts/stablecoin-ratio.route.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
+import wallets from "./routes/wallets.route.js";
 
 process.loadEnvFile("./.env");
 
@@ -37,6 +38,7 @@ const app = new Hono()
   .route("/api/tokens", tokens)
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
+  .route("/api/wallets", wallets)
   .route("/api/charts/balance", chartBalance)
   .route("/api/charts/distribution", chartDistribution)
   .route("/api/charts/pnl", chartPnL)

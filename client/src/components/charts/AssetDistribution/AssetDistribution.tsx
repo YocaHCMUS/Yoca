@@ -35,20 +35,24 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 
-// export interface AssetDistributionProps {
-//   minHeight?: number;
-//   initialFilters?: Partial<any>;
-//   autoRefresh?: boolean;
-//   refreshInterval?: number;
-//   className?: string;
-// }
+/** When provided, the chart uses this data instead of the distribution API (e.g. from wallet portfolio). */
+export interface PortfolioOverride {
+  data: Array<{ name: string; value: number; percentage: number }>;
+  totalValue: number;
+}
 
-export const AssetDistribution: React.FC<ChartProps> = ({
+export interface AssetDistributionProps extends ChartProps {
+  /** Optional real portfolio data; when set, API is skipped and this is used for the donut. */
+  portfolioOverride?: PortfolioOverride;
+}
+
+export const AssetDistribution: React.FC<AssetDistributionProps> = ({
   minHeight = 400,
   initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
   className,
+  portfolioOverride,
 }) => {
   const { t } = useTranslation();
   const chartTitle = t('charts.assetDistributionChart.title');
@@ -60,7 +64,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   // Track selected assets for legend filtering
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
-  // Use centralized filter sync hook
+  // Use centralized filter sync hook (only used when not using portfolio override)
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
@@ -78,15 +82,37 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   );
 
   /**
-   * Centralized lifecycle handling
+   * When portfolioOverride is set, stub fetcher returns it (no API call); otherwise use distribution API.
    */
+  const fetcher = useCallback(
+    (q: DistributionRequestParams): Promise<AssetDistributionResponse> =>
+      portfolioOverride
+        ? Promise.resolve({
+            data: portfolioOverride.data,
+            totalValue: portfolioOverride.totalValue,
+            metadata: { currency: 'USD', timestamp: Date.now() },
+          })
+        : fetchAssetDistribution(q),
+    [portfolioOverride]
+  );
+
   const { data, loadingState, refetch } =
     useStandardChartController<AssetDistributionResponse, DistributionRequestParams>({
-      fetcher: fetchAssetDistribution,
+      fetcher,
       query,
-      autoRefresh,
+      autoRefresh: portfolioOverride ? false : autoRefresh,
       refreshInterval,
     });
+
+  /** When portfolioOverride has data, use it so the chart shows immediately without waiting for controller. */
+  const effectiveData: AssetDistributionResponse | null =
+    portfolioOverride && portfolioOverride.data.length > 0
+      ? {
+          data: portfolioOverride.data,
+          totalValue: portfolioOverride.totalValue,
+          metadata: { currency: 'USD', timestamp: Date.now() },
+        }
+      : data;
 
   /**
    * Setup chart export
@@ -102,7 +128,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    */
   const handleExport = useCallback(
     async (format: ExportFormat) => {
-      if (!data) return;
+      if (!effectiveData) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
 
@@ -110,9 +136,9 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         // Convert asset distribution data to CSV format
         const csv: ChartDataSeries[] = [];
         
-        if (data.wallets) {
+        if (effectiveData.wallets) {
           // Per-wallet data
-          data.wallets.forEach(wallet => {
+          effectiveData.wallets.forEach(wallet => {
             csv.push({
               id: `asset-distribution-${wallet.walletAddress}`,
               name: `Asset Distribution - ${wallet.walletAddress}`,
@@ -124,14 +150,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
               })),
             });
           });
-        } else if (data.data) {
+        } else if (effectiveData.data) {
           // Aggregated data
           csv.push({
             id: 'asset-distribution',
             name: 'Asset Distribution',
             type: 'pie',
             visible: true,
-            data: data.data.map(a => ({
+            data: effectiveData.data.map(a => ({
               name: a.name,
               value: a.value,
             })),
@@ -152,7 +178,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         ? exportPNG(instance as any, filters)
         : exportSVG(instance as any, filters);
     },
-    [data, filters, exportPNG, exportSVG, exportCSV]
+    [effectiveData, filters, exportPNG, exportSVG, exportCSV]
   );
 
   /**
@@ -267,11 +293,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    * Extract unique assets across all wallets for aggregated legend
    */
   const aggregatedLegendData = useMemo(() => {
-    if (!data || !data.wallets || data.wallets.length <= 1) return null;
+    if (!effectiveData || !effectiveData.wallets || effectiveData.wallets.length <= 1) return null;
     
     const uniqueAssets = new Map<string, { name: string; color: string }>();
     
-    data.wallets.forEach((wallet, walletIndex) => {
+    effectiveData.wallets.forEach((wallet, walletIndex) => {
       wallet.data.forEach((asset, assetIndex) => {
         if (!uniqueAssets.has(asset.name)) {
           uniqueAssets.set(asset.name, {
@@ -283,7 +309,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     });
     
     return Array.from(uniqueAssets.values());
-  }, [data, chartTheme.colorPalette]);
+  }, [effectiveData, chartTheme.colorPalette]);
   
   /**
    * Initialize selected assets when data changes
@@ -316,13 +342,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    * ECharts options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (!effectiveData) return [];
 
-    const isMultiWallet = data.wallets && data.wallets.length > 1;
+    const isMultiWallet = effectiveData.wallets && effectiveData.wallets.length > 1;
 
     // Multi-wallet view
-    if (data.wallets && data.wallets.length > 0) {
-      return data.wallets.map(wallet => ({
+    if (effectiveData.wallets && effectiveData.wallets.length > 0) {
+      return effectiveData.wallets.map(wallet => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
@@ -334,27 +360,29 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     }
 
     // Single/aggregated view
-    if (data.data && data.data.length > 0) {
+    if (effectiveData.data && effectiveData.data.length > 0) {
       return [{
         walletAddress: 'aggregated',
-        option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
+        option: createChartOption(effectiveData.data, effectiveData.totalValue ?? 0, undefined, false),
       }];
     }
 
     return [];
-  }, [data, createChartOption]);
+  }, [effectiveData, createChartOption]);
 
-  const isEmpty = !data || (
-    (!data.wallets || data.wallets.length === 0) &&
-    (!data.data || data.data.length === 0)
-  ) || (filters.wallets && filters.wallets.length === 0);
+  const noWalletsSelected = filters.wallets && filters.wallets.length === 0;
+  const hasNoChartData = !effectiveData || (
+    (!effectiveData.wallets || effectiveData.wallets.length === 0) &&
+    (!effectiveData.data || effectiveData.data.length === 0)
+  );
+  const isEmpty = hasNoChartData || (noWalletsSelected && !portfolioOverride);
 
   return (
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
-      emptyState={filters.wallets && filters.wallets.length === 0 
+      emptyState={noWalletsSelected && !portfolioOverride
         ? {
             title: t('charts.assetDistributionChart.noWalletsTitle', 'No Wallets Selected'),
             message: t('charts.assetDistributionChart.noWalletsMessage', 'Please select at least one wallet to view asset distribution.'),

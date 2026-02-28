@@ -51,6 +51,9 @@ export interface ExchangeComparisonProps {
   
   /** Additional CSS class */
   className?: string;
+  
+  /** When set (e.g. from wallet page), use this data instead of the chart API. */
+  exchangesOverride?: ExchangeComparisonResponse | null;
 }
 
 /**
@@ -86,6 +89,7 @@ export function ExchangeComparison({
   refreshInterval = 30000,
   onDataLoaded,
   className,
+  exchangesOverride,
 }: ExchangeComparisonProps) {
   // i18n
   const { t } = useTranslation();
@@ -117,15 +121,30 @@ export function ExchangeComparison({
     metric: currentMetric,
     timezone,
   }), [filters.timePeriod, currentMetric, timezone]);
-  
-  // Use standard chart controller
+
+  const isWalletOverrideMode = exchangesOverride !== undefined;
+
+  const fetcher = useCallback(
+    (q: ExchangesRequestParams) =>
+      isWalletOverrideMode
+        ? Promise.resolve(
+            exchangesOverride ?? { exchanges: [], metadata: { period: '30D', metric: 'count' } }
+          )
+        : fetchExchangeComparison(q),
+    [isWalletOverrideMode, exchangesOverride]
+  );
+
   const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonResponse, ExchangesRequestParams>({
-    fetcher: fetchExchangeComparison,
+    fetcher,
     query,
-    autoRefresh,
+    autoRefresh: isWalletOverrideMode ? false : autoRefresh,
     refreshInterval,
     onDataLoaded,
   });
+
+  const effectiveData: ExchangeComparisonResponse | null = isWalletOverrideMode
+    ? (exchangesOverride ?? { exchanges: [], metadata: { period: '30D', metric: 'count' } })
+    : data;
   
   /**
    * Setup chart export
@@ -140,19 +159,18 @@ export function ExchangeComparison({
    * Handle export based on format
    */
   const handleExport = useCallback(async (format: ExportFormat) => {
-    if (!data) return;
+    if (!effectiveData) return;
 
     const instance = chartRef.current?.getEchartsInstance() ?? null;
 
     if (format === 'csv') {
-      // Convert data to ChartDataSeries format for CSV export
       const csvData: ChartDataSeries[] = [
         {
           id: 'deposits',
           name: t('charts.exchangeComparisonChart.deposits'),
           type: 'bar',
           visible: true,
-          data: data.exchanges.map(ex => ({
+          data: effectiveData.exchanges.map(ex => ({
             name: ex.name,
             value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
           })),
@@ -162,7 +180,7 @@ export function ExchangeComparison({
           name: t('charts.exchangeComparisonChart.withdrawals'),
           type: 'bar',
           visible: true,
-          data: data.exchanges.map(ex => ({
+          data: effectiveData.exchanges.map(ex => ({
             name: ex.name,
             value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
           })),
@@ -177,27 +195,24 @@ export function ExchangeComparison({
       return;
     }
 
-    // Export as PNG or SVG
     format === 'png'
       ? exportPNG(instance as any, filters)
       : exportSVG(instance as any, filters);
-  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
+  }, [effectiveData, filters, currentMetric, exportPNG, exportSVG, exportCSV, t]);
   
   /**
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
-    if (!data || data.exchanges.length === 0) return null;
+    if (!effectiveData || effectiveData.exchanges.length === 0) return null;
     
-    // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
     
-    // Extract exchange names and values
-    const exchangeNames = data.exchanges.map(ex => ex.name);
-    const deposits = data.exchanges.map(ex => 
+    const exchangeNames = effectiveData.exchanges.map(ex => ex.name);
+    const deposits = effectiveData.exchanges.map(ex => 
       currentMetric === 'count' ? ex.deposits : ex.depositsVolume
     );
-    const withdrawals = data.exchanges.map(ex => 
+    const withdrawals = effectiveData.exchanges.map(ex => 
       currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume
     );
     
@@ -311,7 +326,7 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric, chartTheme, t]);
+  }, [effectiveData, currentMetric, chartTheme, t]);
   
   /**
    * Setup chart export
@@ -368,7 +383,7 @@ export function ExchangeComparison({
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || data.exchanges.length === 0}
+      isEmpty={!effectiveData || effectiveData.exchanges.length === 0}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}

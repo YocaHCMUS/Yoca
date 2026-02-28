@@ -6,18 +6,24 @@
  * @module routes/charts/transactions.route
  */
 
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { generateTransactionDistribution } from '../../services/mockChartData.service.js';
+import { Hono } from "hono";
+import { z } from "zod";
+import { getTransactionDistributionFromDb } from "../../services/transactionDistribution.service.js";
 
 /**
  * Request parameter schema for transaction distribution endpoint
  */
 const transactionRequestSchema = z.object({
-  timePeriod: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
-  transactionType: z.enum(['all', 'deposits', 'withdrawals', 'trades']).optional().default('all'),
-  walletIds: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
-  timezone: z.string().optional().default('UTC'),
+  timePeriod: z.enum(["7D", "30D", "60D", "90D", "1Y", "All"]).optional().default("30D"),
+  transactionType: z
+    .enum(["all", "deposits", "withdrawals", "trades"])
+    .optional()
+    .default("all"),
+  walletIds: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
+  timezone: z.string().optional().default("UTC"),
 });
 
 /**
@@ -49,20 +55,19 @@ const app = new Hono()
    *   }
    * }
    */
-  .get('/', async (c) => {
+  .get("/", async (c) => {
     try {
       // Parse and validate query parameters
       const query = c.req.query();
       const params = transactionRequestSchema.parse(query);
-      
-      // Generate transaction distribution data
-      const data = generateTransactionDistribution(
+
+      // Build chart data from cached wallet transactions in DB.
+      const data = await getTransactionDistributionFromDb(
         params.timePeriod,
         params.transactionType,
-        params.walletIds
+        params.walletIds,
       );
-      
-      // Return response
+
       return c.json(data);
     } catch (error) {
       console.error('Error fetching transaction distribution data:', error);
