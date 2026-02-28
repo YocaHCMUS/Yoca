@@ -1,7 +1,6 @@
-import type { AppType } from "@sv/main.js";
+import type { AppType, ErrCode } from "@sv/main.js";
 import { hc } from "hono/client";
 const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN!;
-console.log("Api domain: ", apiDomain);
 const client = hc<AppType>(apiDomain, {
   init: {
     // Sending cookies on each request
@@ -10,3 +9,4 @@ const client = hc<AppType>(apiDomain, {
 });
 
 export default client;
+export type ApiErrCode = ErrCode;

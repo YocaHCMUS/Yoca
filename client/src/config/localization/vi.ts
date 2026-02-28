@@ -33,6 +33,9 @@ export const format = {
 };
 
 export const translation = defineTranslation({
+  misc: {
+    badRequest: "Yêu cầu không hợp lệ",
+  },
   // Common
   common: {
     cancel: "Hủy",
@@ -341,5 +344,18 @@ export const translation = defineTranslation({
       topN: "Hiển thị top",
       wallet: "Ví",
     },
+  },
+  ERROR: {
+    EMAIL_ALREADY_EXISTED: "Email đã tồn tại",
+    EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email hoặc mật khẩu không đúng",
+    FAILED_TO_FETCH_REQUESTED_DATA: "Không thể lấy dữ liệu yêu cầu",
+    GOOGLE_VERIFICATION_FAILED: "Xác thực Google thất bại. Vui lòng thử lại.",
+    WALLET_VERIFICATION_FAILED: "Xác thực ví thất bại. Vui lòng thử lại.",
+    WALLET_NONCE_FAILED: "Không thể khởi tạo xác thực ví. Vui lòng thử lại.",
+    INTERNAL_SERVER_ERR: "Có sự cố với máy chủ. Vui lòng thử lại sau.",
+    GENERAL_UNKNOWN_ERR: "Lỗi chưa xác định.",
+    NETWORK_ERR: "Lỗi đường truyền. Vui lòng thử lại sau.",
+    VALIDATION_ERR:
+      "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
   },
 });

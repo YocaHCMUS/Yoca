@@ -83,3 +83,4 @@ serve(
 );
 // RPC for client
 export type AppType = typeof app;
+export type { ErrCode } from "@sv/config/errors.js";

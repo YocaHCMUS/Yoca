@@ -1,25 +1,14 @@
 export const messageText = {
-  FailedToFetchRequestedData:
-    "Failed to fetch requested data. Please try again later",
-  FailedToFetchExternalData: "Failed to fetch data from external sources",
-  InternalServerError:
-    "There was a problem happened on the server. Please try again later.",
   AccountAlreadyExists: "Account already exists",
-  EmailOrUsernameAlreadyExists: "Email or username already exists",
   InvalidEmailOrPassword: "Email or password was incorrect",
   CouldNotVerifyGoogleAccount: "Could not verify Google account",
   UserCreatedSuccessfully: "User created successfully",
   LoggedInSuccessfully: "Logged-in successfully",
   GoogleLoggedInSuccessfully: "Google logged-in successfully",
   LoggedOutSuccessfully: "Logged out successfully",
-  SolanaNounceGeneratedSuccessfully:
-    "Solana login nounce generated successfully",
-  SolanaWalletVerificationFailed: "Solana wallet verification failed",
-  SolanaWalletVerifiedSuccessfully: "Solana wallet verified successfully",
-  EthereumNounceGeneratedSuccessfully:
-    "Ethereum login nounce generated successfully",
-  EthereumWalletVerificationFailed: "Ethereum wallet verification failed",
-  EthereumWalletVerifiedSuccessfully: "Ethereum wallet verified successfully",
+  LoginNounceGeneratedSuccessfully: "Login nounce generated successfully",
+  WalletVerificationFailed: "Wallet verification failed",
+  WalletVerifiedSuccessfully: "Wallet verified successfully",
 } as const;
 
 export const statusCode = {
@@ -30,4 +19,5 @@ export const statusCode = {
   Unauthorized: 401,
   InternalServerError: 500,
   BadGateway: 502,
+  UnprocessableEntity: 422,
 } as const;

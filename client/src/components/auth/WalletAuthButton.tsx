@@ -65,14 +65,14 @@ export function WalletAuthButton({
           closeModal();
           onSuccess();
         } else {
-          onError("Verification failed");
+          onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
         }
       } else {
-        onError("Failed to get nonce");
+        onError(tr("ERROR.WALLET_NONCE_FAILED"));
       }
     } catch (err) {
       console.error("Wallet verification error:", err);
-      onError(err instanceof Error ? err.message : "Unknown error");
+      onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
     } finally {
       setIsVerifying(false);
     }

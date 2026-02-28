@@ -1,3 +1,4 @@
+import type { ApiErrCode } from "@/api/main";
 import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -32,7 +33,25 @@ export const format = {
   }),
 };
 
+const ERROR = {
+  INTERNAL_SERVER_ERR:
+    "There is a problem with the server. Please try again later.",
+  EMAIL_ALREADY_EXISTED: "Email already existed",
+  EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email or password was incorrect",
+  FAILED_TO_FETCH_REQUESTED_DATA: "Failed to fetch requested data",
+  GOOGLE_VERIFICATION_FAILED: "Google authentication failed. Please try again.",
+  WALLET_VERIFICATION_FAILED: "Wallet verification failed. Please try again.",
+  WALLET_NONCE_FAILED:
+    "Failed to initiate wallet authentication. Please try again.",
+  GENERAL_UNKNOWN_ERR: "Unknown error. Please try again.",
+  NETWORK_ERR: "Network error. Please check your connection and try again.",
+  VALIDATION_ERR: "Invalid input. Please check your data.",
+} as const satisfies Record<ApiErrCode, string>;
+
 export const translation = {
+  misc: {
+    badRequest: "Bad Request",
+  },
   // Common
   common: {
     cancel: "Cancel",
@@ -342,6 +361,7 @@ export const translation = {
       wallet: "Wallet",
     },
   },
+  ERROR,
 } as const;
 
 // English as base translation

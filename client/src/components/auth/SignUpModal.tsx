@@ -5,6 +5,7 @@ import {
   Button,
   ComposedModal,
   Form,
+  InlineNotification,
   Link,
   ModalBody,
   ModalFooter,
@@ -29,7 +30,7 @@ type SignUpModalProps = {
 export function SignUpModal({ open, onClose }: SignUpModalProps) {
   const { tr, fmt } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   const formSchema = z
     .object({
@@ -58,7 +59,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
 
   const onSubmit = async (data: FormSchema) => {
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setErrMsg(null);
 
     try {
       const resp = await client.api.users.auth.password.register.$post({
@@ -69,14 +70,22 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         },
       });
 
-      if (resp.ok) {
+      if (resp.status == 201) {
         const res = await resp.json();
+        // Save user id
+        // Redirect / Open sign in modal
+      } else if (resp.status == 400 || resp.status == 422) {
+        const res = await resp.json();
+        const errorCode = res.errorCode;
+        setErrMsg(tr(`ERROR.${errorCode}`));
+      } else if (resp.status == 500) {
+        setErrMsg(tr("ERROR.INTERNAL_SERVER_ERR"));
       } else {
-        setErrorMessage(tr("validation.registrationFailed"));
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
       }
-    } catch (error) {
-      setErrorMessage(tr("validation.networkError"));
-      console.error("Sign up error:", error);
+    } catch (err) {
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -129,6 +138,15 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
               disabled={isSubmitting}
             />
 
+            {errMsg && (
+              <InlineNotification
+                kind="error"
+                title="Error"
+                lowContrast
+                subtitle={errMsg}
+              />
+            )}
+
             <Button
               type="submit"
               disabled={isSubmitting}
@@ -149,14 +167,14 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         <Stack gap={4} style={{ marginBottom: "2rem" }}>
           <GoogleAuthButton
             onSuccess={() => {}}
-            onError={(msg) => {}}
+            onError={(msg) => setErrMsg(msg)}
             disabled={isSubmitting}
           />
 
           <WalletAuthButton
             disabled={isSubmitting}
             onSuccess={() => {}}
-            onError={(msg) => setErrorMessage(msg)}
+            onError={(msg) => setErrMsg(msg)}
           />
         </Stack>
       </ModalBody>

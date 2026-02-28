@@ -1,0 +1,411 @@
+.
+├── cg_data.json
+├── CHART_MIGRATION.md
+├── CHEATSHEET.md
+├── client
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── public
+│   │   ├── icons
+│   │   │   ├── Ledger_idnDvP24qI_0.svg
+│   │   │   ├── Phantom-Icon_Square.svg
+│   │   │   ├── Solflare_id5j73wBTF_1.svg
+│   │   │   └── Trezor_Logo_0.svg
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── api
+│   │   │   └── main.ts
+│   │   ├── App.css
+│   │   ├── App.tsx
+│   │   ├── assets
+│   │   │   ├── app-logo.png
+│   │   │   └── react.svg
+│   │   ├── components
+│   │   │   ├── auth
+│   │   │   │   ├── GoogleAuthButton.tsx
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── SignInModal.tsx
+│   │   │   │   ├── SignUpModal.tsx
+│   │   │   │   ├── WalletAuthButton.module.scss
+│   │   │   │   └── WalletAuthButton.tsx
+│   │   │   ├── charts
+│   │   │   │   ├── AssetDistribution
+│   │   │   │   │   ├── AssetDistribution.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── AverageRollingAnnualReturn
+│   │   │   │   │   ├── AverageRollingAnnualReturn.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── BalanceChart
+│   │   │   │   │   ├── BalanceChart.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── Base
+│   │   │   │   │   └── BaseChart.tsx
+│   │   │   │   ├── CandleStickChart
+│   │   │   │   │   └── CandleStickChart.tsx
+│   │   │   │   ├── CounterpartyActivity
+│   │   │   │   │   ├── CounterpartyActivity.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── DailyTradingVolume
+│   │   │   │   │   ├── DailyTradingVolume.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── Drawdown
+│   │   │   │   │   ├── DrawdownChart.tsx
+│   │   │   │   │   ├── Drawdown.module.scss
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── ExchangeComparison
+│   │   │   │   │   ├── ExchangeComparison.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── GeckoTerminalChart.tsx
+│   │   │   │   ├── HoldingDurations
+│   │   │   │   │   ├── HoldingDurations.tsx
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── MarketHeatmap
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── MarketHeatmap.tsx
+│   │   │   │   ├── PnLChart
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── PnLChart.tsx
+│   │   │   │   ├── PriceHistoryChart
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── PriceHistoryChart.tsx
+│   │   │   │   ├── RollingAnnualReturn
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── RollingAnnualReturn.tsx
+│   │   │   │   ├── shared
+│   │   │   │   │   ├── ChartContainer.module.scss
+│   │   │   │   │   ├── ChartContainer.tsx
+│   │   │   │   │   ├── ChartEmptyState.module.scss
+│   │   │   │   │   ├── ChartEmptyState.tsx
+│   │   │   │   │   ├── ChartErrorState.module.scss
+│   │   │   │   │   ├── ChartErrorState.tsx
+│   │   │   │   │   ├── ChartGridItem.tsx
+│   │   │   │   │   ├── ChartGrid.tsx
+│   │   │   │   │   ├── ChartProp.tsx
+│   │   │   │   │   ├── ChartSkeleton.module.scss
+│   │   │   │   │   ├── ChartSkeleton.tsx
+│   │   │   │   │   ├── ChartStatsHeader.module.scss
+│   │   │   │   │   ├── ChartStatsHeader.tsx
+│   │   │   │   │   ├── ChartStyle.module.scss
+│   │   │   │   │   ├── ChartWrapper.module.scss
+│   │   │   │   │   ├── ChartWrapper.tsx
+│   │   │   │   │   ├── ExportMenu.module.scss
+│   │   │   │   │   ├── ExportMenu.tsx
+│   │   │   │   │   ├── FullscreenView.module.scss
+│   │   │   │   │   ├── FullscreenView.tsx
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── MiniPlayer.module.scss
+│   │   │   │   │   ├── MiniPlayer.tsx
+│   │   │   │   │   ├── TimezoneSelector.module.scss
+│   │   │   │   │   └── TimezoneSelector.tsx
+│   │   │   │   ├── StablecoinRatio
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── StablecoinRatioChart.tsx
+│   │   │   │   │   └── StablecoinRatio.module.scss
+│   │   │   │   ├── TimeSeriesLineChart
+│   │   │   │   │   └── index.tsx
+│   │   │   │   ├── TokenPriceChart
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── TokenPriceChart.module.scss
+│   │   │   │   │   └── TokenPriceChart.tsx
+│   │   │   │   ├── TotalTradingVolume
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── TotalTradingVolumeChart.tsx
+│   │   │   │   ├── TradingVolume
+│   │   │   │   │   ├── TradingVolume
+│   │   │   │   │   ├── TradingVolumePerTransaction.tsx
+│   │   │   │   │   └── TradingVolume.tsx
+│   │   │   │   ├── TradingVolumeDistribution
+│   │   │   │   │   └── TradingVolumeDistribution.tsx
+│   │   │   │   ├── TransactionDistribution
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── TransactionDistribution.tsx
+│   │   │   │   ├── VolumeBenchmark
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── VolumeBenchmark.tsx
+│   │   │   │   └── Winrate
+│   │   │   │       ├── index.ts
+│   │   │   │       ├── WinrateChart.tsx
+│   │   │   │       └── Winrate.module.scss
+│   │   │   ├── icons
+│   │   │   │   └── Google.svg
+│   │   │   ├── market
+│   │   │   │   ├── AssetInfo.module.scss
+│   │   │   │   ├── AssetInfo.tsx
+│   │   │   │   ├── FundamentalTab.module.scss
+│   │   │   │   ├── FundamentalTab.tsx
+│   │   │   │   ├── FuturesTab.module.scss
+│   │   │   │   ├── FuturesTab.tsx
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── MarketTabs.module.scss
+│   │   │   │   ├── MarketTabs.tsx
+│   │   │   │   ├── OverviewTab.module.scss
+│   │   │   │   ├── OverviewTab.tsx
+│   │   │   │   ├── ProfitLossTab.module.scss
+│   │   │   │   ├── ProfitLossTab.tsx
+│   │   │   │   ├── TickerBar.module.scss
+│   │   │   │   ├── TickerBar.tsx
+│   │   │   │   ├── TokenPerformanceTable.module.scss
+│   │   │   │   ├── TokenPerformanceTable.tsx
+│   │   │   │   ├── TokenPriceHistoryChart.module.scss
+│   │   │   │   ├── TokenPriceHistoryChart.tsx
+│   │   │   │   ├── TransactionTable.module.scss
+│   │   │   │   └── TransactionTable.tsx
+│   │   │   ├── ModelStateManager.tsx
+│   │   │   ├── partials
+│   │   │   │   └── Divider
+│   │   │   │       ├── Divider.module.scss
+│   │   │   │       └── Divider.tsx
+│   │   │   ├── README.md
+│   │   │   ├── tabContainer
+│   │   │   │   ├── tabContainer.module.scss
+│   │   │   │   └── tabContainer.tsx
+│   │   │   ├── tables
+│   │   │   │   ├── TableCellRenderer.tsx
+│   │   │   │   ├── Table.module.scss
+│   │   │   │   ├── Table.tsx
+│   │   │   │   ├── TableWrapper.module.scss
+│   │   │   │   └── TableWrapper.tsx
+│   │   │   ├── Tble.tsx
+│   │   │   ├── token
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── MarketStats.module.scss
+│   │   │   │   ├── MarketStats.tsx
+│   │   │   │   ├── PoolSelector.module.scss
+│   │   │   │   ├── PoolSelector.tsx
+│   │   │   │   ├── RecentTransactions.module.scss
+│   │   │   │   ├── RecentTransactions.tsx
+│   │   │   │   ├── TokenChart.module.scss
+│   │   │   │   ├── TokenChart.tsx
+│   │   │   │   ├── TokenHeader.module.scss
+│   │   │   │   ├── TokenHeader.tsx
+│   │   │   │   ├── TopHolders.module.scss
+│   │   │   │   └── TopHolders.tsx
+│   │   │   ├── wallet
+│   │   │   │   ├── WalletComparision
+│   │   │   │   │   ├── GeneralTab.module.scss
+│   │   │   │   │   ├── GeneralTab.tsx
+│   │   │   │   │   ├── HoldingTab.tsx
+│   │   │   │   │   ├── RiskTab.tsx
+│   │   │   │   │   └── WalletComparisionProp.tsx
+│   │   │   │   └── WalletOverview
+│   │   │   │       ├── WalletOverview.module.scss
+│   │   │   │       └── WalletOverview.tsx
+│   │   │   └── wrapper
+│   │   │       ├── Header.module.scss
+│   │   │       ├── index.ts
+│   │   │       └── PageWrapper.tsx
+│   │   ├── config
+│   │   │   ├── constants.ts
+│   │   │   ├── errors
+│   │   │   │   └── index.ts
+│   │   │   └── localization
+│   │   │       ├── en.ts
+│   │   │       ├── index.ts
+│   │   │       ├── util
+│   │   │       │   ├── util-format.ts
+│   │   │       │   └── util-translation.ts
+│   │   │       └── vi.ts
+│   │   ├── contexts
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── ChartContext.tsx
+│   │   │   ├── index.ts
+│   │   │   ├── LocalizationContext.tsx
+│   │   │   ├── SolanaWalletContext.tsx
+│   │   │   ├── ThemeContext.tsx
+│   │   │   └── WallerModal.module.scss
+│   │   ├── hooks
+│   │   │   ├── useAutoRefresh.ts
+│   │   │   ├── useChartController.ts
+│   │   │   ├── useChartExport.ts
+│   │   │   ├── useChartFiltersSync.ts
+│   │   │   ├── useChartFilters.ts
+│   │   │   ├── useChartTheme.ts
+│   │   │   ├── useExportController.ts
+│   │   │   ├── useFullscreen.ts
+│   │   │   ├── useGet.ts
+│   │   │   ├── useTokenData.ts
+│   │   │   ├── useTokenPageData.ts
+│   │   │   └── useTokenPageLogic.ts
+│   │   ├── i18n
+│   │   │   └── config.ts
+│   │   ├── index.scss
+│   │   ├── main.tsx
+│   │   ├── pages
+│   │   │   ├── auth
+│   │   │   │   ├── index.module.scss
+│   │   │   │   └── index.tsx
+│   │   │   ├── auth_demo
+│   │   │   │   ├── index.tsx
+│   │   │   │   └── SolanaProvider.tsx
+│   │   │   ├── auth_google_demo
+│   │   │   │   └── index.tsx
+│   │   │   ├── dashboard
+│   │   │   │   └── index.tsx
+│   │   │   ├── index.tsx
+│   │   │   ├── market
+│   │   │   │   ├── index.module.scss
+│   │   │   │   └── index.tsx
+│   │   │   ├── token
+│   │   │   │   ├── index.module.scss
+│   │   │   │   └── index.tsx
+│   │   │   ├── wallet
+│   │   │   │   ├── index.module.scss
+│   │   │   │   └── index.tsx
+│   │   │   └── walletsComparision
+│   │   │       ├── index.module.scss
+│   │   │       └── index.tsx
+│   │   ├── scripts
+│   │   │   ├── chart-performance-test.ts
+│   │   │   ├── performance-test.ts
+│   │   │   └── test-coingecko-api.ts
+│   │   ├── services
+│   │   │   ├── auth
+│   │   │   │   ├── authService.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── walletService.ts
+│   │   │   ├── chart
+│   │   │   │   ├── chartApi.ts
+│   │   │   │   ├── chartExport.ts
+│   │   │   │   └── mockChartData.ts
+│   │   │   ├── coingecko.ts
+│   │   │   └── market
+│   │   │       └── mockMarketData.ts
+│   │   ├── styles
+│   │   │   ├── carbon.scss
+│   │   │   ├── theme.scss
+│   │   │   └── _variables.scss
+│   │   ├── types
+│   │   │   ├── auth.ts
+│   │   │   ├── chart-api.types.ts
+│   │   │   ├── chart-data.types.ts
+│   │   │   ├── chart-filters.types.ts
+│   │   │   └── chart.types.ts
+│   │   └── util
+│   │       ├── buffer-polyfill.ts
+│   │       ├── chart-helpers.ts
+│   │       ├── chart-legend-config.ts
+│   │       ├── chart-refresh-utils.ts
+│   │       ├── echarts-setup.ts
+│   │       ├── finance-helpers.ts
+│   │       ├── format.ts
+│   │       ├── table-sorters.ts
+│   │       └── tooltip-helpers.ts
+│   ├── tsconfig.json
+│   ├── tsconfig.vite.json
+│   ├── vite.config.ts
+│   └── vite-env.d.ts
+├── f.json
+├── market_response.json
+├── m.json
+├── package.json
+├── package-lock.json
+├── pool_search.json
+├── pools_test.json
+├── README.md
+├── server
+│   ├── drizzle.config.ts
+│   ├── eslint.config.js
+│   ├── llms
+│   ├── package.json
+│   ├── postgresdb
+│   │   └── migrations
+│   │       ├── 0000_minor_rockslide.sql
+│   │       └── meta
+│   │           ├── 0000_snapshot.json
+│   │           └── _journal.json
+│   ├── src
+│   │   ├── config
+│   │   │   ├── constants.ts
+│   │   │   ├── errors.ts
+│   │   │   └── security.ts
+│   │   ├── db
+│   │   │   ├── index.ts
+│   │   │   ├── schema.ts
+│   │   │   └── seed.ts
+│   │   ├── main.ts
+│   │   ├── middlewares
+│   │   │   └── validation.ts
+│   │   ├── routes
+│   │   │   ├── balances.ts
+│   │   │   ├── charts
+│   │   │   │   ├── average-rolling-annual-return.route.ts
+│   │   │   │   ├── balance.route.ts
+│   │   │   │   ├── counterparties.route.ts
+│   │   │   │   ├── distribution.route.ts
+│   │   │   │   ├── drawdown.route.ts
+│   │   │   │   ├── exchanges.route.ts
+│   │   │   │   ├── holdings.route.ts
+│   │   │   │   ├── pnl.route.ts
+│   │   │   │   ├── price-history.route.ts
+│   │   │   │   ├── rolling-annual-return.route.ts
+│   │   │   │   ├── stablecoin-ratio.route.ts
+│   │   │   │   ├── total-trading-volume.route.ts
+│   │   │   │   ├── trading-volume-distribution.route.ts
+│   │   │   │   ├── trading-volume-per-transaction.route.ts
+│   │   │   │   ├── transactions.route.ts
+│   │   │   │   ├── volume.route.ts
+│   │   │   │   └── winrate.route.ts
+│   │   │   ├── tokens.ts
+│   │   │   ├── transfers.ts
+│   │   │   └── users.ts
+│   │   ├── scripts
+│   │   │   └── check-token-meta.ts
+│   │   ├── services
+│   │   │   ├── balances.ts
+│   │   │   ├── mockChartData.service.ts
+│   │   │   ├── pools.ts
+│   │   │   ├── storage.ts
+│   │   │   ├── tokens
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── token-chart.ts
+│   │   │   │   ├── token-holders.ts
+│   │   │   │   ├── token-info.ts
+│   │   │   │   ├── token-list.ts
+│   │   │   │   ├── token-market-data.ts
+│   │   │   │   ├── token-pools.ts
+│   │   │   │   ├── token-trades.ts
+│   │   │   │   └── token-trending.ts
+│   │   │   ├── transfers.ts
+│   │   │   ├── _types
+│   │   │   │   └── token_raw_responses.ts
+│   │   │   └── users.ts
+│   │   └── util
+│   │       ├── load-env.ts
+│   │       ├── orm-sql.ts
+│   │       ├── responses.ts
+│   │       ├── util-bitquery.ts
+│   │       ├── util-coingecko.ts
+│   │       ├── util-moralis.ts
+│   │       └── util-sim.ts
+│   ├── test-moralis.js
+│   └── tsconfig.json
+├── specs
+│   ├── 001-auth-ui-components
+│   │   ├── contracts
+│   │   │   └── auth-api.yaml
+│   │   ├── data-model.md
+│   │   ├── DEPENDENCIES.md
+│   │   ├── PHASE8-SUMMARY.md
+│   │   ├── plan.md
+│   │   ├── quickstart.md
+│   │   ├── research.md
+│   │   ├── spec.md
+│   │   └── tasks.md
+│   └── 002-data-chart-components
+│       ├── checklists
+│       │   └── requirements.md
+│       ├── contracts
+│       │   └── chart-api.yaml
+│       ├── data-model.md
+│       ├── echarts-integration-research.md
+│       ├── export-filtering-research.md
+│       ├── plan.md
+│       ├── quickstart.md
+│       ├── research.md
+│       ├── spec.md
+│       ├── tasks.md
+│       └── viewing-modes-research.md
+└── structure.txt
+
+91 directories, 318 files

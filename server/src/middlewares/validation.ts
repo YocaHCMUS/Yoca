@@ -1,3 +1,5 @@
+import { setErr } from "@sv/config/errors.js";
+import { statusCode } from "@sv/util/responses.js";
 import type { ValidationTargets } from "hono";
 import { validator } from "hono/validator";
 import z from "zod";
@@ -77,11 +79,11 @@ export function validate<
     if (!parsed.success) {
       return c.json(
         {
-          error: "ValidationError",
+          ...setErr("VALIDATION_ERR"),
           message: `Invalid ${target} parameters`,
           details: parsed.error.issues,
         },
-        400,
+        statusCode.UnprocessableEntity,
       );
     }
     return parsed.data;

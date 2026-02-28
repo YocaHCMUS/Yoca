@@ -5,6 +5,7 @@ import {
   Button,
   ComposedModal,
   Form,
+  InlineNotification,
   Link,
   ModalBody,
   ModalFooter,
@@ -31,7 +32,7 @@ type SignInModalProps = {
 export function SignInModal({ open, onClose }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   const formSchema = z.object({
     email: z.email(tr("validation.invalidEmail")),
@@ -39,18 +40,26 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   });
 
   type FormSchema = z.infer<typeof formSchema>;
+
   const {
     register,
     handleSubmit,
+    clearErrors,
     formState: { errors },
   } = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
   });
 
-  const onSubmit = async (data: FormSchema) => {
+  function close() {
+    setErrMsg(null);
+    clearErrors();
+    onClose();
+  }
+
+  async function onSubmit(data: FormSchema) {
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setErrMsg(null);
 
     try {
       const authData = {
@@ -65,28 +74,35 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
         },
       });
 
-      if (resp.ok) {
+      if (resp.status == 200) {
         const res = await resp.json();
-        onClose();
+        // Redirect here
+        close();
+      } else if (resp.status == 401 || resp.status == 422) {
+        const res = await resp.json();
+        const errCode = res.errorCode;
+        setErrMsg(tr(`ERROR.${errCode}`));
       } else {
-        setErrorMessage(tr("validation.invalidCredentials"));
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
       }
     } catch (error) {
-      setErrorMessage(tr("validation.networkError"));
-      console.error("Sign in error:", error);
+      console.error(error);
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const onGoogleSignInSuccess = async () => {};
+  function onGoogleSignInSuccess() {
+    // Redirect here
+  }
 
-  const onGoogleSignInError = (error: string) => {
-    setErrorMessage(error);
-  };
+  function onGoogleSignInError(_error: string) {
+    setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"));
+  }
 
   return (
-    <ComposedModal open={open} onClose={onClose}>
+    <ComposedModal open={open} onClose={close}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
       <ModalBody hasScrollingContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -112,9 +128,19 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
             <Link>{tr("auth.forgotPassword")}</Link>
 
+            {errMsg && (
+              <InlineNotification
+                kind="error"
+                title="Error"
+                lowContrast
+                subtitle={errMsg}
+              />
+            )}
+
             <Button
               type="submit"
               size="lg"
+              disabled={isSubmitting}
               renderIcon={ArrowRight}
               style={{
                 inlineSize: "100%",
@@ -136,7 +162,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
           <WalletAuthButton
             disabled={isSubmitting}
             onSuccess={() => {}}
-            onError={(err) => setErrorMessage(err)}
+            onError={(err) => setErrMsg(err)}
           />
         </Stack>
       </ModalBody>

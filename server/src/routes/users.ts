@@ -3,6 +3,7 @@ import {
   AUTH_COOKIE_NAME,
   AUTHEN_COOKIE_TTL_MS,
 } from "@sv/config/constants.js";
+import { setErr } from "@sv/config/errors.js";
 import {
   ethereumNounceRequestSchema,
   ethereumVerificationRequestSchema,
@@ -71,16 +72,19 @@ const app = new Hono()
   // .get("/hello", (c) => c.json("oke usre", 200))
   .post(
     "/auth/password/register",
+    // (c, next) => {
+    //   if ((c as any)["hello"]) {
+    //     return c.json("hello", statusCode.BadRequest);
+    //   }
+    //   return next();
+    // },
     validate("json", userCreationSchema),
     async (c) => {
       try {
-        const { email, displayName, password } = c.req.valid("json");
+        const { email, displayName, password }: any = c.req.param;
         const existingPasswordUser = await userService.findUserByEmail(email);
         if (existingPasswordUser) {
-          return c.json(
-            messageText.AccountAlreadyExists,
-            statusCode.BadRequest,
-          );
+          return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
         }
         const userId = await userService.createUserWithPassword(
           email,
@@ -96,10 +100,10 @@ const app = new Hono()
           },
           statusCode.Created,
         );
-      } catch (err) {
+      } catch (error) {
         return c.json(
-          messageText.EmailOrUsernameAlreadyExists,
-          statusCode.BadRequest,
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
         );
       }
     },
@@ -115,7 +119,7 @@ const app = new Hono()
       );
       if (!passwordUser) {
         return c.json(
-          messageText.InvalidEmailOrPassword,
+          setErr("EMAIL_OR_PASSWORD_WAS_INCORRECT"),
           statusCode.Unauthorized,
         );
       }
@@ -139,7 +143,7 @@ const app = new Hono()
 
       if (!payload) {
         return c.json(
-          messageText.CouldNotVerifyGoogleAccount,
+          setErr("GOOGLE_VERIFICATION_FAILED"),
           statusCode.BadRequest,
         );
       }
@@ -165,7 +169,7 @@ const app = new Hono()
     } catch (err) {
       console.error(err);
       return c.json(
-        messageText.InternalServerError,
+        setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
     }
@@ -214,23 +218,18 @@ const app = new Hono()
       );
 
       if (!account) {
-        return c.json(
-          {
-            message: messageText.SolanaWalletVerificationFailed,
-          },
-          statusCode.BadRequest,
-        );
+        return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
       const token = await setAuthToken(c, account.userId);
 
       return c.json(
         {
-          message: messageText.SolanaWalletVerifiedSuccessfully,
+          message: messageText.WalletVerifiedSuccessfully,
           userId: account.userId,
           token,
         },
-        statusCode.Created,
+        201,
       );
     },
   )
@@ -288,9 +287,7 @@ const app = new Hono()
 
       if (!account) {
         return c.json(
-          {
-            message: messageText.EthereumWalletVerificationFailed,
-          },
+          setErr("WALLET_VERIFICATION_FAILED"),
           statusCode.BadRequest,
         );
       }
@@ -299,7 +296,7 @@ const app = new Hono()
 
       return c.json(
         {
-          message: messageText.EthereumWalletVerifiedSuccessfully,
+          error: messageText.WalletVerifiedSuccessfully,
           userId: account.userId,
           token,
         },
