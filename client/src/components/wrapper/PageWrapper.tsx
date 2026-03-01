@@ -78,52 +78,52 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     return (
         <Theme theme={theme === 'dark' ? 'g100' : 'white'}>
             <div className={styles.pageWrapper}>
-            <Header
-                onNavigate={navigate}
-                handleSignIn={handleOpenSignIn}
-                handleSignUp={handleOpenSignUp}
-            />
-            
-            <main className={styles.pageContent}>
-                {children}
-            </main>
-
-            {/* Sign In Modal */}
-            <Modal
-                open={signInModalOpen}
-                onRequestClose={handleCloseModals}
-                passiveModal
-                className={styles.authModal}
-                size="lg"
-            >
-                <SignInForm
-                onSuccess={handleAuthSuccess}
-                onOpenWalletModal={() => handleOpenWalletModal('signin')}
-                onNavigateToSignUp={handleOpenSignUp}
+                <Header
+                    onNavigate={navigate}
+                    handleSignIn={handleOpenSignIn}
+                    handleSignUp={handleOpenSignUp}
                 />
-            </Modal>
 
-            {/* Sign Up Modal */}
-            <Modal
-                open={signUpModalOpen}
-                onRequestClose={handleCloseModals}
-                passiveModal
-                className={styles.authModal}
-                size="lg"
-            >
-                <SignUpForm
-                onSuccess={handleAuthSuccess}
-                onOpenWalletModal={() => handleOpenWalletModal('signup')}
-                onNavigateToSignIn={handleOpenSignIn}
+                <main id="main-content" className={styles.pageContent}>
+                    {children}
+                </main>
+
+                {/* Sign In Modal */}
+                <Modal
+                    open={signInModalOpen}
+                    onRequestClose={handleCloseModals}
+                    passiveModal
+                    className={styles.authModal}
+                    size="lg"
+                >
+                    <SignInForm
+                        onSuccess={handleAuthSuccess}
+                        onOpenWalletModal={() => handleOpenWalletModal('signin')}
+                        onNavigateToSignUp={handleOpenSignUp}
+                    />
+                </Modal>
+
+                {/* Sign Up Modal */}
+                <Modal
+                    open={signUpModalOpen}
+                    onRequestClose={handleCloseModals}
+                    passiveModal
+                    className={styles.authModal}
+                    size="lg"
+                >
+                    <SignUpForm
+                        onSuccess={handleAuthSuccess}
+                        onOpenWalletModal={() => handleOpenWalletModal('signup')}
+                        onNavigateToSignIn={handleOpenSignIn}
+                    />
+                </Modal>
+
+                {/* Wallet Modal */}
+                <WalletModal
+                    open={walletModalOpen}
+                    onClose={handleCloseModals}
+                    mode={walletModalMode}
                 />
-            </Modal>
-
-            {/* Wallet Modal */}
-            <WalletModal
-                open={walletModalOpen}
-                onClose={handleCloseModals}
-                mode={walletModalMode}
-            />
             </div>
         </Theme>
     );

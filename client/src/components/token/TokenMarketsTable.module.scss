@@ -1,0 +1,61 @@
+@use '@carbon/react/scss/theme' as *;
+
+.tableContainer {
+    width: 100%;
+    background: $background;
+
+    // Override Carbon table background to match page
+    :global(.cds--data-table-container) {
+        background: $background;
+    }
+
+    :global(.cds--data-table) {
+        background: $background;
+    }
+
+    // Header row — slightly elevated background
+    :global(.cds--data-table thead tr th) {
+        background: $layer-01;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: $text-secondary;
+        text-transform: uppercase;
+        padding: 14px 16px;
+        border-bottom: 1px solid $border-subtle;
+    }
+
+    // Data rows
+    :global(.cds--data-table tbody tr td) {
+        font-size: 14px;
+        font-weight: 400;
+        color: $text-primary;
+        padding: 14px 16px;
+        border-bottom: 1px solid $border-subtle;
+        vertical-align: middle;
+    }
+
+    // Row hover
+    :global(.cds--data-table tbody tr:hover td) {
+        background: $layer-hover-01;
+    }
+
+    // Last row no bottom border
+    :global(.cds--data-table tbody tr:last-child td) {
+        border-bottom: none;
+    }
+}
+
+.table {
+    background: $background;
+}
+
+.positive {
+    color: #16c784;
+    font-weight: 600;
+}
+
+.negative {
+    color: #ea3943;
+    font-weight: 600;
+}

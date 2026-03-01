@@ -1,0 +1,45 @@
+@use '@carbon/react/scss/theme' as *;
+
+.container {
+    width: 100%;
+    z-index: 10;
+    background: $background;
+
+    // Make Carbon TabList transparent + remove its bottom border (rightHeader provides it)
+    :global(.cds--tabs) {
+        background: transparent;
+    }
+
+    :global(.cds--tab-content) {
+        display: none; // We handle content ourselves via scroll, not tab panels
+    }
+}
+
+.tabList {
+    background: transparent !important;
+    border-bottom: none !important;
+}
+
+// External link styled like a tab
+.tabLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 400;
+    color: $text-secondary;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.2s;
+    align-self: center;
+
+    &:hover {
+        color: $text-primary;
+    }
+}
+
+.icon {
+    margin-bottom: 2px;
+}

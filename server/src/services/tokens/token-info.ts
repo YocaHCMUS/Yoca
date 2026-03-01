@@ -12,7 +12,31 @@ import {
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type { CG_TokenInfo } from "../_types/token_raw_responses.js";
+import type { CG_CoinDetail, CG_TokenInfo } from "../_types/token_raw_responses.js";
+
+// Fetch enriched info from CoinGecko v3 /coins/{id}
+async function fetchCoinDetail(coingeckoId: string): Promise<CG_CoinDetail | null> {
+  if (!coingeckoId) return null;
+
+  const cgEndpoint = cg.getEndpoint(`/coins/${coingeckoId}`);
+  cgEndpoint.search = new URLSearchParams({
+    localization: "false",
+    tickers: "false",
+    market_data: "false",
+    community_data: "false",
+    developer_data: "false",
+  }).toString();
+
+  const req = new Request(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+  if (!resp.ok) return null;
+
+  return resp.json();
+}
 
 // https://docs.coingecko.com/v3.0.1/reference/token-info-contract-address
 async function fetchTokenInfo(tokenAddresses: string[]) {
@@ -43,6 +67,8 @@ async function fetchTokenInfo(tokenAddresses: string[]) {
       }
     }),
   );
+
+  // Build base meta + holders from onchain info
   const infoList = rawInfoList
     .filter((rawMeta) => rawMeta != null)
     .map((raw): { meta: TokenMetaInsert; holders: TokenHolderStatsInsert } => ({
@@ -71,6 +97,32 @@ async function fetchTokenInfo(tokenAddresses: string[]) {
       holders: [],
     };
   }
+
+  // Enrich with v3 /coins/{id} data for tokens that have a coingeckoId
+  await Promise.all(
+    infoList.map(async (info) => {
+      if (!info.meta.coingeckoId) return;
+
+      const detail = await fetchCoinDetail(info.meta.coingeckoId);
+      if (!detail) return;
+
+      const links = detail.links;
+      info.meta.telegramChannel = links.telegram_channel_identifier || null;
+      info.meta.linkBlockchainSites = JSON.stringify(
+        (links.blockchain_site || []).filter((url: string) => url && url.length > 0),
+      );
+      info.meta.categories = JSON.stringify(
+        (detail.categories || []).filter((cat: string) => cat && cat.length > 0),
+      );
+      info.meta.platforms = JSON.stringify(detail.platforms || {});
+
+      // Override with richer v3 data if available
+      if (links.homepage?.[0]) info.meta.linkHomepage = links.homepage[0];
+      if (links.twitter_screen_name) info.meta.twitterScreenName = links.twitter_screen_name;
+      if (links.chat_url?.[0]) info.meta.linkDiscord = links.chat_url[0];
+    }),
+  );
+
   return {
     meta: await db
       .insert(tokenMeta)

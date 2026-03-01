@@ -9,8 +9,7 @@
 .pageWrapper {
   display: flex;
   flex-direction: column;
-  height: 100vh; // Changed from min-height to fixed height
-  overflow: hidden; // Prevent window scroll
+  min-height: 100vh;
   background-color: $background;
 }
 
@@ -25,7 +24,6 @@
   padding-top: $header-height;
   background-color: $background;
   color: $text-primary;
-  overflow: hidden; // Ensure content doesn't overflow parent
 }
 
 /* Auth modal customizations */

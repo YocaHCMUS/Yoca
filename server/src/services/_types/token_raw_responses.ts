@@ -39,6 +39,28 @@ export interface CG_TokenInfo {
   };
 }
 
+// https://docs.coingecko.com/v3.0.1/reference/coins-id
+export interface CG_CoinDetail {
+  id: string;
+  symbol: string;
+  name: string;
+  asset_platform_id: string | null;
+  platforms: Record<string, string>;
+  categories: string[];
+  links: {
+    homepage: string[];
+    whitepaper: string;
+    blockchain_site: string[];
+    official_forum_url: string[];
+    chat_url: string[];
+    announcement_url: string[];
+    twitter_screen_name: string;
+    facebook_username: string;
+    telegram_channel_identifier: string;
+    subreddit_url: string;
+  };
+}
+
 export interface CG_TokenMarketData {
   id: string;
   current_price: number;

@@ -80,6 +80,35 @@ const app = new Hono()
     },
   )
   .get(
+    "/markets/chart/:address/overview",
+    validate("param", addressSchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const days = c.req.query("days") ?? "1";
+        const parsedDays = days === "max" ? ("max" as const) : Number(days);
+        const chartData = await tokenService.getTokenMarketChart(
+          address,
+          parsedDays,
+        );
+        if (chartData) {
+          return c.json(chartData, statusCode.Ok);
+        } else {
+          return c.json(
+            messageText.FailedToFetchRequestedData,
+            statusCode.BadGateway,
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          messageText.InternalServerError,
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
+  .get(
     "/holders/stats/:addresses",
     validate("param", addressListSchema),
     async (c) => {

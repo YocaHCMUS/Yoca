@@ -33,7 +33,9 @@ type CgResult = Required<
     TokenMarketDataInsert,
     Exclude<keyof TokenMarketDataInsert, keyof OnChainCgResult>
   >
->;
+> &
+  // CG total_volume overrides onchain volume24h when available
+  Partial<Pick<TokenMarketDataInsert, "volume24h">>;
 
 // https://docs.coingecko.com/reference/tokens-data-contract-addresses
 async function fetchOnchainMarketData(tokenAddresses: string[]) {
@@ -73,7 +75,7 @@ async function fetchOnchainMarketData(tokenAddresses: string[]) {
         marketCap: Number(raw.attributes.market_cap_usd),
         fullyDilutedValuation: Number(raw.attributes.fdv_usd),
         volume24h: Number(raw.attributes.volume_usd.h24),
-        totalSupply: Number(raw.attributes.total_supply),
+        totalSupply: Number(raw.attributes.total_supply) / Math.pow(10, raw.attributes.decimals),
         totalLiquidity: Number(raw.attributes.total_reserve_in_usd),
         updatedAt: new Date(),
       },
@@ -93,7 +95,7 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
     ids: cgIds.join(","),
     vs_currency: "usd",
     order: "market_cap_desc",
-    price_change_percentage: "1h,24h,14d,30d,200d,1y",
+    price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
   }).toString();
 
   const req = new Request(cgEndpoint, {
@@ -112,9 +114,15 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
     res.map((raw): [string, CgResult] => [
       cgIdToAddress[raw.id],
       {
+        priceBtc: null,
+        priceChangeBtc24h: null,
+        marketCapRank: raw.market_cap_rank,
+        high24h: raw.high_24h,
+        low24h: raw.low_24h,
         priceChangePercentage1h: raw.price_change_percentage_1h_in_currency,
         priceChange24h: raw.price_change_24h,
         priceChangePercentage24h: raw.price_change_percentage_24h_in_currency,
+        priceChangePercentage7d: raw.price_change_percentage_7d_in_currency,
         priceChangePercentage14d: raw.price_change_percentage_14d_in_currency,
         priceChangePercentage30d: raw.price_change_percentage_30d_in_currency,
         priceChangePercentage200d: raw.price_change_percentage_200d_in_currency,
@@ -124,9 +132,12 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
         circulatingSupply: raw.circulating_supply,
         maxSupply: raw.max_supply,
         ath: raw.ath,
+        athChangePercentage: raw.ath_change_percentage,
         athDate: new Date(raw.ath_date),
         atl: raw.atl,
+        atlChangePercentage: raw.atl_change_percentage,
         atlDate: new Date(raw.atl_date),
+        volume24h: raw.total_volume,
       },
     ]),
   );

@@ -22,21 +22,32 @@ export function defineNumberFormat(
     notation: Notation,
     unit?: string,
   ) {
-    const key = `${style}|${notation}|${unit ?? ""}`;
+    // Token symbols (SOL, BONK, etc.) are NOT valid Intl.NumberFormat units.
+    // Always use "decimal" formatting and append the symbol as a text suffix.
+    const effectiveStyle = style === "unit" ? "decimal" : style;
+    const key = `${effectiveStyle}|${notation}`;
 
     if (!formatterMap.has(key)) {
       let numFmt = new Intl.NumberFormat(langCode, {
-        ...styleFormatMap[style],
+        ...styleFormatMap[effectiveStyle],
         notation,
-        style,
+        style: effectiveStyle,
       });
       formatterMap.set(key, numFmt);
-      return value ? numFmt.format(abs ? Math.abs(value) : value) : nullDisplay;
     }
 
-    return value
-      ? formatterMap.get(key)!.format(abs ? Math.abs(value) : value)
-      : nullDisplay;
+    if (!value) return nullDisplay;
+
+    const formatted = formatterMap
+      .get(key)!
+      .format(abs ? Math.abs(value) : value);
+
+    // Append unit suffix for "unit" style
+    if (style === "unit" && unit) {
+      return `${formatted} ${unit}`;
+    }
+
+    return formatted;
   }
 
   function createNotation(notation: Notation) {

@@ -1,4 +1,4 @@
-export { get24hTokenMarketChart } from "./token-chart.js";
+export { get24hTokenMarketChart, getTokenMarketChart } from "./token-chart.js";
 export { getTopTokenHolders } from "./token-holders.js";
 export { getTokenHolderStats, getTokenMetaList } from "./token-info.js";
 export { getCoinGeckoIdList } from "./token-list.js";
