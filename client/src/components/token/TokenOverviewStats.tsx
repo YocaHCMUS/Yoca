@@ -1,4 +1,4 @@
-import { client } from "@/api/main";
+import client from "@/api/main";
 import classNames from "classnames";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useState } from "react";
