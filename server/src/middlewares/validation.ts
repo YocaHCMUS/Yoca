@@ -69,6 +69,12 @@ export const ethereumVerificationRequestSchema = z.object({
   signature: z.string().trim().min(1),
 });
 
+export const userPayloadSchema = z.object({
+  id: z.string(),
+  exp: z.number(),
+  displayName: z.string().nullable(),
+});
+
 // Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,

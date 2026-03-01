@@ -9,6 +9,7 @@ export const ErrCodes = {
   generalUnknownErr: "GENERAL_UNKNOWN_ERR",
   networkErr: "NETWORK_ERR",
   validationErr: "VALIDATION_ERR",
+  invalidTokenPayload: "INVALID_TOKEN_PAYLOAD",
 } as const;
 
 export type ErrCode = (typeof ErrCodes)[keyof typeof ErrCodes];

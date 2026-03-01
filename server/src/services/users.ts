@@ -19,8 +19,12 @@ const toEthereumProviderUserId = (address: string) =>
 
 export async function findUserByEmail(email: string) {
   const [user] = await db
-    .select()
+    .select({
+      user: users,
+      account: authAccounts,
+    })
     .from(authAccounts)
+    .innerJoin(users, eq(users.id, authAccounts.userId))
     .where(
       and(
         eq(authAccounts.provider, "password"),
@@ -79,8 +83,12 @@ export async function verifyUserPassword(email: string, password: string) {
 
 export async function findUserByGoogleId(googleId: string) {
   const [user] = await db
-    .select()
+    .select({
+      user: users,
+      account: authAccounts,
+    })
     .from(authAccounts)
+    .innerJoin(users, eq(authAccounts.userId, users.id))
     .where(
       and(
         eq(authAccounts.provider, "google"),
@@ -107,8 +115,12 @@ export async function createUserWithGoogle(googleId: string) {
 
 export async function findUserByWalletAddress(pubKey: string) {
   const [user] = await db
-    .select()
+    .select({
+      user: users,
+      account: authAccounts,
+    })
     .from(authAccounts)
+    .innerJoin(users, eq(users.id, authAccounts.userId))
     .where(
       and(
         eq(authAccounts.provider, "solana"),
@@ -152,8 +164,12 @@ export async function updateWalletLoginNounce(userId: string) {
 
 export async function findUserByEthereumAddress(address: string) {
   const [user] = await db
-    .select()
+    .select({
+      user: users,
+      account: authAccounts,
+    })
     .from(authAccounts)
+    .innerJoin(users, eq(users.id, authAccounts.userId))
     .where(
       and(
         eq(authAccounts.provider, "other"),
@@ -199,9 +215,13 @@ export async function verifyWalletLoginNounce(
   pubKey: string,
   signature: string,
 ) {
-  const [account] = await db
-    .select()
+  const [user] = await db
+    .select({
+      user: users,
+      account: authAccounts,
+    })
     .from(authAccounts)
+    .innerJoin(users, eq(users.id, authAccounts.userId))
     .where(
       and(
         eq(authAccounts.provider, "solana"),
@@ -210,17 +230,17 @@ export async function verifyWalletLoginNounce(
     )
     .limit(1);
 
-  if (!account || !account.loginNounce || !account.nounceExpiredAt) {
+  if (!user || !user.account.loginNounce || !user.account.nounceExpiredAt) {
     return null;
   }
 
   const now = new Date();
-  if (account.nounceExpiredAt < now) {
+  if (user.account.nounceExpiredAt < now) {
     return null;
   }
 
   const messageBytes = getUtf8Encoder().encode(
-    getSolanaLoginMessage(account.loginNounce, pubKey),
+    getSolanaLoginMessage(user.account.loginNounce, pubKey),
   );
 
   const pubCryptoKey = await getPublicKeyFromAddress(address(pubKey));
@@ -245,7 +265,7 @@ export async function verifyWalletLoginNounce(
       ),
     );
 
-  return account;
+  return user;
 }
 
 export async function verifyEthereumWalletLoginNounce(

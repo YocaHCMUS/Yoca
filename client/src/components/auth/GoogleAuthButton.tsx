@@ -40,19 +40,27 @@ export function GoogleAuthButton({
         },
       });
 
-      if (resp.ok) {
+      if (resp.status == 200) {
         const res = await resp.json();
         setError(null);
         onSuccess(res.userId);
-        return;
-      } else {
-        const errorMsg = tr("auth.googleAuthFailed");
+      } else if (resp.status == 400 || resp.status == 422) {
+        const res = await resp.json();
+        const errCode = res.errorCode;
+        const errorMsg = tr(`ERROR.${errCode}`);
         setError(errorMsg);
         onError(errorMsg);
-        return;
+      } else if (resp.status == 500) {
+        const errorMsg = tr("ERROR.INTERNAL_SERVER_ERR");
+        setError(errorMsg);
+        onError(errorMsg);
+      } else {
+        const errorMsg = tr("ERROR.GOOGLE_VERIFICATION_FAILED");
+        setError(errorMsg);
+        onError(errorMsg);
       }
     } catch (error) {
-      const errorMsg = tr("auth.googleAuthFailed");
+      const errorMsg = tr("ERROR.NETWORK_ERR");
       setError(errorMsg);
       onError(errorMsg);
       return;

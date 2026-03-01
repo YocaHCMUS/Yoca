@@ -31,7 +31,7 @@ type SignUpModalProps = {
 
 export function SignUpModal({ open, onClose }: SignUpModalProps) {
   const { tr, fmt } = useLocalization();
-  const { setUser } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
     formState: { errors },
   } = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
   });
 
   const onSubmit = async (data: FormSchema) => {
@@ -75,8 +75,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
       });
 
       if (resp.status == 201) {
-        const res = await resp.json();
-        setUser({ userId: res.userId });
+        await refreshUser();
         onClose();
         navigate("/");
       } else if (resp.status == 400 || resp.status == 422) {
@@ -171,8 +170,8 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         <Divider text={tr("common.or")} />
         <Stack gap={4} style={{ marginBottom: "2rem" }}>
           <GoogleAuthButton
-            onSuccess={(userId) => {
-              setUser({ userId });
+            onSuccess={async (_userId) => {
+              await refreshUser();
               onClose();
               navigate("/");
             }}
@@ -182,8 +181,8 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
 
           <WalletAuthButton
             disabled={isSubmitting}
-            onSuccess={(userId) => {
-              setUser({ userId });
+            onSuccess={async (_userId) => {
+              await refreshUser();
               onClose();
               navigate("/");
             }}

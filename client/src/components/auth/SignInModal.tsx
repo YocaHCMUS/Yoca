@@ -33,7 +33,7 @@ type SignInModalProps = {
 
 export function SignInModal({ open, onClose }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
-  const { setUser } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -74,8 +74,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
       });
 
       if (resp.status == 200) {
-        const res = await resp.json();
-        setUser({ userId: res.userId });
+        await refreshUser();
         close();
         navigate("/");
       } else if (resp.status == 401 || resp.status == 422) {
@@ -93,8 +92,8 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
     }
   }
 
-  function onGoogleSignInSuccess(userId: string) {
-    setUser({ userId });
+  function onGoogleSignInSuccess(_userId: string) {
+    refreshUser();
     close();
     navigate("/");
   }
@@ -163,8 +162,8 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
 
           <WalletAuthButton
             disabled={isSubmitting}
-            onSuccess={(userId) => {
-              setUser({ userId });
+            onSuccess={async (userId) => {
+              await refreshUser();
               close();
               navigate("/");
             }}

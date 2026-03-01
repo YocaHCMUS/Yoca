@@ -11,6 +11,7 @@ import {
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
+  userPayloadSchema,
   userVerificationSchema,
   validate,
 } from "@sv/middlewares/validation.js";
@@ -19,11 +20,20 @@ import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
-import { sign } from "hono/jwt";
+import { jwt, sign } from "hono/jwt";
+import type z from "zod";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const googleClientId = process.env.GOOGLE_CLIENT_ID!;
 const googleClient = new OAuth2Client(googleClientId);
+
+type UserPayload = z.infer<typeof userPayloadSchema>;
+
+const honoJwt = jwt({
+  alg: "HS256",
+  secret: process.env.JWT_SECRET!,
+  cookie: AUTH_COOKIE_NAME,
+});
 
 async function verifyGoogleToken(idToken: string) {
   const ticket = await googleClient.verifyIdToken({
@@ -40,12 +50,17 @@ async function verifyGoogleToken(idToken: string) {
   return payload;
 }
 
-async function setAuthToken(c: Context, userId: string) {
+async function setAuthToken(
+  c: Context,
+  userId: string,
+  displayName?: string | null,
+) {
   const token = await sign(
     {
       id: userId,
+      displayName: displayName || null,
       exp: Math.floor(Date.now() + AUTHEN_COOKIE_TTL_MS) / 1000,
-    },
+    } satisfies UserPayload,
     jwtSecret,
   );
   setCookie(c, AUTH_COOKIE_NAME, token, {
@@ -58,26 +73,8 @@ async function setAuthToken(c: Context, userId: string) {
 }
 
 const app = new Hono()
-  // .use(
-  //   "/example/of/protected/url/*",
-  //   jwt({
-  //     alg: "HS256",
-  //     secret: process.env.JWT_SECRET!,
-  //     cookie: AUTH_COOKIE_NAME,
-  //   }),
-  // )
-  // .get("/example/of/protected/url/1", async (c) => {
-  //   return c.json("ok you're good", statusCode.Ok);
-  // })
-  // .get("/hello", (c) => c.json("oke usre", 200))
   .post(
     "/auth/password/register",
-    // (c, next) => {
-    //   if ((c as any)["hello"]) {
-    //     return c.json("hello", statusCode.BadRequest);
-    //   }
-    //   return next();
-    // },
     validate("json", userCreationSchema),
     async (c) => {
       try {
@@ -91,7 +88,7 @@ const app = new Hono()
           displayName || null,
           password,
         );
-        const token = await setAuthToken(c, userId);
+        const token = await setAuthToken(c, userId, displayName);
         return c.json(
           {
             message: messageText.UserCreatedSuccessfully,
@@ -105,7 +102,6 @@ const app = new Hono()
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
-
         );
       }
     },
@@ -153,13 +149,16 @@ const app = new Hono()
       const googleId = payload.sub;
 
       const googleUser = await userService.findUserByGoogleId(googleId);
-      let userId = "";
+      let userId: string = "";
+      let displayName: string | null = null;
       if (googleUser) {
-        userId = googleUser.userId;
+        userId = googleUser.account.userId;
+        displayName = googleUser.user.displayName;
       } else {
         userId = await userService.createUserWithGoogle(googleId);
       }
-      const token = await setAuthToken(c, userId);
+
+      const token = await setAuthToken(c, userId, displayName);
       return c.json(
         {
           message: messageText.GoogleLoggedInSuccessfully,
@@ -187,7 +186,7 @@ const app = new Hono()
 
       if (existingWalletUser) {
         const nounce = await userService.updateWalletLoginNounce(
-          existingWalletUser.userId,
+          existingWalletUser.user.id,
         );
         return c.json(
           {
@@ -223,12 +222,12 @@ const app = new Hono()
         return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
-      const token = await setAuthToken(c, account.userId);
+      const token = await setAuthToken(c, account.user.id);
 
       return c.json(
         {
           message: messageText.WalletVerifiedSuccessfully,
-          userId: account.userId,
+          userId: account.user.id,
           token,
         },
         201,
@@ -247,7 +246,7 @@ const app = new Hono()
 
       if (existingWalletUser) {
         const nounce = await userService.updateEthereumWalletLoginNounce(
-          existingWalletUser.userId,
+          existingWalletUser.user.id,
         );
         return c.json(
           {
@@ -309,6 +308,25 @@ const app = new Hono()
   .delete("/auth/logout", async (c) => {
     deleteCookie(c, AUTH_COOKIE_NAME);
     return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
+  })
+  .get("/auth/me", honoJwt, async (c) => {
+    try {
+      // payload is typed as any, currently there is no typesafety for this yet
+      const rawPayload = c.get("jwtPayload");
+
+      const parsedPayload = userPayloadSchema.safeParse(rawPayload);
+      if (!parsedPayload.success) {
+        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+      }
+
+      return c.json(parsedPayload.data, statusCode.Ok);
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
   });
 
 export default app;

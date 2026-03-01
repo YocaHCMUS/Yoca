@@ -27,7 +27,7 @@ import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
 import { useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import { Divider } from "../partials/Divider/Divider";
-import styles from "./Header.module.scss";
+import styles from "./PageWrapper.module.scss";
 
 function ThemeToggleGlobalAction() {
   const { theme, toggleTheme } = useUserTheme();
@@ -55,7 +55,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
   };
 
   const togglePanel = (panel: "lang" | "account") => {
-    setOpenPanel((prev) => (prev === panel ? null : panel));
+    setOpenPanel((prev) => (prev == panel ? null : panel));
   };
 
   function NavHeaderItems() {
@@ -101,7 +101,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
           <HeaderGlobalAction
             aria-label={tr("nav.language")}
-            isActive={openPanel === "lang"}
+            isActive={openPanel == "lang"}
             onClick={() => togglePanel("lang")}
           >
             <Wikis size={20} />
@@ -109,7 +109,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
           <HeaderGlobalAction
             aria-label={tr("nav.account")}
-            isActive={openPanel === "account"}
+            isActive={openPanel == "account"}
             onClick={() => {
               if (user) {
                 togglePanel("account");
@@ -127,11 +127,11 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
         <HeaderPanel
           className={styles.headerPanel}
-          expanded={openPanel === "lang"}
+          expanded={openPanel == "lang"}
         >
           <Switcher
             aria-label="Language Switcher"
-            expanded={openPanel === "lang"}
+            expanded={openPanel == "lang"}
           >
             <SwitcherItem
               aria-labelledby="lang-vi"
@@ -171,9 +171,9 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
         <HeaderPanel
           className={styles.headerPanel}
-          expanded={openPanel === "account"}
+          expanded={openPanel == "account"}
         >
-          <Switcher aria-label="Account" expanded={openPanel === "account"}>
+          <Switcher aria-label="Account" expanded={openPanel == "account"}>
             <SwitcherItem aria-labelledby="account-id" isSelected={false}>
               <Stack
                 orientation="horizontal"
@@ -181,8 +181,10 @@ export function PageWrapper({ children }: { children: ReactNode }) {
                 style={{ alignItems: "center" }}
               >
                 <User size={16} />
-                <p style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
-                  {user?.userId}
+                <p style={{ fontFamily: "monospace" }}>
+                  {user
+                    ? user.displayName || `${user.userId.slice(0, 8)}…`
+                    : ""}
                 </p>
               </Stack>
             </SwitcherItem>
