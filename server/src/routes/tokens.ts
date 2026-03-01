@@ -1,3 +1,4 @@
+import { setErr } from "@sv/config/errors.js";
 import {
   addressListSchema,
   addressSchema,
@@ -18,14 +19,14 @@ const app = new Hono()
         return c.json(meta, statusCode.Ok);
       } else {
         return c.json(
-          messageText.FailedToFetchRequestedData,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.BadGateway,
         );
       }
     } catch (err) {
       console.error(err);
       return c.json(
-        messageText.InternalServerError,
+        setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
     }
@@ -42,14 +43,15 @@ const app = new Hono()
           return c.json(marketData, statusCode.Ok);
         } else {
           return c.json(
-            messageText.FailedToFetchRequestedData,
+            
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
             statusCode.BadGateway,
           );
         }
       } catch (err) {
         console.error(err);
         return c.json(
-          messageText.InternalServerError,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
         );
       }
@@ -66,14 +68,14 @@ const app = new Hono()
           return c.json(marketData, statusCode.Ok);
         } else {
           return c.json(
-            messageText.FailedToFetchRequestedData,
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
             statusCode.BadGateway,
           );
         }
       } catch (err) {
         console.error(err);
         return c.json(
-          messageText.InternalServerError,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
         );
       }
@@ -95,14 +97,14 @@ const app = new Hono()
           return c.json(chartData, statusCode.Ok);
         } else {
           return c.json(
-            messageText.FailedToFetchRequestedData,
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
             statusCode.BadGateway,
           );
         }
       } catch (err) {
         console.error(err);
         return c.json(
-          messageText.InternalServerError,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
         );
       }
@@ -121,14 +123,14 @@ const app = new Hono()
           return c.json(holders, statusCode.Ok);
         } else {
           return c.json(
-            messageText.FailedToFetchRequestedData,
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
             statusCode.BadGateway,
           );
         }
       } catch (err) {
         console.error(err);
         return c.json(
-          messageText.InternalServerError,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
         );
       }
@@ -144,14 +146,14 @@ const app = new Hono()
         return c.json(holders, statusCode.Ok);
       } else {
         return c.json(
-          messageText.FailedToFetchRequestedData,
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
           statusCode.BadGateway,
         );
       }
     } catch (err) {
       console.error(err);
       return c.json(
-        messageText.InternalServerError,
+        setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
     }
@@ -166,7 +168,7 @@ const app = new Hono()
     } catch (err) {
       console.error(err);
       return c.json(
-        messageText.InternalServerError,
+        setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
     }
@@ -181,14 +183,14 @@ const app = new Hono()
         return c.json(pools, statusCode.Ok);
       } else {
         return c.json(
-          messageText.FailedToFetchRequestedData,
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
           statusCode.BadGateway,
         );
       }
     } catch (err) {
       console.error(err);
       return c.json(
-        messageText.InternalServerError,
+        setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
     }
@@ -205,7 +207,7 @@ const app = new Hono()
       } catch (err) {
         console.error(err);
         return c.json(
-          messageText.InternalServerError,
+          setErr("INTERNAL_SERVER_ERR"),
           statusCode.InternalServerError,
         );
       }

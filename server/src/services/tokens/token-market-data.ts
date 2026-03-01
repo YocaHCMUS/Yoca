@@ -12,7 +12,7 @@ import type {
   CG_CoinMarkets,
   CG_TokenDataByAddresses,
 } from "../_types/token_raw_responses.js";
-
+import { getCoinGeckoIdList } from "./token-list.js";
 
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
@@ -84,19 +84,19 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return null;
   }
+  const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
 
-  const res = await db
-    .select()
-    .from(coinGeckoTokenList)
-    .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
+  
+  // const res = await db
+  //   .select()
+  //   .from(coinGeckoTokenList)
+  //   .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
 
+  // Inverse lookup: create idToAddress from addressToCgId
   const idToAddress = Object.fromEntries(
-    res
-      .filter((entry) => entry.coinGeckoId)
-      .map((entry) => [entry.coinGeckoId, entry.tokenAddress]),
+    Object.entries(addressToCgId).map(([address, id]) => [id, address])
   );
-
-  const addressToMarketData =await fetchCgMarketData(idToAddress);;
+  const addressToMarketData = await fetchCgMarketData(idToAddress);
 
   if (!addressToMarketData) {
     return null;
