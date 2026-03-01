@@ -415,7 +415,8 @@ export const translation = defineTranslation({
       percentage: "Phần trăm",
       totalVolume: "Tổng khối lượng",
       noWalletsTitle: "Chưa chọn ví",
-      noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ khối lượng giao dịch.",
+      noWalletsMessage:
+        "Vui lòng chọn ít nhất một ví để xem phân bổ khối lượng giao dịch.",
     },
     tokenPriceChart: {
       price: "Giá {{tokenSymbol}}",
@@ -469,5 +470,20 @@ export const translation = defineTranslation({
     NETWORK_ERR: "Lỗi đường truyền. Vui lòng thử lại sau.",
     VALIDATION_ERR:
       "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
+    INVALID_TOKEN_PAYLOAD: "Dữ liệu token không hợp lệ.",
+  },
+  tooltips: {
+    marketCap:
+      "Giá hiện tại x Số lượng lưu hành. Đây là tổng giá trị thị trường của nguồn cung lưu hành của một loại tiền điện tử. Nó tương tự như cách đo lường của thị trường chứng khoán khi nhân giá mỗi cổ phiếu với số cổ phiếu có sẵn trên thị trường (không bao gồm cổ phiếu do người trong cuộc, chính phủ nắm giữ và khóa lại).",
+    fullyDilutedValuation:
+      "Vốn hóa thị trường của một loại tiền điện tử nếu tất cả các đồng tiền có thể được lưu hành đều có mặt trên thị trường. Nó được tính bằng cách nhân giá hiện tại với tổng cung tối đa của loại tiền điện tử đó.",
+    tradingVolume24h:
+      "Tổng khối lượng giao dịch của token trong 24 giờ qua trên tất cả các sàn giao dịch. Đây là một thước đo về mức độ hoạt động của token và có thể cho thấy tính thanh khoản và sự quan tâm của thị trường đối với token đó.",
+    circulatingSupply:
+      "Tổng số đồng tiền hoặc token hiện có và đang lưu hành trên thị trường. Nó được sử dụng để tính toán vốn hóa thị trường của một loại tiền điện tử.",
+    totalSupply:
+      "Tổng số đồng tiền hoặc token tồn tại cho một loại tiền điện tử, bao gồm cả những đồng chưa lưu hành. Nó được sử dụng để tính toán vốn hóa thị trường tối đa tiềm năng của một loại tiền điện tử.",
+    maxSupply:
+      "Số lượng tối đa đồng tiền hoặc token sẽ tồn tại cho một loại tiền điện tử. Nó được sử dụng để tính toán giá trị định giá đầy đủ của một loại tiền điện tử.",
   },
 });

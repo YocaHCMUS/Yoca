@@ -17,24 +17,30 @@ interface TblHdr {
 
 interface TblRw {
   id: string;
+  [key: string]: React.ReactNode;
 }
 
 interface TblProps {
-  loading: boolean;
+  loading?: boolean;
+  hideHeaders?: boolean;
   headers: TblHdr[];
   rows: TblRw[];
-  hideHeaders?: boolean;
 }
 
-export default function Tble(props: TblProps) {
-  return props.loading ? (
+export default function Tble({
+  loading = false,
+  hideHeaders = false,
+  headers,
+  rows,
+}: TblProps) {
+  return loading ? (
     <DataTableSkeleton
-      headers={props.headers}
+      headers={headers}
       showHeader={false}
       showToolbar={false}
     />
   ) : (
-    <DataTable rows={props.rows} headers={props.headers}>
+    <DataTable rows={rows} headers={headers}>
       {({
         rows,
         headers,
@@ -44,11 +50,14 @@ export default function Tble(props: TblProps) {
         getCellProps,
       }) => (
         <Table {...getTableProps()}>
-          {!props.hideHeaders && (
+          {!hideHeaders && (
             <TableHead>
               <TableRow>
                 {headers.map((header) => (
-                  <TableHeader {...getHeaderProps({ header })} style={(header as any).style}>
+                  <TableHeader
+                    {...getHeaderProps({ header })}
+                    style={(header as any).style}
+                  >
                     {header.header}
                   </TableHeader>
                 ))}

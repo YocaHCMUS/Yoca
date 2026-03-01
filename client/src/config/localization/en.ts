@@ -46,6 +46,7 @@ const ERROR = {
   GENERAL_UNKNOWN_ERR: "Unknown error. Please try again.",
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
+  INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -347,7 +348,8 @@ export const translation = {
       asset: "Asset",
       value: "Value",
       percentage: "Percentage",
-      noWalletsMessage: "Please select at least one wallet to view asset distribution.",
+      noWalletsMessage:
+        "Please select at least one wallet to view asset distribution.",
     },
     pnlChart: {
       title: "Profit & Loss",
@@ -431,7 +433,8 @@ export const translation = {
       percentage: "Percentage",
       totalVolume: "Total Volume",
       noWalletsTitle: "No Wallets Selected",
-      noWalletsMessage: "Please select at least one wallet to view trading volume distribution.",
+      noWalletsMessage:
+        "Please select at least one wallet to view trading volume distribution.",
     },
     tokenPriceChart: {
       price: "{{tokenSymbol}} Price",
@@ -472,6 +475,20 @@ export const translation = {
       custom: "Custom",
       days: "Days",
     },
+  },
+  tooltips: {
+    marketCap:
+      "Current Price x Circulating Supply. Refers to the total market value of a cryptocurrency's circulating supply. It is similar to the stock market's measurement of multiplying price per share by shares readily available in the market (not held & locked by insiders, governments).",
+    fullyDilutedValuation:
+      "The market capitalization of a cryptocurrency if all possible coins were in circulation. It is calculated by multiplying the current price by the maximum supply of the cryptocurrency.",
+    tradingVolume24h:
+      "Total trading volume of the token in the last 24 hours across all exchanges. It is a measure of how actively the token is being traded and can indicate its liquidity and market interest.",
+    circulatingSupply:
+      "The total number of coins or tokens that are currently available and circulating in the market. It is used to calculate the market capitalization of a cryptocurrency.",
+    totalSupply:
+      "The total number of coins or tokens that exist for a cryptocurrency, including those that are not yet circulating. It is used to calculate the maximum potential market capitalization of a cryptocurrency.",
+    maxSupply:
+      "The maximum number of coins or tokens that will ever exist for a cryptocurrency. It is used to calculate the fully diluted valuation of a cryptocurrency.",
   },
   ERROR,
 } as const;

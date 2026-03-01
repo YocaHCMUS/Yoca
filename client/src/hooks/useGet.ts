@@ -45,40 +45,48 @@ type HasRequiredKeys<T> = T extends object
 
 type SuccessJson<R> = R extends { json: () => Promise<infer D> } ? D : never;
 
+type ErrorResponse<R, S extends number> = R extends { status: infer U }
+  ? U extends S
+    ? never
+    : R
+  : never;
+
+type SuccessResponse<R, S extends number> = R extends { status: S } ? R : never;
+
 export function useGet<
   T extends { $get: any; $url: any },
   SuccessStatus extends number,
+  Response = GetResponse<T>,
+  SuccessResponseType = SuccessResponse<Response, SuccessStatus>,
+  Success = SuccessJson<SuccessResponseType>,
+  Transformed = Success,
 >(
   request: T,
   successStatus: SuccessStatus,
   ...params: HasRequiredKeys<GetInput<T>> extends true
-    ? [args: GetInput<T>, options?: ClientRequestOptions]
-    : [args?: GetInput<T>, options?: ClientRequestOptions]
+    ? [
+        args: GetInput<T>,
+        options?: ClientRequestOptions,
+        select?: (data: Success) => Transformed,
+      ]
+    : [
+        args?: GetInput<T>,
+        options?: ClientRequestOptions,
+        select?: (data: Success) => Transformed,
+      ]
 ) {
-  type Response = GetResponse<T>;
-
-  type SuccessResponse<R, S extends number> = R extends { status: S }
-    ? R
-    : never;
-
-  type ErrorResponse<R, S extends number> = R extends { status: infer U }
-    ? U extends S
-      ? never
-      : R
-    : never;
-
-  type Success = SuccessJson<SuccessResponse<Response, SuccessStatus>>;
   type Error = ErrorResponse<Response, SuccessStatus>;
 
-  const [args, options] = params;
+  const [args, options, select] = params;
 
-  return useSWR<Success, Error>(request.$url(args).pathname, async () => {
-    // This any is safe since the we alredy tried to match the params for the method
-    // in the arguments
+  return useSWR<Transformed, Error>(request.$url(args).pathname, async () => {
     const res = await (request.$get as any)(...params);
     if (res.status != successStatus) {
       throw res;
     }
-    return res.json();
+
+    const json = await res.json();
+
+    return select ? select(json as Success) : (json as Transformed);
   });
 }
