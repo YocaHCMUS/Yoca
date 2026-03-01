@@ -1,0 +1,104 @@
+@use '@carbon/react/scss/theme' as *;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+$font-family: 'Inter', system-ui, sans-serif;
+
+.container {
+    display: flex;
+    flex-direction: column;
+    background: $background;
+    border: 1px solid $border-subtle;
+    border-radius: 8px;
+    font-family: $font-family;
+}
+
+// ===== Toolbar =====
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid $border-subtle;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.modeToggle {
+    display: flex;
+    gap: 2px;
+    background: $layer-01;
+    border-radius: 6px;
+    padding: 3px;
+}
+
+.modeBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $text-secondary;
+    font-family: $font-family;
+    transition: background 0.15s, color 0.15s;
+
+    &.active {
+        background: $background;
+        color: $text-primary;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    &:hover:not(.active) {
+        color: $text-primary;
+    }
+}
+
+// ===== Range buttons =====
+.rangeButtons {
+    display: flex;
+    gap: 2px;
+}
+
+.rangeBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $text-helper;
+    font-family: $font-family;
+    transition: background 0.15s, color 0.15s;
+
+    &.active {
+        background: $layer-01;
+        color: $text-primary;
+        font-weight: 600;
+    }
+
+    &:hover:not(.active) {
+        color: $text-primary;
+        background: $layer-hover-01;
+    }
+}
+
+// ===== Chart area =====
+.chartWrapper {
+    height: 350px;
+    position: relative;
+    padding: 12px 0 4px;
+}
+
+.loading,
+.empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: $text-helper;
+}

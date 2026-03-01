@@ -122,3 +122,39 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
 
   return chartData;
 }
+
+// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart
+// For the overview page chart (multiple day ranges, proxied directly)
+export async function getTokenMarketChart(
+  tokenAddress: string,
+  days: number | "max" = 1,
+) {
+  if (!tokenAddress) return null;
+
+  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+
+  if (!cgId) return null;
+
+  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart`);
+  cgEndpoint.search = new URLSearchParams({
+    vs_currency: "usd",
+    days: days.toString(),
+  }).toString();
+
+  const req = new Request(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+  if (!resp.ok) return null;
+
+  const res: CG_TokenMarketChart = await resp.json();
+
+  return {
+    prices: res.prices as [number, number][],
+    marketCaps: res.market_caps as [number, number][],
+  };
+}
+

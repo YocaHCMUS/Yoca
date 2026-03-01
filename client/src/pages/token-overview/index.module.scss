@@ -1,0 +1,102 @@
+@use '@carbon/react/scss/theme' as *;
+
+// ===== Layout =====
+.tokenOverviewPage {
+    background: $background;
+}
+
+.tokenOverviewGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0;
+    height: calc(100vh - 64px); // Fixed height so columns can scroll independently
+    overflow: hidden;
+
+    @media (min-width: 1024px) {
+        grid-template-columns: 420px 1fr;
+        gap: 0;
+    }
+}
+
+// ===== Left Column =====
+.leftColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+    border-right: 1px solid $border-subtle;
+    height: 100%;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.sidebarGroup {
+    background: $background;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0;
+    gap: 0;
+    overflow: visible;
+}
+
+// ===== Right Column =====
+.rightColumn {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+// Sticky tabs header — sits outside scroll area
+.rightHeader {
+    flex-shrink: 0;
+    padding: 8px 24px 0;
+    background: $background;
+    border-bottom: 1px solid $border-subtle;
+    z-index: 10;
+}
+
+// Scrollable content below the tabs
+.rightContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $border-subtle;
+        border-radius: 3px;
+    }
+}
+
+.marketsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.marketsSectionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-primary;
+}
+
+// No longer needed — scroll inside rightContent, no sticky header overlap
+.scrollAnchor {
+    scroll-margin-top: 0;
+}

@@ -48,17 +48,14 @@ function useTokenPageData(address: string, poolAddress: string) {
   const isLoading =
     baseMeta.isLoading ||
     topPools.isLoading ||
-    holders.isLoading ||
-    holdersStats.isLoading ||
     marketData.isLoading ||
     trades.isLoading ||
     poolData.isLoading;
 
+  // Only block on critical data errors, not holders (which depends on Moralis API)
   const error =
     baseMeta.error ||
     topPools.error ||
-    holders.error ||
-    holdersStats.error ||
     marketData.error ||
     trades.error ||
     poolData.error;
@@ -73,7 +70,7 @@ function useTokenPageData(address: string, poolAddress: string) {
 
   // Safe unwrap after loading/error gate
   const [meta] = baseMeta.data!;
-  const [holdersInfo] = holdersStats.data!;
+  const [holdersInfo] = holdersStats.data ?? [null];
   const pool = poolData.data![0];
 
   return {
@@ -82,7 +79,7 @@ function useTokenPageData(address: string, poolAddress: string) {
     data: {
       meta,
       topPools: topPools.data!,
-      holders: holders.data!,
+      holders: holders.data ?? [],
       holdersInfo,
       market: marketData.data?.[address] ?? null,
       trades: trades.data!,

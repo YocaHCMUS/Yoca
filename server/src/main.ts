@@ -23,6 +23,7 @@ import chartTradingVolumePerTransaction from "./routes/charts/trading-volume-per
 import chartTransactions from "./routes/charts/transactions.route.js";
 import chartVolume from "./routes/charts/volume.route.js";
 import chartWinrate from "./routes/charts/winrate.route.js";
+import misc from "./routes/misc.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
@@ -41,6 +42,7 @@ const app = new Hono()
   .get("/api", (c) => c.json({ status: "ok" }))
   .route("/api/users", users)
   .route("/api/tokens", tokens)
+  .route("/api/misc", misc)
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
   .route("/api/charts/balance", chartBalance)

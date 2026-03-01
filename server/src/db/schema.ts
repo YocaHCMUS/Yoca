@@ -77,6 +77,10 @@ export const tokenMeta = pgTable("token_meta", {
   linkHomepage: varchar("homepage"),
   linkDiscord: varchar("link_discord"),
   twitterScreenName: varchar("twitter_screen_name"),
+  telegramChannel: varchar("telegram_channel"),
+  linkBlockchainSites: text("link_blockchain_sites"), // JSON array of explorer URLs
+  categories: text("categories"), // JSON array of category strings
+  platforms: text("platforms"), // JSON object {"ethereum":"0x...", "solana":"..."}
 
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -88,10 +92,17 @@ export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
   decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
+  //priceBtc: decimal("price_btc"),
+  //priceChangeBtc24h: decimal("price_change_btc_24h"),
+
+  marketCapRank: integer("market_cap_rank"),
+  high24h: decimal("high_24h"),
+  low24h: decimal("low_24h"),
 
   priceChange24h: decimal("price_change_24h"),
   priceChangePercentage1h: decimal("price_change_percentage_1h"),
   priceChangePercentage24h: decimal("price_change_percentage_24h"),
+  priceChangePercentage7d: decimal("price_change_percentage_7d"),
   priceChangePercentage14d: decimal("price_change_percentage_14d"),
   priceChangePercentage30d: decimal("price_change_percentage_30d"),
   priceChangePercentage200d: decimal("price_change_percentage_200d"),
@@ -101,7 +112,7 @@ export const tokenMarketData = pgTable("token_market_data", {
   marketCapChange24h: decimal("market_cap_change_24h"),
   marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
-  totalLiquidity: decimal("total_liquidity").notNull(),
+  //totalLiquidity: decimal("total_liquidity").notNull(),
 
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply"),
@@ -109,8 +120,10 @@ export const tokenMarketData = pgTable("token_market_data", {
   totalSupply: decimal("total_supply"),
 
   ath: decimal("ath"),
+  athChangePercentage: decimal("ath_change_percentage"),
   athDate: timestamp("ath_date"),
   atl: decimal("atl"),
+  atlChangePercentage: decimal("atl_change_percentage"),
   atlDate: timestamp("atl_date"),
 
   updatedAt: timestamp("updated_at")

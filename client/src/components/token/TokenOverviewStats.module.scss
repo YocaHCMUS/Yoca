@@ -1,0 +1,502 @@
+@use '@carbon/react/scss/theme' as *;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+$color-success: #16c784;
+$color-danger: #ea3943;
+$font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+$divider: rgba(0, 0, 0, 0.06);
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $font-family;
+    background: $background;
+    box-sizing: border-box;
+    padding: 0 16px;
+}
+
+// ===== Price Header Section =====
+.priceHeader {
+    padding: 16px 0;
+}
+
+.priceRow {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.priceMain {
+    font-size: 32px;
+    font-weight: 700;
+    color: $text-primary;
+    letter-spacing: -0.5px;
+}
+
+.priceChange {
+    font-size: 14px;
+    font-weight: 600;
+
+    &.positive {
+        color: $color-success;
+    }
+
+    &.negative {
+        color: $color-danger;
+    }
+}
+
+.priceBtc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 13px;
+    color: $text-helper;
+    font-weight: 400;
+}
+
+.priceBtcChange {
+    font-size: 12px;
+    font-weight: 600;
+
+    &.positive {
+        color: $color-success;
+    }
+
+    &.negative {
+        color: $color-danger;
+    }
+}
+
+// ===== 24h Range Bar =====
+.rangeSection {
+    padding: 12px 0;
+    border-bottom: 1px solid $divider;
+}
+
+.rangeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.rangeLabel {
+    font-size: 12px;
+    font-weight: 400;
+    color: $text-helper;
+}
+
+.rangeValue {
+    font-size: 12px;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+.rangeBar {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, $color-danger 0%, #ffd700 50%, $color-success 100%);
+    border-radius: 3px;
+    position: relative;
+    margin: 4px 0;
+}
+
+.rangeIndicator {
+    position: absolute;
+    top: -3px;
+    width: 12px;
+    height: 12px;
+    background: $text-primary;
+    border-radius: 50%;
+    border: 2px solid $background;
+    transform: translateX(-50%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+// ===== Stats Rows =====
+.statsSection {
+    display: flex;
+    flex-direction: column;
+}
+
+.statRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid $divider;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.statLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 15px;
+    font-weight: 400;
+    color: #000;
+}
+
+.statValue {
+    font-size: 15px;
+    font-weight: 500;
+    color: #000;
+    text-align: right;
+}
+
+.statValueRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.infinity {
+    font-size: 18px;
+    font-weight: 400;
+}
+
+
+// ===== Historical Price Section =====
+.historicalSection {
+    padding-top: 4px;
+}
+
+.sectionTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #000;
+    padding: 16px 0;
+}
+
+.historicalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid $divider;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.historicalLabel {
+    font-size: 16px;
+    font-weight: 400;
+    color: $text-helper;
+}
+
+.historicalValue {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.historicalPrice {
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+}
+
+.historicalMeta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.historicalChange {
+    font-size: 12px;
+    font-weight: 600;
+
+    &.positive {
+        color: $color-success;
+    }
+
+    &.negative {
+        color: $color-danger;
+    }
+}
+
+.historicalDate {
+    font-size: 13px;
+    color: $text-helper;
+}
+
+
+// ===== Converter Section =====
+.converterSection {
+    padding-top: 4px;
+}
+
+.converterRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid $divider;
+    gap: 8px;
+}
+
+.converterInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: #000;
+    font-family: $font-family;
+    min-width: 0;
+
+    // Remove number input arrows
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.converterUsdValue {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+}
+
+.converterSymbol {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-secondary;
+    white-space: nowrap;
+}
+
+.converterSelect {
+    background: transparent;
+    border: 1px solid $divider;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #000;
+    font-family: $font-family;
+    cursor: pointer;
+    outline: none;
+
+    &:hover {
+        border-color: $border-strong;
+    }
+
+    option {
+        background: $background;
+        color: #000;
+    }
+}
+
+
+
+// ===== Info Section =====
+.infoSection {
+    padding-top: 4px;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid $divider;
+    gap: 12px;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.infoLabel {
+    font-size: 15px;
+    font-weight: 400;
+    color: $text-helper;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.infoBadges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid $border-subtle;
+    background: $background;
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    white-space: nowrap;
+}
+
+.badgeLink {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid $border-subtle;
+    background: $background;
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+
+    &:hover {
+        border-color: $border-strong;
+        background: $layer-01;
+    }
+}
+
+.badgeClickable {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid $border-subtle;
+    background: $background;
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+
+    &:hover {
+        border-color: $border-strong;
+        background: $layer-01;
+    }
+}
+
+.badgeToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid $border-subtle;
+    background: $background;
+    font-size: 12px;
+    font-weight: 500;
+    color: $text-secondary;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    user-select: none;
+
+    &:hover {
+        border-color: $border-strong;
+        background: $layer-01;
+    }
+}
+
+.chevronDown {
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.chevronUp {
+    display: inline-block;
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.infoRowExpandable {
+    position: relative;
+    border-bottom: 1px solid $divider;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.infoRowMain {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    gap: 12px;
+}
+
+.dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    min-width: 200px;
+    background: $background;
+    border: 1px solid $border-subtle;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+    padding: 4px 0;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdownItem {
+    display: block;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+        background: $layer-01;
+    }
+}
+
+.rankBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: $layer-01;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-secondary;
+}

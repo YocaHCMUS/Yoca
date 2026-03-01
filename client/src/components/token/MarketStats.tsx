@@ -10,9 +10,9 @@ type PoolData = InferResponseType<
 
 type MarketData =
   | InferResponseType<
-      (typeof client.api.tokens.markets)[":addresses"]["$get"],
-      200
-    >[number]
+    (typeof client.api.tokens.markets)[":addresses"]["$get"],
+    200
+  >[number]
   | null;
 
 type TopHoldersData = InferResponseType<
@@ -22,9 +22,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
+    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+    200
+  >[number]
   | null;
 
 interface MarketStatsProps {
@@ -109,10 +109,10 @@ export const MarketStats = ({
             <div className={styles.pricesContainer}>
               <span className={styles.valueLarge}>
                 {pool.baseTokenPriceUsd != null &&
-                pool.quoteTokenPriceUsd != null
+                  pool.quoteTokenPriceUsd != null
                   ? (pool.baseTokenPriceUsd / pool.quoteTokenPriceUsd).toFixed(
-                      6,
-                    )
+                    6,
+                  )
                   : "-"}
               </span>
             </div>
@@ -251,20 +251,20 @@ export const MarketStats = ({
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
                   Number(pool.buyVolumeUsd24h) -
-                    Number(pool.sellVolumeUsd24h) >=
-                    0,
+                  Number(pool.sellVolumeUsd24h) >=
+                  0,
                 [styles.negative]:
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
                   Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) <
-                    0,
+                  0,
               })}
             >
               {pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
                 ? formatDollarCompact(
-                    Number(pool.buyVolumeUsd24h) -
-                      Number(pool.sellVolumeUsd24h),
-                  )
+                  Number(pool.buyVolumeUsd24h) -
+                  Number(pool.sellVolumeUsd24h),
+                )
                 : "-"}
             </span>
           </div>
@@ -317,8 +317,8 @@ export const MarketStats = ({
             >
               {pool.buys24h != null && pool.sells24h != null
                 ? formatNumberCompact(
-                    Number(pool.buys24h) - Number(pool.sells24h),
-                  )
+                  Number(pool.buys24h) - Number(pool.sells24h),
+                )
                 : "-"}
             </span>
           </div>
@@ -362,9 +362,9 @@ export const MarketStats = ({
         <div className={styles.gridCell}>
           <span className={styles.label}>CIRC SUPPLY</span>
           <span className={styles.valueMedium}>
-            {formatNumberCompact(
-              data?.circulatingSupply ? Number(data.circulatingSupply) : null,
-            )}
+            {data?.circulatingSupply
+              ? Number(data.circulatingSupply).toLocaleString()
+              : "-"}
           </span>
         </div>
         <div className={styles.gridCell}>
