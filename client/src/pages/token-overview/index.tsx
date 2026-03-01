@@ -36,7 +36,6 @@ function useTokenOverviewData(address: string) {
 
   const isLoading = baseMeta.isLoading || marketData.isLoading;
 
-  // Only block on critical data errors, not holders (which depends on Moralis API)
   const error = baseMeta.error || marketData.error;
 
   if (isLoading || error) {

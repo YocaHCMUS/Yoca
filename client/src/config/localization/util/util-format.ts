@@ -12,6 +12,7 @@ type Style = "decimal" | "currency" | "percent" | "unit";
 export function defineNumberFormat(
   langCode: string,
   styleFormatMap: Record<Style, Intl.NumberFormatOptions>,
+  getExchangeRate?: () => number,
 ) {
   const formatterMap = new Map<string, Intl.NumberFormat>();
 
@@ -38,9 +39,14 @@ export function defineNumberFormat(
 
     if (!value) return nullDisplay;
 
+    const exchangedValue =
+      style === "currency" && getExchangeRate
+        ? value * getExchangeRate()
+        : value;
+
     const formatted = formatterMap
       .get(key)!
-      .format(abs ? Math.abs(value) : value);
+      .format(abs ? Math.abs(exchangedValue) : exchangedValue);
 
     // Append unit suffix for "unit" style
     if (style === "unit" && unit) {

@@ -1,25 +1,17 @@
 import { TOKEN_MARKET_DATA_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import {
-  coinGeckoTokenList,
-  tokenMarketData,
-  type TokenMarketDataInsert,
-} from "@sv/db/schema.js";
+import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type {
-  CG_CoinMarkets,
-  CG_TokenDataByAddresses,
-} from "../_types/token_raw_responses.js";
+import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdList } from "./token-list.js";
-
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   const cgIds = Object.keys(cgIdToAddress);
   if (cgIds.length == 0) {
-    return null;
+    return {};
   }
 
   const cgEndpoint = cg.getEndpoint(`/coins/markets`);
@@ -37,7 +29,7 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
 
   const resp = await fetch(req);
   if (!resp.ok) {
-    return null;
+    return {};
   }
 
   const res: CG_CoinMarkets = await resp.json();
@@ -86,21 +78,14 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   }
   const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
 
-  
-  // const res = await db
-  //   .select()
-  //   .from(coinGeckoTokenList)
-  //   .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
-
-  // Inverse lookup: create idToAddress from addressToCgId
   const idToAddress = Object.fromEntries(
-    Object.entries(addressToCgId).map(([address, id]) => [id, address])
+    Object.entries(addressToCgId).map(([address, id]) => [id, address]),
   );
   const addressToMarketData = await fetchCgMarketData(idToAddress);
 
   if (!addressToMarketData) {
     return null;
-  } 
+  }
 
   const marketDataList = Object.values(addressToMarketData);
 
@@ -112,12 +97,11 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       set: excludedAuto(tokenMarketData, tokenMarketData.address),
     })
     .returning();
-
-  //return addressToMarketData;
 }
+
 export async function getTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
-    return null;
+    return {};
   }
 
   const thresholdDate = new Date(Date.now() - TOKEN_MARKET_DATA_TTL_MS);

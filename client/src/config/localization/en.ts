@@ -476,6 +476,16 @@ export const translation = {
       days: "Days",
     },
   },
+  token: {
+    overviewSectionTitle: "Overview",
+    historicalPriceSectionTitle: "Historical Price",
+    overviewChart: {
+      price: "Price",
+      marketCap: "Market Cap",
+      noData: "No chart data available",
+      noCoingeckoId: "token may not have a CoinGecko ID",
+    },
+  },
   tooltips: {
     marketCap:
       "Current Price x Circulating Supply. Refers to the total market value of a cryptocurrency's circulating supply. It is similar to the stock market's measurement of multiplying price per share by shares readily available in the market (not held & locked by insiders, governments).",

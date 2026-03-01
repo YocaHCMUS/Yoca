@@ -3,27 +3,35 @@ import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
 
 export const langCode = "vi-VN";
 
+function mockGetUsdToVndRate(): number {
+  return 25_000;
+}
+
 export const format = {
-  num: defineNumberFormat(langCode, {
-    currency: {
-      currency: "VND",
-      currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+  num: defineNumberFormat(
+    langCode,
+    {
+      currency: {
+        currency: "VND",
+        currencyDisplay: "narrowSymbol",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      },
+      decimal: {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      },
+      percent: {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      },
+      unit: {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      },
     },
-    decimal: {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    },
-    percent: {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    },
-    unit: {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    },
-  }),
+    mockGetUsdToVndRate,
+  ),
   datetime: defineDateTimeFormat(langCode, {
     datePattern: "DD/MM/YYYY",
     timePattern: "HH:mm",
@@ -471,6 +479,16 @@ export const translation = defineTranslation({
     VALIDATION_ERR:
       "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
     INVALID_TOKEN_PAYLOAD: "Dữ liệu token không hợp lệ.",
+  },
+  token: {
+    overviewSectionTitle: "Tổng quan",
+    historicalPriceSectionTitle: "Lịch sử giá",
+    overviewChart: {
+      price: "Giá",
+      marketCap: "Vốn hóa thị trường",
+      noData: "Không có dữ liệu biểu đồ",
+      noCoingeckoId: "token có thể không có ID CoinGecko",
+    },
   },
   tooltips: {
     marketCap:

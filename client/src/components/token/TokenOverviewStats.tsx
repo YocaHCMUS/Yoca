@@ -1,5 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Section, Stack, Tooltip } from "@carbon/react";
+import { Stack, Tooltip } from "@carbon/react";
 import StrctLst from "../StrctLst";
 import styles from "./TokenOverviewStats.module.scss";
 
@@ -95,7 +95,7 @@ export const TokenOverviewStats = ({ meta, data }: TokenOverviewStatsProps) => {
       <Stack gap={8}>
         {/* Market Stats */}
         <StrctLst
-          title="Overview"
+          title={tr("token.overviewSectionTitle")}
           loading={false}
           rows={[
             {
@@ -165,69 +165,67 @@ export const TokenOverviewStats = ({ meta, data }: TokenOverviewStatsProps) => {
         />
 
         {/* Historical Price */}
-        <Section level={4}>
-          <StrctLst
-            title=" Historical Price"
-            rows={[
-              {
-                id: "range24h",
-                label: <span>24h Range</span>,
-                value: (
-                  <span>
-                    {fmt.num.currency(data.low24h)} -{" "}
-                    {fmt.num.currency(data.high24h)}
-                  </span>
-                ),
-              },
-              {
-                id: "ath",
-                label: <span>All-Time High</span>,
-                value: (
-                  <Stack gap={1}>
-                    <Stack
-                      orientation="horizontal"
-                      style={{ justifyContent: "end" }}
-                      gap={4}
-                    >
-                      <TrendNum value={data.ath} formatter={fmt.num.currency} />
-                      <TrendNum
-                        value={data.athChangePercentage}
-                        formatter={fmt.num.percent}
-                      />
-                    </Stack>
-                    <small style={{ textAlign: "right" }}>
-                      {fmt.datetime.date(data.athDate)} (
-                      {fmt.datetime.relative(data.athDate)})
-                    </small>
+        <StrctLst
+          title={tr("token.historicalPriceSectionTitle")}
+          rows={[
+            {
+              id: "range24h",
+              label: <span>24h Range</span>,
+              value: (
+                <span>
+                  {fmt.num.currency(data.low24h)} -{" "}
+                  {fmt.num.currency(data.high24h)}
+                </span>
+              ),
+            },
+            {
+              id: "ath",
+              label: <span>All-Time High</span>,
+              value: (
+                <Stack gap={1}>
+                  <Stack
+                    orientation="horizontal"
+                    style={{ justifyContent: "end" }}
+                    gap={4}
+                  >
+                    <TrendNum value={data.ath} formatter={fmt.num.currency} />
+                    <TrendNum
+                      value={data.athChangePercentage}
+                      formatter={fmt.num.percent}
+                    />
                   </Stack>
-                ),
-              },
-              {
-                id: "atl",
-                label: <span>All-Time Low</span>,
-                value: (
-                  <Stack gap={1}>
-                    <Stack
-                      orientation="horizontal"
-                      style={{ justifyContent: "end" }}
-                      gap={4}
-                    >
-                      <TrendNum value={data.atl} formatter={fmt.num.currency} />
-                      <TrendNum
-                        value={data.atlChangePercentage}
-                        formatter={fmt.num.percent}
-                      />
-                    </Stack>
-                    <small style={{ textAlign: "right" }}>
-                      {fmt.datetime.date(data.atlDate)} (
-                      {fmt.datetime.relative(data.atlDate)})
-                    </small>
+                  <small style={{ textAlign: "right" }}>
+                    {fmt.datetime.date(data.athDate)} (
+                    {fmt.datetime.relative(data.athDate)})
+                  </small>
+                </Stack>
+              ),
+            },
+            {
+              id: "atl",
+              label: <span>All-Time Low</span>,
+              value: (
+                <Stack gap={1}>
+                  <Stack
+                    orientation="horizontal"
+                    style={{ justifyContent: "end" }}
+                    gap={4}
+                  >
+                    <TrendNum value={data.atl} formatter={fmt.num.currency} />
+                    <TrendNum
+                      value={data.atlChangePercentage}
+                      formatter={fmt.num.percent}
+                    />
                   </Stack>
-                ),
-              },
-            ]}
-          />
-        </Section>
+                  <small style={{ textAlign: "right" }}>
+                    {fmt.datetime.date(data.atlDate)} (
+                    {fmt.datetime.relative(data.atlDate)})
+                  </small>
+                </Stack>
+              ),
+            },
+          ]}
+        />
       </Stack>
     </div>
   );
