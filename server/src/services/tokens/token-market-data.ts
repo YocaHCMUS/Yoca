@@ -13,75 +13,7 @@ import type {
   CG_TokenDataByAddresses,
 } from "../_types/token_raw_responses.js";
 
-type OnChainCgResult = Required<
-  Pick<
-    TokenMarketDataInsert,
-    | "address"
-    | "decimals"
-    | "priceUsd"
-    | "marketCap"
-    | "fullyDilutedValuation"
-    | "volume24h"
-    | "totalSupply"
-    | "totalLiquidity"
-    | "updatedAt"
-  >
->;
 
-type CgResult = Required<
-  Pick<
-    TokenMarketDataInsert,
-    Exclude<keyof TokenMarketDataInsert, keyof OnChainCgResult>
-  >
-> &
-  // CG total_volume overrides onchain volume24h when available
-  Partial<Pick<TokenMarketDataInsert, "volume24h">>;
-
-// https://docs.coingecko.com/reference/tokens-data-contract-addresses
-async function fetchOnchainMarketData(tokenAddresses: string[]) {
-  if (tokenAddresses.length == 0) {
-    return null;
-  }
-
-  const cgEndpoint = cg.getOnchainEndpoint(
-    `/networks/solana/tokens/multi/${tokenAddresses.join(",")}`,
-  );
-
-  cgEndpoint.search = new URLSearchParams({
-    include: "top_pools",
-    include_composition: "true",
-  }).toString();
-
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
-  });
-
-  const resp = await fetch(req);
-
-  if (!resp.ok) {
-    return null;
-  }
-
-  const res: CG_TokenDataByAddresses = await resp.json();
-
-  return Object.fromEntries(
-    res.data.map((raw): [string, OnChainCgResult] => [
-      raw.attributes.address,
-      {
-        address: raw.attributes.address,
-        decimals: raw.attributes.decimals,
-        priceUsd: Number(raw.attributes.price_usd),
-        marketCap: Number(raw.attributes.market_cap_usd),
-        fullyDilutedValuation: Number(raw.attributes.fdv_usd),
-        volume24h: Number(raw.attributes.volume_usd.h24),
-        totalSupply: Number(raw.attributes.total_supply) / Math.pow(10, raw.attributes.decimals),
-        totalLiquidity: Number(raw.attributes.total_reserve_in_usd),
-        updatedAt: new Date(),
-      },
-    ]),
-  );
-}
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
@@ -111,11 +43,16 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   const res: CG_CoinMarkets = await resp.json();
 
   return Object.fromEntries(
-    res.map((raw): [string, CgResult] => [
+    res.map((raw): [string, TokenMarketDataInsert] => [
       cgIdToAddress[raw.id],
       {
-        priceBtc: null,
-        priceChangeBtc24h: null,
+        address: cgIdToAddress[raw.id],
+        decimals: 9,
+        fullyDilutedValuation: raw.fully_diluted_valuation,
+        marketCap: raw.market_cap,
+        priceUsd: raw.current_price,
+        totalSupply: raw.total_supply,
+        updatedAt: new Date(),
         marketCapRank: raw.market_cap_rank,
         high24h: raw.high_24h,
         low24h: raw.low_24h,
@@ -148,13 +85,6 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     return null;
   }
 
-  // Onchain data takes priority as it's more accurate to operating DEXs
-  const onchainData = await fetchOnchainMarketData(tokenAddresses);
-
-  if (!onchainData) {
-    return null;
-  }
-
   const res = await db
     .select()
     .from(coinGeckoTokenList)
@@ -166,27 +96,15 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
       .map((entry) => [entry.coinGeckoId, entry.tokenAddress]),
   );
 
-  const cgData = await fetchCgMarketData(idToAddress);
+  const addressToMarketData =await fetchCgMarketData(idToAddress);;
 
-  if (!cgData) {
+  if (!addressToMarketData) {
     return null;
-  }
-
-  const addressToMarketData = Object.fromEntries(
-    tokenAddresses
-      .filter((address) => onchainData[address] && cgData[address])
-      .map((address) => [
-        address,
-        {
-          ...onchainData[address],
-          ...cgData[address],
-        },
-      ]),
-  );
+  } 
 
   const marketDataList = Object.values(addressToMarketData);
 
-  await db
+  return await db
     .insert(tokenMarketData)
     .values(marketDataList)
     .onConflictDoUpdate({
@@ -195,7 +113,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     })
     .returning();
 
-  return addressToMarketData;
+  //return addressToMarketData;
 }
 export async function getTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
