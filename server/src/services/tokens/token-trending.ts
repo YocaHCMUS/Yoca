@@ -53,36 +53,52 @@
 //     rank: index + 1,
 //   }));
 // }
+import * as bds from "@sv/util/util-birdeye.js";
 
-// /**
-//  * Get trending tokens with caching
-//  */
-// export async function getTrendingTokens() {
-//   const thresholdDate = new Date(Date.now() - TRENDING_TOKENS_TTL_MS);
+export type BDS_TrendingList = {
+  success: boolean;
+  data: {
+    updateUnixTime: number;
+    updateTime: string;
+    tokens: Array<{
+      address: string;
+      decimals: number;
+      liquidity: number;
+      logoURI: string;
+      name: string;
+      symbol: string;
+      volume24hUSD: number;
+      volume24hChangePercent: number;
+      rank: number;
+      price: number;
+      price24hChangePercent: number;
+      fdv: number;
+      marketcap: number;
+    }>;
+    total: number;
+  };
+};
 
-//   const cached = await db
-//     .select()
-//     .from(trendingTokens)
-//     .where(gte(trendingTokens.updatedAt, thresholdDate))
-//     .orderBy(trendingTokens.rank)
-//     .limit(10);
+// https://docs.birdeye.so/reference/get-defi-token_trending
+export async function getTrendingTokens() {
+  const bdsEndpoint = bds.getEndpoint("/defi/token_trending");
 
-//   if (cached.length > 0) {
-//     return cached;
-//   }
+  bdsEndpoint.search = new URLSearchParams({
+    sort_by: "rank",
+    sort_type: "asc",
+  }).toString();
 
-//   // Fetch fresh data
-//   const tokens = await fetchTrendingTokens();
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
 
-//   if (tokens.length === 0) {
-//     return [];
-//   }
+  const resp = await fetch(req);
 
-//   // Clear old trending tokens (they change frequently)
-//   await db.delete(trendingTokens);
+  if (!resp.ok) {
+    return null;
+  }
 
-//   // Store in database
-//   const inserted = await db.insert(trendingTokens).values(tokens).returning();
-
-//   return inserted;
-// }
+  const res: BDS_TrendingList = await resp.json();
+  return res;
+}

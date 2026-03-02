@@ -5,7 +5,7 @@ import {
   validate,
 } from "@sv/middlewares/validation.js";
 import * as tokenService from "@sv/services/tokens/index.js";
-import { messageText, statusCode } from "@sv/util/responses.js";
+import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
 const app = new Hono()
@@ -18,10 +18,7 @@ const app = new Hono()
       if (meta) {
         return c.json(meta, statusCode.Ok);
       } else {
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.BadGateway,
-        );
+        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.BadGateway);
       }
     } catch (err) {
       console.error(err);
@@ -43,7 +40,6 @@ const app = new Hono()
           return c.json(marketData, statusCode.Ok);
         } else {
           return c.json(
-            
             setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
             statusCode.BadGateway,
           );
@@ -212,18 +208,26 @@ const app = new Hono()
         );
       }
     },
-  );
-// .get("/trending", async (c) => {
-//   try {
-//     const trending = await tokenService.getTrendingTokens();
-//     return c.json(trending, statusCode.Ok);
-//   } catch (err) {
-//     console.error(err);
-//     return c.json(
-//       messageText.InternalServerError,
-//       statusCode.InternalServerError,
-//     );
-//   }
-// });
+  )
+  .get("/trending", async (c) => {
+    try {
+      const trending = await tokenService.getTrendingTokens();
+
+      if (trending == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(trending, statusCode.Ok);
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  });
 
 export default app;
