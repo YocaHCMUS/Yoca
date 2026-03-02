@@ -350,6 +350,7 @@ export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
   address: varchar("address", { length: 44 }).primaryKey(),
+  rank: integer("rank").notNull(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
