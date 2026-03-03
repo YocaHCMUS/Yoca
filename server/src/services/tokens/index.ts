@@ -9,5 +9,5 @@ export {
   getTokenTopPools,
 } from "./token-pools.js";
 export { getPoolTrades24h } from "./token-trades.js";
-
 export { getTrendingTokens } from "./token-trending.js";
+export { getTopTokensByMarketCap } from "./token-top-marketcap.js";

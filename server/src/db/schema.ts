@@ -356,6 +356,15 @@ export const trendingTokens = pgTable("trending_tokens", {
     .$onUpdate(() => new Date()),
 });
 
+// Top tokens by market cap
+export const topTokensByMarketCap = pgTable("top_tokens_by_marketcap", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  rank: integer("rank").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const poolTrades24h = pgTable("pool_trades_24h", {
   id: varchar("id", { length: 128 }).primaryKey(),
 

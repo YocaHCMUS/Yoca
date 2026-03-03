@@ -191,6 +191,7 @@ const app = new Hono()
       );
     }
   })
+
   .get(
     "/pools/trades/:address",
     validate("param", addressSchema),
@@ -209,6 +210,7 @@ const app = new Hono()
       }
     },
   )
+
   .get("/trending", async (c) => {
     try {
       const trending = await tokenService.getTrendingTokens();
@@ -221,6 +223,27 @@ const app = new Hono()
       }
 
       return c.json(trending, statusCode.Ok);
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+
+  .get("/top-marketcap", async (c) => {
+    try {
+      const topTokens = await tokenService.getTopTokensByMarketCap();
+
+      if (topTokens == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(topTokens, statusCode.Ok);
     } catch (err) {
       console.error(err);
       return c.json(

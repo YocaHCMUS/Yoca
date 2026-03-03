@@ -14,3 +14,4 @@ export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const AUTH_COOKIE_NAME = "auth_token";
 export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const UPDATE_TRENDING_TOKENS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const UPDATE_TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
