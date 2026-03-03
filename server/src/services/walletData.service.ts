@@ -131,6 +131,241 @@ export interface WalletPortfolioItem {
   change24hPercent?: number;
 }
 
+async function fetchHeliusSolanaPortfolio(
+  address: string,
+): Promise<WalletPortfolioItem[]> {
+  const apiKey = process.env.HELIUS_API_KEY;
+  if (!apiKey) {
+    console.error("HELIUS_API_KEY is not set; falling back to other providers.");
+    return [];
+  }
+
+  const portfolio: WalletPortfolioItem[] = [];
+
+  const baseUrl =
+    process.env.HELIUS_WALLET_API_BASE_URL && process.env.HELIUS_WALLET_API_BASE_URL.length > 0
+      ? process.env.HELIUS_WALLET_API_BASE_URL
+      : "https://api.helius.xyz";
+
+  let page = 1;
+  const limit = 100;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = new URL(`${baseUrl}/v1/wallet/${address}/balances`);
+    url.searchParams.set("api-key", apiKey);
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("showZeroBalance", "false");
+    url.searchParams.set("showNative", "true");
+    // NFTs are not our current focus; exclude them to reduce payload size.
+    url.searchParams.set("showNfts", "false");
+
+    let json: any;
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+      });
+
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet balances error",
+          resp.status,
+          resp.statusText,
+        );
+        break;
+      }
+
+      json = await resp.json();
+    } catch (err) {
+      console.error("Helius wallet balances request failed", err);
+      break;
+    }
+
+    const balances: any[] = Array.isArray(json?.balances) ? json.balances : [];
+
+    for (const token of balances) {
+      const amount = Number(token.balance ?? 0);
+      if (!(amount > 0) || Number.isNaN(amount)) continue;
+
+      const pricePerToken =
+        token.pricePerToken != null && !Number.isNaN(Number(token.pricePerToken))
+          ? Number(token.pricePerToken)
+          : undefined;
+      const usdValue =
+        token.usdValue != null && !Number.isNaN(Number(token.usdValue))
+          ? Number(token.usdValue)
+          : pricePerToken != null
+          ? amount * pricePerToken
+          : 0;
+
+      portfolio.push({
+        tokenAddress: String(token.mint ?? ""),
+        symbol: String(token.symbol ?? ""),
+        name: token.name ? String(token.name) : undefined,
+        amount,
+        priceUsd: pricePerToken,
+        valueUsd: usdValue,
+      });
+    }
+
+    const pagination = json?.pagination;
+    hasMore = Boolean(pagination?.hasMore);
+    page = (pagination?.page ?? page) + 1;
+  }
+
+  return portfolio;
+}
+
+async function fetchHeliusSolanaTransactions(
+  address: string,
+  maxCount: number,
+): Promise<WalletTransaction[]> {
+  const apiKey = process.env.HELIUS_API_KEY;
+  if (!apiKey) {
+    console.error("HELIUS_API_KEY is not set; cannot fetch Solana transactions from Helius.");
+    return [];
+  }
+
+  const baseUrl =
+    process.env.HELIUS_WALLET_API_BASE_URL && process.env.HELIUS_WALLET_API_BASE_URL.length > 0
+      ? process.env.HELIUS_WALLET_API_BASE_URL
+      : "https://api.helius.xyz";
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const ONE_MONTH_SEC = 30 * 24 * 60 * 60;
+  const fromSec = nowSec - ONE_MONTH_SEC;
+
+  const transactions: WalletTransaction[] = [];
+  let cursor: string | null = null;
+
+  const walletLower = address.toLowerCase();
+
+  // Helper to safely extract a public key string from accountKeys entries
+  function toPubkey(entry: any): string {
+    if (!entry) return "";
+    if (typeof entry === "string") return entry;
+    if (typeof entry.pubkey === "string") return entry.pubkey;
+    return "";
+  }
+
+  // Fetch pages until we hit maxCount, run out of data, or reach beyond 1 month.
+  // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
+  while (transactions.length < maxCount) {
+    const url = new URL(`${baseUrl}/v1/wallet/${address}/transfers`);
+    url.searchParams.set("api-key", apiKey);
+    url.searchParams.set("limit", String(Math.min(100, maxCount - transactions.length)));
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    }
+
+    let json: any = null;
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+      });
+
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet transfers error",
+          resp.status,
+          resp.statusText,
+        );
+        break;
+      }
+
+      json = await resp.json();
+    } catch (err) {
+      console.error("Helius wallet transfers request failed", err);
+      break;
+    }
+
+    const data: any[] = Array.isArray(json?.data) ? json.data : [];
+
+    if (data.length === 0) {
+      break;
+    }
+
+    for (const entry of data) {
+      if (transactions.length >= maxCount) break;
+
+      const tsSec =
+        typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          ? entry.timestamp
+          : null;
+      if (tsSec == null || tsSec < fromSec) {
+        // Older than our 1-month window; stop collecting further pages
+        return transactions;
+      }
+
+      const timestamp = tsSec
+        ? new Date(tsSec * 1000).toISOString()
+        : new Date().toISOString();
+
+      let direction: WalletTransaction["direction"] = "unknown";
+      if (entry.direction === "in" || entry.direction === "out") {
+        direction = entry.direction;
+      }
+      const counterparty = typeof entry.counterparty === "string" ? entry.counterparty : "";
+
+      let from = address;
+      let to = address;
+      if (direction === "in") {
+        from = counterparty || address;
+        to = address;
+      } else if (direction === "out") {
+        from = address;
+        to = counterparty || address;
+      }
+
+      const mint = typeof entry.mint === "string" ? entry.mint : "";
+      const amount =
+        typeof entry.amount === "number" && Number.isFinite(entry.amount)
+          ? entry.amount
+          : undefined;
+      const symbol =
+        entry.symbol != null && entry.symbol !== ""
+          ? String(entry.symbol)
+          : undefined;
+
+      const hash = String(entry.signature ?? "");
+      if (!hash) continue;
+
+      const txObj: WalletTransaction = {
+        hash,
+        timestamp,
+        from,
+        to,
+        status: true,
+        fee: undefined,
+        mainAction: undefined,
+        direction,
+        tokens: mint ? [mint] : undefined,
+        primaryTokenSymbol: symbol != null ? symbol : mint || undefined,
+        primaryTokenAmount: amount,
+        primaryTokenAddress: mint || undefined,
+        priceUsd: undefined,
+        totalUsd: undefined,
+      };
+
+      transactions.push(txObj);
+    }
+
+    const hasMore = Boolean(json?.pagination?.hasMore);
+    cursor =
+      typeof json?.pagination?.nextCursor === "string" &&
+      json.pagination.nextCursor.length > 0
+        ? json.pagination.nextCursor
+        : null;
+
+    if (!hasMore || !cursor) {
+      break;
+    }
+  }
+
+  return transactions;
+}
+
 export interface WalletTransaction {
   hash: string;
   timestamp: string;
@@ -240,37 +475,18 @@ export async function getWalletOverview(
 
   // 2) Fallback to external APIs when DB has no data
   if (effectiveChain === "solana") {
-    // Birdeye - Wallet Current Net Worth
-    const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
-    endpoint.search = new URLSearchParams({
-      wallet: address,
-      sort_type: "desc",
-    }).toString();
-
-    let items: any[] = [];
-    let totalAssetValueUsd = 0;
-
+    // Prefer Helius DAS getAssetsByOwner for Solana overview (total asset value + holdings).
+    let heliusPortfolio: WalletPortfolioItem[] = [];
     try {
-      const resp = await birdeye.birdeyeFetch(endpoint, {
-        method: "GET",
-        headers: birdeye.getRequiredHeaders("solana"),
-      });
-
-      if (resp.ok) {
-        const payload = await resp.json();
-        const data = payload?.data;
-        items = Array.isArray(data?.items) ? data.items : [];
-        totalAssetValueUsd = Number(data?.total_value ?? 0);
-      } else {
-        console.error(
-          "Birdeye current-net-worth error",
-          resp.status,
-          resp.statusText,
-        );
-      }
+      heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
     } catch (err) {
-      console.error("Birdeye current-net-worth request failed", err);
+      console.error("Failed to fetch Solana overview from Helius", err);
     }
+
+    const totalAssetValueUsd = heliusPortfolio.reduce(
+      (sum, item) => sum + Number(item.valueUsd ?? 0),
+      0,
+    );
 
     // Fetch recent transactions to enrich overview metrics (24h window)
     let transactionCount24h: number | null = null;
@@ -306,7 +522,7 @@ export async function getWalletOverview(
       address,
       chain: effectiveChain,
       totalAssetValueUsd,
-      tokensHoldingCount: items.length,
+      tokensHoldingCount: heliusPortfolio.length,
       tradingVolumeUsd24h: null,
       pnlUsdTotal: null,
       transactionCount24h,
@@ -314,6 +530,55 @@ export async function getWalletOverview(
     };
     await saveOverviewCache(overview);
     return overview;
+
+    /*
+    // Previous Birdeye-based implementation for Solana overview (kept for reference).
+    // Uncomment if you want to switch back to Birdeye current-net-worth in the future.
+    //
+    // const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
+    // endpoint.search = new URLSearchParams({
+    //   wallet: address,
+    //   sort_type: "desc",
+    // }).toString();
+    //
+    // let items: any[] = [];
+    // let totalAssetValueUsd = 0;
+    //
+    // try {
+    //   const resp = await birdeye.birdeyeFetch(endpoint, {
+    //     method: "GET",
+    //     headers: birdeye.getRequiredHeaders("solana"),
+    //   });
+    //
+    //   if (resp.ok) {
+    //     const payload = await resp.json();
+    //     const data = payload?.data;
+    //     items = Array.isArray(data?.items) ? data.items : [];
+    //     totalAssetValueUsd = Number(data?.total_value ?? 0);
+    //   } else {
+    //     console.error(
+    //       "Birdeye current-net-worth error",
+    //       resp.status,
+    //       resp.statusText,
+    //     );
+    //   }
+    // } catch (err) {
+    //   console.error("Birdeye current-net-worth request failed", err);
+    // }
+    //
+    // const overview: WalletOverview = {
+    //   address,
+    //   chain: effectiveChain,
+    //   totalAssetValueUsd,
+    //   tokensHoldingCount: items.length,
+    //   tradingVolumeUsd24h: null,
+    //   pnlUsdTotal: null,
+    //   transactionCount24h,
+    //   tokensTradedCount,
+    // };
+    // await saveOverviewCache(overview);
+    // return overview;
+    */
   }
 
   // EVM chains – use Moralis wallets/:address/tokens (includes USD prices and 24h change)
@@ -456,54 +721,80 @@ export async function getWalletPortfolio(
 
   // 2) Fallback to external APIs
   if (effectiveChain === "solana") {
-    const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
-    endpoint.search = new URLSearchParams({
-      wallet: address,
-      sort_type: "desc",
-    }).toString();
-
-    let items: any[] = [];
+    // Prefer Helius DAS getAssetsByOwner for Solana portfolio data.
+    // Birdeye implementation is kept below in comments for future reference.
+    let heliusPortfolio: WalletPortfolioItem[] = [];
     try {
-      const resp = await birdeye.birdeyeFetch(endpoint, {
-        method: "GET",
-        headers: birdeye.getRequiredHeaders("solana"),
-      });
-
-      if (resp.ok) {
-        const payload = await resp.json();
-        items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
-      } else {
-        console.error(
-          "Birdeye current-net-worth error",
-          resp.status,
-          resp.statusText,
-        );
-      }
+      heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
     } catch (err) {
-      console.error("Birdeye current-net-worth request failed", err);
+      console.error("Failed to fetch Solana portfolio from Helius", err);
     }
 
-    if (items.length > 0) {
-      const portfolio: WalletPortfolioItem[] = items.map((item: any) => ({
-        tokenAddress: String(item.address),
-        symbol: String(item.symbol ?? ""),
-        name: item.name ? String(item.name) : undefined,
-        amount: Number(item.amount ?? 0),
-        priceUsd: item.price !== undefined ? Number(item.price) : undefined,
-        valueUsd: Number(item.value ?? 0),
-      }));
+    if (heliusPortfolio.length > 0) {
       await db
         .insert(walletPortfolioCache)
-        .values({ address, chain: effectiveChain, data: portfolio })
+        .values({ address, chain: effectiveChain, data: heliusPortfolio })
         .onConflictDoUpdate({
           target: [walletPortfolioCache.address, walletPortfolioCache.chain],
-          set: { data: portfolio, fetchedAt: new Date() },
+          set: { data: heliusPortfolio, fetchedAt: new Date() },
         });
-      return portfolio;
+      return heliusPortfolio;
     }
 
-    // If Birdeye failed or returned no items, do not cache empty array.
-    // Fall back to empty portfolio in API response.
+    // If Helius failed or returned no items, we currently return an empty portfolio.
+    // The previous Birdeye-based implementation is preserved below in comments if you
+    // want to re-enable it later.
+    //
+    // const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
+    // endpoint.search = new URLSearchParams({
+    //   wallet: address,
+    //   sort_type: "desc",
+    // }).toString();
+    //
+    // let items: any[] = [];
+    // try {
+    //   const resp = await birdeye.birdeyeFetch(endpoint, {
+    //     method: "GET",
+    //     headers: birdeye.getRequiredHeaders("solana"),
+    //   });
+    //
+    //   if (resp.ok) {
+    //     const payload = await resp.json();
+    //     items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
+    //   } else {
+    //     console.error(
+    //       "Birdeye current-net-worth error",
+    //       resp.status,
+    //       resp.statusText,
+    //     );
+    //   }
+    // } catch (err) {
+    //   console.error("Birdeye current-net-worth request failed", err);
+    // }
+    //
+    // if (items.length > 0) {
+    //   const portfolio: WalletPortfolioItem[] = items.map((item: any) => ({
+    //     tokenAddress: String(item.address),
+    //     symbol: String(item.symbol ?? ""),
+    //     name: item.name ? String(item.name) : undefined,
+    //     amount: Number(item.amount ?? 0),
+    //     priceUsd: item.price !== undefined ? Number(item.price) : undefined,
+    //     valueUsd: Number(item.value ?? 0),
+    //   }));
+    //   await db
+    //     .insert(walletPortfolioCache)
+    //     .values({ address, chain: effectiveChain, data: portfolio })
+    //     .onConflictDoUpdate({
+    //       target: [walletPortfolioCache.address, walletPortfolioCache.chain],
+    //       set: { data: portfolio, fetchedAt: new Date() },
+    //     });
+    //   return portfolio;
+    // }
+    //
+    // // If Birdeye failed or returned no items, do not cache empty array.
+    // // Fall back to empty portfolio in API response.
+    // return [];
+
     return [];
   }
 
@@ -626,113 +917,10 @@ export async function getWalletTransactions(
   }
 
   if (effectiveChain === "solana") {
-    // Use Birdeye Wallet - Transfer API to retrieve detailed token transfer history
-    const endpoint = birdeye.getEndpoint("/wallet/v2/transfer");
-
-    const body: Record<string, unknown> = {
-      wallet: address,
-      sort_type: "desc",
-      sort_by: "time",
-      limit,
-      offset: 0,
-    };
-
-    // Optional cursor-style pagination support
-    if (options?.before) {
-      body.cursor = options.before;
-    }
-
-    let transfers: any[] = [];
-
-    try {
-      const resp = await birdeye.birdeyeFetch(endpoint, {
-        method: "POST",
-        headers: birdeye.getRequiredHeaders("solana"),
-        body: JSON.stringify(body),
-      });
-
-      if (!resp.ok) {
-        console.error("Birdeye wallet/v2/transfer error", resp.status, resp.statusText);
-      } else {
-        const payload = await resp.json();
-        transfers = Array.isArray(payload?.data) ? (payload.data as any[]) : [];
-      }
-    } catch (err) {
-      console.error("Birdeye wallet/v2/transfer request failed", err);
-    }
-
-    const transactions: WalletTransaction[] = transfers.map((tx) => {
-      const tokenInfo = (tx.token_info ?? {}) as {
-        address?: string;
-        symbol?: string;
-        name?: string;
-        decimals?: number;
-      };
-
-      const primaryTokenSymbol =
-        tokenInfo.symbol != null ? String(tokenInfo.symbol) : undefined;
-      const primaryTokenAddress =
-        tokenInfo.address != null ? String(tokenInfo.address) : undefined;
-
-      let primaryTokenAmount: number | undefined;
-      if (tx.ui_amount != null) {
-        primaryTokenAmount = Number(tx.ui_amount);
-      } else if (tx.amount != null && tokenInfo.decimals != null) {
-        const decimals = Number(tokenInfo.decimals);
-        primaryTokenAmount = Number(tx.amount) / 10 ** decimals;
-      }
-
-      const priceUsd =
-        tx.price != null && !Number.isNaN(Number(tx.price))
-          ? Number(tx.price)
-          : undefined;
-
-      let totalUsd: number | undefined;
-      if (tx.value != null && !Number.isNaN(Number(tx.value))) {
-        totalUsd = Number(tx.value);
-      } else if (primaryTokenAmount != null && priceUsd != null) {
-        totalUsd = primaryTokenAmount * priceUsd;
-      }
-
-      // Derive direction from Birdeye flow field and addresses
-      let direction: WalletTransaction["direction"] = "unknown";
-      const flow = typeof tx.flow === "string" ? tx.flow : "";
-      if (flow === "in" || flow === "out" || flow === "self") {
-        direction = flow;
-      } else {
-        const fromAddr = String(tx.from_address ?? "").toLowerCase();
-        const toAddr = String(tx.to_address ?? "").toLowerCase();
-        const wallet = address.toLowerCase();
-        if (fromAddr === wallet && toAddr === wallet) direction = "self";
-        else if (toAddr === wallet) direction = "in";
-        else if (fromAddr === wallet) direction = "out";
-      }
-
-      const tokens: string[] = [];
-      if (primaryTokenSymbol) {
-        tokens.push(primaryTokenSymbol);
-      } else if (primaryTokenAddress) {
-        tokens.push(primaryTokenAddress);
-      }
-
-      return {
-        hash: String(tx.tx_hash),
-        timestamp: String(tx.time ?? tx.unix_time),
-        from: String(tx.from_address),
-        to: String(tx.to_address),
-        // Birdeye only returns successful transfers here, so treat as true
-        status: true,
-        fee: undefined,
-        mainAction: tx.action ? String(tx.action) : undefined,
-        direction,
-        tokens,
-        primaryTokenSymbol,
-        primaryTokenAmount,
-        primaryTokenAddress,
-        priceUsd,
-        totalUsd,
-      };
-    });
+    // Use Helius getTransactionsForAddress to retrieve detailed token transfer
+    // history for Solana wallets (replaces Birdeye wallet/v2/transfer). This
+    // fetches up to `limit` successful transactions for the past month.
+    const transactions = await fetchHeliusSolanaTransactions(address, limit);
 
     await saveTransactionsCache(address, effectiveChain, transactions);
     return {
@@ -740,6 +928,122 @@ export async function getWalletTransactions(
       chain: effectiveChain,
       transactions,
     };
+
+    /*
+    // Previous Birdeye-based implementation (kept for reference).
+    // Uncomment if you want to switch back to Birdeye wallet/v2/transfer in the future.
+    //
+    // const endpoint = birdeye.getEndpoint("/wallet/v2/transfer");
+    //
+    // const body: Record<string, unknown> = {
+    //   wallet: address,
+    //   sort_type: "desc",
+    //   sort_by: "time",
+    //   limit,
+    //   offset: 0,
+    // };
+    //
+    // if (options?.before) {
+    //   body.cursor = options.before;
+    // }
+    //
+    // let transfers: any[] = [];
+    //
+    // try {
+    //   const resp = await birdeye.birdeyeFetch(endpoint, {
+    //     method: "POST",
+    //     headers: birdeye.getRequiredHeaders("solana"),
+    //     body: JSON.stringify(body),
+    //   });
+    //
+    //   if (!resp.ok) {
+    //     console.error("Birdeye wallet/v2/transfer error", resp.status, resp.statusText);
+    //   } else {
+    //     const payload = await resp.json();
+    //     transfers = Array.isArray(payload?.data) ? (payload.data as any[]) : [];
+    //   }
+    // } catch (err) {
+    //   console.error("Birdeye wallet/v2/transfer request failed", err);
+    // }
+    //
+    // const transactions: WalletTransaction[] = transfers.map((tx) => {
+    //   const tokenInfo = (tx.token_info ?? {}) as {
+    //     address?: string;
+    //     symbol?: string;
+    //     name?: string;
+    //     decimals?: number;
+    //   };
+    //
+    //   const primaryTokenSymbol =
+    //     tokenInfo.symbol != null ? String(tokenInfo.symbol) : undefined;
+    //   const primaryTokenAddress =
+    //     tokenInfo.address != null ? String(tokenInfo.address) : undefined;
+    //
+    //   let primaryTokenAmount: number | undefined;
+    //   if (tx.ui_amount != null) {
+    //     primaryTokenAmount = Number(tx.ui_amount);
+    //   } else if (tx.amount != null && tokenInfo.decimals != null) {
+    //     const decimals = Number(tokenInfo.decimals);
+    //     primaryTokenAmount = Number(tx.amount) / 10 ** decimals;
+    //   }
+    //
+    //   const priceUsd =
+    //     tx.price != null && !Number.isNaN(Number(tx.price))
+    //       ? Number(tx.price)
+    //       : undefined;
+    //
+    //   let totalUsd: number | undefined;
+    //   if (tx.value != null && !Number.isNaN(Number(tx.value))) {
+    //     totalUsd = Number(tx.value);
+    //   } else if (primaryTokenAmount != null && priceUsd != null) {
+    //     totalUsd = primaryTokenAmount * priceUsd;
+    //   }
+    //
+    //   let direction: WalletTransaction["direction"] = "unknown";
+    //   const flow = typeof tx.flow === "string" ? tx.flow : "";
+    //   if (flow === "in" || flow === "out" || flow === "self") {
+    //     direction = flow;
+    //   } else {
+    //     const fromAddr = String(tx.from_address ?? "").toLowerCase();
+    //     const toAddr = String(tx.to_address ?? "").toLowerCase();
+    //     const wallet = address.toLowerCase();
+    //     if (fromAddr === wallet && toAddr === wallet) direction = "self";
+    //     else if (toAddr === wallet) direction = "in";
+    //     else if (fromAddr === wallet) direction = "out";
+    //   }
+    //
+    //   const tokens: string[] = [];
+    //   if (primaryTokenSymbol) {
+    //     tokens.push(primaryTokenSymbol);
+    //   } else if (primaryTokenAddress) {
+    //     tokens.push(primaryTokenAddress);
+    //   }
+    //
+    //   return {
+    //     hash: String(tx.tx_hash),
+    //     timestamp: String(tx.time ?? tx.unix_time),
+    //     from: String(tx.from_address),
+    //     to: String(tx.to_address),
+    //     status: true,
+    //     fee: undefined,
+    //     mainAction: tx.action ? String(tx.action) : undefined,
+    //     direction,
+    //     tokens,
+    //     primaryTokenSymbol,
+    //     primaryTokenAmount,
+    //     primaryTokenAddress,
+    //     priceUsd,
+    //     totalUsd,
+    //   };
+    // });
+    //
+    // await saveTransactionsCache(address, effectiveChain, transactions);
+    // return {
+    //   address,
+    //   chain: effectiveChain,
+    //   transactions,
+    // };
+    */
   }
 
   // EVM chains – Moralis wallet history (max limit 100 on free tier)
