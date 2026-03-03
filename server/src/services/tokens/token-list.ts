@@ -48,6 +48,28 @@ export async function getCoinGeckoIdList(
   }
 }
 
+export async function getAddressesByCoinGeckoId(
+  coinGeckoIds: string[],
+): Promise<Record<string, string>> {
+  if (coinGeckoIds.length == 0) {
+    return {};
+  }
+
+  const res = await db
+    .select({
+      id: coinGeckoTokenList.coinGeckoId,
+      address: coinGeckoTokenList.tokenAddress,
+    })
+    .from(coinGeckoTokenList)
+    .where(inArray(coinGeckoTokenList.coinGeckoId, coinGeckoIds))
+    .limit(coinGeckoIds.length);
+
+  const addressLookup = Object.fromEntries(
+    res.map(({ id, address }) => [id, address]),
+  );
+  return addressLookup;
+}
+
 export async function fetchCgTokenList(
   tokenAddresses: string[],
 ): Promise<Record<string, string>> {

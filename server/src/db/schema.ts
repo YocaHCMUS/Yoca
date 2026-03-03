@@ -408,4 +408,6 @@ export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
 export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
+export type TopTokensByMarketCapInsert =
+  typeof topTokensByMarketCap.$inferInsert;
 // #endregion
