@@ -2,6 +2,7 @@ import { setErr } from "@sv/config/errors.js";
 import {
   addressListSchema,
   addressSchema,
+  daysQuerySchema,
   validate,
 } from "@sv/middlewares/validation.js";
 import * as tokenService from "@sv/services/tokens/index.js";
@@ -77,26 +78,67 @@ const app = new Hono()
       }
     },
   )
+  // .get(
+  //   "/markets/chart/:address/overview",
+  //   validate("param", addressSchema),
+  //   validate("query", daysQuerySchema),
+  //   async (c) => {
+  //     try {
+  //       const { address } = c.req.valid("param");
+  //       const { days = 1 } = c.req.valid("query");
+  //       const chartData = await tokenService.getTokenMarketChart(address, days);
+  //       if (chartData) {
+  //         return c.json(chartData, statusCode.Ok);
+  //       } else {
+  //         return c.json(
+  //           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+  //           statusCode.BadGateway,
+  //         );
+  //       }
+  //     } catch (err) {
+  //       console.error(err);
+  //       return c.json(
+  //         setErr("INTERNAL_SERVER_ERR"),
+  //         statusCode.InternalServerError,
+  //       );
+  //     }
+  //   },
+  // )
   .get(
-    "/markets/chart/:address/overview",
+    "/markets/chart/:address/hourly",
     validate("param", addressSchema),
+    validate("query", daysQuerySchema),
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const days = c.req.query("days") ?? "1";
-        const parsedDays = days === "max" ? ("max" as const) : Number(days);
-        const chartData = await tokenService.getTokenMarketChart(
+        const { days } = c.req.valid("query");
+        const chartData = await tokenService.getHourlyTokenMarketChart(
           address,
-          parsedDays,
+          days,
         );
-        if (chartData) {
-          return c.json(chartData, statusCode.Ok);
-        } else {
-          return c.json(
-            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-            statusCode.BadGateway,
-          );
-        }
+        return c.json(chartData, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
+  .get(
+    "/markets/chart/:address/daily",
+    validate("param", addressSchema),
+    validate("query", daysQuerySchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { days } = c.req.valid("query");
+        const chartData = await tokenService.getDailyTokenMarketChart(
+          address,
+          days,
+        );
+        return c.json(chartData, statusCode.Ok);
       } catch (err) {
         console.error(err);
         return c.json(

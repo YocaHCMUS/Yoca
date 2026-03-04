@@ -224,6 +224,23 @@ export const tokenMarketChart24h = pgTable(
   ],
 );
 
+export const tokenMarketChart30d = pgTable(
+  "token_market_chart_30d",
+  {
+    address: varchar("address", { length: 44 }).notNull(),
+    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
+    price: decimal("price").notNull(),
+    marketCap: decimal("market_cap").notNull(),
+    totalVolume: decimal("total_volume").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.address, table.unixTimestampMs],
+    }),
+  ],
+);
+
 export const tokenMarketChartHourly = pgTable(
   "token_market_chart_hourly",
   {
@@ -232,7 +249,7 @@ export const tokenMarketChartHourly = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({
@@ -249,7 +266,7 @@ export const tokenMarketChartDaily = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({
@@ -401,6 +418,10 @@ export type UserInsert = typeof users.$inferInsert;
 export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
+export type TokenMarketChartHourlyInsert =
+  typeof tokenMarketChartHourly.$inferInsert;
+export type TokenMarketChartDailyInsert =
+  typeof tokenMarketChartDaily.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;

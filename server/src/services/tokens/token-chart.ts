@@ -1,8 +1,18 @@
-import { TOKEN_CHART_24H_UPDATE_THRESHOLD } from "@sv/config/constants.js";
+import {
+  TOKEN_CHART_24H_UPDATE_THRESHOLD,
+  TOKEN_CHART_DAILY_FETCH_RANGE_MS,
+  TOKEN_CHART_DAILY_UPDATE_THRESHOLD,
+  TOKEN_CHART_HOURLY_FETCH_RANGE_MS,
+  TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
   tokenMarketChart24h,
+  tokenMarketChartDaily,
+  tokenMarketChartHourly,
   type TokenMarketChart24hInsert,
+  type TokenMarketChartDailyInsert,
+  type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -60,7 +70,7 @@ export async function fetch24hTokenMarketChart(
         totalVolume: res.total_volumes[index][1],
       }),
     );
-    if (chartDataPoints.length === 0) {
+    if (chartDataPoints.length == 0) {
       return [];
     }
 
@@ -99,7 +109,8 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
         gte(tokenMarketChart24h.unixTimestampMs, from),
         lte(tokenMarketChart24h.unixTimestampMs, to),
       ),
-    );
+    )
+    .orderBy(tokenMarketChart24h.unixTimestampMs);
 
   if (chartData.length == 0) {
     return fetch24hTokenMarketChart(tokenAddress);
@@ -125,21 +136,53 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart
 // For the overview page chart (multiple day ranges, proxied directly)
-export async function getTokenMarketChart(
+// export async function getTokenMarketChart(
+//   tokenAddress: string,
+//   days: number = 1,
+// ) {
+//   if (!tokenAddress) return null;
+
+//   const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+//   const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+
+//   if (!cgId) return null;
+
+//   const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart`);
+//   cgEndpoint.search = new URLSearchParams({
+//     vs_currency: "usd",
+//     days: days.toString(),
+//   }).toString();
+
+//   const req = new Request(cgEndpoint, {
+//     method: "GET",
+//     headers: cg.getRequiredHeaders(),
+//   });
+
+//   const resp = await fetch(req);
+//   if (!resp.ok) return null;
+
+//   const res: CG_TokenMarketChart = await resp.json();
+
+//   return {
+//     prices: res.prices,
+//     marketCaps: res.market_caps,
+//   };
+// }
+
+async function fetchAndCacheRangedChart(
   tokenAddress: string,
-  days: number | "max" = 1,
-) {
-  if (!tokenAddress) return null;
+  cgId: string,
+  table: typeof tokenMarketChartHourly | typeof tokenMarketChartDaily,
+  fetchRangeMs: number,
+): Promise<void> {
+  const now = Date.now();
+  const from = now - fetchRangeMs;
 
-  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
-  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
-
-  if (!cgId) return null;
-
-  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart`);
+  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
   cgEndpoint.search = new URLSearchParams({
     vs_currency: "usd",
-    days: days.toString(),
+    from: from.toString(),
+    to: now.toString(),
   }).toString();
 
   const req = new Request(cgEndpoint, {
@@ -148,13 +191,138 @@ export async function getTokenMarketChart(
   });
 
   const resp = await fetch(req);
-  if (!resp.ok) return null;
+  if (!resp.ok) return;
 
   const res: CG_TokenMarketChart = await resp.json();
+  if (res.prices.length == 0) return;
 
-  return {
-    prices: res.prices as [number, number][],
-    marketCaps: res.market_caps as [number, number][],
-  };
+  const unixUpdatedAtMs = now;
+  const points = res.prices.map(
+    (
+      [timestamp, price],
+      index,
+    ): TokenMarketChartHourlyInsert | TokenMarketChartDailyInsert => ({
+      address: tokenAddress,
+      unixTimestampMs: timestamp,
+      price: price,
+      marketCap: res.market_caps[index][1],
+      totalVolume: res.total_volumes[index][1],
+      unixUpdatedAtMs,
+    }),
+  );
+
+  await db
+    .insert(table)
+    .values(points)
+    .onConflictDoUpdate({
+      target: [table.address, table.unixTimestampMs],
+      set: {
+        price: excluded(table.price),
+        marketCap: excluded(table.marketCap),
+        totalVolume: excluded(table.totalVolume),
+        unixUpdatedAtMs: excluded(table.unixUpdatedAtMs),
+      },
+    });
 }
 
+export async function getHourlyTokenMarketChart(
+  tokenAddress: string,
+  days: number,
+) {
+  if (!tokenAddress) return [];
+
+  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+  if (!cgId) return [];
+
+  const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  const cached = await db
+    .select()
+    .from(tokenMarketChartHourly)
+    .where(
+      and(
+        eq(tokenMarketChartHourly.address, tokenAddress),
+        gte(tokenMarketChartHourly.unixTimestampMs, requestedFrom),
+      ),
+    )
+    .orderBy(tokenMarketChartHourly.unixTimestampMs);
+
+  const latestUpdatedAt =
+    cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
+  const isStale =
+    Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
+
+  if (cached.length == 0 || isStale) {
+    await fetchAndCacheRangedChart(
+      tokenAddress,
+      cgId,
+      tokenMarketChartHourly,
+      TOKEN_CHART_HOURLY_FETCH_RANGE_MS,
+    );
+
+    return db
+      .select()
+      .from(tokenMarketChartHourly)
+      .where(
+        and(
+          eq(tokenMarketChartHourly.address, tokenAddress),
+          gte(tokenMarketChartHourly.unixTimestampMs, requestedFrom),
+        ),
+      )
+      .orderBy(tokenMarketChartHourly.unixTimestampMs);
+  }
+
+  return cached;
+}
+
+export async function getDailyTokenMarketChart(
+  tokenAddress: string,
+  days: number,
+) {
+  if (!tokenAddress) return [];
+
+  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+  if (!cgId) return [];
+
+  const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  const cached = await db
+    .select()
+    .from(tokenMarketChartDaily)
+    .where(
+      and(
+        eq(tokenMarketChartDaily.address, tokenAddress),
+        gte(tokenMarketChartDaily.unixTimestampMs, requestedFrom),
+      ),
+    )
+    .orderBy(tokenMarketChartDaily.unixTimestampMs);
+
+  const latestUpdatedAt =
+    cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
+  const isStale =
+    Date.now() - latestUpdatedAt > TOKEN_CHART_DAILY_UPDATE_THRESHOLD;
+
+  if (cached.length == 0 || isStale) {
+    await fetchAndCacheRangedChart(
+      tokenAddress,
+      cgId,
+      tokenMarketChartDaily,
+      TOKEN_CHART_DAILY_FETCH_RANGE_MS,
+    );
+
+    return db
+      .select()
+      .from(tokenMarketChartDaily)
+      .where(
+        and(
+          eq(tokenMarketChartDaily.address, tokenAddress),
+          gte(tokenMarketChartDaily.unixTimestampMs, requestedFrom),
+        ),
+      )
+      .orderBy(tokenMarketChartDaily.unixTimestampMs);
+  }
+
+  return cached;
+}

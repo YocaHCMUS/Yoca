@@ -21,6 +21,10 @@ export const paginationSchema = z.object({
   offset: z.coerce.number(),
 });
 
+export const daysQuerySchema = z.object({
+  days: z.coerce.number().positive(),
+});
+
 export const addressSchema = z.object({
   address: solanaBase58Schema,
 });
