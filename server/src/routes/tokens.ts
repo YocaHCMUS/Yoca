@@ -111,7 +111,15 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { days } = c.req.valid("query");
+        const { days = 30 } = c.req.valid("query");
+
+        if (days > 90) {
+          return c.json(
+            setErr("HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS"),
+            statusCode.BadRequest,
+          );
+        }
+
         const chartData = await tokenService.getHourlyTokenMarketChart(
           address,
           days,
@@ -133,7 +141,15 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { days } = c.req.valid("query");
+        const { days = 7 } = c.req.valid("query");
+
+        if (days > 365) {
+          return c.json(
+            setErr("DAILY_CHART_DAILY_EXCEEDED_365_DAYS"),
+            statusCode.BadRequest,
+          );
+        }
+
         const chartData = await tokenService.getDailyTokenMarketChart(
           address,
           days,

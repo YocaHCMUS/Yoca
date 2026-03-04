@@ -47,6 +47,10 @@ const ERROR = {
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
   INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
+  HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
+    "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
+  DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
+    "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {

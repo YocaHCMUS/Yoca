@@ -10,6 +10,8 @@ export const ErrCodes = {
   networkErr: "NETWORK_ERR",
   validationErr: "VALIDATION_ERR",
   invalidTokenPayload: "INVALID_TOKEN_PAYLOAD",
+  hourlyChartHourlyExceeded90Days: "HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS",
+  dailyChartDailyExceeded365Days: "DAILY_CHART_DAILY_EXCEEDED_365_DAYS",
 } as const;
 
 export type ErrCode = (typeof ErrCodes)[keyof typeof ErrCodes];

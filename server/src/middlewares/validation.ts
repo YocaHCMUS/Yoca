@@ -22,7 +22,7 @@ export const paginationSchema = z.object({
 });
 
 export const daysQuerySchema = z.object({
-  days: z.coerce.number().positive(),
+  days: z.coerce.number().positive().optional(),
 });
 
 export const addressSchema = z.object({
