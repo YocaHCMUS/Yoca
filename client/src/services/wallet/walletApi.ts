@@ -125,16 +125,35 @@ export async function fetchWalletBalances(address: string) {
   return data;
 }
 
+/**
+ * Fetch wallet asset distribution
+ * GET /api/wallets/distribution
+ */
+export async function fetchWalletDistribution(
+  address: string,
+  chain?: string
+) {
+  const query = { address, ...(chain && { chain }) };
+  const response = await (client.api.wallets as any).distribution.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
   fetchWalletTransactions,
   fetchWalletExchanges,
   fetchWalletBalances,
+  fetchWalletDistribution,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
   getTransactions: fetchWalletTransactions,
   getExchanges: fetchWalletExchanges,
   getBalances: fetchWalletBalances,
+  getDistribution: fetchWalletDistribution,
 };

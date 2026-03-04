@@ -59,7 +59,7 @@ router.get("/portfolio", async (c) => {
 
   try {
     const portfolio = await getWalletPortfolio(address, chain);
-    return c.json({ address, chain, portfolio });
+    return c.json(portfolio);
   } catch (err) {
     console.error("Failed to get wallet portfolio", err);
     return c.json({ error: "Failed to get wallet portfolio" }, 500);
@@ -88,6 +88,43 @@ router.get("/transactions", async (c) => {
   } catch (err) {
     console.error("Failed to get wallet transactions", err);
     return c.json({ error: "Failed to get wallet transactions" }, 500);
+  }
+});
+
+router.get("/distribution", async (c) => {
+  const query = c.req.query();
+  const params = overviewRequestSchema.parse(query)
+  const address = params.address;
+  const chain = params.chain as SupportedChain || "solana"
+
+  try {
+    // Get portfolio data which forms the asset distribution
+    const portfolio = await getWalletPortfolio(address, chain);
+    
+    // Transform portfolio data into distribution format
+    // Calculate percentages based on total value
+    const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
+    
+    const distributionData = portfolio.map((item: any) => ({
+      name: item.symbol || item.token || 'Unknown',
+      value: item.valueUsd ?? 0,
+      percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
+      rawAmount: item.amount ?? item.holding ?? 0,
+    }));
+
+    return c.json({
+      data: distributionData,
+      totalValue: totalValue,
+      address: address,
+      chain: chain,
+      metadata: {
+        currency: 'USD',
+        timestamp: Date.now()
+      }
+    });
+  } catch (err) {
+    console.error("Failed to get wallet asset distribution", err);
+    return c.json({ error: "Failed to get wallet asset distribution" }, 500);
   }
 });
 

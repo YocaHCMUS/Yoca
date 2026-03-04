@@ -337,7 +337,13 @@ export default function WalletPage() {
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
         <div className={styles.columnWrapper}>
-          <AssetDistribution />
+          <AssetDistribution
+            initialFilters={{
+              wallets: address ? [address] : [],
+              timePeriod: "30D"
+            }}
+            autoRefresh={true}
+          />
         </div>
         <div className={styles.columnWrapper}>
           <Table
