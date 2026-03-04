@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
+import { fetchWalletOverview } from '@/services/wallet/walletApi';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -26,15 +27,20 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     autoRefresh = true,
     refreshInterval = 30000
 }) => {
-    // mock data, need to create a hook to fetch these information
-    const name = "Wallet A"; 
-    const tags = ["whale", "early x holder", "early y holder", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user"];
-    const totalAssetValue = 14199;
-    const tradingVolumn = 1822333;
-    const totalPnL = 140000;
-    const transactionCount = 1133;
-    const tokenTraded = 54;
-    const numberOfTokenHolding = 32;
+    // State for overview data
+    const [overview, setOverview] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Provide default values for display
+    const name = "Wallet"; 
+    const tags = ["whale", "early x holder", "early y holder"];
+    const totalAssetValue = overview?.totalAssetValueUsd ?? null;
+    const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
+    const totalPnL = overview?.pnlUsdTotal ?? null;
+    const transactionCount = overview?.transactionCount24h ?? null;
+    const tokenTraded = overview?.tokensTradedCount ?? null;
+    const numberOfTokenHolding = overview?.tokensHoldingCount ?? null;
 
     const [bookmark, setBookmark] = useState(false);
     const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
@@ -42,7 +48,34 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [showCustomControl, setShowCustomControl] = useState(false);
     const [customDays, setCustomDays] = useState(30);
 
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
+
+    // Fetch wallet overview data
+    useEffect(() => {
+        const loadOverview = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await fetchWalletOverview(walletAddress, 'solana');
+                setOverview(data);
+            } catch (err) {
+                console.error('Failed to fetch wallet overview:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (walletAddress && walletAddress !== 'null') {
+            loadOverview();
+            
+            // Set up auto-refresh if enabled
+            if (autoRefresh) {
+                const interval = setInterval(loadOverview, refreshInterval);
+                return () => clearInterval(interval);
+            }
+        }
+    }, [walletAddress, autoRefresh, refreshInterval]);
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -98,6 +131,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     return (
         // main container: column
         <div className={styles.walletOverview}>
+            {error && (
+                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
+                    {tr('common.error')}: {error}
+                </div>
+            )}
+            {loading && (
+                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
+                    {tr('common.loading')}...
+                </div>
+            )}
             {/* 1st row: row containing 3 columns */}
             <div className={styles.topSection}> 
                 {/* 1st column: profile picture */}
@@ -199,7 +242,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalAssetValue')}
                         </div>
                         <div className={styles.statValue}>
-                            ${totalAssetValue.toLocaleString()}
+                            {fmt.num.currency(totalAssetValue)}
                         </div>
                     </div>
                     
@@ -209,7 +252,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tradingVolume')}
                         </div>
                         <div className={styles.statValue}>
-                            ${tradingVolumn.toLocaleString()}
+                            {fmt.num.currency(tradingVolumn)}
                         </div>
                     </div>
                     
@@ -219,7 +262,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalPnL')}
                         </div>
                         <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                            ${totalPnL.toLocaleString()}
+                            {fmt.num.currency(totalPnL)}
                         </div>
                     </div>
                     
@@ -229,7 +272,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tokensTraded')}
                         </div>
                         <div className={styles.statValue}>
-                            {tokenTraded}
+                            {fmt.num.decimal(tokenTraded)}
                         </div>
                     </div>
                     
@@ -239,7 +282,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tokensHolding')}
                         </div>
                         <div className={styles.statValue}>
-                            {numberOfTokenHolding}
+                            {fmt.num.decimal(numberOfTokenHolding)}
                         </div>
                     </div>
                 </div>

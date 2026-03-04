@@ -17,6 +17,7 @@ import {
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import { fetchWalletPortfolio, fetchWalletTransactions } from "@/services/wallet/walletApi.ts";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
@@ -47,43 +48,24 @@ export default function WalletPage() {
   const { tr } = useLocalization();
   const { address } = useParams<{ address: string }>();
   const [transfers, setTransfers] = useState([]);
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState(0);
-  const [secondaryActiveTab, setSecondaryActiveTab] = useState(0); // TODO: implement a hook to scale these state
+  const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
 
-  // Mock data - replace with actual API call
-  const transactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `tx-${i}`,
-    signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
-    type: i % 2 === 0 ? "Buy" : "Sell",
-    token: ["SOL", "USDC", "JTO", "BONK"][i % 4],
-    amount: Math.random() * 1000,
-    price: Math.random() * 200,
-    total: Math.random() * 10000,
-    timestamp: new Date(
-      Date.now() - Math.random() * 86400000 * 30,
-    ).toISOString(),
-    status: i % 10 === 0 ? "Failed" : "Success",
-  }));
-
-  const portfolios: Portfolio[] = Array.from({ length: 50 }, (_, i) => {
-    const prices = [
-      Math.random() * 200,
-      Math.random() * 200,
-      Math.random() * 200,
-      Math.random() * 200,
-    ];
-    const holding = Math.random() * 999 + 0.001;
-    const index = i % 4;
-    return {
-      token: ["SOL", "USDC", "JTO", "BONK"][index],
-      price: prices[index],
-      holding: holding,
-      value: prices[index] * holding,
-      change: (Math.random() - 0.5) * 20, // Random change between -10% and +10%
-    };
-  });
+  // Transform portfolio data from API response for Table component
+  const portfolioData = portfolio.length > 0 
+    ? portfolio.map((item: any) => [
+        item.symbol || item.token || 'Unknown',
+        formatNumber(item.priceUsd ?? 0),
+        `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
+        formatNumber(item.valueUsd ?? item.value ?? 0),
+        ((item.change24hPercent ?? 0) / 100).toFixed(2),
+      ])
+    : [];
 
   // Transform transactions to array format for Table component
   const transactionData = transactions.map((tx) => [
@@ -95,14 +77,6 @@ export default function WalletPage() {
     tx.total.toFixed(2),
     tx.timestamp,
     tx.status,
-  ]);
-
-  const portfolioData = portfolios.map((prt) => [
-    prt.token,
-    prt.price.toFixed(2),
-    `${prt.holding.toFixed(4)} ${prt.token}`,
-    prt.value.toFixed(4),
-    prt.change.toFixed(2),
   ]);
 
   const transactionHeaders = [
@@ -200,31 +174,47 @@ export default function WalletPage() {
   ];
 
   useEffect(() => {
-    (async () => {
+    const loadData = async () => {
+      if (!address || address === 'null') return;
+      
       try {
-        const response = await fetch(
-          `http://localhost:4000/api/balances/${address}`,
-        );
-        const data = await response.json();
-        const balances = data.map(
-          (
-            balance: { symbol: string; balance: string; valueUsd: string },
-            index: number,
-          ) => ({
-            id: index,
-            token: balance.symbol,
-            balance: formatNumber(Number(balance.balance)),
-            valueUsd: formatNumber(Number(balance.valueUsd)),
-          }),
-        );
-
-        setTransfers(balances);
-      } catch (error) {
-        console.error("Failed to fetch transfers:", error);
+        setPortfolioLoading(true);
+        
+        // Fetch portfolio data
+        const portfolioResponse = await fetchWalletPortfolio(address, 'solana');
+        if (portfolioResponse && Array.isArray(portfolioResponse)) {
+          setPortfolio(portfolioResponse);
+        }
+        
+        // Fetch transaction data
+        const transactionResponse = await fetchWalletTransactions(address, {
+          chain: 'solana',
+          limit: 50
+        });
+        if (transactionResponse && transactionResponse.length > 0) {
+          // Transform API transaction response to match Transaction interface
+          const transformedTxs = transactionResponse.map((tx: any, index: number) => ({
+            id: `tx-${index}`,
+            signature: tx.hash || `sig-${index}`,
+            type: (tx.direction === 'in' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
+            token: tx.primaryTokenSymbol || 'Unknown',
+            amount: tx.primaryTokenAmount ?? 0,
+            price: (tx.totalUsd ?? 0) / (tx.primaryTokenAmount ?? 1),
+            total: tx.totalUsd ?? 0,
+            timestamp: tx.blockTimestamp ? new Date(tx.blockTimestamp).toISOString() : new Date().toISOString(),
+            status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
+          }));
+          setTransactions(transformedTxs);
+        }
+      } catch (err) {
+        console.error('Failed to load wallet data:', err);
       } finally {
+        setPortfolioLoading(false);
         setLoading(false);
       }
-    })();
+    };
+
+    loadData();
   }, [address]);
 
   if (!address) {
