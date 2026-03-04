@@ -13,3 +13,8 @@ export const TOKEN_POOL_DATA_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
 export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const AUTH_COOKIE_NAME = "auth_token";
 export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export const WALLET_OVERVIEW_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_PORTFOLIO_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_TRANSACTIONS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour

@@ -16,7 +16,7 @@ const app = new Hono().get(
         return c.json(balances, statusCode.Ok);
       } else {
         return c.json(
-          messageText.FailedToFetchRequestedData,
+          messageText.FailedToFetchRequestData,
           statusCode.BadGateway,
         );
       }

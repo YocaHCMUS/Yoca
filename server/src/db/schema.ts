@@ -5,9 +5,11 @@ import {
   check,
   decimal as dec,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -381,6 +383,79 @@ export const poolTrades24h = pgTable("pool_trades_24h", {
     .$onUpdate(() => new Date()),
 });
 
+// / --- Wallet API cache (DB-first: use cache if fresh, else fetch from Moralis/Birdeye) ---
+
+export const walletOverviewCache = pgTable(
+  "wallet_overview_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
+    tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
+    pnlUsdTotal: decimal("pnl_usd_total"),
+    transactionCount24h: integer("transaction_count_24h"),
+    tokensTradedCount: integer("tokens_traded_count"),
+    tokensHoldingCount: integer("tokens_holding_count").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
+export const walletPortfolioCache = pgTable(
+  "wallet_portfolio_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    data: jsonb("data").$type<Array<{ tokenAddress: string; symbol: string; name?: string; amount: number; priceUsd?: number; valueUsd: number; change24hPercent?: number }>>().notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
+export const walletTransactionsMeta = pgTable(
+  "wallet_transactions_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
+export const walletTransactions = pgTable(
+  "wallet_transactions",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    hash: text("hash").notNull(),
+    blockTimestamp: timestamp("block_timestamp").notNull(),
+    fromAddress: varchar("from_address", { length: 66 }).notNull(),
+    toAddress: varchar("to_address", { length: 66 }).notNull(),
+    receiptStatus: smallint("receipt_status"), // 1 success, 0 fail, null unknown
+    fee: decimal("fee"),
+    mainAction: text("main_action"),
+    direction: text("direction"), // in | out | self | unknown
+    primaryTokenSymbol: text("primary_token_symbol"),
+    primaryTokenAmount: decimal("primary_token_amount"),
+    primaryTokenAddress: varchar("primary_token_address", { length: 66 }),
+    priceUsd: decimal("price_usd"),
+    totalUsd: decimal("total_usd"),
+    tokens: jsonb("tokens").$type<string[]>(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain, t.hash] })],
+);
+
+export const walletExchangeCountsCache = pgTable(
+  "wallet_exchange_counts_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    data: jsonb("data").$type<{ exchanges: Array<{ name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }>; metadata: { period: string; metric: string } }>().notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
 // #endregion
 
 // #region Types
@@ -398,4 +473,10 @@ export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
 export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
+export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
+export type WalletPortfolioCacheInsert = typeof walletPortfolioCache.$inferInsert;
+export type WalletTransactionsMetaInsert = typeof walletTransactionsMeta.$inferInsert;
+export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
+export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
+
 // #endregion
