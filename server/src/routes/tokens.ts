@@ -249,7 +249,6 @@ const app = new Hono()
       );
     }
   })
-
   .get(
     "/pools/trades/:address",
     validate("param", addressSchema),
@@ -268,7 +267,6 @@ const app = new Hono()
       }
     },
   )
-
   .get("/trending", async (c) => {
     try {
       const trending = await tokenService.getTrendingTokens();
@@ -289,7 +287,6 @@ const app = new Hono()
       );
     }
   })
-
   .get("/top-marketcap", async (c) => {
     try {
       const topTokens = await tokenService.getTopTokensByMarketCap();
