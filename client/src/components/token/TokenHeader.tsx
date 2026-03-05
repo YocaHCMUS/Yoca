@@ -1,5 +1,5 @@
+import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
 import { IconButton } from "@carbon/react";
-import { Copy, Wikis, LogoDiscord, Search } from "@carbon/icons-react";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
@@ -12,6 +12,9 @@ interface TokenHeaderProps {
   websiteUrl?: string | null;
   twitterHandle?: string | null;
   tokenAge?: string | null;
+  marketCapRank?: number | null;
+  /** If true, only show logo + symbol + name + rank (no address/icons) */
+  compact?: boolean;
 }
 
 export const TokenHeader = ({
@@ -24,6 +27,8 @@ export const TokenHeader = ({
   websiteUrl,
   twitterHandle,
   tokenAge,
+  marketCapRank,
+  compact = false,
 }: TokenHeaderProps) => {
   const copyToClipboard = () => navigator.clipboard.writeText(address);
 
@@ -47,7 +52,7 @@ export const TokenHeader = ({
     discordInvite && window.open(`https://discord.com/invite/${discordInvite}`, "_blank");
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       <img
         className={styles.image}
         src={imageUrl ?? "https://placehold.co/48x48"}
@@ -57,53 +62,59 @@ export const TokenHeader = ({
         <div className={styles.row}>
           <span className={styles.symbol}>{symbol}</span>
           <span className={styles.name}>{name}</span>
+          {marketCapRank != null && (
+            <span className={styles.rankBadge}>#{marketCapRank}</span>
+          )}
         </div>
-        <div className={styles.row}>
-          {tokenAge && <div className={styles.ageBadge}>{tokenAge}</div>}
-          <div className={styles.addressGroup} onClick={copyToClipboard}>
-            <span className={styles.address}>
-              {address.slice(0, 4)}...{address.slice(-4)}
-            </span>
+
+        {!compact && (
+          <div className={styles.row}>
+            {tokenAge && <div className={styles.ageBadge}>{tokenAge}</div>}
+            <div className={styles.addressGroup} onClick={copyToClipboard}>
+              <span className={styles.address}>
+                {address.slice(0, 4)}...{address.slice(-4)}
+              </span>
+            </div>
+
+            <div className={styles.externalLinks}>
+              <IconButton label="Copy Address" kind="ghost" size="sm" onClick={copyToClipboard}>
+                <Copy size={14} />
+              </IconButton>
+
+              {websiteUrl && (
+                <IconButton label="Website" kind="ghost" size="sm" onClick={openWebsite}>
+                  <Wikis size={14} />
+                </IconButton>
+              )}
+
+              {twitterHandle && (
+                <IconButton label="X (Twitter)" kind="ghost" size="sm" onClick={searchOnTwitter}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+                  </svg>
+                </IconButton>
+              )}
+
+              <IconButton label="Search on X" kind="ghost" size="sm" onClick={searchOnTwitter}>
+                <Search size={14} />
+              </IconButton>
+
+              {discordInvite && (
+                <IconButton label="Join Discord" kind="ghost" size="sm" onClick={openDiscord}>
+                  <LogoDiscord size={14} />
+                </IconButton>
+              )}
+
+              <IconButton label="View on CoinGecko" kind="ghost" size="sm" onClick={openCoinGecko}>
+                <img
+                  src="https://static.coingecko.com/s/thumbnail-007177f3eca19695592f0b8b0eabbdae282b54154e1be912285c9034ea6cbaf2.png"
+                  alt="CoinGecko"
+                  className={styles.coingeckoIcon}
+                />
+              </IconButton>
+            </div>
           </div>
-
-          <div className={styles.externalLinks}>
-            <IconButton label="Copy Address" kind="ghost" size="sm" onClick={copyToClipboard}>
-              <Copy size={14} />
-            </IconButton>
-
-            {websiteUrl && (
-              <IconButton label="Website" kind="ghost" size="sm" onClick={openWebsite}>
-                <Wikis size={14} />
-              </IconButton>
-            )}
-
-            {twitterHandle && (
-              <IconButton label="X (Twitter)" kind="ghost" size="sm" onClick={searchOnTwitter}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
-                </svg>
-              </IconButton>
-            )}
-
-            <IconButton label="Search on X" kind="ghost" size="sm" onClick={searchOnTwitter}>
-              <Search size={14} />
-            </IconButton>
-
-            {discordInvite && (
-              <IconButton label="Join Discord" kind="ghost" size="sm" onClick={openDiscord}>
-                <LogoDiscord size={14} />
-              </IconButton>
-            )}
-
-            <IconButton label="View on CoinGecko" kind="ghost" size="sm" onClick={openCoinGecko}>
-              <img
-                src="https://static.coingecko.com/s/thumbnail-007177f3eca19695592f0b8b0eabbdae282b54154e1be912285c9034ea6cbaf2.png"
-                alt="CoinGecko"
-                className={styles.coingeckoIcon}
-              />
-            </IconButton>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

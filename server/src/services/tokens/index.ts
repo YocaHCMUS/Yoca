@@ -1,3 +1,4 @@
+export { getTokenHistoricalData } from "./token-history.js";
 export {
   get24hTokenMarketChart,
   getDailyTokenMarketChart,

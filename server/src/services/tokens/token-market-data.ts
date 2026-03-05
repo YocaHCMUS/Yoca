@@ -137,8 +137,8 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     return addressToMarketData;
   }
 
-  for (const [address, data] of Object.entries(refreshed)) {
-    addressToMarketData[address] = data;
+  for (const data of refreshed) {
+    addressToMarketData[data.address] = data;
   }
 
   return addressToMarketData;

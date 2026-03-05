@@ -9,21 +9,27 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background-color: var(--cds-background);
   color: var(--cds-text-primary);
-  transition: background-color 0.2s cubic-bezier(0.2, 0, 0.38, 0.9), 
-              color 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0.38, 0.9),
+    color 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 a {
@@ -31,17 +37,22 @@ a {
   color: var(--cds-link-primary);
   text-decoration: inherit;
   transition: color 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-  
+
   &:hover {
     color: var(--cds-link-primary-hover);
   }
-  
+
   &:visited {
     color: var(--cds-link-visited);
   }
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--cds-text-primary);
   margin: 0;
 }

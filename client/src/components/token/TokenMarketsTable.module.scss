@@ -3,30 +3,34 @@
 .tableContainer {
     width: 100%;
     background: $background;
+    border-radius: 8px;
+    overflow: hidden;
 
     // Override Carbon table background to match page
     :global(.cds--data-table-container) {
-        background: $background;
+        background: transparent;
     }
 
     :global(.cds--data-table) {
-        background: $background;
+        background: transparent;
     }
 
-    // Header row — slightly elevated background
-    :global(.cds--data-table thead tr th) {
-        background: $layer-01;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-        color: $text-secondary;
-        text-transform: uppercase;
+    // Header row
+    :global(.cds--data-table thead tr th),
+    :global(.cds--data-table thead tr) {
+        background: $background;
+        font-size: 14px;
+        font-weight: 700;
+        color: $text-primary;
+        text-transform: capitalize;
         padding: 14px 16px;
         border-bottom: 1px solid $border-subtle;
     }
 
     // Data rows
-    :global(.cds--data-table tbody tr td) {
+    :global(.cds--data-table tbody tr td),
+    :global(.cds--data-table tbody tr) {
+        background: $background;
         font-size: 14px;
         font-weight: 400;
         color: $text-primary;
@@ -36,7 +40,8 @@
     }
 
     // Row hover
-    :global(.cds--data-table tbody tr:hover td) {
+    :global(.cds--data-table tbody tr:hover td),
+    :global(.cds--data-table tbody tr:hover) {
         background: $layer-hover-01;
     }
 
@@ -47,7 +52,7 @@
 }
 
 .table {
-    background: $background;
+    background: transparent;
 }
 
 .positive {

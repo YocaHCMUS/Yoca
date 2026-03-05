@@ -306,6 +306,41 @@ const app = new Hono()
         statusCode.InternalServerError,
       );
     }
-  });
+  })
+  .get(
+    "/history/:address",
+    validate("param", addressSchema),
+    validate("query", daysQuerySchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { days = 7 } = c.req.valid("query");
+
+        if (days > 365) {
+          return c.json(
+            setErr("DAILY_CHART_DAILY_EXCEEDED_365_DAYS"),
+            statusCode.BadRequest,
+          );
+        }
+
+        const data = await tokenService.getTokenHistoricalData(address, days);
+
+        if (data == null) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+
+        return c.json(data, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  );
 
 export default app;

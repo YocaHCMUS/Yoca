@@ -86,3 +86,53 @@
     height: 14px;
     object-fit: contain;
 }
+
+.rankBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: $layer-accent-01;
+    font-size: 12px;
+    font-weight: 600;
+    color: $text-secondary;
+    white-space: nowrap;
+}
+
+.compact {
+    padding: 16px 16px 8px 16px; // Align left edge (16px) with stats padding, reduced top/bottom padding
+    gap: 8px;
+    align-items: center;
+
+    .image {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .row {
+        align-items: center;
+        gap: 8px;
+    }
+
+    .symbol {
+        font-size: 19px;
+        font-weight: 600; // Put back slightly bolder for "PENGU" but smaller size
+        line-height: 1;
+    }
+
+    .name {
+        font-size: 15px;
+        font-weight: 400;
+        color: $text-secondary; // Use distinct color for full name if they liked it before
+    }
+
+    .rankBadge {
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        margin-left: 2px;
+        background: #f0f2f5; // Lighter gray background
+        color: #5c6c7f;
+    }
+}

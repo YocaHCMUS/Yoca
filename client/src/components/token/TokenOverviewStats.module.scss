@@ -36,7 +36,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .priceChange {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 600;
 
     &.positive {
@@ -46,6 +46,25 @@ $divider: rgba(0, 0, 0, 0.06);
     &.negative {
         color: $color-danger;
     }
+}
+
+.priceChangePeriod {
+    font-weight: 400;
+}
+
+.positive {
+    color: $color-success;
+    font-weight: 600;
+}
+
+.negative {
+    color: $color-danger;
+    font-weight: 600;
+}
+
+.neutral {
+    color: $text-secondary;
+    font-weight: 500;
 }
 
 .priceBtc {
@@ -77,7 +96,7 @@ $divider: rgba(0, 0, 0, 0.06);
     border-bottom: 1px solid $divider;
 }
 
-.rangeHeader {
+.rangeMinMax {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -85,13 +104,13 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .rangeLabel {
-    font-size: 12px;
-    font-weight: 400;
-    color: $text-helper;
+    font-size: 14px;
+    font-weight: 500;
+    color: $text-primary;
 }
 
 .rangeValue {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     color: $text-primary;
 }
@@ -141,13 +160,63 @@ $divider: rgba(0, 0, 0, 0.06);
     gap: 4px;
     font-size: 15px;
     font-weight: 400;
-    color: #000;
+    color: $text-secondary;
+    cursor: default;
+}
+
+.infoTooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+
+    &:hover .tooltipContent {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+}
+
+.infoIcon {
+    fill: $text-helper;
+
+    &:hover {
+        fill: $text-primary;
+    }
+}
+
+.tooltipContent {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -12px; // Align to the left to grow towards center, avoiding right screen edge overflow
+    width: max-content;
+    max-width: 260px;
+    background-color: $layer-01;
+    color: $text-primary;
+    border: 1px solid $border-subtle;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 200;
+
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, transform 0.15s;
+    pointer-events: none;
+    transform: translateY(-4px);
+    white-space: normal;
+    text-align: left;
 }
 
 .statValue {
     font-size: 15px;
-    font-weight: 500;
-    color: #000;
+    font-weight: 600;
+    color: $text-primary;
     text-align: right;
 }
 
@@ -163,6 +232,185 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 
+// ===== Info Section =====
+.infoSection {
+    padding: 4px 0;
+    border-bottom: 1px solid $divider;
+    margin-bottom: 4px;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    gap: 12px;
+    border-bottom: 1px solid $divider;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.infoLabel {
+    font-size: 14px;
+    font-weight: 400;
+    color: $text-secondary;
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+.infoLink {
+    font-size: 14px;
+    font-weight: 500;
+    color: $link-primary;
+    text-decoration: none;
+    text-align: right;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.infoBadgeGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    /* Increased gap slightly */
+    justify-content: flex-end;
+}
+
+.infoBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: $layer-hover-01;
+    color: $text-primary;
+    border: none;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s;
+
+    /* Add distinct styling in light mode if needed, we'll rely on the theme var $layer-01 usually */
+    /* Wait, the screenshot shows it a bit gray-ish. We can use $layer-hover-01 as the base */
+
+    &[href]:hover {
+        background-color: $layer-selected-hover-01;
+    }
+
+    /* Override any link colors */
+    color: $text-primary !important;
+
+    svg {
+        fill: currentColor;
+    }
+}
+
+.dropdownContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.infoBadgeDropdownGroup {
+    display: inline-flex;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+}
+
+.infoBadgeMainLink {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: $text-primary !important;
+    text-decoration: none;
+    background-color: $layer-hover-01;
+    border-right: 2px solid $border-subtle;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    transition: background 0.15s;
+
+    &:hover {
+        background-color: $layer-selected-hover-01;
+    }
+}
+
+.infoBadgeDropdownBtnOnly {
+    background-color: $layer-hover-01;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    transition: background 0.15s;
+
+    &:hover {
+        background-color: $layer-selected-hover-01;
+    }
+
+    .chevronIcon {
+        color: $text-primary;
+    }
+}
+
+.dropdownMenuAnimated {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #ffffff;
+    border: 1px solid $border-subtle;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    padding: 8px;
+    animation: dropdownFadeIn 0.1s ease-out;
+    min-width: 210px;
+    /* 1.5x wider */
+    max-height: 170px;
+    /* enough for 4 items (~40px each + padding) */
+    overflow-y: auto;
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        background: $layer-01;
+    }
+}
+
+.dropdownItemAnimated {
+    display: flex;
+    align-items: center;
+    padding: 10px 8px;
+    /* Slightly tighter vertical padding */
+    font-size: 13px;
+    /* Smaller font inside dropdown */
+    line-height: 16px;
+    font-weight: 600;
+    color: $text-secondary !important;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+    border-radius: 8px;
+
+    &:hover {
+        background: $layer-hover-01;
+        color: $text-primary !important;
+    }
+}
+
 // ===== Historical Price Section =====
 .historicalSection {
     padding-top: 4px;
@@ -171,7 +419,7 @@ $divider: rgba(0, 0, 0, 0.06);
 .sectionTitle {
     font-size: 15px;
     font-weight: 700;
-    color: #000;
+    color: $text-primary;
     padding: 16px 0;
 }
 
@@ -188,9 +436,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalLabel {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 400;
-    color: $text-helper;
+    color: $text-secondary;
 }
 
 .historicalValue {
@@ -201,9 +449,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalPrice {
-    font-size: 16px;
-    font-weight: 500;
-    color: #000;
+    font-size: 15px;
+    font-weight: 600;
+    color: $text-primary;
 }
 
 .historicalMeta {

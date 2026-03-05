@@ -4,6 +4,7 @@ import "./App.css";
 import Index from "./pages";
 import AuthShowcase from "./pages/auth";
 import DashboardPage from "./pages/dashboard";
+import HistoricalDataPage from "./pages/historical-data";
 import MarketPage from "./pages/market";
 import TokenPage from "./pages/token";
 import TokenOverviewPage from "./pages/token-overview";
@@ -21,6 +22,7 @@ function App() {
           <Route path="/tokens" element={<TokenPage />} />
           <Route path="/tokens/:address" element={<TokenOverviewPage />} />
           <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
+          <Route path="/historical-data/:address" element={<HistoricalDataPage />} />
           <Route path="/wallets/:address" element={<WalletPage />} />
           <Route
             path="/comparision/wallets"
