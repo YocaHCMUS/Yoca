@@ -11,8 +11,10 @@ import {
   renderCode,
   renderCurrency,
   renderDateTime,
+  renderLong,
+  renderLongCode,
   renderPositiveNegative,
-  renderStatus,
+  // renderStatus,
 } from "@/components/tables/TableCellRenderer.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -33,7 +35,7 @@ interface Transaction {
   price: number;
   total: number;
   timestamp: string;
-  status: "Success" | "Failed";
+  // status: "Success" | "Failed";
 }
 
 interface Portfolio {
@@ -76,8 +78,14 @@ export default function WalletPage() {
     tx.price.toFixed(2),
     tx.total.toFixed(2),
     tx.timestamp,
-    tx.status,
+    // tx.status,
   ]);
+
+  // Filter transactions by type
+  const transferData = transactionData.filter((row) => row[1] === 'Buy' || row[1] === 'Sell');
+  const swapData = transactionData.filter((row) => row[1] === 'Swap');
+  const inflowData = transactionData.filter((row) => row[1] === 'Buy');
+  const outflowData = transactionData.filter((row) => row[1] === 'Sell');
 
   const transactionHeaders = [
     tr("walletPage.signature"),
@@ -87,7 +95,7 @@ export default function WalletPage() {
     tr("walletPage.price"),
     tr("walletPage.total"),
     tr("walletPage.time"),
-    tr("walletPage.status"),
+    // tr("walletPage.status"),
   ];
 
   const portfolioHeaders = [
@@ -118,18 +126,18 @@ export default function WalletPage() {
 
   // Cell renderers for conditional styling
   const cellRenderers = [
-    (value: string) => renderCode(value),
+    (value: string) => renderLongCode(value),
     (value: string) =>
       renderBinaryValue(value, {
         Buy: "var(--cds-support-success)",
         Sell: "var(--cds-support-error)",
       }),
-    (value: string) => renderBold(value),
+    (value: string) => renderLong(value, renderBold),
     null,
     (value: string) => renderCurrency(value),
     (value: string) => renderCurrency(value),
     (value: string) => renderDateTime(value),
-    (value: string) => renderStatus(value),
+    // (value: string) => renderStatus(value),
   ];
 
   const portfolioCellRenderers = [
@@ -147,7 +155,7 @@ export default function WalletPage() {
     3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
     4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
     5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
-    7: { type: FilterType.Select }, // Status (Success/Failed) - Select filter
+    // 7: { type: FilterType.Select }, // Status (Success/Failed) - Select filter
   };
 
   const portfolioFilterSchema = {
@@ -191,20 +199,40 @@ export default function WalletPage() {
           chain: 'solana',
           limit: 50
         });
-        if (transactionResponse && transactionResponse.length > 0) {
+
+        console.log('[transactions] raw response:', transactionResponse);
+        console.log('[transactions] response type:', typeof transactionResponse);
+        console.log('[transactions] is array:', Array.isArray(transactionResponse));
+        console.log('[transactions] response length:', transactionResponse?.length);
+        console.log('[transactions] first item:', transactionResponse?.[0]);
+
+        // Handle response that might be wrapped in transactions object
+        const txData = Array.isArray(transactionResponse) 
+          ? transactionResponse 
+          : transactionResponse?.transactions || transactionResponse?.data;
+        
+        if (txData && Array.isArray(txData) && txData.length > 0) {
           // Transform API transaction response to match Transaction interface
-          const transformedTxs = transactionResponse.map((tx: any, index: number) => ({
-            id: `tx-${index}`,
-            signature: tx.hash || `sig-${index}`,
-            type: (tx.direction === 'in' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
-            token: tx.primaryTokenSymbol || 'Unknown',
-            amount: tx.primaryTokenAmount ?? 0,
-            price: (tx.totalUsd ?? 0) / (tx.primaryTokenAmount ?? 1),
-            total: tx.totalUsd ?? 0,
-            timestamp: tx.blockTimestamp ? new Date(tx.blockTimestamp).toISOString() : new Date().toISOString(),
-            status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
-          }));
+          const transformedTxs = txData.map((tx: any, index: number) => {
+            const amount = tx.primaryTokenAmount ?? 0;
+            const total = tx.totalUsd ?? 0;
+            
+            return {
+              id: `tx-${index}`,
+              signature: tx.hash || `sig-${index}`,
+              type: (tx.direction === 'in' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
+              token: tx.primaryTokenSymbol || 'Unknown',
+              amount: amount,
+              price: amount > 0 ? total / amount : 0,
+              total: total,
+              timestamp: tx.blockTimestamp ? new Date(tx.blockTimestamp).toISOString() : new Date().toISOString(),
+              // status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
+            };
+          });
           setTransactions(transformedTxs);
+          console.log('[transactions] ✓ transformed and set:', transformedTxs);
+        } else {
+          console.warn('[transactions] ✗ could not process response - txData:', txData);
         }
       } catch (err) {
         console.error('Failed to load wallet data:', err);
@@ -273,10 +301,10 @@ export default function WalletPage() {
               title={tr("walletPage.transfer")}
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(transferData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={transferData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
@@ -285,10 +313,10 @@ export default function WalletPage() {
               title={tr("walletPage.swap")}
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(swapData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={swapData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
@@ -297,10 +325,10 @@ export default function WalletPage() {
               title={tr("walletPage.inflow")}
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(inflowData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={inflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
@@ -309,10 +337,10 @@ export default function WalletPage() {
               title={tr("walletPage.outflow")}
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve(outflowData)}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={outflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,

@@ -1411,3 +1411,213 @@ export async function getWalletExchangeCounts(
   return response;
 }
 
+/**
+ * Historical Balance Data Point
+ */
+export interface BalanceDataPoint {
+  timestamp: number;
+  value: number;
+  date: string;
+}
+
+/**
+ * Get historical wallet balance by reconstructing from current state and transaction history
+ * 
+ * @param address - Wallet address
+ * @param chain - Blockchain (solana, eth, etc.)
+ * @param timePeriod - Time period for historical data
+ * @returns Array of balance data points over time
+ */
+export async function getWalletBalanceHistory(
+  address: string,
+  chain: SupportedChain,
+  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
+): Promise<BalanceDataPoint[]> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+
+  // Calculate time range based on period
+  const now = new Date();
+  let startDate = new Date(now);
+  switch (timePeriod) {
+    case "7D":
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case "30D":
+      startDate.setDate(now.getDate() - 30);
+      break;
+    case "60D":
+      startDate.setDate(now.getDate() - 60);
+      break;
+    case "90D":
+      startDate.setDate(now.getDate() - 90);
+      break;
+    case "1Y":
+      startDate.setFullYear(now.getFullYear() - 1);
+      break;
+    case "All":
+      startDate = new Date(0); // Unix epoch
+      break;
+  }
+
+  try {
+    // 1. Get current portfolio (latest state)
+    const currentPortfolio = await getWalletPortfolio(address, effectiveChain);
+    const currentTotalValue = currentPortfolio.reduce(
+      (sum, item) => sum + (item.valueUsd ?? 0),
+      0
+    );
+
+    // Build a map of token addresses/symbols to current prices for fallback calculations
+    const tokenPriceMap = new Map<string, number>();
+    for (const item of currentPortfolio) {
+      if (item.priceUsd && item.tokenAddress) {
+        tokenPriceMap.set(item.tokenAddress, item.priceUsd);
+      }
+      if (item.priceUsd && item.symbol) {
+        tokenPriceMap.set(item.symbol, item.priceUsd);
+      }
+    }
+
+    // 2. Get transaction history (fetch more to reconstruct historical data)
+    const txResponse = await getWalletTransactions(address, effectiveChain, { limit: 500 });
+    const transactions = txResponse.transactions;
+
+    // Filter transactions within the time period and sort by timestamp (oldest first)
+    const relevantTxs = transactions
+      .filter(tx => {
+        const txDate = new Date(tx.timestamp);
+        return txDate >= startDate && txDate <= now;
+      })
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    if (relevantTxs.length === 0) {
+      // No transactions in period, return flat line at current value
+      return [
+        {
+          timestamp: startDate.getTime(),
+          value: currentTotalValue,
+          date: startDate.toISOString(),
+        },
+        {
+          timestamp: now.getTime(),
+          value: currentTotalValue,
+          date: now.toISOString(),
+        },
+      ];
+    }
+
+    // Helper function to calculate transaction value in USD
+    const calculateTxValue = (tx: WalletTransaction): number => {
+      // 1. Use totalUsd if available
+      if (tx.totalUsd != null && tx.totalUsd > 0) {
+        return tx.totalUsd;
+      }
+
+      // 2. Calculate from primaryTokenAmount and priceUsd
+      if (tx.primaryTokenAmount != null && tx.priceUsd != null && tx.priceUsd > 0) {
+        return Math.abs(tx.primaryTokenAmount * tx.priceUsd);
+      }
+
+      // 3. Try to estimate using current token prices
+      if (tx.primaryTokenAmount != null) {
+        // Try to get current price for this token
+        const tokenKey = tx.primaryTokenAddress || tx.primaryTokenSymbol;
+        if (tokenKey && tokenPriceMap.has(tokenKey)) {
+          const currentPrice = tokenPriceMap.get(tokenKey)!;
+          return Math.abs(tx.primaryTokenAmount * currentPrice);
+        }
+      }
+
+      // 4. No USD value available - return 0 (will not affect balance calculation significantly)
+      return 0;
+    };
+
+    // 3. Build balance history data points
+    const balanceHistory: BalanceDataPoint[] = [];
+    
+    // Start with current balance
+    let runningBalance = currentTotalValue;
+    
+    // Walk backwards through transactions to estimate historical balances
+    const reversedTxs = [...relevantTxs].reverse();
+    
+    for (let i = 0; i < reversedTxs.length; i++) {
+      const tx = reversedTxs[i];
+      const txDate = new Date(tx.timestamp);
+      const txValue = calculateTxValue(tx);
+      
+      // Adjust running balance based on transaction direction
+      if (tx.direction === "out") {
+        // If funds went out, add them back to get previous balance
+        runningBalance += txValue;
+      } else if (tx.direction === "in") {
+        // If funds came in, subtract them to get previous balance
+        runningBalance -= txValue;
+      }
+      // For "self" or "unknown" direction, we don't adjust the balance
+      
+      // Add data point (going backwards in time)
+      balanceHistory.unshift({
+        timestamp: txDate.getTime(),
+        value: Math.max(0, runningBalance), // Ensure non-negative
+        date: txDate.toISOString(),
+      });
+    }
+    
+    // Add final data point with current balance
+    balanceHistory.push({
+      timestamp: now.getTime(),
+      value: currentTotalValue,
+      date: now.toISOString(),
+    });
+
+    // 4. Interpolate to create smoother daily data points
+    const dailyBalances: BalanceDataPoint[] = [];
+    const dayInMs = 24 * 60 * 60 * 1000;
+    
+    for (let date = new Date(startDate); date <= now; date = new Date(date.getTime() + dayInMs)) {
+      const timestamp = date.getTime();
+      
+      // Find the most recent balance at or before this date
+      let closestBalance = balanceHistory[0]?.value ?? currentTotalValue;
+      for (const point of balanceHistory) {
+        if (point.timestamp <= timestamp) {
+          closestBalance = point.value;
+        } else {
+          break;
+        }
+      }
+      
+      dailyBalances.push({
+        timestamp,
+        value: closestBalance,
+        date: date.toISOString(),
+      });
+    }
+
+    return dailyBalances;
+  } catch (error) {
+    console.error("[WalletBalanceHistory] Error fetching balance history:", error);
+    
+    // Fallback: return current balance as flat line
+    const currentPortfolio = await getWalletPortfolio(address, effectiveChain);
+    const currentTotalValue = currentPortfolio.reduce(
+      (sum, item) => sum + (item.valueUsd ?? 0),
+      0
+    );
+    
+    return [
+      {
+        timestamp: startDate.getTime(),
+        value: currentTotalValue,
+        date: startDate.toISOString(),
+      },
+      {
+        timestamp: now.getTime(),
+        value: currentTotalValue,
+        date: now.toISOString(),
+      },
+    ];
+  }
+}
+
