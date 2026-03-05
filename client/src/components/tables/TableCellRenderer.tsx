@@ -11,6 +11,10 @@ export const renderCode = (value: string) => (
   </code>
 );
 
+export const renderBase = (value: string) => (
+  <span>{value}</span>
+);
+
 /**
  * Higher-order function that wraps any renderer with truncation and tooltip functionality
  * @param value - The original full value
@@ -49,6 +53,35 @@ export const renderLong = (
       {renderFn(truncatedValue)}
     </span>
   );
+};
+
+export const renderReducedNumber = (
+  value: string,
+  renderFn: (value: string) => React.ReactNode,
+) => {
+  // if value is in (0, 0.0001) => render as "< 0.0001"
+  // if > 1000 => render as xK, the same is true for M, B,...
+  const numValue = Number(value);
+
+  if (Number.isNaN(numValue)) {
+    return renderFn(value);
+  }
+
+  if (numValue > 0 && numValue < 0.0001) {
+    return renderFn('< 0.0001');
+  }
+
+  if (Math.abs(numValue) > 1000) {
+    const compact = new Intl.NumberFormat(undefined, {
+      notation: 'compact',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(numValue);
+
+    return renderFn(compact);
+  }
+
+  return renderFn(value);
 };
 
 /**
@@ -223,3 +256,4 @@ export const renderPositiveNegative = (value: string, haveIcon: boolean = true, 
     </span>
   );
 }
+

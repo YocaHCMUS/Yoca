@@ -15,6 +15,8 @@ import {
 } from "@sv/db/schema.js";
 import { and, desc, eq } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
+import { getTokenMarketData } from "../tokens/token-market-data.js";
+
 
 async function saveTransactionsCache(
   address: string,
@@ -56,8 +58,9 @@ async function saveTransactionsCache(
         primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
         primaryTokenAmount: tx.primaryTokenAmount ?? null,
         primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        priceUsd: tx.priceUsd ?? null,
-        totalUsd: tx.totalUsd ?? null,
+        // Price fields are response-time enrichments and are not persisted.
+        priceUsd: null,
+        totalUsd: null,
         tokens: tx.tokens ?? null,
       }));
 
@@ -357,7 +360,7 @@ async function fetchHeliusSolanaTransactions(
         primaryTokenSymbol: symbol != null ? symbol : mint || undefined,
         primaryTokenAmount: amount,
         primaryTokenAddress: mint || undefined,
-        priceUsd: undefined,
+        priceUsd: undefined, // Will be populated after fetching market data
         totalUsd: undefined,
       };
 
@@ -407,7 +410,7 @@ function toIsoTimestamp(value: unknown): string {
   if (value instanceof Date) {
     const isNaN = Number.isNaN(value.getTime())
     const result = Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString()
-    console.log(`[toIsoTimestamp DEBUG] value is date, result is: ${result}, is NaN: ${isNaN}`)
+    // console.log(`[toIsoTimestamp DEBUG] value is date, result is: ${result}, is NaN: ${isNaN}`)
     return result;
   }
 
@@ -416,11 +419,11 @@ function toIsoTimestamp(value: unknown): string {
     const normalized = value.includes("T") ? value : value.replace(" ", "T");
     const parsed = new Date(normalized);
     const result = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
-    console.log(`[toIsoTimestamp DEBUG] value is string, result is: ${result}`)
+    // console.log(`[toIsoTimestamp DEBUG] value is string, result is: ${result}`)
     return result;
   }
 
-  console.log(`[toIsoTimestamp DEBUG] unknowned value type, result is new date`)
+  // console.log(`[toIsoTimestamp DEBUG] unknowned value type, result is new date`)
   return new Date().toISOString();
 }
 
@@ -903,6 +906,77 @@ export async function getWalletTransactions(
 ): Promise<WalletTransactionsResponse> {
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
+  const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+  async function enrichWithSolanaTokenPrices(
+    transactions: WalletTransaction[],
+  ): Promise<void> {
+    const uniqueTokenAddresses = new Set<string>();
+    for (const tx of transactions) {
+      if (tx.primaryTokenAddress) {
+        // Some providers may return non-canonical SOL mint strings. Ensure we
+        // always fetch native SOL price when symbol indicates SOL.
+        if (tx.primaryTokenSymbol === "SOL") {
+          uniqueTokenAddresses.add(SOL_MINT);
+          continue;
+        }
+        uniqueTokenAddresses.add(tx.primaryTokenAddress);
+      }
+    }
+
+    console.log(`[enrichWithSolanaTokenPrices] Enriching ${transactions.length} transactions with ${uniqueTokenAddresses.size} unique tokens`);
+
+    if (uniqueTokenAddresses.size === 0) {
+      // No tokens to enrich; leave prices as undefined
+      return;
+    }
+
+    try {
+      const marketData = await getTokenMarketData(
+        Array.from(uniqueTokenAddresses),
+      );
+      console.log(`[enrichWithSolanaTokenPrices] Got market data for ${Object.keys(marketData).length} tokens`);
+      
+      let enrichedCount = 0;
+      for (const tx of transactions) {
+        if (!tx.primaryTokenAddress) {
+          tx.priceUsd = undefined;
+          tx.totalUsd = undefined;
+          continue;
+        }
+        
+        const tokenData = marketData[tx.primaryTokenAddress];
+        const fallbackSolData =
+          tx.primaryTokenSymbol === "SOL" ? marketData[SOL_MINT] : undefined;
+        const priceUsd = tokenData?.priceUsd ?? fallbackSolData?.priceUsd;
+        
+        if (priceUsd != null && !isNaN(priceUsd)) {
+          tx.priceUsd = priceUsd;
+          if (tx.primaryTokenAmount != null) {
+            tx.totalUsd = priceUsd * tx.primaryTokenAmount;
+          } else {
+            tx.totalUsd = undefined;
+          }
+          enrichedCount++;
+        } else {
+          // Set explicitly to undefined for consistency
+          tx.priceUsd = undefined;
+          tx.totalUsd = undefined;
+        }
+      }
+      console.log(`[enrichWithSolanaTokenPrices] Successfully enriched ${enrichedCount}/${transactions.length} transactions with prices`);
+    } catch (err) {
+      console.error(
+        "Failed to enrich transactions with Solana token prices",
+        err,
+      );
+      // Set all to undefined on error
+      for (const tx of transactions) {
+        tx.priceUsd = undefined;
+        tx.totalUsd = undefined;
+      }
+    }
+  }
 
   // 0) DB-first: use cached transactions if fresh
   const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
@@ -944,141 +1018,27 @@ export async function getWalletTransactions(
         primaryTokenSymbol: r.primaryTokenSymbol ?? undefined,
         primaryTokenAmount: r.primaryTokenAmount != null ? Number(r.primaryTokenAmount) : undefined,
         primaryTokenAddress: r.primaryTokenAddress ?? undefined,
-        priceUsd: r.priceUsd != null ? Number(r.priceUsd) : undefined,
-        totalUsd: r.totalUsd != null ? Number(r.totalUsd) : undefined,
+        priceUsd: undefined,
+        totalUsd: undefined,
       }));
+
+      if (effectiveChain === "solana") {
+        await enrichWithSolanaTokenPrices(transactions);
+      }
+
       return { address, chain: effectiveChain, transactions };
     }
   }
-
   if (effectiveChain === "solana") {
-    // Use Helius getTransactionsForAddress to retrieve detailed token transfer
-    // history for Solana wallets (replaces Birdeye wallet/v2/transfer). This
-    // fetches up to `limit` successful transactions for the past month.
+    // Use Helius to retrieve detailed token transfer history for Solana.
     const transactions = await fetchHeliusSolanaTransactions(address, limit);
-
+    await enrichWithSolanaTokenPrices(transactions);
     await saveTransactionsCache(address, effectiveChain, transactions);
     return {
       address,
       chain: effectiveChain,
       transactions,
     };
-
-    /*
-    // Previous Birdeye-based implementation (kept for reference).
-    // Uncomment if you want to switch back to Birdeye wallet/v2/transfer in the future.
-    //
-    // const endpoint = birdeye.getEndpoint("/wallet/v2/transfer");
-    //
-    // const body: Record<string, unknown> = {
-    //   wallet: address,
-    //   sort_type: "desc",
-    //   sort_by: "time",
-    //   limit,
-    //   offset: 0,
-    // };
-    //
-    // if (options?.before) {
-    //   body.cursor = options.before;
-    // }
-    //
-    // let transfers: any[] = [];
-    //
-    // try {
-    //   const resp = await birdeye.birdeyeFetch(endpoint, {
-    //     method: "POST",
-    //     headers: birdeye.getRequiredHeaders("solana"),
-    //     body: JSON.stringify(body),
-    //   });
-    //
-    //   if (!resp.ok) {
-    //     console.error("Birdeye wallet/v2/transfer error", resp.status, resp.statusText);
-    //   } else {
-    //     const payload = await resp.json();
-    //     transfers = Array.isArray(payload?.data) ? (payload.data as any[]) : [];
-    //   }
-    // } catch (err) {
-    //   console.error("Birdeye wallet/v2/transfer request failed", err);
-    // }
-    //
-    // const transactions: WalletTransaction[] = transfers.map((tx) => {
-    //   const tokenInfo = (tx.token_info ?? {}) as {
-    //     address?: string;
-    //     symbol?: string;
-    //     name?: string;
-    //     decimals?: number;
-    //   };
-    //
-    //   const primaryTokenSymbol =
-    //     tokenInfo.symbol != null ? String(tokenInfo.symbol) : undefined;
-    //   const primaryTokenAddress =
-    //     tokenInfo.address != null ? String(tokenInfo.address) : undefined;
-    //
-    //   let primaryTokenAmount: number | undefined;
-    //   if (tx.ui_amount != null) {
-    //     primaryTokenAmount = Number(tx.ui_amount);
-    //   } else if (tx.amount != null && tokenInfo.decimals != null) {
-    //     const decimals = Number(tokenInfo.decimals);
-    //     primaryTokenAmount = Number(tx.amount) / 10 ** decimals;
-    //   }
-    //
-    //   const priceUsd =
-    //     tx.price != null && !Number.isNaN(Number(tx.price))
-    //       ? Number(tx.price)
-    //       : undefined;
-    //
-    //   let totalUsd: number | undefined;
-    //   if (tx.value != null && !Number.isNaN(Number(tx.value))) {
-    //     totalUsd = Number(tx.value);
-    //   } else if (primaryTokenAmount != null && priceUsd != null) {
-    //     totalUsd = primaryTokenAmount * priceUsd;
-    //   }
-    //
-    //   let direction: WalletTransaction["direction"] = "unknown";
-    //   const flow = typeof tx.flow === "string" ? tx.flow : "";
-    //   if (flow === "in" || flow === "out" || flow === "self") {
-    //     direction = flow;
-    //   } else {
-    //     const fromAddr = String(tx.from_address ?? "").toLowerCase();
-    //     const toAddr = String(tx.to_address ?? "").toLowerCase();
-    //     const wallet = address.toLowerCase();
-    //     if (fromAddr === wallet && toAddr === wallet) direction = "self";
-    //     else if (toAddr === wallet) direction = "in";
-    //     else if (fromAddr === wallet) direction = "out";
-    //   }
-    //
-    //   const tokens: string[] = [];
-    //   if (primaryTokenSymbol) {
-    //     tokens.push(primaryTokenSymbol);
-    //   } else if (primaryTokenAddress) {
-    //     tokens.push(primaryTokenAddress);
-    //   }
-    //
-    //   return {
-    //     hash: String(tx.tx_hash),
-    //     timestamp: String(tx.time ?? tx.unix_time),
-    //     from: String(tx.from_address),
-    //     to: String(tx.to_address),
-    //     status: true,
-    //     fee: undefined,
-    //     mainAction: tx.action ? String(tx.action) : undefined,
-    //     direction,
-    //     tokens,
-    //     primaryTokenSymbol,
-    //     primaryTokenAmount,
-    //     primaryTokenAddress,
-    //     priceUsd,
-    //     totalUsd,
-    //   };
-    // });
-    //
-    // await saveTransactionsCache(address, effectiveChain, transactions);
-    // return {
-    //   address,
-    //   chain: effectiveChain,
-    //   transactions,
-    // };
-    */
   }
 
   // EVM chains – Moralis wallet history (max limit 100 on free tier)
@@ -1088,7 +1048,7 @@ export async function getWalletTransactions(
   if (effectiveChain) {
     params.set("chain", effectiveChain);
   }
-  params.set("order", "DESC"); // Required per Moralis docs example
+  params.set("order", "DESC");
   params.set("limit", String(moralisLimit));
   if (options?.cursor) {
     params.set("cursor", options.cursor);
@@ -1105,7 +1065,12 @@ export async function getWalletTransactions(
 
     if (!resp.ok) {
       const errBody = await resp.text();
-      console.error("Moralis wallet history error", resp.status, resp.statusText, errBody.slice(0, 300));
+      console.error(
+        "Moralis wallet history error",
+        resp.status,
+        resp.statusText,
+        errBody.slice(0, 300),
+      );
     } else {
       const payload = await resp.json();
       result = Array.isArray(payload?.result) ? (payload.result as any[]) : [];
@@ -1114,7 +1079,6 @@ export async function getWalletTransactions(
     console.error("Moralis wallet history request failed", err);
   }
 
-  // First pass: collect unique token addresses and build transaction objects
   const tokenAddresses = new Set<string>();
   const transactionsWithTokens: Array<{
     tx: WalletTransaction;
@@ -1129,21 +1093,17 @@ export async function getWalletTransactions(
       ? (tx.native_transfers as any[])
       : [];
 
-    // Collect all token symbols from both ERC20 and native transfers
     const tokenSymbols = new Set<string>();
-    
     for (const tr of erc20Transfers) {
       const sym = tr.token_symbol ?? tr.token_name;
       if (sym) tokenSymbols.add(String(sym));
       if (tr.address) tokenAddresses.add(String(tr.address));
     }
-    
     for (const tr of nativeTransfers) {
       const sym = tr.token_symbol;
       if (sym) tokenSymbols.add(String(sym));
     }
 
-    // Determine primary token (prefer ERC20, fallback to native)
     const primaryErc20 = erc20Transfers[0];
     const primaryNative = nativeTransfers[0];
 
@@ -1152,7 +1112,6 @@ export async function getWalletTransactions(
     let primaryTokenAddress: string | null = null;
 
     if (primaryErc20) {
-      // Use value_formatted if available (already formatted), otherwise calculate from value + decimals
       if (primaryErc20.value_formatted !== undefined) {
         primaryTokenAmount = Number(primaryErc20.value_formatted);
       } else {
@@ -1160,18 +1119,20 @@ export async function getWalletTransactions(
         const raw = BigInt(primaryErc20.value ?? "0");
         primaryTokenAmount = Number(raw) / 10 ** decimals;
       }
-      primaryTokenSymbol = String(primaryErc20.token_symbol ?? primaryErc20.token_name ?? "");
-      primaryTokenAddress = primaryErc20.address ? String(primaryErc20.address) : null;
+      primaryTokenSymbol = String(
+        primaryErc20.token_symbol ?? primaryErc20.token_name ?? "",
+      );
+      primaryTokenAddress = primaryErc20.address
+        ? String(primaryErc20.address)
+        : null;
     } else if (primaryNative) {
-      // Use value_formatted if available for native transfers
       if (primaryNative.value_formatted !== undefined) {
         primaryTokenAmount = Number(primaryNative.value_formatted);
       } else {
         const raw = BigInt(primaryNative.value ?? "0");
-        primaryTokenAmount = Number(raw) / 10 ** 18; // ETH uses 18 decimals
+        primaryTokenAmount = Number(raw) / 10 ** 18;
       }
       primaryTokenSymbol = String(primaryNative.token_symbol ?? "ETH");
-      // Native ETH doesn't have a contract address, use null
       primaryTokenAddress = null;
     }
 
@@ -1180,7 +1141,12 @@ export async function getWalletTransactions(
       timestamp: toIsoTimestamp(tx.block_timestamp),
       from: String(tx.from_address),
       to: String(tx.to_address),
-      status: tx.receipt_status === "1" ? true : tx.receipt_status === "0" ? false : null,
+      status:
+        tx.receipt_status === "1"
+          ? true
+          : tx.receipt_status === "0"
+            ? false
+            : null,
       fee:
         typeof tx.gas === "string" && typeof tx.gas_price === "string"
           ? Number(tx.gas) * Number(tx.gas_price)
@@ -1190,10 +1156,10 @@ export async function getWalletTransactions(
         tx.from_address === address && tx.to_address === address
           ? "self"
           : tx.to_address === address
-          ? "in"
-          : tx.from_address === address
-          ? "out"
-          : "unknown",
+            ? "in"
+            : tx.from_address === address
+              ? "out"
+              : "unknown",
       tokens: Array.from(tokenSymbols),
       primaryTokenSymbol,
       primaryTokenAmount,
@@ -1203,43 +1169,41 @@ export async function getWalletTransactions(
     transactionsWithTokens.push({ tx: txObj, tokenAddress: primaryTokenAddress });
   }
 
-  // Fetch prices for all unique token addresses
   const priceMap = new Map<string, number>();
-  
-  // Fetch prices in parallel (limit to avoid rate limits)
-  const pricePromises = Array.from(tokenAddresses).slice(0, 50).map(async (tokenAddr) => {
-    try {
-      const priceEndpoint = moralis.getEndpoint(`/erc20/${tokenAddr}/price`);
-      const priceParams = new URLSearchParams();
-      if (effectiveChain) {
-        priceParams.set("chain", effectiveChain);
-      }
-      priceEndpoint.search = priceParams.toString();
-
-      const priceResp = await fetch(priceEndpoint, {
-        method: "GET",
-        headers: moralis.getRequiredHeaders(),
-      });
-
-      if (priceResp.ok) {
-        const priceData = await priceResp.json();
-        const usdPrice = priceData?.usdPrice ?? priceData?.usd_price;
-        if (typeof usdPrice === "number") {
-          priceMap.set(tokenAddr, usdPrice);
+  const pricePromises = Array.from(tokenAddresses)
+    .slice(0, 50)
+    .map(async (tokenAddr) => {
+      try {
+        const priceEndpoint = moralis.getEndpoint(`/erc20/${tokenAddr}/price`);
+        const priceParams = new URLSearchParams();
+        if (effectiveChain) {
+          priceParams.set("chain", effectiveChain);
         }
+        priceEndpoint.search = priceParams.toString();
+
+        const priceResp = await fetch(priceEndpoint, {
+          method: "GET",
+          headers: moralis.getRequiredHeaders(),
+        });
+
+        if (priceResp.ok) {
+          const priceData = await priceResp.json();
+          const usdPrice = priceData?.usdPrice ?? priceData?.usd_price;
+          if (typeof usdPrice === "number") {
+            priceMap.set(tokenAddr, usdPrice);
+          }
+        }
+      } catch {
+        // Ignore individual token price failures.
       }
-    } catch (err) {
-      // Silently fail for individual price fetches
-    }
-  });
+    });
 
   await Promise.all(pricePromises);
 
-  // For native ETH, fetch price using WETH address as proxy (WETH price ≈ ETH price)
   let ethPrice: number | undefined;
   if (effectiveChain === "eth") {
     try {
-      const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH on Ethereum
+      const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
       const ethPriceEndpoint = moralis.getEndpoint(`/erc20/${wethAddress}/price`);
       const ethPriceParams = new URLSearchParams();
       ethPriceParams.set("chain", effectiveChain);
@@ -1254,40 +1218,41 @@ export async function getWalletTransactions(
         const ethPriceData = await ethPriceResp.json();
         ethPrice = ethPriceData?.usdPrice ?? ethPriceData?.usd_price;
       }
-    } catch (err) {
-      // Ignore ETH price fetch errors
+    } catch {
+      // Ignore ETH price fetch errors.
     }
   }
 
-  // Second pass: enrich transactions with prices and calculate totals
-  const transactions: WalletTransaction[] = transactionsWithTokens.map(({ tx, tokenAddress }) => {
-    let priceUsd: number | undefined;
-    let totalUsd: number | undefined;
+  const transactions: WalletTransaction[] = transactionsWithTokens.map(
+    ({ tx, tokenAddress }) => {
+      let priceUsd: number | undefined;
+      let totalUsd: number | undefined;
 
-    if (tokenAddress && priceMap.has(tokenAddress)) {
-      priceUsd = priceMap.get(tokenAddress);
-      if (priceUsd !== undefined && tx.primaryTokenAmount !== undefined) {
-        totalUsd = priceUsd * tx.primaryTokenAmount;
+      if (tokenAddress && priceMap.has(tokenAddress)) {
+        priceUsd = priceMap.get(tokenAddress);
+        if (priceUsd !== undefined && tx.primaryTokenAmount !== undefined) {
+          totalUsd = priceUsd * tx.primaryTokenAmount;
+        }
+      } else if (
+        !tokenAddress &&
+        tx.primaryTokenSymbol === "ETH" &&
+        ethPrice !== undefined
+      ) {
+        priceUsd = ethPrice;
+        if (tx.primaryTokenAmount !== undefined) {
+          totalUsd = ethPrice * tx.primaryTokenAmount;
+        }
       }
-    } else if (!tokenAddress && tx.primaryTokenSymbol === "ETH" && ethPrice !== undefined) {
-      // Handle native ETH
-      priceUsd = ethPrice;
-      if (tx.primaryTokenAmount !== undefined) {
-        totalUsd = ethPrice * tx.primaryTokenAmount;
-      }
-    }
 
-    return {
-      ...tx,
-      priceUsd,
-      totalUsd,
-    };
-  });
+      return {
+        ...tx,
+        priceUsd,
+        totalUsd,
+      };
+    },
+  );
 
   await saveTransactionsCache(address, effectiveChain, transactions);
-  console.log("[getWalletTransactions] fetched txs:");
-  console.log(transactions)
-
   return {
     address,
     chain: effectiveChain,
@@ -1659,3 +1624,15 @@ export async function getWalletBalanceHistory(
   }
 }
 
+// async function getTokenPriceMapFromTransactions(
+  
+// ) {
+//   const uniqueTokenAddresses = new Set<string>();
+
+//   for (const tx of transactions) {
+//     if (tx.primaryTokenAddress) {
+//       uniqueTokenAddresses.add(tx.primaryTokenAddress);
+//     }
+//   }
+//   return await getTokenMarketData(Array.from(uniqueTokenAddresses))
+// }

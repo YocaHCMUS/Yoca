@@ -13,6 +13,8 @@ import {
   renderLong,
   renderLongCode,
   renderPositiveNegative,
+  renderReducedNumber,
+  renderBase
   // renderStatus,
 } from "@/components/tables/TableCellRenderer.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
@@ -75,9 +77,9 @@ export default function WalletPage() {
     tx.buyer,
     tx.seller,
     tx.token,
-    tx.amount.toFixed(9),
-    tx.price.toFixed(2),
-    tx.total.toFixed(2),
+    tx.amount,
+    tx.price,
+    tx.total,
     tx.timestamp,
     // tx.status,
   ]);
@@ -131,9 +133,9 @@ export default function WalletPage() {
     (value: string) => renderLongCode(value),
     (value: string) => renderLongCode(value),
     (value: string) => renderLong(value, renderBold),
-    null,
-    (value: string) => renderCurrency(value),
-    (value: string) => renderCurrency(value),
+    (value: string) => renderReducedNumber(value, renderBase),
+    (value: string) => renderReducedNumber(value, renderCurrency),
+    (value: string) => renderReducedNumber(value, renderCurrency),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     // (value: string) => renderDateTime(value),
     // null
@@ -221,15 +223,14 @@ export default function WalletPage() {
             
             return {
               id: `tx-${index}`,
-              buyer: (tx.direction === 'in' ? tx.to : tx.from),
-              seller: (tx.direction === 'in' ? tx.from : tx.to),
+              buyer: tx.to,
+              seller: tx.from,
               signature: tx.hash || `sig-${index}`,
               token: tx.primaryTokenSymbol || 'Unknown',
               amount: amount,
               price: amount > 0 ? total / amount : 0,
               total: total,
               timestamp: tx.timestamp
-
               // status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
             };
           });

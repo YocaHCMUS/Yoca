@@ -84,8 +84,8 @@ router.get("/transactions", async (c) => {
       cursor: cursor ?? undefined,
       before: before ?? undefined,
     });
-    console.log("[transaction route] data:")
-    console.log(txs);
+    // console.log("[transaction route] data:")
+    // console.log(txs);
     return c.json(txs);
   } catch (err) {
     console.error("Failed to get wallet transactions", err);
