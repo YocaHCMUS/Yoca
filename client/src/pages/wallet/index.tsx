@@ -47,7 +47,7 @@ interface Portfolio {
 }
 
 export default function WalletPage() {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const { address } = useParams<{ address: string }>();
   const [transfers, setTransfers] = useState([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
@@ -136,7 +136,10 @@ export default function WalletPage() {
     null,
     (value: string) => renderCurrency(value),
     (value: string) => renderCurrency(value),
-    (value: string) => renderDateTime(value),
+    (value: string) => renderDateTime(value, fmt.datetime['relative'])
+    // (value: string) => renderDateTime(value),
+    // null
+
     // (value: string) => renderStatus(value),
   ];
 
@@ -225,7 +228,8 @@ export default function WalletPage() {
               amount: amount,
               price: amount > 0 ? total / amount : 0,
               total: total,
-              timestamp: tx.blockTimestamp ? new Date(tx.blockTimestamp).toISOString() : new Date().toISOString(),
+              timestamp: tx.timestamp
+
               // status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
             };
           });
@@ -279,6 +283,7 @@ export default function WalletPage() {
               initialFilters={{
                 timePeriod: "30D",
                 wallets: [address],
+                tokens: ['SOL']
               }}
               autoRefresh={true}
             />,

@@ -141,7 +141,19 @@ export const renderRelativeTime = (value: string) => {
 /**
  * Renders an absolute datetime in readable format
  */
-export const renderDateTime = (value: string, options?: Intl.DateTimeFormatOptions) => {
+export const renderDateTime = (
+  value: string,
+  optionsOrFormatter?: Intl.DateTimeFormatOptions | ((value: string | null) => string),
+  formatter?: (value: string | null) => string,
+) => {
+  const localizationFormatter =
+    typeof optionsOrFormatter === 'function' ? optionsOrFormatter : formatter;
+
+  if (localizationFormatter) {
+    return <span>{localizationFormatter(value)}</span>;
+  }
+
+  const options = typeof optionsOrFormatter === 'function' ? undefined : optionsOrFormatter;
   const date = new Date(value);
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -149,9 +161,9 @@ export const renderDateTime = (value: string, options?: Intl.DateTimeFormatOptio
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    ...options
+    ...options,
   };
-  
+
   return <span>{date.toLocaleString(undefined, defaultOptions)}</span>;
 };
 

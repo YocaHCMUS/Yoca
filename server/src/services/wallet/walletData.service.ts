@@ -389,6 +389,28 @@ export interface WalletTransactionsResponse {
   transactions: WalletTransaction[];
 }
 
+function toIsoTimestamp(value: unknown): string {
+  console.log(`[toIsoTimestamp DEBUG] value: ${value}`)
+  if (value instanceof Date) {
+    const isNaN = Number.isNaN(value.getTime())
+    const result = Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString()
+    console.log(`[toIsoTimestamp DEBUG] value is date, result is: ${result}, is NaN: ${isNaN}`)
+    return result;
+  }
+
+  if (typeof value === "string") {
+    // Accept SQL datetime format like "YYYY-MM-DD HH:mm:ss".
+    const normalized = value.includes("T") ? value : value.replace(" ", "T");
+    const parsed = new Date(normalized);
+    const result = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
+    console.log(`[toIsoTimestamp DEBUG] value is string, result is: ${result}`)
+    return result;
+  }
+
+  console.log(`[toIsoTimestamp DEBUG] unknowned value type, result is new date`)
+  return new Date().toISOString();
+}
+
 function sumTotalAssetValueFromBalances(balances: WalletBalanceInsert[]): number {
   return balances.reduce((sum, bal) => sum + Number(bal.totalValueUsd ?? bal.valueUsd ?? 0), 0);
 }
@@ -898,7 +920,7 @@ export async function getWalletTransactions(
     if (rows.length > 0) {
       const transactions: WalletTransaction[] = rows.map((r) => ({
         hash: r.hash,
-        timestamp: r.blockTimestamp.toISOString(),
+        timestamp: toIsoTimestamp(r.blockTimestamp),
         from: r.fromAddress,
         to: r.toAddress,
         status: r.receiptStatus === 1 ? true : r.receiptStatus === 0 ? false : null,
@@ -1142,7 +1164,7 @@ export async function getWalletTransactions(
 
     const txObj: WalletTransaction = {
       hash: String(tx.hash),
-      timestamp: String(tx.block_timestamp),
+      timestamp: toIsoTimestamp(tx.block_timestamp),
       from: String(tx.from_address),
       to: String(tx.to_address),
       status: tx.receipt_status === "1" ? true : tx.receipt_status === "0" ? false : null,
@@ -1250,6 +1272,9 @@ export async function getWalletTransactions(
   });
 
   await saveTransactionsCache(address, effectiveChain, transactions);
+  console.log("[getWalletTransactions] fetched txs:");
+  console.log(transactions)
+
   return {
     address,
     chain: effectiveChain,
