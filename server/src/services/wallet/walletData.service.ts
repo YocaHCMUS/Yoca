@@ -319,10 +319,23 @@ async function fetchHeliusSolanaTransactions(
       }
 
       const mint = typeof entry.mint === "string" ? entry.mint : "";
-      const amount =
-        typeof entry.amount === "number" && Number.isFinite(entry.amount)
-          ? entry.amount
-          : undefined;
+      const amountRaw = 
+        typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw) 
+          ? entry.amountRaw
+          : undefined
+      const decimal = 
+        typeof entry.decimal === "number" && Number.isFinite(entry.decimal) 
+          ? entry.decimal
+          : undefined
+        
+      const amount = 
+        (typeof amountRaw === "number" && typeof decimal === "number")
+          ? amountRaw /  10 ** decimal
+          : entry.amount
+      // const amount =
+      //   typeof entry.amount === "number" && Number.isFinite(entry.amount)
+      //     ? entry.amount
+      //     : undefined;
       const symbol =
         entry.symbol != null && entry.symbol !== ""
           ? String(entry.symbol)

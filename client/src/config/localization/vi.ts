@@ -155,6 +155,8 @@ export const translation = defineTranslation({
     counterparties: "Đối tác",
     portfolio: "Danh mục đầu tư",
     signature: "Định danh giao dịch",
+    buyer: "Người mua",
+    seller: "Người bán",
     type: "Loại",
     token: "Token",
     amount: "Số lượng",

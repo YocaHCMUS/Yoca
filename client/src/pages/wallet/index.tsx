@@ -6,7 +6,6 @@ import { TransactionDistribution } from "@/components/charts/TransactionDistribu
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
-  renderBinaryValue,
   renderBold,
   renderCode,
   renderCurrency,
@@ -29,7 +28,8 @@ import styles from "./index.module.scss";
 interface Transaction {
   id: string;
   signature: string;
-  type: "Buy" | "Sell";
+  buyer: string;
+  seller: string;
   token: string;
   amount: number;
   price: number;
@@ -72,9 +72,10 @@ export default function WalletPage() {
   // Transform transactions to array format for Table component
   const transactionData = transactions.map((tx) => [
     tx.signature,
-    tx.type,
+    tx.buyer,
+    tx.seller,
     tx.token,
-    tx.amount.toFixed(4),
+    tx.amount.toFixed(9),
     tx.price.toFixed(2),
     tx.total.toFixed(2),
     tx.timestamp,
@@ -82,14 +83,14 @@ export default function WalletPage() {
   ]);
 
   // Filter transactions by type
-  const transferData = transactionData.filter((row) => row[1] === 'Buy' || row[1] === 'Sell');
-  const swapData = transactionData.filter((row) => row[1] === 'Swap');
-  const inflowData = transactionData.filter((row) => row[1] === 'Buy');
-  const outflowData = transactionData.filter((row) => row[1] === 'Sell');
+  const transferData = transactionData;
+  const inflowData = transactionData.filter((row) => address && row[1] === address);
+  const outflowData = transactionData.filter((row) => address && row[2] === address);
 
   const transactionHeaders = [
     tr("walletPage.signature"),
-    tr("walletPage.type"),
+    tr("walletPage.buyer"),
+    tr("walletPage.seller"),
     tr("walletPage.token"),
     tr("walletPage.amount"),
     tr("walletPage.price"),
@@ -106,15 +107,15 @@ export default function WalletPage() {
     tr("walletPage.change24h"),
   ];
 
-  const isSortable = [false, false, false, true, true, true, true, false];
+  const isSortable = [false, false, false, false, true, true, true, true];
   const isSortablePortfolio = [false, true, true, true, true];
 
   // Sort configurations for sortable columns
   const sortConfigs = {
-    3: { type: SortType.Number }, // Amount
-    4: { type: SortType.Number }, // Price
-    5: { type: SortType.Number }, // Total
-    6: { type: SortType.Date }, // Time
+    4: { type: SortType.Number }, // Amount
+    5: { type: SortType.Number }, // Price
+    6: { type: SortType.Number }, // Total
+    7: { type: SortType.Date }, // Time
   };
 
   const portfolioSortConfig = {
@@ -127,16 +128,13 @@ export default function WalletPage() {
   // Cell renderers for conditional styling
   const cellRenderers = [
     (value: string) => renderLongCode(value),
-    (value: string) =>
-      renderBinaryValue(value, {
-        Buy: "var(--cds-support-success)",
-        Sell: "var(--cds-support-error)",
-      }),
+    (value: string) => renderLongCode(value),
+    (value: string) => renderLongCode(value),
     (value: string) => renderLong(value, renderBold),
     null,
     (value: string) => renderCurrency(value),
     (value: string) => renderCurrency(value),
-    (value: string) => renderDateTime(value, fmt.datetime['relative'])
+    (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     // (value: string) => renderDateTime(value),
     // null
 
@@ -153,11 +151,12 @@ export default function WalletPage() {
 
   // Filter schema for filterable columns
   const filterSchema = {
-    1: { type: FilterType.Select }, // Type (Buy/Sell) - Select filter
-    2: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
-    3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
-    4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
-    5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
+    1: { type: FilterType.Select }, // Buyer - Select filter
+    2: { type: FilterType.Select }, // Seller - Select filter
+    3: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
+    4: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
+    5: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
+    6: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
     // 7: { type: FilterType.Select }, // Status (Success/Failed) - Select filter
   };
 
@@ -222,8 +221,9 @@ export default function WalletPage() {
             
             return {
               id: `tx-${index}`,
+              buyer: (tx.direction === 'in' ? tx.to : tx.from),
+              seller: (tx.direction === 'in' ? tx.from : tx.to),
               signature: tx.hash || `sig-${index}`,
-              type: (tx.direction === 'in' ? 'Buy' : 'Sell') as 'Buy' | 'Sell',
               token: tx.primaryTokenSymbol || 'Unknown',
               amount: amount,
               price: amount > 0 ? total / amount : 0,
@@ -295,7 +295,6 @@ export default function WalletPage() {
           activeTab={secondaryActiveTab}
           names={[
             tr("walletPage.transfer"),
-            tr("walletPage.swap"),
             tr("walletPage.inflow"),
             tr("walletPage.outflow"),
             tr("walletPage.counterparties"),
@@ -310,18 +309,6 @@ export default function WalletPage() {
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
               dataEntries={transferData}
-              isSortable={isSortable}
-              sortConfigs={sortConfigs}
-            />,
-            <Table
-              maxHeight={400}
-              title={tr("walletPage.swap")}
-              headers={transactionHeaders}
-              initialFilters={{}}
-              fetcher={Promise.resolve(swapData)}
-              filterSchema={filterSchema}
-              cellRenderers={cellRenderers}
-              dataEntries={swapData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
             />,
