@@ -10,7 +10,7 @@ import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/TabContainer.tsx";
 import { Table, SortType, FilterType } from "@/components/tables/Table.tsx";
 import { 
-  renderCode, 
+  renderHash,
   renderBinaryValue, 
   renderBold, 
   renderCurrency, 
@@ -152,7 +152,7 @@ export default function WalletPage() {
 
   // Cell renderers for conditional styling
   const cellRenderers = [
-    (value: string) => renderCode(value),
+    (value: string) => renderHash(value),
     (value: string) => renderBinaryValue(value, {
       'Buy': 'var(--cds-support-success)',
       'Sell': 'var(--cds-support-error)'
@@ -166,7 +166,7 @@ export default function WalletPage() {
   ];
 
   const portfolioCellRenderers = [
-    (value: string) => renderCode(value),
+    (value: string) => renderHash(value),
     (value: string) => renderCurrency(value),
     null,
     (value: string) => renderCurrency(value),
