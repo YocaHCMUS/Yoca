@@ -27,6 +27,7 @@ import misc from "./routes/misc.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
+import wallets from "@sv/routes/wallets.route.js"
 
 process.loadEnvFile("./.env");
 
@@ -70,7 +71,8 @@ const app = new Hono()
   .route("/api/charts/winrate", chartWinrate)
   .route("/api/charts/drawdown", chartDrawdown)
   .route("/api/charts/totalTradingVolume", chartTotalTradingVolume)
-  .route("/api/charts/stablecoinRatio", chartStablecoinRatio);
+  .route("/api/charts/stablecoinRatio", chartStablecoinRatio)
+  .route("/api/wallets", wallets);
 
 // Server
 serve(

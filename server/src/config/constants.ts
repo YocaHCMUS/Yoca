@@ -22,3 +22,8 @@ export const UPDATE_TRENDING_TOKENS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const UPDATE_TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
 
 export const AUTH_COOKIE_NAME = "auth_token";
+
+export const WALLET_OVERVIEW_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_PORTFOLIO_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_TRANSACTIONS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour

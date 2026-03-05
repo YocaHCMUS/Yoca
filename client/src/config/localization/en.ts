@@ -168,6 +168,8 @@ export const translation = {
     counterparties: "Counterparties",
     portfolio: "Portfolio",
     signature: "Signature",
+    buyer: "Buyer",
+    seller: "Seller",
     type: "Type",
     token: "Token",
     amount: "Amount",
