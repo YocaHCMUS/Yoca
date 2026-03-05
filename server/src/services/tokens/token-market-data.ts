@@ -7,6 +7,43 @@ import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdList } from "./token-list.js";
 
+export function getMarketDataFromRaw(
+  address: string,
+  raw: CG_CoinMarkets[number],
+): TokenMarketDataInsert {
+  return {
+    address,
+    decimals: 9,
+    fullyDilutedValuation: raw.fully_diluted_valuation,
+    marketCap: raw.market_cap,
+    priceUsd: raw.current_price,
+    totalSupply: raw.total_supply,
+    updatedAt: new Date(),
+    marketCapRank: raw.market_cap_rank,
+    high24h: raw.high_24h,
+    low24h: raw.low_24h,
+    priceChangePercentage1h: raw.price_change_percentage_1h_in_currency,
+    priceChange24h: raw.price_change_24h,
+    priceChangePercentage24h: raw.price_change_percentage_24h_in_currency,
+    priceChangePercentage7d: raw.price_change_percentage_7d_in_currency,
+    priceChangePercentage14d: raw.price_change_percentage_14d_in_currency,
+    priceChangePercentage30d: raw.price_change_percentage_30d_in_currency,
+    priceChangePercentage200d: raw.price_change_percentage_200d_in_currency,
+    priceChangePercentage1y: raw.price_change_percentage_1y_in_currency,
+    marketCapChange24h: raw.market_cap_change_24h,
+    marketCapChangePercentage24h: raw.market_cap_change_percentage_24h,
+    circulatingSupply: raw.circulating_supply,
+    maxSupply: raw.max_supply,
+    ath: raw.ath,
+    athChangePercentage: raw.ath_change_percentage,
+    athDate: new Date(raw.ath_date),
+    atl: raw.atl,
+    atlChangePercentage: raw.atl_change_percentage,
+    atlDate: new Date(raw.atl_date),
+    volume24h: raw.total_volume,
+  };
+}
+
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   const cgIds = Object.keys(cgIdToAddress);
@@ -37,37 +74,7 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   return Object.fromEntries(
     res.map((raw): [string, TokenMarketDataInsert] => [
       cgIdToAddress[raw.id],
-      {
-        address: cgIdToAddress[raw.id],
-        decimals: 9,
-        fullyDilutedValuation: raw.fully_diluted_valuation,
-        marketCap: raw.market_cap,
-        priceUsd: raw.current_price,
-        totalSupply: raw.total_supply,
-        updatedAt: new Date(),
-        marketCapRank: raw.market_cap_rank,
-        high24h: raw.high_24h,
-        low24h: raw.low_24h,
-        priceChangePercentage1h: raw.price_change_percentage_1h_in_currency,
-        priceChange24h: raw.price_change_24h,
-        priceChangePercentage24h: raw.price_change_percentage_24h_in_currency,
-        priceChangePercentage7d: raw.price_change_percentage_7d_in_currency,
-        priceChangePercentage14d: raw.price_change_percentage_14d_in_currency,
-        priceChangePercentage30d: raw.price_change_percentage_30d_in_currency,
-        priceChangePercentage200d: raw.price_change_percentage_200d_in_currency,
-        priceChangePercentage1y: raw.price_change_percentage_1y_in_currency,
-        marketCapChange24h: raw.market_cap_change_24h,
-        marketCapChangePercentage24h: raw.market_cap_change_percentage_24h,
-        circulatingSupply: raw.circulating_supply,
-        maxSupply: raw.max_supply,
-        ath: raw.ath,
-        athChangePercentage: raw.ath_change_percentage,
-        athDate: new Date(raw.ath_date),
-        atl: raw.atl,
-        atlChangePercentage: raw.atl_change_percentage,
-        atlDate: new Date(raw.atl_date),
-        volume24h: raw.total_volume,
-      },
+      getMarketDataFromRaw(cgIdToAddress[raw.id], raw),
     ]),
   );
 }

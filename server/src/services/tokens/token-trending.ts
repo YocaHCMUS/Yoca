@@ -1,88 +1,75 @@
-// import { TRENDING_TOKENS_TTL_MS } from "@sv/config/constants.js";
-// import { db } from "@sv/db/index.js";
-// import { trendingTokens, type TrendingTokenInsert } from "@sv/db/schema.js";
-// import * as cg from "@sv/util/util-coingecko.js";
-// import { gte } from "drizzle-orm";
+import { UPDATE_TRENDING_TOKENS_TTL_MS } from "@sv/config/constants.js";
+import { db } from "@sv/db/index.js";
+import { trendingTokens } from "@sv/db/schema.js";
+import * as bds from "@sv/util/util-birdeye.js";
+import { asc } from "drizzle-orm";
 
-// interface TrendingCoinItem {
-//   item: {
-//     id: string;
-//     name: string;
-//     symbol: string;
-//     thumb: string;
-//     data?: {
-//       price_change_percentage_24h?: {
-//         usd?: number;
-//       };
-//     };
-//   };
-// }
+export type BDS_TrendingList = {
+  success: boolean;
+  data: {
+    updateUnixTime: number;
+    updateTime: string;
+    tokens: Array<{
+      address: string;
+      decimals: number;
+      liquidity: number;
+      logoURI: string;
+      name: string;
+      symbol: string;
+      volume24hUSD: number;
+      volume24hChangePercent: number;
+      rank: number;
+      price: number;
+      price24hChangePercent: number;
+      fdv: number;
+      marketcap: number;
+    }>;
+    total: number;
+  };
+};
 
-// interface TrendingResponse {
-//   coins: TrendingCoinItem[];
-// }
+// https://docs.birdeye.so/reference/get-defi-token_trending
+export async function getTrendingTokens() {
+  const result = await db
+    .select()
+    .from(trendingTokens)
+    .orderBy(asc(trendingTokens.rank))
 
-// /**
-//  * Fetch trending tokens from CoinGecko API
-//  */
-// async function fetchTrendingTokens(): Promise<TrendingTokenInsert[]> {
-//   const cgEndpoint = cg.getEndpoint("/search/trending");
+  const thresholdTime = new Date(Date.now() - UPDATE_TRENDING_TOKENS_TTL_MS);
 
-//   const req = new Request(cgEndpoint, {
-//     method: "GET",
-//     headers: cg.getRequiredHeaders(),
-//   });
+  if (result.length > 0 && result[0].updatedAt > thresholdTime) {
+    return result;
+  }
 
-//   const resp = await fetch(req);
+  const bdsEndpoint = bds.getEndpoint("/defi/token_trending");
 
-//   if (!resp.ok) {
-//     console.error(`Trending Tokens API error: ${resp.status}`);
-//     return [];
-//   }
+  bdsEndpoint.search = new URLSearchParams({
+    sort_by: "rank",
+    sort_type: "asc",
+  }).toString();
 
-//   const data: TrendingResponse = await resp.json();
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
 
-//   return data.coins.slice(0, 10).map((item, index) => ({
-//     id: `${item.item.id}-${Date.now()}`, // Unique ID with timestamp
-//     coinGeckoId: item.item.id,
-//     name: item.item.name,
-//     symbol: item.item.symbol,
-//     thumb: item.item.thumb || null,
-//     priceChangePercentage24h:
-//       item.item.data?.price_change_percentage_24h?.usd || 0,
-//     rank: index + 1,
-//   }));
-// }
+  const resp = await fetch(req);
 
-// /**
-//  * Get trending tokens with caching
-//  */
-// export async function getTrendingTokens() {
-//   const thresholdDate = new Date(Date.now() - TRENDING_TOKENS_TTL_MS);
+  if (!resp.ok) {
+    return null;
+  }
 
-//   const cached = await db
-//     .select()
-//     .from(trendingTokens)
-//     .where(gte(trendingTokens.updatedAt, thresholdDate))
-//     .orderBy(trendingTokens.rank)
-//     .limit(10);
+  const res: BDS_TrendingList = await resp.json();
 
-//   if (cached.length > 0) {
-//     return cached;
-//   }
+  if (!res.success) {
+    return null;
+  }
 
-//   // Fetch fresh data
-//   const tokens = await fetchTrendingTokens();
-
-//   if (tokens.length === 0) {
-//     return [];
-//   }
-
-//   // Clear old trending tokens (they change frequently)
-//   await db.delete(trendingTokens);
-
-//   // Store in database
-//   const inserted = await db.insert(trendingTokens).values(tokens).returning();
-
-//   return inserted;
-// }
+  await db.delete(trendingTokens);
+  return await db.insert(trendingTokens).values(
+    res.data.tokens.map((token) => ({
+      address: token.address,
+      rank: token.rank,
+    })),
+  ).returning();
+}

@@ -40,9 +40,11 @@ export function defineNumberFormat(
     if (!value) return nullDisplay;
 
     const exchangedValue =
-      style === "currency" && getExchangeRate
+      style == "currency" && getExchangeRate
         ? value * getExchangeRate()
-        : value;
+        : style == "percent"
+          ? value / 100.0
+          : value;
 
     const formatted = formatterMap
       .get(key)!

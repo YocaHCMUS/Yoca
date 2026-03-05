@@ -15,18 +15,18 @@ export const format = {
         currency: "VND",
         currencyDisplay: "narrowSymbol",
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        maximumFractionDigits: 32,
       },
       decimal: {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
       },
       percent: {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
       },
       unit: {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
       },
     },
@@ -481,6 +481,10 @@ export const translation = defineTranslation({
     VALIDATION_ERR:
       "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
     INVALID_TOKEN_PAYLOAD: "Dữ liệu token không hợp lệ.",
+    HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
+      "Dữ liệu biểu đồ hàng giờ không thể vượt quá 90 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
+    DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
+      "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
   },
   token: {
     overviewSectionTitle: "Tổng quan",

@@ -1,4 +1,8 @@
-export { get24hTokenMarketChart, getTokenMarketChart } from "./token-chart.js";
+export {
+  get24hTokenMarketChart,
+  getDailyTokenMarketChart,
+  getHourlyTokenMarketChart,
+} from "./token-chart.js";
 export { getTopTokenHolders } from "./token-holders.js";
 export { getTokenHolderStats, getTokenMetaList } from "./token-info.js";
 export { getCoinGeckoIdList } from "./token-list.js";
@@ -8,5 +12,6 @@ export {
   getTokenPoolDataList,
   getTokenTopPools,
 } from "./token-pools.js";
+export { getTopTokensByMarketCap } from "./token-top-marketcap.js";
 export { getPoolTrades24h } from "./token-trades.js";
-// export { getTrendingTokens } from "./token-trending.js";
+export { getTrendingTokens } from "./token-trending.js";

@@ -226,6 +226,23 @@ export const tokenMarketChart24h = pgTable(
   ],
 );
 
+export const tokenMarketChart30d = pgTable(
+  "token_market_chart_30d",
+  {
+    address: varchar("address", { length: 44 }).notNull(),
+    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
+    price: decimal("price").notNull(),
+    marketCap: decimal("market_cap").notNull(),
+    totalVolume: decimal("total_volume").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.address, table.unixTimestampMs],
+    }),
+  ],
+);
+
 export const tokenMarketChartHourly = pgTable(
   "token_market_chart_hourly",
   {
@@ -234,7 +251,7 @@ export const tokenMarketChartHourly = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({
@@ -251,7 +268,7 @@ export const tokenMarketChartDaily = pgTable(
     price: decimal("price").notNull(),
     marketCap: decimal("market_cap").notNull(),
     totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAt: integer("unix_updated_at").notNull(),
+    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({
@@ -352,6 +369,16 @@ export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
   address: varchar("address", { length: 44 }).primaryKey(),
+  rank: integer("rank").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// Top tokens by market cap
+export const topTokensByMarketCap = pgTable("top_tokens_by_marketcap", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  rank: integer("rank").notNull(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
@@ -466,6 +493,10 @@ export type UserInsert = typeof users.$inferInsert;
 export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
+export type TokenMarketChartHourlyInsert =
+  typeof tokenMarketChartHourly.$inferInsert;
+export type TokenMarketChartDailyInsert =
+  typeof tokenMarketChartDaily.$inferInsert;
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
@@ -473,6 +504,8 @@ export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
 export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
+export type TopTokensByMarketCapInsert =
+  typeof topTokensByMarketCap.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert = typeof walletPortfolioCache.$inferInsert;
 export type WalletTransactionsMetaInsert = typeof walletTransactionsMeta.$inferInsert;

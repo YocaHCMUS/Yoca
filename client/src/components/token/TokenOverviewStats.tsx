@@ -173,7 +173,7 @@ export const TokenOverviewStats = ({ meta, data }: TokenOverviewStatsProps) => {
               label: <span>24h Range</span>,
               value: (
                 <span>
-                  {fmt.num.currency(data.low24h)} -{" "}
+                  {fmt.num.currency(data.low24h)} -
                   {fmt.num.currency(data.high24h)}
                 </span>
               ),

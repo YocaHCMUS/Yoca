@@ -1,11 +1,18 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
+import type { InferResponseType } from "hono/client";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./TokenOverviewChart.module.scss";
+import client from "@/api/main";
 
 type ChartMode = "price" | "marketcap";
-type TimeRange = { label: string; days: number | "max" };
+type TimeRange = { label: string; days: number };
+
+type ChartPoint = InferResponseType<
+  typeof client.api.tokens.markets.chart[":address"]["$get"],
+  200
+>[number];
 
 const TIME_RANGES: TimeRange[] = [
   { label: "24H", days: 1 },
@@ -13,7 +20,6 @@ const TIME_RANGES: TimeRange[] = [
   { label: "1M", days: 30 },
   { label: "3M", days: 90 },
   { label: "1Y", days: 365 },
-  { label: "Max", days: "max" },
 ];
 
 interface TokenOverviewChartProps {
@@ -34,16 +40,50 @@ export function TokenOverviewChart({
   const chartRef = useRef<ReactECharts>(null);
 
   useEffect(() => {
-    if (!address) return;
-    setLoading(true);
-    fetch(`/api/tokens/markets/chart/${address}/overview?days=${range.days}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.prices) setPrices(data.prices);
-        if (data?.marketCaps) setMarketCaps(data.marketCaps);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const fetchData = async () =>
+    {
+      if (!address) return;
+      setLoading(true);
+      try {
+        const response =
+          range.days === 1
+            ? await client.api.tokens.markets.chart[":address"].$get({
+                param: { address },
+              })
+            : range.days <= 90
+            ? await client.api.tokens.markets.chart[":address"].hourly.$get({
+                param: { address },
+                query: { days: range.days },
+              })
+            : await client.api.tokens.markets.chart[":address"].daily.$get({
+                param: { address },
+                query: { days: range.days },
+              });
+
+        if (response.status === 200) {
+          const data: ChartPoint[] = await response.json();
+          const pricesData: [number, number][] = [];
+          const marketCapsData: [number, number][] = [];
+
+          data.forEach((point) => {
+            pricesData.push([point.unixTimestampMs, point.price]);
+            marketCapsData.push([point.unixTimestampMs, point.marketCap]);
+          });
+
+          setPrices(pricesData);
+          setMarketCaps(marketCapsData);
+        } else {
+          setPrices([]);
+          setMarketCaps([]);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+
+    }
+    fetchData();
   }, [address, range]);
 
   const seriesData = mode === "price" ? prices : marketCaps;

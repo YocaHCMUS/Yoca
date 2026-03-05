@@ -20,4 +20,3 @@ export function getRequiredHeaders(): HeadersInit {
     "X-API-Key": process.env.MORALIS_API_KEY,
   };
 }
-
