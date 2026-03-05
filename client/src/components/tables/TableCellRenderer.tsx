@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract } from '@carbon/icons-react';
+import React, { useState } from 'react';
+import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
 
 /**
  * Renders a value as monospace code with secondary color
@@ -91,6 +91,65 @@ export const renderReducedNumber = (
  */
 export const renderLongCode = (value: string, limit: number = 6) => {
   return renderLong(value, renderCode, limit);
+};
+
+/**
+ * Renders a hash/signature in truncated form (first N + last N chars) with a copy button.
+ * Full value is shown in a tooltip on hover.
+ */
+export const renderHash = (value: string, prefixLen: number = 6, suffixLen: number = 4) => {
+  const truncated =
+    value.length > prefixLen + suffixLen + 3
+      ? `${value.slice(0, prefixLen)}...${value.slice(-suffixLen)}`
+      : value;
+
+  const CopyButton = () => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(value).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      });
+    };
+    return (
+      <button
+        onClick={handleCopy}
+        title={copied ? 'Copied!' : 'Copy'}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0 2px',
+          color: copied ? 'var(--cds-support-success)' : 'var(--cds-text-secondary)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          verticalAlign: 'middle',
+          flexShrink: 0,
+        }}
+      >
+        {copied ? <Checkmark size={12} /> : <Copy size={12} />}
+      </button>
+    );
+  };
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', maxWidth: '100%' }}>
+      <code
+        title={value}
+        style={{
+          color: 'var(--cds-text-secondary)',
+          fontSize: '0.75rem',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {truncated}
+      </code>
+      <CopyButton />
+    </span>
+  );
 };
 
 /**
@@ -256,4 +315,3 @@ export const renderPositiveNegative = (value: string, haveIcon: boolean = true, 
     </span>
   );
 }
-
