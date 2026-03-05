@@ -88,9 +88,14 @@
 }
 
 .marketsSectionTitle {
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 700;
     color: $text-primary;
+}
+
+.marketsSectionDescription {
+    font-size: 14px;
+    color: $text-secondary;
 }
 
 // No longer needed — scroll inside rightContent, no sticky header overlap

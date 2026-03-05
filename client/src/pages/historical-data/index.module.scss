@@ -1,7 +1,7 @@
 @use '@carbon/react/scss/theme' as *;
 
 .page {
-    height: 100%;
+    height: calc(100vh - 48px);
     overflow-y: auto;
     background: $background;
 }
@@ -143,18 +143,21 @@
 }
 
 .showMoreBtn {
-    padding: 8px 28px;
-    font-size: 14px;
-    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
     background: $layer-01;
     color: $text-primary;
-    border: 1px solid $border-subtle;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s;
 
     &:hover {
         background: $layer-hover-01;
-        border-color: $border-strong;
     }
 }
