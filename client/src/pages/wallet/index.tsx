@@ -115,10 +115,10 @@ export default function WalletPage() {
 
   // Sort configurations for sortable columns
   const sortConfigs = {
-    4: { type: SortType.Number }, // Amount
-    5: { type: SortType.Number }, // Price
-    6: { type: SortType.Number }, // Total
-    7: { type: SortType.Date }, // Time
+    3: { type: SortType.Number }, // Amount
+    4: { type: SortType.Number }, // Price
+    5: { type: SortType.Number }, // Total
+    6: { type: SortType.Date }, // Time
   };
 
   const portfolioSortConfig = {
@@ -154,12 +154,12 @@ export default function WalletPage() {
 
   // Filter schema for filterable columns
   const filterSchema = {
-    1: { type: FilterType.Select }, // Buyer - Select filter
-    2: { type: FilterType.Select }, // Seller - Select filter
-    3: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
-    4: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
-    5: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
-    6: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
+    0: { type: FilterType.Select }, // Buyer - Select filter
+    1: { type: FilterType.Select }, // Seller - Select filter
+    2: { type: FilterType.Select }, // Token (SOL, USDC, etc.) - Select filter
+    3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 }, // Amount - Range filter
+    4: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Price - Range filter
+    5: { type: FilterType.Range, min: 0, max: 50000, step: 0.01 }, // Total - Range filter
     // 7: { type: FilterType.Select }, // Status (Success/Failed) - Select filter
   };
 
