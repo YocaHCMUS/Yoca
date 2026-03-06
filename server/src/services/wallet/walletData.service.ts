@@ -3,6 +3,8 @@ import {
   WALLET_OVERVIEW_TTL_MS,
   WALLET_PORTFOLIO_TTL_MS,
   WALLET_TRANSACTIONS_TTL_MS,
+  WALLET_TRANSFERS_TTL_MS,
+  WALLET_SWAPS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import type { WalletBalanceInsert } from "@sv/db/schema.js";
@@ -12,16 +14,20 @@ import {
   walletPortfolioCache,
   walletTransactions,
   walletTransactionsMeta,
-  tokenTransfers
+  tokenTransfers,
+  walletSwap
 } from "@sv/db/schema.js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
-import { fetchHeliusSolanaPortfolio, fetchHeliusSolanaTransactions } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js"
-import type { WalletPortfolioItem, WalletTransaction, WalletOverview, SupportedChain, WalletTransactionsResponse, WalletExchangeCountItem, WalletExchangeCountsResponse,  } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { fetchHeliusSolanaPortfolio, fetchHeliusSolanaTransactions, fetchHeliusSolanaTransfers, fetchHeliusSolanaSwap } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js"
+import type { WalletPortfolioItem, WalletTransaction, WalletOverview, SupportedChain, WalletTransactionsResponse, WalletExchangeCountItem, WalletExchangeCountsResponse, WalletSwap, WalletTransfersResponse, WalletTransfer,  } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as birdeye from "@sv/util/util-birdeye.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { resolveChainForAddress } from "@sv/util/util-helius.js";
+import { Signature } from "ethers";
+
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 
 async function saveTransactionsCache(
@@ -130,6 +136,52 @@ async function saveTransfersCache(
       }));
 
       await db.insert(walletTransactions).values(rows);
+    }
+    await db
+      .insert(walletTransactionsMeta)
+      .values({ address, chain })
+      .onConflictDoUpdate({
+        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+        set: { fetchedAt: new Date() },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet transactions cache", err);
+  }
+}
+
+async function saveSwapsCache(
+  address: string,
+  chain: string,
+  transactions: WalletSwap[],
+) {
+  try {
+    if (transactions.length > 0) {
+      // Deduplicate by transaction hash to avoid multiple rows with the same
+      // (address, chain, hash) primary key when providers return several
+      // legs for a single on-chain transaction.
+      const uniqueBySignature = new Map<string, WalletSwap>();
+      for (const tx of transactions) {
+        if (!uniqueBySignature.has(tx.signature)) {
+          uniqueBySignature.set(tx.signature, tx);
+        }
+      }
+
+      const uniqueTransactions = Array.from(uniqueBySignature.values());
+
+      const rows = uniqueTransactions.map((tx) => ({
+        address: tx.walletAddress,
+        chain: 'Solana',
+        signature: tx.signature,
+        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
+        slot: tx.slot,
+        fee: tx.fee,
+        feePayer: tx.feePayer,
+        // First two entries are the swap legs
+        swapBalanceChanges: tx.balanceChanges,
+        feeBalanceChanges: tx.feeChanges,
+      }));
+
+      await db.insert(walletSwap).values(rows);
     }
     await db
       .insert(walletTransactionsMeta)
@@ -656,77 +708,6 @@ export async function getWalletTransactions(
 ): Promise<WalletTransactionsResponse> {
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
-  const SOL_MINT = "So11111111111111111111111111111111111111112";
-
-  async function enrichWithSolanaTokenPrices(
-    transactions: WalletTransaction[],
-  ): Promise<void> {
-    const uniqueTokenAddresses = new Set<string>();
-    for (const tx of transactions) {
-      if (tx.primaryTokenAddress) {
-        // Some providers may return non-canonical SOL mint strings. Ensure we
-        // always fetch native SOL price when symbol indicates SOL.
-        if (tx.primaryTokenSymbol === "SOL") {
-          uniqueTokenAddresses.add(SOL_MINT);
-          continue;
-        }
-        uniqueTokenAddresses.add(tx.primaryTokenAddress);
-      }
-    }
-
-    console.log(`[enrichWithSolanaTokenPrices] Enriching ${transactions.length} transactions with ${uniqueTokenAddresses.size} unique tokens`);
-
-    if (uniqueTokenAddresses.size === 0) {
-      // No tokens to enrich; leave prices as undefined
-      return;
-    }
-
-    try {
-      const marketData = await getTokenMarketData(
-        Array.from(uniqueTokenAddresses),
-      );
-      console.log(`[enrichWithSolanaTokenPrices] Got market data for ${Object.keys(marketData).length} tokens`);
-      
-      let enrichedCount = 0;
-      for (const tx of transactions) {
-        if (!tx.primaryTokenAddress) {
-          tx.priceUsd = undefined;
-          tx.totalUsd = undefined;
-          continue;
-        }
-        
-        const tokenData = marketData[tx.primaryTokenAddress];
-        const fallbackSolData =
-          tx.primaryTokenSymbol === "SOL" ? marketData[SOL_MINT] : undefined;
-        const priceUsd = tokenData?.priceUsd ?? fallbackSolData?.priceUsd;
-        
-        if (priceUsd != null && !isNaN(priceUsd)) {
-          tx.priceUsd = priceUsd;
-          if (tx.primaryTokenAmount != null) {
-            tx.totalUsd = priceUsd * tx.primaryTokenAmount;
-          } else {
-            tx.totalUsd = undefined;
-          }
-          enrichedCount++;
-        } else {
-          // Set explicitly to undefined for consistency
-          tx.priceUsd = undefined;
-          tx.totalUsd = undefined;
-        }
-      }
-      console.log(`[enrichWithSolanaTokenPrices] Successfully enriched ${enrichedCount}/${transactions.length} transactions with prices`);
-    } catch (err) {
-      console.error(
-        "Failed to enrich transactions with Solana token prices",
-        err,
-      );
-      // Set all to undefined on error
-      for (const tx of transactions) {
-        tx.priceUsd = undefined;
-        tx.totalUsd = undefined;
-      }
-    }
-  }
 
   // 0) DB-first: use cached transactions if fresh
   const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
@@ -1008,6 +989,197 @@ export async function getWalletTransactions(
     chain: effectiveChain,
     transactions,
   };
+}
+
+export async function getWalletTransfers(
+  address: string,
+  chain: SupportedChain,
+  options?: { limit?: number; cursor?: string; before?: string },
+): Promise<WalletTransfersResponse> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+  const limit = Math.min(options?.limit ?? 100, 500);
+
+  // 0) DB-first: use cached transfers if fresh
+  // Note: For now, transfers are only cached at response level since tokenTransfers table
+  // is designed for global transfer indexing. In future, add wallet-specific transfer cache.
+  const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
+  const metaRows = await db
+    .select()
+    .from(walletTransactionsMeta)
+    .where(
+      and(
+        eq(walletTransactionsMeta.address, address),
+        eq(walletTransactionsMeta.chain, effectiveChain),
+      ),
+    )
+    .limit(1);
+  if (metaRows.length > 0 && metaRows[0].fetchedAt >= transferThreshold) {
+    const rows = await db
+      .select()
+      .from(tokenTransfers)
+      .where(
+        and(
+          or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
+          eq(tokenTransfers.chain, effectiveChain),
+        ),
+      )
+      .orderBy(desc(tokenTransfers.blockTime))
+      .limit(limit);
+
+    // If cache has rows, use them; if it's empty, fall through to external API.
+    if (rows.length > 0) {
+      const transactions: WalletTransfer[] = rows.map((r) => ({
+        from: r.fromOwner,
+        to: r.toOwner,
+        // In the according token units
+        amount: r.amount,
+        // amountUsd: number,
+        timestamp: toIsoTimestamp(r.blockTime),
+        tokenAddress: r.tokenAddress,
+        tokenSymbol: r.tokenSymbol,
+        transactionSignature: r.transactionSignature,
+        instructionIndex: r.instructionIndex,
+      }));
+
+      if (effectiveChain === "solana") {
+        await enrichWithSolanaTokenPrices(transactions);
+      }
+
+      return { address, chain: effectiveChain, transfers: transactions };
+    }
+  }
+
+  if (effectiveChain === "solana") {
+    // Use Helius to retrieve token transfers for Solana
+    try {
+      const transfers = await fetchHeliusSolanaTransfers(address, limit);
+      
+      console.log(
+        `[getWalletTransfers] Successfully fetched ${transfers.length} transfers from Helius for ${address}`
+      );
+
+      return {
+        address,
+        chain: effectiveChain,
+        transfers,
+      };
+    } catch (err) {
+      console.error("[getWalletTransfers] Failed to fetch Solana transfers from Helius", err);
+      // Return empty transfers on error instead of throwing
+      return {
+        address,
+        chain: effectiveChain,
+        transfers: [],
+      };
+    }
+  }
+
+  // EVM chains – Moralis doesn't have a direct transfers endpoint
+  // We can extract transfers from transaction history as a fallback
+  console.log(
+    `[getWalletTransfers] EVM chain ${effectiveChain}: Moralis doesn't provide dedicated transfers endpoint. Returning empty.`
+  );
+  
+  return {
+    address,
+    chain: effectiveChain,
+    transfers: [],
+  };
+}
+
+export async function getWalletSwaps(
+  address: string,
+  chain: SupportedChain,
+  options?: { limit?: number; cursor?: string },
+): Promise<{ address: string; chain: SupportedChain; swaps: WalletSwap[] }> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+  const limit = Math.min(options?.limit ?? 100, 500);
+
+  const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
+  const metaRows = await db
+    .select()
+    .from(walletTransactionsMeta)
+    .where(
+      and(
+        eq(walletTransactionsMeta.address, address),
+        eq(walletTransactionsMeta.chain, effectiveChain),
+      ),
+    )
+    .limit(1);
+  if (metaRows.length > 0 && metaRows[0].fetchedAt >= transferThreshold) {
+    const rows = await db
+      .select()
+      .from(walletSwap)
+      .where(
+        and(
+          eq(walletSwap.address, address),
+          eq(walletSwap.chain, effectiveChain),
+        ),
+      )
+      .orderBy(desc(walletSwap.blockTimestamp))
+      .limit(limit);
+
+    // If cache has rows, use them; if it's empty, fall through to external API.
+    if (rows.length > 0) {
+      const transactions: WalletSwap[] = rows.map((r) => ({
+        walletAddress: r.address,
+        signature: r.signature,
+        timestamp: toIsoTimestamp(r.blockTimestamp),
+        slot: r.slot,
+        fee: r.fee,
+        feePayer: r.feePayer,
+        balanceChanges: r.swapBalanceChanges,
+        feeChanges: r.feeBalanceChanges,
+      }));
+
+      if (effectiveChain === "solana") {
+        await enrichWithSolanaTokenPrices(transactions);
+      }
+
+      // tokenTransfers cache does not represent swap DTOs; keep response shape valid.
+      return { address, chain: effectiveChain, swaps: transactions };
+    }
+  }
+
+
+
+  // Only Solana supports swap detection via Helius
+  if (effectiveChain !== "solana") {
+    console.log(
+      `[getWalletSwaps] Chain ${effectiveChain} not supported. Swaps only available for Solana.`
+    );
+    return {
+      address,
+      chain: effectiveChain,
+      swaps: [],
+    };
+  }
+
+  try {
+    // Use Helius to retrieve swap history for Solana
+    const swaps = await fetchHeliusSolanaSwap(address, limit);
+    
+    console.log(
+      `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Helius for ${address}`
+    );
+
+    // Save to cache for future retrieval
+    await saveSwapsCache(address, effectiveChain, swaps);
+
+    return {
+      address,
+      chain: effectiveChain,
+      swaps,
+    };
+  } catch (err) {
+    console.error("[getWalletSwaps] Failed to fetch Solana swaps from Helius", err);
+    // Return empty swaps on error instead of throwing
+    return {
+      address,
+      chain: effectiveChain,
+      swaps: [],
+    };
+  }
 }
 
 /** Normalize platform label (e.g. "Binance 1" -> "Binance"). */
@@ -1411,4 +1583,121 @@ export async function fetchTestTransaction(address: string) {
   };
 
   return getTransactionHistory(address, apiKey);
+}
+
+async function enrichWithSolanaTokenPrices(
+  transactions: WalletTransaction[] | WalletTransfer[] | WalletSwap[],
+): Promise<void> {
+  const isWalletTransaction = (
+    tx: WalletTransaction | WalletTransfer | WalletSwap,
+  ): tx is WalletTransaction => "hash" in tx;
+
+  const isWalletTransfer = (
+    tx: WalletTransaction | WalletTransfer | WalletSwap,
+  ): tx is WalletTransfer => "transactionSignature" in tx;
+
+  const isWalletSwap = (
+    tx: WalletTransaction | WalletTransfer | WalletSwap,
+  ): tx is WalletSwap => "balanceChanges" in tx && "feeChanges" in tx;
+
+  const uniqueTokenAddresses = new Set<string>();
+
+  for (const tx of transactions) {
+    if (isWalletTransaction(tx)) {
+      if (!tx.primaryTokenAddress && tx.primaryTokenSymbol !== "SOL") {
+        continue;
+      }
+
+      // Some providers may return non-canonical SOL mint strings. Ensure we
+      // always fetch native SOL price when symbol indicates SOL.
+      if (tx.primaryTokenSymbol === "SOL") {
+        uniqueTokenAddresses.add(SOL_MINT);
+      } else if (tx.primaryTokenAddress) {
+        uniqueTokenAddresses.add(tx.primaryTokenAddress);
+      }
+      continue;
+    }
+
+    if (isWalletTransfer(tx)) {
+      if (tx.tokenSymbol === "SOL") {
+        uniqueTokenAddresses.add(SOL_MINT);
+      } else if (tx.tokenAddress) {
+        uniqueTokenAddresses.add(tx.tokenAddress);
+      }
+      continue;
+    }
+
+    if (isWalletSwap(tx)) {
+      for (const change of [...tx.balanceChanges, ...tx.feeChanges]) {
+        const mint = String(change.mint ?? "").trim();
+        if (!mint) continue;
+        uniqueTokenAddresses.add(mint === "SOL" ? SOL_MINT : mint);
+      }
+    }
+  }
+
+  console.log(`[enrichWithSolanaTokenPrices] Processing ${transactions.length} records with ${uniqueTokenAddresses.size} unique tokens`);
+
+  if (uniqueTokenAddresses.size === 0) {
+    // No tokens to enrich.
+    return;
+  }
+
+  try {
+    const marketData = await getTokenMarketData(
+      Array.from(uniqueTokenAddresses),
+    );
+    console.log(`[enrichWithSolanaTokenPrices] Got market data for ${Object.keys(marketData).length} tokens`);
+    
+    let enrichedCount = 0;
+    for (const tx of transactions) {
+      if (!isWalletTransaction(tx)) {
+        continue;
+      }
+
+      if (!tx.primaryTokenAddress && tx.primaryTokenSymbol !== "SOL") {
+        tx.priceUsd = undefined;
+        tx.totalUsd = undefined;
+        continue;
+      }
+
+      const tokenAddress =
+        tx.primaryTokenSymbol === "SOL" ? SOL_MINT : tx.primaryTokenAddress;
+      if (!tokenAddress) {
+        tx.priceUsd = undefined;
+        tx.totalUsd = undefined;
+        continue;
+      }
+      
+      const tokenData = marketData[tokenAddress];
+      const priceUsd = tokenData?.priceUsd;
+      
+      if (priceUsd != null && !isNaN(priceUsd)) {
+        tx.priceUsd = priceUsd;
+        if (tx.primaryTokenAmount != null) {
+          tx.totalUsd = priceUsd * tx.primaryTokenAmount;
+        } else {
+          tx.totalUsd = undefined;
+        }
+        enrichedCount++;
+      } else {
+        // Set explicitly to undefined for consistency
+        tx.priceUsd = undefined;
+        tx.totalUsd = undefined;
+      }
+    }
+    console.log(`[enrichWithSolanaTokenPrices] Successfully enriched ${enrichedCount}/${transactions.length} transactions with prices`);
+  } catch (err) {
+    console.error(
+      "Failed to enrich transactions with Solana token prices",
+      err,
+    );
+    // Only transaction DTOs include output price fields.
+    for (const tx of transactions) {
+      if (isWalletTransaction(tx)) {
+        tx.priceUsd = undefined;
+        tx.totalUsd = undefined;
+      }
+    }
+  }
 }

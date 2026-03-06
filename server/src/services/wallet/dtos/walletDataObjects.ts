@@ -53,6 +53,7 @@ export interface WalletSwap {
     fee: number,
     feePayer: string,
     balanceChanges: WalletSwapBalanceChange[],
+    feeChanges: WalletSwapBalanceChange[],
 }
 
 export interface WalletTransfer {

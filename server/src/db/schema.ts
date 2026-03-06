@@ -291,6 +291,8 @@ export const tokenMarketChartDaily = pgTable(
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
     fromOwner: varchar("from_address", { length: 44 }).notNull(),
     toOwner: varchar("to_address", { length: 44 }).notNull(),
     // In the according token units
@@ -486,43 +488,26 @@ export const walletTransactions = pgTable(
 );
 
 export const walletSwap = pgTable(
-  "wallet_swap", 
+  "wallet_swap",
   {
-
-//     signature	"2VQWHYvYoggvrYjmmx3JnSAs5ZpkgAG1yjSHjmntLHiy1JYZLTSzhPVKiHruhr1BKCYpxuiTpVRuJwYDXfesecCK"
-// timestamp	1772789526
-// slot	404569296
-// fee	5100
-// feePayer	"F2LsTgsepmoAuorgQDz9c28eQKnQem8quKX1tzQ2nDE6"
-// error	null
-// balanceChanges	
-// 0	
-// mint	"So11111111111111111111111111111111111111112"
-// amount	-11
-// decimals	0
-// 1	
-// mint	"EFRtJ2sgLHBqdz2Bggz8h6GuDQHPzfvSNhungnPnRMoE"
-// amount	193591.779975
-// decimals	0
-// 2	
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
-    hash: text("hash").notNull(),
+    signature: varchar("signature", { length: 128 }).notNull(),
     blockTimestamp: timestamp("block_timestamp").notNull(),
-    fromAddress: varchar("from_address", { length: 66 }).notNull(),
-    toAddress: varchar("to_address", { length: 66 }).notNull(),
-    receiptStatus: smallint("receipt_status"), // 1 success, 0 fail, null unknown
-    fee: decimal("fee"),
-    mainAction: text("main_action"),
-    direction: text("direction"), // in | out | self | unknown
-    primaryTokenSymbol: text("primary_token_symbol"),
-    primaryTokenAmount: decimal("primary_token_amount"),
-    primaryTokenAddress: varchar("primary_token_address", { length: 66 }),
-    priceUsd: decimal("price_usd"),
-    totalUsd: decimal("total_usd"),
-    tokens: jsonb("tokens").$type<string[]>(),
-  }
-)
+    slot: bigint("slot", { mode: "number" }).notNull(),
+    fee: decimal("fee").notNull(),
+    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    // First two entries are the swap legs
+    swapBalanceChanges: jsonb("swap_balance_changes")
+      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
+      .notNull(),
+    // Remaining entries represent fee/rent/other adjustments
+    feeBalanceChanges: jsonb("fee_balance_changes")
+      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain, t.signature] })],
+);
 
 export const walletExchangeCountsCache = pgTable(
   "wallet_exchange_counts_cache",
@@ -562,6 +547,7 @@ export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert = typeof walletPortfolioCache.$inferInsert;
 export type WalletTransactionsMetaInsert = typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
+export type WalletSwapInsert = typeof walletSwap.$inferInsert;
 export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
 
 // #endregion

@@ -426,6 +426,7 @@ export async function fetchHeliusSolanaSwap(
 
           // First two entries represent swap legs; remaining entries are fee-related movements.
             const swapBalanceChanges = mappedBalanceChanges.slice(0, 2);
+            const swapFeeBalanceChanges = mappedBalanceChanges.slice(2);
 
             const txObj: WalletSwap = {
                 walletAddress: address,
@@ -435,6 +436,7 @@ export async function fetchHeliusSolanaSwap(
                 fee: Number(entry.fee ?? 0),
                 feePayer: String(entry.feePayer ?? ""),
                 balanceChanges: swapBalanceChanges,
+                feeChanges: swapFeeBalanceChanges,
             };
 
           swaps.push(txObj);
