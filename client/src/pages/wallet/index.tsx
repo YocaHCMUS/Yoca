@@ -274,7 +274,14 @@ export default function WalletPage() {
    */
   function buildTransferRecords(rawTx: any): TransferRecord[] {
     const sig = rawTx.signature || rawTx.hash || "";
-    const ts = typeof rawTx.timestamp === "number" ? rawTx.timestamp : 0;
+    // The server converts the Helius Unix timestamp to an ISO string before sending.
+    // Accept either a number (Unix seconds) or an ISO/date string.
+    const ts =
+      typeof rawTx.timestamp === "number"
+        ? rawTx.timestamp
+        : rawTx.timestamp
+          ? Math.floor(new Date(rawTx.timestamp).getTime() / 1000)
+          : 0;
     const records: TransferRecord[] = [];
 
     if (Array.isArray(rawTx.tokenTransfers) && rawTx.tokenTransfers.length > 0) {
