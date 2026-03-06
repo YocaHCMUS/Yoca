@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  fetchTestTransaction,
   getWalletOverview,
   getWalletPortfolio,
   getWalletTransactions,
@@ -144,6 +145,22 @@ router.get("/exchanges", async (c) => {
   } catch (err) {
     console.error("Failed to get wallet exchange counts", err);
     return c.json({ error: "Failed to get wallet exchange counts" }, 500);
+  }
+});
+
+router.get("/debug/test-transactions", async (c) => {
+  const address = c.req.query("address");
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const data = await fetchTestTransaction(address);
+    return c.json({ address, data });
+  } catch (err) {
+    console.error("Failed to fetch test transactions", err);
+    return c.json({ error: "Failed to fetch test transactions" }, 500);
   }
 });
 

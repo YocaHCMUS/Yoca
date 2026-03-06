@@ -16,6 +16,7 @@ import {
 import { and, desc, eq } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
+import { getEndpoint, getRequiredHeaders } from "@sv/util/util-helius.js";
 
 
 async function saveTransactionsCache(
@@ -137,26 +138,14 @@ export interface WalletPortfolioItem {
 async function fetchHeliusSolanaPortfolio(
   address: string,
 ): Promise<WalletPortfolioItem[]> {
-  const apiKey = process.env.HELIUS_API_KEY;
-  if (!apiKey) {
-    console.error("HELIUS_API_KEY is not set; falling back to other providers.");
-    return [];
-  }
-
   const portfolio: WalletPortfolioItem[] = [];
-
-  const baseUrl =
-    process.env.HELIUS_WALLET_API_BASE_URL && process.env.HELIUS_WALLET_API_BASE_URL.length > 0
-      ? process.env.HELIUS_WALLET_API_BASE_URL
-      : "https://api.helius.xyz";
 
   let page = 1;
   const limit = 100;
   let hasMore = true;
 
   while (hasMore) {
-    const url = new URL(`${baseUrl}/v1/wallet/${address}/balances`);
-    url.searchParams.set("api-key", apiKey);
+    const url = getEndpoint(`/v1/wallet/${address}/balances`);
     url.searchParams.set("page", String(page));
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("showZeroBalance", "false");
@@ -166,8 +155,10 @@ async function fetchHeliusSolanaPortfolio(
 
     let json: any;
     try {
+      const headers = getRequiredHeaders();
       const resp = await fetch(url, {
         method: "GET",
+        headers,
       });
 
       if (!resp.ok) {
@@ -224,17 +215,6 @@ async function fetchHeliusSolanaTransactions(
   address: string,
   maxCount: number,
 ): Promise<WalletTransaction[]> {
-  const apiKey = process.env.HELIUS_API_KEY;
-  if (!apiKey) {
-    console.error("HELIUS_API_KEY is not set; cannot fetch Solana transactions from Helius.");
-    return [];
-  }
-
-  const baseUrl =
-    process.env.HELIUS_WALLET_API_BASE_URL && process.env.HELIUS_WALLET_API_BASE_URL.length > 0
-      ? process.env.HELIUS_WALLET_API_BASE_URL
-      : "https://api.helius.xyz";
-
   const nowSec = Math.floor(Date.now() / 1000);
   const ONE_MONTH_SEC = 30 * 24 * 60 * 60;
   const fromSec = nowSec - ONE_MONTH_SEC;
@@ -255,8 +235,7 @@ async function fetchHeliusSolanaTransactions(
   // Fetch pages until we hit maxCount, run out of data, or reach beyond 1 month.
   // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
   while (transactions.length < maxCount) {
-    const url = new URL(`${baseUrl}/v1/wallet/${address}/transfers`);
-    url.searchParams.set("api-key", apiKey);
+    const url = getEndpoint(`/v1/wallet/${address}/transfers`);
     url.searchParams.set("limit", String(Math.min(100, maxCount - transactions.length)));
     if (cursor) {
       url.searchParams.set("cursor", cursor);
@@ -264,8 +243,10 @@ async function fetchHeliusSolanaTransactions(
 
     let json: any = null;
     try {
+      const headers = getRequiredHeaders();
       const resp = await fetch(url, {
         method: "GET",
+        headers,
       });
 
       if (!resp.ok) {
@@ -1636,3 +1617,43 @@ export async function getWalletBalanceHistory(
 //   }
 //   return await getTokenMarketData(Array.from(uniqueTokenAddresses))
 // }
+
+export async function fetchTestTransaction(address: string) {
+  const apiKey = process.env.HELIUS_API_KEY;
+  if (!apiKey) {
+    throw new Error("HELIUS_API_KEY is not configured");
+  }
+
+  const getTransactionHistory = async (address: string, apiKey: string) => {
+    const url = `https://api.helius.xyz/v1/wallet/${address}/history?api-key=${apiKey}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log(`Found ${data.data.length} transactions`);
+
+    // Display recent transactions
+    data.data.forEach((tx: any) => {
+      const date = new Date(tx.timestamp * 1000).toLocaleString();
+      const status = tx.error ? 'Failed' : 'Success';
+
+      console.log(`\n${status} - ${date}`);
+      console.log(`Signature: ${tx.signature.slice(0, 20)}...`);
+      console.log(`Fee: ${tx.fee} SOL`);
+
+      // Show balance changes
+      tx.balanceChanges.forEach((change: any) => {
+        const sign = change.amount > 0 ? '+' : '';
+        console.log(`  ${sign}${change.amount} ${change.mint === 'SOL' ? 'SOL' : change.mint.slice(0, 8)}...`);
+      });
+    });
+
+    return data;
+  };
+
+  return getTransactionHistory(address, apiKey);
+}
