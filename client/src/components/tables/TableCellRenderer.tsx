@@ -81,7 +81,7 @@ export const renderReducedNumber = (
     return renderFn(compact);
   }
 
-  return renderFn(value);
+  return renderFn(Number.parseFloat(value).toFixed(4));
 };
 
 /**
