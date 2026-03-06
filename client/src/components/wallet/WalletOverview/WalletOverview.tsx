@@ -3,6 +3,7 @@ import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { fetchWalletOverview } from '@/services/wallet/walletApi';
+import { useNavigate } from 'react-router';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -88,14 +89,15 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         console.log('Create alert clicked');
     };
 
+    const navigate = useNavigate();
+
     const handleShare = () => {
         // Add your share logic here
         console.log('Share clicked');
     };
 
     const handleCompare = () => {
-        // Add your compare logic here
-        console.log('Compare clicked');
+        navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
     const handleFilterClick = (option: OverviewFilterSelection, value: number) => {

@@ -35,6 +35,71 @@ import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
+import { ContentSwitcher, Switch } from '@carbon/react';
+
+// ── Types ─────────────────────────────────────────────────────────────────
+type TopNOption = 5 | 10 | 0; // 0 = All
+type MinPctOption = 0 | 1 | 5 | 10;
+
+interface AssetItem {
+  name: string;
+  value: number;
+  percentage: number;
+  color?: string;
+}
+
+// ── Grouping helper ────────────────────────────────────────────────────────
+/**
+ * Apply Top-N and min-percentage grouping to a raw asset list.
+ * Items that don't make the cut are merged into a single "Others" entry
+ * that carries the list of hidden names so the tooltip can show them.
+ */
+function applyGrouping(
+  raw: AssetItem[],
+  topN: TopNOption,
+  minPct: MinPctOption,
+  othersLabel: string,
+): (AssetItem & { hiddenNames?: string[] })[] {
+  if (raw.length === 0) return [];
+
+  // Recalculate percentages against the raw total so they're always fresh
+  const rawTotal = raw.reduce((s, a) => s + a.value, 0);
+  const withPct = raw
+    .map(a => ({ ...a, percentage: rawTotal > 0 ? (a.value / rawTotal) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value); // descending by value
+
+  // Step 1: apply min-% filter
+  const afterMinPct = minPct > 0
+    ? withPct.filter(a => a.percentage >= minPct)
+    : withPct;
+
+  // Step 2: apply Top-N cap
+  const kept = topN > 0 ? afterMinPct.slice(0, topN) : afterMinPct;
+
+  // Collect everything that was cut in either step
+  const keptSet = new Set(kept.map(a => a.name));
+  const hidden = withPct.filter(a => !keptSet.has(a.name));
+
+  if (hidden.length === 0) return kept;
+
+  const othersValue = hidden.reduce((s, a) => s + a.value, 0);
+  const newTotal = kept.reduce((s, a) => s + a.value, 0) + othersValue;
+
+  // Recalculate percentages for the kept items
+  const recalcKept = kept.map(a => ({
+    ...a,
+    percentage: newTotal > 0 ? (a.value / newTotal) * 100 : 0,
+  }));
+
+  const othersItem = {
+    name: othersLabel,
+    value: othersValue,
+    percentage: newTotal > 0 ? (othersValue / newTotal) * 100 : 0,
+    hiddenNames: hidden.map(a => a.name),
+  };
+
+  return [...recalcKept, othersItem];
+}
 
 // Infer the response type from the fetcher function automatically
 type AssetDistributionData = InferFetcherData<typeof fetchAssetDistribution>;
@@ -56,6 +121,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 }) => {
   const { tr } = useLocalization();
   const chartTitle = tr('charts.assetDistributionChart.title');
+  const othersLabel = 'Others';
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -63,6 +129,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   
   // Track selected assets for legend filtering
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+
+  // ── New grouping filters ───────────────────────────────────────────────
+  const [topN, setTopN] = useState<TopNOption>(0);       // 0 = All
+  const [minPct, setMinPct] = useState<MinPctOption>(0); // 0 = no min
 
   // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
@@ -172,16 +242,15 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     const base = getThemedChartBaseOption(chartTheme);
     
     // Filter data based on selected assets in multi-wallet view
-    const filteredData = isMultiWallet && selectedAssets.size > 0
+    const preGrouped = isMultiWallet && selectedAssets.size > 0
       ? distributionData.filter(a => selectedAssets.has(a.name))
       : distributionData;
-    
-    // Recalculate total and percentages for filtered data
-    const filteredTotal = filteredData.reduce((sum, a) => sum + a.value, 0);
-    const dataWithRecalculatedPercentages = filteredData.map(a => ({
-      ...a,
-      percentage: filteredTotal > 0 ? (a.value / filteredTotal) * 100 : 0,
-    }));
+
+    // Apply Top-N and min-% grouping
+    const grouped = applyGrouping(preGrouped as AssetItem[], topN, minPct, othersLabel);
+
+    // Total used for the centre label: sum of grouped data
+    const displayTotal = grouped.reduce((s, a) => s + a.value, 0);
 
     return {
       ...base,
@@ -200,34 +269,64 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...base.tooltip,
         trigger: 'item',
-        formatter: (p: any) => createTooltipHeader(p.name)
-          + createTooltipRow(
-              tr('charts.assetDistributionChart.value'),
-              formatCurrency(p.value)
-            )
-          + createTooltipRow(
-              tr('charts.assetDistributionChart.percentage'),
-              `${p.data.percentage.toFixed(2)}%`
-            ),
+        formatter: (p: any) => {
+          const isOthers = p.name === othersLabel;
+          let html = createTooltipHeader(p.name);
+          if (isOthers && p.data.hiddenNames?.length > 0) {
+            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
+            html += (p.data.hiddenNames as string[])
+              .map(n => `<div style="padding:1px 0;font-size:11px;color:var(--cds-text-secondary)">• ${n}</div>`)
+              .join('');
+            html += `</div>`;
+          }
+          html += createTooltipRow(
+            tr('charts.assetDistributionChart.value'),
+            formatCurrency(p.value)
+          );
+          html += createTooltipRow(
+            tr('charts.assetDistributionChart.percentage'),
+            `${p.data.percentage.toFixed(2)}%`
+          );
+          return html;
+        },
       },
-      legend: getPieLegend(
-        chartTheme,
-        distributionData.map(d => d.name),
-        !isMultiWallet
-      ),
+      legend: {
+        ...getPieLegend(
+          chartTheme,
+          grouped.map(d => d.name),
+          !isMultiWallet
+        ),
+        // ECharts 5: show a tooltip when hovering a legend item.
+        // For "Others" we list the constituent token names.
+        tooltip: {
+          show: true,
+          formatter: (name: string) => {
+            const item = grouped.find(g => g.name === name);
+            const hidden: string[] = (item as any)?.hiddenNames ?? [];
+            if (name !== othersLabel || hidden.length === 0) return name;
+            return (
+              `<strong>${name}</strong><br/>` +
+              hidden.map(n => `• ${n}`).join('<br/>')
+            );
+          },
+        },
+      },
       series: [
         {
           type: 'pie',
           radius: ['26%', '56%'],
           center: ['50%', '50%'],
-          data: dataWithRecalculatedPercentages.map((a, i) => ({
+          data: grouped.map((a, i) => ({
             name: a.name,
             value: a.value,
             percentage: a.percentage,
+            hiddenNames: (a as any).hiddenNames,
             itemStyle: {
               color:
-                (a as any).color ??
-                chartTheme.colorPalette[i % chartTheme.colorPalette.length],
+                a.name === othersLabel
+                  ? chartTheme.textColorSecondary   // neutral grey for Others
+                  : (a as any).color ??
+                    chartTheme.colorPalette[i % chartTheme.colorPalette.length],
               borderColor: '#ffffff',
               borderWidth: 2,
               borderRadius: 6,
@@ -255,7 +354,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: formatCurrency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
+            text: formatCurrency(displayTotal),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
@@ -263,7 +362,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, tr, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets, topN, minPct]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
@@ -351,6 +450,38 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     (!('data' in data) || !data.data || data.data.length === 0)
   ) || (filters.wallets && filters.wallets.length === 0);
 
+  // ── Controls rendered into ChartWrapper's actions slot ────────────────
+  const filterControls = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+      {/* Top-N switcher */}
+      <ContentSwitcher
+        size="sm"
+        selectedIndex={topN === 0 ? 2 : topN === 5 ? 0 : 1}
+        onChange={({ index }: { index: number }) => {
+          setTopN(index === 0 ? 5 : index === 1 ? 10 : 0);
+        }}
+      >
+        <Switch name="top5" text="Top 5" />
+        <Switch name="top10" text="Top 10" />
+        <Switch name="all" text="All" />
+      </ContentSwitcher>
+
+      {/* Min-% switcher */}
+      <ContentSwitcher
+        size="sm"
+        selectedIndex={minPct === 0 ? 0 : minPct === 1 ? 1 : minPct === 5 ? 2 : 3}
+        onChange={({ index }: { index: number }) => {
+          setMinPct(index === 0 ? 0 : index === 1 ? 1 : index === 2 ? 5 : 10);
+        }}
+      >
+        <Switch name="all-pct" text="All %" />
+        <Switch name="pct1" text=">1%" />
+        <Switch name="pct5" text=">5%" />
+        <Switch name="pct10" text=">10%" />
+      </ContentSwitcher>
+    </div>
+  );
+
   return (
     <ChartWrapper
       title={chartTitle}
@@ -365,6 +496,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
+      actions={filterControls}
     >
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>

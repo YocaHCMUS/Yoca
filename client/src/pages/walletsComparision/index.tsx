@@ -6,7 +6,8 @@ import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
 import { Close, SearchAdvanced } from "@carbon/react/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import styles from "./index.module.scss";
 
 export default function WalletsComparisionPage() {
@@ -14,6 +15,20 @@ export default function WalletsComparisionPage() {
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const { tr } = useLocalization();
+  const [searchParams] = useSearchParams();
+
+  // Pre-populate from ?wallets=addr1,addr2 query param
+  useEffect(() => {
+    const param = searchParams.get("wallets");
+    if (!param) return;
+    const addresses = param
+      .split(",")
+      .map((a) => a.trim())
+      .filter(Boolean);
+    if (addresses.length > 0) {
+      setSelectedWallets(addresses);
+    }
+  }, []); // run only once on mount
 
   const handleAddWallet = () => {
     if (
