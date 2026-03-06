@@ -58,6 +58,7 @@ export const renderLong = (
 export const renderReducedNumber = (
   value: string,
   renderFn: (value: string) => React.ReactNode,
+  bcp47Locale: string = 'en-US',
 ) => {
   // if value is in (0, 0.0001) => render as "< 0.0001"
   // if > 1000 => render as xK, the same is true for M, B,...
@@ -72,7 +73,9 @@ export const renderReducedNumber = (
   }
 
   if (Math.abs(numValue) > 1000) {
-    const compact = new Intl.NumberFormat(undefined, {
+    // Use the caller-supplied BCP-47 locale so compact suffixes (K/M/B) match
+    // the app's selected language while still avoiding OS-locale surprises.
+    const compact = new Intl.NumberFormat(bcp47Locale, {
       notation: 'compact',
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,

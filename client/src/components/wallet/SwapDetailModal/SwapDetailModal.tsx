@@ -79,9 +79,12 @@ function formatAmount(amount: number): string {
 
   if (abs === 0) return "0";
 
-  // Normal range: just trim to 6 significant figures
+  // Normal range: trim to 6 significant figures.
+  // Use 'en-US' explicitly so locale-specific compact suffixes (e.g. Vietnamese
+  // "Tr" for million) never appear regardless of the browser/OS locale.
   if (abs >= 0.001) {
-    return sign + parseFloat(abs.toPrecision(6)).toString();
+    const trimmed = parseFloat(abs.toPrecision(6));
+    return sign + trimmed.toLocaleString("en-US", { maximumSignificantDigits: 6 });
   }
 
   // Very small: subscript-zero notation
