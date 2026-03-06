@@ -3,7 +3,7 @@ import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx"
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
-import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import TabContainer from "@/components/TabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
   renderBold,
@@ -23,7 +23,7 @@ import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.ts
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
-import { fetchWalletPortfolio, fetchWalletTransactions } from "@/services/wallet/walletApi.ts";
+import { fetchWalletPortfolio, fetchWalletTransfers, fetchWalletSwaps } from "@/services/wallet/walletApi.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
@@ -55,7 +55,8 @@ export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
   const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
-  const [transfers, setTransfers] = useState([]);
+  const [swaps, setSwaps] = useState<any[]>([]);
+  const [transfers, setTransfers] = useState<any[]>([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +69,8 @@ export default function WalletPage() {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedTransfers, setSelectedTransfers] = useState<TransferRecord[] | null>(null);
 
-  // Stores raw API transaction objects aligned by index with the `transactions` state array
-  const rawTxRef = useRef<any[]>([]);
+  // Stores raw API swap objects aligned by index with the swaps state array
+  const rawSwapsRef = useRef<any[]>([]);
 
   // Transform portfolio data from API response for Table component
   const portfolioData = portfolio.length > 0 
@@ -82,28 +83,34 @@ export default function WalletPage() {
       ])
     : [];
 
-  // Transform transactions to array format for Table component.
-  // useMemo keeps stable array-element references so row-click index lookup works.
-  const transactionData = useMemo(
+  // Transform swap data to array format for Table component
+  const swapData = useMemo(
     () =>
-      transactions.map((tx) => [
-        // tx.signature,
-        tx.buyer,
-        tx.seller,
-        tx.token,
-        tx.amount,
-        tx.price,
-        tx.total,
-        tx.timestamp,
-        // tx.status,
+      swaps.map((swap: any) => [
+        swap.signature,
+        swap.timestamp,
+        swap.fee,
+        swap.balanceChanges?.length ?? 0,
       ]),
-    [transactions],
+    [swaps],
   );
 
-  // Filter transactions by type
-  const transferData = transactionData;
-  const inflowData = transactionData.filter((row) => address && row[1] === address);
-  const outflowData = transactionData.filter((row) => address && row[2] === address);
+  // Transform transfer data to array format for Table component
+  const transferData = useMemo(
+    () =>
+      transfers.map((transfer: any) => [
+        transfer.from,
+        transfer.to,
+        transfer.tokenSymbol,
+        transfer.amount,
+        transfer.timestamp,
+      ]),
+    [transfers],
+  );
+
+  // Filter transfers by direction
+  const inflowData = transferData.filter((row) => address && row[1] === address);
+  const outflowData = transferData.filter((row) => address && row[0] === address);
 
   const transactionHeaders = [
     // tr("walletPage.signature"),
@@ -117,6 +124,21 @@ export default function WalletPage() {
     // tr("walletPage.status"),
   ];
 
+  const swapHeaders = [
+    tr("walletPage.signature"),
+    tr("walletPage.time"),
+    tr("walletPage.total"),
+    "Balance Changes",
+  ];
+
+  const transferHeaders = [
+    tr("walletPage.seller"),
+    tr("walletPage.buyer"),
+    tr("walletPage.token"),
+    tr("walletPage.amount"),
+    tr("walletPage.time"),
+  ];
+
   const portfolioHeaders = [
     tr("walletPage.token"),
     tr("walletPage.price"),
@@ -127,6 +149,8 @@ export default function WalletPage() {
 
   const isSortable = [false, false, false, false, true, true, true, true];
   const isSortablePortfolio = [false, true, true, true, true];
+  const isSortableSwaps = [false, true, true, false];
+  const isSortableTransfers = [false, false, false, true, true];
 
   // Sort configurations for sortable columns
   const sortConfigs = {
@@ -134,6 +158,16 @@ export default function WalletPage() {
     4: { type: SortType.Number }, // Price
     5: { type: SortType.Number }, // Total
     6: { type: SortType.Date }, // Time
+  };
+
+  const swapSortConfigs = {
+    1: { type: SortType.Date }, // Time
+    2: { type: SortType.Number }, // Fee
+  };
+
+  const transferSortConfigs = {
+    3: { type: SortType.Number }, // Amount
+    4: { type: SortType.Date }, // Time
   };
 
   const portfolioSortConfig = {
@@ -153,10 +187,21 @@ export default function WalletPage() {
     (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
     (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    // (value: string) => renderDateTime(value),
-    // null
+  ];
 
-    // (value: string) => renderStatus(value),
+  const swapCellRenderers = [
+    (value: string) => renderCode(value),
+    (value: string) => renderDateTime(value, fmt.datetime["relative"]),
+    (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
+    (value: string) => renderBase(value),
+  ];
+
+  const transferCellRenderers = [
+    (value: string) => renderHash(value),
+    (value: string) => renderHash(value),
+    (value: string) => renderCode(value),
+    (value: string) => renderReducedNumber(value, renderBase, bcp47),
+    (value: string) => renderDateTime(value, fmt.datetime["relative"]),
   ];
 
   const portfolioCellRenderers = [
@@ -214,49 +259,27 @@ export default function WalletPage() {
           setPortfolio(portfolioResponse);
         }
         
-        // Fetch transaction data
-        const transactionResponse = await fetchWalletTransactions(address, {
+        // Fetch swaps data for swap table
+        const swapResponse = await fetchWalletSwaps(address, {
           chain: 'solana',
           limit: 50
         });
+        const swapsData = swapResponse?.swaps || [];
+        if (Array.isArray(swapsData)) {
+          rawSwapsRef.current = swapsData;
+          setSwaps(swapsData);
+          console.log('[swaps] ✓ loaded:', swapsData.length, 'swaps');
+        }
 
-        console.log('[transactions] raw response:', transactionResponse);
-        console.log('[transactions] response type:', typeof transactionResponse);
-        console.log('[transactions] is array:', Array.isArray(transactionResponse));
-        console.log('[transactions] response length:', transactionResponse?.length);
-        console.log('[transactions] first item:', transactionResponse?.[0]);
-
-        // Handle response that might be wrapped in transactions object
-        const txData = Array.isArray(transactionResponse) 
-          ? transactionResponse 
-          : transactionResponse?.transactions || transactionResponse?.data;
-        
-        if (txData && Array.isArray(txData) && txData.length > 0) {
-          // Keep raw objects for swap-modal lookup (same index as transformedTxs)
-          rawTxRef.current = txData;
-
-          // Transform API transaction response to match Transaction interface
-          const transformedTxs = txData.map((tx: any, index: number) => {
-            const amount = tx.primaryTokenAmount ?? 0;
-            const total = tx.totalUsd ?? 0;
-            
-            return {
-              id: `tx-${index}`,
-              buyer: tx.to,
-              seller: tx.from,
-              // signature: tx.hash || `sig-${index}`,
-              token: tx.primaryTokenSymbol || 'Unknown',
-              amount: amount,
-              price: amount > 0 ? total / amount : 0,
-              total: total,
-              timestamp: tx.timestamp
-              // status: tx.receiptStatus === 1 ? 'Success' : tx.receiptStatus === 0 ? 'Failed' : 'Success',
-            };
-          });
-          setTransactions(transformedTxs);
-          console.log('[transactions] ✓ transformed and set:', transformedTxs);
-        } else {
-          console.warn('[transactions] ✗ could not process response - txData:', txData);
+        // Fetch transfers data for inflow/outflow tables
+        const transferResponse = await fetchWalletTransfers(address, {
+          chain: 'solana',
+          limit: 50
+        });
+        const transfersData = transferResponse?.transfers || [];
+        if (Array.isArray(transfersData)) {
+          setTransfers(transfersData);
+          console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
         }
       } catch (err) {
         console.error('Failed to load wallet data:', err);
@@ -321,10 +344,22 @@ export default function WalletPage() {
     return records;
   }
 
-  function handleTransactionRowClick(row: any[], rowIndex: number) {
-    const rawTx = rawTxRef.current[rowIndex >= 0 ? rowIndex : -1];
-    if (!rawTx) return;
-    setSelectedTransfers(buildTransferRecords(rawTx));
+  function handleSwapRowClick(row: any[], rowIndex: number) {
+    const rawSwap = rawSwapsRef.current[rowIndex >= 0 ? rowIndex : -1];
+    if (!rawSwap) return;
+    // Convert swap data to transfer records for the modal
+    const records: TransferRecord[] = rawSwap.balanceChanges?.map((change: any) => ({
+      signature: rawSwap.signature,
+      timestamp: Math.floor(new Date(rawSwap.timestamp).getTime() / 1000),
+      direction: "unknown",
+      counterparty: rawSwap.walletAddress,
+      mint: change.mint || "",
+      symbol: null,
+      amount: change.amount,
+      amountRaw: String(change.amount),
+      decimals: change.decimals || 0,
+    })) || [];
+    setSelectedTransfers(records);
     setSwapModalOpen(true);
   }
 
@@ -381,55 +416,67 @@ export default function WalletPage() {
           tabs={[
             <Table
               maxHeight={400}
-              title={tr("walletPage.transfer")}
-              headers={transactionHeaders}
+              title={"swap"}
+              headers={swapHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transferData)}
-              filterSchema={filterSchema}
-              cellRenderers={cellRenderers}
-              dataEntries={transferData}
-              isSortable={isSortable}
-              sortConfigs={sortConfigs}
-              onRowClick={handleTransactionRowClick}
+              fetcher={Promise.resolve(swapData)}
+              filterSchema={{
+                0: { type: FilterType.Select },
+                1: { type: FilterType.Select },
+              }}
+              cellRenderers={swapCellRenderers}
+              dataEntries={swapData}
+              isSortable={isSortableSwaps}
+              sortConfigs={swapSortConfigs}
+              onRowClick={handleSwapRowClick}
             />,
             <Table
               maxHeight={400}
               title={tr("walletPage.inflow")}
-              headers={transactionHeaders}
+              headers={transferHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(inflowData)}
-              filterSchema={filterSchema}
-              cellRenderers={cellRenderers}
+              filterSchema={{
+                0: { type: FilterType.Select },
+                1: { type: FilterType.Select },
+                2: { type: FilterType.Select },
+                3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
+                4: { type: FilterType.Select },
+              }}
+              cellRenderers={transferCellRenderers}
               dataEntries={inflowData}
-              isSortable={isSortable}
-              sortConfigs={sortConfigs}
-              onRowClick={handleTransactionRowClick}
+              isSortable={isSortableTransfers}
+              sortConfigs={transferSortConfigs}
             />,
             <Table
               maxHeight={400}
               title={tr("walletPage.outflow")}
-              headers={transactionHeaders}
+              headers={transferHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(outflowData)}
-              filterSchema={filterSchema}
-              cellRenderers={cellRenderers}
+              filterSchema={{
+                0: { type: FilterType.Select },
+                1: { type: FilterType.Select },
+                2: { type: FilterType.Select },
+                3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
+                4: { type: FilterType.Select },
+              }}
+              cellRenderers={transferCellRenderers}
               dataEntries={outflowData}
-              isSortable={isSortable}
-              sortConfigs={sortConfigs}
-              onRowClick={handleTransactionRowClick}
+              isSortable={isSortableTransfers}
+              sortConfigs={transferSortConfigs}
             />,
             <Table
               maxHeight={400}
               title={tr("walletPage.counterparties")}
               headers={transactionHeaders}
               initialFilters={{}}
-              fetcher={Promise.resolve(transactionData)}
+              fetcher={Promise.resolve([])}
               filterSchema={filterSchema}
               cellRenderers={cellRenderers}
-              dataEntries={transactionData}
+              dataEntries={[]}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
-              onRowClick={handleTransactionRowClick}
             />,
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}

@@ -93,6 +93,49 @@ export async function fetchWalletTransactions(
 }
 
 /**
+ * Fetch wallet transfers
+ * GET /api/wallets/transfers
+ */
+export async function fetchWalletTransfers(
+  address: string,
+  params?: {
+    chain?: string;
+    limit?: number;
+    cursor?: string;
+    before?: string;
+  }
+) {
+  const query = { address, ...params };
+  const response = await (client.api.wallets as any).transfers.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Fetch wallet swaps
+ * GET /api/wallets/swap
+ */
+export async function fetchWalletSwaps(
+  address: string,
+  params?: {
+    chain?: string;
+    limit?: number;
+    cursor?: string;
+  }
+) {
+  const query = { address, ...params };
+  const response = await (client.api.wallets as any).swap.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
  * Fetch wallet exchange counts
  * GET /api/wallets/exchanges
  */
@@ -146,6 +189,8 @@ export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
   fetchWalletTransactions,
+  fetchWalletTransfers,
+  fetchWalletSwaps,
   fetchWalletExchanges,
   fetchWalletBalances,
   fetchWalletDistribution,
@@ -153,6 +198,8 @@ export const walletApi = {
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
   getTransactions: fetchWalletTransactions,
+  getTransfers: fetchWalletTransfers,
+  getSwaps: fetchWalletSwaps,
   getExchanges: fetchWalletExchanges,
   getBalances: fetchWalletBalances,
   getDistribution: fetchWalletDistribution,

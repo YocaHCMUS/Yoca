@@ -1241,7 +1241,7 @@ export async function fetchTestTransaction(address: string) {
   }
 
   const getTransactionHistory = async (address: string, apiKey: string) => {
-    const url = `https://api.helius.xyz/v1/wallet/${address}/history?api-key=${apiKey}`;
+    const url = `https://api.helius.xyz/v1/wallet/${address}/history?api-key=${apiKey}?type=SWAP`;
 
     const response = await fetch(url);
     if (!response.ok) {
