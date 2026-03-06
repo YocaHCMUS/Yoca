@@ -2,9 +2,6 @@ import {
   WALLET_EXCHANGE_COUNTS_TTL_MS,
   WALLET_OVERVIEW_TTL_MS,
   WALLET_PORTFOLIO_TTL_MS,
-  WALLET_TRANSACTIONS_TTL_MS,
-  WALLET_TRANSFERS_TTL_MS,
-  WALLET_SWAPS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import type { WalletBalanceInsert } from "@sv/db/schema.js";
@@ -12,219 +9,24 @@ import {
   walletExchangeCountsCache,
   walletOverviewCache,
   walletPortfolioCache,
-  walletTransactions,
-  walletTransactionsMeta,
-  tokenTransfers,
-  walletSwap
 } from "@sv/db/schema.js";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
 import { fetchHeliusSolanaPortfolio, fetchHeliusSolanaTransactions, fetchHeliusSolanaTransfers, fetchHeliusSolanaSwap } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js"
+import {
+  getCachedWalletSwaps,
+  getCachedWalletTransactions,
+  getCachedWalletTransfers,
+} from "@sv/services/wallet/db/walletDataRetriever.js";
 import type { WalletPortfolioItem, WalletTransaction, WalletOverview, SupportedChain, WalletTransactionsResponse, WalletExchangeCountItem, WalletExchangeCountsResponse, WalletSwap, WalletTransfersResponse, WalletTransfer,  } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as birdeye from "@sv/util/util-birdeye.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { Signature } from "ethers";
+import { saveOverviewCache, saveTransactionsCache, saveSwapsCache } from "./db/walletDataCacher.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-
-
-async function saveTransactionsCache(
-  address: string,
-  chain: string,
-  transactions: WalletTransaction[],
-): Promise<void> {
-  try {
-    await db.delete(walletTransactions).where(
-      and(
-        eq(walletTransactions.address, address),
-        eq(walletTransactions.chain, chain),
-      ),
-    );
-
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueByHash = new Map<string, WalletTransaction>();
-      for (const tx of transactions) {
-        if (!uniqueByHash.has(tx.hash)) {
-          uniqueByHash.set(tx.hash, tx);
-        }
-      }
-
-      const uniqueTransactions = Array.from(uniqueByHash.values());
-
-      const rows = uniqueTransactions.map((tx) => ({
-        address,
-        chain,
-        hash: tx.hash,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-        fee: tx.fee ?? null,
-        mainAction: tx.mainAction ?? null,
-        direction: tx.direction ?? null,
-        primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-        primaryTokenAmount: tx.primaryTokenAmount ?? null,
-        primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        // Price fields are response-time enrichments and are not persisted.
-        priceUsd: null,
-        totalUsd: null,
-        tokens: tx.tokens ?? null,
-      }));
-
-      await db.insert(walletTransactions).values(rows);
-    }
-    await db
-      .insert(walletTransactionsMeta)
-      .values({ address, chain })
-      .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
-        set: { fetchedAt: new Date() },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
-  }
-}
-
-async function saveTransfersCache(
-  address: string,
-  chain: string,
-  transactions: WalletTransaction[],
-): Promise<void> {
-  try {
-    // await db.delete(tokenTransfers).where(
-    //   and(
-    //     eq(walletTransactions.address, address),
-    //     eq(walletTransactions.chain, chain),
-    //   ),
-    // );
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueByHash = new Map<string, WalletTransaction>();
-      for (const tx of transactions) {
-        if (!uniqueByHash.has(tx.hash)) {
-          uniqueByHash.set(tx.hash, tx);
-        }
-      }
-
-      const uniqueTransactions = Array.from(uniqueByHash.values());
-
-      const rows = uniqueTransactions.map((tx) => ({
-        address,
-        chain,
-        hash: tx.hash,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-        fee: tx.fee ?? null,
-        mainAction: tx.mainAction ?? null,
-        direction: tx.direction ?? null,
-        primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-        primaryTokenAmount: tx.primaryTokenAmount ?? null,
-        primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        // Price fields are response-time enrichments and are not persisted.
-        priceUsd: null,
-        totalUsd: null,
-        tokens: tx.tokens ?? null,
-      }));
-
-      await db.insert(walletTransactions).values(rows);
-    }
-    await db
-      .insert(walletTransactionsMeta)
-      .values({ address, chain })
-      .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
-        set: { fetchedAt: new Date() },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
-  }
-}
-
-async function saveSwapsCache(
-  address: string,
-  chain: string,
-  transactions: WalletSwap[],
-) {
-  try {
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueBySignature = new Map<string, WalletSwap>();
-      for (const tx of transactions) {
-        if (!uniqueBySignature.has(tx.signature)) {
-          uniqueBySignature.set(tx.signature, tx);
-        }
-      }
-
-      const uniqueTransactions = Array.from(uniqueBySignature.values());
-
-      const rows = uniqueTransactions.map((tx) => ({
-        address: tx.walletAddress,
-        chain: 'Solana',
-        signature: tx.signature,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        slot: tx.slot,
-        fee: tx.fee,
-        feePayer: tx.feePayer,
-        // First two entries are the swap legs
-        swapBalanceChanges: tx.balanceChanges,
-        feeBalanceChanges: tx.feeChanges,
-      }));
-
-      await db.insert(walletSwap).values(rows);
-    }
-    await db
-      .insert(walletTransactionsMeta)
-      .values({ address, chain })
-      .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
-        set: { fetchedAt: new Date() },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
-  }
-}
-
-async function saveOverviewCache(overview: WalletOverview): Promise<void> {
-  try {
-    await db
-      .insert(walletOverviewCache)
-      .values({
-        address: overview.address,
-        chain: overview.chain,
-        totalAssetValueUsd: overview.totalAssetValueUsd,
-        tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
-        pnlUsdTotal: overview.pnlUsdTotal ?? null,
-        transactionCount24h: overview.transactionCount24h ?? null,
-        tokensTradedCount: overview.tokensTradedCount ?? null,
-        tokensHoldingCount: overview.tokensHoldingCount,
-      })
-      .onConflictDoUpdate({
-        target: [walletOverviewCache.address, walletOverviewCache.chain],
-        set: {
-          totalAssetValueUsd: overview.totalAssetValueUsd,
-          tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
-          pnlUsdTotal: overview.pnlUsdTotal ?? null,
-          transactionCount24h: overview.transactionCount24h ?? null,
-          tokensTradedCount: overview.tokensTradedCount ?? null,
-          tokensHoldingCount: overview.tokensHoldingCount,
-          fetchedAt: new Date(),
-        },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet overview cache", err);
-  }
-}
 
 function toIsoTimestamp(value: unknown): string {
   console.log(`[toIsoTimestamp DEBUG] value: ${value}`)
@@ -709,56 +511,16 @@ export async function getWalletTransactions(
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
 
-  // 0) DB-first: use cached transactions if fresh
-  const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
-  const metaRows = await db
-    .select()
-    .from(walletTransactionsMeta)
-    .where(
-      and(
-        eq(walletTransactionsMeta.address, address),
-        eq(walletTransactionsMeta.chain, effectiveChain),
-      ),
-    )
-    .limit(1);
-  if (metaRows.length > 0 && metaRows[0].fetchedAt >= txThreshold) {
-    const rows = await db
-      .select()
-      .from(walletTransactions)
-      .where(
-        and(
-          eq(walletTransactions.address, address),
-          eq(walletTransactions.chain, effectiveChain),
-        ),
-      )
-      .orderBy(desc(walletTransactions.blockTimestamp))
-      .limit(limit);
-
-    // If cache has rows, use them; if it's empty, fall through to external API.
-    if (rows.length > 0) {
-      const transactions: WalletTransaction[] = rows.map((r) => ({
-        hash: r.hash,
-        timestamp: toIsoTimestamp(r.blockTimestamp),
-        from: r.fromAddress,
-        to: r.toAddress,
-        status: r.receiptStatus === 1 ? true : r.receiptStatus === 0 ? false : null,
-        fee: r.fee != null ? Number(r.fee) : undefined,
-        mainAction: r.mainAction ?? undefined,
-        direction: (r.direction as WalletTransaction["direction"]) ?? undefined,
-        tokens: (r.tokens as string[]) ?? undefined,
-        primaryTokenSymbol: r.primaryTokenSymbol ?? undefined,
-        primaryTokenAmount: r.primaryTokenAmount != null ? Number(r.primaryTokenAmount) : undefined,
-        primaryTokenAddress: r.primaryTokenAddress ?? undefined,
-        priceUsd: undefined,
-        totalUsd: undefined,
-      }));
-
-      if (effectiveChain === "solana") {
-        await enrichWithSolanaTokenPrices(transactions);
-      }
-
-      return { address, chain: effectiveChain, transactions };
+  const cachedTransactions = await getCachedWalletTransactions(
+    address,
+    effectiveChain,
+    limit,
+  );
+  if (cachedTransactions) {
+    if (effectiveChain === "solana") {
+      await enrichWithSolanaTokenPrices(cachedTransactions);
     }
+    return { address, chain: effectiveChain, transactions: cachedTransactions };
   }
   if (effectiveChain === "solana") {
     // Use Helius to retrieve detailed token transfer history for Solana.
@@ -999,54 +761,16 @@ export async function getWalletTransfers(
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
 
-  // 0) DB-first: use cached transfers if fresh
-  // Note: For now, transfers are only cached at response level since tokenTransfers table
-  // is designed for global transfer indexing. In future, add wallet-specific transfer cache.
-  const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-  const metaRows = await db
-    .select()
-    .from(walletTransactionsMeta)
-    .where(
-      and(
-        eq(walletTransactionsMeta.address, address),
-        eq(walletTransactionsMeta.chain, effectiveChain),
-      ),
-    )
-    .limit(1);
-  if (metaRows.length > 0 && metaRows[0].fetchedAt >= transferThreshold) {
-    const rows = await db
-      .select()
-      .from(tokenTransfers)
-      .where(
-        and(
-          or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-          eq(tokenTransfers.chain, effectiveChain),
-        ),
-      )
-      .orderBy(desc(tokenTransfers.blockTime))
-      .limit(limit);
-
-    // If cache has rows, use them; if it's empty, fall through to external API.
-    if (rows.length > 0) {
-      const transactions: WalletTransfer[] = rows.map((r) => ({
-        from: r.fromOwner,
-        to: r.toOwner,
-        // In the according token units
-        amount: r.amount,
-        // amountUsd: number,
-        timestamp: toIsoTimestamp(r.blockTime),
-        tokenAddress: r.tokenAddress,
-        tokenSymbol: r.tokenSymbol,
-        transactionSignature: r.transactionSignature,
-        instructionIndex: r.instructionIndex,
-      }));
-
-      if (effectiveChain === "solana") {
-        await enrichWithSolanaTokenPrices(transactions);
-      }
-
-      return { address, chain: effectiveChain, transfers: transactions };
+  const cachedTransfers = await getCachedWalletTransfers(
+    address,
+    effectiveChain,
+    limit,
+  );
+  if (cachedTransfers) {
+    if (effectiveChain === "solana") {
+      await enrichWithSolanaTokenPrices(cachedTransfers);
     }
+    return { address, chain: effectiveChain, transfers: cachedTransfers };
   }
 
   if (effectiveChain === "solana") {
@@ -1095,50 +819,12 @@ export async function getWalletSwaps(
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
 
-  const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-  const metaRows = await db
-    .select()
-    .from(walletTransactionsMeta)
-    .where(
-      and(
-        eq(walletTransactionsMeta.address, address),
-        eq(walletTransactionsMeta.chain, effectiveChain),
-      ),
-    )
-    .limit(1);
-  if (metaRows.length > 0 && metaRows[0].fetchedAt >= transferThreshold) {
-    const rows = await db
-      .select()
-      .from(walletSwap)
-      .where(
-        and(
-          eq(walletSwap.address, address),
-          eq(walletSwap.chain, effectiveChain),
-        ),
-      )
-      .orderBy(desc(walletSwap.blockTimestamp))
-      .limit(limit);
-
-    // If cache has rows, use them; if it's empty, fall through to external API.
-    if (rows.length > 0) {
-      const transactions: WalletSwap[] = rows.map((r) => ({
-        walletAddress: r.address,
-        signature: r.signature,
-        timestamp: toIsoTimestamp(r.blockTimestamp),
-        slot: r.slot,
-        fee: r.fee,
-        feePayer: r.feePayer,
-        balanceChanges: r.swapBalanceChanges,
-        feeChanges: r.feeBalanceChanges,
-      }));
-
-      if (effectiveChain === "solana") {
-        await enrichWithSolanaTokenPrices(transactions);
-      }
-
-      // tokenTransfers cache does not represent swap DTOs; keep response shape valid.
-      return { address, chain: effectiveChain, swaps: transactions };
+  const cachedSwaps = await getCachedWalletSwaps(address, effectiveChain, limit);
+  if (cachedSwaps) {
+    if (effectiveChain === "solana") {
+      await enrichWithSolanaTokenPrices(cachedSwaps);
     }
+    return { address, chain: effectiveChain, swaps: cachedSwaps };
   }
 
 
