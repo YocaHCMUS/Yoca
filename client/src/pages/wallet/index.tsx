@@ -18,11 +18,12 @@ import {
   renderHash
   // renderStatus,
 } from "@/components/tables/TableCellRenderer.tsx";
+import { SwapDetailModal, type TransferRecord } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { fetchWalletPortfolio, fetchWalletTransactions } from "@/services/wallet/walletApi.ts";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
 import styles from "./index.module.scss";
@@ -61,6 +62,13 @@ export default function WalletPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
 
+  // Swap detail modal state
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [selectedTransfers, setSelectedTransfers] = useState<TransferRecord[] | null>(null);
+
+  // Stores raw API transaction objects aligned by index with the `transactions` state array
+  const rawTxRef = useRef<any[]>([]);
+
   // Transform portfolio data from API response for Table component
   const portfolioData = portfolio.length > 0 
     ? portfolio.map((item: any) => [
@@ -72,18 +80,23 @@ export default function WalletPage() {
       ])
     : [];
 
-  // Transform transactions to array format for Table component
-  const transactionData = transactions.map((tx) => [
-    // tx.signature,
-    tx.buyer,
-    tx.seller,
-    tx.token,
-    tx.amount,
-    tx.price,
-    tx.total,
-    tx.timestamp,
-    // tx.status,
-  ]);
+  // Transform transactions to array format for Table component.
+  // useMemo keeps stable array-element references so row-click index lookup works.
+  const transactionData = useMemo(
+    () =>
+      transactions.map((tx) => [
+        // tx.signature,
+        tx.buyer,
+        tx.seller,
+        tx.token,
+        tx.amount,
+        tx.price,
+        tx.total,
+        tx.timestamp,
+        // tx.status,
+      ]),
+    [transactions],
+  );
 
   // Filter transactions by type
   const transferData = transactionData;
@@ -217,6 +230,9 @@ export default function WalletPage() {
           : transactionResponse?.transactions || transactionResponse?.data;
         
         if (txData && Array.isArray(txData) && txData.length > 0) {
+          // Keep raw objects for swap-modal lookup (same index as transformedTxs)
+          rawTxRef.current = txData;
+
           // Transform API transaction response to match Transaction interface
           const transformedTxs = txData.map((tx: any, index: number) => {
             const amount = tx.primaryTokenAmount ?? 0;
@@ -250,6 +266,58 @@ export default function WalletPage() {
 
     loadData();
   }, [address]);
+
+  /**
+   * Build TransferRecord[] from a raw Helius transaction object.
+   * Tries the `tokenTransfers` array first (enhanced API format), then
+   * falls back to the primary token fields for a single-leg record.
+   */
+  function buildTransferRecords(rawTx: any): TransferRecord[] {
+    const sig = rawTx.signature || rawTx.hash || "";
+    const ts = typeof rawTx.timestamp === "number" ? rawTx.timestamp : 0;
+    const records: TransferRecord[] = [];
+
+    if (Array.isArray(rawTx.tokenTransfers) && rawTx.tokenTransfers.length > 0) {
+      for (const t of rawTx.tokenTransfers) {
+        const isOut = t.fromUserAccount === address;
+        records.push({
+          signature: sig,
+          timestamp: ts,
+          direction: isOut ? "out" : "in",
+          counterparty: isOut
+            ? t.toUserAccount || ""
+            : t.fromUserAccount || "",
+          mint: t.mint || "",
+          symbol: t.tokenSymbol || null,
+          amount: Number(t.tokenAmount ?? 0),
+          amountRaw: String(t.rawTokenAmount ?? ""),
+          decimals: Number(t.decimals ?? 0),
+        });
+      }
+      if (records.length > 0) return records;
+    }
+
+    // Fallback: build from primary token fields
+    records.push({
+      signature: sig,
+      timestamp: ts,
+      direction: "out",
+      counterparty: rawTx.to || "",
+      mint: "",
+      symbol: rawTx.primaryTokenSymbol || null,
+      amount: Number(rawTx.primaryTokenAmount ?? 0),
+      amountRaw: "",
+      decimals: 0,
+    });
+    return records;
+  }
+
+  function handleTransactionRowClick(row: any[], rowIndex: number) {
+    const rawTx = rawTxRef.current[rowIndex >= 0 ? rowIndex : -1];
+    if (!rawTx) return;
+    setSelectedTransfers(buildTransferRecords(rawTx));
+    setSwapModalOpen(true);
+  }
 
   if (!address) {
     return (
@@ -313,6 +381,7 @@ export default function WalletPage() {
               dataEntries={transferData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
+              onRowClick={handleTransactionRowClick}
             />,
             <Table
               maxHeight={400}
@@ -325,6 +394,7 @@ export default function WalletPage() {
               dataEntries={inflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
+              onRowClick={handleTransactionRowClick}
             />,
             <Table
               maxHeight={400}
@@ -337,6 +407,7 @@ export default function WalletPage() {
               dataEntries={outflowData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
+              onRowClick={handleTransactionRowClick}
             />,
             <Table
               maxHeight={400}
@@ -349,6 +420,7 @@ export default function WalletPage() {
               dataEntries={transactionData}
               isSortable={isSortable}
               sortConfigs={sortConfigs}
+              onRowClick={handleTransactionRowClick}
             />,
           ]}
           onTabChange={(index) => setSecondaryActiveTab(index)}
@@ -396,6 +468,12 @@ export default function WalletPage() {
       <div className={styles.chartContainer}>
         <TransactionDistribution />
       </div>
+
+      <SwapDetailModal
+        isOpen={swapModalOpen}
+        onClose={() => setSwapModalOpen(false)}
+        transfers={selectedTransfers}
+      />
     </PageWrapper>
   );
 }
