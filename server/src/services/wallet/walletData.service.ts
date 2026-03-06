@@ -24,7 +24,7 @@ import * as birdeye from "@sv/util/util-birdeye.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { Signature } from "ethers";
-import { saveOverviewCache, saveTransactionsCache, saveSwapsCache } from "./db/walletDataCacher.js";
+import { saveOverviewCache, saveTransactionsCache, saveSwapsCache, saveTransfersCache } from "./db/walletDataCacher.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -782,6 +782,9 @@ export async function getWalletTransfers(
         `[getWalletTransfers] Successfully fetched ${transfers.length} transfers from Helius for ${address}`
       );
 
+      // Save to cache for future retrieval
+      await saveTransfersCache(address, effectiveChain, transfers);
+
       return {
         address,
         chain: effectiveChain,
@@ -814,7 +817,7 @@ export async function getWalletTransfers(
 export async function getWalletSwaps(
   address: string,
   chain: SupportedChain,
-  options?: { limit?: number; cursor?: string },
+  options?: { limit?: number; cursor?: string; before?: string  },
 ): Promise<{ address: string; chain: SupportedChain; swaps: WalletSwap[] }> {
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);

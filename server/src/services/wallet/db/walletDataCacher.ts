@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers } from "@sv/db/schema.js";
 import { and, eq } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction } from "../dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 
 export async function saveSwapsCache(
@@ -144,49 +144,40 @@ export async function saveTransactionsCache(
 export async function saveTransfersCache(
   address: string,
   chain: string,
-  transactions: WalletTransaction[],
+  transfers: WalletTransfer[],
 ): Promise<void> {
   try {
-    // await db.delete(tokenTransfers).where(
-    //   and(
-    //     eq(walletTransactions.address, address),
-    //     eq(walletTransactions.chain, chain),
-    //   ),
-    // );
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueByHash = new Map<string, WalletTransaction>();
-      for (const tx of transactions) {
-        if (!uniqueByHash.has(tx.hash)) {
-          uniqueByHash.set(tx.hash, tx);
+    if (transfers.length > 0) {
+      // Deduplicate by transaction signature + instruction index to avoid multiple rows
+      // with the same primary key when providers return duplicate transfer records.
+      const uniqueKey = (t: WalletTransfer) => `${t.transactionSignature}-${t.instructionIndex}`;
+      const uniqueByKey = new Map<string, WalletTransfer>();
+      for (const transfer of transfers) {
+        const key = uniqueKey(transfer);
+        if (!uniqueByKey.has(key)) {
+          uniqueByKey.set(key, transfer);
         }
       }
 
-      const uniqueTransactions = Array.from(uniqueByHash.values());
+      const uniqueTransfers = Array.from(uniqueByKey.values());
 
-      const rows = uniqueTransactions.map((tx) => ({
+      const rows = uniqueTransfers.map((t) => ({
         address,
         chain,
-        hash: tx.hash,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-        fee: tx.fee ?? null,
-        mainAction: tx.mainAction ?? null,
-        direction: tx.direction ?? null,
-        primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-        primaryTokenAmount: tx.primaryTokenAmount ?? null,
-        primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        // Price fields are response-time enrichments and are not persisted.
-        priceUsd: null,
-        totalUsd: null,
-        tokens: tx.tokens ?? null,
+        fromOwner: t.from,
+        toOwner: t.to,
+        amount: t.amount,
+        // amountUsd is required by schema but not provided by API at fetch time.
+        // Set to 0 as placeholder; real-time pricing is handled via enrichWithSolanaTokenPrices.
+        amountUsd: 0,
+        blockTime: new Date(Date.parse(t.timestamp) || Date.now()),
+        tokenAddress: t.tokenAddress,
+        tokenSymbol: t.tokenSymbol,
+        transactionSignature: t.transactionSignature,
+        instructionIndex: t.instructionIndex,
       }));
 
-      await db.insert(walletTransactions).values(rows);
+      await db.insert(tokenTransfers).values(rows);
     }
     await db
       .insert(walletTransactionsMeta)
@@ -196,7 +187,7 @@ export async function saveTransfersCache(
         set: { fetchedAt: new Date() },
       });
   } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
+    console.error("Failed to save wallet transfers cache", err);
   }
 }
 

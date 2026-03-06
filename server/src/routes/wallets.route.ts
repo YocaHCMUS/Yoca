@@ -4,7 +4,9 @@ import {
   getWalletOverview,
   getWalletPortfolio,
   getWalletTransactions,
-  getWalletExchangeCounts
+  getWalletExchangeCounts,
+  getWalletSwaps,
+  getWalletTransfers
 } from "@sv/services/wallet/walletData.service.js";
 
 const router = new Hono();
@@ -17,7 +19,7 @@ import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.
 //   return (chain as SupportedChain) || "solana";
 // }
 
-const overviewRequestSchema = z.object({
+const walletRequestSchema = z.object({
   address: z.string(),
   chain: z.string()
 });
@@ -39,7 +41,7 @@ router.get("/overview", async (c) => {
   //         params.wallets,
   //       );
   const query = c.req.query();
-  const params = overviewRequestSchema.parse(query)
+  const params = walletRequestSchema.parse(query)
   const address = params.address;
   const chain = params.chain as SupportedChain || "solana"
 
@@ -54,7 +56,7 @@ router.get("/overview", async (c) => {
 
 router.get("/portfolio", async (c) => {
   const query = c.req.query();
-  const params = overviewRequestSchema.parse(query)
+  const params = walletRequestSchema.parse(query)
   const address = params.address;
   const chain = params.chain as SupportedChain || "solana"
 
@@ -69,7 +71,7 @@ router.get("/portfolio", async (c) => {
 
 router.get("/transactions", async (c) => {
   const query = c.req.query();
-  const params = overviewRequestSchema.parse(query)
+  const params = walletRequestSchema.parse(query)
   const address = params.address;
   const chain = params.chain as SupportedChain || "solana"
 
@@ -94,9 +96,61 @@ router.get("/transactions", async (c) => {
   }
 });
 
+router.get("/swap", async (c) => {
+  const query = c.req.query();
+  const params = walletRequestSchema.parse(query)
+  const address = params.address;
+  const chain = params.chain as SupportedChain || "solana"
+
+  const limitParam = c.req.query("limit");
+  const cursor = c.req.query("cursor");
+  const before = c.req.query("before");
+
+  const limit = limitParam ? Number(limitParam) : undefined;
+
+  try {
+    const txs = await getWalletSwaps(address, chain, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor: cursor ?? undefined,
+      before: before ?? undefined,
+    });
+
+    return c.json(txs);
+  } catch (err) {
+    console.error("Failed to get wallet swaps", err);
+    return c.json({ error: "Failed to get wallet swaps" }, 500);
+  }
+});
+
+router.get("/transfers", async(c) => {
+  const query = c.req.query();
+  const params = walletRequestSchema.parse(query)
+  const address = params.address;
+  const chain = params.chain as SupportedChain || "solana"
+
+  const limitParam = c.req.query("limit");
+  const cursor = c.req.query("cursor");
+  const before = c.req.query("before");
+
+  const limit = limitParam ? Number(limitParam) : undefined;
+
+  try {
+    const txs = await getWalletTransfers(address, chain, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor: cursor ?? undefined,
+      before: before ?? undefined,
+    });
+
+    return c.json(txs);
+  } catch (err) {
+    console.error("Failed to get wallet transfers", err);
+    return c.json({ error: "Failed to get wallet transfers" }, 500);
+  }
+})
+
 router.get("/distribution", async (c) => {
   const query = c.req.query();
-  const params = overviewRequestSchema.parse(query)
+  const params = walletRequestSchema.parse(query)
   const address = params.address;
   const chain = params.chain as SupportedChain || "solana"
 
@@ -133,7 +187,7 @@ router.get("/distribution", async (c) => {
 
 router.get("/exchanges", async (c) => {
   const query = c.req.query();
-  const params = overviewRequestSchema.parse(query)
+  const params = walletRequestSchema.parse(query)
   const address = params.address;
   const chain = params.chain as SupportedChain || "solana"
   const limitParam = c.req.query("limit");
