@@ -4,12 +4,12 @@ import {
   getWalletOverview,
   getWalletPortfolio,
   getWalletTransactions,
-  getWalletExchangeCounts,
-  type SupportedChain,
+  getWalletExchangeCounts
 } from "@sv/services/wallet/walletData.service.js";
 
 const router = new Hono();
 import { z } from "zod";
+import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 // function getChainFromQuery(c: any): SupportedChain {
 //   const chain = c.req.query("chain");
