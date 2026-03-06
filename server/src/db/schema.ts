@@ -277,6 +277,17 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
+  // {
+  //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
+  //     "timestamp": 1704067200,
+  //     "direction": "in",
+  //     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
+  //     "mint": "So11111111111111111111111111111111111111112",
+  //     "symbol": "SOL",
+  //     "amount": 1.5,
+  //     "amountRaw": "1500000000",
+  //     "decimals": 9
+  //   },
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
@@ -287,6 +298,7 @@ export const tokenTransfers = pgTable(
     amountUsd: decimal("amount_usd").notNull(),
     blockTime: timestamp("block_time").notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    tokenSymbol: varchar("token_symbol", {length: 10}).notNull(),
     transactionSignature: char("transaction_signature", {
       length: 64,
     }).notNull(),
@@ -298,6 +310,7 @@ export const tokenTransfers = pgTable(
     }),
   ],
 );
+
 
 // Token holders info
 export const tokenHolderStats = pgTable("token_holder_stats", {
@@ -471,6 +484,45 @@ export const walletTransactions = pgTable(
   },
   (t) => [primaryKey({ columns: [t.address, t.chain, t.hash] })],
 );
+
+export const walletSwap = pgTable(
+  "wallet_swap", 
+  {
+
+//     signature	"2VQWHYvYoggvrYjmmx3JnSAs5ZpkgAG1yjSHjmntLHiy1JYZLTSzhPVKiHruhr1BKCYpxuiTpVRuJwYDXfesecCK"
+// timestamp	1772789526
+// slot	404569296
+// fee	5100
+// feePayer	"F2LsTgsepmoAuorgQDz9c28eQKnQem8quKX1tzQ2nDE6"
+// error	null
+// balanceChanges	
+// 0	
+// mint	"So11111111111111111111111111111111111111112"
+// amount	-11
+// decimals	0
+// 1	
+// mint	"EFRtJ2sgLHBqdz2Bggz8h6GuDQHPzfvSNhungnPnRMoE"
+// amount	193591.779975
+// decimals	0
+// 2	
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    hash: text("hash").notNull(),
+    blockTimestamp: timestamp("block_timestamp").notNull(),
+    fromAddress: varchar("from_address", { length: 66 }).notNull(),
+    toAddress: varchar("to_address", { length: 66 }).notNull(),
+    receiptStatus: smallint("receipt_status"), // 1 success, 0 fail, null unknown
+    fee: decimal("fee"),
+    mainAction: text("main_action"),
+    direction: text("direction"), // in | out | self | unknown
+    primaryTokenSymbol: text("primary_token_symbol"),
+    primaryTokenAmount: decimal("primary_token_amount"),
+    primaryTokenAddress: varchar("primary_token_address", { length: 66 }),
+    priceUsd: decimal("price_usd"),
+    totalUsd: decimal("total_usd"),
+    tokens: jsonb("tokens").$type<string[]>(),
+  }
+)
 
 export const walletExchangeCountsCache = pgTable(
   "wallet_exchange_counts_cache",
