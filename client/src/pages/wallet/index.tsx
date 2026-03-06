@@ -22,6 +22,7 @@ import { SwapDetailModal, type TransferRecord } from "@/components/wallet/SwapDe
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import { locale } from "@/config/localization/index.ts";
 import { fetchWalletPortfolio, fetchWalletTransactions } from "@/services/wallet/walletApi.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -51,7 +52,8 @@ interface Portfolio {
 }
 
 export default function WalletPage() {
-  const { tr, fmt } = useLocalization();
+  const { tr, fmt, lang } = useLocalization();
+  const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
   const [transfers, setTransfers] = useState([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
@@ -147,9 +149,9 @@ export default function WalletPage() {
     (value: string) => renderHash(value),
     (value: string) => renderHash(value),
     (value: string) => renderHash(value),
-    (value: string) => renderReducedNumber(value, renderBase),
-    (value: string) => renderReducedNumber(value, renderCurrency),
-    (value: string) => renderReducedNumber(value, renderCurrency),
+    (value: string) => renderReducedNumber(value, renderBase, bcp47),
+    (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
+    (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     // (value: string) => renderDateTime(value),
     // null
@@ -274,7 +276,14 @@ export default function WalletPage() {
    */
   function buildTransferRecords(rawTx: any): TransferRecord[] {
     const sig = rawTx.signature || rawTx.hash || "";
-    const ts = typeof rawTx.timestamp === "number" ? rawTx.timestamp : 0;
+    // The server converts the Helius Unix timestamp to an ISO string before sending.
+    // Accept either a number (Unix seconds) or an ISO/date string.
+    const ts =
+      typeof rawTx.timestamp === "number"
+        ? rawTx.timestamp
+        : rawTx.timestamp
+          ? Math.floor(new Date(rawTx.timestamp).getTime() / 1000)
+          : 0;
     const records: TransferRecord[] = [];
 
     if (Array.isArray(rawTx.tokenTransfers) && rawTx.tokenTransfers.length > 0) {

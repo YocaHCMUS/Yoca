@@ -54,6 +54,60 @@ function formatTimestamp(ts: number): string {
   });
 }
 
+/** Unicode subscript digits 0–9 */
+const SUB_DIGITS = ["₀","₁","₂","₃","₄","₅","₆","₇","₈","₉"] as const;
+
+function toSubscript(n: number): string {
+  return String(n)
+    .split("")
+    .map((c) => SUB_DIGITS[+c] ?? c)
+    .join("");
+}
+
+/**
+ * Format a token amount for display.
+ * - Normal numbers (≥ 0.001): up to 6 significant figures.
+ * - Very small numbers: subscript-zero compact notation.
+ *   e.g. 1e-9  → "0.0₇1"  (literal 0.0, then 7 compressed zeros, then digits)
+ *        2.5e-7 → "0.0₅25"
+ * The full precision value is always available via the `title` attribute.
+ */
+function formatAmount(amount: number): string {
+  if (!isFinite(amount) || isNaN(amount)) return "0";
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  if (abs === 0) return "0";
+
+  // Normal range: trim to 6 significant figures.
+  // Use 'en-US' explicitly so locale-specific compact suffixes (e.g. Vietnamese
+  // "Tr" for million) never appear regardless of the browser/OS locale.
+  if (abs >= 0.001) {
+    const trimmed = parseFloat(abs.toPrecision(6));
+    return sign + trimmed.toLocaleString("en-US", { maximumSignificantDigits: 6 });
+  }
+
+  // Very small: subscript-zero notation
+  // toFixed(20) gives enough room to count leading zeros without scientific notation
+  const raw = abs.toFixed(20);
+  const afterDot = raw.split(".")[1] ?? "";
+  let zeros = 0;
+  for (const ch of afterDot) {
+    if (ch === "0") zeros++;
+    else break;
+  }
+
+  // Significant digits, up to 4, trailing zeros stripped
+  const sig = afterDot.slice(zeros).replace(/0+$/, "").slice(0, 4) || "1";
+
+  // Always show "0.0" literally; subscript encodes the (zeros-1) additional
+  // compressed zeros that follow, e.g. 1e-9 → 0.0₇1 (not 0.₈1)
+  const compressed = zeros - 1;
+  return compressed > 0
+    ? `${sign}0.0${toSubscript(compressed)}${sig}`
+    : `${sign}0.0${sig}`;
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────
 
 interface SwapDetailModalProps {
@@ -120,7 +174,7 @@ export function SwapDetailModal({
             {outTransfer ? (
               <>
                 <span className={styles.tokenAmt} title={String(outTransfer.amount)}>
-                  {outTransfer.amount}
+                  {formatAmount(outTransfer.amount)}
                 </span>
                 <span className={styles.tokenSym} title={outTransfer.symbol ?? outTransfer.mint}>
                   {getSymbolOrMint(outTransfer)}
@@ -140,7 +194,7 @@ export function SwapDetailModal({
             {inTransfer ? (
               <>
                 <span className={styles.tokenAmt} title={String(inTransfer.amount)}>
-                  {inTransfer.amount}
+                  {formatAmount(inTransfer.amount)}
                 </span>
                 <span className={styles.tokenSym} title={inTransfer.symbol ?? inTransfer.mint}>
                   {getSymbolOrMint(inTransfer)}
@@ -157,11 +211,11 @@ export function SwapDetailModal({
           <p className={styles.summary}>
             Swapped{" "}
             <strong>
-              {outTransfer.amount} {getSymbolOrMint(outTransfer)}
+              {formatAmount(outTransfer.amount)} {getSymbolOrMint(outTransfer)}
             </strong>{" "}
             for{" "}
             <strong>
-              {inTransfer.amount} {getSymbolOrMint(inTransfer)}
+              {formatAmount(inTransfer.amount)} {getSymbolOrMint(inTransfer)}
             </strong>
           </p>
         )}
