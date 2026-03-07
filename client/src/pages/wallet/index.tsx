@@ -424,7 +424,14 @@ export default function WalletPage() {
               }}
               autoRefresh={true}
             />,
-            <PnLChart minHeight={400} aggregation="daily" autoRefresh={true} />,
+            <PnLChart 
+              minHeight={400}
+              aggregation="daily"
+              autoRefresh={true}
+              initialFilters={{
+                timePeriod: "30D",
+                wallets: [address]
+              }} />,
           ]} //for testing purpose
           onTabChange={(index) => setActiveTab(index)}
         />

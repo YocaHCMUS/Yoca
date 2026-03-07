@@ -36,7 +36,7 @@ export async function saveSwapsCache(
         feeBalanceChanges: tx.feeChanges,
       }));
 
-      await db.insert(walletSwap).values(rows);
+      await db.insert(walletSwap).values(rows).onConflictDoNothing();
     }
     await db
       .insert(walletSwapMeta)
@@ -171,7 +171,7 @@ export async function saveTransactionsHeliusCache(
         balanceChanges: tx.balanceChanges,
       }));
 
-      await db.insert(walletHeliusTransactions).values(rows);
+      await db.insert(walletHeliusTransactions).values(rows).onConflictDoNothing();
     }
     await db
       .insert(walletTransactionsMeta)
@@ -221,7 +221,7 @@ export async function saveTransfersCache(
         instructionIndex: t.instructionIndex,
       }));
 
-      await db.insert(tokenTransfers).values(rows);
+      await db.insert(tokenTransfers).values(rows).onConflictDoNothing();
     }
     await db
       .insert(walletTransferMeta)
