@@ -131,7 +131,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
   // ── New grouping filters ───────────────────────────────────────────────
-  const [topN, setTopN] = useState<TopNOption>(0);       // 0 = All
+  const [topN, setTopN] = useState<TopNOption>(5);       // default: Top 5
   const [minPct, setMinPct] = useState<MinPctOption>(0); // 0 = no min
 
   // Use centralized filter sync hook
