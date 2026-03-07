@@ -6,6 +6,7 @@ import {
 import { db } from "@sv/db/index.js";
 import {
 	tokenTransfers,
+	walletHeliusTransactions,
 	walletSwap,
 	walletSwapMeta,
 	walletTransactions,
@@ -17,6 +18,7 @@ import type {
 	SupportedChain,
 	WalletSwap,
 	WalletTransaction,
+	WalletTransactionHelius,
 	WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
@@ -141,6 +143,44 @@ export async function getCachedWalletTransactions(
 		primaryTokenAddress: r.primaryTokenAddress ?? undefined,
 		priceUsd: undefined,
 		totalUsd: undefined,
+	}));
+}
+
+export async function getCachedWalletTransactionsHelius(
+	address: string,
+	chain: SupportedChain,
+	limit: number,
+): Promise<WalletTransactionHelius[] | null> {
+	const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
+	const isFresh = await hasFreshWalletMeta(address, chain, txThreshold, "transactions");
+	if (!isFresh) {
+		return null;
+	}
+
+	const rows = await db
+		.select()
+		.from(walletHeliusTransactions)
+		.where(
+			and(
+				eq(walletHeliusTransactions.address, address),
+				eq(walletHeliusTransactions.chain, chain),
+			),
+		)
+		.orderBy(desc(walletHeliusTransactions.timestamp))
+		.limit(limit);
+
+	if (rows.length === 0) {
+		return null;
+	}
+
+	return rows.map((r) => ({
+		walletAddress: r.address,
+		signature: r.signature,
+		timestamp: toIsoTimestamp(r.timestamp),
+		slot: r.slot != null ? Number(r.slot) : 0,
+		fee: r.fee != null ? Number(r.fee) : 0,
+		feePayer: r.feePayer,
+		balanceChanges: r.balanceChanges,
 	}));
 }
 

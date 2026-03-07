@@ -13,18 +13,43 @@ import {
 import { and, desc, eq } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
-import { fetchHeliusSolanaPortfolio, fetchHeliusSolanaTransactions, fetchHeliusSolanaTransfers, fetchHeliusSolanaSwap } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js"
 import {
+  fetchAllTransactionHistory,
+  fetchHeliusSolanaPortfolio,
+  fetchHeliusSolanaSwap,
+  fetchHeliusSolanaTransactions,
+  fetchHeliusSolanaTransfers,
+} from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import {
+  getCachedWalletTransactionsHelius,
   getCachedWalletSwaps,
   getCachedWalletTransactions,
   getCachedWalletTransfers,
 } from "@sv/services/wallet/db/walletDataRetriever.js";
-import type { WalletPortfolioItem, WalletTransaction, WalletOverview, SupportedChain, WalletTransactionsResponse, WalletExchangeCountItem, WalletExchangeCountsResponse, WalletSwap, WalletTransfersResponse, WalletTransfer,  } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type {
+  SupportedChain,
+  WalletExchangeCountItem,
+  WalletExchangeCountsResponse,
+  WalletOverview,
+  WalletPortfolioItem,
+  WalletSwap,
+  WalletTransaction,
+  WalletTransactionHelius,
+  WalletTransactionsResponse,
+  WalletTransfer,
+  WalletTransfersResponse,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as birdeye from "@sv/util/util-birdeye.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { Signature } from "ethers";
-import { saveOverviewCache, saveTransactionsCache, saveSwapsCache, saveTransfersCache } from "./db/walletDataCacher.js";
+import {
+  saveOverviewCache,
+  saveSwapsCache,
+  saveTransactionsCache,
+  saveTransactionsHeliusCache,
+  saveTransfersCache,
+} from "./db/walletDataCacher.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -753,6 +778,39 @@ export async function getWalletTransactions(
   };
 }
 
+export async function getWalletTransactionHelius(
+  address: string,
+  chain: SupportedChain,
+  options?: { limit?: number; cursor?: string; before?: string },
+): Promise<{ address: string; chain: SupportedChain; transactions: WalletTransactionHelius[] }> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+  const limit = Math.min(options?.limit ?? 100, 500);
+
+  const cachedTransactions = await getCachedWalletTransactionsHelius(
+    address,
+    effectiveChain,
+    limit,
+  );
+  if (cachedTransactions) {
+    return { address, chain: effectiveChain, transactions: cachedTransactions };
+  }
+
+  if (effectiveChain !== "solana") {
+    return { address, chain: effectiveChain, transactions: [] };
+  }
+
+  const transactions = await fetchAllTransactionHistory(address, limit);
+  await saveTransactionsHeliusCache(address, effectiveChain, transactions);
+
+  return {
+    address,
+    chain: effectiveChain,
+    transactions,
+  };
+}
+
+
+
 export async function getWalletTransfers(
   address: string,
   chain: SupportedChain,
@@ -1078,9 +1136,34 @@ export async function getWalletBalanceHistory(
       }
     }
 
-    // 2. Get transaction history (fetch more to reconstruct historical data)
-    const txResponse = await getWalletTransactions(address, effectiveChain, { limit: 500 });
+    // 2. Get Helius transaction history (full transaction records with balance changes)
+    const txResponse = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
     const transactions = txResponse.transactions;
+
+    // Gather token mints appearing in historical balance changes so we can enrich
+    // price lookup beyond current portfolio tokens.
+    const txTokenAddresses = new Set<string>();
+    for (const tx of transactions) {
+      if (!Array.isArray(tx.balanceChanges)) continue;
+      for (const change of tx.balanceChanges) {
+        const mint = String(change?.mint ?? "").trim();
+        if (!mint) continue;
+        txTokenAddresses.add(mint === "SOL" ? SOL_MINT : mint);
+      }
+    }
+
+    if (txTokenAddresses.size > 0) {
+      try {
+        const marketData = await getTokenMarketData(Array.from(txTokenAddresses));
+        for (const [tokenAddress, data] of Object.entries(marketData)) {
+          if (data?.priceUsd != null && Number.isFinite(data.priceUsd)) {
+            tokenPriceMap.set(tokenAddress, Number(data.priceUsd));
+          }
+        }
+      } catch (err) {
+        console.error("[WalletBalanceHistory] Failed to enrich token prices for historical txs", err);
+      }
+    }
 
     // Filter transactions within the time period and sort by timestamp (oldest first)
     const relevantTxs = transactions
@@ -1106,30 +1189,35 @@ export async function getWalletBalanceHistory(
       ];
     }
 
-    // Helper function to calculate transaction value in USD
-    const calculateTxValue = (tx: WalletTransaction): number => {
-      // 1. Use totalUsd if available
-      if (tx.totalUsd != null && tx.totalUsd > 0) {
-        return tx.totalUsd;
+    // Helper: estimate signed USD delta for one Helius transaction.
+    // Positive means wallet value increased, negative means decreased.
+    const calculateTxUsdDelta = (tx: WalletTransactionHelius): number => {
+      if (!Array.isArray(tx.balanceChanges) || tx.balanceChanges.length === 0) {
+        return 0;
       }
 
-      // 2. Calculate from primaryTokenAmount and priceUsd
-      if (tx.primaryTokenAmount != null && tx.priceUsd != null && tx.priceUsd > 0) {
-        return Math.abs(tx.primaryTokenAmount * tx.priceUsd);
-      }
+      let deltaUsd = 0;
+      for (const change of tx.balanceChanges) {
+        const mintRaw = String(change?.mint ?? "").trim();
+        if (!mintRaw) continue;
 
-      // 3. Try to estimate using current token prices
-      if (tx.primaryTokenAmount != null) {
-        // Try to get current price for this token
-        const tokenKey = tx.primaryTokenAddress || tx.primaryTokenSymbol;
-        if (tokenKey && tokenPriceMap.has(tokenKey)) {
-          const currentPrice = tokenPriceMap.get(tokenKey)!;
-          return Math.abs(tx.primaryTokenAmount * currentPrice);
+        const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
+        const priceUsd = tokenPriceMap.get(mint);
+        if (priceUsd == null || !Number.isFinite(priceUsd)) {
+          continue;
         }
+
+        const amountRaw = Number(change?.amount ?? 0);
+        const decimals = Number(change?.decimals ?? 0);
+        if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) {
+          continue;
+        }
+
+        const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
+        deltaUsd += normalizedAmount * priceUsd;
       }
 
-      // 4. No USD value available - return 0 (will not affect balance calculation significantly)
-      return 0;
+      return deltaUsd;
     };
 
     // 3. Build balance history data points
@@ -1144,17 +1232,10 @@ export async function getWalletBalanceHistory(
     for (let i = 0; i < reversedTxs.length; i++) {
       const tx = reversedTxs[i];
       const txDate = new Date(tx.timestamp);
-      const txValue = calculateTxValue(tx);
-      
-      // Adjust running balance based on transaction direction
-      if (tx.direction === "out") {
-        // If funds went out, add them back to get previous balance
-        runningBalance += txValue;
-      } else if (tx.direction === "in") {
-        // If funds came in, subtract them to get previous balance
-        runningBalance -= txValue;
-      }
-      // For "self" or "unknown" direction, we don't adjust the balance
+      const txDeltaUsd = calculateTxUsdDelta(tx);
+
+      // Move backwards in time: previous_balance = current_balance - tx_delta.
+      runningBalance -= txDeltaUsd;
       
       // Add data point (going backwards in time)
       balanceHistory.unshift({
