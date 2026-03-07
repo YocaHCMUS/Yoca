@@ -5,139 +5,141 @@ import {
 import { db } from "@sv/db/index.js";
 import {
   tokenHolderStats,
+  tokenMarketData,
   tokenMeta,
   type TokenHolderStatsInsert,
+  type TokenMarketDataInsert,
   type TokenMetaInsert,
 } from "@sv/db/schema.js";
-import { excludedAuto } from "@sv/util/orm-sql.js";
+import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type { CG_CoinDetail, CG_TokenInfo } from "../_types/token_raw_responses.js";
+import { getCoinGeckoIdList } from "./token-list.js";
 
-// Fetch enriched info from CoinGecko v3 /coins/{id}
-async function fetchCoinDetail(coingeckoId: string): Promise<CG_CoinDetail | null> {
-  if (!coingeckoId) return null;
-
-  const cgEndpoint = cg.getEndpoint(`/coins/${coingeckoId}`);
-  cgEndpoint.search = new URLSearchParams({
-    localization: "false",
-    tickers: "false",
-    market_data: "false",
-    community_data: "false",
-    developer_data: "false",
-  }).toString();
-
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+async function fetchHolderStatsItem(
+  tokenAddress: string,
+): Promise<TokenHolderStatsInsert> {
+  const res = await cg.client.onchain.networks.tokens.info.get(tokenAddress, {
+    network: "solana",
   });
 
-  const resp = await fetch(req);
-  if (!resp.ok) return null;
-
-  return resp.json();
+  return {
+    address: res.data!.attributes!.address!,
+    holdersCount: res.data?.attributes?.holders?.count || 0,
+    top10Percent:
+      res.data?.attributes?.holders?.distribution_percentage?.top_10 || 0,
+  };
 }
 
-// https://docs.coingecko.com/v3.0.1/reference/token-info-contract-address
-async function fetchTokenInfo(tokenAddresses: string[]) {
+function fetchHolderStats(tokenAddresses: string[]) {
+  return Promise.all(
+    tokenAddresses.map((address) => fetchHolderStatsItem(address)),
+  );
+}
+
+// https://docs.coingecko.com/v3.0.1/reference/coins-id
+async function fetchTokenMeta(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return {
       meta: [],
-      holders: [],
+      market: [],
     };
   }
+
+  const addressToCgIds = await getCoinGeckoIdList(tokenAddresses);
 
   const rawInfoList = await Promise.all(
-    tokenAddresses.map(async (address) => {
-      const cgEndpoint = cg.getOnchainEndpoint(
-        `/networks/solana/tokens/${address}/info/`,
-      );
-
-      const req = new Request(cgEndpoint, {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      });
-
-      const resp = await fetch(req);
-      if (resp.ok) {
-        const rawMeta: CG_TokenInfo = await resp.json();
+    tokenAddresses
+      .filter((address) => addressToCgIds[address])
+      .map(async (address) => {
+        const rawMeta = await cg.client.coins.getID(addressToCgIds[address], {
+          localization: false,
+          tickers: false,
+          market_data: true,
+          community_data: true,
+          developer_data: true,
+          include_categories_details: true,
+        });
         return rawMeta;
-      } else {
-        return null;
-      }
-    }),
+      }),
   );
 
-  // Build base meta + holders from onchain info
-  const infoList = rawInfoList
-    .filter((rawMeta) => rawMeta != null)
-    .map((raw): { meta: TokenMetaInsert; holders: TokenHolderStatsInsert } => ({
+  const infoList = rawInfoList.map(
+    (raw): { meta: TokenMetaInsert; market: TokenMarketDataInsert } => ({
       meta: {
-        address: raw.data.attributes.address,
-        symbol: raw.data.attributes.symbol,
-        name: raw.data.attributes.name,
-        description: raw.data.attributes.description || null,
-        imageUrl: raw.data.attributes.image_url,
-        linkHomepage: raw.data.attributes.websites?.at(0) || null,
-        linkDiscord: raw.data.attributes.discord_url || null,
-        twitterScreenName: raw.data.attributes.twitter_handle || null,
-        coingeckoId: raw.data.attributes.coingecko_coin_id,
+        address: raw.platforms!.solana!,
+        name: raw.name!,
+        symbol: raw.symbol!,
+        categories: raw.categories_details?.map((detail) => detail.id!),
+        coingeckoId: raw.id,
+        description: raw.description!.en!,
+        imageUrl: raw.image?.small,
+        linkBlockchainSites: raw.links?.blockchain_site,
+        linkDiscord: raw.links?.chat_url?.find((url) =>
+          url.startsWith("https://discord.com/invite/"),
+        ),
+        linkHomepage: raw.links?.homepage?.at(0),
+        telegramChannel: raw.links?.telegram_channel_identifier,
+        twitterScreenName: raw.links?.twitter_screen_name,
       },
-      holders: {
-        address: raw.data.attributes.address,
-        holdersCount: raw.data.attributes.holders?.count || 0,
-        top10Percent:
-          raw.data.attributes.holders?.distribution_percentage?.top_10 || 0,
+      market: {
+        address: raw.platforms!.solana!,
+        decimals: raw.detail_platforms!.solana!.decimal_place!,
+        fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd!,
+        marketCap: raw.market_data?.market_cap?.usd!,
+        marketCapRank: raw.market_data?.market_cap_rank!,
+        priceUsd: raw.market_data?.current_price?.usd!,
+        volume24h: raw.market_data?.total_volume?.usd!,
+        ath: raw.market_data?.ath?.usd!,
+        athChangePercentage: raw.market_data?.ath_change_percentage?.usd!,
+        athDate: new Date(raw.market_data?.ath_date?.usd!),
+        atl: raw.market_data?.atl?.usd!,
+        atlChangePercentage: raw.market_data?.atl_change_percentage?.usd!,
+        atlDate: new Date(raw.market_data?.atl_date?.usd!),
+        circulatingSupply: raw.market_data?.circulating_supply,
+        high24h: raw.market_data?.high_24h?.usd!,
+        low24h: raw.market_data?.low_24h?.usd!,
+        priceChangePercentage1h:
+          raw.market_data?.price_change_percentage_1h_in_currency?.usd,
+        priceChange24h: raw.market_data?.price_change_24h,
+        priceChangePercentage24h: raw.market_data?.price_change_percentage_24h,
+        priceChangePercentage7d: raw.market_data?.price_change_percentage_7d,
+        priceChangePercentage14d: raw.market_data?.price_change_percentage_14d,
+        priceChangePercentage30d: raw.market_data?.price_change_percentage_30d,
+        priceChangePercentage200d:
+          raw.market_data?.price_change_percentage_200d,
+        priceChangePercentage1y: raw.market_data?.price_change_percentage_1y,
+        marketCapChange24h: raw.market_data?.market_cap_change_24h,
+        marketCapChangePercentage24h:
+          raw.market_data?.market_cap_change_percentage_24h,
+        maxSupply: raw.market_data?.max_supply,
+        totalSupply: raw.market_data?.total_supply,
       },
-    }));
-
-  if (infoList.length == 0) {
-    return {
-      meta: [],
-      holders: [],
-    };
-  }
-
-  // Enrich with v3 /coins/{id} data for tokens that have a coingeckoId
-  await Promise.all(
-    infoList.map(async (info) => {
-      if (!info.meta.coingeckoId) return;
-
-      const detail = await fetchCoinDetail(info.meta.coingeckoId);
-      if (!detail) return;
-
-      const links = detail.links;
-      info.meta.telegramChannel = links.telegram_channel_identifier || null;
-      info.meta.linkBlockchainSites = JSON.stringify(
-        (links.blockchain_site || []).filter((url: string) => url && url.length > 0),
-      );
-      info.meta.categories = JSON.stringify(
-        (detail.categories || []).filter((cat: string) => cat && cat.length > 0),
-      );
-      info.meta.platforms = JSON.stringify(detail.platforms || {});
-
-      // Override with richer v3 data if available
-      if (links.homepage?.[0]) info.meta.linkHomepage = links.homepage[0];
-      if (links.twitter_screen_name) info.meta.twitterScreenName = links.twitter_screen_name;
-      if (links.chat_url?.[0]) info.meta.linkDiscord = links.chat_url[0];
     }),
   );
+
+  const metaValues = infoList.map((info) => info.meta);
+  const marketDataValues = infoList.map((info) => info.market);
 
   return {
     meta: await db
       .insert(tokenMeta)
-      .values(infoList.map((info) => info.meta))
+      .values(metaValues)
       .onConflictDoUpdate({
         target: [tokenMeta.address],
-        set: excludedAuto(tokenMeta, tokenMeta.address),
+        set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
       })
       .returning(),
-    holders: await db
-      .insert(tokenHolderStats)
-      .values(infoList.map((info) => info.holders))
+    market: await db
+      .insert(tokenMarketData)
+      .values(marketDataValues)
       .onConflictDoUpdate({
-        target: [tokenHolderStats.address],
-        set: excludedAuto(tokenHolderStats, tokenHolderStats.address),
+        target: [tokenMarketData.address],
+        set: excludedAutoFromInsert(
+          tokenMarketData,
+          tokenMarketData.address,
+          marketDataValues,
+        ),
       })
       .returning(),
   };
@@ -169,7 +171,7 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
     (address) => !addressToMeta[address],
   );
 
-  const refreshed = (await fetchTokenInfo(staleAddresses)).meta;
+  const refreshed = (await fetchTokenMeta(staleAddresses)).meta;
 
   if (!refreshed || refreshed.length == 0) {
     return res;
@@ -199,7 +201,7 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
     (address) => !addressToHolderStat[address],
   );
 
-  const refreshed = (await fetchTokenInfo(staleAddresses)).holders;
+  const refreshed = await fetchHolderStats(staleAddresses);
 
   if (!refreshed || refreshed.length == 0) {
     return res;

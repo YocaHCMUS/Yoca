@@ -1,3 +1,5 @@
+import Coingecko from "@coingecko/coingecko-typescript";
+
 export function getEndpoint(path: string): URL {
   return new URL(`${process.env.COINGECKO_API_BASE_URL}${path}`);
 }
@@ -15,3 +17,8 @@ export function getRequiredHeaders(): Record<string, string> {
 
   return headers;
 }
+
+export const client = new Coingecko({
+  demoAPIKey: process.env.COINGECKO_API_KEY,
+  environment: "demo",
+});

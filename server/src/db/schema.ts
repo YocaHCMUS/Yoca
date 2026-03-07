@@ -78,9 +78,8 @@ export const tokenMeta = pgTable("token_meta", {
   linkDiscord: varchar("link_discord"),
   twitterScreenName: varchar("twitter_screen_name"),
   telegramChannel: varchar("telegram_channel"),
-  linkBlockchainSites: text("link_blockchain_sites"), // JSON array of explorer URLs
-  categories: text("categories"), // JSON array of category strings
-  platforms: text("platforms"), // JSON object {"ethereum":"0x...", "solana":"..."}
+  linkBlockchainSites: varchar("link_blockchain_sites").array(),
+  categories: varchar("categories").array(),
 
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -185,9 +184,8 @@ export const tokenPoolData = pgTable("token_pool_data", {
   sellVolumeUsd6h: decimal("sell_volume_usd_6h"),
   sellVolumeUsd24h: decimal("sell_volume_usd_24h"),
 
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at"),
+  topPoolsUpdatedAt: timestamp("top_pools_updated_at"),
 });
 
 export const tokenTopPools = pgTable(
