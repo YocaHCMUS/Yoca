@@ -244,7 +244,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalAssetValue')}
                         </div>
                         <div className={styles.statValue}>
-                            {fmt.num.currency(totalAssetValue)}
+                            {fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
                         </div>
                     </div>
                     
@@ -254,7 +254,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tradingVolume')}
                         </div>
                         <div className={styles.statValue}>
-                            {fmt.num.currency(tradingVolumn)}
+                            {fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null)}
                         </div>
                     </div>
                     
@@ -264,7 +264,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalPnL')}
                         </div>
                         <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                            {fmt.num.currency(totalPnL)}
+                            {fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null)}
                         </div>
                     </div>
                     
