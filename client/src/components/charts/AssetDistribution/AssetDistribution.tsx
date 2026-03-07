@@ -35,7 +35,7 @@ import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
-import { ContentSwitcher, Switch } from '@carbon/react';
+
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type TopNOption = 5 | 10 | 0; // 0 = All
@@ -187,13 +187,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         // Type guard: check if response has wallets array
         if ('wallets' in data && data.wallets) {
           // Per-wallet data
-          data.wallets.forEach((wallet) => {
+          data.wallets.forEach((wallet: any) => {
             csv.push({
               id: `asset-distribution-${wallet.walletAddress}`,
               name: `Asset Distribution - ${wallet.walletAddress}`,
               type: 'pie',
               visible: true,
-              data: wallet.data.map((a) => ({
+              data: wallet.data.map((a: AssetItem) => ({
                 name: a.name,
                 value: a.value,
               })),
@@ -206,7 +206,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             name: 'Asset Distribution',
             type: 'pie',
             visible: true,
-            data: data.data.map((a) => ({
+            data: data.data.map((a: AssetItem) => ({
               name: a.name,
               value: a.value,
             })),
@@ -372,8 +372,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     
     const uniqueAssets = new Map<string, { name: string; color: string }>();
     
-    data.wallets.forEach((wallet, walletIndex) => {
-      wallet.data.forEach((asset, assetIndex) => {
+    data.wallets.forEach((wallet: any, walletIndex: number) => {
+      wallet.data.forEach((asset: any, assetIndex: number) => {
         if (!uniqueAssets.has(asset.name)) {
           uniqueAssets.set(asset.name, {
             name: asset.name,
@@ -423,7 +423,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
     // Multi-wallet view
     if ('wallets' in data && data.wallets && data.wallets.length > 0) {
-      return data.wallets.map((wallet) => ({
+      return data.wallets.map((wallet: any) => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
@@ -450,35 +450,41 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     (!('data' in data) || !data.data || data.data.length === 0)
   ) || (filters.wallets && filters.wallets.length === 0);
 
-  // ── Controls rendered into ChartWrapper's actions slot ────────────────
-  const filterControls = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-      {/* Top-N switcher */}
-      <ContentSwitcher
-        size="sm"
-        selectedIndex={topN === 0 ? 2 : topN === 5 ? 0 : 1}
-        onChange={({ index }: { index: number }) => {
-          setTopN(index === 0 ? 5 : index === 1 ? 10 : 0);
-        }}
-      >
-        <Switch name="top5" text="Top 5" />
-        <Switch name="top10" text="Top 10" />
-        <Switch name="all" text="All" />
-      </ContentSwitcher>
+  // ── Compact header filter controls ────────────────────────────────────
+  const selectStyle: React.CSSProperties = {
+    height: '1.75rem',
+    padding: '0 0.375rem',
+    fontSize: '0.75rem',
+    border: '1px solid var(--cds-border-strong)',
+    borderRadius: '0.25rem',
+    background: 'var(--cds-layer-02)',
+    color: 'var(--cds-text-primary)',
+    cursor: 'pointer',
+  };
 
-      {/* Min-% switcher */}
-      <ContentSwitcher
-        size="sm"
-        selectedIndex={minPct === 0 ? 0 : minPct === 1 ? 1 : minPct === 5 ? 2 : 3}
-        onChange={({ index }: { index: number }) => {
-          setMinPct(index === 0 ? 0 : index === 1 ? 1 : index === 2 ? 5 : 10);
-        }}
+  const filterControls = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <select
+        value={topN}
+        onChange={(e) => setTopN(Number(e.target.value) as TopNOption)}
+        style={selectStyle}
+        aria-label="Top N filter"
       >
-        <Switch name="all-pct" text="All %" />
-        <Switch name="pct1" text=">1%" />
-        <Switch name="pct5" text=">5%" />
-        <Switch name="pct10" text=">10%" />
-      </ContentSwitcher>
+        <option value={5}>Top 5</option>
+        <option value={10}>Top 10</option>
+        <option value={0}>All</option>
+      </select>
+      <select
+        value={minPct}
+        onChange={(e) => setMinPct(Number(e.target.value) as MinPctOption)}
+        style={selectStyle}
+        aria-label="Min % filter"
+      >
+        <option value={0}>All %</option>
+        <option value={1}>&gt;1%</option>
+        <option value={5}>&gt;5%</option>
+        <option value={10}>&gt;10%</option>
+      </select>
     </div>
   );
 
@@ -555,7 +561,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
           {/* Chart Grid */}
           <ChartGrid itemCount={chartOptions.length} multiItemColumns={3}>
-            {chartOptions.map((chartData, index) => (
+            {chartOptions.map((chartData: any, index: number) => (
               <ChartGridItem
                 key={chartData.walletAddress}
                 itemKey={chartData.walletAddress}
