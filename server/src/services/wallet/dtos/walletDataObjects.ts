@@ -54,6 +54,17 @@ export interface WalletSwap {
     feePayer: string,
     balanceChanges: WalletSwapBalanceChange[],
     feeChanges: WalletSwapBalanceChange[],
+    
+}
+
+export interface WalletTransactionHelius {
+    walletAddress: string,
+    signature: string,
+    timestamp: string,
+    slot: number,
+    fee: number,
+    feePayer: string,
+    balanceChanges: WalletSwapBalanceChange[],
 }
 
 export interface WalletTransfer {

@@ -68,6 +68,7 @@ export default function WalletPage() {
   // Swap detail modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedTransfers, setSelectedTransfers] = useState<TransferRecord[] | null>(null);
+  const [selectedSwap, setSelectedSwap] = useState<any>(null);
 
   // Stores raw API swap objects aligned by index with the swaps state array
   const rawSwapsRef = useRef<any[]>([]);
@@ -86,12 +87,28 @@ export default function WalletPage() {
   // Transform swap data to array format for Table component
   const swapData = useMemo(
     () =>
-      swaps.map((swap: any) => [
-        swap.signature,
-        swap.timestamp,
-        swap.fee,
-        swap.balanceChanges?.length ?? 0,
-      ]),
+      swaps.map((swap: any) => {
+        const balanceChanges = swap.balanceChanges || [];
+        const soldChange = balanceChanges.find((bc: any) => bc.amount < 0);
+        const boughtChange = balanceChanges.find((bc: any) => bc.amount > 0);
+        
+        // Format token display: amount + truncated mint
+        const formatTokenDisplay = (change: any) => {
+          if (!change) return '—';
+          const amount = Math.abs(change.amount).toFixed(4);
+          const mint = change.mint || '';
+          const symbol = mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
+          return `${amount} ${symbol}`;
+        };
+        
+        return [
+          swap.timestamp,
+          swap.fee,
+          formatTokenDisplay(soldChange),
+          formatTokenDisplay(boughtChange),
+          swap.balanceChanges?.length ?? 0,
+        ];
+      }),
     [swaps],
   );
 
@@ -125,10 +142,11 @@ export default function WalletPage() {
   ];
 
   const swapHeaders = [
-    tr("walletPage.signature"),
     tr("walletPage.time"),
-    tr("walletPage.total"),
-    "Balance Changes",
+    "Fee (SOL)",
+    "Token Sold",
+    "Token Bought",
+    "Total Changes",
   ];
 
   const transferHeaders = [
@@ -149,7 +167,7 @@ export default function WalletPage() {
 
   const isSortable = [false, false, false, false, true, true, true, true];
   const isSortablePortfolio = [false, true, true, true, true];
-  const isSortableSwaps = [false, true, true, false];
+  const isSortableSwaps = [true, true, false, false, false];
   const isSortableTransfers = [false, false, false, true, true];
 
   // Sort configurations for sortable columns
@@ -161,8 +179,8 @@ export default function WalletPage() {
   };
 
   const swapSortConfigs = {
-    1: { type: SortType.Date }, // Time
-    2: { type: SortType.Number }, // Fee
+    0: { type: SortType.Date }, // Time
+    1: { type: SortType.Number }, // Fee
   };
 
   const transferSortConfigs = {
@@ -190,9 +208,10 @@ export default function WalletPage() {
   ];
 
   const swapCellRenderers = [
-    (value: string) => renderCode(value),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
+    (value: string) => renderReducedNumber(value, renderBase, bcp47),
+    (value: string) => renderCode(value),
+    (value: string) => renderCode(value),
     (value: string) => renderBase(value),
   ];
 
@@ -347,15 +366,19 @@ export default function WalletPage() {
   function handleSwapRowClick(row: any[], rowIndex: number) {
     const rawSwap = rawSwapsRef.current[rowIndex >= 0 ? rowIndex : -1];
     if (!rawSwap) return;
+    
+    // Store the selected swap
+    setSelectedSwap(rawSwap);
+    
     // Convert swap data to transfer records for the modal
     const records: TransferRecord[] = rawSwap.balanceChanges?.map((change: any) => ({
       signature: rawSwap.signature,
       timestamp: Math.floor(new Date(rawSwap.timestamp).getTime() / 1000),
-      direction: "unknown",
+      direction: change.amount > 0 ? "in" : "out",
       counterparty: rawSwap.walletAddress,
       mint: change.mint || "",
       symbol: null,
-      amount: change.amount,
+      amount: Math.abs(change.amount),
       amountRaw: String(change.amount),
       decimals: change.decimals || 0,
     })) || [];
@@ -422,7 +445,10 @@ export default function WalletPage() {
               fetcher={Promise.resolve(swapData)}
               filterSchema={{
                 0: { type: FilterType.Select },
-                1: { type: FilterType.Select },
+                1: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
+                2: { type: FilterType.Select },
+                3: { type: FilterType.Select },
+                4: { type: FilterType.Select },
               }}
               cellRenderers={swapCellRenderers}
               dataEntries={swapData}
@@ -529,6 +555,9 @@ export default function WalletPage() {
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         transfers={selectedTransfers}
+        fee={selectedSwap?.fee}
+        slot={selectedSwap?.slot}
+        feePayer={selectedSwap?.feePayer}
       />
     </PageWrapper>
   );

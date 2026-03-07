@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta } from "@sv/db/schema.js";
 import { and, eq } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 
 export async function saveSwapsCache(
@@ -39,10 +39,10 @@ export async function saveSwapsCache(
       await db.insert(walletSwap).values(rows);
     }
     await db
-      .insert(walletTransactionsMeta)
+      .insert(walletSwapMeta)
       .values({ address, chain })
       .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+        target: [walletSwapMeta.address, walletSwapMeta.chain],
         set: { fetchedAt: new Date() },
       });
   } catch (err) {
@@ -141,6 +141,50 @@ export async function saveTransactionsCache(
   }
 }
 
+// not very optimised I know, this will have some overlap with swap db
+export async function saveTransactionsHeliusCache(  
+  address: string,
+  chain: string,
+  transactions: WalletTransactionHelius[],
+) {
+  try {
+    if (transactions.length > 0) {
+
+      const uniqueBySignature = new Map<string, WalletTransactionHelius>();
+      for (const tx of transactions) {
+        if (!uniqueBySignature.has(tx.signature)) {
+          uniqueBySignature.set(tx.signature, tx);
+        }
+      }
+
+      const uniqueTransactions = Array.from(uniqueBySignature.values());
+
+      const rows = uniqueTransactions.map((tx) => ({
+        address: tx.walletAddress,
+        chain: 'Solana',
+        signature: tx.signature,
+        timestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
+        slot: tx.slot,
+        fee: tx.fee,
+        feePayer: tx.feePayer,
+        // First two entries are the swap legs
+        balanceChanges: tx.balanceChanges,
+      }));
+
+      await db.insert(walletHeliusTransactions).values(rows);
+    }
+    await db
+      .insert(walletTransactionsMeta)
+      .values({ address, chain })
+      .onConflictDoUpdate({
+        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+        set: { fetchedAt: new Date() },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet transactions cache", err);
+  }
+}
+
 export async function saveTransfersCache(
   address: string,
   chain: string,
@@ -180,10 +224,10 @@ export async function saveTransfersCache(
       await db.insert(tokenTransfers).values(rows);
     }
     await db
-      .insert(walletTransactionsMeta)
+      .insert(walletTransferMeta)
       .values({ address, chain })
       .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+        target: [walletTransferMeta.address, walletTransferMeta.chain],
         set: { fetchedAt: new Date() },
       });
   } catch (err) {

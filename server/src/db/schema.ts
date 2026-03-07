@@ -464,6 +464,43 @@ export const walletTransactionsMeta = pgTable(
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 );
 
+export const walletSwapMeta = pgTable(
+  "wallet_swap_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  }, 
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+)
+
+export const walletTransferMeta = pgTable(
+  "wallet_transfer_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  }, 
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+)
+
+export const walletHeliusTransactions = pgTable(
+  "wallet_helius_transactions",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    signature: text("signature").notNull(),
+    timestamp: timestamp("block_timestamp").notNull(),
+    slot: decimal("slot"),
+    fee: decimal("fee"),
+    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    balanceChanges: jsonb("transaction_balance_changes")
+      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain, t.signature] })]
+)
+
 export const walletTransactions = pgTable(
   "wallet_transactions",
   {
@@ -549,5 +586,8 @@ export type WalletTransactionsMetaInsert = typeof walletTransactionsMeta.$inferI
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
 export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
+export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
+export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 
 // #endregion

@@ -7,8 +7,10 @@ import { db } from "@sv/db/index.js";
 import {
 	tokenTransfers,
 	walletSwap,
+	walletSwapMeta,
 	walletTransactions,
 	walletTransactionsMeta,
+	walletTransferMeta,
 } from "@sv/db/schema.js";
 import { and, desc, eq, or } from "drizzle-orm";
 import type {
@@ -49,13 +51,51 @@ async function getTransactionMetaRows(address: string, chain: SupportedChain) {
 		.limit(1);
 }
 
+async function getTransferMetaRows(address: string, chain: SupportedChain) {
+	return await db
+		.select()
+		.from(walletTransferMeta)
+		.where(
+			and(
+				eq(walletTransferMeta.address, address),
+				eq(walletTransferMeta.chain, chain),
+			),
+		)
+		.limit(1);
+}
+
+async function getSwapMetaRows(address: string, chain: SupportedChain) {
+	return await db
+		.select()
+		.from(walletSwapMeta)
+		.where(
+			and(
+				eq(walletSwapMeta.address, address),
+				eq(walletSwapMeta.chain, chain),
+			),
+		)
+		.limit(1);
+}
+
 async function hasFreshWalletMeta(
 	address: string,
 	chain: SupportedChain,
 	threshold: Date,
+	type: "transfers" | "swaps" | "transactions"
 ): Promise<boolean> {
-	const metaRows = await getTransactionMetaRows(address, chain);
-	return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
+	if (type === "transfers") {
+		const metaRows = await getTransferMetaRows(address, chain);
+		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
+	} else if (type === "swaps") {
+		const metaRows = await getSwapMetaRows(address, chain);
+		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
+	} else if (type === "transactions") {
+		const metaRows = await getTransactionMetaRows(address, chain);
+		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
+	}
+
+	return false;
+
 }
 
 export async function getCachedWalletTransactions(
@@ -64,7 +104,7 @@ export async function getCachedWalletTransactions(
 	limit: number,
 ): Promise<WalletTransaction[] | null> {
 	const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, txThreshold);
+	const isFresh = await hasFreshWalletMeta(address, chain, txThreshold, "transactions");
 	if (!isFresh) {
 		return null;
 	}
@@ -110,7 +150,7 @@ export async function getCachedWalletTransfers(
 	limit: number,
 ): Promise<WalletTransfer[] | null> {
 	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold);
+	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold, "transfers");
 	if (!isFresh) {
 		return null;
 	}
@@ -149,7 +189,7 @@ export async function getCachedWalletSwaps(
 	limit: number,
 ): Promise<WalletSwap[] | null> {
 	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold);
+	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold, "swaps");
 	if (!isFresh) {
 		return null;
 	}

@@ -114,6 +114,9 @@ interface SwapDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   transfers: TransferRecord[] | null;
+  fee?: number;
+  slot?: number;
+  feePayer?: string;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -122,6 +125,9 @@ export function SwapDetailModal({
   isOpen,
   onClose,
   transfers,
+  fee,
+  slot,
+  feePayer,
 }: SwapDetailModalProps) {
   // Close on Escape key
   useEffect(() => {
@@ -240,6 +246,29 @@ export function SwapDetailModal({
             <span className={styles.detailVal}>{formatTimestamp(timestamp)}</span>
           </div>
 
+          {fee !== undefined && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailKey}>Transaction Fee</span>
+              <span className={styles.detailVal}>{fee.toFixed(9)} SOL</span>
+            </div>
+          )}
+
+          {slot !== undefined && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailKey}>Slot</span>
+              <span className={styles.detailVal}>{slot.toLocaleString()}</span>
+            </div>
+          )}
+
+          {feePayer && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailKey}>Fee Payer</span>
+              <span className={styles.detailVal} title={feePayer}>
+                {truncateAddr(feePayer)}
+              </span>
+            </div>
+          )}
+
           {outTransfer && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Sent to</span>
@@ -264,6 +293,31 @@ export function SwapDetailModal({
             </div>
           )}
         </div>
+
+        {/* ── All Balance Changes (for complex swaps with >2 changes) ── */}
+        {transfers.length > 2 && (
+          <div className={styles.balanceChanges}>
+            <h3 className={styles.sectionTitle}>All Balance Changes ({transfers.length})</h3>
+            <div className={styles.changesList}>
+              {transfers.map((t, idx) => (
+                <div key={idx} className={styles.changeItem}>
+                  <span className={styles.changeDirection}>
+                    {t.direction === "in" ? "+" : "-"}
+                  </span>
+                  <span className={styles.changeAmount} title={String(t.amount)}>
+                    {formatAmount(t.amount)}
+                  </span>
+                  <span className={styles.changeSymbol} title={t.symbol ?? t.mint}>
+                    {getSymbolOrMint(t)}
+                  </span>
+                  <span className={styles.changeMint} title={t.mint}>
+                    {truncateAddr(t.mint)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     modalRoot,
