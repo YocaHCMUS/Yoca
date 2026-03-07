@@ -13,7 +13,6 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    decimals: 9,
     fullyDilutedValuation: raw.fully_diluted_valuation,
     marketCap: raw.market_cap,
     priceUsd: raw.current_price,

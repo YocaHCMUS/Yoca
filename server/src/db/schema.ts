@@ -69,6 +69,7 @@ export const authAccounts = pgTable(
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
   name: varchar("name").notNull(),
+  decimals: integer("decimals").notNull(),
   symbol: varchar("symbol").notNull(),
   imageUrl: varchar("image_url"),
   description: varchar("description"),
@@ -89,7 +90,6 @@ export const tokenMeta = pgTable("token_meta", {
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
   //priceBtc: decimal("price_btc"),
   //priceChangeBtc24h: decimal("price_change_btc_24h"),

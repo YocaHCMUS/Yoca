@@ -70,6 +70,7 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
         address: raw.platforms!.solana!,
         name: raw.name!,
         symbol: raw.symbol!,
+        decimals: raw.detail_platforms!.solana!.decimal_place!,
         categories: raw.categories_details?.map((detail) => detail.id!),
         coingeckoId: raw.id,
         description: raw.description!.en!,
@@ -84,7 +85,6 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
       },
       market: {
         address: raw.platforms!.solana!,
-        decimals: raw.detail_platforms!.solana!.decimal_place!,
         fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd!,
         marketCap: raw.market_data?.market_cap?.usd!,
         marketCapRank: raw.market_data?.market_cap_rank!,
