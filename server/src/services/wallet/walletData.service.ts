@@ -158,9 +158,11 @@ export async function getWalletOverview(
     // Fetch recent transactions to enrich overview metrics (24h window)
     let transactionCount24h: number | null = null;
     let tokensTradedCount: number | null = null;
+    let tradingVolumeUsd24h: number | null = null;
+    let pnlUsd24h: number | null = null;
 
     try {
-      const txs = await getWalletTransactions(address, effectiveChain, { limit: 500 });
+      const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
       const now = Date.now();
       const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -173,14 +175,54 @@ export async function getWalletOverview(
       transactionCount24h = recent.length;
 
       const tokenSet = new Set<string>();
+      const mintSet = new Set<string>();
       for (const tx of recent) {
-        if (Array.isArray(tx.tokens)) {
-          tx.tokens.forEach((sym) => {
-            if (sym) tokenSet.add(sym);
+        if (Array.isArray(tx.balanceChanges)) {
+          tx.balanceChanges.forEach((change) => {
+            const mintRaw = String(change?.mint ?? "").trim();
+            if (!mintRaw) return;
+            const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
+            tokenSet.add(mint);
+            mintSet.add(mint);
           });
         }
       }
       tokensTradedCount = tokenSet.size;
+
+      if (recent.length > 0 && mintSet.size > 0) {
+        const marketData = await getTokenMarketData(Array.from(mintSet));
+
+        let volumeAcc = 0;
+        let pnlAcc = 0;
+        let pricedChanges = 0;
+
+        for (const tx of recent) {
+          let txDeltaUsd = 0;
+          for (const change of tx.balanceChanges ?? []) {
+            const mintRaw = String(change?.mint ?? "").trim();
+            if (!mintRaw) continue;
+            const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
+            const priceUsd = marketData[mint]?.priceUsd;
+            if (priceUsd == null || !Number.isFinite(priceUsd)) continue;
+
+            const amountRaw = Number(change?.amount ?? 0);
+            const decimals = Number(change?.decimals ?? 0);
+            if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) continue;
+
+            const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
+            txDeltaUsd += normalizedAmount * priceUsd;
+            pricedChanges += 1;
+          }
+
+          pnlAcc += txDeltaUsd;
+          volumeAcc += Math.abs(txDeltaUsd);
+        }
+
+        if (pricedChanges > 0) {
+          tradingVolumeUsd24h = volumeAcc;
+          pnlUsd24h = pnlAcc;
+        }
+      }
     } catch {
       // soft-fail: leave metrics as null if anything goes wrong
     }
@@ -190,8 +232,8 @@ export async function getWalletOverview(
       chain: effectiveChain,
       totalAssetValueUsd,
       tokensHoldingCount: heliusPortfolio.length,
-      tradingVolumeUsd24h: null,
-      pnlUsdTotal: null,
+      tradingVolumeUsd24h,
+      pnlUsdTotal: pnlUsd24h,
       transactionCount24h,
       tokensTradedCount,
     };
@@ -294,6 +336,8 @@ export async function getWalletOverview(
   // Derive tokens traded count and transaction count over recent history
   let transactionCount24h: number | null = null;
   let tokensTradedCount: number | null = null;
+  let tradingVolumeUsd24h: number | null = null;
+  let pnlUsd24h: number | null = null;
   try {
     const txs = await getWalletTransactions(address, effectiveChain, { limit: 500 });
     const now = Date.now();
@@ -308,14 +352,51 @@ export async function getWalletOverview(
     transactionCount24h = recent.length;
 
     const tokenSet = new Set<string>();
+    let volumeAcc = 0;
+    let pnlAcc = 0;
+    let pricedTxCount = 0;
+
+    const getTxUsdValue = (tx: WalletTransaction): number | null => {
+      if (tx.totalUsd != null && Number.isFinite(tx.totalUsd)) {
+        return Math.abs(tx.totalUsd);
+      }
+      if (
+        tx.primaryTokenAmount != null &&
+        tx.priceUsd != null &&
+        Number.isFinite(tx.primaryTokenAmount) &&
+        Number.isFinite(tx.priceUsd)
+      ) {
+        return Math.abs(tx.primaryTokenAmount * tx.priceUsd);
+      }
+      return null;
+    };
+
     for (const tx of recent) {
       if (Array.isArray(tx.tokens)) {
         tx.tokens.forEach((sym) => {
           if (sym) tokenSet.add(sym);
         });
       }
+
+      const txValueUsd = getTxUsdValue(tx);
+      if (txValueUsd == null) {
+        continue;
+      }
+
+      volumeAcc += txValueUsd;
+      if (tx.direction === "in") {
+        pnlAcc += txValueUsd;
+      } else if (tx.direction === "out") {
+        pnlAcc -= txValueUsd;
+      }
+      pricedTxCount += 1;
     }
     tokensTradedCount = tokenSet.size;
+
+    if (pricedTxCount > 0) {
+      tradingVolumeUsd24h = volumeAcc;
+      pnlUsd24h = pnlAcc;
+    }
   } catch (err) {
     console.error("Failed to derive EVM overview metrics from transactions", err);
   }
@@ -325,8 +406,8 @@ export async function getWalletOverview(
     chain: effectiveChain,
     totalAssetValueUsd,
     tokensHoldingCount: tokenItems.length,
-    tradingVolumeUsd24h: null,
-    pnlUsdTotal: null,
+    tradingVolumeUsd24h,
+    pnlUsdTotal: pnlUsd24h,
     transactionCount24h,
     tokensTradedCount,
   };
