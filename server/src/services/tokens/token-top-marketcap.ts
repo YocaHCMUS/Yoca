@@ -41,7 +41,7 @@ export async function getTopTokensByMarketCap() {
 
   const topTokenInsert = solanaRes.map(
     (raw, index): TopTokensByMarketCapInsert => ({
-      address: cgIdToAddress[raw.id!],
+      address: cgIdToAddress[raw.id!]!,
       rank: index + 1,
     }),
   );
