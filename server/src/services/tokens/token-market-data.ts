@@ -116,6 +116,10 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     (address) => !addressToMarketData[address],
   );
 
+  if (staleAddresses.length == 0) {
+    return addressToMarketData;
+  }
+
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
   if (!refreshed) {

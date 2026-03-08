@@ -34,6 +34,9 @@ async function fetchHolderStatsItem(
 }
 
 function fetchHolderStats(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return Promise.resolve([]);
+  }
   return Promise.all(
     tokenAddresses.map((address) => fetchHolderStatsItem(address)),
   );
@@ -171,6 +174,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
 }
 
 async function fetchTokenMeta(tokenAddresses: string[]) {
+  if (tokenAddresses.length == 0) {
+    return [];
+  }
   // We cheat and use makert data here as it allow get multiple tokens info in one request
   // Potential extra 1 API here, but better than fetch each addresses.
   const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
@@ -182,16 +188,21 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     order: "market_cap_desc",
   });
 
+  const cgIdToAddress = Object.fromEntries(
+    Object.entries(addressToCgId).map(([address, id]) => [id, address]),
+  );
+
   const metaValues = res
-    .filter((raw) => addressToCgId[raw.id!])
+    .filter((raw) => cgIdToAddress[raw.id!])
     .map(
       (raw): TokenMetaInsert => ({
-        address: addressToCgId[raw.id!],
+        address: cgIdToAddress[raw.id!],
         name: raw.name!,
         symbol: raw.symbol!,
         imageUrl: raw.image,
       }),
     );
+  console.log(metaValues);
 
   return db
     .insert(tokenMeta)
@@ -304,11 +315,24 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
     (address) => !addressToHolderStat[address],
   );
 
+  if (staleAddresses.length == 0) {
+    return res;
+  }
+
   const refreshed = await fetchHolderStats(staleAddresses);
 
-  if (!refreshed || refreshed.length == 0) {
-    return res;
-  } else {
-    return [...res, ...refreshed];
-  }
+  const persisted = await db
+    .insert(tokenHolderStats)
+    .values(refreshed)
+    .onConflictDoUpdate({
+      target: [tokenHolderStats.address],
+      set: excludedAutoFromInsert(
+        tokenHolderStats,
+        tokenHolderStats.address,
+        refreshed,
+      ),
+    })
+    .returning();
+
+  return [...res, ...persisted];
 }
