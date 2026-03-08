@@ -4,7 +4,7 @@ import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Stack } from "@carbon/react";
+import { Stack, Tooltip } from "@carbon/react";
 import { useMemo } from "react";
 
 export default function MarketPage() {
@@ -62,7 +62,14 @@ export default function MarketPage() {
             )}
             <span>
               <strong>{tokenMeta.symbol.toUpperCase()}</strong>
-              <small>- {tokenMeta.name}</small>
+              <Tooltip label={tokenMeta.name}>
+                <small>
+                  {" - "}
+                  {tokenMeta.name.length > 30
+                    ? tokenMeta.name.slice(0, 30) + "…"
+                    : tokenMeta.name}
+                </small>
+              </Tooltip>
             </span>
           </Stack>
         ),

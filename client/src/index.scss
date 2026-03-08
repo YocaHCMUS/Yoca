@@ -18,14 +18,12 @@
 
 html {
   height: 100%;
-  overflow: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   background-color: var(--cds-background);
   color: var(--cds-text-primary);
   transition: background-color 0.2s cubic-bezier(0.2, 0, 0.38, 0.9),
