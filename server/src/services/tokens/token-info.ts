@@ -1,19 +1,21 @@
 import {
-  TOKEN_META_TTL_MS,
+  TOKEN_DETAILS_TTL_MS,
   TOP_TOKEN_HOLDER_STATS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
+  tokenDetails,
   tokenHolderStats,
   tokenMarketData,
   tokenMeta,
+  type TokenDetailedInfoInsert,
   type TokenHolderStatsInsert,
   type TokenMarketDataInsert,
   type TokenMetaInsert,
 } from "@sv/db/schema.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { and, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdList } from "./token-list.js";
 
 async function fetchHolderStatsItem(
@@ -38,10 +40,11 @@ function fetchHolderStats(tokenAddresses: string[]) {
 }
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id
-async function fetchTokenMeta(tokenAddresses: string[]) {
+async function fetchTokenDetails(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return {
       meta: [],
+      details: [],
       market: [],
     };
   }
@@ -64,17 +67,26 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
       }),
   );
 
-  const infoList = rawInfoList.map(
-    (raw): { meta: TokenMetaInsert; market: TokenMarketDataInsert } => ({
+  const details = rawInfoList.map(
+    (
+      raw,
+    ): {
+      meta: TokenMetaInsert;
+      detailedInfo: TokenDetailedInfoInsert;
+      market: TokenMarketDataInsert;
+    } => ({
       meta: {
         address: raw.platforms!.solana!,
         name: raw.name!,
         symbol: raw.symbol!,
-        decimals: raw.detail_platforms!.solana!.decimal_place!,
-        categories: raw.categories_details?.map((detail) => detail.id!),
-        coingeckoId: raw.id,
-        description: raw.description!.en!,
         imageUrl: raw.image?.small,
+      },
+      detailedInfo: {
+        coingeckoId: raw.id,
+        decimals: raw.detail_platforms!.solana!.decimal_place!,
+        address: raw.platforms!.solana!,
+        description: raw.description!.en!,
+        categories: raw.categories_details?.map((detail) => detail.id!),
         linkBlockchainSites: raw.links?.blockchain_site,
         linkDiscord: raw.links?.chat_url?.find((url) =>
           url.startsWith("https://discord.com/invite/"),
@@ -118,8 +130,9 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     }),
   );
 
-  const metaValues = infoList.map((info) => info.meta);
-  const marketDataValues = infoList.map((info) => info.market);
+  const metaValues = details.map((detail) => detail.meta);
+  const detailedInfoValues = details.map((detail) => detail.detailedInfo);
+  const marketDataValues = details.map((detail) => detail.market);
 
   return {
     meta: await db
@@ -128,6 +141,18 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
       .onConflictDoUpdate({
         target: [tokenMeta.address],
         set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+      })
+      .returning(),
+    details: await db
+      .insert(tokenDetails)
+      .values(detailedInfoValues)
+      .onConflictDoUpdate({
+        target: [tokenDetails.address],
+        set: excludedAutoFromInsert(
+          tokenDetails,
+          tokenDetails.address,
+          detailedInfoValues,
+        ),
       })
       .returning(),
     market: await db
@@ -145,20 +170,53 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
   };
 }
 
-export async function getTokenMetaList(tokenAddresses: string[]) {
+async function fetchTokenMeta(tokenAddresses: string[]) {
+  // We cheat and use makert data here as it allow get multiple tokens info in one request
+  // Potential extra 1 API here, but better than fetch each addresses.
+  const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
+  const cgIds = Object.values(addressToCgId);
+
+  const res = await cg.client.coins.markets.get({
+    ids: cgIds.join(","),
+    vs_currency: "usd",
+    order: "market_cap_desc",
+  });
+
+  const metaValues = res
+    .filter((raw) => addressToCgId[raw.id!])
+    .map(
+      (raw): TokenMetaInsert => ({
+        address: addressToCgId[raw.id!],
+        name: raw.name!,
+        symbol: raw.symbol!,
+        imageUrl: raw.image,
+      }),
+    );
+
+  return db
+    .insert(tokenMeta)
+    .values(metaValues)
+    .onConflictDoUpdate({
+      target: [tokenMeta.address],
+      set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+    })
+    .returning();
+}
+
+export async function getTokenMeta(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return [];
   }
 
-  const thresholdDate = new Date(Date.now() - TOKEN_META_TTL_MS);
+  const thresholdDate = new Date(Date.now() - TOKEN_DETAILS_TTL_MS);
 
   const res = await db
     .select()
     .from(tokenMeta)
     .where(
       and(
-        gte(tokenMeta.updatedAt, thresholdDate),
         inArray(tokenMeta.address, tokenAddresses),
+        gte(tokenMeta.updatedAt, thresholdDate),
       ),
     )
     .limit(tokenAddresses.length);
@@ -171,13 +229,58 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
     (address) => !addressToMeta[address],
   );
 
-  const refreshed = (await fetchTokenMeta(staleAddresses)).meta;
+  const refreshed = await fetchTokenMeta(staleAddresses);
 
   if (!refreshed || refreshed.length == 0) {
     return res;
   } else {
     return [...res, ...refreshed];
   }
+}
+
+export async function getTokenDetails(tokenAddresses: string[]) {
+  const thresholdDate = new Date(Date.now() - TOKEN_DETAILS_TTL_MS);
+
+  const res = await db
+    .select({
+      address: tokenMeta.address,
+      meta: tokenMeta,
+      details: tokenDetails,
+    })
+    .from(tokenMeta)
+    .innerJoin(tokenDetails, eq(tokenMeta.address, tokenDetails.address))
+    .where(
+      and(
+        inArray(tokenMeta.address, tokenAddresses),
+        gte(tokenMeta.updatedAt, thresholdDate),
+        gte(tokenDetails.updatedAt, thresholdDate),
+      ),
+    );
+  if (res.length == tokenAddresses.length) {
+    return res;
+  }
+
+  const addressToRes = Object.fromEntries(res.map((row) => [row.address, row]));
+
+  const staleAddresses = tokenAddresses.filter(
+    (address) => !addressToRes[address],
+  );
+  const { meta: refreshedMeta, details: refreshedDetails } =
+    await fetchTokenDetails(staleAddresses);
+  const addressToRefreshedDetails = Object.fromEntries(
+    refreshedDetails.map((detail) => [detail.address, detail]),
+  );
+
+  const refreshed = refreshedMeta
+    .filter((meta) => addressToRefreshedDetails[meta.address])
+    .map((meta) => ({
+      address: meta.address,
+      meta,
+      details: addressToRefreshedDetails[meta.address],
+    }));
+  const full = [...res, ...refreshed];
+
+  return full;
 }
 
 export async function getTokenHolderStats(tokenAddresses: string[]) {

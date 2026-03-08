@@ -1,5 +1,5 @@
 export const CG_TOKEN_LIST_TTL_MS = 30 * 24 * 60 * 1000; // 1 month
-export const TOKEN_META_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+export const TOKEN_DETAILS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 export const TOKEN_MARKET_DATA_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const WALLET_BALANCES_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const TOKEN_CHART_24H_UPDATE_THRESHOLD = 7 * 60 * 1000; // 7 minutes
@@ -19,6 +19,6 @@ export const TOKEN_POOL_DATA_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
 export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const UPDATE_TRENDING_TOKENS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const UPDATE_TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+export const TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
 
 export const AUTH_COOKIE_NAME = "auth_token";

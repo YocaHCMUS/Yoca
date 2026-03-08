@@ -1,11 +1,15 @@
-export { getTokenHistoricalData } from "./token-history.js";
 export {
   get24hTokenMarketChart,
   getDailyTokenMarketChart,
   getHourlyTokenMarketChart,
 } from "./token-chart.js";
+export { getTokenHistoricalData } from "./token-history.js";
 export { getTopTokenHolders } from "./token-holders.js";
-export { getTokenHolderStats, getTokenMetaList } from "./token-info.js";
+export {
+  getTokenDetails,
+  getTokenHolderStats,
+  getTokenMeta,
+} from "./token-info.js";
 export { getCoinGeckoIdList } from "./token-list.js";
 export { getTokenMarketData } from "./token-market-data.js";
 export {

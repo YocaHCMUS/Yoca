@@ -69,12 +69,19 @@ export const authAccounts = pgTable(
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
   name: varchar("name").notNull(),
-  decimals: integer("decimals").notNull(),
   symbol: varchar("symbol").notNull(),
   imageUrl: varchar("image_url"),
-  description: varchar("description"),
-  coingeckoId: varchar("coingecko_id"),
 
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const tokenDetails = pgTable("token_details", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  decimals: integer("decimals").notNull(),
+  coingeckoId: varchar("coingecko_id"),
+  description: varchar("description"),
   linkHomepage: varchar("homepage"),
   linkDiscord: varchar("link_discord"),
   twitterScreenName: varchar("twitter_screen_name"),
@@ -84,15 +91,12 @@ export const tokenMeta = pgTable("token_meta", {
 
   updatedAt: timestamp("updated_at")
     .notNull()
-    .defaultNow()
     .$onUpdate(() => new Date()),
 });
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
   priceUsd: decimal("price_usd").notNull(),
-  //priceBtc: decimal("price_btc"),
-  //priceChangeBtc24h: decimal("price_change_btc_24h"),
 
   marketCapRank: integer("market_cap_rank"),
   high24h: decimal("high_24h"),
@@ -410,6 +414,7 @@ export const poolTrades24h = pgTable("pool_trades_24h", {
 
 // #region Types
 export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
+export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
