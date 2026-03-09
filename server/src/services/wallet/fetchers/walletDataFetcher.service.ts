@@ -254,11 +254,12 @@ export async function fetchHeliusSolanaTransfers(
 
     const transfers: WalletTransfer[] = [];
     let cursor: string | null = null;
-
+    let pageCount = 0;
 
     // Fetch pages until no more data or we reach entries older than the requested window.
     // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
     while (true) {
+        pageCount++;
         const url = getEndpoint(`/v1/wallet/${address}/transfers`);
       url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
         if (cursor) {
@@ -346,6 +347,8 @@ export async function fetchHeliusSolanaTransfers(
             transfers.push(transferEntry);
         }
 
+        console.log(`[fetchHeliusSolanaTransfers] Page ${pageCount}: Collected ${transfers.length} transfers so far`);
+
         const hasMore = Boolean(json?.pagination?.hasMore);
         cursor =
             typeof json?.pagination?.nextCursor === "string" &&
@@ -376,10 +379,12 @@ export async function fetchHeliusSolanaSwap(
 
   const swaps: WalletSwap[] = [];
   let cursor: string | null = null;
+  let pageCount = 0;
 
   // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
   while (true) {
+    pageCount++;
     const url = getEndpoint(`/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`);
     url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
@@ -458,6 +463,8 @@ export async function fetchHeliusSolanaSwap(
       swaps.push(txObj);
     }
 
+    console.log(`[fetchHeliusSolanaSwap] Page ${pageCount}: Collected ${swaps.length} swaps so far`);
+
     const hasMore = Boolean(json?.pagination?.hasMore);
     cursor =
         typeof json?.pagination?.nextCursor === "string"
@@ -490,10 +497,12 @@ export async function fetchAllTransactionHistory(
 
   const transactions: WalletTransactionHelius[] = [];
   let cursor: string | null = null;
+  let pageCount = 0;
 
   // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
   while (true) {
+    pageCount++;
     const url = getEndpoint(`/v1/wallet/${address}/history?tokenAccounts=balanceChanged`);
     url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
@@ -567,6 +576,8 @@ export async function fetchAllTransactionHistory(
 
       transactions.push(txObj);
     }
+
+    console.log(`[fetchAllTransactionHistory] Page ${pageCount}: Collected ${transactions.length} transactions so far`);
 
     const hasMore = Boolean(json?.pagination?.hasMore);
     cursor =

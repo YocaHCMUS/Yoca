@@ -162,11 +162,14 @@ export async function getWalletOverview(
     let pnlUsd24h: number | null = null;
 
     try {
-      const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
+      // const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
+      const txs = await getWalletSwaps(address, effectiveChain);
+      
       const now = Date.now();
       const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-      const recent = txs.transactions.filter((tx) => {
+      // const recent = txs.transactions.filter((tx) => {
+      const recent = txs.swaps.filter((tx) => {
         const ts = Date.parse(tx.timestamp);
         if (Number.isNaN(ts)) return false;
         return now - ts <= ONE_DAY_MS;
@@ -1217,8 +1220,11 @@ export async function getWalletBalanceHistory(
     }
 
     // 2. Get Helius transaction history (full transaction records with balance changes)
-    const txResponse = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
-    const transactions = txResponse.transactions;
+    // const txResponse = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
+    const txResponse = await getWalletSwaps(address, effectiveChain);
+    
+    // const transactions = txResponse.transactions;
+    const transactions = txResponse.swaps;
 
     // Gather token mints appearing in historical balance changes so we can enrich
     // price lookup beyond current portfolio tokens.

@@ -11,9 +11,9 @@ import { z } from "zod";
 import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 import { 
   getWalletBalanceHistory, 
-  type SupportedChain,
   type BalanceDataPoint 
 } from '../../services/wallet/walletData.service.js';
+import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for balance trend endpoint

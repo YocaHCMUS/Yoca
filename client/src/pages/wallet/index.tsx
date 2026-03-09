@@ -410,7 +410,7 @@ export default function WalletPage() {
             <BalanceChart
               minHeight={460}
               initialFilters={{
-                timePeriod: "30D",
+                timePeriod: "7D",
                 wallets: [address],
               }}
               autoRefresh={true}
@@ -418,7 +418,7 @@ export default function WalletPage() {
             <BalanceChart
               minHeight={460}
               initialFilters={{
-                timePeriod: "30D",
+                timePeriod: "7D",
                 wallets: [address],
                 tokens: ['SOL']
               }}
@@ -429,7 +429,7 @@ export default function WalletPage() {
               aggregation="daily"
               autoRefresh={true}
               initialFilters={{
-                timePeriod: "30D",
+                timePeriod: "7D",
                 wallets: [address]
               }} />,
           ]} //for testing purpose
