@@ -149,13 +149,16 @@ export async function getCachedWalletTransactions(
 export async function getCachedWalletTransactionsHelius(
 	address: string,
 	chain: SupportedChain,
-	limit: number,
+	from: "24h" | "7d" = "7d",
 ): Promise<WalletTransactionHelius[] | null> {
 	const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
 	const isFresh = await hasFreshWalletMeta(address, chain, txThreshold, "transactions");
 	if (!isFresh) {
 		return null;
 	}
+
+	const fromMs = from === "24h" ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+	const fromTimestamp = new Date(Date.now() - fromMs);
 
 	const rows = await db
 		.select()
@@ -166,34 +169,41 @@ export async function getCachedWalletTransactionsHelius(
 				eq(walletHeliusTransactions.chain, chain),
 			),
 		)
-		.orderBy(desc(walletHeliusTransactions.timestamp))
-		.limit(limit);
+		.orderBy(desc(walletHeliusTransactions.timestamp));
 
 	if (rows.length === 0) {
 		return null;
 	}
 
-	return rows.map((r) => ({
-		walletAddress: r.address,
-		signature: r.signature,
-		timestamp: toIsoTimestamp(r.timestamp),
-		slot: r.slot != null ? Number(r.slot) : 0,
-		fee: r.fee != null ? Number(r.fee) : 0,
-		feePayer: r.feePayer,
-		balanceChanges: r.balanceChanges,
-	}));
+	return rows
+		.filter((r) => {
+			const rowDate = r.timestamp instanceof Date ? r.timestamp : new Date(r.timestamp);
+			return rowDate >= fromTimestamp;
+		})
+		.map((r) => ({
+			walletAddress: r.address,
+			signature: r.signature,
+			timestamp: toIsoTimestamp(r.timestamp),
+			slot: r.slot != null ? Number(r.slot) : 0,
+			fee: r.fee != null ? Number(r.fee) : 0,
+			feePayer: r.feePayer,
+			balanceChanges: r.balanceChanges,
+		}));
 }
 
 export async function getCachedWalletTransfers(
 	address: string,
 	chain: SupportedChain,
-	limit: number,
+	from: "24h" | "7d" = "7d",
 ): Promise<WalletTransfer[] | null> {
 	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
 	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold, "transfers");
 	if (!isFresh) {
 		return null;
 	}
+
+	const fromMs = from === "24h" ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+	const fromTimestamp = new Date(Date.now() - fromMs);
 
 	const rows = await db
 		.select()
@@ -204,29 +214,33 @@ export async function getCachedWalletTransfers(
 				eq(tokenTransfers.chain, chain),
 			),
 		)
-		.orderBy(desc(tokenTransfers.blockTime))
-		.limit(limit);
+		.orderBy(desc(tokenTransfers.blockTime));
 
 	if (rows.length === 0) {
 		return null;
 	}
 
-	return rows.map((r) => ({
-		from: r.fromOwner,
-		to: r.toOwner,
-		amount: r.amount,
-		timestamp: toIsoTimestamp(r.blockTime),
-		tokenAddress: r.tokenAddress,
-		tokenSymbol: r.tokenSymbol,
-		transactionSignature: r.transactionSignature,
-		instructionIndex: r.instructionIndex,
-	}));
+	return rows
+		.filter((r) => {
+			const rowDate = r.blockTime instanceof Date ? r.blockTime : new Date(r.blockTime);
+			return rowDate >= fromTimestamp;
+		})
+		.map((r) => ({
+			from: r.fromOwner,
+			to: r.toOwner,
+			amount: r.amount,
+			timestamp: toIsoTimestamp(r.blockTime),
+			tokenAddress: r.tokenAddress,
+			tokenSymbol: r.tokenSymbol,
+			transactionSignature: r.transactionSignature,
+			instructionIndex: r.instructionIndex,
+		}));
 }
 
 export async function getCachedWalletSwaps(
 	address: string,
 	chain: SupportedChain,
-	limit: number,
+	from: "24h" | "7d" = "7d",
 ): Promise<WalletSwap[] | null> {
 	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
 	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold, "swaps");
@@ -234,25 +248,32 @@ export async function getCachedWalletSwaps(
 		return null;
 	}
 
+	const fromMs = from === "24h" ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+	const fromTimestamp = new Date(Date.now() - fromMs);
+
 	const rows = await db
 		.select()
 		.from(walletSwap)
 		.where(and(eq(walletSwap.address, address), eq(walletSwap.chain, chain)))
-		.orderBy(desc(walletSwap.blockTimestamp))
-		.limit(limit);
+		.orderBy(desc(walletSwap.blockTimestamp));
 
 	if (rows.length === 0) {
 		return null;
 	}
 
-	return rows.map((r) => ({
-		walletAddress: r.address,
-		signature: r.signature,
-		timestamp: toIsoTimestamp(r.blockTimestamp),
-		slot: r.slot,
-		fee: r.fee,
-		feePayer: r.feePayer,
-		balanceChanges: r.swapBalanceChanges,
-		feeChanges: r.feeBalanceChanges,
-	}));
+	return rows
+		.filter((r) => {
+			const rowDate = r.blockTimestamp instanceof Date ? r.blockTimestamp : new Date(r.blockTimestamp);
+			return rowDate >= fromTimestamp;
+		})
+		.map((r) => ({
+			walletAddress: r.address,
+			signature: r.signature,
+			timestamp: toIsoTimestamp(r.blockTimestamp),
+			slot: r.slot,
+			fee: r.fee,
+			feePayer: r.feePayer,
+			balanceChanges: r.swapBalanceChanges,
+			feeChanges: r.feeBalanceChanges,
+		}));
 }

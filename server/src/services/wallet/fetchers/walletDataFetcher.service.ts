@@ -241,21 +241,26 @@ export async function fetchHeliusSolanaTransactions(
 
 export async function fetchHeliusSolanaTransfers(
   address: string,
-  maxCount: number,
+  from: HeliusHistoryFrom = "7d",
 ): Promise<WalletTransfer[]> {
     const nowSec = Math.floor(Date.now() / 1000);
-    const ONE_MONTH_SEC = 30 * 24 * 60 * 60;
-    const fromSec = nowSec - ONE_MONTH_SEC;
+    const fromSec =
+      from === "24h"
+        ? nowSec - 24 * 60 * 60
+        : nowSec - 7 * 24 * 60 * 60;
+
+    // Helius transfers endpoint returns at most 100 items per page.
+    const HELIUS_PAGE_LIMIT = 100;
 
     const transfers: WalletTransfer[] = [];
     let cursor: string | null = null;
 
 
-    // Fetch pages until we hit maxCount, run out of data, or reach beyond 1 month.
+    // Fetch pages until no more data or we reach entries older than the requested window.
     // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
-    while (transfers.length < maxCount) {
+    while (true) {
         const url = getEndpoint(`/v1/wallet/${address}/transfers`);
-        url.searchParams.set("limit", String(Math.min(100, maxCount - transfers.length)));
+      url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
         if (cursor) {
         url.searchParams.set("cursor", cursor);
         }
@@ -290,7 +295,14 @@ export async function fetchHeliusSolanaTransfers(
         }
 
         for (const entry of data) {
-            if (transfers.length >= maxCount) break;
+          const tsSec =
+            typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+            ? entry.timestamp
+            : null;
+
+          if (tsSec == null || tsSec < fromSec) {
+            return transfers;
+          }
 
             const direction = entry.direction;
             let from = '';
@@ -324,7 +336,7 @@ export async function fetchHeliusSolanaTransfers(
                 to: to,
                 // In the according token units
                 amount: amount,
-                timestamp: entry.timestamp,
+              timestamp: new Date(tsSec * 1000).toISOString(),
                 tokenAddress: entry.mint,
                 tokenSymbol: entry.symbol,
                 transactionSignature: entry.signature,
@@ -351,20 +363,25 @@ export async function fetchHeliusSolanaTransfers(
 
 export async function fetchHeliusSolanaSwap(
     address: string,
-    maxCount: number,
+    from: HeliusHistoryFrom = "7d",
 ): Promise<WalletSwap[]> {
   const nowSec = Math.floor(Date.now() / 1000);
-  const ONE_MONTH_SEC = 30 * 24 * 60 * 60;
-  const fromSec = nowSec - ONE_MONTH_SEC;
+  const fromSec =
+    from === "24h"
+      ? nowSec - 24 * 60 * 60
+      : nowSec - 7 * 24 * 60 * 60;
+
+  // Helius history endpoint returns at most 100 items per page.
+  const HELIUS_PAGE_LIMIT = 100;
 
   const swaps: WalletSwap[] = [];
   let cursor: string | null = null;
 
-  // Fetch pages until we hit maxCount, run out of data, or reach beyond 1 month.
+  // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
-  while (swaps.length < maxCount) {
+  while (true) {
     const url = getEndpoint(`/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`);
-    url.searchParams.set("limit", String(Math.min(100, maxCount - swaps.length)));
+    url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
         url.searchParams.set("cursor", cursor);
     }
@@ -399,8 +416,6 @@ export async function fetchHeliusSolanaSwap(
     }
 
     for (const entry of data) {
-        if (swaps.length >= maxCount) break;
-
         const tsSec =
             typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
             ? entry.timestamp
@@ -458,19 +473,29 @@ export async function fetchHeliusSolanaSwap(
   return swaps;
 }
 
-export async function fetchAllTransactionHistory(address: string, maxCount: number) {
+export type HeliusHistoryFrom = "24h" | "7d";
+
+export async function fetchAllTransactionHistory(
+  address: string,
+  from: HeliusHistoryFrom = "7d",
+) {
   const nowSec = Math.floor(Date.now() / 1000);
-  const ONE_MONTH_SEC = 30 * 24 * 60 * 60;
-  const fromSec = nowSec - ONE_MONTH_SEC;
+  const fromSec =
+    from === "24h"
+      ? nowSec - 24 * 60 * 60
+      : nowSec - 7 * 24 * 60 * 60;
+
+  // Helius history endpoint returns at most 100 items per page.
+  const HELIUS_PAGE_LIMIT = 100;
 
   const transactions: WalletTransactionHelius[] = [];
   let cursor: string | null = null;
 
-  // Fetch pages until we hit maxCount, run out of data, or reach beyond 1 month.
+  // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
-  while (transactions.length < maxCount) {
+  while (true) {
     const url = getEndpoint(`/v1/wallet/${address}/history?tokenAccounts=balanceChanged`);
-    url.searchParams.set("limit", String(Math.min(100, maxCount - transactions.length)));
+    url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
         url.searchParams.set("cursor", cursor);
     }
@@ -505,8 +530,6 @@ export async function fetchAllTransactionHistory(address: string, maxCount: numb
     }
 
     for (const entry of data) {
-        if (transactions.length >= maxCount) break;
-
         const tsSec =
             typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
             ? entry.timestamp
