@@ -1,4 +1,4 @@
-import { getEndpoint, getRequiredHeaders } from "@sv/util/util-helius.js";
+import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 import type { WalletPortfolioItem, WalletSwap, WalletTransaction, WalletTransactionHelius, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { apiKeyManager } from "@sv/util/api-key-manager.js";
 
@@ -23,7 +23,7 @@ export async function fetchHeliusSolanaPortfolio(
     let json: any;
     try {
       const headers = getRequiredHeaders();
-      const resp = await fetch(url, {
+      const resp = await heliusFetch(url, {
         method: "GET",
         headers,
       });
@@ -111,7 +111,7 @@ export async function fetchHeliusSolanaTransactions(
     let json: any = null;
     try {
       const headers = getRequiredHeaders();
-      const resp = await fetch(url, {
+      const resp = await heliusFetch(url, {
         method: "GET",
         headers,
       });
@@ -268,7 +268,7 @@ export async function fetchHeliusSolanaTransfers(
         let json: any = null;
         try {
             const headers = getRequiredHeaders();
-            const resp = await fetch(url, {
+            const resp = await heliusFetch(url, {
                 method: "GET",
                 headers,
             });
@@ -389,7 +389,7 @@ export async function fetchHeliusSolanaSwap(
     let json: any = null;
     try {
         const headers = getRequiredHeaders();
-        const resp = await fetch(url, {
+        const resp = await heliusFetch(url, {
             method: "GET",
             headers,
         });
@@ -503,7 +503,7 @@ export async function fetchAllTransactionHistory(
     let json: any = null;
     try {
         const headers = getRequiredHeaders();
-        const resp = await fetch(url, {
+        const resp = await heliusFetch(url, {
             method: "GET",
             headers,
         });
