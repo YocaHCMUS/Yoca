@@ -249,7 +249,8 @@ export function SwapDetailModal({
           {fee !== undefined && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Transaction Fee</span>
-              <span className={styles.detailVal}>{fee.toFixed(9)} SOL</span>
+              {/* <span className={styles.detailVal}>{fee} lamport</span> */}
+              <span className={styles.detailVal}>{fee * 10 ** (-9)} SOL</span>
             </div>
           )}
 

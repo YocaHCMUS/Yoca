@@ -143,7 +143,7 @@ export default function WalletPage() {
 
   const swapHeaders = [
     tr("walletPage.time"),
-    "Fee (SOL)",
+    "Fee (lamport)",
     "Token Sold",
     "Token Bought",
     "Total Changes",
