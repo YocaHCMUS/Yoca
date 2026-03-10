@@ -19,7 +19,7 @@
 
 **Cách tôi đã prompt:**
 
-- Đưa ra mục tiêu rõ ràng: *"chuyển từ Birdeye sang Helius vì Birdeye quá chậm"*
+- Đưa ra mục tiêu rõ ràng: *"chuyển từ Birdeye sang Helius vì Birdeye quá chậm vì bị giới hạn 1 rpm và các thông tin cần thiết còn chưa có đủ"*
 - Gắn với codebase: tag file cụ thể (ví dụ `@server/src/services/walletData.service.ts`)
 - Nêu ràng buộc: *"comment Birdeye ra, không xóa, để sau có thể dùng lại"*
 
