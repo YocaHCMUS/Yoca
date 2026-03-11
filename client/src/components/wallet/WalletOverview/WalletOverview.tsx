@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled, Edit } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { fetchWalletOverview } from '@/services/wallet/walletApi';
 import { useNavigate } from 'react-router';
+import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -32,9 +33,25 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [overview, setOverview] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
+    // Label state – persisted to localStorage per wallet address
+    const labelKey = `wallet-label-${walletAddress}`;
+    const [label, setLabel] = useState<string>(
+        () => localStorage.getItem(labelKey) ?? ""
+    );
+    const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+
+    const handleLabelSave = (newLabel: string) => {
+        setLabel(newLabel);
+        if (newLabel) {
+            localStorage.setItem(labelKey, newLabel);
+        } else {
+            localStorage.removeItem(labelKey);
+        }
+    };
+
     // Provide default values for display
-    const name = "Wallet"; 
+    const name = label || "Wallet"; 
     const tags = ["whale", "early x holder", "early y holder"];
     const totalAssetValue = overview?.totalAssetValueUsd ?? null;
     const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
@@ -131,7 +148,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     return (
-        // main container: column
+        <>
+        {/* main container: column */}
         <div className={styles.walletOverview}>
             {error && (
                 <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
@@ -152,7 +170,17 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 
                 {/* 2nd column: basic profile information (name, wallet address, tags) */}
                 <div className={styles.profileInfo}>
-                    <h2 className={styles.walletName}>{name}</h2>
+                    <div className={styles.walletNameRow}>
+                        <h2 className={styles.walletName}>{name}</h2>
+                        <button
+                            className={styles.editLabelBtn}
+                            onClick={() => setIsLabelModalOpen(true)}
+                            aria-label="Edit wallet label"
+                            title="Assign custom label"
+                        >
+                            <Edit size={16} />
+                        </button>
+                    </div>
                     <div className={styles.walletAddressContainer}>
                         {/* <Tooltip align="bottom" label={walletAddress}>
                         </Tooltip> */}
@@ -290,6 +318,15 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 </div>
             </div>
         </div>
+
+        <WalletLabelModal
+            isOpen={isLabelModalOpen}
+            onClose={() => setIsLabelModalOpen(false)}
+            onSave={handleLabelSave}
+            walletAddress={walletAddress}
+            initialLabel={label}
+        />
+        </>
     );
 }
 

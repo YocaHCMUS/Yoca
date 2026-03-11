@@ -1,6 +1,7 @@
 import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 import type { WalletPortfolioItem, WalletSwap, WalletTransaction, WalletTransactionHelius, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { apiKeyManager } from "@sv/util/api-key-manager.js";
+import { unknown } from "zod";
 
 export async function fetchHeliusSolanaPortfolio(
   address: string,
@@ -338,8 +339,8 @@ export async function fetchHeliusSolanaTransfers(
                 // In the according token units
                 amount: amount,
               timestamp: new Date(tsSec * 1000).toISOString(),
-                tokenAddress: entry.mint,
-                tokenSymbol: entry.symbol,
+                tokenAddress: entry.mint || unknown,
+                tokenSymbol: entry.symbol || unknown,
                 transactionSignature: entry.signature,
                 instructionIndex: 0, // what is this even for?
             };

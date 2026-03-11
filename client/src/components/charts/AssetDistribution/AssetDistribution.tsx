@@ -190,7 +190,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           data.wallets.forEach((wallet: any) => {
             csv.push({
               id: `asset-distribution-${wallet.walletAddress}`,
-              name: `Asset Distribution - ${wallet.walletAddress}`,
+              name: `Assets Distribution - ${wallet.walletAddress}`,
               type: 'pie',
               visible: true,
               data: wallet.data.map((a: AssetItem) => ({
@@ -203,7 +203,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           // Aggregated data
           csv.push({
             id: 'asset-distribution',
-            name: 'Asset Distribution',
+            name: 'Assets Distribution',
             type: 'pie',
             visible: true,
             data: data.data.map((a: AssetItem) => ({
