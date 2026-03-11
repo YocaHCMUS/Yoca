@@ -557,6 +557,19 @@ export const walletExchangeCountsCache = pgTable(
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 );
 
+export const walletUserTags = pgTable(
+  "wallet_user_tags",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.walletAddress] })],
+);
+
 // #endregion
 
 // #region Types
@@ -588,6 +601,7 @@ export type WalletSwapInsert = typeof walletSwap.$inferInsert;
 export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
 export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
+export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 
 // #endregion

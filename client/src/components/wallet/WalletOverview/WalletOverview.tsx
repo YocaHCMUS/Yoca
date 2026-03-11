@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled, Edit } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled, Edit, Tag as TagIcon } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { fetchWalletOverview } from '@/services/wallet/walletApi';
+import { fetchWalletTags, saveWalletTags } from '@/services/wallet/walletTagsApi';
 import { useNavigate } from 'react-router';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
+import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -29,6 +32,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     autoRefresh = true,
     refreshInterval = 30000
 }) => {
+    const { user } = useAuth();
+
     // State for overview data
     const [overview, setOverview] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -50,9 +55,32 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         }
     };
 
+    // Tags state – server-persisted per user; empty until loaded
+    const [tags, setTags] = useState<string[]>([]);
+    const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+    // Load tags from server whenever the authenticated user or wallet changes
+    useEffect(() => {
+        if (!user || !walletAddress || walletAddress === 'null') {
+            setTags([]);
+            return;
+        }
+        fetchWalletTags(walletAddress)
+            .then(setTags)
+            .catch((err) => console.error('[WalletOverview] Failed to load tags:', err));
+    }, [user, walletAddress]);
+
+    const handleTagsSave = async (newTags: string[]) => {
+        try {
+            await saveWalletTags(walletAddress, newTags);
+            setTags(newTags);
+        } catch (err) {
+            console.error('[WalletOverview] Failed to save tags:', err);
+        }
+    };
+
     // Provide default values for display
-    const name = label || "Wallet"; 
-    const tags = ["whale", "early x holder", "early y holder"];
+    const name = label || "Wallet";
     const totalAssetValue = overview?.totalAssetValueUsd ?? null;
     const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
     const totalPnL = overview?.pnlUsdTotal ?? null;
@@ -191,17 +219,29 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </h4>
                         <CopyButton onClick={handleCopyAddress}/>
                     </div>
-                    <div className={styles.tags}>
+                    <div className={styles.tagsRow}>
                         {tags.map((tag, index) => (
                             <Tag
                                 key={index}
                                 size="md"
-                                title="Clear filter"
-                                type="cyan" // probably change color based on tag type
+                                type="cyan"
                             >
                                 {tag}
                             </Tag>
                         ))}
+                        <Tooltip
+                            label={user ? 'Manage tags' : 'Sign in to manage tags'}
+                            align="bottom"
+                        >
+                            <button
+                                className={styles.editLabelBtn}
+                                onClick={() => user && setIsTagsModalOpen(true)}
+                                aria-label="Manage wallet tags"
+                                disabled={!user}
+                            >
+                                <TagIcon size={16} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
                 
@@ -325,6 +365,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             onSave={handleLabelSave}
             walletAddress={walletAddress}
             initialLabel={label}
+        />
+        <WalletTagsModal
+            isOpen={isTagsModalOpen}
+            onClose={() => setIsTagsModalOpen(false)}
+            onSave={handleTagsSave}
+            walletAddress={walletAddress}
+            walletLabel={label || undefined}
+            initialTags={tags}
         />
         </>
     );

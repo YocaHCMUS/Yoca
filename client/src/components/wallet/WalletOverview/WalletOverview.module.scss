@@ -86,7 +86,8 @@
   gap: $spacing-01;
 }
 
-.tags {
+.tags,
+.tagsRow {
   display: flex;
   gap: $spacing-03;
   flex-wrap: wrap;
