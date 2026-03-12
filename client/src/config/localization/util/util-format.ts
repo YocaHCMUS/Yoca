@@ -10,13 +10,13 @@ type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
 
 /**
- * Determines the number of decimal places to display for a currency value.
+ * Determines the number of decimal places to display for a numeric value.
  * The rule is based on the fractional part of the absolute value:
- *   - frac in [0.01, 1)  → 4 decimals  e.g. $1.246678 → $1.2467
+ *   - frac in [0.01, 1)      → 4 decimals  e.g. $1.246678 → $1.2467
  *   - frac in [0.0001, 0.01) → 6 decimals  e.g. $81.00147367 → $81.001474
- *   - frac < 0.0001       → 8 decimals
+ *   - frac < 0.0001           → 8 decimals
  */
-function resolveCurrencyDecimals(value: number): number {
+function resolveDecimals(value: number): number {
   const frac = Math.abs(value) % 1;
   if (frac >= 0.01) return 4;
   if (frac >= 0.0001) return 6;
@@ -50,11 +50,11 @@ export function defineNumberFormat(
           ? value / 100.0
           : value;
 
-    // For currency, pick decimal precision based on the fractional part of the value.
+    // Pick decimal precision based on the fractional part of the value.
     let key = `${effectiveStyle}|${notation}`;
     let extraOptions: Intl.NumberFormatOptions = {};
-    if (effectiveStyle === "currency") {
-      const decimals = resolveCurrencyDecimals(exchangedValue);
+    if (effectiveStyle === "currency" || effectiveStyle === "decimal") {
+      const decimals = resolveDecimals(exchangedValue);
       key = `${key}|${decimals}`;
       extraOptions = { maximumFractionDigits: decimals };
     }
