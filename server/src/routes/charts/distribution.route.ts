@@ -9,6 +9,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateAssetDistribution } from '../../services/mockChartData.service.js';
+import { getWalletPortfolio, type SupportedChain } from '../../services/wallet/walletData.service.js';
 
 /**
  * Request parameter schema for distribution endpoint
@@ -57,7 +58,52 @@ const app = new Hono()
       const query = c.req.query();
       const params = distributionRequestSchema.parse(query);
 
-      // Generate asset distribution data
+      // If wallets parameter is provided, fetch actual portfolio data
+      if (params.wallets) {
+        const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
+        
+        // For single wallet, return aggregated data
+        if (walletAddresses.length === 1) {
+          const address = walletAddresses[0];
+          const chain: SupportedChain = 'solana'; // Default chain
+          
+          try {
+            const portfolio = await getWalletPortfolio(address, chain);
+            
+            // Transform portfolio data into distribution format
+            const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
+            
+            const distributionData = portfolio.map((item: any) => ({
+              name: item.symbol || item.token || 'Unknown',
+              value: item.valueUsd ?? 0,
+              percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
+              rawAmount: item.amount ?? item.holding ?? 0,
+            }));
+        
+            return c.json({
+              data: distributionData,
+              totalValue: totalValue,
+              address: address,
+              chain: chain,
+              metadata: {
+                currency: 'USD',
+                timestamp: Date.now()
+              }
+            });
+          } catch (err) {
+            console.error("Failed to fetch wallet portfolio for distribution", err);
+            // Fall back to mock data on error
+            const data = generateAssetDistribution(params.period, params.wallets);
+            return c.json(data, 200);
+          }
+        }
+        
+        // For multiple wallets, fall back to mock data generation
+        const data = generateAssetDistribution(params.period, params.wallets);
+        return c.json(data, 200);
+      }
+
+      // Generate asset distribution data (mock)
       const data = generateAssetDistribution(params.period, params.wallets);
 
       // Return response

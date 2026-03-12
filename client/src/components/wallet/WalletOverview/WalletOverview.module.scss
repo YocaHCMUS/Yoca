@@ -36,11 +36,36 @@
   gap: $spacing-02;
 }
 
+.walletNameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+}
+
 .walletName {
   margin: 0;
   font-size: 24px;
   font-weight: bold;
   color: $text-primary;
+}
+
+.editLabelBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $icon-primary;
+    background-color: $layer-hover-01;
+  }
 }
 
 .walletAddress {
@@ -61,7 +86,8 @@
   gap: $spacing-01;
 }
 
-.tags {
+.tags,
+.tagsRow {
   display: flex;
   gap: $spacing-03;
   flex-wrap: wrap;

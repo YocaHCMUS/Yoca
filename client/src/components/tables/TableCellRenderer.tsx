@@ -1,5 +1,5 @@
-
-import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract } from '@carbon/icons-react';
+import React, { useState } from 'react';
+import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
 
 /**
  * Renders a value as monospace code with secondary color
@@ -10,6 +10,150 @@ export const renderCode = (value: string) => (
     {value}
   </code>
 );
+
+export const renderBase = (value: string) => (
+  <span>{value}</span>
+);
+
+/**
+ * Higher-order function that wraps any renderer with truncation and tooltip functionality
+ * @param value - The original full value
+ * @param renderFn - The render function to apply to the truncated value
+ * @param limit - Maximum characters to show before truncation (default: 6)
+ * 
+ * @example
+ * renderLong(longAddress, renderCode, 8)
+ * renderLong(longText, renderBold, 10)
+ * renderLong(longHash, (val) => renderCurrency(val, '$'), 6)
+ */
+export const renderLong = (
+  value: string, 
+  renderFn: (value: string) => React.ReactNode, 
+  limit: number = 6
+) => {
+  const truncatedValue = value.length > limit ? value.slice(0, limit) + '...' : value;
+  
+  return (
+    <span
+      style={{ 
+        cursor: 'help',
+        padding: '2px 4px',
+        borderRadius: '2px',
+        transition: 'background-color 0.2s ease',
+        display: 'inline-block',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--cds-layer-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+      title={value}
+    >
+      {renderFn(truncatedValue)}
+    </span>
+  );
+};
+
+export const renderReducedNumber = (
+  value: string,
+  renderFn: (value: string) => React.ReactNode,
+  bcp47Locale: string = 'en-US',
+) => {
+  // if value is in (0, 0.0001) => render as "< 0.0001"
+  // if > 1000 => render as xK, the same is true for M, B,...
+  const numValue = Number(value);
+
+  if (Number.isNaN(numValue)) {
+    return renderFn(value);
+  }
+
+  if (numValue > 0 && numValue < 0.0001) {
+    return renderFn('< 0.0001');
+  }
+
+  if (Math.abs(numValue) > 1000) {
+    // Use the caller-supplied BCP-47 locale so compact suffixes (K/M/B) match
+    // the app's selected language while still avoiding OS-locale surprises.
+    const compact = new Intl.NumberFormat(bcp47Locale, {
+      notation: 'compact',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(numValue);
+
+    return renderFn(compact);
+  }
+
+  return renderFn(Number.parseFloat(value).toFixed(4));
+};
+
+/**
+ * Renders a shortened version of a long string value with full text in tooltip
+ * Shows approximately first 6 characters with ellipsis
+ * Convenience function that wraps renderCode with renderLong
+ */
+export const renderLongCode = (value: string, limit: number = 6) => {
+  return renderLong(value, renderCode, limit);
+};
+
+/**
+ * Renders a hash/signature in truncated form (first N + last N chars) with a copy button.
+ * Full value is shown in a tooltip on hover.
+ */
+export const renderHash = (value: string, prefixLen: number = 6, suffixLen: number = 4) => {
+  const truncated =
+    value.length > prefixLen + suffixLen + 3
+      ? `${value.slice(0, prefixLen)}...${value.slice(-suffixLen)}`
+      : value;
+
+  const CopyButton = () => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(value).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      });
+    };
+    return (
+      <button
+        onClick={handleCopy}
+        title={copied ? 'Copied!' : 'Copy'}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0 2px',
+          color: copied ? 'var(--cds-support-success)' : 'var(--cds-text-secondary)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          verticalAlign: 'middle',
+          flexShrink: 0,
+        }}
+      >
+        {copied ? <Checkmark size={12} /> : <Copy size={12} />}
+      </button>
+    );
+  };
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', maxWidth: '100%' }}>
+      <code
+        title={value}
+        style={{
+          color: 'var(--cds-text-secondary)',
+          fontSize: '0.75rem',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {truncated}
+      </code>
+      <CopyButton />
+    </span>
+  );
+};
 
 /**
  * Renders a binary value with conditional coloring
@@ -92,7 +236,19 @@ export const renderRelativeTime = (value: string) => {
 /**
  * Renders an absolute datetime in readable format
  */
-export const renderDateTime = (value: string, options?: Intl.DateTimeFormatOptions) => {
+export const renderDateTime = (
+  value: string,
+  optionsOrFormatter?: Intl.DateTimeFormatOptions | ((value: string | null) => string),
+  formatter?: (value: string | null) => string,
+) => {
+  const localizationFormatter =
+    typeof optionsOrFormatter === 'function' ? optionsOrFormatter : formatter;
+
+  if (localizationFormatter) {
+    return <span>{localizationFormatter(value)}</span>;
+  }
+
+  const options = typeof optionsOrFormatter === 'function' ? undefined : optionsOrFormatter;
   const date = new Date(value);
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -100,9 +256,9 @@ export const renderDateTime = (value: string, options?: Intl.DateTimeFormatOptio
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    ...options
+    ...options,
   };
-  
+
   return <span>{date.toLocaleString(undefined, defaultOptions)}</span>;
 };
 

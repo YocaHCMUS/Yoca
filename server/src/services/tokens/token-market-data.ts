@@ -81,6 +81,11 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
 
   const marketDataList = Object.values(addressToMarketData);
 
+  // Return empty array if no tokens found on CoinGecko
+  if (marketDataList.length === 0) {
+    return [];
+  }
+
   return await db
     .insert(tokenMarketData)
     .values(marketDataList)
@@ -122,7 +127,7 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
 
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
-  if (!refreshed) {
+  if (!refreshed || refreshed.length === 0) {
     return addressToMarketData;
   }
 
