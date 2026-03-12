@@ -491,13 +491,28 @@ export async function fetchHeliusSolanaSwap(
 
 export type HeliusHistoryFrom = "24h" | "7d";
 
+export function timePeriodToFromSec(timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All"): number {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const daySec = 24 * 60 * 60;
+  switch (timePeriod) {
+    case "7D": return nowSec - 7 * daySec;
+    case "30D": return nowSec - 30 * daySec;
+    case "60D": return nowSec - 60 * daySec;
+    case "90D": return nowSec - 90 * daySec;
+    case "1Y": return nowSec - 365 * daySec;
+    case "All": return 0;
+  }
+}
+
 export async function fetchAllTransactionHistory(
   address: string,
-  from: HeliusHistoryFrom = "7d",
+  from: HeliusHistoryFrom | number = "7d",
 ) {
   const nowSec = Math.floor(Date.now() / 1000);
   const daySec = 24 * 60 * 60;
-  const fromSec = nowSec - (daySec * (from === "24h" ? 1 : 7))
+  const fromSec = typeof from === "number"
+    ? from
+    : nowSec - (daySec * (from === "24h" ? 1 : 7))
 
   // Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60)
   // Helius history endpoint returns at most 100 items per page.
