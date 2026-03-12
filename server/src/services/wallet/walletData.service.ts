@@ -163,19 +163,23 @@ export async function getWalletOverview(
 
     try {
       // const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
-      const txs = await getWalletSwaps(address, effectiveChain);
-      
-      const now = Date.now();
-      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      // const txs = await getWalletSwaps(address, effectiveChain, {from: "24h"});
+      const txs = await getWalletTransactionHelius(address, effectiveChain, {from: "24h"});
 
-      // const recent = txs.transactions.filter((tx) => {
-      const recent = txs.swaps.filter((tx) => {
-        const ts = Date.parse(tx.timestamp);
-        if (Number.isNaN(ts)) return false;
-        return now - ts <= ONE_DAY_MS;
-      });
+      
+      // const now = Date.now();
+      // const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+      // // const recent = txs.transactions.filter((tx) => {
+      // const recent = txs.swaps.filter((tx) => {
+      //   const ts = Date.parse(tx.timestamp);
+      //   if (Number.isNaN(ts)) return false;
+      //   return now - ts <= ONE_DAY_MS;
+      // });
+      const recent = txs.transactions
 
       transactionCount24h = recent.length;
+      // transactionCount24h = txs.swaps.length;
 
       const tokenSet = new Set<string>();
       const mintSet = new Set<string>();
@@ -1221,10 +1225,12 @@ export async function getWalletBalanceHistory(
 
     // 2. Get Helius transaction history (full transaction records with balance changes)
     // const txResponse = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
-    const txResponse = await getWalletSwaps(address, effectiveChain);
+    // const txResponse = await getWalletSwaps(address, effectiveChain, {from: "7d"});
+    const txResponse = await getWalletTransactionHelius(address, effectiveChain, {from: "7d"});
+
     
-    // const transactions = txResponse.transactions;
-    const transactions = txResponse.swaps;
+    const transactions = txResponse.transactions;
+    // const transactions = txResponse.swaps;
 
     // Gather token mints appearing in historical balance changes so we can enrich
     // price lookup beyond current portfolio tokens.

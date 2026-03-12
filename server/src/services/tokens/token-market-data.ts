@@ -5,7 +5,36 @@ import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
-import { getCoinGeckoIdList } from "./token-list.js";
+import { getCoinGeckoIdList } from "@sv/services/tokens/token-list.js";
+
+const DEFAULT_MARKET_DATA_DECIMALS = 9;
+
+// Prevent duplicated API+DB work when concurrent requests refresh the same stale token set.
+const inFlightRefreshes = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof fetchTokenMarketData>>>
+>();
+
+function refreshKey(tokenAddresses: string[]) {
+  return [...new Set(tokenAddresses)].sort().join(",");
+}
+
+function asRequiredNumber(value: unknown): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function asOptionalNumber(value: unknown): number | null {
+  if (value == null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function asOptionalDate(value: unknown): Date | null {
+  if (typeof value !== "string" && !(value instanceof Date)) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 export function getMarketDataFromRaw(
   address: string,
@@ -13,33 +42,34 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    fullyDilutedValuation: raw.fully_diluted_valuation!,
-    marketCap: raw.market_cap!,
-    priceUsd: raw.current_price!,
-    totalSupply: raw.total_supply,
+    decimals: DEFAULT_MARKET_DATA_DECIMALS,
+    fullyDilutedValuation: asRequiredNumber(raw.fully_diluted_valuation),
+    marketCap: asRequiredNumber(raw.market_cap),
+    priceUsd: asRequiredNumber(raw.current_price),
+    totalSupply: asOptionalNumber(raw.total_supply),
     updatedAt: new Date(),
-    marketCapRank: raw.market_cap_rank,
-    high24h: raw.high_24h,
-    low24h: raw.low_24h,
-    priceChangePercentage1h: raw.price_change_percentage_1h_in_currency,
-    priceChange24h: raw.price_change_24h,
-    priceChangePercentage24h: raw.price_change_percentage_24h_in_currency,
-    priceChangePercentage7d: raw.price_change_percentage_7d_in_currency,
-    priceChangePercentage14d: raw.price_change_percentage_14d_in_currency,
-    priceChangePercentage30d: raw.price_change_percentage_30d_in_currency,
-    priceChangePercentage200d: raw.price_change_percentage_200d_in_currency,
-    priceChangePercentage1y: raw.price_change_percentage_1y_in_currency,
-    marketCapChange24h: raw.market_cap_change_24h,
-    marketCapChangePercentage24h: raw.market_cap_change_percentage_24h,
-    circulatingSupply: raw.circulating_supply,
-    maxSupply: raw.max_supply,
-    ath: raw.ath,
-    athChangePercentage: raw.ath_change_percentage,
-    athDate: raw.ath_date ? new Date(raw.ath_date) : null,
-    atl: raw.atl,
-    atlChangePercentage: raw.atl_change_percentage,
-    atlDate: raw.atl_date ? new Date(raw.atl_date) : null,
-    volume24h: raw.total_volume!,
+    marketCapRank: asOptionalNumber(raw.market_cap_rank),
+    high24h: asOptionalNumber(raw.high_24h),
+    low24h: asOptionalNumber(raw.low_24h),
+    priceChangePercentage1h: asOptionalNumber(raw.price_change_percentage_1h_in_currency),
+    priceChange24h: asOptionalNumber(raw.price_change_24h),
+    priceChangePercentage24h: asOptionalNumber(raw.price_change_percentage_24h_in_currency),
+    priceChangePercentage7d: asOptionalNumber(raw.price_change_percentage_7d_in_currency),
+    priceChangePercentage14d: asOptionalNumber(raw.price_change_percentage_14d_in_currency),
+    priceChangePercentage30d: asOptionalNumber(raw.price_change_percentage_30d_in_currency),
+    priceChangePercentage200d: asOptionalNumber(raw.price_change_percentage_200d_in_currency),
+    priceChangePercentage1y: asOptionalNumber(raw.price_change_percentage_1y_in_currency),
+    marketCapChange24h: asOptionalNumber(raw.market_cap_change_24h),
+    marketCapChangePercentage24h: asOptionalNumber(raw.market_cap_change_percentage_24h),
+    circulatingSupply: asOptionalNumber(raw.circulating_supply),
+    maxSupply: asOptionalNumber(raw.max_supply),
+    ath: asOptionalNumber(raw.ath),
+    athChangePercentage: asOptionalNumber(raw.ath_change_percentage),
+    athDate: asOptionalDate(raw.ath_date),
+    atl: asOptionalNumber(raw.atl),
+    atlChangePercentage: asOptionalNumber(raw.atl_change_percentage),
+    atlDate: asOptionalDate(raw.atl_date),
+    volume24h: asRequiredNumber(raw.total_volume),
   };
 }
 
@@ -96,6 +126,20 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     .returning();
 }
 
+async function fetchTokenMarketDataShared(tokenAddresses: string[]) {
+  const key = refreshKey(tokenAddresses);
+  const inFlight = inFlightRefreshes.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const task = fetchTokenMarketData(tokenAddresses).finally(() => {
+    inFlightRefreshes.delete(key);
+  });
+  inFlightRefreshes.set(key, task);
+  return task;
+}
+
 export async function getTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return {};
@@ -125,7 +169,7 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     return addressToMarketData;
   }
 
-  const refreshed = await fetchTokenMarketData(staleAddresses);
+  const refreshed = await fetchTokenMarketDataShared(staleAddresses);
 
   if (!refreshed || refreshed.length === 0) {
     return addressToMarketData;

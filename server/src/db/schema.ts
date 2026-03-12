@@ -98,6 +98,7 @@ export const tokenDetails = pgTable("token_details", {
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
+  decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
 
   marketCapRank: integer("market_cap_rank"),
@@ -279,17 +280,17 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
-  // {
-  //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
-  //     "timestamp": 1704067200,
-  //     "direction": "in",
-  //     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
-  //     "mint": "So11111111111111111111111111111111111111112",
-  //     "symbol": "SOL",
-  //     "amount": 1.5,
-  //     "amountRaw": "1500000000",
-  //     "decimals": 9
-  //   },
+// {
+//     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
+//     "timestamp": 1704067200,
+//     "direction": "in",
+//     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
+//     "mint": "So11111111111111111111111111111111111111112",
+//     "symbol": "SOL",
+//     "amount": 1.5,
+//     "amountRaw": "1500000000",
+//     "decimals": 9
+//   },
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
@@ -302,7 +303,7 @@ export const tokenTransfers = pgTable(
     amountUsd: decimal("amount_usd").notNull(),
     blockTime: timestamp("block_time").notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    tokenSymbol: varchar("token_symbol", {length: 10}).notNull(),
+    tokenSymbol: varchar("token_symbol", { length: 10 }).notNull(),
     transactionSignature: varchar("transaction_signature", {
       length: 88,
     }).notNull(),
@@ -472,7 +473,7 @@ export const walletSwapMeta = pgTable(
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  }, 
+  },
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 )
 
@@ -482,7 +483,7 @@ export const walletTransferMeta = pgTable(
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  }, 
+  },
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 )
 

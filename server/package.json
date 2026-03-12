@@ -7,6 +7,8 @@
     "dev": "tsx watch src/main.ts",
     "build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "node build/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "clear": "rimraf ./node_modules && npm run clean",
     "clean": "rimraf ./build",
@@ -32,6 +34,7 @@
     "@types/bcryptjs": "^2.4.6",
     "drizzle-kit": "^0.31.7",
     "tsc-alias": "^1.8.16",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "vitest": "^4.0.18"
   }
 }
