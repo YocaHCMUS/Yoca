@@ -10,7 +10,7 @@ export const format = {
     {
       currency: {
         currency: "VND",
-        currencyDisplay: "narrowSymbol",
+        currencyDisplay: "code",
         minimumFractionDigits: 0,
         maximumFractionDigits: 32,
       },

@@ -11,6 +11,7 @@ import {
 } from "@carbon/react";
 import { useEffect, useState } from "react";
 import styles from "./TokenMarketsTable.module.scss";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface TokenMarketsTableProps {
     address: string;
@@ -79,6 +80,7 @@ const HEADERS = [
 ];
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
+    const {fmt} = useLocalization();
     const [pools, setPools] = useState<CGPoolData[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -111,7 +113,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
             rank: idx + 1,
             exchange: dexLabel(dexId),
             pair: p.name,
-            price: fmtPrice(Number(p.base_token_price_usd)),
+            price: fmt.num.currency(Number(p.base_token_price_usd)),
             change: { value: chgNum, text: `${chgNum >= 0 ? "+" : ""}${chgNum.toFixed(2)}%`, positive: chgNum >= 0 },
             volume: fmt$(Number(p.volume_usd?.h24)),
             liquidity: fmt$(Number(p.reserve_in_usd)),
