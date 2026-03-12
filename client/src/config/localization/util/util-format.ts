@@ -29,8 +29,13 @@ export function defineNumberFormat(
     const key = `${effectiveStyle}|${notation}`;
 
     if (!formatterMap.has(key)) {
+      const styleOpts = { ...styleFormatMap[effectiveStyle] };
+      if (notation === "compact") {
+        styleOpts.minimumFractionDigits = 0;
+        styleOpts.maximumFractionDigits = 2;
+      }
       let numFmt = new Intl.NumberFormat(langCode, {
-        ...styleFormatMap[effectiveStyle],
+        ...styleOpts,
         notation,
         style: effectiveStyle,
       });
@@ -71,9 +76,32 @@ export function defineNumberFormat(
     };
   }
 
+  // Compact currency with readable full words (avoids Intl abbreviations like N/T/NT/Tr)
+  function readableCompactCurrency(value: NullableNumber): string {
+    if (!value) return nullDisplay;
+    const v = getExchangeRate ? value * getExchangeRate() : value;
+    const abs = Math.abs(v);
+    const opts = { maximumFractionDigits: 2 };
+    if (langCode.startsWith("vi")) {
+      const sym = "đồng";
+      if (abs >= 1e12) return `${(v / 1e12).toLocaleString(langCode, opts)} nghìn tỷ ${sym}`;
+      if (abs >= 1e9)  return `${(v / 1e9).toLocaleString(langCode, opts)} tỷ ${sym}`;
+      if (abs >= 1e6)  return `${(v / 1e6).toLocaleString(langCode, opts)} triệu ${sym}`;
+      if (abs >= 1e3)  return `${(v / 1e3).toLocaleString(langCode, opts)} nghìn ${sym}`;
+      return `${v.toLocaleString(langCode, { maximumFractionDigits: 0 })} ${sym}`;
+    }
+    // For non-vi locales: use standard notation for small values (< 1) to avoid rounding to $0
+    const absVal = Math.abs(value);
+    if (absVal > 0 && absVal < 1) return createNotation("standard").currency(value);
+    return createNotation("compact").currency(value);
+  }
+
   return {
     ...createNotation("standard"),
     compact: createNotation("compact"),
+    readableCompact: {
+      currency: readableCompactCurrency,
+    },
   };
 }
 

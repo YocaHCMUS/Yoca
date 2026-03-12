@@ -75,14 +75,67 @@ export interface OnchainTokenData {
     }>;
 }
 
-const BASE_URL = "https://api.coingecko.com/api/v3";
-const API_KEY = "CG-MjPFyX8QAo68K93S65PHjrki";
+// CoinGecko Trending API response types
+export interface CoinItem {
+    id: string;
+    coin_id: number;
+    name: string;
+    symbol: string;
+    thumb: string;
+    small: string;
+    large: string;
+    slug: string;
+    price_btc: number;
+    score: number;
+    data: {
+        price: string | number;
+        price_btc: string | number;
+        price_change_percentage_24h: {
+            usd: number;
+        };
+        sparkline: string;
+    };
+}
+
+export interface TrendingResponse {
+    coins: { item: CoinItem }[];
+}
+
+// CoinGecko GeckoTerminal pool data
+export interface CGPoolData {
+    id: string;
+    attributes: {
+        address: string;
+        name: string;
+        base_token_price_usd: string;
+        price_change_percentage: { h24: string };
+        volume_usd: { h24: string };
+        reserve_in_usd: string;
+        transactions: { h24: { buys: number; sells: number } };
+    };
+    relationships: {
+        dex: { data: { id: string } };
+    };
+}
+
+const BASE_URL = import.meta.env.VITE_COINGECKO_BASE_URL;
+const API_KEY = import.meta.env.VITE_COINGECKO_API_KEY;
 
 // Common headers with API key
 const getHeaders = () => ({
     accept: "application/json",
     "x-cg-demo-api-key": API_KEY,
 });
+
+/**
+ * General-purpose authenticated CoinGecko fetch.
+ * Returns parsed JSON or null on HTTP error.
+ */
+export async function cgFetch(path: string): Promise<unknown> {
+    const response = await fetch(`${BASE_URL}${path}`, { headers: getHeaders() });
+    if (!response.ok) return null;
+    return response.json();
+}
 
 /**
  * Fetch single token market data

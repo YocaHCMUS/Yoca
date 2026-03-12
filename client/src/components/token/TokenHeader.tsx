@@ -1,5 +1,8 @@
+import { BUBBLEMAPS_SOL_URL, COINGECKO_THUMBNAIL_URL, PLACEHOLDER_IMAGE_URL } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
-import { IconButton } from "@carbon/react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
@@ -31,6 +34,9 @@ export const TokenHeader = ({
   compact = false,
 }: TokenHeaderProps) => {
   const copyToClipboard = () => navigator.clipboard.writeText(address);
+  const { tr } = useLocalization();
+  const [bubblemapsOpen, setBubblemapsOpen] = useState(false);
+  const bubblemapsUrl = `${BUBBLEMAPS_SOL_URL}/${address}`;
 
   const openWebsite = () => websiteUrl && window.open(websiteUrl, "_blank");
 
@@ -52,10 +58,11 @@ export const TokenHeader = ({
     discordInvite && window.open(`https://discord.com/invite/${discordInvite}`, "_blank");
 
   return (
+    <>
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       <img
         className={styles.image}
-        src={imageUrl ?? "https://placehold.co/48x48"}
+        src={imageUrl ?? PLACEHOLDER_IMAGE_URL}
         alt={name}
       />
       <div className={styles.info}>
@@ -70,52 +77,89 @@ export const TokenHeader = ({
         {!compact && (
           <div className={styles.row}>
             {tokenAge && <div className={styles.ageBadge}>{tokenAge}</div>}
-            <div className={styles.addressGroup} onClick={copyToClipboard}>
+            <div className={styles.addressGroup}>
               <span className={styles.address}>
                 {address.slice(0, 4)}...{address.slice(-4)}
               </span>
             </div>
 
             <div className={styles.externalLinks}>
-              <IconButton label="Copy Address" kind="ghost" size="sm" onClick={copyToClipboard}>
+              <button className={styles.iconBtn} title={tr("token.header.copy")} onClick={copyToClipboard}>
                 <Copy size={14} />
-              </IconButton>
+              </button>
+
+              <button className={styles.iconBtn} title="Bubblemaps" onClick={() => setBubblemapsOpen(true)}>
+                <svg width="14" height="14" viewBox="0 0 100 100" fill="currentColor">
+                  <circle cx="50" cy="30" r="18" />
+                  <circle cx="22" cy="65" r="13" />
+                  <circle cx="50" cy="72" r="10" />
+                  <circle cx="76" cy="62" r="15" />
+                  <line x1="50" y1="48" x2="22" y2="65" stroke="currentColor" strokeWidth="4" />
+                  <line x1="50" y1="48" x2="50" y2="72" stroke="currentColor" strokeWidth="4" />
+                  <line x1="50" y1="48" x2="76" y2="62" stroke="currentColor" strokeWidth="4" />
+                </svg>
+              </button>
 
               {websiteUrl && (
-                <IconButton label="Website" kind="ghost" size="sm" onClick={openWebsite}>
+                <button className={styles.iconBtn} title={tr("token.website")} onClick={openWebsite}>
                   <Wikis size={14} />
-                </IconButton>
+                </button>
               )}
 
               {twitterHandle && (
-                <IconButton label="X (Twitter)" kind="ghost" size="sm" onClick={searchOnTwitter}>
+                <button className={styles.iconBtn} title={tr("token.header.twitter")} onClick={searchOnTwitter}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
                   </svg>
-                </IconButton>
+                </button>
               )}
 
-              <IconButton label="Search on X" kind="ghost" size="sm" onClick={searchOnTwitter}>
+              <button className={styles.iconBtn} title={tr("token.header.searchX")} onClick={searchOnTwitter}>
                 <Search size={14} />
-              </IconButton>
+              </button>
 
               {discordInvite && (
-                <IconButton label="Join Discord" kind="ghost" size="sm" onClick={openDiscord}>
+                <button className={styles.iconBtn} title={tr("token.header.discord")} onClick={openDiscord}>
                   <LogoDiscord size={14} />
-                </IconButton>
+                </button>
               )}
 
-              <IconButton label="View on CoinGecko" kind="ghost" size="sm" onClick={openCoinGecko}>
+              <button className={styles.iconBtn} title={tr("token.header.coingecko")} onClick={openCoinGecko}>
                 <img
-                  src="https://static.coingecko.com/s/thumbnail-007177f3eca19695592f0b8b0eabbdae282b54154e1be912285c9034ea6cbaf2.png"
+                  src={COINGECKO_THUMBNAIL_URL}
                   alt="CoinGecko"
                   className={styles.coingeckoIcon}
                 />
-              </IconButton>
+              </button>
             </div>
           </div>
         )}
       </div>
     </div>
+
+    {bubblemapsOpen && createPortal(
+      <div
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
+        onClick={() => setBubblemapsOpen(false)}
+      >
+        <div
+          style={{ position: "relative", width: "min(960px, 94vw)", height: "min(700px, 90vh)", background: "#111", borderRadius: 10, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)" }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            style={{ position: "absolute", top: 10, right: 12, zIndex: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "#fff" }}
+            onClick={() => setBubblemapsOpen(false)}
+          >✕</button>
+          <iframe
+            src={bubblemapsUrl}
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+            title="Bubblemaps"
+            allow="fullscreen"
+          />
+        </div>
+      </div>,
+      document.body,
+    )}
+  </>
   );
 };

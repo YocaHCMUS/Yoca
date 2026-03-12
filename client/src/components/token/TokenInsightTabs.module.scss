@@ -1,0 +1,156 @@
+@use '@carbon/react/scss/theme' as *;
+
+.container {
+    width: 100%;
+}
+
+// ── Tabs ──────────────────────────────────────────
+.tabList {
+    :global(.cds--tabs__nav-link) {
+        font-size: 14px;
+        font-weight: 600;
+        color: $text-secondary;
+        border-bottom: 2px solid transparent;
+        padding: 10px 16px;
+    }
+
+    :global(.cds--tabs__nav-item--selected .cds--tabs__nav-link) {
+        color: $text-primary;
+        border-bottom-color: $interactive;
+    }
+
+    :global(.cds--tabs__nav-link:hover) {
+        color: $text-primary;
+        background: transparent;
+    }
+}
+
+// ── Tab Content ───────────────────────────────────
+.tabContent {
+    padding: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+// ── About Tab ─────────────────────────────────────
+.description {
+    font-size: 14px;
+    line-height: 1.7;
+    color: $text-secondary;
+    margin: 0;
+}
+
+.noData {
+    font-size: 14px;
+    color: $text-placeholder;
+    margin: 0;
+}
+
+.insightGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid $border-subtle;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.insightCard {
+    padding: 16px 20px;
+    border-bottom: 1px solid $border-subtle;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.insightQuestion {
+    font-size: 14px;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 6px;
+}
+
+.insightAnswer {
+    font-size: 14px;
+    line-height: 1.65;
+    color: $text-secondary;
+    margin: 0;
+}
+
+.highlightValue {
+    color: $text-primary;
+    font-weight: 600;
+}
+
+.positive {
+    color: #16c784;
+    font-weight: 600;
+}
+
+.negative {
+    color: #ea3943;
+    font-weight: 600;
+}
+
+// ── Holders Tab ───────────────────────────────────
+.holdersLayout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+
+    @media (min-width: 900px) {
+        grid-template-columns: 2fr 3fr;
+        align-items: stretch;
+    }
+}
+
+.holdersTable {
+    min-width: 0;
+}
+
+.holdersChart {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid $border-subtle-01;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chartHeader {
+    padding: 16px 16px 0;
+}
+
+.chartTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 4px;
+}
+
+.chartDescription {
+    font-size: 13px;
+    color: $text-secondary;
+    margin: 0 0 8px;
+}
+
+.chartBody {
+    flex: 1;
+    min-height: 300px;
+    max-height: 360px;
+}
+
+.chartPlaceholder {
+    height: 340px;
+    border-radius: 8px;
+    background: $layer-01;
+    animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}

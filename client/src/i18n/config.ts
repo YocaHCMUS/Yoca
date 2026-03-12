@@ -120,6 +120,50 @@ const resources = {
         navigationSection: 'Navigation Header',
         placeholderContent: 'This is placeholder content for demonstration.',
       },
+      // Token Overview
+      token: {
+        range24h: '24h Range',
+        marketCap: 'Market Cap',
+        fullyDilutedValuation: 'Fully Diluted Valuation',
+        tradingVolume24h: '24 Hour Trading Vol',
+        circulatingSupply: 'Circulating Supply',
+        totalSupply: 'Total Supply',
+        maxSupply: 'Max Supply',
+        info: 'Info',
+        website: 'Website',
+        explorers: 'Explorers',
+        community: 'Community',
+        historicalPriceSectionTitle: 'Historical Data',
+        allTimeHigh: 'All-Time High',
+        allTimeLow: 'All-Time Low',
+        marketsTitle: '{{name}} Markets',
+        marketsDescription: 'Top decentralized exchange pools for trading {{name}}.',
+        trendingCoins: 'Trending Coins',
+        tabs: {
+          overview: 'Overview',
+          markets: 'Markets',
+          trending: 'Trending',
+          historicalData: 'Historical Data',
+        },
+        marketsTable: {
+          rank: '#',
+          exchange: 'Exchange',
+          pair: 'Pair',
+          price: 'Price',
+          change24h: '24h Change',
+          volume24h: '24h Volume',
+          liquidity: 'Liquidity',
+          txns24h: 'Txns 24h',
+        },
+      },
+      tooltips: {
+        marketCap: "Total market value of a cryptocurrency's circulating supply.",
+        fullyDilutedValuation: "The theoretical market cap if the max supply was in circulation.",
+        tradingVolume24h: "A measure of a cryptocurrency trading volume across all tracked platforms in the last 24 hours.",
+        circulatingSupply: "The amount of coins that are circulating in the market and are tradeable by the public.",
+        totalSupply: "The amount of coins that have already been created, minus any coins that have been burned.",
+        maxSupply: "The maximum number of coins coded to exist in the lifetime of the cryptocurrency.",
+      },
       // Charts
       charts: {
         // Common
@@ -130,7 +174,7 @@ const resources = {
         fullscreen: 'Fullscreen',
         miniPlayer: 'Mini Player',
         exitFullscreen: 'Exit Fullscreen',
-        
+
         // Viewing modes
         enterFullscreenMode: 'Enter fullscreen mode',
         openMiniPlayer: 'Open mini player',
@@ -142,7 +186,7 @@ const resources = {
         dragToMove: 'Drag to move',
         maximize: 'Maximize',
         minimize: 'Minimize',
-        
+
         // Timezone
         selectTimezone: 'Select timezone',
         timezone: 'Timezone',
@@ -151,27 +195,27 @@ const resources = {
         noTimezonesFound: 'No timezones found',
         localTime: 'Local Time',
         utc: 'UTC',
-        
+
         // Loading states
         loadingChartData: 'Loading {{title}} chart data',
         refreshingChartData: 'Refreshing {{title}} chart data',
         chartLoadedSuccessfully: '{{title}} chart loaded successfully',
         errorLoadingChart: 'Error loading {{title}} chart',
         noDataForChart: 'No data available for {{title}} chart',
-        
+
         // Empty state
         noDataTitle: 'No Data Available',
         noDataMessage: 'There is no data to display for the selected filters.',
         resetFilters: 'Reset Filters',
         adjustFilters: 'Try adjusting your filters or date range',
-        
+
         // Error state
         errorTitle: 'Unable to Load Chart',
         errorMessage: 'An error occurred while loading the chart data.',
         technicalDetails: 'Technical Details',
         networkError: 'Network error. Please check your connection.',
         serverError: 'Server error. Please try again later.',
-        
+
         // Export
         exportChart: 'Export chart',
         exportFormatOptions: 'Export format options',
@@ -186,7 +230,7 @@ const resources = {
         dataBadge: 'Data',
         exportSuccess: 'Chart exported successfully',
         exportFailed: 'Export failed. Please try again.',
-        
+
         // Filters
         timePeriod: 'Time Period',
         last7Days: 'Last 7 Days',
@@ -205,7 +249,7 @@ const resources = {
         deposits: 'Deposits',
         withdrawals: 'Withdrawals',
         wallets: 'Wallets',
-        
+
         // Chart titles
         balanceTrend: 'Balance Trend',
         assetDistribution: 'Asset Distribution',
@@ -215,7 +259,7 @@ const resources = {
         volumeBenchmark: 'Volume Benchmark',
         transactionDistribution: 'Transaction Distribution',
         holdingDurations: 'Holding Durations',
-        
+
         // Chart specific
         balanceChart: {
           title: 'Balance Trend',
@@ -416,6 +460,50 @@ const resources = {
         navigationSection: 'Thanh điều hướng',
         placeholderContent: 'Đây là nội dung mẫu để minh họa.',
       },
+      // Token Overview
+      token: {
+        range24h: 'Khoảng giá 24h',
+        marketCap: 'Vốn hóa thị trường',
+        fullyDilutedValuation: 'Định giá pha loãng hoàn toàn',
+        tradingVolume24h: 'Lượng giao dịch 24 giờ',
+        circulatingSupply: 'Nguồn cung lưu hành',
+        totalSupply: 'Tổng cung',
+        maxSupply: 'Nguồn cung tối đa',
+        info: 'Thông tin',
+        website: 'Trang web',
+        explorers: 'Trình khám phá',
+        community: 'Cộng đồng',
+        historicalPriceSectionTitle: 'Lịch sử giá',
+        allTimeHigh: 'Đỉnh cao nhất mọi thời đại',
+        allTimeLow: 'Đáy thấp nhất mọi thời đại',
+        marketsTitle: 'Thị trường {{name}}',
+        marketsDescription: 'Các sàn giao dịch phi tập trung hàng đầu cho {{name}}.',
+        trendingCoins: 'Tiền điện tử thịnh hành',
+        tabs: {
+          overview: 'Tổng quan',
+          markets: 'Thị trường',
+          trending: 'Thịnh hành',
+          historicalData: 'Dữ liệu lịch sử',
+        },
+        marketsTable: {
+          rank: '#',
+          exchange: 'Sàn giao dịch',
+          pair: 'Cặp',
+          price: 'Giá',
+          change24h: 'Thay đổi 24 giờ',
+          volume24h: 'Lượng giao dịch 24 giờ',
+          liquidity: 'Thanh khoản',
+          txns24h: 'SLGD 24 giờ',
+        },
+      },
+      tooltips: {
+        marketCap: "Tổng giá trị thị trường của nguồn cung lưu hành của tiền điện tử.",
+        fullyDilutedValuation: "Vốn hóa thị trường lý thuyết nếu nguồn cung tối đa được lưu hành đầy đủ.",
+        tradingVolume24h: "Thước đo khối lượng giao dịch tiền điện tử trên tất cả các nền tảng được theo dõi trong 24 giờ qua.",
+        circulatingSupply: "Số lượng tiền đang lưu hành trên thị trường và có thể giao dịch bởi công chúng.",
+        totalSupply: "Số lượng tiền đã được tạo ra, trừ đi bất kỳ đồng tiền nào đã bị đốt cháy.",
+        maxSupply: "Số lượng tiền tối đa được mã hóa để tồn tại trong vòng đời của tiền điện tử.",
+      },
       // Charts
       charts: {
         // Common
@@ -426,7 +514,7 @@ const resources = {
         fullscreen: 'Toàn màn hình',
         miniPlayer: 'Trình phát nhỏ',
         exitFullscreen: 'Thoát toàn màn hình',
-        
+
         // Viewing modes
         enterFullscreenMode: 'Vào chế độ toàn màn hình',
         openMiniPlayer: 'Mở trình phát nhỏ',
@@ -438,7 +526,7 @@ const resources = {
         dragToMove: 'Kéo để di chuyển',
         maximize: 'Phóng to',
         minimize: 'Thu nhỏ',
-        
+
         // Timezone
         selectTimezone: 'Chọn múi giờ',
         timezone: 'Múi giờ',
@@ -447,27 +535,27 @@ const resources = {
         noTimezonesFound: 'Không tìm thấy múi giờ',
         localTime: 'Giờ địa phương',
         utc: 'UTC',
-        
+
         // Loading states
         loadingChartData: 'Đang tải dữ liệu biểu đồ {{title}}',
         refreshingChartData: 'Đang làm mới dữ liệu biểu đồ {{title}}',
         chartLoadedSuccessfully: 'Biểu đồ {{title}} đã tải thành công',
         errorLoadingChart: 'Lỗi khi tải biểu đồ {{title}}',
         noDataForChart: 'Không có dữ liệu cho biểu đồ {{title}}',
-        
+
         // Empty state
         noDataTitle: 'Không có dữ liệu',
         noDataMessage: 'Không có dữ liệu để hiển thị cho bộ lọc đã chọn.',
         resetFilters: 'Đặt lại bộ lọc',
         adjustFilters: 'Thử điều chỉnh bộ lọc hoặc khoảng thời gian',
-        
+
         // Error state
         errorTitle: 'Không thể tải biểu đồ',
         errorMessage: 'Đã xảy ra lỗi khi tải dữ liệu biểu đồ.',
         technicalDetails: 'Chi tiết kỹ thuật',
         networkError: 'Lỗi mạng. Vui lòng kiểm tra kết nối.',
         serverError: 'Lỗi máy chủ. Vui lòng thử lại sau.',
-        
+
         // Export
         exportChart: 'Xuất biểu đồ',
         exportFormatOptions: 'Tùy chọn định dạng xuất',
@@ -482,7 +570,7 @@ const resources = {
         dataBadge: 'Dữ liệu',
         exportSuccess: 'Xuất biểu đồ thành công',
         exportFailed: 'Xuất thất bại. Vui lòng thử lại.',
-        
+
         // Filters
         timePeriod: 'Khoảng thời gian',
         last7Days: '7 ngày qua',
@@ -501,7 +589,7 @@ const resources = {
         deposits: 'Nạp tiền',
         withdrawals: 'Rút tiền',
         wallets: 'Ví',
-        
+
         // Chart titles
         balanceTrend: 'Xu hướng số dư',
         assetDistribution: 'Phân bổ tài sản',
@@ -511,7 +599,7 @@ const resources = {
         volumeBenchmark: 'Đánh giá khối lượng',
         transactionDistribution: 'Phân bổ giao dịch',
         holdingDurations: 'Thời gian nắm giữ',
-        
+
         // Chart specific
         balanceChart: {
           title: 'Xu hướng số dư',
@@ -712,6 +800,50 @@ const resources = {
         navigationSection: 'ナビゲーションヘッダー',
         placeholderContent: 'これはデモンストレーションのプレースホルダーコンテンツです。',
       },
+      // Token Overview
+      token: {
+        range24h: '24h Range',
+        marketCap: 'Market Cap',
+        fullyDilutedValuation: 'Fully Diluted Valuation',
+        tradingVolume24h: '24 Hour Trading Vol',
+        circulatingSupply: 'Circulating Supply',
+        totalSupply: 'Total Supply',
+        maxSupply: 'Max Supply',
+        info: 'Info',
+        website: 'Website',
+        explorers: 'Explorers',
+        community: 'Community',
+        historicalPriceSectionTitle: 'Historical Data',
+        allTimeHigh: 'All-Time High',
+        allTimeLow: 'All-Time Low',
+        marketsTitle: '{{name}} Markets',
+        marketsDescription: 'Top decentralized exchange pools for trading {{name}}.',
+        trendingCoins: 'Trending Coins',
+        tabs: {
+          overview: 'Overview',
+          markets: 'Markets',
+          trending: 'Trending',
+          historicalData: 'Historical Data',
+        },
+        marketsTable: {
+          rank: '#',
+          exchange: 'Exchange',
+          pair: 'Pair',
+          price: 'Price',
+          change24h: '24h Change',
+          volume24h: '24h Volume',
+          liquidity: 'Liquidity',
+          txns24h: 'Txns 24h',
+        },
+      },
+      tooltips: {
+        marketCap: "Total market value of a cryptocurrency's circulating supply.",
+        fullyDilutedValuation: "The theoretical market cap if the max supply was in circulation.",
+        tradingVolume24h: "A measure of a cryptocurrency trading volume across all tracked platforms in the last 24 hours.",
+        circulatingSupply: "The amount of coins that are circulating in the market and are tradeable by the public.",
+        totalSupply: "The amount of coins that have already been created, minus any coins that have been burned.",
+        maxSupply: "The maximum number of coins coded to exist in the lifetime of the cryptocurrency.",
+      },
       // Charts
       charts: {
         // Common
@@ -722,7 +854,7 @@ const resources = {
         fullscreen: 'フルスクリーン',
         miniPlayer: 'ミニプレーヤー',
         exitFullscreen: 'フルスクリーン終了',
-        
+
         // Viewing modes
         enterFullscreenMode: 'フルスクリーンモードに入る',
         openMiniPlayer: 'ミニプレーヤーを開く',
@@ -734,7 +866,7 @@ const resources = {
         dragToMove: 'ドラッグして移動',
         maximize: '最大化',
         minimize: '最小化',
-        
+
         // Timezone
         selectTimezone: 'タイムゾーンを選択',
         timezone: 'タイムゾーン',
@@ -743,27 +875,27 @@ const resources = {
         noTimezonesFound: 'タイムゾーンが見つかりません',
         localTime: 'ローカル時刻',
         utc: 'UTC',
-        
+
         // Loading states
         loadingChartData: '{{title}}チャートデータを読み込み中',
         refreshingChartData: '{{title}}チャートデータを更新中',
         chartLoadedSuccessfully: '{{title}}チャートが正常に読み込まれました',
         errorLoadingChart: '{{title}}チャートの読み込みエラー',
         noDataForChart: '{{title}}チャートのデータがありません',
-        
+
         // Empty state
         noDataTitle: 'データがありません',
         noDataMessage: '選択したフィルターに表示するデータがありません。',
         resetFilters: 'フィルターをリセット',
         adjustFilters: 'フィルターまたは日付範囲を調整してください',
-        
+
         // Error state
         errorTitle: 'チャートを読み込めません',
         errorMessage: 'チャートデータの読み込み中にエラーが発生しました。',
         technicalDetails: '技術的な詳細',
         networkError: 'ネットワークエラー。接続を確認してください。',
         serverError: 'サーバーエラー。後でもう一度お試しください。',
-        
+
         // Export
         exportChart: 'チャートをエクスポート',
         exportFormatOptions: 'エクスポート形式オプション',
@@ -778,7 +910,7 @@ const resources = {
         dataBadge: 'データ',
         exportSuccess: 'チャートのエクスポートに成功しました',
         exportFailed: 'エクスポートに失敗しました。もう一度お試しください。',
-        
+
         // Filters
         timePeriod: '期間',
         last7Days: '過去7日間',
@@ -797,7 +929,7 @@ const resources = {
         deposits: '入金',
         withdrawals: '出金',
         wallets: 'ウォレット',
-        
+
         // Chart titles
         balanceTrend: '残高推移',
         assetDistribution: '資産分布',
@@ -807,7 +939,7 @@ const resources = {
         volumeBenchmark: '取引量ベンチマーク',
         transactionDistribution: '取引分布',
         holdingDurations: '保有期間',
-        
+
         // Chart specific
         balanceChart: {
           title: '残高推移',

@@ -1,4 +1,7 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatAddress } from "@/util/format";
+import { BUBBLEMAPS_SOL_URL, SOLSCAN_ACCOUNT_URL, SOLSCAN_TX_URL } from "@/config/constants";
+import { Launch } from "@carbon/icons-react";
 import { useState } from "react";
 import styles from "./RecentTransactions.module.scss";
 
@@ -36,24 +39,19 @@ export const RecentTransactions = ({
   quoteMeta,
 }: RecentTransactionsProps) => {
   const [showBubbleMapModal, setShowBubbleMapModal] = useState(false);
-  const { fmt } = useLocalization();
-
-  const shortenAddress = (addr: string) => {
-    if (!addr) return "";
-    return addr.slice(0, 10);
-  };
+  const { tr, fmt } = useLocalization();
 
   return (
     <div className={styles.container}>
       <div className={styles.tabsHeader}>
         <div
           className={`${styles.tab} ${styles.active}`}
-          // Always active since it's the main view now
+        // Always active since it's the main view now
         >
-          Transactions
+          {tr("token.recentTransactions.transactions")}
         </div>
         <div className={styles.tab} onClick={() => setShowBubbleMapModal(true)}>
-          Bubblemaps
+          {tr("token.recentTransactions.bubblemaps")}
         </div>
       </div>
 
@@ -61,32 +59,26 @@ export const RecentTransactions = ({
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>Price {quoteMeta.symbol}</th>
-              <th>Price USD</th>
-              <th>Value</th>
-              <th>From</th>
-              <th>TX</th>
+              <th>{tr("token.recentTransactions.time")}</th>
+              <th>{tr("token.recentTransactions.type")}</th>
+              <th>{tr("token.recentTransactions.priceUsd")}</th>
+              <th>{baseMeta.symbol.toUpperCase()}</th>
+              <th>{tr("token.recentTransactions.value")}</th>
+              <th>{tr("token.recentTransactions.from")}</th>
+              <th>{tr("token.recentTransactions.tx")}</th>
             </tr>
           </thead>
           <tbody>
-            {trades.length == 0 ? (
+            {trades.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
-                  Loading trades...
-                </td>
-              </tr>
-            ) : trades.length == 0 ? (
-              <tr>
-                <td colSpan={7} className={styles.emptyState}>
-                  No recent transactions
+                  {tr("token.recentTransactions.empty")}
                 </td>
               </tr>
             ) : (
               trades.map((trade) => (
                 <tr key={trade.id}>
-                  <td className={styles.timeCell}>
+                  <td>
                     <span className={styles.timeText}>
                       {fmt.datetime.datetime(trade.timestamp)}
                     </span>
@@ -94,22 +86,17 @@ export const RecentTransactions = ({
                   <td
                     className={`${styles.type} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {trade.kind.toUpperCase()}
+                    {trade.kind == "buy" ? tr("token.recentTransactions.buy") : tr("token.recentTransactions.sell")}
                   </td>
                   <td
                     className={`${styles.price} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {fmt.num.compact.unit(trade.priceQuote, quoteMeta.symbol)}
-                  </td>
-                  <td
-                    className={`${styles.price} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
-                  >
-                    {fmt.num.compact.currency(trade.priceUsd)}
+                    {fmt.num.currency(trade.priceUsd)}
                   </td>
                   <td
                     className={`${styles.amount} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {fmt.num.compact.unit(trade.amount, baseMeta.symbol)}
+                    {fmt.num.compact.unit(trade.amount, baseMeta.symbol.toUpperCase())}
                   </td>
                   <td
                     className={`${styles.value} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
@@ -118,36 +105,22 @@ export const RecentTransactions = ({
                   </td>
                   <td>
                     <a
-                      href={`https://solscan.io/account/${trade.fromAddress}`}
+                      href={`${SOLSCAN_ACCOUNT_URL}/${trade.fromAddress}`}
                       target="_blank"
                       rel="noreferrer"
                       className={styles.link}
                     >
-                      {shortenAddress(trade.fromAddress)}
+                      {formatAddress(trade.fromAddress)}
                     </a>
                   </td>
                   <td>
                     <a
-                      href={`https://solscan.io/tx/${trade.txHash}`}
+                      href={`${SOLSCAN_TX_URL}/${trade.txHash}`}
                       target="_blank"
                       rel="noreferrer"
                       className={styles.iconLink}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
-                      </svg>
+                      <Launch size={14} />
                     </a>
                   </td>
                 </tr>
@@ -168,7 +141,7 @@ export const RecentTransactions = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <h3>Bubble Maps</h3>
+              <h3>{tr("token.recentTransactions.bubblemaps")}</h3>
               <button
                 className={styles.closeButton}
                 onClick={() => setShowBubbleMapModal(false)}
@@ -179,13 +152,13 @@ export const RecentTransactions = ({
             <div className={styles.bubblemapsContainer}>
               {baseMeta.address ? (
                 <iframe
-                  src={`https://app.bubblemaps.io/sol/token/${baseMeta.address}?theme=light`}
+                src={`${BUBBLEMAPS_SOL_URL}/${baseMeta.address}?theme=light`}
                   title="BubbleMaps"
                   className={styles.bubblemapsIframe}
                 />
               ) : (
                 <div className={styles.emptyState}>
-                  No token address for bubblemaps
+                  {tr("token.recentTransactions.noAddress")}
                 </div>
               )}
             </div>

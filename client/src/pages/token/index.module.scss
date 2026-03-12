@@ -29,7 +29,7 @@
     overflow: hidden;
 
     @media (min-width: 1024px) {
-        grid-template-columns: 380px 1fr;
+        grid-template-columns: 2fr 7fr;
         gap: 0;
     }
 }

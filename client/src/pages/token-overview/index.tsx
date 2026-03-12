@@ -1,13 +1,15 @@
 import client from "@/api/main";
 import {
-  TokenHeader,
-  TokenMarketsTable,
-  TokenOverviewChart,
-  TokenOverviewStats,
-  TokenTabs,
-  TrendingCoins,
+    GlobalPrices,
+    TokenHeader,
+    TokenInsightTabs,
+    TokenMarketsTable,
+    TokenOverviewChart,
+    TokenOverviewStats,
+    TokenTabs,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -78,7 +80,6 @@ export default function TokenOverviewPage() {
 
   const overviewRef = useRef<HTMLDivElement>(null);
   const marketsRef = useRef<HTMLDivElement>(null);
-  const trendingRef = useRef<HTMLDivElement>(null);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -89,9 +90,6 @@ export default function TokenOverviewPage() {
         break;
       case "markets":
         targetRef = marketsRef;
-        break;
-      case "trending":
-        targetRef = trendingRef;
         break;
     }
     if (targetRef?.current) {
@@ -127,6 +125,7 @@ export default function TokenOverviewPage() {
 
   const meta = stickyMetaRef.current;
   const market = stickyMarketRef.current;
+  const { tr } = useLocalization();
 
   return (
     <PageWrapper>
@@ -168,7 +167,7 @@ export default function TokenOverviewPage() {
               </div>
             ) : (
               <TokenOverviewStats
-                meta={meta}
+                meta={meta! as any}
                 data={market}
                 customPriceChange={customPriceChange}
               />
@@ -197,6 +196,22 @@ export default function TokenOverviewPage() {
               )}
             </div>
 
+            {/* About / Holders insight tabs — right below chart */}
+            <div className={styles.marketsSection}>
+              <TokenInsightTabs
+                address={address}
+                meta={{
+                  name: meta?.name ?? "",
+                  symbol: meta?.symbol ?? "",
+                  description: (result.data?.meta as any)?.description ?? null,
+                }}
+                market={market}
+                holders={result.data?.holders ?? []}
+                holdersInfo={result.data?.holdersInfo ?? null}
+                holdersLoading={result.isFirstLoad}
+              />
+            </div>
+
             <div
               ref={marketsRef}
               className={`${styles.marketsSection} ${styles.scrollAnchor}`}
@@ -209,13 +224,21 @@ export default function TokenOverviewPage() {
               </div>
               {address && <TokenMarketsTable address={address} symbol={meta?.symbol ?? ""} />}
             </div>
-            <div
-              ref={trendingRef}
-              className={`${styles.marketsSection} ${styles.scrollAnchor}`}
-            >
-              <div className={styles.marketsSectionTitle}>Trending Coins</div>
-              <TrendingCoins />
-            </div>
+
+            {market?.priceUsd != null && (
+              <div className={styles.marketsSection}>
+                <div className={styles.marketsSectionTitle}>
+                  {tr("token.globalPrices.title", { name: meta?.name ?? "—" })}
+                </div>
+                <div className={styles.marketsSectionDescription}>
+                  {tr("token.globalPrices.description", { name: meta?.name ?? "This token" })}
+                </div>
+                <GlobalPrices
+                  priceUsd={market.priceUsd}
+                  symbol={meta?.symbol ?? ""}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

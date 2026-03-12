@@ -1,11 +1,11 @@
 import client from "@/api/main";
 import {
-  MarketStats,
-  PoolSelector,
-  RecentTransactions,
-  TokenChart,
-  TokenHeader,
-  TopHolders,
+    MarketStats,
+    PoolSelector,
+    RecentTransactions,
+    TokenChart,
+    TokenHeader,
+    TopHolders,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
@@ -176,7 +176,11 @@ export default function TokenPage() {
                   ? trade.buyTokenPriceUsd
                   : trade.sellTokenPriceUsd;
 
-              const priceQuote = priceUsd;
+              // Price in quote token (e.g. SOL per base token)
+              const priceQuote =
+                kind == "buy"
+                  ? trade.sellTokenAmount / trade.buyTokenAmount
+                  : trade.buyTokenAmount / trade.sellTokenAmount;
 
               return {
                 kind,

@@ -195,7 +195,7 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
         <div className={styles.rangeSection}>
           <div className={styles.rangeMinMax}>
             <span className={styles.rangeValue}>{fmt.num.currency(rangeLow)}</span>
-            <span className={styles.rangeLabel}>24h Range</span>
+            <span className={styles.rangeLabel}>{tr("token.range24h")}</span>
             <span className={styles.rangeValue}>{fmt.num.currency(rangeHigh)}</span>
           </div>
           <div className={styles.rangeBar}>
@@ -213,37 +213,37 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
           {
             id: "marketCap",
             label: tr("tooltips.marketCap"),
-            display: "Market Cap",
+            display: tr("token.marketCap"),
             value: fmt.num.currency(data.marketCap),
           },
           {
             id: "fdv",
             label: tr("tooltips.fullyDilutedValuation"),
-            display: "Fully Diluted Valuation",
+            display: tr("token.fullyDilutedValuation"),
             value: fmt.num.currency(data.fullyDilutedValuation),
           },
           {
             id: "volume24h",
             label: tr("tooltips.tradingVolume24h"),
-            display: "24 Hour Trading Vol",
+            display: tr("token.tradingVolume24h"),
             value: fmt.num.currency(data.volume24h),
           },
           {
             id: "circulating",
             label: tr("tooltips.circulatingSupply"),
-            display: "Circulating Supply",
+            display: tr("token.circulatingSupply"),
             value: fmt.num.decimal(data.circulatingSupply),
           },
           {
             id: "total",
             label: tr("tooltips.totalSupply"),
-            display: "Total Supply",
+            display: tr("token.totalSupply"),
             value: fmt.num.decimal(data.totalSupply),
           },
           {
             id: "max",
             label: tr("tooltips.maxSupply"),
-            display: "Max Supply",
+            display: tr("token.maxSupply"),
             value:
               data.maxSupply != null
                 ? fmt.num.decimal(data.maxSupply)
@@ -285,11 +285,11 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
 
         return (
           <div className={styles.infoSection}>
-            <div className={styles.sectionTitle}>Info</div>
+            <div className={styles.sectionTitle}>{tr("token.info")}</div>
 
             {meta.linkHomepage && (
               <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Website</span>
+                <span className={styles.infoLabel}>{tr("token.website")}</span>
                 <div className={styles.infoBadgeGroup}>
                   <a
                     className={styles.infoBadge}
@@ -305,7 +305,7 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
 
             {explorers.length > 0 && (
               <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Explorers</span>
+                <span className={styles.infoLabel}>{tr("token.explorers")}</span>
                 <div className={styles.infoBadgeGroup}>
                   <InfoDropdown
                     items={explorers
@@ -329,7 +329,7 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
 
             {(meta.twitterScreenName || meta.linkDiscord || meta.telegramChannel) && (
               <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Community</span>
+                <span className={styles.infoLabel}>{tr("token.community")}</span>
                 <div className={styles.infoBadgeGroup}>
                   <InfoDropdown
                     items={(
@@ -396,7 +396,7 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
 
         {/* ATH */}
         <div className={styles.historicalRow}>
-          <span className={styles.historicalLabel}>All-Time High</span>
+          <span className={styles.historicalLabel}>{tr("token.allTimeHigh")}</span>
           <div className={styles.historicalValue}>
             <div className={styles.historicalMeta}>
               <span className={styles.historicalPrice}>
@@ -417,7 +417,7 @@ export const TokenOverviewStats = ({ meta, data, customPriceChange }: TokenOverv
 
         {/* ATL */}
         <div className={styles.historicalRow}>
-          <span className={styles.historicalLabel}>All-Time Low</span>
+          <span className={styles.historicalLabel}>{tr("token.allTimeLow")}</span>
           <div className={styles.historicalValue}>
             <div className={styles.historicalMeta}>
               <span className={styles.historicalPrice}>

@@ -1,5 +1,6 @@
-import { Tabs, TabList, Tab } from "@carbon/react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { Launch } from "@carbon/icons-react";
+import { Tab, TabList, Tabs } from "@carbon/react";
 import { Link } from "react-router";
 import styles from "./TokenTabs.module.scss";
 
@@ -10,23 +11,24 @@ interface TokenTabsProps {
     address: string;
 }
 
-const TABS = [
-    { id: "overview", label: "Overview" },
-    { id: "markets", label: "Markets" },
-    { id: "trending", label: "Trending" },
-];
+const TAB_IDS = ["overview", "markets"];
 
 export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabsProps) {
-    const selectedIndex = TABS.findIndex((t) => t.id === activeTab);
+    const { tr } = useLocalization();
+    const tabs = [
+        { id: "overview", label: tr("token.tabs.overview") },
+        { id: "markets", label: tr("token.tabs.markets") },
+    ];
+    const selectedIndex = TAB_IDS.indexOf(activeTab);
 
     return (
         <div className={styles.container}>
             <Tabs
                 selectedIndex={selectedIndex >= 0 ? selectedIndex : 0}
-                onChange={({ selectedIndex: idx }) => onTabChange(TABS[idx].id)}
+                onChange={({ selectedIndex: idx }) => onTabChange(TAB_IDS[idx])}
             >
                 <TabList aria-label="Token sections" className={styles.tabList}>
-                    {TABS.map((tab) => (
+                    {tabs.map((tab) => (
                         <Tab key={tab.id}>{tab.label}</Tab>
                     ))}
                     {/* Historical Data — external link, not a real tab */}
@@ -36,7 +38,7 @@ export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabs
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        Historical Data <Launch size={14} className={styles.icon} />
+                        {tr("token.tabs.historicalData")} <Launch size={14} className={styles.icon} />
                     </Link>
                 </TabList>
             </Tabs>

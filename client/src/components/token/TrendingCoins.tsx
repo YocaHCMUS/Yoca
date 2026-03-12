@@ -1,64 +1,8 @@
 import { useEffect, useState } from "react";
+import { cgFetch, type CoinItem, type TrendingResponse } from "@/services/coingecko";
+import { formatPriceString, formatPct } from "@/util/format";
 import { Star } from "@carbon/icons-react"; // Or similar for the favorite icon
 import styles from "./TrendingCoins.module.scss";
-
-interface CoinItem {
-    id: string;
-    coin_id: number;
-    name: string;
-    symbol: string;
-    thumb: string;
-    small: string;
-    large: string;
-    slug: string;
-    price_btc: number;
-    score: number;
-    data: {
-        price: string | number;
-        price_btc: string | number;
-        price_change_percentage_24h: {
-            usd: number;
-        };
-        sparkline: string;
-    };
-}
-
-interface TrendingResponse {
-    coins: { item: CoinItem }[];
-}
-
-function formatPriceString(priceValue: string | number | undefined): string {
-    if (priceValue == null) return "–";
-
-    // The price from CG API might be a number or a string.
-    let num: number;
-    if (typeof priceValue === "number") {
-        num = priceValue;
-    } else {
-        const stripped = priceValue.replace(/[^\d.-]/g, '');
-        num = parseFloat(stripped);
-    }
-
-    // The price string from CG API might naturally contain $ prefix or formatting
-    // If it starts with $, return as is or reformat slightly
-    if (!isNaN(num)) {
-        if (num < 0.0001) return `$${num.toExponential(4)}`;
-        if (num < 0.01) return `$${num.toFixed(6)}`;
-        if (num < 1) return `$${num.toFixed(4)}`;
-        // For numbers >= 1, locale string works well
-        return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-
-    return priceValue.toString();
-}
-
-function formatPct(value: number | undefined) {
-    if (value === undefined) return { text: "–", positive: null };
-    const positive = value >= 0;
-    // Add arrow symbol mimicking the image (e.g. ▲ 2.5%)
-    const arrow = positive ? "▲" : "▼";
-    return { text: `${arrow} ${Math.abs(value).toFixed(1)}%`, positive };
-}
 
 export function TrendingCoins() {
     const [coins, setCoins] = useState<CoinItem[]>([]);
@@ -68,13 +12,8 @@ export function TrendingCoins() {
         const fetchTrending = async () => {
             setLoading(true);
             try {
-                const res = await fetch("https://api.coingecko.com/api/v3/search/trending", {
-                    headers: {
-                        "x-cg-demo-api-key": "CG-MjPFyX8QAo68K93S65PHjrki",
-                    },
-                });
-                const data: TrendingResponse = await res.json();
-                if (data && data.coins) {
+                const data = await cgFetch("/search/trending") as TrendingResponse | null;
+                if (data?.coins) {
                     // Get top 8 to fit nicely in 4-column grid (2 rows) or max 10
                     setCoins(data.coins.map(c => c.item).slice(0, 10));
                 }

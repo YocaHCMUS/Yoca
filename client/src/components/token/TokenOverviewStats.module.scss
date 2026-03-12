@@ -158,7 +158,7 @@ $divider: rgba(0, 0, 0, 0.06);
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: $text-secondary;
     cursor: default;
@@ -214,7 +214,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .statValue {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: $text-primary;
     text-align: right;
@@ -417,7 +417,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .sectionTitle {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: $text-primary;
     padding: 16px 0;
@@ -436,7 +436,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalLabel {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: $text-secondary;
 }
@@ -449,7 +449,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalPrice {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: $text-primary;
 }
@@ -572,7 +572,7 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .infoLabel {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: $text-helper;
     white-space: nowrap;

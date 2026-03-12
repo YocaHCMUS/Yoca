@@ -1,17 +1,18 @@
 import client from "@/api/main";
 import { TokenHeader } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import {
-  DataTable,
-  DataTableSkeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
+    DataTable,
+    DataTableSkeleton,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@carbon/react";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
@@ -50,25 +51,19 @@ function formatCurrency(value: number | null, compact = false): string {
   }).format(value);
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, lang: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const d = new Date(year, month - 1, day);
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(lang, {
     month: "short",
     day: "2-digit",
     year: "numeric",
   });
 }
 
-const TABLE_HEADERS = [
-  { key: "date", header: "Date" },
-  { key: "marketCap", header: "Market Cap" },
-  { key: "volume", header: "Volume" },
-  { key: "close", header: "Close" },
-];
-
 export default function HistoricalDataPage() {
   const { address } = useParams<{ address: string }>();
+  const { tr, lang } = useLocalization();
   const [selectedRange, setSelectedRange] = useState<TimeRange>(TIME_RANGES[0]);
   const [rows, setRows] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,13 +110,20 @@ export default function HistoricalDataPage() {
   const PAGE_SIZE = 20;
   const allRows = rows.map((r, i) => ({
     id: String(i),
-    date: formatDate(r.dateStr),
+    date: formatDate(r.dateStr, lang),
     marketCap: formatCurrency(r.marketCap, true),
     volume: formatCurrency(r.volume, true),
     close: formatCurrency(r.price),
   }));
   const tableRows = allRows.slice(0, visibleCount);
   const hasMore = visibleCount < allRows.length;
+
+  const TABLE_HEADERS = [
+    { key: "date", header: tr("token.historicalData.date") },
+    { key: "marketCap", header: tr("token.historicalData.marketCap") },
+    { key: "volume", header: tr("token.historicalData.volume") },
+    { key: "close", header: tr("token.historicalData.close") },
+  ];
 
   return (
     <PageWrapper>
@@ -147,7 +149,7 @@ export default function HistoricalDataPage() {
           {/* Tiêu đề + range selector */}
           <div className={styles.header}>
             <h2 className={styles.title}>
-              {meta?.name ?? "—"} Price History
+              {tr("token.historicalData.title", { name: meta?.name ?? "—" })}
             </h2>
             <div className={styles.rangeSelector}>
               {TIME_RANGES.map((r) => (
@@ -172,7 +174,7 @@ export default function HistoricalDataPage() {
             />
           ) : error ? (
             <div className={styles.errorMsg}>
-              Failed to fetch historical data. This token may not be listed on CoinGecko.
+              {tr("token.historicalData.error")}
             </div>
           ) : (
             <div className={styles.tableContainer}>
@@ -210,7 +212,7 @@ export default function HistoricalDataPage() {
                   className={styles.showMoreBtn}
                   onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
                 >
-                  Show More
+                  {tr("token.historicalData.showMore")}
                 </button>
               </div>
             )}

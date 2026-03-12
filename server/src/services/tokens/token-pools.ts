@@ -1,20 +1,20 @@
 import {
-  TOKEN_POOL_DATA_TTL_MS,
-  TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
+    TOKEN_POOL_DATA_TTL_MS,
+    TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenPoolData,
-  tokenTopPools,
-  type TokenPoolDataInsert,
-  type TokenTopPoolInsert,
+    tokenPoolData,
+    tokenTopPools,
+    type TokenPoolDataInsert,
+    type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
 import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { and, eq, gt, or } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import type {
-  CG_PoolData,
-  CG_TopPoolData,
+    CG_PoolData,
+    CG_TopPoolData,
 } from "../_types/token_raw_responses.js";
 
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
@@ -29,7 +29,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
 
   cgEndpoint.search = new URLSearchParams({
     include: "base_token,quote_token,dex",
-    sort: "h24_volume_usd_liquidity_desc",
+    sort: "h24_volume_usd_desc",
     page: "1",
   }).toString();
 
@@ -80,6 +80,9 @@ async function fetchTokenTopPools(tokenAddress: string) {
           raw.attributes.quote_token_price_native_currency,
         ),
 
+        priceChangePercentage5m: Number(
+          raw.attributes.price_change_percentage.m5,
+        ),
         priceChangePercentage1h: Number(
           raw.attributes.price_change_percentage.h1,
         ),
@@ -123,11 +126,11 @@ async function fetchTokenTopPools(tokenAddress: string) {
     }),
   );
 
-  await db.delete(tokenTopPools);
+  await db.delete(tokenTopPools).where(eq(tokenTopPools.tokenAddress, tokenAddress));
 
   const rankInfo = await db
     .insert(tokenTopPools)
-    .values(poolDataList.map((pool) => pool.rankInfo))
+    .values(poolDataList.map((pool) => ({ ...pool.rankInfo, updatedAt: new Date() })))
     .onConflictDoUpdate({
       target: [tokenTopPools.tokenAddress, tokenTopPools.rank],
       set: excludedAuto(tokenTopPools, [
@@ -166,9 +169,24 @@ async function fetchTokenTopPools(tokenAddress: string) {
 }
 
 export async function getTokenTopPools(tokenAddress: string) {
-  const dataThresholdDate = new Date(Date.now() - TOKEN_TOP_POOLS_TTL_MS);
+  const listThresholdDate = new Date(Date.now() - TOKEN_TOP_POOLS_TTL_MS);
 
-  const res = await db
+  const freshCheck = await db
+    .select({ updatedAt: tokenTopPools.updatedAt })
+    .from(tokenTopPools)
+    .where(
+      and(
+        eq(tokenTopPools.tokenAddress, tokenAddress),
+        gt(tokenTopPools.updatedAt, listThresholdDate),
+      ),
+    )
+    .limit(1);
+
+  if (freshCheck.length === 0) {
+    return await fetchTokenTopPools(tokenAddress);
+  }
+
+  return await db
     .select({
       rankInfo: tokenTopPools,
       data: tokenPoolData,
@@ -178,24 +196,8 @@ export async function getTokenTopPools(tokenAddress: string) {
       tokenPoolData,
       eq(tokenTopPools.poolAddress, tokenPoolData.poolAddress),
     )
-    .where(
-      and(
-        eq(tokenTopPools.tokenAddress, tokenAddress),
-        or(
-          gt(tokenPoolData.updatedAt, dataThresholdDate),
-          gt(tokenPoolData.topPoolsUpdatedAt, dataThresholdDate),
-        ),
-      ),
-    )
+    .where(eq(tokenTopPools.tokenAddress, tokenAddress))
     .orderBy(tokenTopPools.rank);
-
-  const stale = res.length == 0;
-
-  if (stale) {
-    return await fetchTokenTopPools(tokenAddress);
-  }
-
-  return res;
 }
 
 async function fetchPoolData(poolAddress: string) {
@@ -245,6 +247,7 @@ async function fetchPoolData(poolAddress: string) {
       raw.attributes.quote_token_price_native_currency,
     ),
 
+    priceChangePercentage5m: Number(raw.attributes.price_change_percentage.m5),
     priceChangePercentage1h: Number(raw.attributes.price_change_percentage.h1),
     priceChangePercentage6h: Number(raw.attributes.price_change_percentage.h6),
     priceChangePercentage24h: Number(
@@ -308,7 +311,10 @@ export async function getTokenPoolData(poolAddress: string) {
     )
     .limit(1);
 
-  const stale = poolData.length == 0;
+  const stale =
+    poolData.length == 0 ||
+    poolData[0].buyVolumeUsd24h == null ||
+    poolData[0].priceChangePercentage5m == null;
 
   if (stale) {
     return await fetchPoolData(poolAddress);

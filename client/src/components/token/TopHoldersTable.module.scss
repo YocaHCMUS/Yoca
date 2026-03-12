@@ -6,7 +6,6 @@
     border-radius: 8px;
     overflow: hidden;
 
-    // Override Carbon table background to match page
     :global(.cds--data-table-container) {
         background: transparent;
     }
@@ -50,17 +49,30 @@
         border-bottom: none;
     }
 
-    // Right-align all columns except Exchange (2nd) and Pair (3rd)
-    :global(.cds--data-table thead tr th:not(:nth-child(2)):not(:nth-child(3))),
-    :global(.cds--data-table tbody tr td:not(:nth-child(2)):not(:nth-child(3))) {
-        text-align: right;
+    // Table uses 1fr 2fr 1fr column layout
+    :global(.cds--data-table) {
+        table-layout: fixed;
+        width: 100%;
     }
 
-    // Header button label also needs justify-content for flex layout
-    :global(.cds--data-table thead tr th:not(:nth-child(2)):not(:nth-child(3)) .cds--table-header-label) {
-        display: flex;
-        justify-content: flex-end;
-        width: 100%;
+    // Rank column: 2fr
+    :global(.cds--data-table thead tr th:first-child),
+    :global(.cds--data-table tbody tr td:first-child) {
+        width: 25%; // 2/7
+    }
+
+    // Address column: 3fr
+    :global(.cds--data-table thead tr th:nth-child(2)),
+    :global(.cds--data-table tbody tr td:nth-child(2)) {
+        width: 50%; // 3/7
+    }
+
+    // % column: 2fr, left-align
+    :global(.cds--data-table thead tr th:last-child),
+    :global(.cds--data-table tbody tr td:last-child) {
+        width: 25%; // 2/7
+        text-align: left;
+        padding-left: 8px;
     }
 }
 
@@ -68,20 +80,11 @@
     background: transparent;
 }
 
-.positive {
-    color: #16c784;
-    font-weight: 600;
-}
-
-.negative {
-    color: #ea3943;
-    font-weight: 600;
-}
-
-.pairLink {
-    color: inherit;
+.addressLink {
+    color: #1a73e8;
     text-decoration: none;
-    font-weight: 500;
+    font-family: monospace;
+    font-size: 13px;
 
     &:hover {
         text-decoration: underline;

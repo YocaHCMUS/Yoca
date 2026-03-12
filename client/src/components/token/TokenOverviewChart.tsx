@@ -14,13 +14,7 @@ type ChartPoint = InferResponseType<
   200
 >[number];
 
-const TIME_RANGES: TimeRange[] = [
-  { label: "24H", days: 1 },
-  { label: "7D", days: 7 },
-  { label: "1M", days: 30 },
-  { label: "3M", days: 90 },
-  { label: "1Y", days: 365 },
-];
+
 
 interface TokenOverviewChartProps {
   address: string;
@@ -33,7 +27,16 @@ export function TokenOverviewChart({
   symbol,
   onPriceChangeUpdate,
 }: TokenOverviewChartProps) {
-  const { tr, fmt } = useLocalization();
+  const { tr, fmt, lang } = useLocalization();
+  const dateLocale = lang === "vi" ? "vi-VN" : "en-US";
+  const TIME_RANGES: TimeRange[] = useMemo(() => [
+    { label: tr("wallet.filter24h"), days: 1 },
+    { label: tr("wallet.filter7d"), days: 7 },
+    { label: tr("wallet.filter30d"), days: 30 },
+    { label: tr("wallet.filter90d"), days: 90 },
+    { label: tr("wallet.filter365d"), days: 365 },
+  ], [tr]);
+
   const [mode, setMode] = useState<ChartMode>("price");
   const [range, setRange] = useState<TimeRange>(TIME_RANGES[0]);
   const [prices, setPrices] = useState<[number, number][]>([]);
@@ -135,13 +138,13 @@ export function TokenOverviewChart({
           const [ts, val] = params[0].data as [number, number];
           const d = new Date(ts);
           const dateStr = isShortRange
-            ? d.toLocaleString([], {
+            ? d.toLocaleString(dateLocale, {
               month: "short",
               day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             })
-            : d.toLocaleDateString([], {
+            : d.toLocaleDateString(dateLocale, {
               month: "short",
               day: "numeric",
               year: "numeric",
@@ -162,11 +165,11 @@ export function TokenOverviewChart({
           formatter: (val: number) => {
             const d = new Date(val);
             if (range.days === 1)
-              return d.toLocaleTimeString([], {
+              return d.toLocaleTimeString(dateLocale, {
                 hour: "2-digit",
                 minute: "2-digit",
               });
-            return d.toLocaleDateString([], { month: "short", day: "numeric" });
+            return d.toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
           },
         },
         splitLine: { show: false },
@@ -209,7 +212,7 @@ export function TokenOverviewChart({
         },
       ],
     };
-  }, [seriesData, color, areaColor, range, fmt]);
+  }, [seriesData, color, areaColor, range, fmt, dateLocale]);
 
   return (
     <div className={styles.container}>

@@ -78,6 +78,32 @@ const app = new Hono()
       }
     },
   )
+  // .get(
+  //   "/markets/chart/:address/overview",
+  //   validate("param", addressSchema),
+  //   validate("query", daysQuerySchema),
+  //   async (c) => {
+  //     try {
+  //       const { address } = c.req.valid("param");
+  //       const { days = 1 } = c.req.valid("query");
+  //       const chartData = await tokenService.getTokenMarketChart(address, days);
+  //       if (chartData) {
+  //         return c.json(chartData, statusCode.Ok);
+  //       } else {
+  //         return c.json(
+  //           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+  //           statusCode.BadGateway,
+  //         );
+  //       }
+  //     } catch (err) {
+  //       console.error(err);
+  //       return c.json(
+  //         setErr("INTERNAL_SERVER_ERR"),
+  //         statusCode.InternalServerError,
+  //       );
+  //     }
+  //   },
+  // )
   .get(
     "/markets/chart/:address/hourly",
     validate("param", addressSchema),

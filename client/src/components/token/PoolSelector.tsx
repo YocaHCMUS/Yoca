@@ -1,4 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { dexLabel } from "@/util/format";
 import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
@@ -23,9 +24,12 @@ export function PoolSelector({
   selectedPool,
   onPoolChange,
 }: PoolSelectorProps) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const capitalizeDex = (dex: string | null) =>
+    dex ? dex.charAt(0).toUpperCase() + dex.slice(1) : "";
 
   // Close on click outside
   useEffect(() => {
@@ -56,10 +60,10 @@ export function PoolSelector({
       >
         <div className={styles.selectedContent}>
           <span className={styles.selectedName}>
-            {selectedPool.poolName || "Select Pool"}
+            {selectedPool.poolName || tr("token.poolSelector.selectPool")}
           </span>
           {selectedPool.dexId && (
-            <span className={styles.sourceTag}>{selectedPool.dexId}</span>
+            <span className={styles.sourceTag}>{dexLabel(selectedPool.dexId)}</span>
           )}
         </div>
         {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -68,9 +72,9 @@ export function PoolSelector({
       {isOpen && (
         <div className={styles.dropdown}>
           <div className={styles.headerRow}>
-            <span className={styles.colPair}>PAIR</span>
-            <span className={styles.colVol}>24H VOL</span>
-            <span className={styles.colLiq}>LIQUIDITY</span>
+            <span className={styles.colPair}>{tr("token.marketsTable.pair").toUpperCase()}</span>
+            <span className={styles.colVol}>{tr("token.marketsTable.volume24h").toUpperCase()}</span>
+            <span className={styles.colLiq}>{tr("token.marketsTable.liquidity").toUpperCase()}</span>
           </div>
 
           <div className={styles.list}>
@@ -86,7 +90,7 @@ export function PoolSelector({
                 <div className={styles.colPair}>
                   <div className={styles.pairInfo}>
                     <div className={styles.pairName}>{pool.poolName}</div>
-                    <div className={styles.pairSource}>{pool.dexId}</div>
+                    <div className={styles.pairSource}>{dexLabel(pool.dexId)}</div>
                   </div>
                 </div>
                 <div className={styles.colVol}>
