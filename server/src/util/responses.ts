@@ -9,7 +9,10 @@ export const messageText = {
   LoginNounceGeneratedSuccessfully: "Login nounce generated successfully",
   WalletVerificationFailed: "Wallet verification failed",
   WalletVerifiedSuccessfully: "Wallet verified successfully",
+  InternalServerError: "Internal server error",
+  FailedToFetchRequestData: "Fail to fetch data",
 } as const;
+
 
 export const statusCode = {
   Ok: 200,

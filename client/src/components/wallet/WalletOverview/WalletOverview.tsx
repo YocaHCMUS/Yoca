@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled } from '@carbon/react/icons';
+import React, { useState, useEffect } from 'react';
+import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled, Edit, Tag as TagIcon } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchWalletOverview } from '@/services/wallet/walletApi';
+import { fetchWalletTags, saveWalletTags } from '@/services/wallet/walletTagsApi';
+import { useNavigate } from 'react-router';
+import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
+import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
@@ -26,15 +32,61 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     autoRefresh = true,
     refreshInterval = 30000
 }) => {
-    // mock data, need to create a hook to fetch these information
-    const name = "Wallet A"; 
-    const tags = ["whale", "early x holder", "early y holder", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user", "metamask user"];
-    const totalAssetValue = 14199;
-    const tradingVolumn = 1822333;
-    const totalPnL = 140000;
-    const transactionCount = 1133;
-    const tokenTraded = 54;
-    const numberOfTokenHolding = 32;
+    const { user } = useAuth();
+
+    // State for overview data
+    const [overview, setOverview] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Label state – persisted to localStorage per wallet address
+    const labelKey = `wallet-label-${walletAddress}`;
+    const [label, setLabel] = useState<string>(
+        () => localStorage.getItem(labelKey) ?? ""
+    );
+    const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+
+    const handleLabelSave = (newLabel: string) => {
+        setLabel(newLabel);
+        if (newLabel) {
+            localStorage.setItem(labelKey, newLabel);
+        } else {
+            localStorage.removeItem(labelKey);
+        }
+    };
+
+    // Tags state – server-persisted per user; empty until loaded
+    const [tags, setTags] = useState<string[]>([]);
+    const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+    // Load tags from server whenever the authenticated user or wallet changes
+    useEffect(() => {
+        if (!user || !walletAddress || walletAddress === 'null') {
+            setTags([]);
+            return;
+        }
+        fetchWalletTags(walletAddress)
+            .then(setTags)
+            .catch((err) => console.error('[WalletOverview] Failed to load tags:', err));
+    }, [user, walletAddress]);
+
+    const handleTagsSave = async (newTags: string[]) => {
+        try {
+            await saveWalletTags(walletAddress, newTags);
+            setTags(newTags);
+        } catch (err) {
+            console.error('[WalletOverview] Failed to save tags:', err);
+        }
+    };
+
+    // Provide default values for display
+    const name = label || "Wallet";
+    const totalAssetValue = overview?.totalAssetValueUsd ?? null;
+    const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
+    const totalPnL = overview?.pnlUsdTotal ?? null;
+    const transactionCount = overview?.transactionCount24h ?? null;
+    const tokenTraded = overview?.tokensTradedCount ?? null;
+    const numberOfTokenHolding = overview?.tokensHoldingCount ?? null;
 
     const [bookmark, setBookmark] = useState(false);
     const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
@@ -42,7 +94,34 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [showCustomControl, setShowCustomControl] = useState(false);
     const [customDays, setCustomDays] = useState(30);
 
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
+
+    // Fetch wallet overview data
+    useEffect(() => {
+        const loadOverview = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await fetchWalletOverview(walletAddress, 'solana');
+                setOverview(data);
+            } catch (err) {
+                console.error('Failed to fetch wallet overview:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (walletAddress && walletAddress !== 'null') {
+            loadOverview();
+            
+            // Set up auto-refresh if enabled
+            if (autoRefresh) {
+                const interval = setInterval(loadOverview, refreshInterval);
+                return () => clearInterval(interval);
+            }
+        }
+    }, [walletAddress, autoRefresh, refreshInterval]);
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -55,14 +134,15 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         console.log('Create alert clicked');
     };
 
+    const navigate = useNavigate();
+
     const handleShare = () => {
         // Add your share logic here
         console.log('Share clicked');
     };
 
     const handleCompare = () => {
-        // Add your compare logic here
-        console.log('Compare clicked');
+        navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
     const handleFilterClick = (option: OverviewFilterSelection, value: number) => {
@@ -96,8 +176,19 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     return (
-        // main container: column
+        <>
+        {/* main container: column */}
         <div className={styles.walletOverview}>
+            {error && (
+                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
+                    {tr('common.error')}: {error}
+                </div>
+            )}
+            {loading && (
+                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
+                    {tr('common.loading')}...
+                </div>
+            )}
             {/* 1st row: row containing 3 columns */}
             <div className={styles.topSection}> 
                 {/* 1st column: profile picture */}
@@ -107,7 +198,17 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 
                 {/* 2nd column: basic profile information (name, wallet address, tags) */}
                 <div className={styles.profileInfo}>
-                    <h2 className={styles.walletName}>{name}</h2>
+                    <div className={styles.walletNameRow}>
+                        <h2 className={styles.walletName}>{name}</h2>
+                        <button
+                            className={styles.editLabelBtn}
+                            onClick={() => setIsLabelModalOpen(true)}
+                            aria-label="Edit wallet label"
+                            title="Assign custom label"
+                        >
+                            <Edit size={16} />
+                        </button>
+                    </div>
                     <div className={styles.walletAddressContainer}>
                         {/* <Tooltip align="bottom" label={walletAddress}>
                         </Tooltip> */}
@@ -118,17 +219,29 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </h4>
                         <CopyButton onClick={handleCopyAddress}/>
                     </div>
-                    <div className={styles.tags}>
+                    <div className={styles.tagsRow}>
                         {tags.map((tag, index) => (
                             <Tag
                                 key={index}
                                 size="md"
-                                title="Clear filter"
-                                type="cyan" // probably change color based on tag type
+                                type="cyan"
                             >
                                 {tag}
                             </Tag>
                         ))}
+                        <Tooltip
+                            label={user ? 'Manage tags' : 'Sign in to manage tags'}
+                            align="bottom"
+                        >
+                            <button
+                                className={styles.editLabelBtn}
+                                onClick={() => user && setIsTagsModalOpen(true)}
+                                aria-label="Manage wallet tags"
+                                disabled={!user}
+                            >
+                                <TagIcon size={16} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
                 
@@ -199,7 +312,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalAssetValue')}
                         </div>
                         <div className={styles.statValue}>
-                            ${totalAssetValue.toLocaleString()}
+                            {fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
                         </div>
                     </div>
                     
@@ -209,7 +322,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tradingVolume')}
                         </div>
                         <div className={styles.statValue}>
-                            ${tradingVolumn.toLocaleString()}
+                            {fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null)}
                         </div>
                     </div>
                     
@@ -219,7 +332,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.totalPnL')}
                         </div>
                         <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                            ${totalPnL.toLocaleString()}
+                            {fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null)}
                         </div>
                     </div>
                     
@@ -229,7 +342,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tokensTraded')}
                         </div>
                         <div className={styles.statValue}>
-                            {tokenTraded}
+                            {fmt.num.decimal(tokenTraded)}
                         </div>
                     </div>
                     
@@ -239,12 +352,29 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             {tr('wallet.tokensHolding')}
                         </div>
                         <div className={styles.statValue}>
-                            {numberOfTokenHolding}
+                            {fmt.num.decimal(numberOfTokenHolding)}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <WalletLabelModal
+            isOpen={isLabelModalOpen}
+            onClose={() => setIsLabelModalOpen(false)}
+            onSave={handleLabelSave}
+            walletAddress={walletAddress}
+            initialLabel={label}
+        />
+        <WalletTagsModal
+            isOpen={isTagsModalOpen}
+            onClose={() => setIsTagsModalOpen(false)}
+            onSave={handleTagsSave}
+            walletAddress={walletAddress}
+            walletLabel={label || undefined}
+            initialTags={tags}
+        />
+        </>
     );
 }
 

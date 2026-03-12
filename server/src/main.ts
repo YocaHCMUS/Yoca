@@ -17,6 +17,7 @@ import chartPnL from "./routes/charts/pnl.route.js";
 import chartPriceHistory from "./routes/charts/price-history.route.js";
 import chartRollingAnnualReturn from "./routes/charts/rolling-annual-return.route.js";
 import chartStablecoinRatio from "./routes/charts/stablecoin-ratio.route.js";
+import chartDailyTradingVolume from "./routes/charts/daily-trading-volume.route.js";
 import chartTotalTradingVolume from "./routes/charts/total-trading-volume.route.js";
 import chartTradingVolumeDistribution from "./routes/charts/trading-volume-distribution.route.js";
 import chartTradingVolumePerTransaction from "./routes/charts/trading-volume-per-transaction.route.js";
@@ -28,6 +29,8 @@ import search from "./routes/search.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
+import wallets from "@sv/routes/wallets.route.js";
+import walletTags from "@sv/routes/walletTags.route.js"
 
 process.loadEnvFile("./.env");
 
@@ -56,6 +59,7 @@ const app = new Hono()
   .route("/api/charts/transactions", chartTransactions)
   .route("/api/charts/holdings", chartHoldings)
   .route("/api/charts/price-history", chartPriceHistory)
+  .route("/api/charts/dailyTradingVolume", chartDailyTradingVolume)
   .route(
     "/api/charts/tradingVolumeDistribution",
     chartTradingVolumeDistribution,
@@ -72,7 +76,9 @@ const app = new Hono()
   .route("/api/charts/winrate", chartWinrate)
   .route("/api/charts/drawdown", chartDrawdown)
   .route("/api/charts/totalTradingVolume", chartTotalTradingVolume)
-  .route("/api/charts/stablecoinRatio", chartStablecoinRatio);
+  .route("/api/charts/stablecoinRatio", chartStablecoinRatio)
+  .route("/api/wallets", wallets)
+  .route("/api/walletTags", walletTags);
 
 // Server
 serve(

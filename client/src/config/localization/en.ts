@@ -162,7 +162,7 @@ export const translation = {
   walletPage: {
     addressNotFound: "Address not found",
     activity: "Activity",
-    asset: "Asset",
+    asset: "Assets",
     topExchange: "Top exchange",
     topCounterparties: "Top counterparties",
     balanceHistory: "Balance History",
@@ -175,6 +175,8 @@ export const translation = {
     counterparties: "Counterparties",
     portfolio: "Portfolio",
     signature: "Signature",
+    buyer: "Buyer",
+    seller: "Seller",
     type: "Type",
     token: "Token",
     amount: "Amount",
@@ -337,7 +339,7 @@ export const translation = {
 
     // Chart titles
     balanceTrend: "Balance Trend",
-    assetDistribution: "Asset Distribution",
+    assetDistribution: "Assets Distribution",
     profitLoss: "Profit & Loss",
     exchangeComparison: "Exchange Comparison",
     counterpartyActivity: "Counterparty Activity",
@@ -354,9 +356,9 @@ export const translation = {
       balance: "Balance",
     },
     assetDistributionChart: {
-      title: "Asset Distribution",
+      title: "Assets Distribution",
       totalValue: "Total Value",
-      asset: "Asset",
+      asset: "Assets",
       value: "Value",
       percentage: "Percentage",
       noWalletsMessage:

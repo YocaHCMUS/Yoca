@@ -7,7 +7,7 @@
  * @module DailyTradingVolume
  */
 
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
@@ -21,35 +21,16 @@ import sharedStyles from '../shared/ChartStyle.module.scss';
 import { Button } from '@carbon/react';
 import { Add, Close } from '@carbon/react/icons';
 import { ChartGridItem } from '../shared';
+import { fetchDailyTradingVolume } from '@/services/chart/chartApi';
+import type { VolumeBenchmarkResponse } from '@/types/chart-api.types';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
+import { useStandardChartController } from '@/hooks/useChartController';
+import type { ChartProps } from '../shared/ChartProp';
 
 /**
  * Props for DailyTradingVolume component
  */
-export interface DailyTradingVolumeProps {
-  /** Chart title */
-  title?: string;
-  
-  /** Chart minimum height in pixels */
-  minHeight?: number;
-  
-  /** Wallet addresses to display */
-  walletAddresses?: string[];
-  
-  /** Selected benchmark tokens */
-  selectedBenchmarks?: string[];
-  
-  /** Enable export functionality */
-  enableExport?: boolean;
-  
-  /** Enable fullscreen mode */
-  enableFullscreen?: boolean;
-  
-  /** Enable mini-player mode */
-  enableMiniPlayer?: boolean;
-  
-  /** Additional CSS class */
-  className?: string;
-}
+export type DailyTradingVolumeProps = ChartProps;
 
 /**
  * Wallet color palette for visualization
@@ -152,39 +133,114 @@ function generateMockData(walletAddresses: string[]) {
 export function DailyTradingVolume({
   title,
   minHeight = 400,
-  walletAddresses = [],
-  selectedBenchmarks = ['SOL'],
-  enableExport = true,
-  enableFullscreen = true,
-  enableMiniPlayer = true,
+  initialFilters,
+  autoRefresh = true,
+  refreshInterval = 30000,
   className,
 }: DailyTradingVolumeProps) {
   // i18n
   const { tr } = useLocalization();
   const chartTitle = title || 'Daily Trading Volume Historical Chart';
-  
-  // Chart instance ref
   const chartRef = useRef<ReactECharts>(null);
-  
-  // Get theme configuration
   const chartTheme = useChartTheme();
-  
-  // Generate data based on selected wallets
-  const data = useMemo(() => {
-    if (walletAddresses.length === 0) {
-      // Return empty data structure if no wallets selected
-      return {
+  const { filters, walletsString } = useChartFiltersSync({
+    initialFilters,
+    debounceDelay: 300,
+  });
+
+  const [selectedBenchmarks] = useState<string[]>(['SOL']);
+
+  const [data, setData] = useState(() => ({
+    dates: [] as string[],
+    wallets: [] as { name: string; color: string; data: number[] }[],
+    benchmark: {
+      name: 'SOL',
+      color: '#F2994A',
+      data: [] as number[],
+    },
+  }));
+
+  const [loading, setLoading] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    const wallets = walletsString
+      ? walletsString.split(',').map(w => w.trim()).filter(Boolean)
+      : [];
+
+    if (wallets.length === 0) {
+      setData({
         dates: [],
         wallets: [],
         benchmark: {
           name: 'SOL',
           color: '#F2994A',
           data: [],
-        }
+        },
+      });
+      setLoading('success');
+      return;
+    }
+
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading('loading');
+      try {
+        const response = await fetchDailyTradingVolume({
+          period: filters.timePeriod,
+          wallets: walletsString,
+        } as any);
+
+        if (cancelled) return;
+
+        // Map API data to existing structure; keep benchmark mock for now.
+        const success = response as {
+          dates: string[];
+          wallets: { walletAddress: string; walletName: string; volumes: number[] }[];
+          metadata: { period: string; currency: string };
+        };
+
+        const mappedWallets = success.wallets.map(
+          (w: { walletName: string; volumes: number[] }, index: number) => ({
+            name: w.walletName,
+            color: WALLET_COLORS[index % WALLET_COLORS.length],
+            data: w.volumes,
+          }),
+        );
+
+        setData((prev) => ({
+          ...prev,
+          dates: success.dates,
+          wallets: mappedWallets,
+        }));
+        setLoading('success');
+      } catch (err) {
+        console.error('[DailyTradingVolume] Failed to fetch data', err);
+        if (cancelled) return;
+        // Fall back to mock so chart is not empty
+        const fallbackWallets = walletsString
+          ? walletsString.split(',').map(w => w.trim()).filter(Boolean)
+          : [];
+        setData(generateMockData(fallbackWallets));
+        setLoading('error');
+        setRetryCount((x) => x + 1);
+      }
+    };
+
+    fetchData();
+
+    if (autoRefresh) {
+      const id = setInterval(fetchData, refreshInterval);
+      return () => {
+        cancelled = true;
+        clearInterval(id);
       };
     }
-    return generateMockData(walletAddresses);
-  }, [walletAddresses]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.timePeriod, walletsString, autoRefresh, refreshInterval]);
   
   /**
    * Generate eCharts options for dual-axis chart
@@ -395,11 +451,12 @@ export function DailyTradingVolume({
   };
   
   // Show empty state if no wallets selected
-  if (walletAddresses.length === 0) {
+  const hasWallets = data.wallets.length > 0;
+  if (!hasWallets) {
     return (
       <ChartWrapper
         title={chartTitle}
-        loadingState={{ status: 'success', retryCount: 0 }}
+        loadingState={{ status: loading, retryCount }}
         isEmpty={true}
         enableExport={false}
         enableFullscreen={false}
@@ -422,11 +479,11 @@ export function DailyTradingVolume({
   return (
     <ChartWrapper
       title={chartTitle}
-      loadingState={{ status: 'success', retryCount: 0 }}
-      isEmpty={false}
-      enableExport={enableExport}
-      enableFullscreen={enableFullscreen}
-      enableMiniPlayer={enableMiniPlayer}
+      loadingState={{ status: loading, retryCount }}
+      isEmpty={!hasWallets}
+      enableExport={true}
+      enableFullscreen={true}
+      enableMiniPlayer={true}
       onExport={handleExport}
       className={className}
     >
