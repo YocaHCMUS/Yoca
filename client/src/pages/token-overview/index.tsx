@@ -35,23 +35,25 @@ function useTokenOverviewData(address: string) {
   });
 
   const isLoading = baseMeta.isLoading || marketData.isLoading;
-
   const error = baseMeta.error || marketData.error;
 
-  if (isLoading || error) {
+  // If we have no data at all yet, return null
+  if (!baseMeta.data || !marketData.data) {
     return {
       isLoading,
+      isFirstLoad: true,
       error,
       data: null as null,
     };
   }
 
-  // Safe unwrap after loading/error gate
-  const [meta] = baseMeta.data!;
+  // Safe unwrap — data có thể là stale (token cũ) do keepPreviousData
+  const [meta] = baseMeta.data;
   const [holdersInfo] = holdersStats.data ?? [null];
 
   return {
-    isLoading: false,
+    isLoading,
+    isFirstLoad: false,
     error: null,
     data: {
       meta,
@@ -68,6 +70,11 @@ export default function TokenOverviewPage() {
   }>();
 
   const [activeTab, setActiveTab] = useState("overview");
+
+  const [customPriceChange, setCustomPriceChange] = useState<{
+    percentage: number | null;
+    label: string;
+  } | null>(null);
 
   const overviewRef = useRef<HTMLDivElement>(null);
   const marketsRef = useRef<HTMLDivElement>(null);
@@ -88,7 +95,15 @@ export default function TokenOverviewPage() {
         break;
     }
     if (targetRef?.current) {
-      targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      const container = targetRef.current.parentElement;
+      if (container) {
+        const containerTop = container.getBoundingClientRect().top;
+        const targetTop = targetRef.current.getBoundingClientRect().top;
+        container.scrollBy({
+          top: targetTop - containerTop - 24, // Adjust for the 24px padding
+          behavior: "smooth",
+        });
+      }
     }
   };
 
@@ -98,33 +113,66 @@ export default function TokenOverviewPage() {
 
   const result = useTokenOverviewData(address);
 
-  if (result.isLoading) {
-    return <>Loading</>;
-  }
+  // ── Sticky data: update ĐỒNG BỘ trong lúc render (không dùng useEffect) ──
+  // Đảm bảo cột trái luôn hiện data gần nhất, không bao giờ trắng
+  const freshMeta = result.data?.meta ?? null;
+  const freshMarket = result.data?.market ?? null;
 
-  if (result.error || !result.data) {
-    return <>Error</>;
-  }
+  const stickyMetaRef = useRef(freshMeta);
+  const stickyMarketRef = useRef(freshMarket);
 
-  const { meta, market } = result.data;
+  // Cập nhật ngay trong render — không cần đợi effect cycle
+  if (freshMeta) stickyMetaRef.current = freshMeta;
+  if (freshMarket) stickyMarketRef.current = freshMarket;
+
+  const meta = stickyMetaRef.current;
+  const market = stickyMarketRef.current;
 
   return (
     <PageWrapper>
       <div className={styles.tokenOverviewGrid}>
         <div className={styles.leftColumn}>
           <div className={styles.sidebarGroup}>
-            <TokenHeader
-              name={meta.name}
-              symbol={meta.symbol}
-              address={meta.address}
-              imageUrl={meta.imageUrl ?? undefined}
-              coinGeckoId={meta.coingeckoId ?? null}
-              discordInvite={meta.linkDiscord}
-              websiteUrl={meta.linkHomepage}
-              twitterHandle={meta.twitterScreenName}
-            />
+            {!meta ? (
+              <div className={styles.skeletonHeader}>
+                <div className={`${styles.skeletonBlock} ${styles.skeletonAvatar}`} />
+                <div className={styles.skeletonLines}>
+                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineLong}`} />
+                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`} />
+                </div>
+              </div>
+            ) : (
+              <TokenHeader
+                name={meta.name}
+                symbol={meta.symbol}
+                address={meta.address}
+                imageUrl={meta.imageUrl ?? undefined}
+                coinGeckoId={meta.coingeckoId ?? null}
+                discordInvite={meta.linkDiscord}
+                websiteUrl={meta.linkHomepage}
+                twitterHandle={meta.twitterScreenName}
+                marketCapRank={market?.marketCapRank ?? null}
+                compact
+              />
+            )}
 
-            {market && <TokenOverviewStats meta={meta} data={market} />}
+            {!market ? (
+              <div className={styles.skeletonStats}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className={styles.skeletonStatRow}>
+                    <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`} />
+                    <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <TokenOverviewStats
+                meta={meta}
+                data={market}
+                customPriceChange={customPriceChange}
+              />
+            )}
           </div>
         </div>
 
@@ -133,13 +181,20 @@ export default function TokenOverviewPage() {
             <TokenTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
-              symbol={meta.symbol}
+              symbol={meta?.symbol ?? "—"}
+              address={address}
             />
           </div>
 
           <div className={styles.rightContent}>
             <div ref={overviewRef} className={styles.scrollAnchor}>
-              <TokenOverviewChart address={address} symbol={meta.symbol} />
+              {address && (
+                <TokenOverviewChart
+                  address={address}
+                  symbol={meta?.symbol ?? ""}
+                  onPriceChangeUpdate={setCustomPriceChange}
+                />
+              )}
             </div>
 
             <div
@@ -147,9 +202,12 @@ export default function TokenOverviewPage() {
               className={`${styles.marketsSection} ${styles.scrollAnchor}`}
             >
               <div className={styles.marketsSectionTitle}>
-                {meta.name} Markets
+                {meta?.name ?? "—"} Markets
               </div>
-              <TokenMarketsTable address={address} symbol={meta.symbol} />
+              <div className={styles.marketsSectionDescription}>
+                Top decentralized exchange pools for trading {meta?.name ?? "this token"}.
+              </div>
+              {address && <TokenMarketsTable address={address} symbol={meta?.symbol ?? ""} />}
             </div>
             <div
               ref={trendingRef}

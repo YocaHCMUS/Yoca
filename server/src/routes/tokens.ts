@@ -10,11 +10,34 @@ import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
 const app = new Hono()
+  .get(
+    "/details/:addresses",
+    validate("param", addressListSchema),
+    async (c) => {
+      try {
+        const { addresses } = c.req.valid("param");
+
+        const meta = await tokenService.getTokenDetails(addresses);
+
+        if (meta) {
+          return c.json(meta, statusCode.Ok);
+        } else {
+          return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.BadGateway);
+        }
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
   .get("/meta/:addresses", validate("param", addressListSchema), async (c) => {
     try {
       const { addresses } = c.req.valid("param");
 
-      const meta = await tokenService.getTokenMetaList(addresses);
+      const meta = await tokenService.getTokenMeta(addresses);
 
       if (meta) {
         return c.json(meta, statusCode.Ok);
@@ -78,32 +101,6 @@ const app = new Hono()
       }
     },
   )
-  // .get(
-  //   "/markets/chart/:address/overview",
-  //   validate("param", addressSchema),
-  //   validate("query", daysQuerySchema),
-  //   async (c) => {
-  //     try {
-  //       const { address } = c.req.valid("param");
-  //       const { days = 1 } = c.req.valid("query");
-  //       const chartData = await tokenService.getTokenMarketChart(address, days);
-  //       if (chartData) {
-  //         return c.json(chartData, statusCode.Ok);
-  //       } else {
-  //         return c.json(
-  //           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-  //           statusCode.BadGateway,
-  //         );
-  //       }
-  //     } catch (err) {
-  //       console.error(err);
-  //       return c.json(
-  //         setErr("INTERNAL_SERVER_ERR"),
-  //         statusCode.InternalServerError,
-  //       );
-  //     }
-  //   },
-  // )
   .get(
     "/markets/chart/:address/hourly",
     validate("param", addressSchema),
@@ -306,6 +303,41 @@ const app = new Hono()
         statusCode.InternalServerError,
       );
     }
-  });
+  })
+  .get(
+    "/history/:address",
+    validate("param", addressSchema),
+    validate("query", daysQuerySchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { days = 7 } = c.req.valid("query");
+
+        if (days > 365) {
+          return c.json(
+            setErr("DAILY_CHART_DAILY_EXCEEDED_365_DAYS"),
+            statusCode.BadRequest,
+          );
+        }
+
+        const data = await tokenService.getTokenHistoricalData(address, days);
+
+        if (data == null) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+
+        return c.json(data, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  );
 
 export default app;

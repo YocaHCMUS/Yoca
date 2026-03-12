@@ -9,22 +9,13 @@ import {
   type TokenPoolDataInsert,
   type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
-import { excludedAuto } from "@sv/util/orm-sql.js";
+import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, or } from "drizzle-orm";
 import type {
   CG_PoolData,
   CG_TopPoolData,
 } from "../_types/token_raw_responses.js";
-
-const complementaryFields: (keyof TokenPoolDataInsert)[] = [
-  "buyVolumeUsd1h",
-  "buyVolumeUsd6h",
-  "buyVolumeUsd24h",
-  "sellVolumeUsd1h",
-  "sellVolumeUsd6h",
-  "sellVolumeUsd24h",
-];
 
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
   return id.startsWith(prefix) ? id.slice(prefix.length) : id;
@@ -126,9 +117,13 @@ async function fetchTokenTopPools(tokenAddress: string) {
         sellVolumeUsd1h: null,
         sellVolumeUsd6h: null,
         sellVolumeUsd24h: null,
+
+        topPoolsUpdatedAt: new Date(),
       },
     }),
   );
+
+  await db.delete(tokenTopPools);
 
   const rankInfo = await db
     .insert(tokenTopPools)
@@ -141,12 +136,18 @@ async function fetchTokenTopPools(tokenAddress: string) {
       ]),
     })
     .returning();
+
+  const poolDataValues = poolDataList.map((poolData) => poolData.data);
   const data = await db
     .insert(tokenPoolData)
-    .values(poolDataList.map((poolData) => poolData.data))
+    .values(poolDataValues)
     .onConflictDoUpdate({
       target: [tokenPoolData.poolAddress],
-      set: excludedAuto(tokenPoolData, [tokenPoolData.poolAddress]),
+      set: excludedAutoFromInsert(
+        tokenPoolData,
+        tokenPoolData.poolAddress,
+        poolDataValues,
+      ),
     })
     .returning();
   const addressToPoolRank = Object.fromEntries(
@@ -165,6 +166,8 @@ async function fetchTokenTopPools(tokenAddress: string) {
 }
 
 export async function getTokenTopPools(tokenAddress: string) {
+  const dataThresholdDate = new Date(Date.now() - TOKEN_TOP_POOLS_TTL_MS);
+
   const res = await db
     .select({
       rankInfo: tokenTopPools,
@@ -175,21 +178,18 @@ export async function getTokenTopPools(tokenAddress: string) {
       tokenPoolData,
       eq(tokenTopPools.poolAddress, tokenPoolData.poolAddress),
     )
-    .where(eq(tokenTopPools.tokenAddress, tokenAddress))
+    .where(
+      and(
+        eq(tokenTopPools.tokenAddress, tokenAddress),
+        or(
+          gt(tokenPoolData.updatedAt, dataThresholdDate),
+          gt(tokenPoolData.topPoolsUpdatedAt, dataThresholdDate),
+        ),
+      ),
+    )
     .orderBy(tokenTopPools.rank);
 
-  let stale = false;
-
-  if (res.length > 0) {
-    const latestUpdate = res.reduce((latest, cur) =>
-      cur.rankInfo.updatedAt > latest.rankInfo.updatedAt ? cur : latest,
-    );
-
-    const thresholdDate = new Date(Date.now() - TOKEN_TOP_POOLS_TTL_MS);
-    stale = latestUpdate.rankInfo.updatedAt < thresholdDate;
-  } else {
-    stale = true;
-  }
+  const stale = res.length == 0;
 
   if (stale) {
     return await fetchTokenTopPools(tokenAddress);
@@ -278,6 +278,8 @@ async function fetchPoolData(poolAddress: string) {
     sellVolumeUsd1h: Number(raw.attributes.sell_volume_usd.h1),
     sellVolumeUsd6h: Number(raw.attributes.sell_volume_usd.h6),
     sellVolumeUsd24h: Number(raw.attributes.sell_volume_usd.h24),
+
+    updatedAt: new Date(),
   };
 
   const [inserted] = await db
@@ -293,28 +295,26 @@ async function fetchPoolData(poolAddress: string) {
 }
 
 export async function getTokenPoolData(poolAddress: string) {
-  const [poolData] = await db
+  const thresholdDate = new Date(Date.now() - TOKEN_POOL_DATA_TTL_MS);
+
+  const poolData = await db
     .select()
     .from(tokenPoolData)
-    .where(eq(tokenPoolData.poolAddress, poolAddress))
+    .where(
+      and(
+        eq(tokenPoolData.poolAddress, poolAddress),
+        gt(tokenPoolData.updatedAt, thresholdDate),
+      ),
+    )
     .limit(1);
 
-  let stale = false;
-  if (poolData) {
-    const thresholdDate = new Date(Date.now() - TOKEN_POOL_DATA_TTL_MS);
-    const incomplete = complementaryFields.some(
-      (field) => poolData[field] == null,
-    );
-    stale = poolData.updatedAt < thresholdDate || incomplete;
-  } else {
-    stale = true;
-  }
+  const stale = poolData.length == 0;
 
   if (stale) {
     return await fetchPoolData(poolAddress);
   }
 
-  return poolData;
+  return poolData[0];
 }
 
 export async function getTokenPoolDataList(poolAddresses: string[]) {

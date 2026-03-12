@@ -10,7 +10,7 @@
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 0;
-    height: calc(100vh - 64px); // Fixed height so columns can scroll independently
+    height: calc(100vh - 48px); // Fixed height so columns can scroll independently
     overflow: hidden;
 
     @media (min-width: 1024px) {
@@ -28,23 +28,21 @@
     border-right: 1px solid $border-subtle;
     height: 100%;
     overflow-y: auto;
+    scrollbar-width: none; // Firefox
+    -ms-overflow-style: none; // IE/Edge
 
     &::-webkit-scrollbar {
-        display: none;
+        display: none; // Chrome/Safari
     }
-
-    -ms-overflow-style: none;
-    scrollbar-width: none;
 }
+
 
 .sidebarGroup {
     background: $background;
     display: flex;
     flex-direction: column;
-    flex: 1;
     padding: 0;
     gap: 0;
-    overflow: visible;
 }
 
 // ===== Right Column =====
@@ -61,7 +59,6 @@
     flex-shrink: 0;
     padding: 8px 24px 0;
     background: $background;
-    border-bottom: 1px solid $border-subtle;
     z-index: 10;
 }
 
@@ -92,11 +89,90 @@
 
 .marketsSectionTitle {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     color: $text-primary;
+}
+
+.marketsSectionDescription {
+    font-size: 14px;
+    color: $text-secondary;
 }
 
 // No longer needed — scroll inside rightContent, no sticky header overlap
 .scrollAnchor {
     scroll-margin-top: 0;
+}
+
+// ===== Skeleton Loading =====
+@keyframes shimmer {
+    0% {
+        background-position: -400px 0;
+    }
+
+    100% {
+        background-position: 400px 0;
+    }
+}
+
+.skeletonBlock {
+    background: linear-gradient(90deg,
+            $layer-accent-01 25%,
+            $layer-accent-02 50%,
+            $layer-accent-01 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 4px;
+}
+
+.skeletonHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+
+.skeletonAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.skeletonLines {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.skeletonLine {
+    height: 12px;
+    border-radius: 6px;
+}
+
+.skeletonLineLong {
+    width: 80%;
+}
+
+.skeletonLineMedium {
+    width: 60%;
+}
+
+.skeletonLineShort {
+    width: 40%;
+}
+
+.skeletonStats {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px 0;
+}
+
+.skeletonStatRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid $border-subtle;
 }

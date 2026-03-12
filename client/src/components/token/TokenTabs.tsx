@@ -7,6 +7,7 @@ interface TokenTabsProps {
     activeTab: string;
     onTabChange: (tabId: string) => void;
     symbol: string;
+    address: string;
 }
 
 const TABS = [
@@ -15,7 +16,7 @@ const TABS = [
     { id: "trending", label: "Trending" },
 ];
 
-export function TokenTabs({ activeTab, onTabChange, symbol }: TokenTabsProps) {
+export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabsProps) {
     const selectedIndex = TABS.findIndex((t) => t.id === activeTab);
 
     return (
@@ -30,7 +31,7 @@ export function TokenTabs({ activeTab, onTabChange, symbol }: TokenTabsProps) {
                     ))}
                     {/* Historical Data — external link, not a real tab */}
                     <Link
-                        to={`/historical-data/${symbol.toLowerCase()}`}
+                        to={`/historical-data/${address}`}
                         className={styles.tabLink}
                         target="_blank"
                         rel="noopener noreferrer"

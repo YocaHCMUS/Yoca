@@ -1,10 +1,10 @@
+import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { InferResponseType } from "hono/client";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
+import type { InferResponseType } from "hono/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./TokenOverviewChart.module.scss";
-import client from "@/api/main";
 
 type ChartMode = "price" | "marketcap";
 type TimeRange = { label: string; days: number };
@@ -25,11 +25,13 @@ const TIME_RANGES: TimeRange[] = [
 interface TokenOverviewChartProps {
   address: string;
   symbol: string;
+  onPriceChangeUpdate?: (data: { percentage: number | null; label: string }) => void;
 }
 
 export function TokenOverviewChart({
   address,
   symbol,
+  onPriceChangeUpdate,
 }: TokenOverviewChartProps) {
   const { tr, fmt } = useLocalization();
   const [mode, setMode] = useState<ChartMode>("price");
@@ -40,22 +42,24 @@ export function TokenOverviewChart({
   const chartRef = useRef<ReactECharts>(null);
 
   useEffect(() => {
-    const fetchData = async () =>
-    {
+    const fetchData = async () => {
       if (!address) return;
+      // Clear old data immediately so old range % doesn't persist while loading new range
+      setPrices([]);
+      setMarketCaps([]);
       setLoading(true);
       try {
         const response =
           range.days === 1
             ? await client.api.tokens.markets.chart[":address"].$get({
-                param: { address },
-              })
+              param: { address },
+            })
             : range.days <= 90
-            ? await client.api.tokens.markets.chart[":address"].hourly.$get({
+              ? await client.api.tokens.markets.chart[":address"].hourly.$get({
                 param: { address },
                 query: { days: range.days },
               })
-            : await client.api.tokens.markets.chart[":address"].daily.$get({
+              : await client.api.tokens.markets.chart[":address"].daily.$get({
                 param: { address },
                 query: { days: range.days },
               });
@@ -93,6 +97,21 @@ export function TokenOverviewChart({
     return seriesData[seriesData.length - 1][1] >= seriesData[0][1];
   }, [seriesData]);
 
+  useEffect(() => {
+    if (!onPriceChangeUpdate) return;
+    if (prices.length < 2) {
+      onPriceChangeUpdate({ percentage: null, label: range.label });
+      return;
+    }
+    const startPrice = prices[0][1];
+    const endPrice = prices[prices.length - 1][1];
+    let percentage = null;
+    if (startPrice > 0) {
+      percentage = ((endPrice - startPrice) / startPrice) * 100;
+    }
+    onPriceChangeUpdate({ percentage, label: range.label });
+  }, [prices, range.label, onPriceChangeUpdate]);
+
   const color = isPositive ? "#16a34a" : "#dc2626";
   const areaColor = isPositive
     ? ["rgba(22,163,74,0.25)", "rgba(22,163,74,0.02)"]
@@ -105,7 +124,7 @@ export function TokenOverviewChart({
 
     return {
       animation: false,
-      grid: { left: 8, right: 8, top: 20, bottom: 28, containLabel: true },
+      grid: { left: 20, right: 20, top: 20, bottom: 28, containLabel: true },
       tooltip: {
         trigger: "axis",
         backgroundColor: "rgba(0,0,0,0.85)",
@@ -117,19 +136,19 @@ export function TokenOverviewChart({
           const d = new Date(ts);
           const dateStr = isShortRange
             ? d.toLocaleString([], {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : d.toLocaleDateString([], {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              });
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
           return `<div style="padding:6px 10px">
-                        <div style="color:#aaa;margin-bottom:3px;font-size:11px">${dateStr}</div>
-                        <div style="font-size:14px;font-weight:700">${fmt.num.compact.currency(val)}</div>
+                        <div style="color:#aaa;margin-bottom:3px;font-size:12px">${dateStr}</div>
+                        <div style="font-size:16px;font-weight:700">${fmt.num.compact.currency(val)}</div>
                     </div>`;
         },
       },
@@ -139,7 +158,7 @@ export function TokenOverviewChart({
         axisTick: { show: false },
         axisLabel: {
           color: "#888",
-          fontSize: 11,
+          fontSize: 12,
           formatter: (val: number) => {
             const d = new Date(val);
             if (range.days === 1)
@@ -160,7 +179,7 @@ export function TokenOverviewChart({
         axisTick: { show: false },
         axisLabel: {
           color: "#888",
-          fontSize: 11,
+          fontSize: 12,
           formatter: (val: number) => fmt.num.compact.currency(val),
         },
         splitLine: {

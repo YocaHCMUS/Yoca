@@ -2,12 +2,12 @@ import {
     DataTable,
     DataTableSkeleton,
     Table,
-    TableHead,
-    TableRow,
-    TableHeader,
     TableBody,
     TableCell,
     TableContainer,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@carbon/react";
 import { useEffect, useState } from "react";
 import styles from "./TokenMarketsTable.module.scss";
@@ -72,10 +72,10 @@ const HEADERS = [
     { key: "exchange", header: "Exchange" },
     { key: "pair", header: "Pair" },
     { key: "price", header: "Price" },
-    { key: "change", header: "24H Chg" },
-    { key: "volume", header: "24H Volume" },
+    { key: "change", header: "24h Chg" },
+    { key: "volume", header: "24h Volume" },
     { key: "liquidity", header: "Liquidity" },
-    { key: "txns", header: "Txns 24H" },
+    { key: "txns", header: "Txns 24h" },
 ];
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {

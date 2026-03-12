@@ -53,6 +53,12 @@ type ErrorResponse<R, S extends number> = R extends { status: infer U }
 
 type SuccessResponse<R, S extends number> = R extends { status: S } ? R : never;
 
+type UseGetConfig<Success, Transformed> = {
+  options?: ClientRequestOptions;
+  select?: (data: Success) => Transformed;
+  enabled?: boolean;
+};
+
 export function useGet<
   T extends { $get: any; $url: any },
   SuccessStatus extends number,
@@ -64,29 +70,25 @@ export function useGet<
   request: T,
   successStatus: SuccessStatus,
   ...params: HasRequiredKeys<GetInput<T>> extends true
-    ? [
-        args: GetInput<T>,
-        options?: ClientRequestOptions,
-        select?: (data: Success) => Transformed,
-      ]
-    : [
-        args?: GetInput<T>,
-        options?: ClientRequestOptions,
-        select?: (data: Success) => Transformed,
-      ]
+    ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
+    : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
 ) {
   type Error = ErrorResponse<Response, SuccessStatus>;
 
-  const [args, options, select] = params;
+  const [args, config] = params;
+  const { options, select, enabled = true } = config ?? {};
 
-  return useSWR<Transformed, Error>(request.$url(args).pathname, async () => {
-    const res = await (request.$get as any)(...params);
-    if (res.status != successStatus) {
-      throw res;
-    }
+  return useSWR<Transformed, Error>(
+    enabled ? request.$url(args).href : null,
+    async () => {
+      const res = await (request.$get as any)(args, options);
+      if (res.status != successStatus) {
+        throw res;
+      }
 
-    const json = await res.json();
+      const json = await res.json();
 
-    return select ? select(json as Success) : (json as Transformed);
-  });
+      return select ? select(json as Success) : (json as Transformed);
+    },
+  );
 }

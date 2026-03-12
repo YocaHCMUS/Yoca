@@ -73,29 +73,32 @@ export const tokenMeta = pgTable("token_meta", {
   name: varchar("name").notNull(),
   symbol: varchar("symbol").notNull(),
   imageUrl: varchar("image_url"),
-  description: varchar("description"),
-  coingeckoId: varchar("coingecko_id"),
 
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const tokenDetails = pgTable("token_details", {
+  address: varchar("address", { length: 44 }).primaryKey(),
+  decimals: integer("decimals").notNull(),
+  coingeckoId: varchar("coingecko_id"),
+  description: varchar("description"),
   linkHomepage: varchar("homepage"),
   linkDiscord: varchar("link_discord"),
   twitterScreenName: varchar("twitter_screen_name"),
   telegramChannel: varchar("telegram_channel"),
-  linkBlockchainSites: text("link_blockchain_sites"), // JSON array of explorer URLs
-  categories: text("categories"), // JSON array of category strings
-  platforms: text("platforms"), // JSON object {"ethereum":"0x...", "solana":"..."}
+  linkBlockchainSites: varchar("link_blockchain_sites").array(),
+  categories: varchar("categories").array(),
 
   updatedAt: timestamp("updated_at")
     .notNull()
-    .defaultNow()
     .$onUpdate(() => new Date()),
 });
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
-  //priceBtc: decimal("price_btc"),
-  //priceChangeBtc24h: decimal("price_change_btc_24h"),
 
   marketCapRank: integer("market_cap_rank"),
   high24h: decimal("high_24h"),
@@ -187,9 +190,8 @@ export const tokenPoolData = pgTable("token_pool_data", {
   sellVolumeUsd6h: decimal("sell_volume_usd_6h"),
   sellVolumeUsd24h: decimal("sell_volume_usd_24h"),
 
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at"),
+  topPoolsUpdatedAt: timestamp("top_pools_updated_at"),
 });
 
 export const tokenTopPools = pgTable(
@@ -574,6 +576,7 @@ export const walletUserTags = pgTable(
 
 // #region Types
 export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
+export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;

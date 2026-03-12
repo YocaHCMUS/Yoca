@@ -79,6 +79,10 @@ export const userPayloadSchema = z.object({
   displayName: z.string().nullable(),
 });
 
+export const searchQuerySchema = z.object({
+  q: z.string().optional(),
+});
+
 // Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,
