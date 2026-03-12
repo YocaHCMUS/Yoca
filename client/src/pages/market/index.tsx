@@ -1,7 +1,11 @@
 import client from "@/api/main";
+import TokenTreeMap, {
+  type TokenTreeMapNode,
+} from "@/components/charts/TokenTreeMap";
 import Tble from "@/components/Tble";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
+import { ELLIPSIS } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { Stack, Tooltip } from "@carbon/react";
@@ -32,6 +36,53 @@ export default function MarketPage() {
   );
 
   const loading = topTokens.isLoading || meta.isLoading || marketData.isLoading;
+
+  const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
+    if (!topTokens.data || !meta.data || !marketData.data) return [];
+
+    const addressToMeta = Object.fromEntries(
+      meta.data.map((m) => [m.address, m]),
+    );
+    const addressToMarket = marketData.data;
+
+    const data = topTokens.data.map((token) => {
+      const tokenMeta = addressToMeta[token.address];
+      const tokenMarket = addressToMarket[token.address];
+
+      return {
+        imgUrl: tokenMeta.imageUrl || "",
+        symbol: tokenMeta.symbol.toUpperCase(),
+        value: tokenMarket.marketCap,
+        tooltips: [
+          {
+            label: "Price",
+            value: tokenMarket.priceUsd,
+            valueFmtr: fmt.num.currency,
+          },
+          {
+            label: "24h Price",
+            value: tokenMarket.priceChange24h,
+            valueFmtr: fmt.num.percent,
+          },
+          {
+            label: "Market Cap",
+            value: tokenMarket.marketCap,
+            valueFmtr: fmt.num.currency,
+          },
+          {
+            label: "24h Volume",
+            value: tokenMarket.volume24h,
+            valueFmtr: fmt.num.currency,
+          },
+        ],
+        trendValue: tokenMarket.priceChange24h,
+        trendValueFmtr: fmt.num.percent,
+        link: `/token/${token.address}`,
+      };
+    });
+
+    return data;
+  }, [topTokens.data, meta.data, marketData.data, fmt]);
 
   const rows = useMemo(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
@@ -66,7 +117,7 @@ export default function MarketPage() {
                 <small>
                   {" - "}
                   {tokenMeta.name.length > 30
-                    ? tokenMeta.name.slice(0, 30) + "…"
+                    ? tokenMeta.name.slice(0, 30) + ELLIPSIS
                     : tokenMeta.name}
                 </small>
               </Tooltip>
@@ -106,52 +157,45 @@ export default function MarketPage() {
         ),
       };
     });
-  }, [topTokens.data, meta.data, marketData.data]);
+  }, [topTokens.data, meta.data, marketData.data, fmt]);
 
   return (
     <PageWrapper>
+      <TokenTreeMap loading={loading} data={treeMapData} height={500} />
       <Tble
         loading={loading}
         headers={[
           {
             key: "rank",
             header: "#",
-            style: { width: "50px" },
           },
           {
             key: "token",
             header: "Token",
-            style: { width: "200px" },
           },
           {
             key: "price",
             header: "Price",
-            style: { width: "120px" },
           },
           {
             key: "change24h",
             header: "24h %",
-            style: { width: "100px" },
           },
           {
             key: "change7d",
             header: "7d %",
-            style: { width: "100px" },
           },
           {
             key: "change30d",
             header: "30d %",
-            style: { width: "100px" },
           },
           {
             key: "marketCap",
             header: "Market Cap",
-            style: { width: "150px" },
           },
           {
             key: "volume24h",
             header: "24h Volume",
-            style: { width: "150px" },
           },
         ]}
         rows={rows}

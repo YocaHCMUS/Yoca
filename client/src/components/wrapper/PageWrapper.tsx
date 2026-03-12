@@ -224,9 +224,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
 
-      <Content className={styles.mainContent} id="main-content">
-        {children}
-      </Content>
+      <Content id="main-content">{children}</Content>
     </>
   );
 }

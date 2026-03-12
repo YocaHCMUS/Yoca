@@ -7,10 +7,17 @@ export const langCode = "en-US";
 export const format = {
   num: defineNumberFormat(langCode, {
     currency: {
+      // > 1, 4 decimals
+      // eg: $1.246678 -> $1.2465
+      // eg: $1.246 -> $1.246
+      // 0.01 - 1, 4 decimals
+      // 0.0001 - 0.01, 6 decimals
+      // eg: $81.00147367 -> $81.001474
+      // < 0.0001, 8 decimals
       currency: "USD",
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 32,
+      maximumFractionDigits: 4,
     },
     decimal: {
       minimumFractionDigits: 0,
