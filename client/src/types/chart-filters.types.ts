@@ -92,6 +92,9 @@ export interface ExportMetadata {
   
   /** Number of data points */
   dataPointCount: number;
+
+  /** Additional component-specific filter labels */
+  extraFilters?: Record<string, string>;
 }
 
 /**

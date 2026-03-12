@@ -188,12 +188,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         if ('wallets' in data && data.wallets) {
           // Per-wallet data
           data.wallets.forEach((wallet: any) => {
+            const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
             csv.push({
               id: `asset-distribution-${wallet.walletAddress}`,
               name: `Assets Distribution - ${wallet.walletAddress}`,
               type: 'pie',
               visible: true,
-              data: wallet.data.map((a: AssetItem) => ({
+              data: grouped.map((a) => ({
                 name: a.name,
                 value: a.value,
               })),
@@ -201,19 +202,23 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           });
         } else if ('data' in data && data.data) {
           // Aggregated data
+          const grouped = applyGrouping(data.data as AssetItem[], topN, minPct, othersLabel);
           csv.push({
             id: 'asset-distribution',
             name: 'Assets Distribution',
             type: 'pie',
             visible: true,
-            data: data.data.map((a: AssetItem) => ({
+            data: grouped.map((a) => ({
               name: a.name,
               value: a.value,
             })),
           });
         }
         
-        exportCSV(csv, filters);
+        exportCSV(csv, { ...filters, wallets: [] }, {
+          'Top N': topN === 0 ? 'All' : `Top ${topN}`,
+          'Min %': minPct === 0 ? 'All' : `>${minPct}%`,
+        });
         return;
       }
 
@@ -227,7 +232,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         ? exportPNG(instance as any, filters)
         : exportSVG(instance as any, filters);
     },
-    [data, filters, exportPNG, exportSVG, exportCSV]
+    [data, filters, topN, minPct, othersLabel, exportPNG, exportSVG, exportCSV]
   );
 
   /**
