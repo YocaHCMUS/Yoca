@@ -64,7 +64,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
             id: pool.id,
             rank: idx + 1,
             exchange: dexLabel(dexId),
-            pair: { value: p.name, poolAddress: p.address },
+            pair: p.name,
             price: fmt.num.currency(Number(p.base_token_price_usd)),
             change: { value: chgNum, text: `${chgNum >= 0 ? "+" : ""}${chgNum.toFixed(2)}%`, positive: chgNum >= 0 },
             volume: fmt.num.compact.currency(Number(p.volume_usd?.h24)),

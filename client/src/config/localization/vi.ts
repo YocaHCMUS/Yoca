@@ -1,12 +1,9 @@
 import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import { getUsdToVndRate } from "./util/exchange-service";
 
 export const langCode = "vi-VN";
-
-function mockGetUsdToVndRate(): number {
-  return 25_000;
-}
 
 export const format = {
   num: defineNumberFormat(
@@ -14,7 +11,7 @@ export const format = {
     {
       currency: {
         currency: "VND",
-        currencyDisplay: "narrowSymbol",
+        currencyDisplay: "code",
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
       },
@@ -31,7 +28,7 @@ export const format = {
         maximumFractionDigits: 2,
       },
     },
-    mockGetUsdToVndRate,
+    getUsdToVndRate,
   ),
   datetime: defineDateTimeFormat(langCode, {
     datePattern: "DD/MM/YYYY",

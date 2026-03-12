@@ -9,6 +9,20 @@ type NullableDayJsConfig = dayjs.ConfigType | null;
 type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
 
+/**
+ * Determines the number of decimal places to display for a numeric value.
+ * The rule is based on the fractional part of the absolute value:
+ *   - frac in [0.01, 1)      → 4 decimals  e.g. $1.246678 → $1.2467
+ *   - frac in [0.0001, 0.01) → 6 decimals  e.g. $81.00147367 → $81.001474
+ *   - frac < 0.0001           → 8 decimals
+ */
+function resolveDecimals(value: number): number {
+  const frac = Math.abs(value) % 1;
+  if (frac >= 0.01) return 4;
+  if (frac >= 0.0001) return 6;
+  return 8;
+}
+
 export function defineNumberFormat(
   langCode: string,
   styleFormatMap: Record<Style, Intl.NumberFormatOptions>,
@@ -26,21 +40,6 @@ export function defineNumberFormat(
     // Token symbols (SOL, BONK, etc.) are NOT valid Intl.NumberFormat units.
     // Always use "decimal" formatting and append the symbol as a text suffix.
     const effectiveStyle = style === "unit" ? "decimal" : style;
-    const key = `${effectiveStyle}|${notation}`;
-
-    if (!formatterMap.has(key)) {
-      const styleOpts = { ...styleFormatMap[effectiveStyle] };
-      if (notation === "compact") {
-        styleOpts.minimumFractionDigits = 0;
-        styleOpts.maximumFractionDigits = 2;
-      }
-      let numFmt = new Intl.NumberFormat(langCode, {
-        ...styleOpts,
-        notation,
-        style: effectiveStyle,
-      });
-      formatterMap.set(key, numFmt);
-    }
 
     if (!value) return nullDisplay;
 
@@ -50,6 +49,25 @@ export function defineNumberFormat(
         : style == "percent"
           ? value / 100.0
           : value;
+
+    // Pick decimal precision based on the fractional part of the value.
+    let key = `${effectiveStyle}|${notation}`;
+    let extraOptions: Intl.NumberFormatOptions = {};
+    if (effectiveStyle === "currency" || effectiveStyle === "decimal") {
+      const decimals = resolveDecimals(exchangedValue);
+      key = `${key}|${decimals}`;
+      extraOptions = { maximumFractionDigits: decimals };
+    }
+
+    if (!formatterMap.has(key)) {
+      const numFmt = new Intl.NumberFormat(langCode, {
+        ...styleFormatMap[effectiveStyle],
+        ...extraOptions,
+        notation,
+        style: effectiveStyle,
+      });
+      formatterMap.set(key, numFmt);
+    }
 
     const formatted = formatterMap
       .get(key)!
