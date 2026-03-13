@@ -43,31 +43,31 @@ import sharedStyles from '../shared/ChartStyle.module.scss';
 export interface PnLChartProps {
   /** Chart title */
   title?: string;
-  
+
   /** Chart minimum height in pixels */
   minHeight?: number;
-  
+
   /** Initial time period */
   initialTimePeriod?: TimePeriod;
-  
+
   /** Initial wallets */
   initialWallets?: string[];
-  
+
   /** Data aggregation level */
   aggregation?: 'daily' | 'weekly' | 'monthly';
-  
+
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
-  
+
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-  
+
   /** Custom CSS class */
   className?: string;
-  
+
   /** Initial view mode (default: 'both') */
   initialViewMode?: 'daily' | 'cumulative' | 'both';
-  
+
   /** Initial filters */
   initialFilters?: {
     timePeriod?: TimePeriod;
@@ -99,7 +99,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // State for view mode
   const [viewMode, setViewMode] = useState<'daily' | 'cumulative' | 'both'>(initialViewMode);
 
@@ -117,7 +117,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
    */
   const query = useMemo<PnLRequestParams>(
     () => ({
-      timePeriod: filters.timePeriod,
+      period: filters.timePeriod,
       wallets: walletsString,
       aggregation,
       timezone,
@@ -148,25 +148,25 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     const profitColor = chartTheme.colorPalette[1]; // Green
     const lossColor = chartTheme.colorPalette[2]; // Red
     const cumulativeColor = chartTheme.colorPalette[0]; // Blue
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Extract timestamps and values
     const timestamps = dailyPnLData.map((item: { timestamp: number; value: number }) => item.timestamp);
     const dailyValues = dailyPnLData.map((item: { timestamp: number; value: number }) => item.value);
     const cumulativeValues = cumulativePnLData.map((item: { timestamp: number; value: number }) => item.value);
-    
+
     // Format X-axis dates
     const xAxisData = timestamps.map((ts: number) => formatTimestampWithTimezone(ts, timezone, 'MM/dd'));
-    
+
     // Determine which series to show
     const showDaily = viewMode === 'daily' || viewMode === 'both';
     const showCumulative = viewMode === 'cumulative' || viewMode === 'both';
-    
+
     // Build series array
     const series: any[] = [];
-    
+
     if (showDaily) {
       series.push({
         name: tr('charts.pnlChart.dailyPnL'),
@@ -187,7 +187,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       });
     }
-    
+
     if (showCumulative) {
       series.push({
         name: tr('charts.pnlChart.cumulativePnL'),
@@ -213,10 +213,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       });
     }
-    
+
     // Build yAxis configuration
     const yAxis: any[] = [];
-    
+
     if (viewMode === 'both') {
       // Dual-axis mode
       yAxis.push({
@@ -247,7 +247,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           },
         },
       });
-      
+
       yAxis.push({
         ...baseOption.yAxis,
         type: 'value',
@@ -291,12 +291,12 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
       });
     }
-    
+
     // Build legend data
     const legendData: string[] = [];
     if (showDaily) legendData.push(tr('charts.pnlChart.dailyPnL'));
     if (showCumulative) legendData.push(tr('charts.pnlChart.cumulativePnL'));
-    
+
     return {
       ...baseOption,
       title: walletLabel ? {
@@ -327,14 +327,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          
+
           const timestamp = timestamps[params[0].dataIndex];
           const date = formatTimestampWithTimezone(timestamp, timezone, 'PPP');
           const dailyValue = dailyValues[params[0].dataIndex];
           const cumulativeValue = cumulativeValues[params[0].dataIndex];
-          
+
           let tooltipContent = createTooltipHeader(date);
-          
+
           if (showDaily) {
             tooltipContent += createTooltipRow(
               tr('charts.pnlChart.dailyPnL'),
@@ -342,14 +342,14 @@ export const PnLChart: React.FC<PnLChartProps> = ({
               { valueColor: dailyValue >= 0 ? profitColor : lossColor }
             );
           }
-          
+
           if (showCumulative) {
             tooltipContent += createTooltipRow(
               tr('charts.pnlChart.cumulativePnL'),
               formatCurrency(cumulativeValue)
             );
           }
-          
+
           return tooltipContent;
         },
       },

@@ -9,6 +9,8 @@ const hoisted = vi.hoisted(() => {
     const getCachedWalletTransactionsHeliusMock = vi.fn();
     const getTokenMarketDataMock = vi.fn();
     const getTokenHistoricalDataMock = vi.fn();
+    const getHourlyTokenMarketChartMock = vi.fn();
+    const getDailyTokenMarketChartMock = vi.fn();
     const saveTransactionsHeliusCacheMock = vi.fn();
 
     const db = {
@@ -52,6 +54,8 @@ const hoisted = vi.hoisted(() => {
         getCachedWalletTransactionsHeliusMock,
         getTokenMarketDataMock,
         getTokenHistoricalDataMock,
+        getHourlyTokenMarketChartMock,
+        getDailyTokenMarketChartMock,
         saveTransactionsHeliusCacheMock,
         db,
     };
@@ -116,7 +120,13 @@ vi.mock("@sv/services/tokens/token-history.js", () => ({
     getTokenHistoricalData: hoisted.getTokenHistoricalDataMock,
 }));
 
+vi.mock("@sv/services/tokens/token-chart.js", () => ({
+    getHourlyTokenMarketChart: hoisted.getHourlyTokenMarketChartMock,
+    getDailyTokenMarketChart: hoisted.getDailyTokenMarketChartMock,
+}));
+
 import {
+    getCumulativePnL,
     getWalletTokenBalanceHistory,
     getWalletTransactionHelius,
 } from "../../src/services/wallet/walletData.service.ts";
@@ -130,6 +140,16 @@ function getSeriesValueByDate(
     return found!.value;
 }
 
+function getPointValueByDay(
+    series: Array<{ timestamp: number; value: number }>,
+    day: string,
+): number {
+    const targetTs = new Date(`${day}T00:00:00.000Z`).getTime();
+    const point = series.find((item) => item.timestamp === targetTs);
+    expect(point).toBeDefined();
+    return point!.value;
+}
+
 describe("walletData.service - token USD historical pricing", () => {
     beforeEach(() => {
         vi.useFakeTimers();
@@ -141,6 +161,8 @@ describe("walletData.service - token USD historical pricing", () => {
         hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.getTokenHistoricalDataMock.mockReset();
+        hoisted.getHourlyTokenMarketChartMock.mockReset();
+        hoisted.getDailyTokenMarketChartMock.mockReset();
         hoisted.saveTransactionsHeliusCacheMock.mockReset();
 
         hoisted.getWalletBalancesMock.mockReturnValue(null);
@@ -227,6 +249,129 @@ describe("walletData.service - token USD historical pricing", () => {
     });
 });
 
+describe("walletData.service - cumulative PnL", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-03-12T00:00:00.000Z"));
+
+        hoisted.getWalletBalancesMock.mockReset();
+        hoisted.fetchHeliusSolanaPortfolioMock.mockReset();
+        hoisted.fetchAllTransactionHistoryMock.mockReset();
+        hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
+        hoisted.getTokenMarketDataMock.mockReset();
+        hoisted.getHourlyTokenMarketChartMock.mockReset();
+        hoisted.getDailyTokenMarketChartMock.mockReset();
+        hoisted.saveTransactionsHeliusCacheMock.mockReset();
+
+        hoisted.getWalletBalancesMock.mockReturnValue(null);
+        hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("computes cumulative PnL from historical prices and token balance snapshots", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 100,
+                priceUsd: 5,
+                valueUsd: 500,
+            },
+        ]);
+
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-deposit",
+                    timestamp: "2026-03-11T12:00:00.000Z",
+                    slot: 1,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: 10, decimals: 0 },
+                    ],
+                },
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-withdraw",
+                    timestamp: "2026-03-09T12:00:00.000Z",
+                    slot: 2,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: -20, decimals: 0 },
+                    ],
+                },
+            ],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([
+            { unixTimestampMs: new Date("2026-03-05T00:00:00.000Z").getTime(), price: 1 },
+            { unixTimestampMs: new Date("2026-03-06T00:00:00.000Z").getTime(), price: 1.5 },
+            { unixTimestampMs: new Date("2026-03-07T00:00:00.000Z").getTime(), price: 2 },
+            { unixTimestampMs: new Date("2026-03-08T00:00:00.000Z").getTime(), price: 2.5 },
+            { unixTimestampMs: new Date("2026-03-09T00:00:00.000Z").getTime(), price: 3 },
+            { unixTimestampMs: new Date("2026-03-10T00:00:00.000Z").getTime(), price: 3.5 },
+            { unixTimestampMs: new Date("2026-03-11T00:00:00.000Z").getTime(), price: 4 },
+            { unixTimestampMs: new Date("2026-03-12T00:00:00.000Z").getTime(), price: 5 },
+        ]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 5 },
+        });
+
+        const result = await getCumulativePnL("wallet-1", "solana", "7D", "daily");
+
+        expect(result.dailyPnL.length).toBe(8);
+        expect(result.cumulativePnL.length).toBe(8);
+        expect(result.startBalance).toBe(110);
+        expect(result.endBalance).toBe(500);
+
+        expect(getPointValueByDay(result.dailyPnL, "2026-03-10")).toBe(-15);
+        expect(getPointValueByDay(result.dailyPnL, "2026-03-12")).toBe(140);
+
+        expect(getPointValueByDay(result.cumulativePnL, "2026-03-05")).toBe(0);
+        expect(getPointValueByDay(result.cumulativePnL, "2026-03-12")).toBe(390);
+    });
+
+    it("returns zero-valued series when token prices are missing", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 50,
+                priceUsd: undefined,
+                valueUsd: 0,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([]);
+        hoisted.getDailyTokenMarketChartMock.mockResolvedValue([]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({});
+
+        const result = await getCumulativePnL("wallet-1", "solana", "7D", "daily");
+
+        expect(result.dailyPnL.length).toBeGreaterThan(1);
+        expect(result.cumulativePnL.length).toBe(result.dailyPnL.length);
+        expect(result.startBalance).toBe(0);
+        expect(result.endBalance).toBe(0);
+        expect(result.dailyPnL.every((point) => point.value === 0)).toBe(true);
+        expect(result.cumulativePnL.every((point) => point.value === 0)).toBe(true);
+    });
+});
+
 describe("walletData.service - cache coverage sync behavior", () => {
     beforeEach(() => {
         vi.useFakeTimers();
@@ -235,6 +380,8 @@ describe("walletData.service - cache coverage sync behavior", () => {
         hoisted.fetchAllTransactionHistoryMock.mockReset();
         hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
         hoisted.saveTransactionsHeliusCacheMock.mockReset();
+        hoisted.getHourlyTokenMarketChartMock.mockReset();
+        hoisted.getDailyTokenMarketChartMock.mockReset();
 
         hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
         hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);

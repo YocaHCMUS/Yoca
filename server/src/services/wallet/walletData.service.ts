@@ -13,6 +13,10 @@ import {
 import { and, desc, eq, sql } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
+import {
+  getDailyTokenMarketChart,
+  getHourlyTokenMarketChart,
+} from "../tokens/token-chart.js";
 import { getTokenHistoricalData } from "../tokens/token-history.js";
 import {
   fetchAllTransactionHistory,
@@ -1369,6 +1373,203 @@ export interface BalanceDataPoint {
   date: string;
 }
 
+export interface PnLDataPoint {
+  timestamp: number;
+  value: number;
+}
+
+export type PnLAggregation = "daily" | "weekly" | "monthly";
+
+export interface WalletCumulativePnLResult {
+  dailyPnL: PnLDataPoint[];
+  cumulativePnL: PnLDataPoint[];
+  startBalance: number;
+  endBalance: number;
+  realizedPnL?: number;
+}
+
+type PriceTimelinePoint = {
+  timestampMs: number;
+  price: number;
+};
+
+const MAX_PNL_SNAPSHOT_POINTS = 1500;
+
+function roundUsd(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function getRangeStartMs(
+  nowMs: number,
+  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All",
+): number {
+  if (timePeriod === "All") {
+    return 0;
+  }
+
+  const dayCountByPeriod: Record<"7D" | "30D" | "60D" | "90D" | "1Y", number> = {
+    "7D": 7,
+    "30D": 30,
+    "60D": 60,
+    "90D": 90,
+    "1Y": 365,
+  };
+
+  return nowMs - dayCountByPeriod[timePeriod] * DAY_MS;
+}
+
+function getAggregationIntervalMs(aggregation: PnLAggregation): number {
+  if (aggregation === "weekly") {
+    return 7 * DAY_MS;
+  }
+  if (aggregation === "monthly") {
+    return 30 * DAY_MS;
+  }
+  return DAY_MS;
+}
+
+function normalizeMint(mint: unknown): string {
+  const raw = String(mint ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw === "SOL" ? SOL_MINT : raw;
+}
+
+function parseTimestampMs(timestamp: string): number {
+  const ms = Date.parse(timestamp);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function normalizeBalanceDelta(
+  change: { amount: number; decimals: number },
+): number {
+  const amountRaw = Number(change.amount);
+  const decimals = Number(change.decimals);
+  if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) {
+    return 0;
+  }
+
+  return amountRaw / 10 ** Math.max(0, decimals);
+}
+
+function buildSnapshotTimestamps(
+  startMs: number,
+  endMs: number,
+  intervalMs: number,
+): number[] {
+  if (endMs <= startMs) {
+    return [endMs];
+  }
+
+  const totalRangeMs = endMs - startMs;
+  const expectedPointCount = Math.floor(totalRangeMs / intervalMs) + 1;
+  const effectiveIntervalMs =
+    expectedPointCount > MAX_PNL_SNAPSHOT_POINTS
+      ? Math.max(intervalMs, Math.ceil(totalRangeMs / (MAX_PNL_SNAPSHOT_POINTS - 1)))
+      : intervalMs;
+
+  const points: number[] = [];
+  for (let ts = startMs; ts <= endMs; ts += effectiveIntervalMs) {
+    points.push(ts);
+  }
+
+  if (points.length === 0 || points[points.length - 1] !== endMs) {
+    points.push(endMs);
+  }
+
+  return points;
+}
+
+function normalizePriceTimeline(
+  rows: Array<{ unixTimestampMs: number; price: unknown }>,
+): PriceTimelinePoint[] {
+  return rows
+    .map((row) => ({
+      timestampMs: Number(row.unixTimestampMs),
+      price: Number(row.price),
+    }))
+    .filter(
+      (point) =>
+        Number.isFinite(point.timestampMs) &&
+        Number.isFinite(point.price) &&
+        point.price > 0,
+    )
+    .sort((a, b) => a.timestampMs - b.timestampMs);
+}
+
+function findPriceAtOrBefore(
+  timeline: PriceTimelinePoint[],
+  timestampMs: number,
+): number | null {
+  if (timeline.length === 0) {
+    return null;
+  }
+
+  let left = 0;
+  let right = timeline.length - 1;
+  let foundIndex = -1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const point = timeline[mid];
+
+    if (point.timestampMs <= timestampMs) {
+      foundIndex = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  if (foundIndex >= 0) {
+    return timeline[foundIndex].price;
+  }
+
+  return timeline[0].price;
+}
+
+function toCurrentPriceFallback(
+  marketData: Record<string, { priceUsd?: number | string }>,
+): Record<string, number> {
+  const fallback: Record<string, number> = {};
+  for (const [tokenAddress, entry] of Object.entries(marketData)) {
+    const value = Number(entry?.priceUsd ?? Number.NaN);
+    if (Number.isFinite(value) && value > 0) {
+      fallback[tokenAddress] = value;
+    }
+  }
+  return fallback;
+}
+
+function calculatePortfolioValueUsd(
+  balances: Map<string, number>,
+  timelinesByToken: Map<string, PriceTimelinePoint[]>,
+  currentPriceFallback: Record<string, number>,
+  timestampMs: number,
+): number {
+  let totalValueUsd = 0;
+
+  for (const [tokenAddress, rawBalance] of balances.entries()) {
+    const normalizedBalance = Number(rawBalance);
+    if (!Number.isFinite(normalizedBalance) || normalizedBalance <= 0) {
+      continue;
+    }
+
+    const timeline = timelinesByToken.get(tokenAddress) ?? [];
+    const historicalPrice = findPriceAtOrBefore(timeline, timestampMs);
+    const priceUsd = historicalPrice ?? currentPriceFallback[tokenAddress] ?? 0;
+
+    if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+      continue;
+    }
+
+    totalValueUsd += normalizedBalance * priceUsd;
+  }
+
+  return totalValueUsd;
+}
+
 /**
  * Get historical wallet balance by reconstructing from current state and transaction history
  * 
@@ -1593,6 +1794,211 @@ export async function getWalletBalanceHistory(
         date: now.toISOString(),
       },
     ];
+  }
+}
+
+/**
+ * Get cumulative wallet PnL using transaction-derived balance snapshots
+ * and historical token prices from cached token chart services.
+ */
+export async function getCumulativePnL(
+  address: string,
+  chain: SupportedChain,
+  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D",
+  aggregation: PnLAggregation = "daily",
+): Promise<WalletCumulativePnLResult> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+  const nowMs = Date.now();
+  const startMs = getRangeStartMs(nowMs, timePeriod);
+  const intervalMs = getAggregationIntervalMs(aggregation);
+  const snapshots = buildSnapshotTimestamps(startMs, nowMs, intervalMs);
+
+  const zeroSeries: PnLDataPoint[] = snapshots.map((timestamp) => ({
+    timestamp,
+    value: 0,
+  }));
+
+  if (effectiveChain !== "solana") {
+    return {
+      dailyPnL: zeroSeries,
+      cumulativePnL: zeroSeries,
+      startBalance: 0,
+      endBalance: 0,
+    };
+  }
+
+  try {
+    const requestedFromSec = Math.floor(startMs / 1000);
+    const requestedToSec = Math.floor(nowMs / 1000);
+
+    const [portfolio, txResponse] = await Promise.all([
+      getWalletPortfolio(address, effectiveChain),
+      getWalletTransactionHelius(address, effectiveChain, {
+        fromSec: requestedFromSec,
+        toSec: requestedToSec,
+      }),
+    ]);
+
+    const balances = new Map<string, number>();
+    const tokenAddresses = new Set<string>();
+
+    for (const item of portfolio) {
+      const tokenAddress = normalizeMint(item.tokenAddress);
+      if (!tokenAddress) {
+        continue;
+      }
+
+      const amount = Number(item.amount ?? 0);
+      if (!Number.isFinite(amount)) {
+        continue;
+      }
+
+      const nextAmount = (balances.get(tokenAddress) ?? 0) + amount;
+      balances.set(tokenAddress, nextAmount);
+      tokenAddresses.add(tokenAddress);
+    }
+
+    const transactions = txResponse.transactions
+      .filter((tx) => {
+        const timestampMs = parseTimestampMs(tx.timestamp);
+        return timestampMs >= startMs && timestampMs <= nowMs;
+      })
+      .sort((a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp));
+
+    for (const tx of transactions) {
+      for (const change of tx.balanceChanges ?? []) {
+        const tokenAddress = normalizeMint(change?.mint);
+        if (!tokenAddress) {
+          continue;
+        }
+        tokenAddresses.add(tokenAddress);
+      }
+    }
+
+    if (tokenAddresses.size === 0) {
+      return {
+        dailyPnL: zeroSeries,
+        cumulativePnL: zeroSeries,
+        startBalance: 0,
+        endBalance: 0,
+      };
+    }
+
+    const tokenAddressList = Array.from(tokenAddresses);
+    const daysSpan = Math.max(
+      1,
+      Math.min(365, Math.ceil((nowMs - startMs) / DAY_MS) + 2),
+    );
+    const useHourlyChart = daysSpan <= 90;
+
+    const [currentMarketData, priceTimelineEntries] = await Promise.all([
+      getTokenMarketData(tokenAddressList),
+      Promise.all(
+        tokenAddressList.map(async (tokenAddress) => {
+          const chartRows = useHourlyChart
+            ? await getHourlyTokenMarketChart(tokenAddress, daysSpan)
+            : await getDailyTokenMarketChart(tokenAddress, daysSpan);
+
+          const timeline = normalizePriceTimeline(
+            chartRows.map((row) => ({
+              unixTimestampMs: row.unixTimestampMs,
+              price: row.price,
+            })),
+          );
+
+          return [tokenAddress, timeline] as const;
+        }),
+      ),
+    ]);
+
+    const timelinesByToken = new Map<string, PriceTimelinePoint[]>(
+      priceTimelineEntries,
+    );
+    const currentPriceFallback = toCurrentPriceFallback(currentMarketData);
+
+    const snapshotsDescending = [...snapshots].sort((a, b) => b - a);
+    const portfolioValuesDescending: PnLDataPoint[] = [];
+    let txIndex = 0;
+
+    for (const snapshotMs of snapshotsDescending) {
+      while (txIndex < transactions.length) {
+        const tx = transactions[txIndex];
+        const txTimestampMs = parseTimestampMs(tx.timestamp);
+        if (txTimestampMs <= snapshotMs) {
+          break;
+        }
+
+        for (const change of tx.balanceChanges ?? []) {
+          const tokenAddress = normalizeMint(change?.mint);
+          if (!tokenAddress) {
+            continue;
+          }
+
+          const balanceDelta = normalizeBalanceDelta({
+            amount: Number(change?.amount ?? 0),
+            decimals: Number(change?.decimals ?? 0),
+          });
+
+          if (!Number.isFinite(balanceDelta) || balanceDelta === 0) {
+            continue;
+          }
+
+          const previousAmount = (balances.get(tokenAddress) ?? 0) - balanceDelta;
+          if (Math.abs(previousAmount) < 1e-12) {
+            balances.delete(tokenAddress);
+          } else {
+            balances.set(tokenAddress, previousAmount);
+          }
+        }
+
+        txIndex += 1;
+      }
+
+      const portfolioValueUsd = calculatePortfolioValueUsd(
+        balances,
+        timelinesByToken,
+        currentPriceFallback,
+        snapshotMs,
+      );
+
+      portfolioValuesDescending.push({
+        timestamp: snapshotMs,
+        value: roundUsd(Math.max(0, portfolioValueUsd)),
+      });
+    }
+
+    const portfolioValues = portfolioValuesDescending.reverse();
+    const startingValue = portfolioValues[0]?.value ?? 0;
+
+    let previousValue = startingValue;
+    const dailyPnL = portfolioValues.map((point, index) => {
+      const periodDelta = index === 0 ? 0 : point.value - previousValue;
+      previousValue = point.value;
+      return {
+        timestamp: point.timestamp,
+        value: roundUsd(periodDelta),
+      };
+    });
+
+    const cumulativePnL = portfolioValues.map((point) => ({
+      timestamp: point.timestamp,
+      value: roundUsd(point.value - startingValue),
+    }));
+
+    return {
+      dailyPnL,
+      cumulativePnL,
+      startBalance: roundUsd(startingValue),
+      endBalance: roundUsd(portfolioValues[portfolioValues.length - 1]?.value ?? 0),
+    };
+  } catch (error) {
+    console.error("[WalletCumulativePnL] Error computing cumulative PnL:", error);
+    return {
+      dailyPnL: zeroSeries,
+      cumulativePnL: zeroSeries,
+      startBalance: 0,
+      endBalance: 0,
+    };
   }
 }
 

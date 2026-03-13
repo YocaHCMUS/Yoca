@@ -8,7 +8,6 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { generatePnLData } from '../../services/mockChartData.service.js';
 import { getHistoricalPnLData } from '../../services/charts/pnlChart.service.js';
 
 /**
@@ -56,41 +55,28 @@ const app = new Hono()
    */
   .get("/", async (c) => {
     try {
-      // Parse and validate query parameters
       const query = c.req.query();
       const params = pnlRequestSchema.parse(query);
 
-      let data;
+      const data = await getHistoricalPnLData(
+        params.wallets,
+        params.period,
+        params.aggregation,
+        "solana",
+      );
 
-      // Use real wallet-backed P&L service when wallets are provided.
-      if (params.wallets.length > 0) {
-        try {
-          data = await getHistoricalPnLData(
-            params.wallets,
-            params.period,
-            params.aggregation,
-            "solana",
-          );
-        } catch (serviceError) {
-          console.error("[PnLChart] Falling back to mock P&L service", serviceError);
-          data = generatePnLData(
-            params.wallets,
-            params.period,
-            params.aggregation,
-          );
-        }
-      } else {
-        // Keep mock response behavior when no wallet is supplied.
-        data = generatePnLData(
-          params.wallets,
-          params.period,
-          params.aggregation,
+      return c.json(data, 200);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return c.json(
+          {
+            error: "Validation error",
+            details: error.issues,
+          },
+          400,
         );
       }
 
-      // Return response
-      return c.json(data, 200);
-    } catch (error) {
       console.error("Error fetching P&L data:", error);
       return c.json(
         {
