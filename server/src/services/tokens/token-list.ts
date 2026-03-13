@@ -10,6 +10,21 @@ import * as cg from "@sv/util/util-coingecko.js";
 import { inArray } from "drizzle-orm";
 import type { CG_Token } from "../_types/token_raw_responses.js";
 
+// Canonical wrapped/native SOL mint on Solana.
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+const SOL_COINGECKO_ID = "solana";
+
+function withSolFallback(
+  tokenAddresses: string[],
+  idLookup: Record<string, string>,
+): Record<string, string> {
+  const next = { ...idLookup };
+  if (tokenAddresses.includes(SOL_MINT) && !next[SOL_MINT]) {
+    next[SOL_MINT] = SOL_COINGECKO_ID;
+  }
+  return next;
+}
+
 export async function getCoinGeckoIdList(
   tokenAddresses: string[],
 ): Promise<Record<string, string>> {
@@ -31,7 +46,7 @@ export async function getCoinGeckoIdList(
     await db.update(coinGeckoTokenListMeta).set({
       lastRefresh: new Date(),
     });
-    return idLookup;
+    return withSolFallback(tokenAddresses, idLookup);
   } else {
     const res = await db
       .select({
@@ -44,7 +59,7 @@ export async function getCoinGeckoIdList(
     const idLookup = Object.fromEntries(
       res.map(({ id, address }) => [address, id]),
     );
-    return idLookup;
+    return withSolFallback(tokenAddresses, idLookup);
   }
 }
 
@@ -115,8 +130,8 @@ export async function fetchCgTokenList(
         });
     }
 
-    return idLookup;
+    return withSolFallback(tokenAddresses, idLookup);
   } else {
-    return {};
+    return withSolFallback(tokenAddresses, {});
   }
 }

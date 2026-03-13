@@ -21,6 +21,11 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
     return [];
   }
   const res: MRL_TopHolders = await resp.json();
+
+  if (res.result.length == 0) {
+    return [];
+  }
+
   const topHolders = res.result.map(
     (raw, idx): TokenTopHolderInsert => ({
       holderAddress: raw.ownerAddress,

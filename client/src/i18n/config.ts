@@ -252,7 +252,7 @@ const resources = {
 
         // Chart titles
         balanceTrend: 'Balance Trend',
-        assetDistribution: 'Asset Distribution',
+        assetDistribution: 'Assets Distribution',
         profitLoss: 'Profit & Loss',
         exchangeComparison: 'Exchange Comparison',
         counterpartyActivity: 'Counterparty Activity',
@@ -269,9 +269,9 @@ const resources = {
           balance: 'Balance',
         },
         assetDistributionChart: {
-          title: 'Asset Distribution',
+          title: 'Assets Distribution',
           totalValue: 'Total Value',
-          asset: 'Asset',
+          asset: 'Assets',
           value: 'Value',
           percentage: 'Percentage',
         },

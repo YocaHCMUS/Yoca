@@ -134,7 +134,7 @@ export function BalanceChart({
   const chartOption = useMemo((): EChartsOption | null => {
     if (!data || 'error' in data) return null;
 
-    const isMultiWallet = data.wallets && data.wallets.length > 1;
+    const isMultiWallet = data.series.length > 1;
     
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);

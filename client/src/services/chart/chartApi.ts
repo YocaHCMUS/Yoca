@@ -252,6 +252,18 @@ export async function fetchTotalTradingVolume(params?: Parameters<typeof client.
 }
 
 /**
+ * Fetch daily trading volume data
+ * GET /api/charts/dailyTradingVolume
+ */
+export async function fetchDailyTradingVolume(params?: Parameters<typeof client.api.charts.dailyTradingVolume.$get>[0]) {
+  const honoParams = params ? { query: params } : undefined;
+  const response = await client.api.charts.dailyTradingVolume.$get(honoParams as any);
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
  * Fetch stablecoin ratio data
  * GET /api/charts/stablecoin-ratio
  * Type automatically inferred from server route via Hono RPC

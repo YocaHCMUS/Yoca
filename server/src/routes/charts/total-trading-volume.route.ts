@@ -8,7 +8,7 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateTotalTradingVolumeData } from '../../services/mockChartData.service.js';
+import { getTotalTradingVolumeFromDb } from '@sv/services/charts/totalTradingVolume.service.js';
 
 /**
  * Request parameter schema for total trading volume endpoint
@@ -51,8 +51,7 @@ const app = new Hono()
       const query = c.req.query();
       const params = totalTradingVolumeRequestSchema.parse(query);
       
-      // Generate total trading volume data
-      const data = generateTotalTradingVolumeData(
+      const data = await getTotalTradingVolumeFromDb(
         params.wallets,
         params.period
       );

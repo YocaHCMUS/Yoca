@@ -44,6 +44,8 @@ export interface TableProps {
     isSortable?: boolean[];
     sortConfigs?: Record<number, SortConfig>; 
     maxHeight?: number;
+    /** Called when the user clicks a data row. Receives the original row array and its index inside dataEntries. */
+    onRowClick?: (row: any[], rowIndex: number) => void;
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -56,7 +58,8 @@ export const Table: React.FC<TableProps> = ({
     dataEntries = [],
     isSortable = [],
     sortConfigs,
-    maxHeight
+    maxHeight,
+    onRowClick,
 }) => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
@@ -567,8 +570,17 @@ export const Table: React.FC<TableProps> = ({
                                 <TableBody>
                                     {rows.map((row, rowIndex) => {
                                         const { key, ...rowProps } = getRowProps({ row });
+                                        const originalRow = paginatedRows[rowIndex];
+                                        const originalIndex = onRowClick
+                                            ? dataEntries.indexOf(originalRow)
+                                            : -1;
                                         return (
-                                            <TableRow key={key} {...rowProps}>
+                                            <TableRow
+                                                key={key}
+                                                {...rowProps}
+                                                onClick={onRowClick ? () => onRowClick(originalRow, originalIndex) : undefined}
+                                                style={onRowClick ? { cursor: 'pointer' } : undefined}
+                                            >
                                                 {row.cells.map((cell, cellIndex) => {
                                                     // Extract raw value and apply renderer/class logic here
                                                     const rawValue = cell.value;

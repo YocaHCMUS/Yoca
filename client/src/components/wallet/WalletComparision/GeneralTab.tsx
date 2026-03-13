@@ -43,8 +43,10 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             <div className={styles.stableCoinChart}>
                 <DailyTradingVolume
                     minHeight={400}
-                    walletAddresses={walletAddresses}
-                    selectedBenchmarks={['SOL']}
+                    initialFilters={{
+                        timePeriod: '30D',
+                        wallets: walletAddresses,
+                    }}
                 />
             </div>
 

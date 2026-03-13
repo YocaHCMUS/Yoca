@@ -9,6 +9,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateBalanceTrend } from '../../services/mockChartData.service.js';
+import { 
+  getWalletBalanceHistory, 
+  type BalanceDataPoint 
+} from '../../services/wallet/walletData.service.js';
+import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for balance trend endpoint
@@ -35,6 +40,7 @@ const app = new Hono()
    * Query Parameters:
    * - timePeriod: '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' (default: '30D')
    * - tokens: Comma-separated token symbols (optional, default: all tokens)
+   * - wallets: Comma-separated wallet addresses (optional)
    * - timezone: IANA timezone string (optional, default: 'UTC')
    *
    * Response:
@@ -57,7 +63,92 @@ const app = new Hono()
       const params = balanceRequestSchema.parse(query);
       console.log('[balance.route] Parsed params:', params);
 
-      // Generate balance trend data
+      // If wallets parameter is provided, fetch actual balance history
+      if (params.wallets) {
+        const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
+        
+        if (walletAddresses.length > 0) {
+          try {
+            // For single wallet, return direct data
+            if (walletAddresses.length === 1) {
+              const address = walletAddresses[0];
+              const chain: SupportedChain = 'solana'; // Default chain
+              
+              const balanceHistory = await getWalletBalanceHistory(
+                address, 
+                chain, 
+                params.timePeriod
+              );
+              
+              // Format response to match client expectations (series structure)
+              const seriesName = params.tokens || 'Total';
+              
+              return c.json({
+                series: [
+                  {
+                    name: seriesName,
+                    data: balanceHistory.map(point => ({
+                      timestamp: point.timestamp,
+                      value: point.value,
+                    })),
+                  }
+                ],
+                wallets: undefined, // Single wallet, not shown in legend
+                metadata: {
+                  timePeriod: params.timePeriod,
+                  aggregation: 'daily',
+                  dataPoints: balanceHistory.length,
+                  currency: 'USD',
+                  timezone: params.timezone || 'UTC',
+                },
+              }, 200);
+            }
+            
+            // For multiple wallets, create series for each wallet
+            const chain: SupportedChain = 'solana';
+            const allHistories = await Promise.all(
+              walletAddresses.map(addr => 
+                getWalletBalanceHistory(addr, chain, params.timePeriod)
+              )
+            );
+            
+            // Build series array (one per wallet)
+            const series = walletAddresses.map((address, index) => {
+              const history = allHistories[index];
+              return {
+                name: `${address.substring(0, 8)}...`, // Shortened address for legend
+                data: history.map(point => ({
+                  timestamp: point.timestamp,
+                  value: point.value,
+                })),
+              };
+            });
+            
+            return c.json({
+              series,
+              wallets: walletAddresses,
+              metadata: {
+                timePeriod: params.timePeriod,
+                aggregation: 'daily',
+                dataPoints: allHistories[0]?.length ?? 0,
+                currency: 'USD',
+                timezone: params.timezone || 'UTC',
+              },
+            }, 200);
+          } catch (error) {
+            console.error("[BalanceChart] Error fetching wallet balance history:", error);
+            // Fall back to mock data on error
+            const data = generateBalanceTrend(
+              params.timePeriod,
+              params.tokens,
+              params.wallets,
+            );
+            return c.json(data, 200);
+          }
+        }
+      }
+
+      // Generate balance trend data (mock) if no wallets specified
       const data = generateBalanceTrend(
         params.timePeriod,
         params.tokens,

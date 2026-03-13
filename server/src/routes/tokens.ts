@@ -10,11 +10,34 @@ import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
 const app = new Hono()
+  .get(
+    "/details/:addresses",
+    validate("param", addressListSchema),
+    async (c) => {
+      try {
+        const { addresses } = c.req.valid("param");
+
+        const meta = await tokenService.getTokenDetails(addresses);
+
+        if (meta) {
+          return c.json(meta, statusCode.Ok);
+        } else {
+          return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.BadGateway);
+        }
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
   .get("/meta/:addresses", validate("param", addressListSchema), async (c) => {
     try {
       const { addresses } = c.req.valid("param");
 
-      const meta = await tokenService.getTokenMetaList(addresses);
+      const meta = await tokenService.getTokenMeta(addresses);
 
       if (meta) {
         return c.json(meta, statusCode.Ok);

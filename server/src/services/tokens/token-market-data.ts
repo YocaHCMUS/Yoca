@@ -13,9 +13,9 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    fullyDilutedValuation: raw.fully_diluted_valuation,
-    marketCap: raw.market_cap,
-    priceUsd: raw.current_price,
+    fullyDilutedValuation: raw.fully_diluted_valuation!,
+    marketCap: raw.market_cap!,
+    priceUsd: raw.current_price!,
     totalSupply: raw.total_supply,
     updatedAt: new Date(),
     marketCapRank: raw.market_cap_rank,
@@ -35,45 +35,31 @@ export function getMarketDataFromRaw(
     maxSupply: raw.max_supply,
     ath: raw.ath,
     athChangePercentage: raw.ath_change_percentage,
-    athDate: new Date(raw.ath_date),
+    athDate: raw.ath_date ? new Date(raw.ath_date) : null,
     atl: raw.atl,
     atlChangePercentage: raw.atl_change_percentage,
-    atlDate: new Date(raw.atl_date),
-    volume24h: raw.total_volume,
+    atlDate: raw.atl_date ? new Date(raw.atl_date) : null,
+    volume24h: raw.total_volume!,
   };
 }
 
-// https://docs.coingecko.com/v3.0.1/reference/coins-markets
 async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
   const cgIds = Object.keys(cgIdToAddress);
   if (cgIds.length == 0) {
     return {};
   }
 
-  const cgEndpoint = cg.getEndpoint(`/coins/markets`);
-  cgEndpoint.search = new URLSearchParams({
+  const res = (await cg.client.coins.markets.get({
     ids: cgIds.join(","),
     vs_currency: "usd",
     order: "market_cap_desc",
     price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
-  }).toString();
-
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
-  });
-
-  const resp = await fetch(req);
-  if (!resp.ok) {
-    return {};
-  }
-
-  const res: CG_CoinMarkets = await resp.json();
+  })) as CG_CoinMarkets;
 
   return Object.fromEntries(
     res.map((raw): [string, TokenMarketDataInsert] => [
-      cgIdToAddress[raw.id],
-      getMarketDataFromRaw(cgIdToAddress[raw.id], raw),
+      cgIdToAddress[raw.id!],
+      getMarketDataFromRaw(cgIdToAddress[raw.id!], raw),
     ]),
   );
 }
@@ -94,6 +80,11 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   }
 
   const marketDataList = Object.values(addressToMarketData);
+
+  // Return empty array if no tokens found on CoinGecko
+  if (marketDataList.length === 0) {
+    return [];
+  }
 
   return await db
     .insert(tokenMarketData)
@@ -130,9 +121,13 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     (address) => !addressToMarketData[address],
   );
 
+  if (staleAddresses.length == 0) {
+    return addressToMarketData;
+  }
+
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
-  if (!refreshed) {
+  if (!refreshed || refreshed.length === 0) {
     return addressToMarketData;
   }
 
