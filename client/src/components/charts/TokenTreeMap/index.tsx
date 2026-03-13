@@ -45,7 +45,7 @@ type RectSize = {
   height: number;
 };
 
-const labelSizes = ["tiny", "small", "medium", "full"] as const;
+const labelSizes = ["xs", "sm", "md", "lg", "xl", "xxl"] as const;
 
 type LabelFormatter = (node: TokenTreeMapNode) => string;
 type LabelSize = (typeof labelSizes)[number];
@@ -58,47 +58,83 @@ const labelThresholds: Record<
     rich?: RichStyles;
   }
 > = {
-  tiny: {
+  xs: {
     rectSize: 8,
     iconSize: 4,
-    format: (node) => `{icon_tiny_${node.symbol}|}`,
+    format: (node) => `{icon_xs_${node.symbol}|}`,
   },
-  small: {
-    rectSize: 40,
+  sm: {
+    rectSize: 24,
+    iconSize: 12,
+    format: (node) => `{icon_sm_${node.symbol}|}`,
+  },
+  md: {
+    rectSize: 48,
     iconSize: 20,
-    format: (node) => `{icon_small_${node.symbol}|}`,
-  },
-  medium: {
-    rectSize: 80,
-    iconSize: 32,
     format: (node) =>
-      `{icon_medium_${node.symbol}|}\n{symbol_md|${node.symbol}}\n{trendValue_md|${node.trendValueFmtr(node.trendValue)}}`,
+      `{icon_md_${node.symbol}|}\n{sym_md|${node.symbol}}\n{trend_md|${node.trendValueFmtr(node.trendValue)}}`,
     rich: {
-      symbol_md: {
-        padding: [8, 0, 0, 0],
-        fontSize: 10,
+      sym_md: {
+        padding: [6, 0, 0, 0],
+        fontSize: 9,
         align: "center",
       },
-      trendValue_md: {
+      trend_md: {
         fontSize: 7,
         align: "center",
       },
     },
   },
-  full: {
-    rectSize: 120,
-    iconSize: 60,
+  lg: {
+    rectSize: 80,
+    iconSize: 32,
     format: (node) =>
-      `{icon_full_${node.symbol}|}\n{symbol_full|${node.symbol}}\n{trendValue_full|${node.trendValueFmtr(node.trendValue)}}`,
+      `{icon_lg_${node.symbol}|}\n{sym_lg|${node.symbol}}\n{trend_lg|${node.trendValueFmtr(node.trendValue)}}`,
     rich: {
-      symbol_full: {
+      sym_lg: {
+        padding: [8, 0, 0, 0],
+        fontSize: 12,
+        fontWeight: 600,
+        align: "center",
+      },
+      trend_lg: {
+        fontSize: 9,
+        align: "center",
+      },
+    },
+  },
+  xl: {
+    rectSize: 120,
+    iconSize: 48,
+    format: (node) =>
+      `{icon_xl_${node.symbol}|}\n{sym_xl|${node.symbol}}\n{trend_xl|${node.trendValueFmtr(node.trendValue)}}`,
+    rich: {
+      sym_xl: {
         padding: [8, 0, 0, 0],
         fontSize: 16,
         fontWeight: "bold",
         align: "center",
       },
-      trendValue_full: {
+      trend_xl: {
         fontSize: 10,
+        align: "center",
+      },
+    },
+  },
+  xxl: {
+    rectSize: 200,
+    iconSize: 80,
+    format: (node) =>
+      `{icon_xxl_${node.symbol}|}\n{sym_xxl|${node.symbol}}\n{trend_xxl|${node.trendValueFmtr(node.trendValue)}}`,
+    rich: {
+      sym_xxl: {
+        padding: [10, 0, 0, 0],
+        fontSize: 20,
+        fontWeight: 700,
+        align: "center",
+      },
+      trend_xxl: {
+        fontSize: 12,
         align: "center",
       },
     },
@@ -261,12 +297,12 @@ export default function TokenTreeMap({
   );
 
   // Build icon rich entries only for the size we expect to render for each node.
-  // Fallback to 'tiny' when the rect size is unknown.
+  // Fallback to 'xs' when the rect size is unknown.
   const iconRichEntries = useMemo(() => {
     return Object.fromEntries(
       data.flatMap((node) => {
         const rect = rectSizes[node.symbol];
-        let size: LabelSize = "tiny";
+        let size: LabelSize = "xs";
 
         if (rect) {
           const maxRect = Math.min(rect.width, rect.height);
@@ -274,7 +310,7 @@ export default function TokenTreeMap({
             const sizeKey = labelSizes[i];
             const threshold = labelThresholds[sizeKey];
             if (maxRect < threshold.rectSize) {
-              size = i == 0 ? "tiny" : labelSizes[i - 1];
+              size = i == 0 ? "xs" : labelSizes[i - 1];
               break;
             }
             if (i == labelSizes.length - 1) {
