@@ -74,15 +74,27 @@ export default function WalletPage() {
   const rawSwapsRef = useRef<any[]>([]);
 
   // Transform portfolio data from API response for Table component
-  const portfolioData = portfolio.length > 0 
+  const portfolioData = portfolio.length > 0
     ? portfolio.map((item: any) => [
-        item.symbol || item.token || 'Unknown',
-        formatNumber(item.priceUsd ?? 0),
-        `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
-        formatNumber(item.valueUsd ?? item.value ?? 0),
-        ((item.change24hPercent ?? 0) / 100).toFixed(2),
-      ])
+      item.symbol || item.token || 'Unknown',
+      formatNumber(item.priceUsd ?? 0),
+      `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
+      formatNumber(item.valueUsd ?? item.value ?? 0),
+      ((item.change24hPercent ?? 0) / 100).toFixed(2),
+    ])
     : [];
+
+  const balanceTokenOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          portfolio
+            .map((item: any) => String(item.symbol || item.token || '').trim().toUpperCase())
+            .filter((symbol: string) => symbol.length > 0)
+        )
+      ).slice(0, 12),
+    [portfolio]
+  );
 
   // Transform swap data to array format for Table component
   const swapData = useMemo(
@@ -91,7 +103,7 @@ export default function WalletPage() {
         const balanceChanges = swap.balanceChanges || [];
         const soldChange = balanceChanges.find((bc: any) => bc.amount < 0);
         const boughtChange = balanceChanges.find((bc: any) => bc.amount > 0);
-        
+
         // Format token display: amount + truncated mint
         const formatTokenDisplay = (change: any) => {
           if (!change) return '—';
@@ -100,7 +112,7 @@ export default function WalletPage() {
           const symbol = mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
           return `${amount} ${symbol}`;
         };
-        
+
         return [
           swap.timestamp,
           swap.fee,
@@ -268,16 +280,16 @@ export default function WalletPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!address || address === 'null') return;
-      
+
       try {
         setPortfolioLoading(true);
-        
+
         // Fetch portfolio data
         const portfolioResponse = await fetchWalletPortfolio(address, 'solana');
         if (portfolioResponse && Array.isArray(portfolioResponse)) {
           setPortfolio(portfolioResponse);
         }
-        
+
         // Fetch swaps data for swap table
         const swapResponse = await fetchWalletSwaps(address, {
           chain: 'solana',
@@ -366,10 +378,10 @@ export default function WalletPage() {
   function handleSwapRowClick(row: any[], rowIndex: number) {
     const rawSwap = rawSwapsRef.current[rowIndex >= 0 ? rowIndex : -1];
     if (!rawSwap) return;
-    
+
     // Store the selected swap
     setSelectedSwap(rawSwap);
-    
+
     // Convert swap data to transfer records for the modal
     const records: TransferRecord[] = rawSwap.balanceChanges?.map((change: any) => ({
       signature: rawSwap.signature,
@@ -422,9 +434,12 @@ export default function WalletPage() {
                 wallets: [address],
                 tokens: ['SOL']
               }}
+              enableTokenSelector={true}
+              tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
+              allowMultiTokenSelection={true}
               autoRefresh={true}
             />,
-            <PnLChart 
+            <PnLChart
               minHeight={400}
               aggregation="daily"
               autoRefresh={true}

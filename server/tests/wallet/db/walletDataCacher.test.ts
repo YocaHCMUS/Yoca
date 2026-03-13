@@ -97,6 +97,14 @@ vi.mock("@sv/db/schema.js", () => hoisted.schema);
 vi.mock("drizzle-orm", () => ({
     and: (...args: unknown[]) => ({ op: "and", args }),
     eq: (...args: unknown[]) => ({ op: "eq", args }),
+    sql: Object.assign(
+        (strings: TemplateStringsArray, ...values: unknown[]) => ({
+            op: "sql",
+            strings: Array.from(strings),
+            values,
+        }),
+        { placeholder: (name: string) => ({ op: "placeholder", name }) },
+    ),
 }));
 
 import {
@@ -208,7 +216,7 @@ describe("walletDataCacher", () => {
         expect(metaInsert?.conflict).toBe("update");
     });
 
-    it("deduplicates helius transactions by signature and persists Solana chain rows", async () => {
+    it("deduplicates helius transactions by signature and persists canonical chain rows", async () => {
         await saveTransactionsHeliusCache("addr-1", "solana", [
             {
                 walletAddress: "addr-1",
@@ -237,6 +245,38 @@ describe("walletDataCacher", () => {
 
         expect(heliusRows).toHaveLength(1);
         expect(heliusRows[0].signature).toBe("helius-sig-1");
-        expect(heliusRows[0].chain).toBe("Solana");
+        expect(heliusRows[0].chain).toBe("solana");
+    });
+
+    it("persists coveredFromSec and coveredToSec in meta when coveredRange is provided", async () => {
+        const coveredRange = { fromSec: 1000, toSec: 2000 };
+
+        await saveTransactionsHeliusCache("addr-1", "solana", [], coveredRange);
+
+        const metaInsert = hoisted.insertCalls.find(
+            (c) => c.table === hoisted.schema.walletTransactionsMeta,
+        );
+        expect(metaInsert?.conflict).toBe("update");
+        const metaValues = metaInsert?.values as { coveredFromSec: number; coveredToSec: number };
+        expect(metaValues.coveredFromSec).toBe(coveredRange.fromSec);
+        expect(metaValues.coveredToSec).toBe(coveredRange.toSec);
+    });
+
+    it("updates meta even when zero transactions are provided (zero-row sync)", async () => {
+        const coveredRange = { fromSec: 500, toSec: 1500 };
+
+        await saveTransactionsHeliusCache("addr-1", "solana", [], coveredRange);
+
+        // No helius transaction insert should have occurred
+        const heliusInsert = hoisted.insertCalls.find(
+            (c) => c.table === hoisted.schema.walletHeliusTransactions,
+        );
+        expect(heliusInsert).toBeUndefined();
+
+        // But meta should still be updated
+        const metaInsert = hoisted.insertCalls.find(
+            (c) => c.table === hoisted.schema.walletTransactionsMeta,
+        );
+        expect(metaInsert?.conflict).toBe("update");
     });
 });

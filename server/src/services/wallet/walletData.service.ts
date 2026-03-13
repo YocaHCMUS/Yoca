@@ -10,9 +10,10 @@ import {
   walletOverviewCache,
   walletPortfolioCache,
 } from "@sv/db/schema.js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import getWalletBalances from "@sv/routes/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
+import { getTokenHistoricalData } from "../tokens/token-history.js";
 import {
   fetchAllTransactionHistory,
   fetchHeliusSolanaPortfolio,
@@ -53,31 +54,94 @@ import {
 } from "./db/walletDataCacher.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_SEC = 24 * 60 * 60;
+
+type WalletHistoryRange = {
+  fromSec: number;
+  toSec: number;
+};
+
+let chainRepairPromise: Promise<void> | null = null;
 
 function toIsoTimestamp(value: unknown): string {
-  console.log(`[toIsoTimestamp DEBUG] value: ${value}`)
   if (value instanceof Date) {
-    const isNaN = Number.isNaN(value.getTime())
-    const result = Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString()
-    // console.log(`[toIsoTimestamp DEBUG] value is date, result is: ${result}, is NaN: ${isNaN}`)
-    return result;
+    return Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString();
   }
 
   if (typeof value === "string") {
-    // Accept SQL datetime format like "YYYY-MM-DD HH:mm:ss".
     const normalized = value.includes("T") ? value : value.replace(" ", "T");
     const parsed = new Date(normalized);
-    const result = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
-    // console.log(`[toIsoTimestamp DEBUG] value is string, result is: ${result}`)
-    return result;
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
   }
 
-  // console.log(`[toIsoTimestamp DEBUG] unknowned value type, result is new date`)
   return new Date().toISOString();
 }
 
 function sumTotalAssetValueFromBalances(balances: WalletBalanceInsert[]): number {
   return balances.reduce((sum, bal) => sum + Number(bal.totalValueUsd ?? bal.valueUsd ?? 0), 0);
+}
+
+function getHistoryRange(options?: { from?: "24h" | "7d"; fromSec?: number; toSec?: number }): WalletHistoryRange {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec =
+    options?.fromSec != null
+      ? Math.max(0, options.fromSec)
+      : options?.from === "24h"
+        ? nowSec - DAY_SEC
+        : nowSec - 7 * DAY_SEC;
+  const toSec = options?.toSec != null ? Math.max(fromSec, options.toSec) : nowSec;
+  return { fromSec, toSec };
+}
+
+function getTimestampSecFromIso(iso: string): number {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) {
+    return 0;
+  }
+  return Math.floor(ms / 1000);
+}
+
+function mergeTransactionsBySignature(
+  existing: WalletTransactionHelius[],
+  incoming: WalletTransactionHelius[],
+): WalletTransactionHelius[] {
+  const bySignature = new Map<string, WalletTransactionHelius>();
+
+  for (const tx of existing) {
+    bySignature.set(tx.signature, tx);
+  }
+
+  for (const tx of incoming) {
+    bySignature.set(tx.signature, tx);
+  }
+
+  return Array.from(bySignature.values()).sort(
+    (a, b) => getTimestampSecFromIso(b.timestamp) - getTimestampSecFromIso(a.timestamp),
+  );
+}
+
+async function normalizeWalletCacheChainsOnce(): Promise<void> {
+  if (chainRepairPromise) {
+    await chainRepairPromise;
+    return;
+  }
+
+  chainRepairPromise = (async () => {
+    try {
+      await db.execute(sql`update wallet_helius_transactions set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update wallet_transactions_meta set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update wallet_transactions set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update wallet_swap set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update wallet_swap_meta set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update wallet_transfer_meta set chain = lower(chain) where chain <> lower(chain)`);
+      await db.execute(sql`update token_transfers set chain = lower(chain) where chain <> lower(chain)`);
+    } catch (err) {
+      console.error("[wallet-cache-chain-repair] Failed to normalize chain values", err);
+    }
+  })();
+
+  await chainRepairPromise;
 }
 
 export async function getWalletOverview(
@@ -624,6 +688,8 @@ export async function getWalletTransactions(
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
 
+  await normalizeWalletCacheChainsOnce();
+
   const cachedTransactions = await getCachedWalletTransactions(
     address,
     effectiveChain,
@@ -869,34 +935,123 @@ export async function getWalletTransactions(
 export async function getWalletTransactionHelius(
   address: string,
   chain: SupportedChain,
-  options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d"; fromSec?: number },
+  options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d"; fromSec?: number; toSec?: number },
 ): Promise<{ address: string; chain: SupportedChain; transactions: WalletTransactionHelius[] }> {
   const effectiveChain = resolveChainForAddress(address, chain);
-  const limit = Math.min(options?.limit ?? 100, 500);
-
-  const cachedTransactions = await getCachedWalletTransactionsHelius(
-    address,
-    effectiveChain,
-    options?.from ?? "7d",
-  );
-  if (cachedTransactions) {
-    return { address, chain: effectiveChain, transactions: cachedTransactions };
-  }
 
   if (effectiveChain !== "solana") {
     return { address, chain: effectiveChain, transactions: [] };
   }
 
-  const fromArg: "24h" | "7d" | number = options?.fromSec !== undefined
-    ? options.fromSec
-    : options?.from ?? "7d";
-  const transactions = await fetchAllTransactionHistory(address, fromArg);
-  await saveTransactionsHeliusCache(address, effectiveChain, transactions);
+  await normalizeWalletCacheChainsOnce();
+
+  const requestedRange = getHistoryRange(options);
+  const cacheRangeResult = await getCachedWalletTransactionsHelius(
+    address,
+    effectiveChain,
+    requestedRange,
+  );
+
+  let fetchedTransactions: WalletTransactionHelius[] = [];
+  let mergedTransactions = cacheRangeResult.transactions;
+
+  if (!cacheRangeResult.isFullyCovered) {
+    const knownSignatures = new Set(
+      cacheRangeResult.transactions.map((tx) => tx.signature),
+    );
+
+    const hasNoCoverage =
+      cacheRangeResult.coveredRange.earliestSec == null ||
+      cacheRangeResult.coveredRange.latestSec == null;
+
+    if (hasNoCoverage) {
+      fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+    } else {
+      const coveredLatestSec = cacheRangeResult.coveredRange.latestSec;
+      const coveredEarliestSec = cacheRangeResult.coveredRange.earliestSec;
+
+      if (coveredLatestSec == null || coveredEarliestSec == null) {
+        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+      } else {
+
+        const needsHeadGapFill = coveredLatestSec < requestedRange.toSec;
+        if (needsHeadGapFill) {
+          const headFetched = await fetchAllTransactionHistory(address, requestedRange, {
+            stopAtKnownSignatures: knownSignatures,
+          });
+          fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, headFetched);
+          for (const tx of headFetched) {
+            knownSignatures.add(tx.signature);
+          }
+        }
+
+        const needsTailGapFill = coveredEarliestSec > requestedRange.fromSec;
+        if (needsTailGapFill) {
+          const oldestCachedTx = cacheRangeResult.transactions.reduce<WalletTransactionHelius | null>(
+            (oldest, tx) => {
+              if (!oldest) {
+                return tx;
+              }
+
+              return getTimestampSecFromIso(tx.timestamp) < getTimestampSecFromIso(oldest.timestamp)
+                ? tx
+                : oldest;
+            },
+            null,
+          );
+
+          if (oldestCachedTx) {
+            const tailToSec = Math.max(
+              requestedRange.fromSec,
+              coveredEarliestSec - 1,
+            );
+            const tailFetched = await fetchAllTransactionHistory(
+              address,
+              { fromSec: requestedRange.fromSec, toSec: tailToSec },
+              { beforeCursor: oldestCachedTx.signature },
+            );
+            fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, tailFetched);
+          }
+        }
+      }
+    }
+
+    if (fetchedTransactions.length > 0) {
+      await saveTransactionsHeliusCache(address, effectiveChain, fetchedTransactions, requestedRange);
+    } else {
+      // Bug 4 fix: even when zero new transactions were returned the sync
+      // completed successfully.  Persist the coverage bounds so the next
+      // request knows the range was already checked and skips the Helius call.
+      await saveTransactionsHeliusCache(address, effectiveChain, [], requestedRange);
+    }
+
+    mergedTransactions = mergeTransactionsBySignature(
+      cacheRangeResult.transactions,
+      fetchedTransactions,
+    ).filter((tx) => {
+      const txSec = getTimestampSecFromIso(tx.timestamp);
+      return txSec >= requestedRange.fromSec && txSec <= requestedRange.toSec;
+    });
+  }
+
+  console.log("[wallet-transaction-helius-cache]", {
+    address,
+    chain: effectiveChain,
+    requestedRange,
+    coveredRange: cacheRangeResult.coveredRange,
+    cacheHitRatio:
+      mergedTransactions.length > 0
+        ? Number((cacheRangeResult.transactions.length / mergedTransactions.length).toFixed(4))
+        : 0,
+    cachedCount: cacheRangeResult.transactions.length,
+    fetchedCount: fetchedTransactions.length,
+    returnedCount: mergedTransactions.length,
+  });
 
   return {
     address,
     chain: effectiveChain,
-    transactions,
+    transactions: mergedTransactions,
   };
 }
 
@@ -909,6 +1064,8 @@ export async function getWalletTransfers(
 ): Promise<WalletTransfersResponse> {
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
+
+  await normalizeWalletCacheChainsOnce();
 
   const cachedTransfers = await getCachedWalletTransfers(
     address,
@@ -970,6 +1127,8 @@ export async function getWalletSwaps(
 ): Promise<{ address: string; chain: SupportedChain; swaps: WalletSwap[] }> {
   const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
+
+  await normalizeWalletCacheChainsOnce();
 
   const cachedSwaps = await getCachedWalletSwaps(address, effectiveChain, options?.from ?? "7d");
   if (cachedSwaps) {
@@ -1454,9 +1613,10 @@ export async function getWalletTokenBalanceHistory(
       resolvedItem.tokenAddress === "SOL" ? SOL_MINT : resolvedItem.tokenAddress;
     const resolvedSymbol = resolvedItem.symbol || tokenSelector;
     const currentTokenBalance = resolvedItem.amount ?? 0;
+    const requestedFromSec = timePeriodToFromSec(timePeriod);
 
     const txResponse = await getWalletTransactionHelius(address, effectiveChain, {
-      fromSec: timePeriodToFromSec(timePeriod),
+      fromSec: requestedFromSec,
     });
     const transactions = txResponse.transactions;
 
@@ -1470,53 +1630,79 @@ export async function getWalletTokenBalanceHistory(
     const marketData = await getTokenMarketData([resolvedMint]);
     const currentPrice = marketData[resolvedMint]?.priceUsd ?? 0;
 
-    if (relevantTxs.length === 0) {
-      const tokenSeries = [
-        { timestamp: startDate.getTime(), value: currentTokenBalance, date: startDate.toISOString() },
-        { timestamp: now.getTime(), value: currentTokenBalance, date: now.toISOString() },
-      ];
-      const usdSeries = [
-        { timestamp: startDate.getTime(), value: currentTokenBalance * currentPrice, date: startDate.toISOString() },
-        { timestamp: now.getTime(), value: currentTokenBalance * currentPrice, date: now.toISOString() },
-      ];
-      return { tokenSeries, usdSeries, tokenSymbol: resolvedSymbol, tokenAddress: resolvedMint };
+    const daysSpan = Math.max(
+      1,
+      Math.min(3650, Math.ceil((now.getTime() - startDate.getTime()) / DAY_MS) + 2),
+    );
+
+    let historicalPriceTimeline: Array<{ timestampSec: number; price: number }> = [];
+    try {
+      const historicalData = await getTokenHistoricalData(resolvedMint, daysSpan);
+      historicalPriceTimeline = (historicalData ?? [])
+        .map((point) => ({
+          timestampSec: Math.floor(point.timestampMs / 1000),
+          price: Number(point.price ?? Number.NaN),
+        }))
+        .filter((point) => Number.isFinite(point.price) && point.price > 0)
+        .sort((a, b) => a.timestampSec - b.timestampSec);
+    } catch (historyErr) {
+      console.error("[getWalletTokenBalanceHistory] Failed to fetch historical prices", historyErr);
     }
 
     const tokenBalanceHistory: BalanceDataPoint[] = [];
-    let runningTokenBalance = currentTokenBalance;
-    const reversedTxs = [...relevantTxs].reverse();
 
-    for (const tx of reversedTxs) {
-      const txDate = new Date(tx.timestamp);
-      let tokenDelta = 0;
-      for (const change of tx.balanceChanges ?? []) {
-        const mint = String(change?.mint ?? "").trim();
-        const canonicalMint = mint === "SOL" ? SOL_MINT : mint;
-        if (canonicalMint !== resolvedMint) continue;
-        const amountRaw = Number(change?.amount ?? 0);
-        const decimals = Number(change?.decimals ?? 0);
-        if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) continue;
-        tokenDelta += amountRaw / 10 ** Math.max(0, decimals);
+    if (relevantTxs.length === 0) {
+      tokenBalanceHistory.push(
+        { timestamp: startDate.getTime(), value: currentTokenBalance, date: startDate.toISOString() },
+        { timestamp: now.getTime(), value: currentTokenBalance, date: now.toISOString() },
+      );
+    } else {
+      let runningTokenBalance = currentTokenBalance;
+      const reversedTxs = [...relevantTxs].reverse();
+
+      for (const tx of reversedTxs) {
+        const txDate = new Date(tx.timestamp);
+        let tokenDelta = 0;
+
+        for (const change of tx.balanceChanges ?? []) {
+          const mint = String(change?.mint ?? "").trim();
+          const canonicalMint = mint === "SOL" ? SOL_MINT : mint;
+          if (canonicalMint !== resolvedMint) {
+            continue;
+          }
+
+          const amountRaw = Number(change?.amount ?? 0);
+          const decimals = Number(change?.decimals ?? 0);
+          if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) {
+            continue;
+          }
+
+          tokenDelta += amountRaw / 10 ** Math.max(0, decimals);
+        }
+
+        runningTokenBalance -= tokenDelta;
+        tokenBalanceHistory.unshift({
+          timestamp: txDate.getTime(),
+          value: Math.max(0, runningTokenBalance),
+          date: txDate.toISOString(),
+        });
       }
-      runningTokenBalance -= tokenDelta;
-      tokenBalanceHistory.unshift({
-        timestamp: txDate.getTime(),
-        value: Math.max(0, runningTokenBalance),
-        date: txDate.toISOString(),
+
+      tokenBalanceHistory.push({
+        timestamp: now.getTime(),
+        value: Math.max(0, currentTokenBalance),
+        date: now.toISOString(),
       });
     }
 
-    tokenBalanceHistory.push({
-      timestamp: now.getTime(),
-      value: Math.max(0, currentTokenBalance),
-      date: now.toISOString(),
-    });
-
-    const dayInMs = 24 * 60 * 60 * 1000;
     const tokenSeries: BalanceDataPoint[] = [];
     const usdSeries: BalanceDataPoint[] = [];
+    let priceCursor = 0;
+    let latestHistoricalPrice: number | null = null;
+    let historicalPricedPoints = 0;
+    let fallbackPricedPoints = 0;
 
-    for (let date = new Date(startDate); date <= now; date = new Date(date.getTime() + dayInMs)) {
+    for (let date = new Date(startDate); date <= now; date = new Date(date.getTime() + DAY_MS)) {
       const timestamp = date.getTime();
       let closestTokenBalance = tokenBalanceHistory[0]?.value ?? currentTokenBalance;
       for (const point of tokenBalanceHistory) {
@@ -1526,9 +1712,40 @@ export async function getWalletTokenBalanceHistory(
           break;
         }
       }
+
       tokenSeries.push({ timestamp, value: closestTokenBalance, date: date.toISOString() });
-      usdSeries.push({ timestamp, value: closestTokenBalance * currentPrice, date: date.toISOString() });
+
+      const pointSec = Math.floor(timestamp / 1000);
+      while (
+        priceCursor < historicalPriceTimeline.length &&
+        historicalPriceTimeline[priceCursor].timestampSec <= pointSec
+      ) {
+        latestHistoricalPrice = historicalPriceTimeline[priceCursor].price;
+        priceCursor += 1;
+      }
+
+      const appliedPrice = latestHistoricalPrice ?? currentPrice;
+      if (latestHistoricalPrice != null) {
+        historicalPricedPoints += 1;
+      } else {
+        fallbackPricedPoints += 1;
+      }
+
+      usdSeries.push({
+        timestamp,
+        value: closestTokenBalance * appliedPrice,
+        date: date.toISOString(),
+      });
     }
+
+    console.log("[wallet-token-balance-history-price]", {
+      address,
+      tokenAddress: resolvedMint,
+      requestedRange: { fromSec: requestedFromSec, toSec: Math.floor(now.getTime() / 1000) },
+      historicalPricePoints: historicalPriceTimeline.length,
+      historicalPricedPoints,
+      fallbackPricedPoints,
+    });
 
     return { tokenSeries, usdSeries, tokenSymbol: resolvedSymbol, tokenAddress: resolvedMint };
   } catch (err) {

@@ -202,4 +202,60 @@ describe("fetchAllTransactionHistory - time-window cutoff", () => {
         expect(result).toHaveLength(1);
         expect(result[0].signature).toBe("sig-valid");
     });
+
+    it("stops incremental fetch when an overlap signature is encountered", async () => {
+        const overlapSig = "sig-overlap";
+
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "sig-new",
+                        timestamp: NOW_SEC - 10,
+                        slot: 1,
+                        fee: 5000,
+                        feePayer: "payer",
+                        balanceChanges: [],
+                    },
+                    {
+                        signature: overlapSig,
+                        timestamp: NOW_SEC - 20,
+                        slot: 2,
+                        fee: 5000,
+                        feePayer: "payer",
+                        balanceChanges: [],
+                    },
+                ],
+                pagination: { hasMore: true, nextCursor: "cursor-1" },
+            }),
+        );
+
+        const result = await fetchAllTransactionHistory(
+            "wallet-addr",
+            { fromSec: NOW_SEC - 7 * DAY_SEC, toSec: NOW_SEC },
+            { stopAtKnownSignatures: new Set([overlapSig]) },
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].signature).toBe("sig-new");
+        expect(heliusFetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses provided before cursor for tail backfill", async () => {
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [],
+                pagination: { hasMore: false, nextCursor: null },
+            }),
+        );
+
+        await fetchAllTransactionHistory(
+            "wallet-addr",
+            { fromSec: NOW_SEC - 30 * DAY_SEC, toSec: NOW_SEC - 7 * DAY_SEC },
+            { beforeCursor: "oldest-cached-sig" },
+        );
+
+        const firstUrl = heliusFetchMock.mock.calls[0][0] as URL;
+        expect(firstUrl.searchParams.get("before")).toBe("oldest-cached-sig");
+    });
 });

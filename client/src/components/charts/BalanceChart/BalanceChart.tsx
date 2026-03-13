@@ -17,6 +17,7 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 
 // export interface BalanceChartProps {
@@ -50,6 +51,9 @@ export function BalanceChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  enableTokenSelector = false,
+  tokenSelectorOptions = [],
+  allowMultiTokenSelection = true,
   // onDataLoaded,
   className,
 }: ChartProps) {
@@ -61,10 +65,15 @@ export function BalanceChart({
   const { selectedTimezone: timezone } = useChartContext();
 
   // Use centralized filter sync hook
-  const { filters, walletsString, tokensString } = useChartFiltersSync({
+  const { filters, setTokens, walletsString, tokensString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
+
+  const normalizedSelectedTokens = useMemo(
+    () => new Set((filters.tokens ?? []).map(token => token.trim().toUpperCase())),
+    [filters.tokens]
+  );
 
   /**
    * Memoize query to prevent unnecessary re-fetches
@@ -92,6 +101,53 @@ export function BalanceChart({
       refreshInterval,
       // onDataLoaded,
     });
+
+  const tokenOptions = useMemo(() => {
+    const optionsMap = new Map<string, string>();
+
+    for (const option of tokenSelectorOptions ?? []) {
+      const value = String(option ?? '').trim();
+      if (!value) continue;
+      optionsMap.set(value.toUpperCase(), value.toUpperCase());
+    }
+
+    if (data && !('error' in data)) {
+      const metadata = data.metadata as { tokens?: string[] };
+      const metadataTokens = Array.isArray(metadata.tokens) ? metadata.tokens : [];
+      for (const token of metadataTokens) {
+        const value = String(token ?? '').trim();
+        if (!value) continue;
+        optionsMap.set(value.toUpperCase(), value.toUpperCase());
+      }
+    }
+
+    return Array.from(optionsMap.values());
+  }, [tokenSelectorOptions, data]);
+
+  const showTokenSelector = enableTokenSelector && tokenOptions.length > 0;
+
+  const handleSelectAllTokens = () => {
+    setTokens([]);
+  };
+
+  const handleToggleToken = (token: string) => {
+    const normalized = token.trim().toUpperCase();
+    if (!normalized) return;
+
+    if (!allowMultiTokenSelection) {
+      setTokens([normalized]);
+      return;
+    }
+
+    const next = new Set(normalizedSelectedTokens);
+    if (next.has(normalized)) {
+      next.delete(normalized);
+    } else {
+      next.add(normalized);
+    }
+
+    setTokens(Array.from(next.values()));
+  };
 
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
   //   chartTitle,
@@ -146,7 +202,13 @@ export function BalanceChart({
 
     if (isTokenMode) {
       const tokenSymbols: string[] = meta?.tokens ?? [];
+      const hasSingleToken = tokenSymbols.length === 1;
       const primarySymbol = tokenSymbols[0] ?? 'Token';
+
+      const getSeriesTokenSymbol = (seriesName: string) => {
+        const matched = seriesName.match(/([A-Za-z0-9._-]+)\s+\((?:units|USD)\)$/i);
+        return matched ? matched[1] : undefined;
+      };
 
       const seriesConfig = data.series.map((series, index) => {
         const isUsd = series.unit === 'USD';
@@ -203,10 +265,13 @@ export function BalanceChart({
           {
             ...baseOption.yAxis,
             type: 'value',
-            name: primarySymbol,
+            name: hasSingleToken ? primarySymbol : tr('charts.tokens'),
             axisLabel: {
               ...baseOption.yAxis.axisLabel,
-              formatter: (value: number) => `${value.toLocaleString()} ${primarySymbol}`,
+              formatter: (value: number) => {
+                if (!hasSingleToken) return value.toLocaleString();
+                return `${value.toLocaleString()} ${primarySymbol}`;
+              },
             },
           },
           {
@@ -230,7 +295,10 @@ export function BalanceChart({
             (p) => {
               const seriesEntry = data.series.find(s => s.name === p.seriesName);
               if (seriesEntry?.unit === 'TOKEN') {
-                return `${p.value[1].toLocaleString()} ${primarySymbol}`;
+                const symbol = hasSingleToken ? primarySymbol : getSeriesTokenSymbol(seriesEntry.name);
+                return symbol
+                  ? `${p.value[1].toLocaleString()} ${symbol}`
+                  : p.value[1].toLocaleString();
               }
               return formatCurrency(p.value[1]);
             }
@@ -311,6 +379,35 @@ export function BalanceChart({
       isEmpty={!data || 'error' in data || data.series.length === 0 || data.series[0].data.length === 0}
       onRetry={() => refetch(false)}
     >
+      {showTokenSelector && (
+        <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--between']} ${sharedStyles['chartControls--withBackground']}`}>
+          <div className={sharedStyles.limitSelector}>
+            <label>{tr('charts.tokens')}</label>
+          </div>
+          <div className={sharedStyles['chartToggle--padded']} style={{ display: 'flex', flexWrap: 'wrap' }}>
+            <button
+              className={`${sharedStyles.chartToggleButton} ${normalizedSelectedTokens.size === 0 ? sharedStyles.active : ''}`}
+              onClick={handleSelectAllTokens}
+              type="button"
+            >
+              {tr('charts.allTokens')}
+            </button>
+            {tokenOptions.map((token) => {
+              const isActive = normalizedSelectedTokens.has(token.toUpperCase());
+              return (
+                <button
+                  key={token}
+                  className={`${sharedStyles.chartToggleButton} ${isActive ? sharedStyles.active : ''}`}
+                  onClick={() => handleToggleToken(token)}
+                  type="button"
+                >
+                  {token}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {chartOption && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts

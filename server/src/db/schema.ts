@@ -463,6 +463,10 @@ export const walletTransactionsMeta = pgTable(
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    // Explicit persisted bounds for coverage checks.
+    // Nullable so pre-migration rows don't break existing reads.
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
   },
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 );

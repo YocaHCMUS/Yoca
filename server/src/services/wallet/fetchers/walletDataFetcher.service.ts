@@ -1,7 +1,5 @@
 import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 import type { WalletPortfolioItem, WalletSwap, WalletTransaction, WalletTransactionHelius, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { apiKeyManager } from "@sv/util/api-key-manager.js";
-import { unknown } from "zod";
 
 function getNextCursor(pagination: any): string | null {
   // Wallet API docs specify pagination.nextCursor; keep a legacy fallback for beta changes.
@@ -9,6 +7,16 @@ function getNextCursor(pagination: any): string | null {
   if (typeof raw !== "string") return null;
   return raw.length > 0 ? raw : null;
 }
+
+export type HeliusHistoryRange = {
+  fromSec: number;
+  toSec?: number;
+};
+
+type FetchAllTransactionHistoryOptions = {
+  beforeCursor?: string;
+  stopAtKnownSignatures?: Set<string>;
+};
 
 export async function fetchHeliusSolanaPortfolio(
   address: string,
@@ -506,21 +514,26 @@ export function timePeriodToFromSec(timePeriod: "7D" | "30D" | "60D" | "90D" | "
 
 export async function fetchAllTransactionHistory(
   address: string,
-  from: HeliusHistoryFrom | number = "7d",
+  from: HeliusHistoryFrom | number | HeliusHistoryRange = "7d",
+  options?: FetchAllTransactionHistoryOptions,
 ) {
   const nowSec = Math.floor(Date.now() / 1000);
   const daySec = 24 * 60 * 60;
   const fromSec = typeof from === "number"
     ? from
-    : nowSec - (daySec * (from === "24h" ? 1 : 7))
+    : typeof from === "object"
+      ? from.fromSec
+      : nowSec - (daySec * (from === "24h" ? 1 : 7));
+  const toSec = typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
 
   // Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60)
   // Helius history endpoint returns at most 100 items per page.
   const HELIUS_PAGE_LIMIT = 100;
 
   const transactions: WalletTransactionHelius[] = [];
-  let cursor: string | null = null;
+  let cursor: string | null = options?.beforeCursor ?? null;
   let pageCount = 0;
+  const knownSignatures = options?.stopAtKnownSignatures;
 
   // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
@@ -571,8 +584,20 @@ export async function fetchAllTransactionHistory(
         // Recent entries can occasionally have null timestamp while still processing.
         continue;
       }
+      if (tsSec > toSec) {
+        continue;
+      }
+
       if (tsSec < fromSec) {
-        console.log(`tsSec: ${tsSec} --- fromSec: ${fromSec}`)
+        return transactions;
+      }
+
+      const signature = String(entry.signature ?? "");
+      if (!signature) {
+        continue;
+      }
+
+      if (knownSignatures?.has(signature)) {
         return transactions;
       }
 
@@ -594,7 +619,7 @@ export async function fetchAllTransactionHistory(
 
       const txObj: WalletTransactionHelius = {
         walletAddress: address,
-        signature: String(entry.signature ?? ""),
+        signature,
         timestamp: new Date(tsSec * 1000).toISOString(),
         slot: Number(entry.slot ?? 0),
         fee: Number(entry.fee ?? 0),

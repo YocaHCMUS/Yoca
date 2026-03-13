@@ -181,9 +181,11 @@ describe("walletDataRetriever", () => {
         expect(res?.[0].transactionSignature).toBe("sig-recent");
     });
 
-    it("filters helius transactions by from-window", async () => {
+    it("filters helius transactions by requested range and reports coverage from meta bounds", async () => {
+        // When the meta row has no coverage bounds, isFullyCovered should be false
+        // and coveredRange should reflect null (no bounds persisted yet).
         hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
-            { fetchedAt: new Date("2026-03-12T11:55:00.000Z") },
+            { fetchedAt: new Date("2026-03-12T11:55:00.000Z"), coveredFromSec: null, coveredToSec: null },
         ]);
 
         hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, [
@@ -210,11 +212,102 @@ describe("walletDataRetriever", () => {
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
             "solana" as any,
-            "24h",
+            { fromSec: Math.floor(new Date("2026-03-11T12:00:00.000Z").getTime() / 1000) },
         );
 
-        expect(res).not.toBeNull();
-        expect(res).toHaveLength(1);
-        expect(res?.[0].signature).toBe("helius-recent");
+        expect(res.transactions).toHaveLength(1);
+        expect(res.transactions[0].signature).toBe("helius-recent");
+        // No persisted bounds yet — meta-based coverage is null
+        expect(res.coveredRange.earliestSec).toBeNull();
+        expect(res.coveredRange.latestSec).toBeNull();
+        expect(res.isFullyCovered).toBe(false);
+    });
+
+    it("reports isFullyCovered when persisted meta bounds contain the requested range", async () => {
+        const requestedFrom = Math.floor(new Date("2026-03-11T12:00:00.000Z").getTime() / 1000);
+        const requestedTo = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
+
+        // Meta bounds cover the full requested window.
+        hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
+            {
+                fetchedAt: new Date("2026-03-12T11:55:00.000Z"),
+                coveredFromSec: requestedFrom - 100,
+                coveredToSec: requestedTo + 100,
+            },
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, [
+            {
+                address: "wallet-1",
+                signature: "helius-recent",
+                timestamp: new Date("2026-03-12T11:30:00.000Z"),
+                slot: 1,
+                fee: 0.000005,
+                feePayer: "payer-1",
+                balanceChanges: [{ mint: "SOL", amount: 1, decimals: 9 }],
+            },
+        ]);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: requestedFrom, toSec: requestedTo },
+        );
+
+        expect(res.isFullyCovered).toBe(true);
+        expect(res.coveredRange.earliestSec).toBe(requestedFrom - 100);
+        expect(res.coveredRange.latestSec).toBe(requestedTo + 100);
+    });
+
+    it("reports isFullyCovered false when meta bounds only partially overlap requested range", async () => {
+        const requestedFrom = Math.floor(new Date("2026-03-05T00:00:00.000Z").getTime() / 1000);
+        const requestedTo = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
+
+        // Meta covers only the last 2 days, not the full 7-day window.
+        hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
+            {
+                fetchedAt: new Date("2026-03-12T11:55:00.000Z"),
+                coveredFromSec: Math.floor(new Date("2026-03-10T00:00:00.000Z").getTime() / 1000),
+                coveredToSec: requestedTo,
+            },
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, []);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: requestedFrom, toSec: requestedTo },
+        );
+
+        expect(res.isFullyCovered).toBe(false);
+    });
+
+    it("returns cached range rows even if metadata is stale", async () => {
+        hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
+            { fetchedAt: new Date("2026-03-12T09:00:00.000Z") },
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, [
+            {
+                address: "wallet-1",
+                chain: "Solana",
+                signature: "legacy-sig",
+                timestamp: new Date("2026-03-12T11:30:00.000Z"),
+                slot: 10,
+                fee: 0.000004,
+                feePayer: "payer-legacy",
+                balanceChanges: [{ mint: "SOL", amount: 1, decimals: 9 }],
+            },
+        ]);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: Math.floor(new Date("2026-03-12T00:00:00.000Z").getTime() / 1000) },
+        );
+
+        expect(res.transactions).toHaveLength(1);
+        expect(res.transactions[0].signature).toBe("legacy-sig");
     });
 });

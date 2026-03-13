@@ -22,6 +22,13 @@
       "when": 1741651200000,
       "tag": "0002_wallet_user_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1741824000000,
+      "tag": "0003_wallet_meta_covered_range",
+      "breakpoints": true
     }
   ]
 }

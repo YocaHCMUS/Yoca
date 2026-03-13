@@ -15,25 +15,34 @@ import type { ChartFilters } from '@/types/chart-filters.types';
 export interface ChartProps {
   /** Chart title (overrides default i18n title) */
   title?: string;
-  
+
   /** Minimum chart height in pixels (default: 400) */
   minHeight?: number;
-  
+
   /** Initial filter values (wallets, timePeriod, tokens, etc.) */
   initialFilters?: Partial<ChartFilters>;
-  
+
+  /** Show token selector controls (BalanceChart) */
+  enableTokenSelector?: boolean;
+
+  /** Token options used by selector controls (BalanceChart) */
+  tokenSelectorOptions?: string[];
+
+  /** Allow selecting multiple tokens at the same time */
+  allowMultiTokenSelection?: boolean;
+
   /** Enable automatic data refresh (default: true) */
   autoRefresh?: boolean;
-  
+
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-  
+
   /** Additional CSS class name */
   className?: string;
-  
+
   /** Callback when data is loaded */
   onDataLoaded?: (data: any) => void;
-  
+
   /** Callback when an error occurs */
   onError?: (error: Error) => void;
 }
@@ -44,7 +53,7 @@ export interface ChartProps {
 export interface ChartPropsWithExport extends ChartProps {
   /** Enable export functionality (default: true) */
   enableExport?: boolean;
-  
+
   /** Custom export filename prefix */
   exportFilename?: string;
 }
@@ -55,7 +64,7 @@ export interface ChartPropsWithExport extends ChartProps {
 export interface ChartPropsWithViewMode extends ChartProps {
   /** Initial view mode */
   initialViewMode?: string;
-  
+
   /** Available view modes */
   viewModes?: string[];
 }
