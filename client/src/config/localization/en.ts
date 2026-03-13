@@ -209,6 +209,8 @@ export const translation = {
     account: "Account",
     language: "Language",
     search: "Search",
+    switchToLightTheme: "Switch to Light Theme",
+    switchToDarkTheme: "Switch to Dark Theme",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

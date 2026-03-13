@@ -274,7 +274,7 @@ export default function TokenTreeMap({
   className,
 }: TokenTreeMapProps) {
   console.log("re-render");
-  const { fmt } = useLocalization();
+  const { tr } = useLocalization();
   const [rectSizes, setRectSizes] = useState<Record<string, RectSize>>({});
   const collectedSizesRef = useRef<Record<string, RectSize>>({});
   const { theme } = useUserTheme();
@@ -345,7 +345,7 @@ export default function TokenTreeMap({
   if (loading) {
     return (
       <Stack style={{ height, alignItems: "center", justifyContent: "center" }}>
-        <InlineLoading description="Loading..." />
+        <InlineLoading description={tr("common.loading")} />
       </Stack>
     );
   }

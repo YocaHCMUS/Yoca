@@ -189,6 +189,8 @@ export const translation = defineTranslation({
     language: "Ngôn ngữ",
     account: "Tài khoản",
     search: "Tìm kiếm",
+    switchToLightTheme: "Chuyển sang Chủ đề Sáng",
+    switchToDarkTheme: "Chuyển sang Chủ đề Tối",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

@@ -31,10 +31,15 @@ import styles from "./PageWrapper.module.scss";
 
 function ThemeToggleGlobalAction() {
   const { theme, toggleTheme } = useUserTheme();
+  const { tr } = useLocalization();
 
   return (
     <HeaderGlobalAction
-      aria-label={`Switch to ${theme == "dark" ? "light" : "dark"} mode`}
+      aria-label={
+        theme == "dark"
+          ? tr("nav.switchToDarkTheme")
+          : tr("nav.switchToLightTheme")
+      }
       tooltipAlignment="end"
       onClick={toggleTheme}
     >
