@@ -34,9 +34,8 @@ export type TokenMeta = {
   symbol: string;
 
   linkHomepage: string | null;
-  linkBlockchainSites: string | null;
-  platforms: string | null;
-  categories: string | null;
+  linkBlockchainSites: string[] | null;
+  categories: string[] | null;
 
   twitterScreenName: string | null;
   telegramChannel: string | null;
@@ -297,30 +296,8 @@ export const TokenOverviewStats = ({
 
       {/* ── Info Section ── */}
       {(() => {
-        const explorers: string[] = (() => {
-          try {
-            return JSON.parse(meta.linkBlockchainSites ?? "[]") ?? [];
-          } catch {
-            return [];
-          }
-        })();
-        const categories: string[] = (() => {
-          try {
-            return JSON.parse(meta.categories ?? "[]") ?? [];
-          } catch {
-            return [];
-          }
-        })();
-        const platforms: Record<string, string> = (() => {
-          try {
-            return JSON.parse(meta.platforms ?? "{}") ?? {};
-          } catch {
-            return {};
-          }
-        })();
-        const platformChains = Object.keys(platforms).filter(
-          (k) => platforms[k],
-        );
+        const explorers: string[] = meta.linkBlockchainSites || [];
+        const categories: string[] = meta.categories || [];
 
         const hasAny =
           meta.linkHomepage ||

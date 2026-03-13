@@ -1,12 +1,12 @@
 import client from "@/api/main";
 import {
-    GlobalPrices,
-    TokenHeader,
-    TokenInsightTabs,
-    TokenMarketsTable,
-    TokenOverviewChart,
-    TokenOverviewStats,
-    TokenTabs,
+  GlobalPrices,
+  TokenHeader,
+  TokenInsightTabs,
+  TokenMarketsTable,
+  TokenOverviewChart,
+  TokenOverviewStats,
+  TokenTabs,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -16,9 +16,21 @@ import { useParams } from "react-router";
 import styles from "./index.module.scss";
 
 function useTokenOverviewData(address: string) {
-  const baseMeta = useGet(client.api.tokens.meta[":addresses"], 200, {
-    param: { addresses: address },
-  });
+  const tokenDetails = useGet(
+    client.api.tokens.details[":addresses"],
+    200,
+    {
+      param: {
+        addresses: address,
+      },
+    },
+    {
+      select: (data) => ({
+        ...data[0].meta,
+        ...data[0].details,
+      }),
+    },
+  );
 
   const holders = useGet(client.api.tokens.holders[":address"], 200, {
     param: { address },
@@ -36,11 +48,11 @@ function useTokenOverviewData(address: string) {
     param: { addresses: address },
   });
 
-  const isLoading = baseMeta.isLoading || marketData.isLoading;
-  const error = baseMeta.error || marketData.error;
+  const isLoading = tokenDetails.isLoading || marketData.isLoading;
+  const error = tokenDetails.error || marketData.error;
 
   // If we have no data at all yet, return null
-  if (!baseMeta.data || !marketData.data) {
+  if (!tokenDetails.data || !marketData.data) {
     return {
       isLoading,
       isFirstLoad: true,
@@ -49,8 +61,7 @@ function useTokenOverviewData(address: string) {
     };
   }
 
-  // Safe unwrap — data có thể là stale (token cũ) do keepPreviousData
-  const [meta] = baseMeta.data;
+  const details = tokenDetails.data ?? [null];
   const [holdersInfo] = holdersStats.data ?? [null];
 
   return {
@@ -58,7 +69,7 @@ function useTokenOverviewData(address: string) {
     isFirstLoad: false,
     error: null,
     data: {
-      meta,
+      details,
       holders: holders.data ?? [],
       holdersInfo,
       market: marketData.data?.[address] ?? null,
@@ -111,63 +122,77 @@ export default function TokenOverviewPage() {
 
   const result = useTokenOverviewData(address);
 
-  // ── Sticky data: update ĐỒNG BỘ trong lúc render (không dùng useEffect) ──
-  // Đảm bảo cột trái luôn hiện data gần nhất, không bao giờ trắng
-  const freshMeta = result.data?.meta ?? null;
-  const freshMarket = result.data?.market ?? null;
+  // // ── Sticky data: update ĐỒNG BỘ trong lúc render (không dùng useEffect) ──
+  // // Đảm bảo cột trái luôn hiện data gần nhất, không bao giờ trắng
+  // const freshMeta = result.data?.meta ?? null;
 
-  const stickyMetaRef = useRef(freshMeta);
-  const stickyMarketRef = useRef(freshMarket);
+  // const stickyMetaRef = useRef(freshMeta);
+  // const stickyMarketRef = useRef(freshMarket);
 
-  // Cập nhật ngay trong render — không cần đợi effect cycle
-  if (freshMeta) stickyMetaRef.current = freshMeta;
-  if (freshMarket) stickyMarketRef.current = freshMarket;
+  // // Cập nhật ngay trong render — không cần đợi effect cycle
+  // if (freshMeta) stickyMetaRef.current = freshMeta;
+  // if (freshMarket) stickyMarketRef.current = freshMarket;
 
-  const meta = stickyMetaRef.current;
-  const market = stickyMarketRef.current;
+  // const meta = stickyMetaRef.current;
+  // const market = stickyMarketRef.current;
   const { tr } = useLocalization();
+
+  const details = result.data?.details;
+  const market = result.data?.market;
 
   return (
     <PageWrapper>
       <div className={styles.tokenOverviewGrid}>
         <div className={styles.leftColumn}>
           <div className={styles.sidebarGroup}>
-            {!meta ? (
+            {!details ? (
               <div className={styles.skeletonHeader}>
-                <div className={`${styles.skeletonBlock} ${styles.skeletonAvatar}`} />
+                <div
+                  className={`${styles.skeletonBlock} ${styles.skeletonAvatar}`}
+                />
                 <div className={styles.skeletonLines}>
-                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineLong}`} />
-                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-                  <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`} />
+                  <div
+                    className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineLong}`}
+                  />
+                  <div
+                    className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`}
+                  />
+                  <div
+                    className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`}
+                  />
                 </div>
               </div>
             ) : (
               <TokenHeader
-                name={meta.name}
-                symbol={meta.symbol}
-                address={meta.address}
-                imageUrl={meta.imageUrl ?? undefined}
-                coinGeckoId={meta.coingeckoId ?? null}
-                discordInvite={meta.linkDiscord}
-                websiteUrl={meta.linkHomepage}
-                twitterHandle={meta.twitterScreenName}
-                marketCapRank={market?.marketCapRank ?? null}
+                name={details.name}
+                symbol={details.symbol}
+                address={details.address}
+                imageUrl={details.imageUrl ?? undefined}
+                coinGeckoId={details.coingeckoId ?? ""}
+                discordInvite={details.linkDiscord}
+                websiteUrl={details.linkHomepage}
+                twitterHandle={details.twitterScreenName}
+                marketCapRank={null}
                 compact
               />
             )}
 
-            {!market ? (
+            {!market || !details ? (
               <div className={styles.skeletonStats}>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className={styles.skeletonStatRow}>
-                    <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`} />
-                    <div className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                    <div
+                      className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineMedium}`}
+                    />
+                    <div
+                      className={`${styles.skeletonBlock} ${styles.skeletonLine} ${styles.skeletonLineShort}`}
+                    />
                   </div>
                 ))}
               </div>
             ) : (
               <TokenOverviewStats
-                meta={meta! as any}
+                meta={details}
                 data={market}
                 customPriceChange={customPriceChange}
               />
@@ -180,7 +205,7 @@ export default function TokenOverviewPage() {
             <TokenTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
-              symbol={meta?.symbol ?? "—"}
+              symbol={details?.symbol ?? "—"}
               address={address}
             />
           </div>
@@ -190,7 +215,7 @@ export default function TokenOverviewPage() {
               {address && (
                 <TokenOverviewChart
                   address={address}
-                  symbol={meta?.symbol ?? ""}
+                  symbol={details?.symbol ?? ""}
                   onPriceChangeUpdate={setCustomPriceChange}
                 />
               )}
@@ -201,11 +226,11 @@ export default function TokenOverviewPage() {
               <TokenInsightTabs
                 address={address}
                 meta={{
-                  name: meta?.name ?? "",
-                  symbol: meta?.symbol ?? "",
-                  description: (result.data?.meta as any)?.description ?? null,
+                  name: details?.name ?? "",
+                  symbol: details?.symbol ?? "",
+                  description: details?.description ?? null,
                 }}
-                market={market}
+                market={market ?? null}
                 holders={result.data?.holders ?? []}
                 holdersInfo={result.data?.holdersInfo ?? null}
                 holdersLoading={result.isFirstLoad}
@@ -217,25 +242,35 @@ export default function TokenOverviewPage() {
               className={`${styles.marketsSection} ${styles.scrollAnchor}`}
             >
               <div className={styles.marketsSectionTitle}>
-                {meta?.name ?? "—"} Markets
+                {details?.name ?? "—"} Markets
               </div>
               <div className={styles.marketsSectionDescription}>
-                Top decentralized exchange pools for trading {meta?.name ?? "this token"}.
+                Top decentralized exchange pools for trading{" "}
+                {details?.name ?? "this token"}.
               </div>
-              {address && <TokenMarketsTable address={address} symbol={meta?.symbol ?? ""} />}
+              {address && (
+                <TokenMarketsTable
+                  address={address}
+                  symbol={details?.symbol ?? ""}
+                />
+              )}
             </div>
 
             {market?.priceUsd != null && (
               <div className={styles.marketsSection}>
                 <div className={styles.marketsSectionTitle}>
-                  {tr("token.globalPrices.title", { name: meta?.name ?? "—" })}
+                  {tr("token.globalPrices.title", {
+                    name: details?.name ?? "—",
+                  })}
                 </div>
                 <div className={styles.marketsSectionDescription}>
-                  {tr("token.globalPrices.description", { name: meta?.name ?? "This token" })}
+                  {tr("token.globalPrices.description", {
+                    name: details?.name ?? "This token",
+                  })}
                 </div>
                 <GlobalPrices
                   priceUsd={market.priceUsd}
-                  symbol={meta?.symbol ?? ""}
+                  symbol={details?.symbol ?? ""}
                 />
               </div>
             )}
