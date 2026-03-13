@@ -400,6 +400,21 @@ export const topTokensByMarketCap = pgTable("top_tokens_by_marketcap", {
     .$onUpdate(() => new Date()),
 });
 
+export const topTraders = pgTable(
+  "top_traders",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    rank: integer("rank").notNull(),
+    pnl: decimal("pnl").notNull(),
+    volume: decimal("volume").notNull(),
+    tradeCount: integer("trade_count").notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [ t.address] })],
+);
+
 export const poolTrades24h = pgTable("pool_trades_24h", {
   id: varchar("id", { length: 128 }).primaryKey(),
 
@@ -621,6 +636,7 @@ export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
 export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
 export type TopTokensByMarketCapInsert =
   typeof topTokensByMarketCap.$inferInsert;
+export type TopTraderInsert = typeof topTraders.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert =
   typeof walletPortfolioCache.$inferInsert;
