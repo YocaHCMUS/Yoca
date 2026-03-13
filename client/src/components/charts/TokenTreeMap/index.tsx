@@ -1,4 +1,5 @@
 import { CARBON } from "@/config/constants";
+import { useUserTheme } from "@/contexts";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption, TreemapSeriesOption } from "echarts";
@@ -35,6 +36,10 @@ type TreeNode = NonNullable<TreemapSeriesOption["data"]>[number] & {
   raw: TokenTreeMapNode;
 };
 
+type RichStyles = NonNullable<
+  NonNullable<TreemapSeriesOption["label"]>["rich"]
+>;
+
 type RectSize = {
   width: number;
   height: number;
@@ -50,6 +55,7 @@ const labelThresholds: Record<
     rectSize: number;
     iconSize: number;
     format: LabelFormatter;
+    rich?: RichStyles;
   }
 > = {
   tiny: {
@@ -64,17 +70,45 @@ const labelThresholds: Record<
   },
   medium: {
     rectSize: 80,
-    iconSize: 40,
+    iconSize: 32,
     format: (node) =>
-      `{icon_medium_${node.symbol}|}\n{symbol|${node.symbol}}\n{trendValue|${node.trendValueFmtr(node.trendValue)}}`,
+      `{icon_medium_${node.symbol}|}\n{symbol_md|${node.symbol}}\n{trendValue_md|${node.trendValueFmtr(node.trendValue)}}`,
+    rich: {
+      symbol_md: {
+        padding: [8, 0, 0, 0],
+        fontSize: 10,
+        align: "center",
+      },
+      trendValue_md: {
+        fontSize: 7,
+        align: "center",
+      },
+    },
   },
   full: {
     rectSize: 120,
     iconSize: 60,
     format: (node) =>
-      `{icon_full_${node.symbol}|}\n{symbol|${node.symbol}}\n{trendValue|${node.trendValueFmtr(node.trendValue)}}`,
+      `{icon_full_${node.symbol}|}\n{symbol_full|${node.symbol}}\n{trendValue_full|${node.trendValueFmtr(node.trendValue)}}`,
+    rich: {
+      symbol_full: {
+        padding: [8, 0, 0, 0],
+        fontSize: 16,
+        fontWeight: "bold",
+        align: "center",
+      },
+      trendValue_full: {
+        fontSize: 10,
+        align: "center",
+      },
+    },
   },
 };
+
+const richStyles = Object.values(labelThresholds)
+  .map((threshold) => threshold.rich)
+  .filter((styles) => styles != undefined)
+  .reduce((acc, cur) => ({ ...acc, ...cur }), {});
 
 function getTrendColor(trend: number | null): string {
   if (trend == null || trend == 0) return CARBON.info;
@@ -97,6 +131,8 @@ function buildTreemapOption(
   data: TokenTreeMapNode[],
   rectSizes: Record<string, RectSize>,
   onSizeCollected: (symbol: string, size: RectSize) => void,
+  theme: "light" | "dark",
+  iconRichEntries: Record<string, any>,
 ): EChartsOption {
   return {
     tooltip: {
@@ -105,7 +141,7 @@ function buildTreemapOption(
         if (Array.isArray(params)) {
           return "";
         }
-        const node: TokenTreeMapNode = (params.data as any).raw;
+        const node: TokenTreeMapNode = (params.data as TreeNode).raw;
 
         const rows = node.tooltips
           .map((t) => {
@@ -159,39 +195,18 @@ function buildTreemapOption(
             );
           },
           rich: {
-            ...Object.fromEntries(
-              (Object.keys(labelThresholds) as LabelSize[]).flatMap((size) =>
-                data.map((node) => [
-                  `icon_${size}_${node.symbol}`,
-                  {
-                    backgroundColor: {
-                      image: node.imgUrl,
-                    },
-                    align: "center",
-                    width: labelThresholds[size].iconSize,
-                    height: labelThresholds[size].iconSize,
-                  },
-                ]),
-              ),
-            ),
-            symbol: {
-              padding: [8, 0, 0, 0],
-              fontSize: 16,
-              fontWeight: "bold",
-              align: "center",
-            },
-            trendValue: {
-              fontSize: 11,
-              align: "center",
-            },
+            ...iconRichEntries,
+            ...richStyles,
           },
         },
 
         roam: false,
 
         visibleMin: 0,
+
         itemStyle: {
           gapWidth: 1,
+          borderColor: theme == "dark" ? "black" : "white",
         },
 
         labelLayout: (params) => {
@@ -226,6 +241,7 @@ export default function TokenTreeMap({
   const { fmt } = useLocalization();
   const [rectSizes, setRectSizes] = useState<Record<string, RectSize>>({});
   const collectedSizesRef = useRef<Record<string, RectSize>>({});
+  const { theme } = useUserTheme();
 
   const handleSizeCollected = useCallback(
     (symbol: string, size: RectSize) => {
@@ -241,12 +257,54 @@ export default function TokenTreeMap({
         setRectSizes({ ...collectedSizesRef.current });
       }
     },
-    [data.length, rectSizes],
+    [data.length],
   );
 
+  // Build icon rich entries only for the size we expect to render for each node.
+  // Fallback to 'tiny' when the rect size is unknown.
+  const iconRichEntries = useMemo(() => {
+    return Object.fromEntries(
+      data.flatMap((node) => {
+        const rect = rectSizes[node.symbol];
+        let size: LabelSize = "tiny";
+
+        if (rect) {
+          const maxRect = Math.min(rect.width, rect.height);
+          for (let i = 0; i < labelSizes.length; i++) {
+            const sizeKey = labelSizes[i];
+            const threshold = labelThresholds[sizeKey];
+            if (maxRect < threshold.rectSize) {
+              size = i == 0 ? "tiny" : labelSizes[i - 1];
+              break;
+            }
+            if (i == labelSizes.length - 1) {
+              size = labelSizes[labelSizes.length - 1];
+            }
+          }
+        }
+
+        const entryKey = `icon_${size}_${node.symbol}`;
+        const entryValue = {
+          backgroundColor: { image: node.imgUrl },
+          align: "center",
+          width: labelThresholds[size].iconSize,
+          height: labelThresholds[size].iconSize,
+        };
+
+        return [[entryKey, entryValue]];
+      }),
+    );
+  }, [data, rectSizes]);
+
   const options = useMemo(() => {
-    return buildTreemapOption(data, rectSizes, handleSizeCollected);
-  }, [data, rectSizes, handleSizeCollected]);
+    return buildTreemapOption(
+      data,
+      rectSizes,
+      handleSizeCollected,
+      theme,
+      iconRichEntries,
+    );
+  }, [data, rectSizes, handleSizeCollected, theme, iconRichEntries]);
 
   if (loading) {
     return (
