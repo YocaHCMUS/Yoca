@@ -9,6 +9,7 @@ const hoisted = vi.hoisted(() => {
     const getCachedWalletTransactionsHeliusMock = vi.fn();
     const getTokenMarketDataMock = vi.fn();
     const getTokenHistoricalDataMock = vi.fn();
+    const saveTransactionsHeliusCacheMock = vi.fn();
 
     const db = {
         select: vi.fn(() => ({
@@ -51,6 +52,7 @@ const hoisted = vi.hoisted(() => {
         getCachedWalletTransactionsHeliusMock,
         getTokenMarketDataMock,
         getTokenHistoricalDataMock,
+        saveTransactionsHeliusCacheMock,
         db,
     };
 });
@@ -102,7 +104,7 @@ vi.mock("@sv/services/wallet/db/walletDataCacher.js", () => ({
     saveOverviewCache: vi.fn(async () => undefined),
     saveSwapsCache: vi.fn(async () => undefined),
     saveTransactionsCache: vi.fn(async () => undefined),
-    saveTransactionsHeliusCache: vi.fn(async () => undefined),
+    saveTransactionsHeliusCache: hoisted.saveTransactionsHeliusCacheMock,
     saveTransfersCache: vi.fn(async () => undefined),
 }));
 
@@ -114,7 +116,10 @@ vi.mock("@sv/services/tokens/token-history.js", () => ({
     getTokenHistoricalData: hoisted.getTokenHistoricalDataMock,
 }));
 
-import { getWalletTokenBalanceHistory } from "../../src/services/wallet/walletData.service.ts";
+import {
+    getWalletTokenBalanceHistory,
+    getWalletTransactionHelius,
+} from "../../src/services/wallet/walletData.service.ts";
 
 function getSeriesValueByDate(
     series: Array<{ date: string; value: number }>,
@@ -136,6 +141,7 @@ describe("walletData.service - token USD historical pricing", () => {
         hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.getTokenHistoricalDataMock.mockReset();
+        hoisted.saveTransactionsHeliusCacheMock.mockReset();
 
         hoisted.getWalletBalancesMock.mockReturnValue(null);
         hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
@@ -155,6 +161,7 @@ describe("walletData.service - token USD historical pricing", () => {
             isFullyCovered: true,
         });
         hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
     });
 
     afterEach(() => {
@@ -217,5 +224,77 @@ describe("walletData.service - token USD historical pricing", () => {
         for (let i = 0; i < result.tokenSeries.length; i++) {
             expect(result.tokenSeries[i].timestamp).toBe(result.usdSeries[i].timestamp);
         }
+    });
+});
+
+describe("walletData.service - cache coverage sync behavior", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-03-12T00:00:00.000Z"));
+
+        hoisted.fetchAllTransactionHistoryMock.mockReset();
+        hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
+        hoisted.saveTransactionsHeliusCacheMock.mockReset();
+
+        hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("runs tail backfill even when requested-range cache slice is empty", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const fromSec = nowSec - 30 * 24 * 60 * 60;
+        const coveredEarliestSec = fromSec + 10 * 24 * 60 * 60;
+
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec, toSec: nowSec },
+            coveredRange: { earliestSec: coveredEarliestSec, latestSec: nowSec },
+            isFullyCovered: false,
+        });
+
+        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+
+        expect(hoisted.fetchAllTransactionHistoryMock).toHaveBeenCalledTimes(1);
+        const fetchCall = hoisted.fetchAllTransactionHistoryMock.mock.calls[0];
+        expect(fetchCall[0]).toBe("wallet-1");
+        expect(fetchCall[1]).toEqual({
+            fromSec,
+            toSec: coveredEarliestSec - 1,
+        });
+        expect(fetchCall[2]).toBeUndefined();
+
+        expect(hoisted.saveTransactionsHeliusCacheMock).toHaveBeenCalledWith(
+            "wallet-1",
+            "solana",
+            [],
+            { fromSec, toSec: nowSec },
+        );
+    });
+
+    it("does not widen coverage bounds when a required gap fetch fails", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const fromSec = nowSec - 30 * 24 * 60 * 60;
+        const coveredEarliestSec = fromSec + 10 * 24 * 60 * 60;
+
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec, toSec: nowSec },
+            coveredRange: { earliestSec: coveredEarliestSec, latestSec: nowSec },
+            isFullyCovered: false,
+        });
+        hoisted.fetchAllTransactionHistoryMock.mockRejectedValueOnce(new Error("tail fetch failed"));
+
+        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+
+        expect(hoisted.saveTransactionsHeliusCacheMock).toHaveBeenCalledTimes(1);
+        const saveCall = hoisted.saveTransactionsHeliusCacheMock.mock.calls[0];
+        expect(saveCall[0]).toBe("wallet-1");
+        expect(saveCall[1]).toBe("solana");
+        expect(saveCall[2]).toEqual([]);
+        expect(saveCall[3]).toBeUndefined();
     });
 });

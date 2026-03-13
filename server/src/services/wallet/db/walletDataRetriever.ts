@@ -34,6 +34,12 @@ export type CachedWalletTransactionsHeliusRangeResult = {
 	isFullyCovered: boolean;
 };
 
+const MOVING_NOW_HEAD_LAG_ALLOWANCE_SEC = 5;
+const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
+	30,
+	Math.min(Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000), 5 * 60),
+);
+
 function toIsoTimestamp(value: unknown): string {
 	if (value instanceof Date) {
 		return Number.isNaN(value.getTime())
@@ -50,6 +56,26 @@ function toIsoTimestamp(value: unknown): string {
 	}
 
 	return new Date().toISOString();
+}
+
+function toEpochSec(value: unknown): number | null {
+	if (value instanceof Date) {
+		if (Number.isNaN(value.getTime())) {
+			return null;
+		}
+		return Math.floor(value.getTime() / 1000);
+	}
+
+	if (typeof value === "string") {
+		const normalized = value.includes("T") ? value : value.replace(" ", "T");
+		const parsed = new Date(normalized);
+		if (Number.isNaN(parsed.getTime())) {
+			return null;
+		}
+		return Math.floor(parsed.getTime() / 1000);
+	}
+
+	return null;
 }
 
 function getChainCandidates(chain: SupportedChain): string[] {
@@ -215,8 +241,8 @@ export async function getCachedWalletTransactionsHelius(
 	// are unreliable for sparse wallets and will produce false head/tail
 	// gaps on every request.
 	// ------------------------------------------------------------------
-	const canonicalChain = chainCandidates[0]; // already lowercase from getChainCandidates
-	const metaRows = await db
+	const canonicalChain = chainCandidates.find((candidate) => candidate === candidate.toLowerCase()) ?? chainCandidates[0];
+	let metaRows = await db
 		.select()
 		.from(walletTransactionsMeta)
 		.where(
@@ -227,6 +253,32 @@ export async function getCachedWalletTransactionsHelius(
 		)
 		.limit(1);
 
+	if (metaRows.length === 0) {
+		const legacyChainCandidates = chainCandidates.filter((candidate) => candidate !== canonicalChain);
+		if (legacyChainCandidates.length > 0) {
+			const legacyChainCondition =
+				legacyChainCandidates.length === 1
+					? eq(walletTransactionsMeta.chain, legacyChainCandidates[0])
+					: or(
+						...legacyChainCandidates.map((candidate) =>
+							eq(walletTransactionsMeta.chain, candidate),
+						),
+					);
+
+			metaRows = await db
+				.select()
+				.from(walletTransactionsMeta)
+				.where(
+					and(
+						eq(walletTransactionsMeta.address, address),
+						legacyChainCondition,
+					),
+				)
+				.orderBy(desc(walletTransactionsMeta.fetchedAt))
+				.limit(1);
+		}
+	}
+
 	const metaCoveredFromSec: number | null =
 		metaRows.length > 0 && metaRows[0].coveredFromSec != null
 			? Number(metaRows[0].coveredFromSec)
@@ -235,12 +287,25 @@ export async function getCachedWalletTransactionsHelius(
 		metaRows.length > 0 && metaRows[0].coveredToSec != null
 			? Number(metaRows[0].coveredToSec)
 			: null;
+	const metaFetchedAtSec: number | null =
+		metaRows.length > 0 ? toEpochSec(metaRows[0].fetchedAt) : null;
 
-	const isFullyCovered =
-		metaCoveredFromSec != null &&
+	const nowSec = Math.floor(Date.now() / 1000);
+	const isMovingNowWindow =
+		Math.abs(requestedRange.toSec - nowSec) <= MOVING_NOW_HEAD_LAG_ALLOWANCE_SEC;
+	const hasFreshMovingNowHead =
+		isMovingNowWindow &&
 		metaCoveredToSec != null &&
-		metaCoveredFromSec <= requestedRange.fromSec &&
-		metaCoveredToSec >= requestedRange.toSec;
+		metaCoveredToSec >= requestedRange.toSec - MOVING_NOW_HEAD_FRESHNESS_SEC &&
+		metaFetchedAtSec != null &&
+		metaFetchedAtSec >= requestedRange.toSec - MOVING_NOW_HEAD_FRESHNESS_SEC;
+
+	const coversTail =
+		metaCoveredFromSec != null && metaCoveredFromSec <= requestedRange.fromSec;
+	const coversHead =
+		metaCoveredToSec != null && metaCoveredToSec >= requestedRange.toSec;
+
+	const isFullyCovered = coversTail && (coversHead || hasFreshMovingNowHead);
 
 	const rows = await db
 		.select()

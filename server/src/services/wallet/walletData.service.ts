@@ -954,38 +954,64 @@ export async function getWalletTransactionHelius(
 
   let fetchedTransactions: WalletTransactionHelius[] = [];
   let mergedTransactions = cacheRangeResult.transactions;
+  let confirmedCoverageRange: WalletHistoryRange | undefined =
+    cacheRangeResult.isFullyCovered ? requestedRange : undefined;
 
   if (!cacheRangeResult.isFullyCovered) {
     const knownSignatures = new Set(
       cacheRangeResult.transactions.map((tx) => tx.signature),
     );
 
+    let headCoverageConfirmed = false;
+    let tailCoverageConfirmed = false;
+
     const hasNoCoverage =
       cacheRangeResult.coveredRange.earliestSec == null ||
       cacheRangeResult.coveredRange.latestSec == null;
 
     if (hasNoCoverage) {
-      fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+      try {
+        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+        headCoverageConfirmed = true;
+        tailCoverageConfirmed = true;
+      } catch (fetchErr) {
+        console.error("[wallet-transaction-helius-cache] Full-range fetch failed", fetchErr);
+      }
     } else {
       const coveredLatestSec = cacheRangeResult.coveredRange.latestSec;
       const coveredEarliestSec = cacheRangeResult.coveredRange.earliestSec;
 
       if (coveredLatestSec == null || coveredEarliestSec == null) {
-        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+        try {
+          fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+          headCoverageConfirmed = true;
+          tailCoverageConfirmed = true;
+        } catch (fetchErr) {
+          console.error("[wallet-transaction-helius-cache] Full-range fallback fetch failed", fetchErr);
+        }
       } else {
-
         const needsHeadGapFill = coveredLatestSec < requestedRange.toSec;
+        const needsTailGapFill = coveredEarliestSec > requestedRange.fromSec;
+
+        headCoverageConfirmed = !needsHeadGapFill;
+        tailCoverageConfirmed = !needsTailGapFill;
+
         if (needsHeadGapFill) {
-          const headFetched = await fetchAllTransactionHistory(address, requestedRange, {
-            stopAtKnownSignatures: knownSignatures,
-          });
-          fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, headFetched);
-          for (const tx of headFetched) {
-            knownSignatures.add(tx.signature);
+          try {
+            const headFetched = await fetchAllTransactionHistory(address, requestedRange, {
+              stopAtKnownSignatures: knownSignatures,
+            });
+            fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, headFetched);
+            for (const tx of headFetched) {
+              knownSignatures.add(tx.signature);
+            }
+            headCoverageConfirmed = true;
+          } catch (headErr) {
+            headCoverageConfirmed = false;
+            console.error("[wallet-transaction-helius-cache] Head-gap fetch failed", headErr);
           }
         }
 
-        const needsTailGapFill = coveredEarliestSec > requestedRange.fromSec;
         if (needsTailGapFill) {
           const oldestCachedTx = cacheRangeResult.transactions.reduce<WalletTransactionHelius | null>(
             (oldest, tx) => {
@@ -1000,30 +1026,44 @@ export async function getWalletTransactionHelius(
             null,
           );
 
-          if (oldestCachedTx) {
-            const tailToSec = Math.max(
-              requestedRange.fromSec,
-              coveredEarliestSec - 1,
-            );
-            const tailFetched = await fetchAllTransactionHistory(
-              address,
-              { fromSec: requestedRange.fromSec, toSec: tailToSec },
-              { beforeCursor: oldestCachedTx.signature },
-            );
+          const tailToSec = Math.max(
+            requestedRange.fromSec,
+            coveredEarliestSec - 1,
+          );
+
+          try {
+            const tailFetched = oldestCachedTx
+              ? await fetchAllTransactionHistory(
+                address,
+                { fromSec: requestedRange.fromSec, toSec: tailToSec },
+                { beforeCursor: oldestCachedTx.signature },
+              )
+              : await fetchAllTransactionHistory(
+                address,
+                { fromSec: requestedRange.fromSec, toSec: tailToSec },
+              );
+
             fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, tailFetched);
+            tailCoverageConfirmed = true;
+          } catch (tailErr) {
+            tailCoverageConfirmed = false;
+            console.error("[wallet-transaction-helius-cache] Tail-gap fetch failed", tailErr);
           }
         }
       }
     }
 
-    if (fetchedTransactions.length > 0) {
-      await saveTransactionsHeliusCache(address, effectiveChain, fetchedTransactions, requestedRange);
-    } else {
-      // Bug 4 fix: even when zero new transactions were returned the sync
-      // completed successfully.  Persist the coverage bounds so the next
-      // request knows the range was already checked and skips the Helius call.
-      await saveTransactionsHeliusCache(address, effectiveChain, [], requestedRange);
-    }
+    confirmedCoverageRange =
+      headCoverageConfirmed && tailCoverageConfirmed ? requestedRange : undefined;
+
+    // Persist fetched rows on every sync attempt. Coverage bounds are widened
+    // only for ranges confirmed by cache + completed provider fetch paths.
+    await saveTransactionsHeliusCache(
+      address,
+      effectiveChain,
+      fetchedTransactions,
+      confirmedCoverageRange,
+    );
 
     mergedTransactions = mergeTransactionsBySignature(
       cacheRangeResult.transactions,
@@ -1045,6 +1085,7 @@ export async function getWalletTransactionHelius(
         : 0,
     cachedCount: cacheRangeResult.transactions.length,
     fetchedCount: fetchedTransactions.length,
+    confirmedCoverageRange,
     returnedCount: mergedTransactions.length,
   });
 

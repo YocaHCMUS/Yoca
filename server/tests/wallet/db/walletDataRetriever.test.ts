@@ -2,8 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => {
     const rowsByTable = new Map<unknown, unknown[]>();
+    const queuedRowsByTable = new Map<unknown, unknown[][]>();
 
-    const getRows = (table: unknown) => rowsByTable.get(table) ?? [];
+    const getRows = (table: unknown) => {
+        const queued = queuedRowsByTable.get(table);
+        if (queued && queued.length > 0) {
+            const nextRows = queued.shift() ?? [];
+            if (queued.length === 0) {
+                queuedRowsByTable.delete(table);
+            }
+            return nextRows;
+        }
+
+        return rowsByTable.get(table) ?? [];
+    };
+
+    const queueRows = (table: unknown, rowsQueue: unknown[][]) => {
+        queuedRowsByTable.set(table, rowsQueue.map((rows) => [...rows]));
+    };
 
     const makeOrderByResult = (table: unknown) => ({
         limit: async (n: number) => getRows(table).slice(0, n),
@@ -65,7 +81,7 @@ const hoisted = vi.hoisted(() => {
         },
     };
 
-    return { db, rowsByTable, schema };
+    return { db, rowsByTable, queuedRowsByTable, queueRows, schema };
 });
 
 vi.mock("@sv/config/constants.js", () => ({
@@ -98,6 +114,7 @@ describe("walletDataRetriever", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-03-12T12:00:00.000Z"));
         hoisted.rowsByTable.clear();
+        hoisted.queuedRowsByTable.clear();
     });
 
     afterEach(() => {
@@ -309,5 +326,81 @@ describe("walletDataRetriever", () => {
 
         expect(res.transactions).toHaveLength(1);
         expect(res.transactions[0].signature).toBe("legacy-sig");
+    });
+
+    it("treats moving-now windows as covered when fetchedAt is fresh and coveredToSec lags slightly", async () => {
+        const nowSec = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
+        const requestedFrom = Math.floor(new Date("2026-03-12T11:00:00.000Z").getTime() / 1000);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
+            {
+                fetchedAt: new Date("2026-03-12T11:59:30.000Z"),
+                coveredFromSec: requestedFrom - 100,
+                coveredToSec: nowSec - 120,
+            },
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, []);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: requestedFrom },
+        );
+
+        expect(res.isFullyCovered).toBe(true);
+        expect(res.coveredRange.earliestSec).toBe(requestedFrom - 100);
+        expect(res.coveredRange.latestSec).toBe(nowSec - 120);
+    });
+
+    it("does not treat moving-now windows as covered when fetchedAt freshness has expired", async () => {
+        const nowSec = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
+        const requestedFrom = Math.floor(new Date("2026-03-12T11:00:00.000Z").getTime() / 1000);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
+            {
+                fetchedAt: new Date("2026-03-12T11:45:00.000Z"),
+                coveredFromSec: requestedFrom - 100,
+                coveredToSec: nowSec - 120,
+            },
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, []);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: requestedFrom },
+        );
+
+        expect(res.isFullyCovered).toBe(false);
+    });
+
+    it("falls back to legacy chain-cased metadata when canonical lowercase metadata row is missing", async () => {
+        const requestedFrom = Math.floor(new Date("2026-03-11T12:00:00.000Z").getTime() / 1000);
+        const requestedTo = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
+
+        hoisted.queueRows(hoisted.schema.walletTransactionsMeta, [
+            [],
+            [
+                {
+                    fetchedAt: new Date("2026-03-12T11:55:00.000Z"),
+                    coveredFromSec: requestedFrom - 60,
+                    coveredToSec: requestedTo + 60,
+                },
+            ],
+        ]);
+
+        hoisted.rowsByTable.set(hoisted.schema.walletHeliusTransactions, []);
+
+        const res = await getCachedWalletTransactionsHelius(
+            "wallet-1",
+            "solana" as any,
+            { fromSec: requestedFrom, toSec: requestedTo },
+        );
+
+        expect(res.isFullyCovered).toBe(true);
+        expect(res.coveredRange.earliestSec).toBe(requestedFrom - 60);
+        expect(res.coveredRange.latestSec).toBe(requestedTo + 60);
     });
 });

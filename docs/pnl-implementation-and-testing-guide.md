@@ -1,4 +1,3 @@
-Here is the implementation and testing plan for the Backend Cumulative PnL historical data processing, tailored to the Yoca monorepo structure and your specific focus on dynamic calculation.
 Implementation & Testing Plan: Historical Cumulative PnL
 1. Objective
 

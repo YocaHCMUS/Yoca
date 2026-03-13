@@ -422,13 +422,13 @@ export async function fetchHeliusSolanaSwap(
           resp.status,
           resp.statusText,
         );
-        break;
+        throw new Error(`Helius history request failed: ${resp.status} ${resp.statusText}`);
       }
 
       json = await resp.json();
     } catch (err) {
       console.error("Helius wallet transaction request failed", err);
-      break;
+      throw err;
     }
 
     const data: any[] = Array.isArray(json?.data) ? json.data : [];
