@@ -3,27 +3,31 @@ import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx"
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import { TransactionDistribution } from "@/components/charts/TransactionDistribution/TransactionDistribution.tsx";
-import TabContainer from "@/components/TabContainer/tabContainer.tsx";
+import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
-  renderBold,
+  renderBase,
   renderCode,
   renderCurrency,
   renderDateTime,
-  renderLong,
-  renderLongCode,
+  renderHash,
+  // renderStatus,
   renderPositiveNegative,
   renderReducedNumber,
-  renderBase,
-  renderHash
-  // renderStatus,
 } from "@/components/tables/TableCellRenderer.tsx";
-import { SwapDetailModal, type TransferRecord } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import {
+  SwapDetailModal,
+  type TransferRecord,
+} from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
-import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
-import { fetchWalletPortfolio, fetchWalletTransfers, fetchWalletSwaps } from "@/services/wallet/walletApi.ts";
+import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import {
+  fetchWalletPortfolio,
+  fetchWalletSwaps,
+  fetchWalletTransfers,
+} from "@/services/wallet/walletApi.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { formatNumber } from "../../util/format.ts";
@@ -67,22 +71,25 @@ export default function WalletPage() {
 
   // Swap detail modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
-  const [selectedTransfers, setSelectedTransfers] = useState<TransferRecord[] | null>(null);
+  const [selectedTransfers, setSelectedTransfers] = useState<
+    TransferRecord[] | null
+  >(null);
   const [selectedSwap, setSelectedSwap] = useState<any>(null);
 
   // Stores raw API swap objects aligned by index with the swaps state array
   const rawSwapsRef = useRef<any[]>([]);
 
   // Transform portfolio data from API response for Table component
-  const portfolioData = portfolio.length > 0 
-    ? portfolio.map((item: any) => [
-        item.symbol || item.token || 'Unknown',
-        formatNumber(item.priceUsd ?? 0),
-        `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
-        formatNumber(item.valueUsd ?? item.value ?? 0),
-        ((item.change24hPercent ?? 0) / 100).toFixed(2),
-      ])
-    : [];
+  const portfolioData =
+    portfolio.length > 0
+      ? portfolio.map((item: any) => [
+          item.symbol || item.token || "Unknown",
+          formatNumber(item.priceUsd ?? 0),
+          `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
+          formatNumber(item.valueUsd ?? item.value ?? 0),
+          ((item.change24hPercent ?? 0) / 100).toFixed(2),
+        ])
+      : [];
 
   // Transform swap data to array format for Table component
   const swapData = useMemo(
@@ -91,16 +98,17 @@ export default function WalletPage() {
         const balanceChanges = swap.balanceChanges || [];
         const soldChange = balanceChanges.find((bc: any) => bc.amount < 0);
         const boughtChange = balanceChanges.find((bc: any) => bc.amount > 0);
-        
+
         // Format token display: amount + truncated mint
         const formatTokenDisplay = (change: any) => {
-          if (!change) return '—';
+          if (!change) return "—";
           const amount = Math.abs(change.amount).toFixed(4);
-          const mint = change.mint || '';
-          const symbol = mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
+          const mint = change.mint || "";
+          const symbol =
+            mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
           return `${amount} ${symbol}`;
         };
-        
+
         return [
           swap.timestamp,
           swap.fee,
@@ -126,8 +134,12 @@ export default function WalletPage() {
   );
 
   // Filter transfers by direction
-  const inflowData = transferData.filter((row) => address && row[1] === address);
-  const outflowData = transferData.filter((row) => address && row[0] === address);
+  const inflowData = transferData.filter(
+    (row) => address && row[1] === address,
+  );
+  const outflowData = transferData.filter(
+    (row) => address && row[0] === address,
+  );
 
   const transactionHeaders = [
     // tr("walletPage.signature"),
@@ -267,41 +279,45 @@ export default function WalletPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!address || address === 'null') return;
-      
+      if (!address || address === "null") return;
+
       try {
         setPortfolioLoading(true);
-        
+
         // Fetch portfolio data
-        const portfolioResponse = await fetchWalletPortfolio(address, 'solana');
+        const portfolioResponse = await fetchWalletPortfolio(address, "solana");
         if (portfolioResponse && Array.isArray(portfolioResponse)) {
           setPortfolio(portfolioResponse);
         }
-        
+
         // Fetch swaps data for swap table
         const swapResponse = await fetchWalletSwaps(address, {
-          chain: 'solana',
-          limit: 50
+          chain: "solana",
+          limit: 50,
         });
         const swapsData = swapResponse?.swaps || [];
         if (Array.isArray(swapsData)) {
           rawSwapsRef.current = swapsData;
           setSwaps(swapsData);
-          console.log('[swaps] ✓ loaded:', swapsData.length, 'swaps');
+          console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
         }
 
         // Fetch transfers data for inflow/outflow tables
         const transferResponse = await fetchWalletTransfers(address, {
-          chain: 'solana',
-          limit: 50
+          chain: "solana",
+          limit: 50,
         });
         const transfersData = transferResponse?.transfers || [];
         if (Array.isArray(transfersData)) {
           setTransfers(transfersData);
-          console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+          console.log(
+            "[transfers] ✓ loaded:",
+            transfersData.length,
+            "transfers",
+          );
         }
       } catch (err) {
-        console.error('Failed to load wallet data:', err);
+        console.error("Failed to load wallet data:", err);
       } finally {
         setPortfolioLoading(false);
         setLoading(false);
@@ -328,16 +344,17 @@ export default function WalletPage() {
           : 0;
     const records: TransferRecord[] = [];
 
-    if (Array.isArray(rawTx.tokenTransfers) && rawTx.tokenTransfers.length > 0) {
+    if (
+      Array.isArray(rawTx.tokenTransfers) &&
+      rawTx.tokenTransfers.length > 0
+    ) {
       for (const t of rawTx.tokenTransfers) {
         const isOut = t.fromUserAccount === address;
         records.push({
           signature: sig,
           timestamp: ts,
           direction: isOut ? "out" : "in",
-          counterparty: isOut
-            ? t.toUserAccount || ""
-            : t.fromUserAccount || "",
+          counterparty: isOut ? t.toUserAccount || "" : t.fromUserAccount || "",
           mint: t.mint || "",
           symbol: t.tokenSymbol || null,
           amount: Number(t.tokenAmount ?? 0),
@@ -366,22 +383,23 @@ export default function WalletPage() {
   function handleSwapRowClick(row: any[], rowIndex: number) {
     const rawSwap = rawSwapsRef.current[rowIndex >= 0 ? rowIndex : -1];
     if (!rawSwap) return;
-    
+
     // Store the selected swap
     setSelectedSwap(rawSwap);
-    
+
     // Convert swap data to transfer records for the modal
-    const records: TransferRecord[] = rawSwap.balanceChanges?.map((change: any) => ({
-      signature: rawSwap.signature,
-      timestamp: Math.floor(new Date(rawSwap.timestamp).getTime() / 1000),
-      direction: change.amount > 0 ? "in" : "out",
-      counterparty: rawSwap.walletAddress,
-      mint: change.mint || "",
-      symbol: null,
-      amount: Math.abs(change.amount),
-      amountRaw: String(change.amount),
-      decimals: change.decimals || 0,
-    })) || [];
+    const records: TransferRecord[] =
+      rawSwap.balanceChanges?.map((change: any) => ({
+        signature: rawSwap.signature,
+        timestamp: Math.floor(new Date(rawSwap.timestamp).getTime() / 1000),
+        direction: change.amount > 0 ? "in" : "out",
+        counterparty: rawSwap.walletAddress,
+        mint: change.mint || "",
+        symbol: null,
+        amount: Math.abs(change.amount),
+        amountRaw: String(change.amount),
+        decimals: change.decimals || 0,
+      })) || [];
     setSelectedTransfers(records);
     setSwapModalOpen(true);
   }
@@ -420,18 +438,19 @@ export default function WalletPage() {
               initialFilters={{
                 timePeriod: "7D",
                 wallets: [address],
-                tokens: ['SOL']
+                tokens: ["SOL"],
               }}
               autoRefresh={true}
             />,
-            <PnLChart 
+            <PnLChart
               minHeight={400}
               aggregation="daily"
               autoRefresh={true}
               initialFilters={{
                 timePeriod: "7D",
-                wallets: [address]
-              }} />,
+                wallets: [address],
+              }}
+            />,
           ]} //for testing purpose
           onTabChange={(index) => setActiveTab(index)}
         />
@@ -523,7 +542,7 @@ export default function WalletPage() {
           <AssetDistribution
             initialFilters={{
               wallets: address ? [address] : [],
-              timePeriod: "30D"
+              timePeriod: "30D",
             }}
             autoRefresh={true}
           />

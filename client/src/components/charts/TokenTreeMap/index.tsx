@@ -3,7 +3,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption, TreemapSeriesOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 export interface TokenTreeMapNode {
   imgUrl: string;
@@ -35,26 +35,50 @@ type TreeNode = NonNullable<TreemapSeriesOption["data"]>[number] & {
   raw: TokenTreeMapNode;
 };
 
-interface RectSize {
+type RectSize = {
   width: number;
   height: number;
-}
+};
 
-const MIN_WIDTH_FOR_FULL_LABEL = 120;
-const MIN_HEIGHT_FOR_FULL_LABEL = 100;
-const MIN_SIZE_FOR_ICON = 10;
+const labelSizes = ["tiny", "small", "medium", "full"] as const;
+
+type LabelFormatter = (node: TokenTreeMapNode) => string;
+type LabelSize = (typeof labelSizes)[number];
+const labelThresholds: Record<
+  LabelSize,
+  {
+    rectSize: number;
+    iconSize: number;
+    format: LabelFormatter;
+  }
+> = {
+  tiny: {
+    rectSize: 8,
+    iconSize: 4,
+    format: (node) => `{icon_tiny_${node.symbol}|}`,
+  },
+  small: {
+    rectSize: 40,
+    iconSize: 20,
+    format: (node) => `{icon_small_${node.symbol}|}`,
+  },
+  medium: {
+    rectSize: 80,
+    iconSize: 40,
+    format: (node) =>
+      `{icon_medium_${node.symbol}|}\n{symbol|${node.symbol}}\n{trendValue|${node.trendValueFmtr(node.trendValue)}}`,
+  },
+  full: {
+    rectSize: 120,
+    iconSize: 60,
+    format: (node) =>
+      `{icon_full_${node.symbol}|}\n{symbol|${node.symbol}}\n{trendValue|${node.trendValueFmtr(node.trendValue)}}`,
+  },
+};
 
 function getTrendColor(trend: number | null): string {
   if (trend == null || trend == 0) return CARBON.info;
   return trend > 0 ? CARBON.success : CARBON.error;
-}
-
-function buildTrendLabel(symbol: string, trendStr: string) {
-  return `{icon_${symbol}|}\n{symbol|${symbol}}\n{trendValue|${trendStr}}`;
-}
-
-function buildIconOnly(symbol: string) {
-  return `{icon_${symbol}|}`;
 }
 
 function buildTreeNodes(nodes: TokenTreeMapNode[]): TreeNode[] {
@@ -69,23 +93,31 @@ function buildTreeNodes(nodes: TokenTreeMapNode[]): TreeNode[] {
   }));
 }
 
-function buildTooltip() {
+function buildTreemapOption(
+  data: TokenTreeMapNode[],
+  rectSizes: Record<string, RectSize>,
+  onSizeCollected: (symbol: string, size: RectSize) => void,
+): EChartsOption {
   return {
-    trigger: "item" as const,
-    formatter: (params: any) => {
-      const node: TokenTreeMapNode = params.data.raw;
+    tooltip: {
+      trigger: "item" as const,
+      formatter: (params) => {
+        if (Array.isArray(params)) {
+          return "";
+        }
+        const node: TokenTreeMapNode = (params.data as any).raw;
 
-      const rows = node.tooltips
-        .map((t) => {
-          const value = t.valueFmtr(t.value);
-          return `<div style="display:flex;justify-content:space-between;">
+        const rows = node.tooltips
+          .map((t) => {
+            const value = t.valueFmtr(t.value);
+            return `<div style="display:flex;gap:16px;justify-content:space-between;">
             <small>${t.label}</small>
             <strong>${value}</strong>
           </div>`;
-        })
-        .join("");
+          })
+          .join("");
 
-      return `
+        return `
         <div>
           <div style="font-weight:bold;margin-bottom:4px;">
             ${node.symbol}
@@ -93,124 +125,91 @@ function buildTooltip() {
           ${rows}
         </div>
       `;
+      },
     },
-  };
-}
-
-function buildTreemapOption(
-  data: TokenTreeMapNode[],
-  rectSizes: Record<string, RectSize>,
-  onSizeCollected: (symbol: string, size: RectSize) => void,
-): EChartsOption {
-  return {
-    tooltip: buildTooltip(),
     series: [
       {
         type: "treemap",
         data: buildTreeNodes(data),
-        scaleLimit: {
-          min: 1.0,
-          max: 1.0,
-        },
 
         label: {
           formatter: (params) => {
             const node: TokenTreeMapNode = (params.data as TreeNode).raw;
-            const trendStr = node.trendValueFmtr(node.trendValue);
+
             const rectSize = rectSizes[node.symbol];
-
             if (!rectSize) {
-              return buildTrendLabel(node.symbol, trendStr);
+              return node.symbol;
             }
 
-            if (
-              rectSize.width < MIN_SIZE_FOR_ICON ||
-              rectSize.height < MIN_SIZE_FOR_ICON
-            ) {
-              return "";
+            const maxRectSize = Math.min(rectSize.width, rectSize.height);
+
+            for (let i = 0; i < labelSizes.length; i++) {
+              const threshold = labelThresholds[labelSizes[i]];
+              if (maxRectSize < threshold.rectSize) {
+                if (i == 0) {
+                  return "";
+                } else {
+                  return labelThresholds[labelSizes[i - 1]].format(node);
+                }
+              }
             }
 
-            if (
-              rectSize.width < MIN_WIDTH_FOR_FULL_LABEL ||
-              rectSize.height < MIN_HEIGHT_FOR_FULL_LABEL
-            ) {
-              console.log("icon only", node);
-              return buildIconOnly(node.symbol);
-            }
-
-            return buildTrendLabel(node.symbol, trendStr);
+            return labelThresholds[labelSizes[labelSizes.length - 1]].format(
+              node,
+            );
           },
           rich: {
-            topPad: {
-              padding: [16, 0, 0, 0],
-            },
             ...Object.fromEntries(
-              data.map((node) => {
-                const rectSize = rectSizes[node.symbol];
-                const iconSize = rectSize
-                  ? Math.max(
-                      24,
-                      Math.min(
-                        48,
-                        Math.min(rectSize.width, rectSize.height) * 0.4,
-                      ),
-                    )
-                  : 48;
-
-                return [
-                  `icon_${node.symbol}`,
+              (Object.keys(labelThresholds) as LabelSize[]).flatMap((size) =>
+                data.map((node) => [
+                  `icon_${size}_${node.symbol}`,
                   {
                     backgroundColor: {
                       image: node.imgUrl,
                     },
-                    align: "center" as const,
-                    height: iconSize,
+                    align: "center",
+                    width: labelThresholds[size].iconSize,
+                    height: labelThresholds[size].iconSize,
                   },
-                ];
-              }),
+                ]),
+              ),
             ),
             symbol: {
               padding: [8, 0, 0, 0],
               fontSize: 16,
-              fontWeight: "bold" as const,
-              align: "center" as const,
+              fontWeight: "bold",
+              align: "center",
             },
             trendValue: {
               fontSize: 11,
-              align: "center" as const,
+              align: "center",
             },
           },
         },
 
+        roam: false,
+
         visibleMin: 0,
+        itemStyle: {
+          gapWidth: 1,
+        },
 
         labelLayout: (params) => {
           const rect = params.rect;
           const labelRect = params.labelRect;
 
-          if (!rect || !labelRect) {
-            return { x: 0, y: 0 };
-          }
-
-          if (params.dataIndex !== undefined && data[params.dataIndex]) {
-            const symbol = data[params.dataIndex].symbol;
-            onSizeCollected(symbol, { width: rect.width, height: rect.height });
-          }
+          const symbol = data[params.dataIndex! - 1].symbol;
+          onSizeCollected(symbol, {
+            width: rect.width,
+            height: rect.height,
+          });
 
           return {
             x: rect.x,
             y: rect.y + rect.height / 2 - labelRect.height / 2,
           };
         },
-
-        breadcrumb: {
-          show: false,
-        },
-
-        itemStyle: {
-          gapWidth: 1,
-        },
-
+        breadcrumb: { show: false },
         nodeClick: "link",
       },
     ],
@@ -223,24 +222,31 @@ export default function TokenTreeMap({
   height = 300,
   className,
 }: TokenTreeMapProps) {
+  console.log("re-render");
   const { fmt } = useLocalization();
   const [rectSizes, setRectSizes] = useState<Record<string, RectSize>>({});
   const collectedSizesRef = useRef<Record<string, RectSize>>({});
 
-  const handleSizeCollected = (symbol: string, size: RectSize) => {
-    collectedSizesRef.current[symbol] = size;
+  const handleSizeCollected = useCallback(
+    (symbol: string, size: RectSize) => {
+      const prev = collectedSizesRef.current[symbol];
 
-    if (Object.keys(collectedSizesRef.current).length === data.length) {
-      setRectSizes(collectedSizesRef.current);
-      collectedSizesRef.current = {};
-    } else {
-      console.log(data.at(-1));
-    }
-  };
+      if (prev && prev.width == size.width && prev.height == size.height) {
+        return;
+      }
+
+      collectedSizesRef.current[symbol] = size;
+
+      if (Object.keys(collectedSizesRef.current).length == data.length) {
+        setRectSizes({ ...collectedSizesRef.current });
+      }
+    },
+    [data.length, rectSizes],
+  );
 
   const options = useMemo(() => {
     return buildTreemapOption(data, rectSizes, handleSizeCollected);
-  }, [data, rectSizes]);
+  }, [data, rectSizes, handleSizeCollected]);
 
   if (loading) {
     return (
