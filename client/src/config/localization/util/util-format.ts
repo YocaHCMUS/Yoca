@@ -50,11 +50,14 @@ export function defineNumberFormat(
           ? value / 100.0
           : value;
 
-    // Pick decimal precision based on the fractional part of the value.
+    // Pick decimal precision based on notation/style.
     let key = `${effectiveStyle}|${notation}`;
     let extraOptions: Intl.NumberFormatOptions = {};
     if (effectiveStyle === "currency" || effectiveStyle === "decimal") {
-      const decimals = resolveDecimals(exchangedValue);
+      const decimals =
+        effectiveStyle === "currency" && notation === "compact"
+          ? 2
+          : resolveDecimals(exchangedValue);
       key = `${key}|${decimals}`;
       extraOptions = { maximumFractionDigits: decimals };
     }
