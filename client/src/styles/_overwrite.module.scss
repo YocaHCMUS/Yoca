@@ -1,0 +1,14 @@
+.tbl {
+  :global(.cds--data-table_inner-container) {
+    height: 100%;
+  }
+
+  :global(.cds--data-table-content) {
+    height: 100%;
+  }
+
+  :global(.cds--data-table--sticky-header) {
+    block-size: 100%;
+    max-block-size: none;
+  }
+}

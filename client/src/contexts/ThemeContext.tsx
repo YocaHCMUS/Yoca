@@ -58,7 +58,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       }}
     >
       <GlobalTheme theme={userThemes[theme]}>
-        <Theme theme={userThemes[theme]}>{children}</Theme>
+        <Theme theme={userThemes[theme]} style={{ height: "100vh" }}>
+          {children}
+        </Theme>
       </GlobalTheme>
     </ThemeContext.Provider>
   );

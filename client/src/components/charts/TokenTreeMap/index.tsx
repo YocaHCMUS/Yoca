@@ -71,8 +71,7 @@ const labelThresholds: Record<
   md: {
     rectSize: 48,
     iconSize: 20,
-    format: (node) =>
-      `{icon_md_${node.symbol}|}\n{sym_md|${node.symbol}}\n{trend_md|${node.trendValueFmtr(node.trendValue)}}`,
+    format: (node) => `{icon_md_${node.symbol}|}`,
     rich: {
       sym_md: {
         padding: [6, 0, 0, 0],
@@ -262,6 +261,10 @@ function buildTreemapOption(
         },
         breadcrumb: { show: false },
         nodeClick: "link",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
       },
     ],
   };
@@ -358,6 +361,10 @@ export default function TokenTreeMap({
   }
 
   return (
-    <ReactECharts option={options} style={{ height }} className={className} />
+    <ReactECharts
+      option={options}
+      style={{ width: "100%", height }}
+      className={className}
+    />
   );
 }

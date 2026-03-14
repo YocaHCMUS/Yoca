@@ -116,7 +116,6 @@ export const tokenMarketData = pgTable("token_market_data", {
   marketCapChange24h: decimal("market_cap_change_24h"),
   marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
   fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
-  //totalLiquidity: decimal("total_liquidity").notNull(),
 
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply"),
@@ -279,17 +278,6 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
-// {
-//     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
-//     "timestamp": 1704067200,
-//     "direction": "in",
-//     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
-//     "mint": "So11111111111111111111111111111111111111112",
-//     "symbol": "SOL",
-//     "amount": 1.5,
-//     "amountRaw": "1500000000",
-//     "decimals": 9
-//   },
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
@@ -412,7 +400,7 @@ export const topTraders = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (t) => [primaryKey({ columns: [ t.address] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const poolTrades24h = pgTable("pool_trades_24h", {

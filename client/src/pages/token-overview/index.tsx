@@ -122,19 +122,6 @@ export default function TokenOverviewPage() {
 
   const result = useTokenOverviewData(address);
 
-  // // ── Sticky data: update ĐỒNG BỘ trong lúc render (không dùng useEffect) ──
-  // // Đảm bảo cột trái luôn hiện data gần nhất, không bao giờ trắng
-  // const freshMeta = result.data?.meta ?? null;
-
-  // const stickyMetaRef = useRef(freshMeta);
-  // const stickyMarketRef = useRef(freshMarket);
-
-  // // Cập nhật ngay trong render — không cần đợi effect cycle
-  // if (freshMeta) stickyMetaRef.current = freshMeta;
-  // if (freshMarket) stickyMarketRef.current = freshMarket;
-
-  // const meta = stickyMetaRef.current;
-  // const market = stickyMarketRef.current;
   const { tr } = useLocalization();
 
   const details = result.data?.details;

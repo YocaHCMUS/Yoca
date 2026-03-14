@@ -5,10 +5,9 @@ import TokenTreeMap, {
 import Tble from "@/components/Tble";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
-import { ELLIPSIS } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Stack, Tooltip } from "@carbon/react";
+import { Column, Grid, Stack, Tooltip } from "@carbon/react";
 import { useMemo } from "react";
 
 export default function MarketPage() {
@@ -36,6 +35,10 @@ export default function MarketPage() {
   );
 
   const loading = topTokens.isLoading || meta.isLoading || marketData.isLoading;
+
+  const topTraders = useGet(client.api.traders.top, 200);
+
+  const tradersLoading = topTraders.isLoading;
 
   const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
@@ -101,25 +104,21 @@ export default function MarketPage() {
         token: (
           <Stack
             orientation="horizontal"
-            gap={4}
+            gap={2}
             style={{ alignItems: "center" }}
           >
             {tokenMeta.imageUrl && (
               <img
                 src={tokenMeta.imageUrl}
                 alt={tokenMeta.symbol}
-                style={{ width: "24px", height: "24px", borderRadius: "50%" }}
+                width={24}
+                style={{ borderRadius: "50%" }}
               />
             )}
+
             <span>
-              <strong>{tokenMeta.symbol.toUpperCase()}</strong>
               <Tooltip label={tokenMeta.name}>
-                <small>
-                  {" - "}
-                  {tokenMeta.name.length > 30
-                    ? tokenMeta.name.slice(0, 30) + ELLIPSIS
-                    : tokenMeta.name}
-                </small>
+                <strong>{tokenMeta.symbol.toUpperCase()}</strong>
               </Tooltip>
             </span>
           </Stack>
@@ -146,60 +145,101 @@ export default function MarketPage() {
         marketCap: (
           <TrendNum
             value={tokenMarket.marketCap}
-            formatter={fmt.num.currency}
+            formatter={fmt.num.compact.currency}
           />
         ),
         volume24h: (
           <TrendNum
             value={tokenMarket.volume24h}
-            formatter={fmt.num.currency}
+            formatter={fmt.num.compact.currency}
           />
         ),
       };
     });
   }, [topTokens.data, meta.data, marketData.data, fmt]);
 
+  const traderRows = useMemo(() => {
+    if (!topTraders.data) return [];
+
+    const truncate = (a: string) =>
+      a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
+
+    return topTraders.data.map((t: any) => ({
+      id: t.address,
+      trader: (
+        <Stack
+          orientation="horizontal"
+          gap={2}
+          style={{ alignItems: "center" }}
+        >
+          <strong>{t.rank}</strong>
+          <span>
+            <Tooltip label={t.address}>
+              <a href={`/wallet/${t.address}`}>{truncate(t.address)}</a>
+            </Tooltip>
+          </span>
+        </Stack>
+      ),
+      pnl: fmt.num.currency(t.pnl),
+      volume: fmt.num.compact.currency(t.volume),
+      trades: t.trade_count,
+    }));
+  }, [topTraders.data, fmt]);
+
   return (
     <PageWrapper>
-      <TokenTreeMap loading={loading} data={treeMapData} height={500} />
-      <Tble
-        loading={loading}
-        headers={[
-          {
-            key: "rank",
-            header: "#",
-          },
-          {
-            key: "token",
-            header: "Token",
-          },
-          {
-            key: "price",
-            header: "Price",
-          },
-          {
-            key: "change24h",
-            header: "24h %",
-          },
-          {
-            key: "change7d",
-            header: "7d %",
-          },
-          {
-            key: "change30d",
-            header: "30d %",
-          },
-          {
-            key: "marketCap",
-            header: "Market Cap",
-          },
-          {
-            key: "volume24h",
-            header: "24h Volume",
-          },
-        ]}
-        rows={rows}
-      />
+      <Grid>
+        <Column sm={2} md={8} lg={8}>
+          <Tble
+            height={500}
+            loading={loading}
+            headers={[
+              {
+                key: "token",
+                header: "Token",
+              },
+              {
+                key: "price",
+                header: "Price",
+              },
+              {
+                key: "change24h",
+                header: "24h %",
+              },
+              {
+                key: "marketCap",
+                header: "Market Cap",
+              },
+              {
+                key: "volume24h",
+                header: "24h Volume",
+              },
+            ]}
+            rows={rows}
+            stickyHeader
+          />
+        </Column>
+        <Column sm={2} md={8} lg={8}>
+          <TokenTreeMap loading={loading} data={treeMapData} height={500} />
+        </Column>
+      </Grid>
+      <Grid style={{ marginTop: 16 }}>
+        <Column sm={2} md={16} lg={16}>
+          <h3>Top Traders</h3>
+          <Tble
+            height={400}
+            loading={tradersLoading}
+            headers={[
+              { key: "trader", header: "Trader" },
+              { key: "pnl", header: "PnL" },
+              { key: "volume", header: "Volume" },
+              { key: "trades", header: "Trades" },
+            ]}
+            rows={traderRows}
+            stickyHeader
+          />
+        </Column>
+      </Grid>
     </PageWrapper>
   );
 }

@@ -34,7 +34,7 @@ function Root() {
               </LocalizationProvider>
             </SolanaProvider>
           </GoogleOAuthProvider>
-          <ModalRoot />/
+          <ModalRoot />
         </AuthProvider>
       </ThemeProvider>
     </StrictMode>

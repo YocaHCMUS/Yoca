@@ -17,7 +17,6 @@ import {
   Heading,
   SideNav,
   SideNavItems,
-  SkipToContent,
   Stack,
   Switcher,
   SwitcherDivider,
@@ -76,8 +75,6 @@ export function PageWrapper({ children }: { children: ReactNode }) {
   return (
     <>
       <Header>
-        <SkipToContent />
-
         <HeaderMenuButton
           aria-label={isSideNavExpanded ? "Close menu" : "Open menu"}
           isActive={isSideNavExpanded}
@@ -229,7 +226,9 @@ export function PageWrapper({ children }: { children: ReactNode }) {
 
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
 
-      <Content id="main-content">{children}</Content>
+      <Content id="main-content" style={{ height: "100%" }}>
+        {children}
+      </Content>
     </>
   );
 }
