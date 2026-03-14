@@ -190,6 +190,27 @@ export const translation = {
     value: "Value",
     change24h: "Change (24h)",
   },
+  // Market Page
+  marketPage: {
+    topTokens: "Top tokens",
+    topTokensDescription: "Top 50 tokens by market cap",
+    profitableTraders: "Profitable traders",
+    recentTrades: "Recent trades",
+    marketCap: "Market Cap",
+    volume24h: "24h Volume",
+    change24h: "24h %",
+    price: "Price",
+    token: "Token",
+    trader: "Trader",
+    profits: "Profits",
+    volume: "Volume",
+    trades: "Trades",
+    time: "Time",
+    value: "Value",
+    amount: "Amount",
+    transaction: "Transaction",
+    openInSolscan: "Open in Solscan",
+  },
   // Wallet Comparison Page
   walletComparison: {
     selectedWallets: "Selected Wallets",
@@ -299,6 +320,9 @@ export const translation = {
     adjustFilters: "Try adjusting your filters or date range",
     noWalletsTitle: "No Wallets Selected",
     noData: "No data available",
+
+    // TreeMap
+    treemapNoData: "No data",
 
     // Error state
     errorTitle: "Unable to Load Chart",

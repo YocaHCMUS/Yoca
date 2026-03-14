@@ -21,3 +21,9 @@
     max-block-size: none;
   }
 }
+
+.fltrOpt {
+  :global(.cds--content-switcher-btn){
+    padding: 8px !important; 
+  }
+}

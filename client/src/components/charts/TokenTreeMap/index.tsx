@@ -342,7 +342,7 @@ export default function TokenTreeMap({
   if (data.length == 0) {
     return (
       <Stack style={{ height, alignItems: "center", justifyContent: "center" }}>
-        <p>No data</p>
+        <p>{tr("charts.treemapNoData")}</p>
       </Stack>
     );
   }

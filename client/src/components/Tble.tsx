@@ -9,6 +9,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableToolbar,
+  TableToolbarContent,
   type DataTableProps,
 } from "@carbon/react";
 import type { ReactNode } from "react";
@@ -35,6 +37,8 @@ interface TblProps
   hideHeaders?: boolean;
   loading?: boolean;
   height?: number | string;
+  toolBar?: ReactNode;
+  toolBarHeight?: number | string;
 }
 
 export default function Tble({
@@ -45,6 +49,8 @@ export default function Tble({
   hideHeaders = false,
   loading = false,
   height = 600,
+  toolBar,
+  toolBarHeight = 42,
   ...dataTableProps
 }: TblProps) {
   const headerLookup = Object.fromEntries(
@@ -68,47 +74,64 @@ export default function Tble({
           getHeaderProps,
           getRowProps,
           getCellProps,
+          getToolbarProps,
         }) => (
-          <Table {...getTableProps()}>
-            <TableHead hidden={hideHeaders}>
-              <TableRow>
-                {headers.map((header) => (
-                  <TableHeader
-                    {...getHeaderProps({ header })}
-                    style={{
-                      paddingBlockStart: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      inlineSize: headerLookup[header.key].width,
-                      justifyContent: headerLookup[header.key].align,
-                    }}
-                  >
-                    {header.header}
-                  </TableHeader>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow {...getRowProps({ row })}>
-                  {row.cells.map((cell) => (
-                    <TableCell
-                      {...getCellProps({ cell })}
+          <>
+            {!!toolBar && (
+              <TableToolbar {...getToolbarProps()}>
+                <TableToolbarContent
+                  style={{
+                    blockSize: toolBarHeight,
+                    paddingLeft: 8,
+                    paddingRight: 8,
+                    paddingBottom: 12,
+                  }}
+                >
+                  {toolBar}
+                </TableToolbarContent>
+              </TableToolbar>
+            )}
+            <Table {...getTableProps()}>
+              <TableHead hidden={hideHeaders}>
+                <TableRow>
+                  {headers.map((header) => (
+                    <TableHeader
+                      {...getHeaderProps({ header })}
                       style={{
                         paddingBlockStart: 0,
                         display: "flex",
                         alignItems: "center",
-                        inlineSize: headerLookup[cell.info.header].width,
-                        justifyContent: headerLookup[cell.info.header].align,
+                        inlineSize: headerLookup[header.key].width,
+                        justifyContent: headerLookup[header.key].align,
                       }}
                     >
-                      {cell.value}
-                    </TableCell>
+                      {header.header}
+                    </TableHeader>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow {...getRowProps({ row })}>
+                    {row.cells.map((cell) => (
+                      <TableCell
+                        {...getCellProps({ cell })}
+                        style={{
+                          paddingBlockStart: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          inlineSize: headerLookup[cell.info.header].width,
+                          justifyContent: headerLookup[cell.info.header].align,
+                        }}
+                      >
+                        {cell.value}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
       </DataTable>
     </TableContainer>

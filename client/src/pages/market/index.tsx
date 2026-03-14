@@ -8,12 +8,111 @@ import { PageWrapper } from "@/components/wrapper";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
+import {
+  Column,
+  ContentSwitcher,
+  Grid,
+  IconButton,
+  Link,
+  Stack,
+  Switch,
+  Tooltip,
+} from "@carbon/react";
 import { Launch } from "@carbon/react/icons";
 import { useMemo } from "react";
 
+type TradeVolumeOption = "$10k" | "$50k" | "$100k";
+type TradeTimeOption = "6h" | "12h" | "24h";
+
+interface TradeFilterOptionsProps {
+  volume: TradeVolumeOption;
+  time: TradeTimeOption;
+  onVolumeChange: (value: TradeVolumeOption) => void;
+  onTimeChange: (value: TradeTimeOption) => void;
+}
+
+interface FilterOption<T> {
+  value: T;
+  label: string;
+}
+
+interface FilterSwitchProps<T> {
+  value: T;
+  options: FilterOption<T>[];
+  onChange: (value: T) => void;
+  tooltipLabel: string;
+}
+
+function FilterSwitch<T extends string | number>({
+  value,
+  options,
+  onChange,
+  tooltipLabel,
+}: FilterSwitchProps<T>) {
+  const selectedIndex = options.findIndex((opt) => opt.value == value);
+
+  return (
+    <Tooltip label={tooltipLabel} enterDelayMs={100} align="left">
+      <ContentSwitcher
+        className={overwriteStyles.fltrOpt}
+        onChange={({ name }) => {
+          if (!name) return;
+          const selected = options.find((opt) => opt.value == name);
+          if (selected) {
+            onChange(selected.value);
+          }
+        }}
+        selectedIndex={selectedIndex >= 0 ? selectedIndex : 0}
+        size="sm"
+        style={{ minInlineSize: 200 }}
+      >
+        {options.map((opt) => (
+          <Switch key={opt.value} name={opt.value} text={opt.label} />
+        ))}
+      </ContentSwitcher>
+    </Tooltip>
+  );
+}
+
+function TradeFilterOptions({
+  volume,
+  time,
+  onVolumeChange,
+  onTimeChange,
+}: TradeFilterOptionsProps) {
+  const volumeOptions: FilterOption<TradeVolumeOption>[] = [
+    { value: "$10k", label: ">$10k" },
+    { value: "$50k", label: ">$50k" },
+    { value: "$100k", label: ">$100k" },
+  ];
+
+  const timeOptions: FilterOption<TradeTimeOption>[] = [
+    { value: "6h", label: "6h" },
+    { value: "12h", label: "12h" },
+    { value: "24h", label: "24h" },
+  ];
+
+  return (
+    <Stack gap={4} orientation="horizontal" style={{ justifyContent: "end" }}>
+      <FilterSwitch
+        value={volume}
+        options={volumeOptions}
+        onChange={onVolumeChange}
+        tooltipLabel="Trading Volume"
+      />
+      <FilterSwitch
+        value={time}
+        options={timeOptions}
+        onChange={onTimeChange}
+        tooltipLabel="Trading Time"
+      />
+    </Stack>
+  );
+}
+
 export default function MarketPage() {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
 
   const topTokens = useGet(client.api.tokens["top-marketcap"], 200);
 
@@ -62,22 +161,22 @@ export default function MarketPage() {
         value: tokenMarket.marketCap,
         tooltips: [
           {
-            label: "Price",
+            label: tr("marketPage.price"),
             value: tokenMarket.priceUsd,
             valueFmtr: fmt.num.currency,
           },
           {
-            label: "24h Price",
+            label: tr("marketPage.change24h"),
             value: tokenMarket.priceChange24h,
             valueFmtr: fmt.num.percent,
           },
           {
-            label: "Market Cap",
+            label: tr("marketPage.marketCap"),
             value: tokenMarket.marketCap,
             valueFmtr: fmt.num.currency,
           },
           {
-            label: "24h Volume",
+            label: tr("marketPage.volume24h"),
             value: tokenMarket.volume24h,
             valueFmtr: fmt.num.currency,
           },
@@ -192,7 +291,7 @@ export default function MarketPage() {
       solscan: (
         <IconButton
           href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
-          label="Open in Solscan"
+          label={tr("marketPage.openInSolscan")}
           kind="ghost"
           size="sm"
           align="bottom-right"
@@ -225,16 +324,20 @@ export default function MarketPage() {
       <Grid narrow>
         <Column sm={2} md={8} lg={8}>
           <Tble
-            title={<strong>TOP TOKENS</strong>}
-            description={<small>Top 50 tokens by Market Cap</small>}
+            title={
+              <strong style={{ textTransform: "uppercase" }}>
+                {tr("marketPage.topTokens")}
+              </strong>
+            }
+            description={<small>{tr("marketPage.topTokensDescription")}</small>}
             height={500}
             loading={loading}
             headers={[
-              { key: "token", header: "Token" },
-              { key: "price", header: "Price" },
-              { key: "change24h", header: "24h %" },
-              { key: "marketCap", header: "Market Cap" },
-              { key: "volume24h", header: "24h Volume" },
+              { key: "token", header: tr("marketPage.token") },
+              { key: "price", header: tr("marketPage.price") },
+              { key: "change24h", header: tr("marketPage.change24h") },
+              { key: "marketCap", header: tr("marketPage.marketCap") },
+              { key: "volume24h", header: tr("marketPage.volume24h") },
             ]}
             rows={rows}
             stickyHeader
@@ -243,32 +346,52 @@ export default function MarketPage() {
         <Column sm={2} md={8} lg={8}>
           <TokenTreeMap loading={loading} data={treeMapData} height={500} />
         </Column>
-        <Column sm={2} md={4} lg={8}>
+        <Column sm={2} md={8} lg={8}>
           <Tble
-            title={<strong>PROFITABLE TRADERS</strong>}
+            title={
+              <strong style={{ textTransform: "uppercase" }}>
+                {tr("marketPage.profitableTraders")}
+              </strong>
+            }
             height={400}
             loading={tradersLoading}
             headers={[
-              { key: "trader", header: "Trader" },
-              { key: "pnl", header: "Profits" },
-              { key: "volume", header: "Volume" },
-              { key: "trades", header: "Trades" },
+              { key: "trader", header: tr("marketPage.trader") },
+              { key: "pnl", header: tr("marketPage.profits") },
+              { key: "volume", header: tr("marketPage.volume") },
+              { key: "trades", header: tr("marketPage.trades") },
             ]}
             rows={traderRows}
             stickyHeader
           />
         </Column>
-        <Column sm={2} md={4} lg={8}>
+        <Column sm={2} md={8} lg={8}>
           <Tble
-            title={<strong>RECENT TRADES</strong>}
+            title={
+              <strong style={{ textTransform: "uppercase" }}>
+                {tr("marketPage.recentTrades")}
+              </strong>
+            }
             height={400}
             loading={recentTradesData.isLoading}
+            toolBar={
+              <TradeFilterOptions
+                volume="$10k"
+                time="6h"
+                onVolumeChange={() => {}}
+                onTimeChange={() => {}}
+              />
+            }
             headers={[
-              { key: "time", header: "Time" },
-              { key: "volume", header: "Value" },
-              { key: "amount", header: "Amount", width: "150%" },
-              { key: "trader", header: "Trader" },
-              { key: "solscan", header: "Transaction", align: "center" },
+              { key: "time", header: tr("marketPage.time") },
+              { key: "volume", header: tr("marketPage.value") },
+              { key: "amount", header: tr("marketPage.amount"), width: "150%" },
+              { key: "trader", header: tr("marketPage.trader") },
+              {
+                key: "solscan",
+                header: tr("marketPage.transaction"),
+                align: "center",
+              },
             ]}
             rows={recentTradesRows}
             stickyHeader
