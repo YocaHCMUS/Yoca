@@ -11,7 +11,7 @@ import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { asc, gt } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
-import { getAddressesByCoinGeckoId } from "./token-list.js";
+import { getAddressesByCoinGeckoIds } from "./token-list.js";
 import { getMarketDataFromRaw } from "./token-market-data.js";
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markeats
@@ -35,10 +35,9 @@ export async function getTopTokensByMarketCap() {
   })) as CG_CoinMarkets;
 
   const cgIds = res.map((raw) => raw.id!);
-  const cgIdToAddress = await getAddressesByCoinGeckoId(cgIds);
+  const cgIdToAddress = await getAddressesByCoinGeckoIds(cgIds);
 
   const solanaRes = res.filter((raw) => cgIdToAddress[raw.id!]);
-
   const topTokenInsert = solanaRes.map(
     (raw, index): TopTokensByMarketCapInsert => ({
       address: cgIdToAddress[raw.id!]!,

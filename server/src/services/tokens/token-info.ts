@@ -16,7 +16,7 @@ import {
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
-import { getCoinGeckoIdList } from "./token-list.js";
+import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 async function fetchHolderStatsItem(
   tokenAddress: string,
@@ -52,7 +52,7 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
     };
   }
 
-  const addressToCgIds = await getCoinGeckoIdList(tokenAddresses);
+  const addressToCgIds = await getCoinGeckoIdsByAddresses(tokenAddresses);
 
   const rawInfoList = await Promise.all(
     tokenAddresses
@@ -179,7 +179,7 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
   }
   // We cheat and use makert data here as it allow get multiple tokens info in one request
   // Potential extra 1 API here, but better than fetch each addresses.
-  const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
+  const addressToCgId = await getCoinGeckoIdsByAddresses(tokenAddresses);
   const cgIds = Object.values(addressToCgId);
 
   const res = await cg.client.coins.markets.get({

@@ -10,7 +10,7 @@ export {
   getTokenHolderStats,
   getTokenMeta,
 } from "./token-info.js";
-export { getCoinGeckoIdList } from "./token-list.js";
+export { getCoinGeckoIdsByAddresses as getCoinGeckoIdList } from "./token-list.js";
 export { getTokenMarketData } from "./token-market-data.js";
 export {
   getTokenPoolData,

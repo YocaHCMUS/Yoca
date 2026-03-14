@@ -5,11 +5,13 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
   type DataTableProps,
 } from "@carbon/react";
+import type { ReactNode } from "react";
 
 interface TblHdr {
   header: string;
@@ -19,13 +21,15 @@ interface TblHdr {
 
 interface TblRw {
   id: string;
-  [key: string]: React.ReactNode;
+  [key: string]: ReactNode;
 }
 
 interface TblProps
   extends Omit<DataTableProps<TblRw, any[]>, "rows" | "headers"> {
   rows: TblRw[];
   headers: TblHdr[];
+  title?: ReactNode;
+  description?: ReactNode;
   hideHeaders?: boolean;
   loading?: boolean;
   height?: number | string;
@@ -34,19 +38,22 @@ interface TblProps
 export default function Tble({
   rows,
   headers,
+  title,
+  description,
   hideHeaders = false,
   loading = false,
   height = 600,
   ...dataTableProps
 }: TblProps) {
   return loading ? (
-    <DataTableSkeleton
-      headers={headers}
-      showHeader={!hideHeaders}
-      showToolbar={false}
-    />
+    <DataTableSkeleton headers={headers} showHeader={!hideHeaders} />
   ) : (
-    <div className={overwriteStyles.tbl} style={{ height }}>
+    <TableContainer
+      title={title}
+      description={description}
+      className={overwriteStyles.tbl}
+      style={{ height }}
+    >
       <DataTable rows={rows} headers={headers} {...dataTableProps}>
         {({
           rows,
@@ -80,6 +87,6 @@ export default function Tble({
           </Table>
         )}
       </DataTable>
-    </div>
+    </TableContainer>
   );
 }

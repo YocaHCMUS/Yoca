@@ -1,6 +1,6 @@
 import { setErr } from "@sv/config/errors.js";
 import { searchQuerySchema, validate } from "@sv/middlewares/validation.js";
-import { getAddressesByCoinGeckoId } from "@sv/services/tokens/token-list.js";
+import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { statusCode } from "@sv/util/responses.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -72,7 +72,7 @@ const app = new Hono().get(
         });
       });
 
-      const cgIdToAddress = await getAddressesByCoinGeckoId(
+      const cgIdToAddress = await getAddressesByCoinGeckoIds(
         queriesSearch.map((token) => token.id!),
       );
 

@@ -1,5 +1,5 @@
 import * as cg from "@sv/util/util-coingecko.js";
-import { getCoinGeckoIdList } from "./token-list.js";
+import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export type HistoricalDataPoint = {
   dateStr: string; // "YYYY-MM-DD"
@@ -20,7 +20,7 @@ export async function getTokenHistoricalData(
   tokenAddress: string,
   days: number,
 ): Promise<HistoricalDataPoint[] | null> {
-  const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
+  const cgIdLookup = await getCoinGeckoIdsByAddresses([tokenAddress]);
   const cgId = cgIdLookup?.[tokenAddress];
 
   if (!cgId) return null;

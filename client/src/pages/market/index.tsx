@@ -7,7 +7,7 @@ import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Column, Grid, Stack, Tooltip } from "@carbon/react";
+import { Column, Grid, Link, Stack, Tooltip } from "@carbon/react";
 import { useMemo } from "react";
 
 export default function MarketPage() {
@@ -164,33 +164,26 @@ export default function MarketPage() {
     const truncate = (a: string) =>
       a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
 
-    return topTraders.data.map((t: any) => ({
+    return topTraders.data.map((t) => ({
       id: t.address,
       trader: (
-        <Stack
-          orientation="horizontal"
-          gap={2}
-          style={{ alignItems: "center" }}
-        >
-          <strong>{t.rank}</strong>
-          <span>
-            <Tooltip label={t.address}>
-              <a href={`/wallet/${t.address}`}>{truncate(t.address)}</a>
-            </Tooltip>
-          </span>
-        </Stack>
+        <Tooltip label={t.address} align="bottom-left">
+          <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+        </Tooltip>
       ),
       pnl: fmt.num.currency(t.pnl),
       volume: fmt.num.compact.currency(t.volume),
-      trades: t.trade_count,
+      trades: t.tradeCount,
     }));
   }, [topTraders.data, fmt]);
 
   return (
     <PageWrapper>
-      <Grid>
+      <Grid narrow>
         <Column sm={2} md={8} lg={8}>
           <Tble
+            title={<strong>TOP TOKENS</strong>}
+            description={<small>Top 50 tokens by Market Cap</small>}
             height={500}
             loading={loading}
             headers={[
@@ -222,16 +215,14 @@ export default function MarketPage() {
         <Column sm={2} md={8} lg={8}>
           <TokenTreeMap loading={loading} data={treeMapData} height={500} />
         </Column>
-      </Grid>
-      <Grid style={{ marginTop: 16 }}>
-        <Column sm={2} md={16} lg={16}>
-          <h3>Top Traders</h3>
+        <Column sm={2} md={4} lg={8}>
           <Tble
+            title={<strong>PROFITABLE TRADERS</strong>}
             height={400}
             loading={tradersLoading}
             headers={[
               { key: "trader", header: "Trader" },
-              { key: "pnl", header: "PnL" },
+              { key: "pnl", header: "Profits" },
               { key: "volume", header: "Volume" },
               { key: "trades", header: "Trades" },
             ]}

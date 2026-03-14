@@ -1,4 +1,8 @@
 .tbl {
+  :global(.cds--data-table-header){
+    padding-block: 0.5rem 0.5rem;
+  }
+
   :global(.cds--data-table_inner-container) {
     height: 100%;
   }

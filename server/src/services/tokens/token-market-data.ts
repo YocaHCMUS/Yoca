@@ -5,7 +5,7 @@ import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
-import { getCoinGeckoIdList } from "./token-list.js";
+import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export function getMarketDataFromRaw(
   address: string,
@@ -68,7 +68,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return null;
   }
-  const addressToCgId = await getCoinGeckoIdList(tokenAddresses);
+  const addressToCgId = await getCoinGeckoIdsByAddresses(tokenAddresses);
 
   const idToAddress = Object.fromEntries(
     Object.entries(addressToCgId).map(([address, id]) => [id, address]),
