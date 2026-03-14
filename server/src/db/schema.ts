@@ -1,17 +1,17 @@
 import { sql } from "drizzle-orm";
 import {
-    bigint,
-    char,
-    check,
-    decimal as dec,
-    integer,
-    pgEnum,
-    pgTable,
-    primaryKey,
-    text,
-    timestamp,
-    uuid,
-    varchar,
+  bigint,
+  char,
+  check,
+  decimal as dec,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
@@ -124,6 +124,8 @@ export const tokenMarketData = pgTable("token_market_data", {
   atl: decimal("atl"),
   atlChangePercentage: decimal("atl_change_percentage"),
   atlDate: timestamp("atl_date"),
+
+  sparkline7d: text("sparkline_7d"),
 
   updatedAt: timestamp("updated_at")
     .notNull()

@@ -40,6 +40,7 @@ export function getMarketDataFromRaw(
     atlChangePercentage: raw.atl_change_percentage,
     atlDate: new Date(raw.atl_date),
     volume24h: raw.total_volume,
+    sparkline7d: raw.sparkline_in_7d ? JSON.stringify(raw.sparkline_in_7d.price) : null,
   };
 }
 
@@ -55,6 +56,7 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
     ids: cgIds.join(","),
     vs_currency: "usd",
     order: "market_cap_desc",
+    sparkline: "true",
     price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
   }).toString();
 
@@ -95,6 +97,10 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
 
   const marketDataList = Object.values(addressToMarketData);
 
+  if (marketDataList.length === 0) {
+    return [];
+  }
+
   return await db
     .insert(tokenMarketData)
     .values(marketDataList)
@@ -105,7 +111,8 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     .returning();
 }
 
-export async function getTokenMarketData(tokenAddresses: string[]) {
+export async function getTokenMarketData(addresses: string[]) {
+  const tokenAddresses = [...new Set(addresses)];
   if (tokenAddresses.length == 0) {
     return {};
   }

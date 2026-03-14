@@ -18,9 +18,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
+    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+    200
+  >[number]
   | null;
 
 interface MarketData {
@@ -253,18 +253,16 @@ export function TokenInsightTabs({
 
   useEffect(() => {
     if (!address) return;
-    const network = address.startsWith("0x") ? "eth" : "solana";
     setDistLoading(true);
-    fetch(
-      `https://api.coingecko.com/api/v3/onchain/networks/${network}/tokens/${address}/info`,
-      { headers: { "x-cg-demo-api-key": "CG-MjPFyX8QAo68K93S65PHjrki" } },
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        const dist = data?.data?.attributes?.holders?.distribution_percentage;
-        if (dist) setDistribution(dist as DistributionData);
+    client.api.tokens.holders.distribution[":address"]
+      .$get({ param: { address } })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setDistribution(data as DistributionData);
+        }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setDistLoading(false));
   }, [address]);
 
@@ -274,61 +272,61 @@ export function TokenInsightTabs({
 
   const insightCards = market
     ? [
-        {
-          question: tr("token.insightTabs.volumeQ", { name, symbol }),
-          answer: tr("token.insightTabs.volumeA", {
-            name,
-            symbol,
-            volume: fmtCurrency(market.volume24h),
-            change: fmtPct(market.priceChangePercentage24h),
-          }),
-        },
-        ...(market.ath != null
-          ? [
-              {
-                question: tr("token.insightTabs.athAtlQ", { name, symbol }),
-                answer: tr("token.insightTabs.athAtlA", {
-                  name,
-                  symbol,
-                  ath: fmtCurrency(market.ath),
-                  atl: fmtCurrency(market.atl),
-                  athPct: fmtPct(market.athChangePercentage),
-                  atlPct: fmtPct(market.atlChangePercentage),
-                }),
-              },
-            ]
-          : []),
-        ...(market.marketCap != null
-          ? [
-              {
-                question: tr("token.insightTabs.marketCapQ", { name, symbol }),
-                answer: tr("token.insightTabs.marketCapA", {
-                  name,
-                  symbol,
-                  marketCap: fmtCurrency(market.marketCap),
-                  rank: String(market.marketCapRank ?? "—"),
-                  supply: fmtSupply(market.circulatingSupply, symbol),
-                }),
-              },
-            ]
-          : []),
-        ...(market.fullyDilutedValuation != null
-          ? [
-              {
-                question: tr("token.insightTabs.fdvQ", { name, symbol }),
-                answer: tr("token.insightTabs.fdvA", {
-                  name,
-                  symbol,
-                  fdv: fmtCurrency(market.fullyDilutedValuation),
-                  maxSupply: fmtSupply(
-                    market.maxSupply ?? market.totalSupply,
-                    symbol,
-                  ),
-                }),
-              },
-            ]
-          : []),
-      ]
+      {
+        question: tr("token.insightTabs.volumeQ", { name, symbol }),
+        answer: tr("token.insightTabs.volumeA", {
+          name,
+          symbol,
+          volume: fmtCurrency(market.volume24h),
+          change: fmtPct(market.priceChangePercentage24h),
+        }),
+      },
+      ...(market.ath != null
+        ? [
+          {
+            question: tr("token.insightTabs.athAtlQ", { name, symbol }),
+            answer: tr("token.insightTabs.athAtlA", {
+              name,
+              symbol,
+              ath: fmtCurrency(market.ath),
+              atl: fmtCurrency(market.atl),
+              athPct: fmtPct(market.athChangePercentage),
+              atlPct: fmtPct(market.atlChangePercentage),
+            }),
+          },
+        ]
+        : []),
+      ...(market.marketCap != null
+        ? [
+          {
+            question: tr("token.insightTabs.marketCapQ", { name, symbol }),
+            answer: tr("token.insightTabs.marketCapA", {
+              name,
+              symbol,
+              marketCap: fmtCurrency(market.marketCap),
+              rank: String(market.marketCapRank ?? "—"),
+              supply: fmtSupply(market.circulatingSupply, symbol),
+            }),
+          },
+        ]
+        : []),
+      ...(market.fullyDilutedValuation != null
+        ? [
+          {
+            question: tr("token.insightTabs.fdvQ", { name, symbol }),
+            answer: tr("token.insightTabs.fdvA", {
+              name,
+              symbol,
+              fdv: fmtCurrency(market.fullyDilutedValuation),
+              maxSupply: fmtSupply(
+                market.maxSupply ?? market.totalSupply,
+                symbol,
+              ),
+            }),
+          },
+        ]
+        : []),
+    ]
     : [];
 
   // ── Donut labels ────────────────────────────

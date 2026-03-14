@@ -80,3 +80,28 @@ export function formatPct(value: number | undefined): { text: string; positive: 
   const positive = value >= 0;
   return { text: `${positive ? "\u25b2" : "\u25bc"} ${Math.abs(value).toFixed(1)}%`, positive };
 }
+
+/**
+ * Format a numeric USD price with smart decimal precision.
+ * - null/undefined/NaN → "—"
+ * - < 0.0001 → exponential notation  e.g. $1.23e-5
+ * - < 1      → 5 decimal places      e.g. $0.01234
+ * - >= 1     → 2 decimal places      e.g. $1,234.56
+ */
+export function formatPrice(v: number | null | undefined): string {
+  if (v == null || isNaN(v)) return "—";
+  if (v < 0.0001) return `$${v.toExponential(3)}`;
+  if (v < 1) return `$${v.toFixed(5)}`;
+  return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Format a percentage change value with sign, returning both
+ * the display text and a `positive` flag for conditional styling.
+ * - null/undefined/NaN → { text: "—", positive: null }
+ */
+export function formatChange(v: number | null | undefined): { text: string; positive: boolean | null } {
+  if (v == null || isNaN(v)) return { text: "—", positive: null };
+  const positive = v >= 0;
+  return { text: `${positive ? "+" : ""}${v.toFixed(2)}%`, positive };
+}

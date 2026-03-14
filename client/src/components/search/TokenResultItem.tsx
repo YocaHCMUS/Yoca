@@ -1,0 +1,77 @@
+import { formatChange } from "@/util/format";
+import type { InferResponseType } from "hono/client";
+import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import styles from "./TokenResultItem.module.scss";
+
+type SearchResult = InferResponseType<typeof client.api.search.$get, 200>;
+export type TokenResult = SearchResult["tokens"][number];
+
+function TokenPlaceholder({ symbol }: { symbol: string }) {
+    return (
+        <div className={styles.tokenImgPlaceholder}>
+            {symbol?.slice(0, 2).toUpperCase() || "?"}
+        </div>
+    );
+}
+
+interface TokenResultItemProps {
+    token: TokenResult;
+    isFocused: boolean;
+    onSelect: (token: TokenResult) => void;
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+}
+
+export function TokenResultItem({
+    token,
+    isFocused,
+    onSelect,
+    onMouseEnter,
+    onMouseLeave,
+}: TokenResultItemProps) {
+    const { fmt } = useLocalization();
+    const change = formatChange(token.priceChangePercentage24h);
+
+    return (
+        <div
+            className={`${styles.resultItem} ${isFocused ? styles.focused : ""}`}
+            onClick={() => onSelect(token)}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+        >
+            {token.imgUrl ? (
+                <img
+                    src={token.imgUrl}
+                    alt={token.name ?? ""}
+                    className={styles.tokenImg}
+                    onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                    }}
+                />
+            ) : (
+                <TokenPlaceholder symbol={token.symbol ?? ""} />
+            )}
+
+            <div className={styles.tokenMeta}>
+                <p className={styles.tokenName}>{token.name}</p>
+                <p className={styles.tokenSymbol}>{token.symbol}</p>
+            </div>
+
+            <div className={styles.stats}>
+                <p className={styles.tokenPrice}>{fmt.num.currency(token.priceUsd)}</p>
+                <p
+                    className={`${styles.tokenChange} ${
+                        change.positive === true
+                            ? styles.positive
+                            : change.positive === false
+                              ? styles.negative
+                              : ""
+                    }`}
+                >
+                    {change.text}
+                </p>
+            </div>
+        </div>
+    );
+}

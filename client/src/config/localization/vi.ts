@@ -1,7 +1,7 @@
 import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
-import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
 import { getUsdToVndRate } from "./util/exchange-service";
+import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
 
 export const langCode = "vi-VN";
 
@@ -187,6 +187,21 @@ export const translation = defineTranslation({
     language: "Ngôn ngữ",
     account: "Tài khoản",
     search: "Tìm kiếm",
+    searchPlaceholder: "Tìm token theo tên hoặc địa chỉ…",
+    searchHint: "Nhập để tìm kiếm token",
+    searchLoading: "Đang tìm kiếm…",
+    searchNoResults: "Không tìm thấy token nào",
+    searchTokens: "Token",
+    searchPools: "Pools",
+    searchNavigate: "để di chuyển",
+    searchSelect: "để chọn",
+    searchClose: "để đóng",
+    searchStats: "Thống kê",
+    searchRank: "Thứ hạng",
+    searchMarketCap: "Vốn hóa",
+    searchVolume: "Khối lượng 24h",
+    searchPrice: "Giá",
+    searchLast7Days: "7 ngày qua",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

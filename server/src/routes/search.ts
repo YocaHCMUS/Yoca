@@ -1,5 +1,6 @@
 import { setErr } from "@sv/config/errors.js";
 import { searchQuerySchema, validate } from "@sv/middlewares/validation.js";
+import { getTokenMetaList } from "@sv/services/tokens/token-info.js";
 import { getAddressesByCoinGeckoId } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { statusCode } from "@sv/util/responses.js";
@@ -10,7 +11,7 @@ async function getSearchPoolsResult(q: string) {
   const res = await cg.client.onchain.search.pools.get({
     query: q,
     network: "solana",
-    include: "base_token,quote_token,dex",
+    include: "base_token,quote_token",
   });
 
   const pools = res.data!;
@@ -20,15 +21,12 @@ async function getSearchPoolsResult(q: string) {
 
   const tokens = res
     .included!.filter((raw) => raw.type == "token")
-    .filter(
-      (token) =>
-        token.attributes!.coingecko_coin_id != null &&
-        !quoteTokens.includes(token.id),
-    );
+    .filter((token) => token.attributes!.coingecko_coin_id != null);
 
   return {
     tokens,
     pools,
+    included: res.included,
   };
 }
 
@@ -65,11 +63,24 @@ const app = new Hono().get(
 
       const tokenList: Array<Token> = [];
 
+      const searchQ = q.toLowerCase();
       poolSearch.tokens.forEach((token) => {
-        tokenList.push({
-          address: token.attributes!.address!,
-          imgUrl: token.attributes!.image_url || null,
-        });
+        const symbol = token.attributes?.symbol?.toLowerCase() || "";
+        const name = token.attributes?.name?.toLowerCase() || "";
+        const address = token.attributes?.address?.toLowerCase() || "";
+
+        // Only add token to the main list if it actually matches the query
+        // This prevents quote tokens (USDC, SOL) from cluttering results for "pengu"
+        if (
+          symbol.includes(searchQ) ||
+          name.includes(searchQ) ||
+          address === searchQ
+        ) {
+          tokenList.push({
+            address: token.attributes!.address!,
+            imgUrl: token.attributes!.image_url || null,
+          });
+        }
       });
 
       const cgIdToAddress = await getAddressesByCoinGeckoId(
@@ -86,22 +97,56 @@ const app = new Hono().get(
         }
       });
 
-      let tokenAddresses = tokenList.map((token) => token.address);
-      const marketData = await getTokenMarketData(tokenAddresses);
-      tokenAddresses = tokenAddresses.filter((address) => marketData[address]);
+      let tokenAddresses = [...new Set(tokenList.map((token) => token.address))];
+      const [marketData, metaData] = await Promise.all([
+        getTokenMarketData(tokenAddresses),
+        getTokenMetaList(tokenAddresses),
+      ]);
+
+      // tokenAddresses = tokenAddresses.filter((address) => marketData[address]);
       const addressToTokenImg = Object.fromEntries(
         tokenList.map((token) => [token.address, token.imgUrl]),
+      );
+      const addressToMeta = Object.fromEntries(
+        metaData.map((m: any) => [m.address, m]),
       );
 
       const tokens = tokenAddresses.map((address) => ({
         ...marketData[address],
-        imgUrl: addressToTokenImg[address],
+        name: addressToMeta[address]?.name || "",
+        symbol: addressToMeta[address]?.symbol || "",
+        imgUrl: addressToTokenImg[address] || addressToMeta[address]?.imageUrl,
+        description: addressToMeta[address]?.description || "",
+        sparkline7d: marketData[address]?.sparkline7d || null,
       }));
+
+      const addressToIncludedToken = Object.fromEntries(
+        (poolSearch.included || [])
+          .filter((item) => item.type === "token")
+          .map((item) => [item.id, item]),
+      );
+
+      const pools = poolSearch.pools.map((pool) => {
+        const baseTokenId = pool.relationships?.base_token?.data?.id;
+        const quoteTokenId = pool.relationships?.quote_token?.data?.id;
+
+        return {
+          ...pool,
+          baseTokenImg: baseTokenId
+            ? (addressToIncludedToken[baseTokenId]?.attributes as any)
+              ?.image_url
+            : null,
+          quoteTokenImg: quoteTokenId
+            ? (addressToIncludedToken[quoteTokenId]?.attributes as any)
+              ?.image_url
+            : null,
+        };
+      });
 
       return c.json(
         {
           tokens,
-          pools: poolSearch.pools,
+          pools,
         },
         statusCode.Ok,
       );

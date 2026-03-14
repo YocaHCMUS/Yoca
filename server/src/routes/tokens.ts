@@ -190,6 +190,33 @@ const app = new Hono()
       }
     },
   )
+  .get(
+    "/holders/distribution/:address",
+    validate("param", addressSchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+
+        const distribution =
+          await tokenService.getTokenHolderDistribution(address);
+
+        if (distribution) {
+          return c.json(distribution, statusCode.Ok);
+        } else {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
   .get("/holders/:address", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");

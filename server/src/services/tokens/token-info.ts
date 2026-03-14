@@ -118,6 +118,10 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     }),
   );
 
+  if (infoList.length === 0) {
+    return { meta: [], market: [] };
+  }
+
   const metaValues = infoList.map((info) => info.meta);
   const marketDataValues = infoList.map((info) => info.market);
 
@@ -145,7 +149,8 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
   };
 }
 
-export async function getTokenMetaList(tokenAddresses: string[]) {
+export async function getTokenMetaList(addresses: string[]) {
+  const tokenAddresses = [...new Set(addresses)];
   if (tokenAddresses.length == 0) {
     return [];
   }
@@ -178,6 +183,22 @@ export async function getTokenMetaList(tokenAddresses: string[]) {
   } else {
     return [...res, ...refreshed];
   }
+}
+
+export async function getTokenHolderDistribution(tokenAddress: string) {
+  const network = tokenAddress.startsWith("0x") ? "eth" : "solana";
+  const res = await cg.client.onchain.networks.tokens.info.get(tokenAddress, {
+    network,
+  });
+  const dist = res.data?.attributes?.holders?.distribution_percentage ?? null;
+  return dist as {
+    top_10: string;
+    "11_20"?: string;
+    "21_40"?: string;
+    "11_30"?: string;
+    "31_50"?: string;
+    rest: string;
+  } | null;
 }
 
 export async function getTokenHolderStats(tokenAddresses: string[]) {

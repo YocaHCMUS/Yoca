@@ -50,6 +50,9 @@ export type CG_CoinMarkets = Array<{
   price_change_percentage_24h_in_currency?: number;
   price_change_percentage_30d_in_currency?: number;
   price_change_percentage_7d_in_currency: number;
+  sparkline_in_7d?: {
+    price: number[];
+  };
 }>;
 
 export type CG_TopPoolData = {

@@ -16,8 +16,16 @@ type Style = "decimal" | "currency" | "percent" | "unit";
  *   - frac in [0.0001, 0.01) → 6 decimals  e.g. $81.00147367 → $81.001474
  *   - frac < 0.0001           → 8 decimals
  */
-function resolveDecimals(value: number): number {
-  const frac = Math.abs(value) % 1;
+function resolveDecimals(value: number, isVnd: boolean = false): number {
+  const abs = Math.abs(value);
+
+  if (isVnd) {
+    if (abs >= 100) return 0;
+    if (abs >= 1) return 2;
+    return 4;
+  }
+
+  const frac = abs % 1;
   if (frac >= 0.01) return 4;
   if (frac >= 0.0001) return 6;
   return 8;
@@ -40,6 +48,8 @@ export function defineNumberFormat(
     // Token symbols (SOL, BONK, etc.) are NOT valid Intl.NumberFormat units.
     // Always use "decimal" formatting and append the symbol as a text suffix.
     const effectiveStyle = style === "unit" ? "decimal" : style;
+    const isVnd =
+      style === "currency" && styleFormatMap.currency?.currency === "VND";
 
     if (!value) return nullDisplay;
 
@@ -54,7 +64,7 @@ export function defineNumberFormat(
     let key = `${effectiveStyle}|${notation}`;
     let extraOptions: Intl.NumberFormatOptions = {};
     if (effectiveStyle === "currency" || effectiveStyle === "decimal") {
-      const decimals = resolveDecimals(exchangedValue);
+      const decimals = resolveDecimals(exchangedValue, isVnd);
       key = `${key}|${decimals}`;
       extraOptions = { maximumFractionDigits: decimals };
     }
