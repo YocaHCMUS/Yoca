@@ -127,6 +127,7 @@ vi.mock("@sv/services/tokens/token-chart.js", () => ({
 
 import {
     getCumulativePnL,
+    getWalletBalanceHistory,
     getWalletTokenBalanceHistory,
     getWalletTransactionHelius,
 } from "../../src/services/wallet/walletData.service.ts";
@@ -245,6 +246,311 @@ describe("walletData.service - token USD historical pricing", () => {
 
         for (let i = 0; i < result.tokenSeries.length; i++) {
             expect(result.tokenSeries[i].timestamp).toBe(result.usdSeries[i].timestamp);
+        }
+    });
+});
+
+describe("walletData.service - balance history historical valuation", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-03-12T00:00:00.000Z"));
+
+        hoisted.getWalletBalancesMock.mockReset();
+        hoisted.fetchHeliusSolanaPortfolioMock.mockReset();
+        hoisted.fetchAllTransactionHistoryMock.mockReset();
+        hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
+        hoisted.getTokenMarketDataMock.mockReset();
+        hoisted.getHourlyTokenMarketChartMock.mockReset();
+        hoisted.getDailyTokenMarketChartMock.mockReset();
+        hoisted.saveTransactionsHeliusCacheMock.mockReset();
+
+        hoisted.getWalletBalancesMock.mockReturnValue(null);
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                name: "Solana",
+                amount: 10,
+                priceUsd: 100,
+                valueUsd: 1000,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 100 },
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([]);
+        hoisted.getDailyTokenMarketChartMock.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("values balance history from historical prices and transaction-derived snapshots", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 100,
+                priceUsd: 5,
+                valueUsd: 500,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-deposit",
+                    timestamp: "2026-03-11T12:00:00.000Z",
+                    slot: 1,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: 10, decimals: 0 },
+                    ],
+                },
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-withdraw",
+                    timestamp: "2026-03-09T12:00:00.000Z",
+                    slot: 2,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: -20, decimals: 0 },
+                    ],
+                },
+            ],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([
+            { unixTimestampMs: new Date("2026-03-05T00:00:00.000Z").getTime(), price: 1 },
+            { unixTimestampMs: new Date("2026-03-06T00:00:00.000Z").getTime(), price: 1.5 },
+            { unixTimestampMs: new Date("2026-03-07T00:00:00.000Z").getTime(), price: 2 },
+            { unixTimestampMs: new Date("2026-03-08T00:00:00.000Z").getTime(), price: 2.5 },
+            { unixTimestampMs: new Date("2026-03-09T00:00:00.000Z").getTime(), price: 3 },
+            { unixTimestampMs: new Date("2026-03-10T00:00:00.000Z").getTime(), price: 3.5 },
+            { unixTimestampMs: new Date("2026-03-11T00:00:00.000Z").getTime(), price: 4 },
+            { unixTimestampMs: new Date("2026-03-12T00:00:00.000Z").getTime(), price: 5 },
+        ]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 5 },
+        });
+
+        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+
+        expect(result.length).toBe(8);
+        expect(getSeriesValueByDate(result, "2026-03-05")).toBe(110);
+        expect(getSeriesValueByDate(result, "2026-03-09")).toBe(330);
+        expect(getSeriesValueByDate(result, "2026-03-10")).toBe(315);
+        expect(getSeriesValueByDate(result, "2026-03-12")).toBe(500);
+
+        const expectedToSec = Math.floor(Date.now() / 1000);
+        const expectedFromSec = expectedToSec - 7 * 24 * 60 * 60;
+        expect(hoisted.getCachedWalletTransactionsHeliusMock).toHaveBeenCalledWith(
+            "wallet-1",
+            "solana",
+            { fromSec: expectedFromSec, toSec: expectedToSec },
+        );
+    });
+
+    it("uses nearest-prior historical prices and falls back to current price before first chart point", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 10,
+                priceUsd: 100,
+                valueUsd: 1000,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([
+            { unixTimestampMs: new Date("2026-03-06T12:00:00.000Z").getTime(), price: 2 },
+            { unixTimestampMs: new Date("2026-03-09T12:00:00.000Z").getTime(), price: 4 },
+        ]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 100 },
+        });
+
+        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+
+        expect(getSeriesValueByDate(result, "2026-03-05")).toBe(1000);
+        expect(getSeriesValueByDate(result, "2026-03-06")).toBe(1000);
+        expect(getSeriesValueByDate(result, "2026-03-07")).toBe(20);
+        expect(getSeriesValueByDate(result, "2026-03-09")).toBe(20);
+        expect(getSeriesValueByDate(result, "2026-03-10")).toBe(40);
+    });
+
+    it("falls back to current token prices when chart history is missing", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 12,
+                priceUsd: 75,
+                valueUsd: 900,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 75 },
+        });
+
+        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+
+        expect(result.length).toBe(8);
+        const uniqueValues = new Set(result.map((point) => point.value));
+        expect(uniqueValues.size).toBe(1);
+        expect(Array.from(uniqueValues)[0]).toBe(900);
+    });
+
+    it("normalizes SOL-like portfolio mints before price lookup in token mode", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: "11111111111111111111111111111111",
+                symbol: "SOL",
+                amount: 10,
+                priceUsd: 100,
+                valueUsd: 1000,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getTokenHistoricalDataMock.mockResolvedValue(null);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 100 },
+        });
+
+        const result = await getWalletTokenBalanceHistory("wallet-1", "solana", "SOL", "7D");
+
+        expect(result.tokenAddress).toBe(SOL_MINT);
+        expect(result.usdSeries.length).toBeGreaterThan(1);
+        expect(result.usdSeries.every((point) => point.value === 1000)).toBe(true);
+        expect(hoisted.getTokenMarketDataMock).toHaveBeenCalledWith([SOL_MINT]);
+    });
+
+    it("returns a deterministic safe series when historical and current prices are both missing", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 12,
+                priceUsd: undefined,
+                valueUsd: 0,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({});
+
+        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+
+        expect(result.length).toBe(8);
+        expect(result.every((point) => Number.isFinite(point.value))).toBe(true);
+        expect(result.every((point) => point.value === 0)).toBe(true);
+    });
+
+    it("keeps timestamp alignment and matches cumulative PnL valuation baseline", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
+            {
+                tokenAddress: SOL_MINT,
+                symbol: "SOL",
+                amount: 100,
+                priceUsd: 5,
+                valueUsd: 500,
+            },
+        ]);
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-deposit",
+                    timestamp: "2026-03-11T12:00:00.000Z",
+                    slot: 1,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: 10, decimals: 0 },
+                    ],
+                },
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-withdraw",
+                    timestamp: "2026-03-09T12:00:00.000Z",
+                    slot: 2,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [
+                        { mint: SOL_MINT, amount: -20, decimals: 0 },
+                    ],
+                },
+            ],
+            requestedRange: { fromSec: 0, toSec: Math.floor(Date.now() / 1000) },
+            coveredRange: { earliestSec: 0, latestSec: Math.floor(Date.now() / 1000) },
+            isFullyCovered: true,
+        });
+        hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([
+            { unixTimestampMs: new Date("2026-03-05T00:00:00.000Z").getTime(), price: 1 },
+            { unixTimestampMs: new Date("2026-03-06T00:00:00.000Z").getTime(), price: 1.5 },
+            { unixTimestampMs: new Date("2026-03-07T00:00:00.000Z").getTime(), price: 2 },
+            { unixTimestampMs: new Date("2026-03-08T00:00:00.000Z").getTime(), price: 2.5 },
+            { unixTimestampMs: new Date("2026-03-09T00:00:00.000Z").getTime(), price: 3 },
+            { unixTimestampMs: new Date("2026-03-10T00:00:00.000Z").getTime(), price: 3.5 },
+            { unixTimestampMs: new Date("2026-03-11T00:00:00.000Z").getTime(), price: 4 },
+            { unixTimestampMs: new Date("2026-03-12T00:00:00.000Z").getTime(), price: 5 },
+        ]);
+        hoisted.getTokenMarketDataMock.mockResolvedValue({
+            [SOL_MINT]: { priceUsd: 5 },
+        });
+
+        const [balanceHistory, pnl] = await Promise.all([
+            getWalletBalanceHistory("wallet-1", "solana", "7D"),
+            getCumulativePnL("wallet-1", "solana", "7D", "daily"),
+        ]);
+
+        expect(balanceHistory.length).toBe(8);
+        expect(balanceHistory.length).toBe(pnl.cumulativePnL.length);
+        expect(balanceHistory[0].timestamp).toBe(new Date("2026-03-05T00:00:00.000Z").getTime());
+        expect(balanceHistory[balanceHistory.length - 1].timestamp).toBe(
+            new Date("2026-03-12T00:00:00.000Z").getTime(),
+        );
+
+        for (let i = 0; i < balanceHistory.length; i++) {
+            expect(balanceHistory[i].timestamp).toBe(pnl.cumulativePnL[i].timestamp);
+            expect(balanceHistory[i].value).toBe(
+                Number((pnl.startBalance + pnl.cumulativePnL[i].value).toFixed(2)),
+            );
         }
     });
 });

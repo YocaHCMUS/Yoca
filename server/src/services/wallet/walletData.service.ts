@@ -1428,12 +1428,27 @@ function getAggregationIntervalMs(aggregation: PnLAggregation): number {
   return DAY_MS;
 }
 
+const SOL_NATIVE_SYSTEM_ADDRESS = "11111111111111111111111111111111";
+
 function normalizeMint(mint: unknown): string {
   const raw = String(mint ?? "").trim();
   if (!raw) {
     return "";
   }
-  return raw === "SOL" ? SOL_MINT : raw;
+
+  if (
+    raw.toUpperCase() === "SOL" ||
+    raw === SOL_NATIVE_SYSTEM_ADDRESS ||
+    raw.toLowerCase() === SOL_MINT.toLowerCase()
+  ) {
+    return SOL_MINT;
+  }
+
+  return raw;
+}
+
+function isSolSymbol(symbol: unknown): boolean {
+  return String(symbol ?? "").trim().toUpperCase() === "SOL";
 }
 
 function parseTimestampMs(timestamp: string): number {
@@ -1526,7 +1541,7 @@ function findPriceAtOrBefore(
     return timeline[foundIndex].price;
   }
 
-  return timeline[0].price;
+  return null;
 }
 
 function toCurrentPriceFallback(
@@ -1570,6 +1585,158 @@ function calculatePortfolioValueUsd(
   return totalValueUsd;
 }
 
+async function getHistoricalPortfolioValueSeries(
+  address: string,
+  chain: SupportedChain,
+  startMs: number,
+  endMs: number,
+  intervalMs: number,
+): Promise<PnLDataPoint[]> {
+  const snapshots = buildSnapshotTimestamps(startMs, endMs, intervalMs);
+  const requestedFromSec = Math.floor(startMs / 1000);
+  const requestedToSec = Math.floor(endMs / 1000);
+
+  const [portfolio, txResponse] = await Promise.all([
+    getWalletPortfolio(address, chain),
+    getWalletTransactionHelius(address, chain, {
+      fromSec: requestedFromSec,
+      toSec: requestedToSec,
+    }),
+  ]);
+
+  const balances = new Map<string, number>();
+  const tokenAddresses = new Set<string>();
+
+  for (const item of portfolio) {
+    const tokenAddress = normalizeMint(item.tokenAddress);
+    if (!tokenAddress) {
+      continue;
+    }
+
+    const amount = Number(item.amount ?? 0);
+    if (!Number.isFinite(amount)) {
+      continue;
+    }
+
+    const nextAmount = (balances.get(tokenAddress) ?? 0) + amount;
+    if (Math.abs(nextAmount) < 1e-12) {
+      balances.delete(tokenAddress);
+    } else {
+      balances.set(tokenAddress, nextAmount);
+    }
+    tokenAddresses.add(tokenAddress);
+  }
+
+  const transactions = txResponse.transactions
+    .filter((tx) => {
+      const timestampMs = parseTimestampMs(tx.timestamp);
+      return timestampMs >= startMs && timestampMs <= endMs;
+    })
+    .sort((a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp));
+
+  for (const tx of transactions) {
+    for (const change of tx.balanceChanges ?? []) {
+      const tokenAddress = normalizeMint(change?.mint);
+      if (!tokenAddress) {
+        continue;
+      }
+      tokenAddresses.add(tokenAddress);
+    }
+  }
+
+  if (tokenAddresses.size === 0) {
+    return snapshots.map((timestamp) => ({
+      timestamp,
+      value: 0,
+    }));
+  }
+
+  const tokenAddressList = Array.from(tokenAddresses);
+  const daysSpan = Math.max(
+    1,
+    Math.min(365, Math.ceil((endMs - startMs) / DAY_MS) + 2),
+  );
+  const useHourlyChart = daysSpan <= 90;
+
+  const [currentMarketData, priceTimelineEntries] = await Promise.all([
+    getTokenMarketData(tokenAddressList),
+    Promise.all(
+      tokenAddressList.map(async (tokenAddress) => {
+        const chartRows = useHourlyChart
+          ? await getHourlyTokenMarketChart(tokenAddress, daysSpan)
+          : await getDailyTokenMarketChart(tokenAddress, daysSpan);
+
+        const timeline = normalizePriceTimeline(
+          chartRows.map((row) => ({
+            unixTimestampMs: row.unixTimestampMs,
+            price: row.price,
+          })),
+        );
+
+        return [tokenAddress, timeline] as const;
+      }),
+    ),
+  ]);
+
+  const timelinesByToken = new Map<string, PriceTimelinePoint[]>(
+    priceTimelineEntries,
+  );
+  const currentPriceFallback = toCurrentPriceFallback(currentMarketData);
+
+  const snapshotsDescending = [...snapshots].sort((a, b) => b - a);
+  const portfolioValuesDescending: PnLDataPoint[] = [];
+  let txIndex = 0;
+
+  for (const snapshotMs of snapshotsDescending) {
+    while (txIndex < transactions.length) {
+      const tx = transactions[txIndex];
+      const txTimestampMs = parseTimestampMs(tx.timestamp);
+      if (txTimestampMs <= snapshotMs) {
+        break;
+      }
+
+      for (const change of tx.balanceChanges ?? []) {
+        const tokenAddress = normalizeMint(change?.mint);
+        if (!tokenAddress) {
+          continue;
+        }
+
+        const balanceDelta = normalizeBalanceDelta({
+          amount: Number(change?.amount ?? 0),
+          decimals: Number(change?.decimals ?? 0),
+        });
+
+        if (!Number.isFinite(balanceDelta) || balanceDelta === 0) {
+          continue;
+        }
+
+        const previousAmount = (balances.get(tokenAddress) ?? 0) - balanceDelta;
+        if (Math.abs(previousAmount) < 1e-12) {
+          balances.delete(tokenAddress);
+        } else {
+          balances.set(tokenAddress, previousAmount);
+        }
+      }
+
+      txIndex += 1;
+    }
+
+    const portfolioValueUsd = calculatePortfolioValueUsd(
+      balances,
+      timelinesByToken,
+      currentPriceFallback,
+      snapshotMs,
+    );
+
+    portfolioValuesDescending.push({
+      timestamp: snapshotMs,
+      value: roundUsd(Math.max(0, portfolioValueUsd)),
+    });
+  }
+
+  return portfolioValuesDescending.reverse();
+}
+
 /**
  * Get historical wallet balance by reconstructing from current state and transaction history
  * 
@@ -1584,194 +1751,46 @@ export async function getWalletBalanceHistory(
   timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
 ): Promise<BalanceDataPoint[]> {
   const effectiveChain = resolveChainForAddress(address, chain);
+  const nowMs = Date.now();
+  const startMs = getRangeStartMs(nowMs, timePeriod);
+  const now = new Date(nowMs);
+  const startDate = new Date(startMs);
 
-  // Calculate time range based on period
-  const now = new Date();
-  let startDate = new Date(now);
-  switch (timePeriod) {
-    case "7D":
-      startDate.setDate(now.getDate() - 7);
-      break;
-    case "30D":
-      startDate.setDate(now.getDate() - 30);
-      break;
-    case "60D":
-      startDate.setDate(now.getDate() - 60);
-      break;
-    case "90D":
-      startDate.setDate(now.getDate() - 90);
-      break;
-    case "1Y":
-      startDate.setFullYear(now.getFullYear() - 1);
-      break;
-    case "All":
-      startDate = new Date(0); // Unix epoch
-      break;
-  }
-
-  try {
-    // 1. Get current portfolio (latest state)
+  if (effectiveChain !== "solana") {
     const currentPortfolio = await getWalletPortfolio(address, effectiveChain);
     const currentTotalValue = currentPortfolio.reduce(
       (sum, item) => sum + (item.valueUsd ?? 0),
-      0
+      0,
     );
 
-    // Build a map of token addresses/symbols to current prices for fallback calculations
-    const tokenPriceMap = new Map<string, number>();
-    for (const item of currentPortfolio) {
-      if (item.priceUsd && item.tokenAddress) {
-        tokenPriceMap.set(item.tokenAddress, item.priceUsd);
-      }
-      if (item.priceUsd && item.symbol) {
-        tokenPriceMap.set(item.symbol, item.priceUsd);
-      }
-    }
+    return [
+      {
+        timestamp: startMs,
+        value: Math.max(0, currentTotalValue),
+        date: startDate.toISOString(),
+      },
+      {
+        timestamp: nowMs,
+        value: Math.max(0, currentTotalValue),
+        date: now.toISOString(),
+      },
+    ];
+  }
 
-    // 2. Get Helius transaction history (full transaction records with balance changes)
-    const txResponse = await getWalletTransactionHelius(address, effectiveChain, { from: "7d", fromSec: timePeriodToFromSec(timePeriod) });
+  try {
+    const portfolioValues = await getHistoricalPortfolioValueSeries(
+      address,
+      effectiveChain,
+      startMs,
+      nowMs,
+      DAY_MS,
+    );
 
-
-    const transactions = txResponse.transactions;
-    // const transactions = txResponse.swaps;
-
-    // Gather token mints appearing in historical balance changes so we can enrich
-    // price lookup beyond current portfolio tokens.
-    const txTokenAddresses = new Set<string>();
-    for (const tx of transactions) {
-      if (!Array.isArray(tx.balanceChanges)) continue;
-      for (const change of tx.balanceChanges) {
-        const mint = String(change?.mint ?? "").trim();
-        if (!mint) continue;
-        txTokenAddresses.add(mint === "SOL" ? SOL_MINT : mint);
-      }
-    }
-
-    if (txTokenAddresses.size > 0) {
-      try {
-        const marketData = await getTokenMarketData(Array.from(txTokenAddresses));
-        for (const [tokenAddress, data] of Object.entries(marketData)) {
-          if (data?.priceUsd != null && Number.isFinite(data.priceUsd)) {
-            tokenPriceMap.set(tokenAddress, Number(data.priceUsd));
-          }
-        }
-      } catch (err) {
-        console.error("[WalletBalanceHistory] Failed to enrich token prices for historical txs", err);
-      }
-    }
-
-    // Filter transactions within the time period and sort by timestamp (oldest first)
-    const relevantTxs = transactions
-      .filter(tx => {
-        const txDate = new Date(tx.timestamp);
-        return txDate >= startDate && txDate <= now;
-      })
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    if (relevantTxs.length === 0) {
-      // No transactions in period, return flat line at current value
-      return [
-        {
-          timestamp: startDate.getTime(),
-          value: currentTotalValue,
-          date: startDate.toISOString(),
-        },
-        {
-          timestamp: now.getTime(),
-          value: currentTotalValue,
-          date: now.toISOString(),
-        },
-      ];
-    }
-
-    // Helper: estimate signed USD delta for one Helius transaction.
-    // Positive means wallet value increased, negative means decreased.
-    const calculateTxUsdDelta = (tx: WalletTransactionHelius): number => {
-      if (!Array.isArray(tx.balanceChanges) || tx.balanceChanges.length === 0) {
-        return 0;
-      }
-
-      let deltaUsd = 0;
-      for (const change of tx.balanceChanges) {
-        const mintRaw = String(change?.mint ?? "").trim();
-        if (!mintRaw) continue;
-
-        const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
-        const priceUsd = tokenPriceMap.get(mint);
-        if (priceUsd == null || !Number.isFinite(priceUsd)) {
-          continue;
-        }
-
-        const amountRaw = Number(change?.amount ?? 0);
-        const decimals = Number(change?.decimals ?? 0);
-        if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) {
-          continue;
-        }
-
-        const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
-        deltaUsd += normalizedAmount * priceUsd;
-      }
-
-      return deltaUsd;
-    };
-
-    // 3. Build balance history data points
-    const balanceHistory: BalanceDataPoint[] = [];
-
-    // Start with current balance
-    let runningBalance = currentTotalValue;
-
-    // Walk backwards through transactions to estimate historical balances
-    const reversedTxs = [...relevantTxs].reverse();
-
-    for (let i = 0; i < reversedTxs.length; i++) {
-      const tx = reversedTxs[i];
-      const txDate = new Date(tx.timestamp);
-      const txDeltaUsd = calculateTxUsdDelta(tx);
-
-      // Move backwards in time: previous_balance = current_balance - tx_delta.
-      runningBalance -= txDeltaUsd;
-
-      // Add data point (going backwards in time)
-      balanceHistory.unshift({
-        timestamp: txDate.getTime(),
-        value: Math.max(0, runningBalance), // Ensure non-negative
-        date: txDate.toISOString(),
-      });
-    }
-
-    // Add final data point with current balance
-    balanceHistory.push({
-      timestamp: now.getTime(),
-      value: currentTotalValue,
-      date: now.toISOString(),
-    });
-
-    // 4. Interpolate to create smoother daily data points
-    const dailyBalances: BalanceDataPoint[] = [];
-    const dayInMs = 24 * 60 * 60 * 1000;
-
-    for (let date = new Date(startDate); date <= now; date = new Date(date.getTime() + dayInMs)) {
-      const timestamp = date.getTime();
-
-      // Find the most recent balance at or before this date
-      let closestBalance = balanceHistory[0]?.value ?? currentTotalValue;
-      for (const point of balanceHistory) {
-        if (point.timestamp <= timestamp) {
-          closestBalance = point.value;
-        } else {
-          break;
-        }
-      }
-
-      dailyBalances.push({
-        timestamp,
-        value: closestBalance,
-        date: date.toISOString(),
-      });
-    }
-
-    return dailyBalances;
+    return portfolioValues.map((point) => ({
+      timestamp: point.timestamp,
+      value: point.value,
+      date: new Date(point.timestamp).toISOString(),
+    }));
   } catch (error) {
     console.error("[WalletBalanceHistory] Error fetching balance history:", error);
 
@@ -1779,18 +1798,18 @@ export async function getWalletBalanceHistory(
     const currentPortfolio = await getWalletPortfolio(address, effectiveChain);
     const currentTotalValue = currentPortfolio.reduce(
       (sum, item) => sum + (item.valueUsd ?? 0),
-      0
+      0,
     );
 
     return [
       {
-        timestamp: startDate.getTime(),
-        value: currentTotalValue,
+        timestamp: startMs,
+        value: Math.max(0, currentTotalValue),
         date: startDate.toISOString(),
       },
       {
-        timestamp: now.getTime(),
-        value: currentTotalValue,
+        timestamp: nowMs,
+        value: Math.max(0, currentTotalValue),
         date: now.toISOString(),
       },
     ];
@@ -1828,146 +1847,13 @@ export async function getCumulativePnL(
   }
 
   try {
-    const requestedFromSec = Math.floor(startMs / 1000);
-    const requestedToSec = Math.floor(nowMs / 1000);
-
-    const [portfolio, txResponse] = await Promise.all([
-      getWalletPortfolio(address, effectiveChain),
-      getWalletTransactionHelius(address, effectiveChain, {
-        fromSec: requestedFromSec,
-        toSec: requestedToSec,
-      }),
-    ]);
-
-    const balances = new Map<string, number>();
-    const tokenAddresses = new Set<string>();
-
-    for (const item of portfolio) {
-      const tokenAddress = normalizeMint(item.tokenAddress);
-      if (!tokenAddress) {
-        continue;
-      }
-
-      const amount = Number(item.amount ?? 0);
-      if (!Number.isFinite(amount)) {
-        continue;
-      }
-
-      const nextAmount = (balances.get(tokenAddress) ?? 0) + amount;
-      balances.set(tokenAddress, nextAmount);
-      tokenAddresses.add(tokenAddress);
-    }
-
-    const transactions = txResponse.transactions
-      .filter((tx) => {
-        const timestampMs = parseTimestampMs(tx.timestamp);
-        return timestampMs >= startMs && timestampMs <= nowMs;
-      })
-      .sort((a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp));
-
-    for (const tx of transactions) {
-      for (const change of tx.balanceChanges ?? []) {
-        const tokenAddress = normalizeMint(change?.mint);
-        if (!tokenAddress) {
-          continue;
-        }
-        tokenAddresses.add(tokenAddress);
-      }
-    }
-
-    if (tokenAddresses.size === 0) {
-      return {
-        dailyPnL: zeroSeries,
-        cumulativePnL: zeroSeries,
-        startBalance: 0,
-        endBalance: 0,
-      };
-    }
-
-    const tokenAddressList = Array.from(tokenAddresses);
-    const daysSpan = Math.max(
-      1,
-      Math.min(365, Math.ceil((nowMs - startMs) / DAY_MS) + 2),
+    const portfolioValues = await getHistoricalPortfolioValueSeries(
+      address,
+      effectiveChain,
+      startMs,
+      nowMs,
+      intervalMs,
     );
-    const useHourlyChart = daysSpan <= 90;
-
-    const [currentMarketData, priceTimelineEntries] = await Promise.all([
-      getTokenMarketData(tokenAddressList),
-      Promise.all(
-        tokenAddressList.map(async (tokenAddress) => {
-          const chartRows = useHourlyChart
-            ? await getHourlyTokenMarketChart(tokenAddress, daysSpan)
-            : await getDailyTokenMarketChart(tokenAddress, daysSpan);
-
-          const timeline = normalizePriceTimeline(
-            chartRows.map((row) => ({
-              unixTimestampMs: row.unixTimestampMs,
-              price: row.price,
-            })),
-          );
-
-          return [tokenAddress, timeline] as const;
-        }),
-      ),
-    ]);
-
-    const timelinesByToken = new Map<string, PriceTimelinePoint[]>(
-      priceTimelineEntries,
-    );
-    const currentPriceFallback = toCurrentPriceFallback(currentMarketData);
-
-    const snapshotsDescending = [...snapshots].sort((a, b) => b - a);
-    const portfolioValuesDescending: PnLDataPoint[] = [];
-    let txIndex = 0;
-
-    for (const snapshotMs of snapshotsDescending) {
-      while (txIndex < transactions.length) {
-        const tx = transactions[txIndex];
-        const txTimestampMs = parseTimestampMs(tx.timestamp);
-        if (txTimestampMs <= snapshotMs) {
-          break;
-        }
-
-        for (const change of tx.balanceChanges ?? []) {
-          const tokenAddress = normalizeMint(change?.mint);
-          if (!tokenAddress) {
-            continue;
-          }
-
-          const balanceDelta = normalizeBalanceDelta({
-            amount: Number(change?.amount ?? 0),
-            decimals: Number(change?.decimals ?? 0),
-          });
-
-          if (!Number.isFinite(balanceDelta) || balanceDelta === 0) {
-            continue;
-          }
-
-          const previousAmount = (balances.get(tokenAddress) ?? 0) - balanceDelta;
-          if (Math.abs(previousAmount) < 1e-12) {
-            balances.delete(tokenAddress);
-          } else {
-            balances.set(tokenAddress, previousAmount);
-          }
-        }
-
-        txIndex += 1;
-      }
-
-      const portfolioValueUsd = calculatePortfolioValueUsd(
-        balances,
-        timelinesByToken,
-        currentPriceFallback,
-        snapshotMs,
-      );
-
-      portfolioValuesDescending.push({
-        timestamp: snapshotMs,
-        value: roundUsd(Math.max(0, portfolioValueUsd)),
-      });
-    }
-
-    const portfolioValues = portfolioValuesDescending.reverse();
     const startingValue = portfolioValues[0]?.value ?? 0;
 
     let previousValue = startingValue;
@@ -2057,7 +1943,13 @@ export async function getWalletTokenBalanceHistory(
     }
 
     const resolvedMint =
-      resolvedItem.tokenAddress === "SOL" ? SOL_MINT : resolvedItem.tokenAddress;
+      isSolSymbol(resolvedItem.symbol) || selectorLower === "sol"
+        ? SOL_MINT
+        : normalizeMint(resolvedItem.tokenAddress);
+    if (!resolvedMint) {
+      return flatZero();
+    }
+
     const resolvedSymbol = resolvedItem.symbol || tokenSelector;
     const currentTokenBalance = resolvedItem.amount ?? 0;
     const requestedFromSec = timePeriodToFromSec(timePeriod);
@@ -2075,7 +1967,10 @@ export async function getWalletTokenBalanceHistory(
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const marketData = await getTokenMarketData([resolvedMint]);
-    const currentPrice = marketData[resolvedMint]?.priceUsd ?? 0;
+    const currentPriceRaw = Number(marketData[resolvedMint]?.priceUsd ?? Number.NaN);
+    const currentPrice = Number.isFinite(currentPriceRaw) && currentPriceRaw > 0
+      ? currentPriceRaw
+      : 0;
 
     const daysSpan = Math.max(
       1,
@@ -2112,9 +2007,8 @@ export async function getWalletTokenBalanceHistory(
         let tokenDelta = 0;
 
         for (const change of tx.balanceChanges ?? []) {
-          const mint = String(change?.mint ?? "").trim();
-          const canonicalMint = mint === "SOL" ? SOL_MINT : mint;
-          if (canonicalMint !== resolvedMint) {
+          const canonicalMint = normalizeMint(change?.mint);
+          if (!canonicalMint || canonicalMint !== resolvedMint) {
             continue;
           }
 
