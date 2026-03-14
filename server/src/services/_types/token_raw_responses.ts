@@ -14,17 +14,6 @@ export interface CG_TokenMarketChart {
 }
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
-
-type CG_CoinMarkets_Extra = {
-  price_change_percentage_1h_in_currency: number | null;
-  price_change_percentage_24h_in_currency: number | null;
-  price_change_percentage_7d_in_currency: number | null;
-  price_change_percentage_14d_in_currency: number | null;
-  price_change_percentage_30d_in_currency: number | null;
-  price_change_percentage_200d_in_currency: number | null;
-  price_change_percentage_1y_in_currency: number | null;
-};
-
 type MarketItem = MarketGetResponse[number];
 export interface MarketGet extends MarketItem {
   price_change_percentage_1h_in_currency: number | null;
@@ -319,4 +308,47 @@ export type MRL_TopHolders = {
   page: string;
   pageSize: string;
   totalSupply: string;
+};
+
+type TokenSide = {
+  symbol: string;
+  address: string;
+  decimals: number;
+  price: number;
+  amount: string;
+  ui_amount: number;
+  ui_change_amount: number;
+  type_swap: "from" | "to";
+  is_scaled_ui_token: boolean;
+  multiplier: number | null;
+};
+
+type SwapItem = {
+  base: TokenSide;
+  quote: TokenSide;
+
+  tx_type: "swap";
+  tx_hash: string;
+
+  ins_index: number;
+  inner_ins_index: number | null;
+
+  block_unix_time: number;
+  block_number: number;
+
+  volume_usd: number;
+  volume: number;
+
+  owner: string;
+  signers: string[];
+
+  source: string;
+  interacted_program_id: string;
+  pool_id: string;
+};
+
+export type BDS_RecentTrades = {
+  data: {
+    items: SwapItem[];
+  };
 };

@@ -1,5 +1,10 @@
-import { serve } from "@hono/node-server";
 import "@sv/util/load-env.js";
+
+import { serve } from "@hono/node-server";
+import traders from "@sv/routes/traders.js";
+import trades from "@sv/routes/trades.js";
+import wallets from "@sv/routes/wallets.route.js";
+import walletTags from "@sv/routes/walletTags.route.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -9,6 +14,7 @@ import balances from "./routes/balances.js";
 import chartAverageRollingAnnualReturn from "./routes/charts/average-rolling-annual-return.route.js";
 import chartBalance from "./routes/charts/balance.route.js";
 import chartCounterparties from "./routes/charts/counterparties.route.js";
+import chartDailyTradingVolume from "./routes/charts/daily-trading-volume.route.js";
 import chartDistribution from "./routes/charts/distribution.route.js";
 import chartDrawdown from "./routes/charts/drawdown.route.js";
 import chartExchanges from "./routes/charts/exchanges.route.js";
@@ -17,7 +23,6 @@ import chartPnL from "./routes/charts/pnl.route.js";
 import chartPriceHistory from "./routes/charts/price-history.route.js";
 import chartRollingAnnualReturn from "./routes/charts/rolling-annual-return.route.js";
 import chartStablecoinRatio from "./routes/charts/stablecoin-ratio.route.js";
-import chartDailyTradingVolume from "./routes/charts/daily-trading-volume.route.js";
 import chartTotalTradingVolume from "./routes/charts/total-trading-volume.route.js";
 import chartTradingVolumeDistribution from "./routes/charts/trading-volume-distribution.route.js";
 import chartTradingVolumePerTransaction from "./routes/charts/trading-volume-per-transaction.route.js";
@@ -29,11 +34,6 @@ import search from "./routes/search.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
-import wallets from "@sv/routes/wallets.route.js";
-import walletTags from "@sv/routes/walletTags.route.js"
-import traders from "@sv/routes/traders.js";
-
-process.loadEnvFile("./.env");
 
 // Routes
 const app = new Hono()
@@ -80,7 +80,8 @@ const app = new Hono()
   .route("/api/charts/stablecoinRatio", chartStablecoinRatio)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
-  .route("/api/traders", traders);
+  .route("/api/traders", traders)
+  .route("/api/trades", trades);
 
 // Server
 serve(

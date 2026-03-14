@@ -429,6 +429,34 @@ export const poolTrades24h = pgTable("pool_trades_24h", {
     .$onUpdate(() => new Date()),
 });
 
+export const recentTrades = pgTable("recent_trades", {
+  id: varchar("id", { length: 128 }).primaryKey(),
+
+  baseSymbol: varchar("base_symbol").notNull(),
+  baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  baseDecimals: integer("base_decimals").notNull(),
+  basePrice: decimal("base_price").notNull(),
+  baseAmount: varchar("base_amount").notNull(),
+
+  quoteSymbol: varchar("quote_symbol").notNull(),
+  quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
+  quoteDecimals: integer("quote_decimals").notNull(),
+  quotePrice: decimal("quote_price").notNull(),
+  quoteAmount: varchar("quote_amount").notNull(),
+
+  txHash: varchar("tx_hash", { length: 88 }).notNull(),
+  blockUnixTime: integer("block_unix_time").notNull(),
+  volumeUsd: decimal("volume_usd").notNull(),
+
+  owner: varchar("owner", { length: 44 }).notNull(),
+  source: varchar("source").notNull(),
+  poolId: varchar("pool_id", { length: 44 }).notNull(),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 // / --- Wallet API cache (DB-first: use cache if fresh, else fetch from Moralis/Birdeye) ---
 
 export const walletOverviewCache = pgTable(
@@ -610,6 +638,7 @@ export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;
 export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
+export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type TokenMarketChartHourlyInsert =
   typeof tokenMarketChartHourly.$inferInsert;
@@ -619,7 +648,7 @@ export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
-export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
+export type RecentTradeInsert = typeof recentTrades.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
 export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
 export type TopTokensByMarketCapInsert =

@@ -31,7 +31,7 @@ type UserPayload = z.infer<typeof userPayloadSchema>;
 
 const honoJwt = jwt({
   alg: "HS256",
-  secret: process.env.JWT_SECRET!,
+  secret: jwtSecret,
   cookie: AUTH_COOKIE_NAME,
 });
 
