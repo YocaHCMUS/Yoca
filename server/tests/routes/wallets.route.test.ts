@@ -4,6 +4,10 @@ const { getWalletOverviewMock } = vi.hoisted(() => ({
     getWalletOverviewMock: vi.fn(),
 }));
 
+const { getWalletCounterpartiesMock } = vi.hoisted(() => ({
+    getWalletCounterpartiesMock: vi.fn(),
+}));
+
 const {
     getWalletIdentityMock,
     getWalletIdentityBatchMock,
@@ -22,6 +26,10 @@ vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     getWalletExchangeCounts: vi.fn(async () => ({ exchanges: [], metadata: { period: "30D", metric: "count" } })),
     getWalletSwaps: vi.fn(async () => ({ address: "", chain: "solana", swaps: [] })),
     getWalletTransfers: vi.fn(async () => ({ address: "", chain: "solana", transfers: [] })),
+}));
+
+vi.mock("@sv/services/wallet/counterparties.service.js", () => ({
+    getWalletCounterparties: getWalletCounterpartiesMock,
 }));
 
 vi.mock("@sv/services/wallet/walletIdentity.service.js", () => {
@@ -63,6 +71,7 @@ const WEEK_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
 
 beforeEach(() => {
     getWalletOverviewMock.mockReset();
+    getWalletCounterpartiesMock.mockReset();
     getWalletIdentityMock.mockReset();
     getWalletIdentityBatchMock.mockReset();
     composeWalletIntelligenceMock.mockReset();
@@ -108,6 +117,52 @@ beforeEach(() => {
     getWalletIdentityBatchMock.mockResolvedValue({
         chain: "solana",
         results: [],
+    });
+
+    getWalletCounterpartiesMock.mockResolvedValue({
+        counterparties: [
+            {
+                address: "wallet-2",
+                identity: {
+                    status: "unknown",
+                    name: null,
+                    category: null,
+                    type: null,
+                },
+                uniqueTokenCount: 2,
+                tokens: ["SOL", "USDC"],
+                transactionCount: 3,
+                totalVolumeUsd: 120,
+            },
+        ],
+        rankings: {
+            byTransactionCount: [
+                {
+                    address: "wallet-2",
+                    label: "wallet-2",
+                    transactionCount: 3,
+                    totalVolumeUsd: 120,
+                },
+            ],
+            byVolume: [
+                {
+                    address: "wallet-2",
+                    label: "wallet-2",
+                    transactionCount: 3,
+                    totalVolumeUsd: 120,
+                },
+            ],
+        },
+        metadata: {
+            period: "7d",
+            chain: "solana",
+            source: "mixed",
+            totals: {
+                counterparties: 1,
+                transactions: 3,
+                volume: 120,
+            },
+        },
     });
 
     composeWalletIntelligenceMock.mockResolvedValue({
@@ -270,6 +325,57 @@ describe("wallets.route - /identity", () => {
 
         expect(response.status).toBe(400);
         expect(getWalletIdentityMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("wallets.route - /counterparties", () => {
+    it("returns 200 and counterparties payload", async () => {
+        const response = await router.request(
+            "http://localhost/counterparties?address=wallet-1&chain=solana&period=7d&limit=10&includeTokens=true",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.counterparties).toHaveLength(1);
+
+        expect(getWalletCounterpartiesMock).toHaveBeenCalledWith("wallet-1", "solana", {
+            period: "7d",
+            limit: 10,
+            includeTokens: true,
+        });
+    });
+
+    it("returns 400 when address is missing", async () => {
+        const response = await router.request("http://localhost/counterparties?chain=solana");
+
+        expect(response.status).toBe(400);
+        expect(getWalletCounterpartiesMock).not.toHaveBeenCalled();
+    });
+
+    it("normalizes invalid period to 7d", async () => {
+        const response = await router.request(
+            "http://localhost/counterparties?address=wallet-1&period=30d",
+        );
+
+        expect(response.status).toBe(200);
+        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+            period: "7d",
+            limit: 20,
+            includeTokens: true,
+        });
+    });
+
+    it("clamps limit to max value", async () => {
+        const response = await router.request(
+            "http://localhost/counterparties?address=wallet-1&limit=9999",
+        );
+
+        expect(response.status).toBe(200);
+        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+            period: "7d",
+            limit: 100,
+            includeTokens: true,
+        });
     });
 });
 

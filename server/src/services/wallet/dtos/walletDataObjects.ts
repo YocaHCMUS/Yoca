@@ -108,3 +108,46 @@ export interface WalletExchangeCountsResponse {
     exchanges: WalletExchangeCountItem[];
     metadata: { period: string; metric: "count" | "volume" };
 }
+
+export type WalletCounterpartyPeriod = "24h" | "7d";
+
+export interface WalletCounterpartyIdentity {
+    status: "known" | "unknown" | "unavailable";
+    name: string | null;
+    category: string | null;
+    type: string | null;
+}
+
+export interface WalletCounterpartyRow {
+    address: string;
+    identity: WalletCounterpartyIdentity;
+    uniqueTokenCount: number;
+    tokens: string[];
+    transactionCount: number;
+    totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartyRankingItem {
+    address: string;
+    label: string;
+    transactionCount: number;
+    totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartiesResponse {
+    counterparties: WalletCounterpartyRow[];
+    rankings: {
+        byTransactionCount: WalletCounterpartyRankingItem[];
+        byVolume: WalletCounterpartyRankingItem[];
+    };
+    metadata: {
+        period: WalletCounterpartyPeriod;
+        chain: SupportedChain;
+        source: "cache" | "provider" | "mixed";
+        totals: {
+            counterparties: number;
+            transactions: number;
+            volume: number;
+        };
+    };
+}

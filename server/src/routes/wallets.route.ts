@@ -8,6 +8,7 @@ import {
   getWalletSwaps,
   getWalletTransfers
 } from "@sv/services/wallet/walletData.service.js";
+import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
   WalletIdentityServiceError,
@@ -35,6 +36,12 @@ const walletOverviewRequestSchema = walletRequestSchema.extend({
   period: z.string().optional(),
 });
 
+const walletCounterpartyRequestSchema = walletRequestSchema.extend({
+  period: z.string().optional(),
+  limit: z.string().optional(),
+  includeTokens: z.string().optional(),
+});
+
 const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
   chain: z.string().optional(),
@@ -43,6 +50,10 @@ const walletIdentityBatchRequestSchema = z.object({
 const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
 const MIN_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
 const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
+
+const DEFAULT_COUNTERPARTY_PERIOD = "7d";
+const DEFAULT_COUNTERPARTY_LIMIT = 20;
+const MAX_COUNTERPARTY_LIMIT = 100;
 
 function parseOverviewPeriodSec(rawPeriod?: string): {
   periodSec: number;
@@ -122,6 +133,42 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
     status: fallbackStatus,
     error: "Failed to fetch wallet identity",
   };
+}
+
+function parseCounterpartyPeriod(rawPeriod?: string): "24h" | "7d" {
+  const normalized = String(rawPeriod ?? "").trim().toLowerCase();
+  return normalized === "24h" ? "24h" : normalized === "7d" ? "7d" : DEFAULT_COUNTERPARTY_PERIOD;
+}
+
+function parseCounterpartyLimit(rawLimit?: string): number {
+  const parsed = Number(rawLimit ?? DEFAULT_COUNTERPARTY_LIMIT);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_COUNTERPARTY_LIMIT;
+  }
+
+  const integerLimit = Math.floor(parsed);
+  if (integerLimit < 1) {
+    return 1;
+  }
+
+  if (integerLimit > MAX_COUNTERPARTY_LIMIT) {
+    return MAX_COUNTERPARTY_LIMIT;
+  }
+
+  return integerLimit;
+}
+
+function parseCounterpartyIncludeTokens(rawIncludeTokens?: string): boolean {
+  if (rawIncludeTokens == null) {
+    return true;
+  }
+
+  const normalized = rawIncludeTokens.trim().toLowerCase();
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return true;
 }
 
 router.get("/overview", async (c) => {
@@ -308,6 +355,33 @@ router.get("/exchanges", async (c) => {
   } catch (err) {
     console.error("Failed to get wallet exchange counts", err);
     return c.json({ error: "Failed to get wallet exchange counts" }, 500);
+  }
+});
+
+router.get("/counterparties", async (c) => {
+  const query = c.req.query();
+  const parsed = walletCounterpartyRequestSchema.safeParse(query);
+
+  if (!parsed.success) {
+    return c.json({ error: "Missing or invalid required query param: address" }, 400);
+  }
+
+  const address = parsed.data.address;
+  const chain = (parsed.data.chain as SupportedChain) || "solana";
+  const period = parseCounterpartyPeriod(parsed.data.period);
+  const limit = parseCounterpartyLimit(parsed.data.limit);
+  const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
+
+  try {
+    const counterparties = await getWalletCounterparties(address, chain, {
+      period,
+      limit,
+      includeTokens,
+    });
+    return c.json(counterparties);
+  } catch (err) {
+    console.error("Failed to get wallet counterparties", err);
+    return c.json({ error: "Failed to get wallet counterparties" }, 500);
   }
 });
 

@@ -14,6 +14,47 @@ import client from '@/api/main';
  */
 export type InferFetcherData<T extends (...args: any[]) => Promise<any>> = Awaited<ReturnType<T>>;
 
+export interface WalletCounterpartyIdentity {
+  status: "known" | "unknown" | "unavailable";
+  name: string | null;
+  category: string | null;
+  type: string | null;
+}
+
+export interface WalletCounterpartyRow {
+  address: string;
+  identity: WalletCounterpartyIdentity;
+  uniqueTokenCount: number;
+  tokens: string[];
+  transactionCount: number;
+  totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartyRankingItem {
+  address: string;
+  label: string;
+  transactionCount: number;
+  totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartiesResponse {
+  counterparties: WalletCounterpartyRow[];
+  rankings: {
+    byTransactionCount: WalletCounterpartyRankingItem[];
+    byVolume: WalletCounterpartyRankingItem[];
+  };
+  metadata: {
+    period: "24h" | "7d";
+    chain: string;
+    source: "cache" | "provider" | "mixed";
+    totals: {
+      counterparties: number;
+      transactions: number;
+      volume: number;
+    };
+  };
+}
+
 /**
  * Helper to handle API response with error checking
  */
@@ -141,6 +182,35 @@ export async function fetchWalletSwaps(
 }
 
 /**
+ * Fetch wallet counterparties data
+ * GET /api/wallets/counterparties
+ */
+export async function fetchWalletCounterparties(
+  address: string,
+  params?: {
+    chain?: string;
+    period?: "24h" | "7d";
+    limit?: number;
+    includeTokens?: boolean;
+  }
+): Promise<WalletCounterpartiesResponse> {
+  const query = {
+    address,
+    ...(params?.chain && { chain: params.chain }),
+    ...(params?.period && { period: params.period }),
+    ...(params?.limit != null && { limit: params.limit }),
+    ...(params?.includeTokens != null && { includeTokens: String(params.includeTokens) }),
+  };
+
+  const response = await (client.api as any).wallets.counterparties.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
  * Fetch wallet exchange counts
  * GET /api/wallets/exchanges
  */
@@ -249,6 +319,7 @@ export const walletApi = {
   fetchWalletTransactions,
   fetchWalletTransfers,
   fetchWalletSwaps,
+  fetchWalletCounterparties,
   fetchWalletExchanges,
   fetchWalletBalances,
   fetchWalletDistribution,
@@ -261,6 +332,7 @@ export const walletApi = {
   getTransactions: fetchWalletTransactions,
   getTransfers: fetchWalletTransfers,
   getSwaps: fetchWalletSwaps,
+  getCounterparties: fetchWalletCounterparties,
   getExchanges: fetchWalletExchanges,
   getBalances: fetchWalletBalances,
   getDistribution: fetchWalletDistribution,

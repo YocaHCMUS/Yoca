@@ -139,7 +139,7 @@ export interface ExchangeComparisonResponse extends ChartResponseBase {
  * GET /api/charts/counterparties
  */
 export interface CounterpartyActivityResponse extends ChartResponseBase {
-  /** Data for each counterparty */
+  /** Data for each counterparty (legacy field, defaults to count ranking) */
   counterparties: {
     /** Counterparty identifier (address or name) */
     id: string;
@@ -151,6 +151,22 @@ export interface CounterpartyActivityResponse extends ChartResponseBase {
     transactionCount: number;
 
     /** Total volume */
+    totalVolume: number;
+  }[];
+
+  /** Optional explicit ranking by transaction count */
+  counterpartiesByTransactionCount?: {
+    id: string;
+    name: string;
+    transactionCount: number;
+    totalVolume: number;
+  }[];
+
+  /** Optional explicit ranking by total volume */
+  counterpartiesByVolume?: {
+    id: string;
+    name: string;
+    transactionCount: number;
     totalVolume: number;
   }[];
 
@@ -523,11 +539,29 @@ export interface ExchangesRequestParams extends ChartResponseBase {
  * API request parameters for counterparties endpoint
  */
 export interface CounterpartiesRequestParams extends ChartResponseBase {
+  /** Chart time period filter (legacy chart contract) */
+  timePeriod?: string;
+
+  /** Chart transaction type filter (legacy chart contract) */
+  transactionType?: string;
+
   /** Time period filter */
   period?: string;
 
   /** Transaction type filter */
   type?: string;
+
+  /** Optional comma-separated wallet addresses */
+  wallets?: string;
+
+  /** Optional single wallet override */
+  address?: string;
+
+  /** Optional chain for wallet-aware mode */
+  chain?: string;
+
+  /** Optional timezone */
+  timezone?: string;
 
   /** Limit to top N counterparties */
   limit?: number;
