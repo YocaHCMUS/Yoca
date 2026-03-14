@@ -422,6 +422,50 @@ describe("walletData.service - cache coverage sync behavior", () => {
         );
     });
 
+    it("uses oldest cached signature as beforeCursor during tail backfill", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const fromSec = nowSec - 30 * 24 * 60 * 60;
+        const coveredEarliestSec = fromSec + 10 * 24 * 60 * 60;
+        const oldestSignature = "sig-oldest-cache";
+
+        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
+            transactions: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "sig-newer-cache",
+                    timestamp: new Date((nowSec - 60) * 1000).toISOString(),
+                    slot: 10,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [],
+                },
+                {
+                    walletAddress: "wallet-1",
+                    signature: oldestSignature,
+                    timestamp: new Date((coveredEarliestSec + 5) * 1000).toISOString(),
+                    slot: 11,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [],
+                },
+            ],
+            requestedRange: { fromSec, toSec: nowSec },
+            coveredRange: { earliestSec: coveredEarliestSec, latestSec: nowSec },
+            isFullyCovered: false,
+        });
+
+        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+
+        expect(hoisted.fetchAllTransactionHistoryMock).toHaveBeenCalledTimes(1);
+        const fetchCall = hoisted.fetchAllTransactionHistoryMock.mock.calls[0];
+        expect(fetchCall[0]).toBe("wallet-1");
+        expect(fetchCall[1]).toEqual({
+            fromSec,
+            toSec: coveredEarliestSec - 1,
+        });
+        expect(fetchCall[2]).toEqual({ beforeCursor: oldestSignature });
+    });
+
     it("does not widen coverage bounds when a required gap fetch fails", async () => {
         const nowSec = Math.floor(Date.now() / 1000);
         const fromSec = nowSec - 30 * 24 * 60 * 60;

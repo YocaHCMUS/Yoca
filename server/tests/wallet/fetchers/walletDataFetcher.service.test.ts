@@ -85,6 +85,35 @@ describe("walletDataFetcher.service", () => {
         expect(secondUrl.searchParams.get("before")).toBe("cursor-1");
     });
 
+    it("uses a provided beforeCursor seed on the first history request", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "sig-1",
+                        timestamp: nowSec - 15,
+                        slot: 1,
+                        fee: 0.000005,
+                        feePayer: "payer-1",
+                        balanceChanges: [{ mint: "SOL", amount: -0.1, decimals: 9 }],
+                    },
+                ],
+                pagination: { hasMore: false, nextCursor: null },
+            }),
+        );
+
+        await fetchAllTransactionHistory("wallet-address", "7d", {
+            beforeCursor: "sig-seed",
+        });
+
+        expect(heliusFetchMock).toHaveBeenCalledTimes(1);
+        const firstUrl = heliusFetchMock.mock.calls[0][0] as URL;
+        expect(firstUrl.pathname).toContain("/v1/wallet/wallet-address/history");
+        expect(firstUrl.searchParams.get("before")).toBe("sig-seed");
+    });
+
     it("paginates transfers with cursor=nextCursor", async () => {
         const nowSec = Math.floor(Date.now() / 1000);
 

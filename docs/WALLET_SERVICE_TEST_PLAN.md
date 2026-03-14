@@ -4,6 +4,7 @@
 - Fetcher service: `walletDataFetcher.service.ts`
 - Cache writer service: `walletDataCacher.ts`
 - Cache reader service: `walletDataRetriever.ts`
+- Wallet data service: `walletData.service.ts` (`getWalletTransactionHelius` cache sync path)
 - Token market data service: `token-market-data.ts`
 
 ## Objectives
@@ -11,6 +12,8 @@
 - Validate timestamp-window behavior and null timestamp handling.
 - Validate deduplication and metadata writes in cache persistence.
 - Validate TTL freshness checks and date-window filtering in cache retrieval.
+- Validate `getWalletTransactionHelius` head/tail gap sync behavior against cached coverage metadata.
+- Validate signature-seeded tail pagination (`before=<oldest-cached-signature>`) and fallback behavior.
 - Validate null-value normalization before persisting token market data.
 - Validate race handling when two service instances refresh the same stale token set concurrently.
 
@@ -27,9 +30,15 @@
 
 ### Fetcher Tests
 1. History pagination uses `before` with `pagination.nextCursor`.
-2. Transfers pagination uses `cursor` with `pagination.nextCursor`.
-3. Null timestamps are skipped (not treated as hard stop).
-4. Transaction mapping includes direction, counterparty, and amount conversion.
+2. History accepts a provided `beforeCursor` seed (e.g., oldest cached transaction signature) for the first page.
+3. Transfers pagination uses `cursor` with `pagination.nextCursor`.
+4. Null timestamps are skipped (not treated as hard stop).
+5. Transaction mapping includes direction, counterparty, and amount conversion.
+
+### Wallet Data Service Tests (`getWalletTransactionHelius`)
+1. Runs tail backfill even when requested-range cache slice is empty.
+2. Uses oldest cached transaction signature as `beforeCursor` during tail backfill when cache slice is non-empty.
+3. Does not widen coverage bounds when a required head/tail gap fetch fails.
 
 ### Cache Writer Tests
 1. `saveTransactionsCache` deletes previous rows and inserts deduplicated hashes.

@@ -37,7 +37,7 @@ export type CachedWalletTransactionsHeliusRangeResult = {
 const MOVING_NOW_HEAD_LAG_ALLOWANCE_SEC = 5;
 const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
 	30,
-	Math.min(Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000), 5 * 60),
+	Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000),
 );
 
 function toIsoTimestamp(value: unknown): string {

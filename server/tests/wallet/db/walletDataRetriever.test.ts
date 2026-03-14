@@ -359,7 +359,7 @@ describe("walletDataRetriever", () => {
 
         hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
             {
-                fetchedAt: new Date("2026-03-12T11:45:00.000Z"),
+                fetchedAt: new Date("2026-03-12T10:45:00.000Z"),
                 coveredFromSec: requestedFrom - 100,
                 coveredToSec: nowSec - 120,
             },
