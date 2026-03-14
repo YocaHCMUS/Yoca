@@ -65,12 +65,12 @@ const labelThresholds: Record<
   },
   sm: {
     rectSize: 24,
-    iconSize: 12,
+    iconSize: 20,
     format: (node) => `{icon_sm_${node.symbol}|}`,
   },
   md: {
     rectSize: 48,
-    iconSize: 20,
+    iconSize: 40,
     format: (node) => `{icon_md_${node.symbol}|}`,
     rich: {
       sym_md: {
@@ -86,54 +86,41 @@ const labelThresholds: Record<
   },
   lg: {
     rectSize: 80,
-    iconSize: 32,
-    format: (node) =>
-      `{icon_lg_${node.symbol}|}\n{sym_lg|${node.symbol}}\n{trend_lg|${node.trendValueFmtr(node.trendValue)}}`,
-    rich: {
-      sym_lg: {
-        padding: [8, 0, 0, 0],
-        fontSize: 12,
-        fontWeight: 600,
-        align: "center",
-      },
-      trend_lg: {
-        fontSize: 9,
-        align: "center",
-      },
-    },
+    iconSize: 72,
+    format: (node) => `{icon_lg_${node.symbol}|}\n`,
   },
   xl: {
     rectSize: 120,
-    iconSize: 48,
+    iconSize: 80,
     format: (node) =>
       `{icon_xl_${node.symbol}|}\n{sym_xl|${node.symbol}}\n{trend_xl|${node.trendValueFmtr(node.trendValue)}}`,
     rich: {
       sym_xl: {
         padding: [8, 0, 0, 0],
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: "bold",
         align: "center",
       },
       trend_xl: {
-        fontSize: 10,
+        fontSize: 16,
         align: "center",
       },
     },
   },
   xxl: {
     rectSize: 200,
-    iconSize: 80,
+    iconSize: 120,
     format: (node) =>
       `{icon_xxl_${node.symbol}|}\n{sym_xxl|${node.symbol}}\n{trend_xxl|${node.trendValueFmtr(node.trendValue)}}`,
     rich: {
       sym_xxl: {
         padding: [10, 0, 0, 0],
-        fontSize: 20,
+        fontSize: 32,
         fontWeight: 700,
         align: "center",
       },
       trend_xxl: {
-        fontSize: 12,
+        fontSize: 24,
         align: "center",
       },
     },
