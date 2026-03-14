@@ -388,20 +388,16 @@ export const topTokensByMarketCap = pgTable("top_tokens_by_marketcap", {
     .$onUpdate(() => new Date()),
 });
 
-export const topTraders = pgTable(
-  "top_traders",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    rank: integer("rank").notNull(),
-    pnl: decimal("pnl").notNull(),
-    volume: decimal("volume").notNull(),
-    tradeCount: integer("trade_count").notNull(),
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (t) => [primaryKey({ columns: [t.address] })],
-);
+export const topTraders = pgTable("top_traders", {
+  address: varchar("address", { length: 66 }).primaryKey(),
+  rank: integer("rank").notNull(),
+  pnl: decimal("pnl").notNull(),
+  volume: decimal("volume").notNull(),
+  tradeCount: integer("trade_count").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
 export const poolTrades24h = pgTable("pool_trades_24h", {
   id: varchar("id", { length: 128 }).primaryKey(),
@@ -429,33 +425,47 @@ export const poolTrades24h = pgTable("pool_trades_24h", {
     .$onUpdate(() => new Date()),
 });
 
-export const recentTrades = pgTable("recent_trades", {
-  id: varchar("id", { length: 128 }).primaryKey(),
+export const recentTrades = pgTable(
+  "recent_trades",
+  {
+    transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    innerInstructionIndex: integer("inner_instruction_index"),
 
-  baseSymbol: varchar("base_symbol").notNull(),
-  baseAddress: varchar("base_address", { length: 44 }).notNull(),
-  baseDecimals: integer("base_decimals").notNull(),
-  basePrice: decimal("base_price").notNull(),
-  baseAmount: varchar("base_amount").notNull(),
+    baseSymbol: varchar("base_symbol"),
+    baseAddress: varchar("base_address", { length: 44 }).notNull(),
+    baseDecimals: integer("base_decimals"),
+    basePrice: decimal("base_price"),
+    baseAmount: varchar("base_amount"),
 
-  quoteSymbol: varchar("quote_symbol").notNull(),
-  quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
-  quoteDecimals: integer("quote_decimals").notNull(),
-  quotePrice: decimal("quote_price").notNull(),
-  quoteAmount: varchar("quote_amount").notNull(),
+    quoteSymbol: varchar("quote_symbol"),
+    quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
+    quoteDecimals: integer("quote_decimals"),
+    quotePrice: decimal("quote_price"),
+    quoteAmount: varchar("quote_amount"),
 
-  txHash: varchar("tx_hash", { length: 88 }).notNull(),
-  blockUnixTime: integer("block_unix_time").notNull(),
-  volumeUsd: decimal("volume_usd").notNull(),
+    blockUnixTime: integer("block_unix_time").notNull(),
+    volumeUsd: decimal("volume_usd").notNull(),
 
-  owner: varchar("owner", { length: 44 }).notNull(),
-  source: varchar("source").notNull(),
-  poolId: varchar("pool_id", { length: 44 }).notNull(),
+    owner: varchar("owner", { length: 44 }).notNull(),
+    source: varchar("source").notNull(),
+    poolAddress: varchar("poolAddress", { length: 44 }).notNull(),
 
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.transactionHash,
+        table.instructionIndex,
+        table.innerInstructionIndex,
+        table.poolAddress,
+      ],
+    }),
+  ],
+);
 
 // / --- Wallet API cache (DB-first: use cache if fresh, else fetch from Moralis/Birdeye) ---
 

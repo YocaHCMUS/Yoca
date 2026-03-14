@@ -40,6 +40,8 @@ export default function MarketPage() {
 
   const tradersLoading = topTraders.isLoading;
 
+  const recentTradesData = useGet(client.api.trades.recent, 200);
+
   const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
 
@@ -177,6 +179,36 @@ export default function MarketPage() {
     }));
   }, [topTraders.data, fmt]);
 
+  const recentTradesRows = useMemo(() => {
+    if (!recentTradesData.data) return [];
+
+    const truncate = (a: string) =>
+      a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
+
+    return recentTradesData.data.map((trade) => ({
+      id: trade.transactionHash,
+      from: (
+        <Tooltip label={trade.baseSymbol} align="bottom-left">
+          <span>{trade.baseSymbol?.toUpperCase() || "-"}</span>
+        </Tooltip>
+      ),
+      to: (
+        <Tooltip label={trade.quoteSymbol} align="bottom-left">
+          <span>{trade.quoteSymbol?.toUpperCase() || "-"}</span>
+        </Tooltip>
+      ),
+      amount: fmt.num.compact.decimal(Number(trade.baseAmount)),
+      volume: fmt.num.compact.currency(trade.volumeUsd),
+      trader: (
+        <Tooltip label={trade.owner} align="bottom-left">
+          <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
+        </Tooltip>
+      ),
+      source: trade.source,
+      time: new Date(trade.blockUnixTime * 1000).toLocaleTimeString(),
+    }));
+  }, [recentTradesData.data, fmt]);
+
   return (
     <PageWrapper>
       <Grid narrow>
@@ -227,6 +259,24 @@ export default function MarketPage() {
               { key: "trades", header: "Trades" },
             ]}
             rows={traderRows}
+            stickyHeader
+          />
+        </Column>
+        <Column sm={2} md={4} lg={8}>
+          <Tble
+            title={<strong>RECENT TRADES</strong>}
+            height={400}
+            loading={recentTradesData.isLoading}
+            headers={[
+              { key: "from", header: "From" },
+              { key: "to", header: "To" },
+              { key: "amount", header: "Amount" },
+              { key: "volume", header: "Volume" },
+              { key: "trader", header: "Trader" },
+              { key: "source", header: "Source" },
+              { key: "time", header: "Time" },
+            ]}
+            rows={recentTradesRows}
             stickyHeader
           />
         </Column>

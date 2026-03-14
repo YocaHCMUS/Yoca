@@ -27,7 +27,9 @@ async function fetchRecentTrades(): Promise<RecentTradeInsert[]> {
   const res: BDS_RecentTrades = await resp.json();
   const trades = res.data.items.map(
     (raw): RecentTradeInsert => ({
-      id: raw.tx_hash,
+      transactionHash: raw.tx_hash,
+      instructionIndex: raw.ins_index || -1, // for unknown instruction index
+      innerInstructionIndex: raw.inner_ins_index || -1, // for unknown inner instruction index
 
       baseSymbol: raw.base.symbol,
       baseAddress: raw.base.address,
@@ -41,26 +43,40 @@ async function fetchRecentTrades(): Promise<RecentTradeInsert[]> {
       quotePrice: raw.quote.price,
       quoteAmount: raw.quote.amount,
 
-      txHash: raw.tx_hash,
       blockUnixTime: raw.block_unix_time,
       volumeUsd: raw.volume_usd,
 
       owner: raw.owner,
       source: raw.source,
-      poolId: raw.pool_id,
+      poolAddress: raw.pool_id,
     }),
   );
 
-  return await db
-    .insert(recentTrades)
-    .values(trades)
-    .onConflictDoUpdate({
-      target: [recentTrades.id],
-      set: {
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+  const duplicates = trades.filter(
+    (trade, index, arr) =>
+      arr.findIndex(
+        (t) =>
+          t.poolAddress === trade.poolAddress &&
+          t.transactionHash === trade.transactionHash &&
+          t.instructionIndex === trade.instructionIndex &&
+          t.innerInstructionIndex === trade.innerInstructionIndex,
+      ) !== index,
+  );
+
+  if (duplicates.length > 0) {
+    console.log(
+      "Duplicated trades:",
+      duplicates.map((t) => ({
+        poolAddress: t.poolAddress,
+        transactionHash: t.transactionHash,
+        instructionIndex: t.instructionIndex,
+        innerInstructionIndex: t.innerInstructionIndex,
+      })),
+    );
+  }
+
+  await db.delete(recentTrades);
+  return await db.insert(recentTrades).values(trades).returning();
 }
 
 export async function getRecentTrades() {
