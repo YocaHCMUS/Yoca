@@ -16,6 +16,8 @@ import type { ReactNode } from "react";
 interface TblHdr {
   header: string;
   key: string;
+  align?: "start" | "center" | "end";
+  width?: number | string;
   style?: React.CSSProperties;
 }
 
@@ -45,6 +47,10 @@ export default function Tble({
   height = 600,
   ...dataTableProps
 }: TblProps) {
+  const headerLookup = Object.fromEntries(
+    headers.map((header) => [header.key, header]),
+  );
+
   return loading ? (
     <DataTableSkeleton headers={headers} showHeader={!hideHeaders} />
   ) : (
@@ -67,7 +73,16 @@ export default function Tble({
             <TableHead hidden={hideHeaders}>
               <TableRow>
                 {headers.map((header) => (
-                  <TableHeader {...getHeaderProps({ header })}>
+                  <TableHeader
+                    {...getHeaderProps({ header })}
+                    style={{
+                      paddingBlockStart: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      inlineSize: headerLookup[header.key].width,
+                      justifyContent: headerLookup[header.key].align,
+                    }}
+                  >
                     {header.header}
                   </TableHeader>
                 ))}
@@ -77,7 +92,16 @@ export default function Tble({
               {rows.map((row) => (
                 <TableRow {...getRowProps({ row })}>
                   {row.cells.map((cell) => (
-                    <TableCell {...getCellProps({ cell })}>
+                    <TableCell
+                      {...getCellProps({ cell })}
+                      style={{
+                        paddingBlockStart: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        inlineSize: headerLookup[cell.info.header].width,
+                        justifyContent: headerLookup[cell.info.header].align,
+                      }}
+                    >
                       {cell.value}
                     </TableCell>
                   ))}

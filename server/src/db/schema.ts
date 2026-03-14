@@ -425,47 +425,40 @@ export const poolTrades24h = pgTable("pool_trades_24h", {
     .$onUpdate(() => new Date()),
 });
 
-export const recentTrades = pgTable(
-  "recent_trades",
-  {
-    transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
-    instructionIndex: integer("instruction_index").notNull(),
-    innerInstructionIndex: integer("inner_instruction_index"),
+export const recentTrades = pgTable("recent_trades", {
+  // Underscore before name to signal this is synthetic field and is not
+  // inferred from the actual data by any means (which usually discouraged)
+  _tradeId: uuid("_trade_id").primaryKey().defaultRandom(),
 
-    baseSymbol: varchar("base_symbol"),
-    baseAddress: varchar("base_address", { length: 44 }).notNull(),
-    baseDecimals: integer("base_decimals"),
-    basePrice: decimal("base_price"),
-    baseAmount: varchar("base_amount"),
+  transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
+  instructionIndex: integer("instruction_index"),
+  // If instruction index is null, it doesn't mean the trade happened at top
+  // leve instruction, Birdeye might just didn't have that information
+  innerInstructionIndex: integer("inner_instruction_index"),
 
-    quoteSymbol: varchar("quote_symbol"),
-    quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
-    quoteDecimals: integer("quote_decimals"),
-    quotePrice: decimal("quote_price"),
-    quoteAmount: varchar("quote_amount"),
+  baseSymbol: varchar("base_symbol"),
+  baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  baseDecimals: integer("base_decimals"),
+  basePrice: decimal("base_price"),
+  baseAmount: varchar("base_amount"),
 
-    blockUnixTime: integer("block_unix_time").notNull(),
-    volumeUsd: decimal("volume_usd").notNull(),
+  quoteSymbol: varchar("quote_symbol"),
+  quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
+  quoteDecimals: integer("quote_decimals"),
+  quotePrice: decimal("quote_price"),
+  quoteAmount: varchar("quote_amount"),
 
-    owner: varchar("owner", { length: 44 }).notNull(),
-    source: varchar("source").notNull(),
-    poolAddress: varchar("poolAddress", { length: 44 }).notNull(),
+  blockUnixTime: integer("block_unix_time").notNull(),
+  volumeUsd: decimal("volume_usd").notNull(),
 
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    primaryKey({
-      columns: [
-        table.transactionHash,
-        table.instructionIndex,
-        table.innerInstructionIndex,
-        table.poolAddress,
-      ],
-    }),
-  ],
-);
+  owner: varchar("owner", { length: 44 }).notNull(),
+  source: varchar("source").notNull(),
+  poolAddress: varchar("poolAddress", { length: 44 }).notNull(),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
 // / --- Wallet API cache (DB-first: use cache if fresh, else fetch from Moralis/Birdeye) ---
 

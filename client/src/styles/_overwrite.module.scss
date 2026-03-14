@@ -3,6 +3,11 @@
     padding-block: 0.5rem 0.5rem;
   }
 
+  :global(.cds--data-table) td,
+  :global(.cds--data-table) th {
+    padding-inline: 0.5rem 0rem;
+  }
+
   :global(.cds--data-table_inner-container) {
     height: 100%;
   }

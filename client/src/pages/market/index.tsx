@@ -5,9 +5,11 @@ import TokenTreeMap, {
 import Tble from "@/components/Tble";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
+import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Column, Grid, Link, Stack, Tooltip } from "@carbon/react";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import { Launch } from "@carbon/react/icons";
 import { useMemo } from "react";
 
 export default function MarketPage() {
@@ -185,26 +187,35 @@ export default function MarketPage() {
     const truncate = (a: string) =>
       a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
 
-    return recentTradesData.data.map((trade) => ({
-      id: trade.transactionHash,
-      from: (
-        <Tooltip label={trade.baseSymbol} align="bottom-left">
-          <span>{trade.baseSymbol?.toUpperCase() || "-"}</span>
-        </Tooltip>
+    return recentTradesData.data.map((trade, index) => ({
+      id: index.toString(),
+      solscan: (
+        <IconButton
+          href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
+          label="Open in Solscan"
+          kind="ghost"
+          size="sm"
+          align="bottom-right"
+        >
+          <Launch size={18} />
+        </IconButton>
       ),
-      to: (
-        <Tooltip label={trade.quoteSymbol} align="bottom-left">
-          <span>{trade.quoteSymbol?.toUpperCase() || "-"}</span>
-        </Tooltip>
+      amount: (
+        <Stack>
+          <span>
+            {fmt.num.compact.unit(trade.baseAmount, trade.baseSymbol)}
+          </span>
+          <span>
+            {fmt.num.compact.unit(trade.quoteAmount, trade.quoteSymbol)}
+          </span>
+        </Stack>
       ),
-      amount: fmt.num.compact.decimal(Number(trade.baseAmount)),
       volume: fmt.num.compact.currency(trade.volumeUsd),
       trader: (
         <Tooltip label={trade.owner} align="bottom-left">
           <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
         </Tooltip>
       ),
-      source: trade.source,
       time: new Date(trade.blockUnixTime * 1000).toLocaleTimeString(),
     }));
   }, [recentTradesData.data, fmt]);
@@ -219,26 +230,11 @@ export default function MarketPage() {
             height={500}
             loading={loading}
             headers={[
-              {
-                key: "token",
-                header: "Token",
-              },
-              {
-                key: "price",
-                header: "Price",
-              },
-              {
-                key: "change24h",
-                header: "24h %",
-              },
-              {
-                key: "marketCap",
-                header: "Market Cap",
-              },
-              {
-                key: "volume24h",
-                header: "24h Volume",
-              },
+              { key: "token", header: "Token" },
+              { key: "price", header: "Price" },
+              { key: "change24h", header: "24h %" },
+              { key: "marketCap", header: "Market Cap" },
+              { key: "volume24h", header: "24h Volume" },
             ]}
             rows={rows}
             stickyHeader
@@ -268,13 +264,11 @@ export default function MarketPage() {
             height={400}
             loading={recentTradesData.isLoading}
             headers={[
-              { key: "from", header: "From" },
-              { key: "to", header: "To" },
-              { key: "amount", header: "Amount" },
-              { key: "volume", header: "Volume" },
-              { key: "trader", header: "Trader" },
-              { key: "source", header: "Source" },
               { key: "time", header: "Time" },
+              { key: "volume", header: "Value" },
+              { key: "amount", header: "Amount", width: "150%" },
+              { key: "trader", header: "Trader" },
+              { key: "solscan", header: "Transaction", align: "center" },
             ]}
             rows={recentTradesRows}
             stickyHeader

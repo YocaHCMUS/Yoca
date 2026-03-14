@@ -16,7 +16,7 @@ const app = new Hono().get("/recent", async (c) => {
       statusCode.BadGateway,
     );
   } catch (err) {
-    // console.error(err );
+    console.error(err);
     return c.json(
       setErr("INTERNAL_SERVER_ERR"),
       statusCode.InternalServerError,

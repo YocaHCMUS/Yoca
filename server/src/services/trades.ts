@@ -5,11 +5,11 @@ import * as bds from "@sv/util/util-birdeye.js";
 import { desc } from "drizzle-orm";
 import type { BDS_RecentTrades } from "./_types/token_raw_responses.js";
 
-async function fetchRecentTrades(): Promise<RecentTradeInsert[]> {
+async function fetchRecentTrades() {
   const bdsEndpoint = bds.getEndpoint("/defi/v3/txs/recent");
 
   bdsEndpoint.search = new URLSearchParams({
-    limit: "500",
+    limit: "50",
     tx_type: "swap",
   }).toString();
 
@@ -28,8 +28,8 @@ async function fetchRecentTrades(): Promise<RecentTradeInsert[]> {
   const trades = res.data.items.map(
     (raw): RecentTradeInsert => ({
       transactionHash: raw.tx_hash,
-      instructionIndex: raw.ins_index || -1, // for unknown instruction index
-      innerInstructionIndex: raw.inner_ins_index || -1, // for unknown inner instruction index
+      instructionIndex: raw.ins_index,
+      innerInstructionIndex: raw.inner_ins_index,
 
       baseSymbol: raw.base.symbol,
       baseAddress: raw.base.address,
@@ -52,29 +52,6 @@ async function fetchRecentTrades(): Promise<RecentTradeInsert[]> {
     }),
   );
 
-  const duplicates = trades.filter(
-    (trade, index, arr) =>
-      arr.findIndex(
-        (t) =>
-          t.poolAddress === trade.poolAddress &&
-          t.transactionHash === trade.transactionHash &&
-          t.instructionIndex === trade.instructionIndex &&
-          t.innerInstructionIndex === trade.innerInstructionIndex,
-      ) !== index,
-  );
-
-  if (duplicates.length > 0) {
-    console.log(
-      "Duplicated trades:",
-      duplicates.map((t) => ({
-        poolAddress: t.poolAddress,
-        transactionHash: t.transactionHash,
-        instructionIndex: t.instructionIndex,
-        innerInstructionIndex: t.innerInstructionIndex,
-      })),
-    );
-  }
-
   await db.delete(recentTrades);
   return await db.insert(recentTrades).values(trades).returning();
 }
@@ -84,7 +61,7 @@ export async function getRecentTrades() {
     .select()
     .from(recentTrades)
     .orderBy(desc(recentTrades.blockUnixTime))
-    .limit(500);
+    .limit(50);
 
   let stale = false;
 

@@ -3,7 +3,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import utc from "dayjs/plugin/utc";
 
 const nullDisplay = "-";
-type NullableNumber = number | null;
+type NumberLike = number | string | null;
 type NullableDayJsConfig = dayjs.ConfigType | null;
 
 type Notation = "standard" | "compact";
@@ -12,9 +12,9 @@ type Style = "decimal" | "currency" | "percent" | "unit";
 /**
  * Determines the number of decimal places to display for a numeric value.
  * The rule is based on the fractional part of the absolute value:
- *   - frac in [0.01, 1)      → 4 decimals  e.g. $1.246678 → $1.2467
- *   - frac in [0.0001, 0.01) → 6 decimals  e.g. $81.00147367 → $81.001474
- *   - frac < 0.0001           → 8 decimals
+ *   - frac in [0.01, 1)      -> 4 decimals  e.g. $1.246678 -> $1.2467
+ *   - frac in [0.0001, 0.01) -> 6 decimals  e.g. $81.00147367 -> $81.001474
+ *   - frac < 0.0001           -> 8 decimals
  */
 function resolveDecimals(value: number): number {
   const frac = Math.abs(value) % 1;
@@ -31,29 +31,27 @@ export function defineNumberFormat(
   const formatterMap = new Map<string, Intl.NumberFormat>();
 
   function format(
-    value: NullableNumber,
+    value: NumberLike,
     abs: boolean,
     style: Style,
     notation: Notation,
-    unit?: string,
+    unit?: string | null,
   ) {
-    // Token symbols (SOL, BONK, etc.) are NOT valid Intl.NumberFormat units.
-    // Always use "decimal" formatting and append the symbol as a text suffix.
-    const effectiveStyle = style === "unit" ? "decimal" : style;
+    const effectiveStyle = style == "unit" ? "decimal" : style;
 
-    if (!value) return nullDisplay;
+    if (typeof value !== "number" && typeof value !== "string")
+      return nullDisplay;
+    const numValue = typeof value == "string" ? Number(value) : value;
+    if (!Number.isFinite(numValue)) return nullDisplay;
 
     const exchangedValue =
       style == "currency" && getExchangeRate
-        ? value * getExchangeRate()
-        : style == "percent"
-          ? value / 100.0
-          : value;
+        ? numValue * getExchangeRate()
+        : numValue;
 
-    // Pick decimal precision based on the fractional part of the value.
     let key = `${effectiveStyle}|${notation}`;
     let extraOptions: Intl.NumberFormatOptions = {};
-    if (effectiveStyle === "currency" || effectiveStyle === "decimal") {
+    if (effectiveStyle == "currency" || effectiveStyle == "decimal") {
       const decimals = resolveDecimals(exchangedValue);
       key = `${key}|${decimals}`;
       extraOptions = { maximumFractionDigits: decimals };
@@ -73,8 +71,7 @@ export function defineNumberFormat(
       .get(key)!
       .format(abs ? Math.abs(exchangedValue) : exchangedValue);
 
-    // Append unit suffix for "unit" style
-    if (style === "unit" && unit) {
+    if (style == "unit" && unit) {
       return `${formatted} ${unit}`;
     }
 
@@ -83,35 +80,39 @@ export function defineNumberFormat(
 
   function createNotation(notation: Notation) {
     return {
-      decimal: (value: NullableNumber, abs: boolean = false) =>
+      decimal: (value: NumberLike, abs: boolean = false) =>
         format(value, abs, "decimal", notation),
-      currency: (value: NullableNumber, abs: boolean = false) =>
+      currency: (value: NumberLike, abs: boolean = false) =>
         format(value, abs, "currency", notation),
-      percent: (value: NullableNumber, abs: boolean = false) =>
+      percent: (value: NumberLike, abs: boolean = false) =>
         format(value, abs, "percent", notation),
-      unit: (value: NullableNumber, unit: string, abs: boolean = false) =>
+      unit: (value: NumberLike, unit: string | null, abs: boolean = false) =>
         format(value, abs, "unit", notation, unit),
     };
   }
 
-  // Compact currency with readable full words (avoids Intl abbreviations like N/T/NT/Tr)
-  function readableCompactCurrency(value: NullableNumber): string {
-    if (!value) return nullDisplay;
-    const v = getExchangeRate ? value * getExchangeRate() : value;
+  function readableCompactCurrency(value: NumberLike): string {
+    if (value == null || value == undefined || value == "") return nullDisplay;
+    const numValue = typeof value == "string" ? Number(value) : value;
+    if (!Number.isFinite(numValue)) return nullDisplay;
+    const v = getExchangeRate ? numValue * getExchangeRate() : numValue;
     const abs = Math.abs(v);
     const opts = { maximumFractionDigits: 2 };
     if (langCode.startsWith("vi")) {
       const sym = "đồng";
-      if (abs >= 1e12) return `${(v / 1e12).toLocaleString(langCode, opts)} nghìn tỷ ${sym}`;
-      if (abs >= 1e9)  return `${(v / 1e9).toLocaleString(langCode, opts)} tỷ ${sym}`;
-      if (abs >= 1e6)  return `${(v / 1e6).toLocaleString(langCode, opts)} triệu ${sym}`;
-      if (abs >= 1e3)  return `${(v / 1e3).toLocaleString(langCode, opts)} nghìn ${sym}`;
+      if (abs >= 1e12)
+        return `${(v / 1e12).toLocaleString(langCode, opts)} nghìn tỷ ${sym}`;
+      if (abs >= 1e9)
+        return `${(v / 1e9).toLocaleString(langCode, opts)} tỷ ${sym}`;
+      if (abs >= 1e6)
+        return `${(v / 1e6).toLocaleString(langCode, opts)} triệu ${sym}`;
+      if (abs >= 1e3)
+        return `${(v / 1e3).toLocaleString(langCode, opts)} nghìn ${sym}`;
       return `${v.toLocaleString(langCode, { maximumFractionDigits: 0 })} ${sym}`;
     }
-    // For non-vi locales: use standard notation for small values (< 1) to avoid rounding to $0
-    const absVal = Math.abs(value);
-    if (absVal > 0 && absVal < 1) return createNotation("standard").currency(value);
-    return createNotation("compact").currency(value);
+    if (abs > 0 && abs < 1)
+      return createNotation("standard").currency(numValue);
+    return createNotation("compact").currency(numValue);
   }
 
   return {
@@ -154,11 +155,11 @@ export function defineDateTimeFormat(
       value ? dayjs.utc(value).toISOString() : nullDisplay,
     relative: (value: NullableDayJsConfig) =>
       value ? toLocal(value).fromNow() : nullDisplay,
-    fromUnixSeconds: (seconds: NullableNumber) =>
+    fromUnixSeconds: (seconds: number | null) =>
       seconds
         ? toLocal(dayjs.unix(seconds)).format(fmtInfo.dateTimePattern)
         : nullDisplay,
-    fromUnixMilliseconds: (ms: NullableNumber) =>
+    fromUnixMilliseconds: (ms: number | null) =>
       ms ? toLocal(dayjs(ms)).format(fmtInfo.dateTimePattern) : nullDisplay,
   };
 }
