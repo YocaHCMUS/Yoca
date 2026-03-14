@@ -94,7 +94,7 @@ function TradeFilterOptions({
   ];
 
   return (
-    <Stack gap={4} orientation="horizontal" style={{ justifyContent: "end" }}>
+    <Stack gap={2} orientation="horizontal" style={{ justifyContent: "end" }}>
       <FilterSwitch
         value={volume}
         options={volumeOptions}
@@ -368,20 +368,30 @@ export default function MarketPage() {
         <Column sm={2} md={8} lg={8}>
           <Tble
             title={
-              <strong style={{ textTransform: "uppercase" }}>
-                {tr("marketPage.recentTrades")}
-              </strong>
+              <Stack
+                orientation="horizontal"
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  alignItems: "end",
+                }}
+              >
+                <Stack>
+                  <strong style={{ textTransform: "uppercase" }}>
+                    {tr("marketPage.recentTrades")}
+                  </strong>
+                  <span className={overwriteStyles.tblDsc}>Description</span>
+                </Stack>
+                <TradeFilterOptions
+                  volume="$10k"
+                  time="6h"
+                  onVolumeChange={() => {}}
+                  onTimeChange={() => {}}
+                />
+              </Stack>
             }
             height={400}
             loading={recentTradesData.isLoading}
-            toolBar={
-              <TradeFilterOptions
-                volume="$10k"
-                time="6h"
-                onVolumeChange={() => {}}
-                onTimeChange={() => {}}
-              />
-            }
             headers={[
               { key: "time", header: tr("marketPage.time") },
               { key: "volume", header: tr("marketPage.value") },

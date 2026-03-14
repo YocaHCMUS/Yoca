@@ -64,25 +64,14 @@ const labelThresholds: Record<
     format: (node) => `{icon_xs_${node.symbol}|}`,
   },
   sm: {
-    rectSize: 24,
+    rectSize: 30,
     iconSize: 20,
     format: (node) => `{icon_sm_${node.symbol}|}`,
   },
   md: {
     rectSize: 48,
-    iconSize: 40,
+    iconSize: 32,
     format: (node) => `{icon_md_${node.symbol}|}`,
-    rich: {
-      sym_md: {
-        padding: [6, 0, 0, 0],
-        fontSize: 9,
-        align: "center",
-      },
-      trend_md: {
-        fontSize: 7,
-        align: "center",
-      },
-    },
   },
   lg: {
     rectSize: 80,
