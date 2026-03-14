@@ -53,7 +53,7 @@ function FilterSwitch<T extends string | number>({
   const selectedIndex = options.findIndex((opt) => opt.value == value);
 
   return (
-    <Tooltip label={tooltipLabel} enterDelayMs={100} align="left">
+    <Tooltip label={tooltipLabel} enterDelayMs={2000} align="left">
       <ContentSwitcher
         className={overwriteStyles.fltrOpt}
         onChange={({ name }) => {
@@ -315,13 +315,13 @@ export default function MarketPage() {
           <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
         </Tooltip>
       ),
-      time: new Date(trade.blockUnixTime * 1000).toLocaleTimeString(),
+      time: fmt.datetime.relative(trade.blockUnixTime),
     }));
   }, [recentTradesData.data, fmt]);
 
   return (
     <PageWrapper>
-      <Grid narrow>
+      <Grid narrow className={overwriteStyles.wdGrd}>
         <Column sm={2} md={8} lg={8}>
           <Tble
             title={
@@ -344,15 +344,17 @@ export default function MarketPage() {
           />
         </Column>
         <Column sm={2} md={8} lg={8}>
-          <TokenTreeMap loading={loading} data={treeMapData} height={500} />
+          <TokenTreeMap
+            loading={loading}
+            data={treeMapData}
+            height={500}
+            maxTrendValue={20}
+          />
         </Column>
         <Column sm={2} md={8} lg={8}>
           <Tble
-            title={
-              <strong style={{ textTransform: "uppercase" }}>
-                {tr("marketPage.profitableTraders")}
-              </strong>
-            }
+            title={tr("marketPage.profitableTraders")}
+            description={tr("marketPage.topTokensDescription")}
             height={400}
             loading={tradersLoading}
             headers={[
@@ -367,29 +369,16 @@ export default function MarketPage() {
         </Column>
         <Column sm={2} md={8} lg={8}>
           <Tble
-            title={
-              <Stack
-                orientation="horizontal"
-                style={{
-                  width: "100%",
-                  justifyContent: "space-between",
-                  alignItems: "end",
-                }}
-              >
-                <Stack>
-                  <strong style={{ textTransform: "uppercase" }}>
-                    {tr("marketPage.recentTrades")}
-                  </strong>
-                  <span className={overwriteStyles.tblDsc}>Description</span>
-                </Stack>
-                <TradeFilterOptions
-                  volume="$10k"
-                  time="6h"
-                  onVolumeChange={() => {}}
-                  onTimeChange={() => {}}
-                />
-              </Stack>
+            title={tr("marketPage.recentTrades")}
+            toolBar={
+              <TradeFilterOptions
+                volume="$10k"
+                time="6h"
+                onVolumeChange={() => {}}
+                onTimeChange={() => {}}
+              />
             }
+            description={"Description"}
             height={400}
             loading={recentTradesData.isLoading}
             headers={[

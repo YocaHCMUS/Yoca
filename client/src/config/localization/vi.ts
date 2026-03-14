@@ -20,8 +20,8 @@ export const format = {
         maximumFractionDigits: 2,
       },
       percent: {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+        minimumSignificantDigits: 2,
+        maximumSignificantDigits: 4,
       },
       unit: {
         minimumFractionDigits: 0,

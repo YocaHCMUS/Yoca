@@ -2,6 +2,7 @@ import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
   DataTable,
   DataTableSkeleton,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -9,8 +10,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableToolbar,
-  TableToolbarContent,
   type DataTableProps,
 } from "@carbon/react";
 import type { ReactNode } from "react";
@@ -50,7 +49,6 @@ export default function Tble({
   loading = false,
   height = 600,
   toolBar,
-  toolBarHeight = 42,
   ...dataTableProps
 }: TblProps) {
   const headerLookup = Object.fromEntries(
@@ -61,10 +59,23 @@ export default function Tble({
     <DataTableSkeleton headers={headers} showHeader={!hideHeaders} />
   ) : (
     <TableContainer
-      title={title}
-      description={description}
+      title={
+        <Stack
+          orientation="horizontal"
+          style={{
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "end",
+          }}
+        >
+          <Stack>
+            <strong style={{ textTransform: "uppercase" }}>{title}</strong>
+            <span className={overwriteStyles.tblDsc}>{description}</span>
+          </Stack>
+          {toolBar}
+        </Stack>
+      }
       className={overwriteStyles.tbl}
-      style={{ height }}
     >
       <DataTable rows={rows} headers={headers} {...dataTableProps}>
         {({
@@ -74,23 +85,8 @@ export default function Tble({
           getHeaderProps,
           getRowProps,
           getCellProps,
-          getToolbarProps,
         }) => (
-          <>
-            {!!toolBar && (
-              <TableToolbar {...getToolbarProps()}>
-                <TableToolbarContent
-                  style={{
-                    blockSize: toolBarHeight,
-                    paddingLeft: 8,
-                    paddingRight: 8,
-                    paddingBottom: 12,
-                  }}
-                >
-                  {toolBar}
-                </TableToolbarContent>
-              </TableToolbar>
-            )}
+          <div style={{ height }}>
             <Table {...getTableProps()}>
               <TableHead hidden={hideHeaders}>
                 <TableRow>
@@ -131,7 +127,7 @@ export default function Tble({
                 ))}
               </TableBody>
             </Table>
-          </>
+          </div>
         )}
       </DataTable>
     </TableContainer>

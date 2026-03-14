@@ -29,6 +29,7 @@ interface TokenTreeMapProps {
   height?: number;
   title?: string;
   className?: string;
+  maxTrendValue?: number;
 }
 
 type TreeNode = NonNullable<TreemapSeriesOption["data"]>[number] & {
@@ -121,17 +122,39 @@ const richStyles = Object.values(labelThresholds)
   .filter((styles) => styles != undefined)
   .reduce((acc, cur) => ({ ...acc, ...cur }), {});
 
-function getTrendColor(trend: number | null): string {
-  if (trend == null || trend == 0) return CARBON.info;
-  return trend > 0 ? CARBON.success : CARBON.error;
+function brightenColor(hex: string, intensity: number): string {
+  const r = Math.round(
+    parseInt(hex.slice(1, 3), 16) * (1 - intensity) + 255 * intensity,
+  );
+  const g = Math.round(
+    parseInt(hex.slice(3, 5), 16) * (1 - intensity) + 255 * intensity,
+  );
+  const b = Math.round(
+    parseInt(hex.slice(5, 7), 16) * (1 - intensity) + 255 * intensity,
+  );
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
-function buildTreeNodes(nodes: TokenTreeMapNode[]): TreeNode[] {
+function getTrendColor(trend: number | null, maxTrendValue?: number): string {
+  if (trend == null || trend == 0) return CARBON.info;
+
+  const baseColor = trend > 0 ? CARBON.success : CARBON.error;
+
+  if (!maxTrendValue || maxTrendValue <= 0) return baseColor;
+
+  const intensity = Math.min(Math.abs(trend) / maxTrendValue, 1);
+  return brightenColor(baseColor, intensity);
+}
+
+function buildTreeNodes(
+  nodes: TokenTreeMapNode[],
+  maxTrendValue?: number,
+): TreeNode[] {
   return nodes.map((node) => ({
     name: node.symbol,
     value: [node.value, node.trendValue ?? 0],
     itemStyle: {
-      color: getTrendColor(node.trendValue),
+      color: getTrendColor(node.trendValue, maxTrendValue),
     },
     link: node.link,
     raw: node,
@@ -144,6 +167,7 @@ function buildTreemapOption(
   onSizeCollected: (symbol: string, size: RectSize) => void,
   theme: "light" | "dark",
   iconRichEntries: Record<string, any>,
+  maxTrendValue?: number,
 ): EChartsOption {
   return {
     tooltip: {
@@ -177,7 +201,7 @@ function buildTreemapOption(
     series: [
       {
         type: "treemap",
-        data: buildTreeNodes(data),
+        data: buildTreeNodes(data, maxTrendValue),
 
         label: {
           formatter: (params) => {
@@ -251,6 +275,7 @@ export default function TokenTreeMap({
   loading = false,
   height = 300,
   className,
+  maxTrendValue,
 }: TokenTreeMapProps) {
   console.log("re-render");
   const { tr } = useLocalization();
@@ -318,8 +343,16 @@ export default function TokenTreeMap({
       handleSizeCollected,
       theme,
       iconRichEntries,
+      maxTrendValue,
     );
-  }, [data, rectSizes, handleSizeCollected, theme, iconRichEntries]);
+  }, [
+    data,
+    rectSizes,
+    handleSizeCollected,
+    theme,
+    iconRichEntries,
+    maxTrendValue,
+  ]);
 
   if (loading) {
     return (
