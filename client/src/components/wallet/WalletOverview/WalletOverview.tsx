@@ -3,12 +3,33 @@ import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWalletOverview } from '@/services/wallet/walletApi';
+import { fetchWalletIntelligence, fetchWalletOverview } from '@/services/wallet/walletApi';
 import { fetchWalletTags, saveWalletTags } from '@/services/wallet/walletTagsApi';
 import { useNavigate } from 'react-router';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
+
+function shortenWalletAddress(address: string): string {
+    const normalized = address.trim();
+    if (normalized.length <= 14) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+}
+
+function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
+    if (level === 'low') {
+        return 'green';
+    }
+
+    if (level === 'medium') {
+        return 'warm-gray';
+    }
+
+    return 'red';
+}
 
 export enum OverviewFilterSelection {
     week,
@@ -35,6 +56,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     // State for overview data
     const [overview, setOverview] = useState<any>(null);
+    const [intelligence, setIntelligence] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -78,8 +100,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         }
     };
 
+    const identityStatus = intelligence?.identity?.status ?? null;
+    const identityName = intelligence?.identity?.name ?? null;
+    const identityCategory = intelligence?.identity?.category ?? null;
+    const riskLevel = intelligence?.analysis?.riskLevel ?? null;
+
     // Provide default values for display
-    const name = label || "Wallet";
+    const name = label || (identityStatus === 'known' && identityName ? identityName : "Wallet");
+    const displayedAddress = identityStatus === 'unknown'
+        ? shortenWalletAddress(walletAddress)
+        : walletAddress;
     const totalAssetValue = overview?.totalAssetValueUsd ?? null;
     const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
     const totalPnL = overview?.pnlUsdTotal ?? null;
@@ -114,15 +144,31 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             try {
                 setLoading(true);
                 setError(null);
-                const data = await fetchWalletOverview(
-                    walletAddress,
-                    'solana',
-                    getSelectedOverviewPeriod(),
-                );
-                setOverview(data);
+
+                const [overviewResult, intelligenceResult] = await Promise.allSettled([
+                    fetchWalletOverview(
+                        walletAddress,
+                        'solana',
+                        getSelectedOverviewPeriod(),
+                    ),
+                    fetchWalletIntelligence(walletAddress, 'solana'),
+                ]);
+
+                if (overviewResult.status === 'rejected') {
+                    throw overviewResult.reason;
+                }
+
+                setOverview(overviewResult.value);
+
+                if (intelligenceResult.status === 'fulfilled') {
+                    setIntelligence(intelligenceResult.value);
+                } else {
+                    setIntelligence(null);
+                }
             } catch (err) {
                 console.error('Failed to fetch wallet overview:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load wallet data');
+                setIntelligence(null);
             } finally {
                 setLoading(false);
             }
@@ -231,9 +277,31 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             <h4
                                 className={styles.walletAddress}
                             >
-                                {walletAddress}
+                                {displayedAddress}
                             </h4>
                             <CopyButton onClick={handleCopyAddress} />
+                        </div>
+                        <div className={styles.identityRow}>
+                            {identityStatus === 'known' && identityCategory && (
+                                <Tag size="sm" type="teal">
+                                    {identityCategory}
+                                </Tag>
+                            )}
+                            {identityStatus === 'unknown' && (
+                                <Tag size="sm" type="cool-gray">
+                                    Unknown Entity
+                                </Tag>
+                            )}
+                            {identityStatus === 'unavailable' && (
+                                <Tag size="sm" type="red">
+                                    Identity Unavailable
+                                </Tag>
+                            )}
+                            {riskLevel && (
+                                <Tag size="sm" type={getRiskTagType(riskLevel)}>
+                                    Risk: {String(riskLevel).toUpperCase()}
+                                </Tag>
+                            )}
                         </div>
                         <div className={styles.tagsRow}>
                             {tags.map((tag, index) => (

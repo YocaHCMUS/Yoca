@@ -564,6 +564,23 @@ export const walletExchangeCountsCache = pgTable(
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 );
 
+export const walletIdentityCache = pgTable(
+  "wallet_identity_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    status: varchar("status", { length: 16 }).notNull(),
+    type: varchar("type", { length: 64 }),
+    name: varchar("name", { length: 255 }),
+    category: varchar("category", { length: 255 }),
+    tags: jsonb("tags").$type<string[]>().notNull(),
+    domainNames: jsonb("domain_names").$type<string[]>().notNull(),
+    raw: jsonb("raw").$type<Record<string, unknown> | null>(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
 export const walletUserTags = pgTable(
   "wallet_user_tags",
   {
@@ -607,6 +624,7 @@ export type WalletTransactionsMetaInsert = typeof walletTransactionsMeta.$inferI
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
 export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
+export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
 export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;

@@ -8,6 +8,13 @@ import {
   getWalletSwaps,
   getWalletTransfers
 } from "@sv/services/wallet/walletData.service.js";
+import {
+  WALLET_IDENTITY_MAX_BATCH_SIZE,
+  WalletIdentityServiceError,
+  getWalletIdentity,
+  getWalletIdentityBatch,
+} from "@sv/services/wallet/walletIdentity.service.js";
+import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 
 const router = new Hono();
 import { z } from "zod";
@@ -26,6 +33,11 @@ const walletRequestSchema = z.object({
 
 const walletOverviewRequestSchema = walletRequestSchema.extend({
   period: z.string().optional(),
+});
+
+const walletIdentityBatchRequestSchema = z.object({
+  addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
+  chain: z.string().optional(),
 });
 
 const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
@@ -67,6 +79,49 @@ function parseOverviewPeriodSec(rawPeriod?: string): {
   }
 
   return { periodSec, normalized: false };
+}
+
+function mapWalletIdentityError(err: WalletIdentityServiceError): {
+  status: 400 | 401 | 502 | 503;
+  error: string;
+} {
+  if (err.code === "invalid_address") {
+    return { status: 400, error: "Invalid wallet address format" };
+  }
+
+  if (err.code === "invalid_batch") {
+    return { status: 400, error: "Invalid identity batch payload" };
+  }
+
+  if (err.code === "unsupported_chain") {
+    return { status: 400, error: "Wallet identity is currently supported only for Solana" };
+  }
+
+  if (err.code === "provider_unauthorized") {
+    return { status: 401, error: "Wallet identity provider authorization failed" };
+  }
+
+  if (err.code === "provider_rate_limited" || err.code === "provider_unavailable") {
+    return { status: 503, error: "Wallet identity provider is unavailable" };
+  }
+
+  if (err.code === "provider_bad_request") {
+    return { status: 400, error: "Invalid request for wallet identity provider" };
+  }
+
+  const fallbackStatus: 400 | 401 | 502 | 503 =
+    err.statusCode === 400
+      ? 400
+      : err.statusCode === 401
+        ? 401
+        : err.statusCode === 503
+          ? 503
+          : 502;
+
+  return {
+    status: fallbackStatus,
+    error: "Failed to fetch wallet identity",
+  };
 }
 
 router.get("/overview", async (c) => {
@@ -256,6 +311,80 @@ router.get("/exchanges", async (c) => {
   }
 });
 
+router.get("/identity", async (c) => {
+  const address = c.req.query("address");
+  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const identity = await getWalletIdentity(address, chain);
+    return c.json(identity, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to fetch wallet identity", err);
+    return c.json({ error: "Failed to fetch wallet identity" }, 500);
+  }
+});
+
+router.post("/identity/batch", async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON payload" }, 400);
+  }
+
+  const parsed = walletIdentityBatchRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid identity batch payload" }, 400);
+  }
+
+  const chain = (parsed.data.chain as SupportedChain) || "solana";
+
+  try {
+    const identityBatch = await getWalletIdentityBatch(parsed.data.addresses, chain);
+    return c.json(identityBatch, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to fetch wallet identity batch", err);
+    return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
+  }
+});
+
+router.get("/intelligence", async (c) => {
+  const address = c.req.query("address");
+  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const intelligence = await composeWalletIntelligence(address, { chain });
+    return c.json(intelligence, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to compose wallet intelligence", err);
+    return c.json({ error: "Failed to compose wallet intelligence" }, 500);
+  }
+});
+
 router.get("/debug/test-transactions", async (c) => {
   const address = c.req.query("address");
 
@@ -269,23 +398,6 @@ router.get("/debug/test-transactions", async (c) => {
   } catch (err) {
     console.error("Failed to fetch test transactions", err);
     return c.json({ error: "Failed to fetch test transactions" }, 500);
-  }
-});
-
-router.get("/debug/identity", async (c) => {
-  const address = c.req.query("address");
-
-  if (!address) {
-    return c.json({ error: "Missing required query param: address" }, 400);
-  }
-
-  try {
-    const { getWalletIdentity } = await import("@sv/services/wallet/walletIdentity.service.js");
-    const data = await getWalletIdentity(address);
-    return c.json({ address, data });
-  } catch (err) {
-    console.error("Failed to fetch wallet identity", err);
-    return c.json({ error: "Failed to fetch wallet identity" }, 500);
   }
 });
 

@@ -190,6 +190,59 @@ export async function fetchWalletDistribution(
   return data;
 }
 
+/**
+ * Fetch wallet identity data
+ * GET /api/wallets/identity
+ */
+export async function fetchWalletIdentity(
+  address: string,
+  chain?: string,
+) {
+  const query = { address, ...(chain && { chain }) };
+  const response = await (client.api as any).wallets.identity.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Fetch wallet identity batch data
+ * POST /api/wallets/identity/batch
+ */
+export async function fetchWalletIdentityBatch(
+  addresses: string[],
+  chain?: string,
+) {
+  const response = await (client.api as any).wallets.identity.batch.$post({
+    json: {
+      addresses,
+      ...(chain && { chain }),
+    },
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Fetch composed wallet intelligence data
+ * GET /api/wallets/intelligence
+ */
+export async function fetchWalletIntelligence(
+  address: string,
+  chain?: string,
+) {
+  const query = { address, ...(chain && { chain }) };
+  const response = await (client.api as any).wallets.intelligence.$get({
+    query,
+  });
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -199,6 +252,9 @@ export const walletApi = {
   fetchWalletExchanges,
   fetchWalletBalances,
   fetchWalletDistribution,
+  fetchWalletIdentity,
+  fetchWalletIdentityBatch,
+  fetchWalletIntelligence,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
@@ -208,4 +264,7 @@ export const walletApi = {
   getExchanges: fetchWalletExchanges,
   getBalances: fetchWalletBalances,
   getDistribution: fetchWalletDistribution,
+  getIdentity: fetchWalletIdentity,
+  getIdentityBatch: fetchWalletIdentityBatch,
+  getIntelligence: fetchWalletIntelligence,
 };

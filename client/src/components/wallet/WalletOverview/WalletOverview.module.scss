@@ -86,6 +86,13 @@
   gap: $spacing-01;
 }
 
+.identityRow {
+  display: flex;
+  gap: $spacing-03;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .tags,
 .tagsRow {
   display: flex;
@@ -149,7 +156,7 @@
   * {
     cursor: pointer;
   }
-  
+
 }
 
 .utilityButton {
