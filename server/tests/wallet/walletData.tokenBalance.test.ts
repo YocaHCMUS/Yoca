@@ -65,10 +65,8 @@ vi.mock("@sv/db/index.js", () => ({
     db: hoisted.db,
 }));
 
-vi.mock("@sv/routes/balances.js", () => ({
-    default: {
-        get: hoisted.getWalletBalancesMock,
-    },
+vi.mock("@sv/services/balances.js", () => ({
+    getWalletBalances: hoisted.getWalletBalancesMock,
 }));
 
 vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({

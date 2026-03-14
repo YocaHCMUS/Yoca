@@ -11,7 +11,7 @@ import {
   walletPortfolioCache,
 } from "@sv/db/schema.js";
 import { and, desc, eq, sql } from "drizzle-orm";
-import getWalletBalances from "@sv/routes/balances.js";
+import { getWalletBalances } from "@sv/services/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
 import {
   getDailyTokenMarketChart,
@@ -67,6 +67,54 @@ type WalletHistoryRange = {
 };
 
 let chainRepairPromise: Promise<void> | null = null;
+
+const DEFAULT_OVERVIEW_PERIOD_SEC = DAY_SEC;
+const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
+const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
+const MAX_OVERVIEW_MORALIS_PAGES = 5;
+
+type WalletOverviewCacheRow = {
+  totalAssetValueUsd: number | string;
+  tradingVolumeUsd24h: number | string | null;
+  pnlUsdTotal: number | string | null;
+  transactionCount24h: number | null;
+  tokensTradedCount: number | null;
+  tokensHoldingCount: number;
+  fetchedAt: Date;
+};
+
+type NormalizedOverviewBalanceChange = {
+  mint: string;
+  amount: number;
+  decimals: number;
+  usdDeltaHint?: number;
+};
+
+type NormalizedOverviewTransaction = {
+  signature: string;
+  timestamp: string;
+  balanceChanges: NormalizedOverviewBalanceChange[];
+};
+
+type OverviewHoldingsSnapshot = {
+  totalAssetValueUsd: number;
+  tokensHoldingCount: number;
+  source:
+  | "balances-db"
+  | "helius-portfolio"
+  | "moralis-wallet-tokens"
+  | "overview-cache"
+  | "none";
+};
+
+type OverviewActivitySnapshot = {
+  transactionCount24h: number | null;
+  tokensTradedCount: number | null;
+  tradingVolumeUsd24h: number | null;
+  pnlUsdTotal: number | null;
+  source: "helius-transactions" | "moralis-history" | "overview-cache" | "none";
+  pricedChangesCount: number;
+};
 
 function toIsoTimestamp(value: unknown): string {
   if (value instanceof Date) {
@@ -148,245 +196,124 @@ async function normalizeWalletCacheChainsOnce(): Promise<void> {
   await chainRepairPromise;
 }
 
-export async function getWalletOverview(
+function toFiniteNumber(value: unknown, fallback = 0): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function normalizeOverviewPeriodSec(periodSec?: number): number {
+  const parsed = Number(periodSec ?? DEFAULT_OVERVIEW_PERIOD_SEC);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_OVERVIEW_PERIOD_SEC;
+  }
+
+  const normalized = Math.floor(parsed);
+  if (normalized < MIN_OVERVIEW_PERIOD_SEC || normalized > MAX_OVERVIEW_PERIOD_SEC) {
+    return DEFAULT_OVERVIEW_PERIOD_SEC;
+  }
+
+  return normalized;
+}
+
+function formatOverviewMetricsPeriod(periodSec: number): string {
+  if (periodSec === DAY_SEC) {
+    return "24h";
+  }
+
+  const days = Math.floor(periodSec / DAY_SEC);
+  if (days * DAY_SEC === periodSec) {
+    return `${days}d`;
+  }
+
+  const hours = Math.max(1, Math.round(periodSec / 3600));
+  return `${hours}h`;
+}
+
+function normalizeOverviewMint(mint: unknown): string {
+  const rawMint = String(mint ?? "").trim();
+  if (!rawMint) {
+    return "";
+  }
+
+  return rawMint.toUpperCase() === "SOL" ? SOL_MINT : rawMint;
+}
+
+function mapOverviewCacheRowToDto(
+  row: WalletOverviewCacheRow,
   address: string,
   chain: SupportedChain,
-): Promise<WalletOverview> {
-  const effectiveChain = resolveChainForAddress(address, chain);
+  periodSec: number,
+): WalletOverview {
+  const tradingVolumeUsd =
+    row.tradingVolumeUsd24h != null ? toFiniteNumber(row.tradingVolumeUsd24h, 0) : null;
+  const pnlUsd = row.pnlUsdTotal != null ? toFiniteNumber(row.pnlUsdTotal, 0) : null;
 
-  // 0) DB-first: use cached overview if fresh
-  const overviewThreshold = new Date(Date.now() - WALLET_OVERVIEW_TTL_MS);
+  return {
+    address,
+    chain,
+    totalAssetValueUsd: toFiniteNumber(row.totalAssetValueUsd, 0),
+    tradingVolumeUsd24h: tradingVolumeUsd,
+    pnlUsdTotal: pnlUsd,
+    transactionCount24h: row.transactionCount24h ?? null,
+    tokensTradedCount: row.tokensTradedCount ?? null,
+    tokensHoldingCount: toFiniteNumber(row.tokensHoldingCount, 0),
+    tradingVolumeUsdWindow: tradingVolumeUsd,
+    pnlUsdWindow: pnlUsd,
+    metricsPeriod: formatOverviewMetricsPeriod(periodSec),
+  };
+}
+
+async function getLatestOverviewCacheRow(
+  address: string,
+  chain: SupportedChain,
+): Promise<WalletOverviewCacheRow | null> {
   const cached = await db
     .select()
     .from(walletOverviewCache)
     .where(
       and(
         eq(walletOverviewCache.address, address),
-        eq(walletOverviewCache.chain, effectiveChain),
+        eq(walletOverviewCache.chain, chain),
       ),
     )
     .limit(1);
-  if (cached.length > 0 && cached[0].fetchedAt >= overviewThreshold) {
-    const row = cached[0];
-    return {
-      address,
-      chain: effectiveChain,
-      totalAssetValueUsd: Number(row.totalAssetValueUsd),
-      tradingVolumeUsd24h: row.tradingVolumeUsd24h != null ? Number(row.tradingVolumeUsd24h) : null,
-      pnlUsdTotal: row.pnlUsdTotal != null ? Number(row.pnlUsdTotal) : null,
-      transactionCount24h: row.transactionCount24h,
-      tokensTradedCount: row.tokensTradedCount,
-      tokensHoldingCount: row.tokensHoldingCount,
-    };
+
+  if (cached.length === 0) {
+    return null;
   }
 
-  // 1) Try DB first via existing balances service
-  let balances: WalletBalanceInsert[] | null = null;
+  return cached[0] as unknown as WalletOverviewCacheRow;
+}
 
-  try {
-    // getWalletBalances already implements DB-first with TTL and external fetch as fallback
-    const res = getWalletBalances.get(address) as unknown as WalletBalanceInsert[] | null;
-    if (res && res.length > 0) {
-      balances = res;
-    }
-  } catch {
-    // ignore and fall through to external APIs
+function getOverviewFromFreshCache(
+  cacheRow: WalletOverviewCacheRow | null,
+  address: string,
+  chain: SupportedChain,
+  periodSec: number,
+): WalletOverview | null {
+  if (!cacheRow || periodSec !== DEFAULT_OVERVIEW_PERIOD_SEC) {
+    return null;
   }
 
-  if (balances && balances.length > 0) {
-    const totalAssetValueUsd = sumTotalAssetValueFromBalances(balances);
-    const overview: WalletOverview = {
-      address,
-      chain: effectiveChain,
-      totalAssetValueUsd,
-      tokensHoldingCount: balances.length,
-      tradingVolumeUsd24h: null,
-      pnlUsdTotal: null,
-      transactionCount24h: null,
-      tokensTradedCount: null,
-    };
-    await saveOverviewCache(overview);
-    return overview;
+  const overviewThreshold = new Date(Date.now() - WALLET_OVERVIEW_TTL_MS);
+  if (cacheRow.fetchedAt < overviewThreshold) {
+    return null;
   }
 
-  // 2) Fallback to external APIs when DB has no data
-  if (effectiveChain === "solana") {
-    // Prefer Helius DAS getAssetsByOwner for Solana overview (total asset value + holdings).
-    let heliusPortfolio: WalletPortfolioItem[] = [];
-    try {
-      heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
-    } catch (err) {
-      console.error("Failed to fetch Solana overview from Helius", err);
-    }
+  return mapOverviewCacheRowToDto(cacheRow, address, chain, periodSec);
+}
 
-    const totalAssetValueUsd = heliusPortfolio.reduce(
-      (sum, item) => sum + Number(item.valueUsd ?? 0),
-      0,
-    );
-
-    // Fetch recent transactions to enrich overview metrics (24h window)
-    let transactionCount24h: number | null = null;
-    let tokensTradedCount: number | null = null;
-    let tradingVolumeUsd24h: number | null = null;
-    let pnlUsd24h: number | null = null;
-
-    try {
-      // const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
-      // const txs = await getWalletSwaps(address, effectiveChain, {from: "24h"});
-      const txs = await getWalletTransactionHelius(address, effectiveChain, { from: "24h" });
-
-
-      // const now = Date.now();
-      // const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-      // // const recent = txs.transactions.filter((tx) => {
-      // const recent = txs.swaps.filter((tx) => {
-      //   const ts = Date.parse(tx.timestamp);
-      //   if (Number.isNaN(ts)) return false;
-      //   return now - ts <= ONE_DAY_MS;
-      // });
-      const recent = txs.transactions
-
-      transactionCount24h = recent.length;
-      // transactionCount24h = txs.swaps.length;
-
-      const tokenSet = new Set<string>();
-      const mintSet = new Set<string>();
-      for (const tx of recent) {
-        if (Array.isArray(tx.balanceChanges)) {
-          tx.balanceChanges.forEach((change) => {
-            const mintRaw = String(change?.mint ?? "").trim();
-            if (!mintRaw) return;
-            const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
-            tokenSet.add(mint);
-            mintSet.add(mint);
-          });
-        }
-      }
-      tokensTradedCount = tokenSet.size;
-
-      if (recent.length > 0 && mintSet.size > 0) {
-        const marketData = await getTokenMarketData(Array.from(mintSet));
-
-        let volumeAcc = 0;
-        let pnlAcc = 0;
-        let pricedChanges = 0;
-
-        for (const tx of recent) {
-          let txDeltaUsd = 0;
-          for (const change of tx.balanceChanges ?? []) {
-            const mintRaw = String(change?.mint ?? "").trim();
-            if (!mintRaw) continue;
-            const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
-            const priceUsd = marketData[mint]?.priceUsd;
-            if (priceUsd == null || !Number.isFinite(priceUsd)) continue;
-
-            const amountRaw = Number(change?.amount ?? 0);
-            const decimals = Number(change?.decimals ?? 0);
-            if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) continue;
-
-            const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
-            txDeltaUsd += normalizedAmount * priceUsd;
-            pricedChanges += 1;
-          }
-
-          pnlAcc += txDeltaUsd;
-          volumeAcc += Math.abs(txDeltaUsd);
-        }
-
-        if (pricedChanges > 0) {
-          tradingVolumeUsd24h = volumeAcc;
-          pnlUsd24h = pnlAcc;
-        }
-      }
-    } catch {
-      // soft-fail: leave metrics as null if anything goes wrong
-    }
-
-    const overview: WalletOverview = {
-      address,
-      chain: effectiveChain,
-      totalAssetValueUsd,
-      tokensHoldingCount: heliusPortfolio.length,
-      tradingVolumeUsd24h,
-      pnlUsdTotal: pnlUsd24h,
-      transactionCount24h,
-      tokensTradedCount,
-    };
-    await saveOverviewCache(overview);
-    return overview;
-
-    /*
-    // Previous Birdeye-based implementation for Solana overview (kept for reference).
-    // Uncomment if you want to switch back to Birdeye current-net-worth in the future.
-    //
-    // const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
-    // endpoint.search = new URLSearchParams({
-    //   wallet: address,
-    //   sort_type: "desc",
-    // }).toString();
-    //
-    // let items: any[] = [];
-    // let totalAssetValueUsd = 0;
-    //
-    // try {
-    //   const resp = await birdeye.birdeyeFetch(endpoint, {
-    //     method: "GET",
-    //     headers: birdeye.getRequiredHeaders("solana"),
-    //   });
-    //
-    //   if (resp.ok) {
-    //     const payload = await resp.json();
-    //     const data = payload?.data;
-    //     items = Array.isArray(data?.items) ? data.items : [];
-    //     totalAssetValueUsd = Number(data?.total_value ?? 0);
-    //   } else {
-    //     console.error(
-    //       "Birdeye current-net-worth error",
-    //       resp.status,
-    //       resp.statusText,
-    //     );
-    //   }
-    // } catch (err) {
-    //   console.error("Birdeye current-net-worth request failed", err);
-    // }
-    //
-    // const overview: WalletOverview = {
-    //   address,
-    //   chain: effectiveChain,
-    //   totalAssetValueUsd,
-    //   tokensHoldingCount: items.length,
-    //   tradingVolumeUsd24h: null,
-    //   pnlUsdTotal: null,
-    //   transactionCount24h,
-    //   tokensTradedCount,
-    // };
-    // await saveOverviewCache(overview);
-    // return overview;
-    */
-  }
-
-  // EVM chains – use Moralis wallets/:address/tokens (includes USD prices and 24h change)
+async function fetchMoralisWalletTokensSnapshot(
+  address: string,
+  chain: SupportedChain,
+): Promise<OverviewHoldingsSnapshot | null> {
   const endpoint = moralis.getEndpoint(`/wallets/${address}/tokens`);
   const searchParams = new URLSearchParams();
-  if (effectiveChain) {
-    searchParams.set("chain", effectiveChain);
+  if (chain) {
+    searchParams.set("chain", chain);
   }
   searchParams.set("limit", "100");
   endpoint.search = searchParams.toString();
-
-  let tokenItems: Array<{
-    token_address: string;
-    name: string;
-    symbol: string;
-    decimals: number | string;
-    balance: string;
-    balance_formatted?: string;
-    usd_price?: number;
-    usd_value?: number;
-    usd_price_24hr_percent_change?: number;
-  }> = [];
-  let totalAssetValueUsd = 0;
 
   try {
     const resp = await fetch(endpoint, {
@@ -396,97 +323,530 @@ export async function getWalletOverview(
 
     if (!resp.ok) {
       console.error("Moralis wallets/tokens error", resp.status, resp.statusText);
-    } else {
-      const data = await resp.json();
-      const result = Array.isArray(data?.result) ? data.result : [];
-      tokenItems = result;
-      totalAssetValueUsd = result.reduce(
-        (sum: number, t: any) => sum + Number(t?.usd_value ?? 0),
-        0,
-      );
+      return null;
     }
+
+    const data = await resp.json();
+    const result = Array.isArray(data?.result) ? data.result : [];
+
+    return {
+      totalAssetValueUsd: result.reduce(
+        (sum: number, item: any) => sum + Number(item?.usd_value ?? 0),
+        0,
+      ),
+      tokensHoldingCount: result.length,
+      source: "moralis-wallet-tokens",
+    };
   } catch (err) {
     console.error("Moralis wallets/tokens request failed", err);
+    return null;
   }
+}
 
-  // Derive tokens traded count and transaction count over recent history
-  let transactionCount24h: number | null = null;
-  let tokensTradedCount: number | null = null;
-  let tradingVolumeUsd24h: number | null = null;
-  let pnlUsd24h: number | null = null;
+async function buildHoldingsSnapshotFromBalancesOrProviders(
+  address: string,
+  chain: SupportedChain,
+  cacheRow: WalletOverviewCacheRow | null,
+): Promise<OverviewHoldingsSnapshot> {
   try {
-    const txs = await getWalletTransactionHelius(address, effectiveChain, { limit: 500 });
-    const now = Date.now();
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-    const recent = txs.transactions.filter((tx) => {
-      const ts = Date.parse(tx.timestamp);
-      if (Number.isNaN(ts)) return false;
-      return now - ts <= ONE_DAY_MS;
-    });
-
-    transactionCount24h = recent.length;
-
-    const mintSet = new Set<string>();
-    for (const tx of recent) {
-      for (const change of tx.balanceChanges ?? []) {
-        const mintRaw = String(change?.mint ?? "").trim();
-        if (!mintRaw) continue;
-        const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
-        mintSet.add(mint);
-      }
-    }
-    tokensTradedCount = mintSet.size;
-
-    if (recent.length > 0 && mintSet.size > 0) {
-      const marketData = await getTokenMarketData(Array.from(mintSet));
-
-      let volumeAcc = 0;
-      let pnlAcc = 0;
-      let pricedChanges = 0;
-
-      for (const tx of recent) {
-        let txDeltaUsd = 0;
-        for (const change of tx.balanceChanges ?? []) {
-          const mintRaw = String(change?.mint ?? "").trim();
-          if (!mintRaw) continue;
-          const mint = mintRaw === "SOL" ? SOL_MINT : mintRaw;
-          const priceUsd = marketData[mint]?.priceUsd;
-          if (priceUsd == null || !Number.isFinite(priceUsd)) continue;
-
-          const amountRaw = Number(change?.amount ?? 0);
-          const decimals = Number(change?.decimals ?? 0);
-          if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) continue;
-
-          const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
-          txDeltaUsd += normalizedAmount * priceUsd;
-          pricedChanges += 1;
-        }
-
-        pnlAcc += txDeltaUsd;
-        volumeAcc += Math.abs(txDeltaUsd);
-      }
-
-      if (pricedChanges > 0) {
-        tradingVolumeUsd24h = volumeAcc;
-        pnlUsd24h = pnlAcc;
-      }
+    const balances = await getWalletBalances(address);
+    if (balances && balances.length > 0) {
+      return {
+        totalAssetValueUsd: sumTotalAssetValueFromBalances(balances),
+        tokensHoldingCount: balances.length,
+        source: "balances-db",
+      };
     }
   } catch (err) {
-    console.error("Failed to derive EVM overview metrics from transactions", err);
+    console.error("Failed to fetch wallet balances for overview holdings", err);
   }
 
-  const overview: WalletOverview = {
+  if (chain === "solana") {
+    try {
+      const heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
+      return {
+        totalAssetValueUsd: heliusPortfolio.reduce(
+          (sum, item) => sum + Number(item.valueUsd ?? 0),
+          0,
+        ),
+        tokensHoldingCount: heliusPortfolio.length,
+        source: "helius-portfolio",
+      };
+    } catch (err) {
+      console.error("Failed to fetch Solana portfolio for overview holdings", err);
+    }
+  } else {
+    const evmSnapshot = await fetchMoralisWalletTokensSnapshot(address, chain);
+    if (evmSnapshot) {
+      return evmSnapshot;
+    }
+  }
+
+  if (cacheRow) {
+    return {
+      totalAssetValueUsd: toFiniteNumber(cacheRow.totalAssetValueUsd, 0),
+      tokensHoldingCount: toFiniteNumber(cacheRow.tokensHoldingCount, 0),
+      source: "overview-cache",
+    };
+  }
+
+  return {
+    totalAssetValueUsd: 0,
+    tokensHoldingCount: 0,
+    source: "none",
+  };
+}
+
+function getSignedTransferDirection(
+  fromAddress: unknown,
+  toAddress: unknown,
+  walletAddressLower: string,
+): number {
+  const fromLower = String(fromAddress ?? "").toLowerCase();
+  const toLower = String(toAddress ?? "").toLowerCase();
+
+  if (toLower === walletAddressLower && fromLower !== walletAddressLower) {
+    return 1;
+  }
+
+  if (fromLower === walletAddressLower && toLower !== walletAddressLower) {
+    return -1;
+  }
+
+  return 0;
+}
+
+function normalizeTransferAmount(
+  transfer: Record<string, unknown>,
+  defaultDecimals: number,
+): number {
+  const formatted = Number(transfer.value_formatted ?? Number.NaN);
+  if (Number.isFinite(formatted)) {
+    return formatted;
+  }
+
+  const rawAmount = Number(transfer.value ?? transfer.amount ?? Number.NaN);
+  const decimals = Number(transfer.token_decimals ?? transfer.decimals ?? defaultDecimals);
+  if (!Number.isFinite(rawAmount) || !Number.isFinite(decimals)) {
+    return 0;
+  }
+
+  return rawAmount / 10 ** Math.max(0, decimals);
+}
+
+function normalizeUsdDeltaHint(value: unknown, direction: number): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  return Math.abs(parsed) * direction;
+}
+
+async function getSolanaOverviewActivityTransactions(
+  address: string,
+  chain: SupportedChain,
+  range: WalletHistoryRange,
+): Promise<NormalizedOverviewTransaction[]> {
+  const txs = await getWalletTransactionHelius(address, chain, {
+    fromSec: range.fromSec,
+    toSec: range.toSec,
+  });
+
+  return txs.transactions.map((tx) => ({
+    signature: tx.signature,
+    timestamp: tx.timestamp,
+    balanceChanges: (tx.balanceChanges ?? []).map((change) => ({
+      mint: normalizeOverviewMint(change?.mint),
+      amount: Number(change?.amount ?? 0),
+      decimals: Number(change?.decimals ?? 0),
+    })),
+  }));
+}
+
+async function getEvmOverviewActivityTransactions(
+  address: string,
+  chain: SupportedChain,
+  range: WalletHistoryRange,
+): Promise<NormalizedOverviewTransaction[]> {
+  const walletAddressLower = address.toLowerCase();
+  const normalizedTransactions: NormalizedOverviewTransaction[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_OVERVIEW_MORALIS_PAGES; page += 1) {
+    const endpoint = moralis.getEndpoint(`/wallets/${address}/history`);
+    const params = new URLSearchParams();
+    if (chain) {
+      params.set("chain", chain);
+    }
+    params.set("order", "DESC");
+    params.set("limit", "100");
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+    endpoint.search = params.toString();
+
+    let payload: any = null;
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: moralis.getRequiredHeaders(),
+      });
+
+      if (!response.ok) {
+        console.error("Moralis wallet history error", response.status, response.statusText);
+        break;
+      }
+
+      payload = await response.json();
+    } catch (err) {
+      console.error("Moralis wallet history request failed", err);
+      break;
+    }
+
+    const result = Array.isArray(payload?.result) ? payload.result : [];
+    if (result.length === 0) {
+      break;
+    }
+
+    let reachedPastRange = false;
+
+    for (const tx of result) {
+      const timestamp = toIsoTimestamp(tx?.block_timestamp ?? tx?.blockTimestamp ?? tx?.timestamp);
+      const txSec = getTimestampSecFromIso(timestamp);
+
+      if (txSec > range.toSec) {
+        continue;
+      }
+      if (txSec < range.fromSec) {
+        reachedPastRange = true;
+        continue;
+      }
+
+      const balanceChanges: NormalizedOverviewBalanceChange[] = [];
+
+      const erc20Transfers = Array.isArray(tx?.erc20_transfers) ? tx.erc20_transfers : [];
+      for (const transfer of erc20Transfers) {
+        const direction = getSignedTransferDirection(
+          transfer?.from_address,
+          transfer?.to_address,
+          walletAddressLower,
+        );
+        if (direction === 0) {
+          continue;
+        }
+
+        const normalizedAmount = normalizeTransferAmount(transfer as Record<string, unknown>, 0);
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
+          continue;
+        }
+
+        const mint = String(transfer?.address ?? "").trim().toLowerCase();
+        if (!mint) {
+          continue;
+        }
+
+        balanceChanges.push({
+          mint,
+          amount: normalizedAmount * direction,
+          decimals: 0,
+          usdDeltaHint: normalizeUsdDeltaHint(
+            transfer?.value_usd ?? transfer?.usd_value,
+            direction,
+          ),
+        });
+      }
+
+      const nativeTransfers = Array.isArray(tx?.native_transfers) ? tx.native_transfers : [];
+      for (const transfer of nativeTransfers) {
+        const direction = getSignedTransferDirection(
+          transfer?.from_address,
+          transfer?.to_address,
+          walletAddressLower,
+        );
+        if (direction === 0) {
+          continue;
+        }
+
+        const normalizedAmount = normalizeTransferAmount(transfer as Record<string, unknown>, 18);
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
+          continue;
+        }
+
+        balanceChanges.push({
+          mint: `native:${chain}`,
+          amount: normalizedAmount * direction,
+          decimals: 0,
+          usdDeltaHint: normalizeUsdDeltaHint(
+            transfer?.value_usd ?? transfer?.usd_value,
+            direction,
+          ),
+        });
+      }
+
+      normalizedTransactions.push({
+        signature: String(tx?.hash ?? tx?.transaction_hash ?? `${timestamp}-${normalizedTransactions.length}`),
+        timestamp,
+        balanceChanges,
+      });
+    }
+
+    if (reachedPastRange) {
+      break;
+    }
+
+    const nextCursor =
+      typeof payload?.cursor === "string" && payload.cursor.length > 0
+        ? payload.cursor
+        : undefined;
+
+    if (!nextCursor || seenCursors.has(nextCursor)) {
+      break;
+    }
+
+    seenCursors.add(nextCursor);
+    cursor = nextCursor;
+  }
+
+  return normalizedTransactions;
+}
+
+async function reduceActivityMetricsFromTransactions(
+  transactions: NormalizedOverviewTransaction[],
+): Promise<Omit<OverviewActivitySnapshot, "source">> {
+  if (transactions.length === 0) {
+    return {
+      transactionCount24h: 0,
+      tokensTradedCount: 0,
+      tradingVolumeUsd24h: null,
+      pnlUsdTotal: null,
+      pricedChangesCount: 0,
+    };
+  }
+
+  const tokenSet = new Set<string>();
+  const mintsNeedingPrices = new Set<string>();
+
+  for (const tx of transactions) {
+    for (const change of tx.balanceChanges ?? []) {
+      const mint = normalizeOverviewMint(change?.mint);
+      if (!mint) {
+        continue;
+      }
+
+      tokenSet.add(mint);
+
+      const hasUsdHint = Number.isFinite(Number(change.usdDeltaHint));
+      if (!hasUsdHint) {
+        mintsNeedingPrices.add(mint);
+      }
+    }
+  }
+
+  const marketData =
+    mintsNeedingPrices.size > 0
+      ? await getTokenMarketData(Array.from(mintsNeedingPrices))
+      : {};
+
+  let volumeAcc = 0;
+  let pnlAcc = 0;
+  let pricedChangesCount = 0;
+
+  for (const tx of transactions) {
+    let txDeltaUsd = 0;
+    let txHasPricing = false;
+
+    for (const change of tx.balanceChanges ?? []) {
+      const mint = normalizeOverviewMint(change?.mint);
+      if (!mint) {
+        continue;
+      }
+
+      let deltaUsd: number | null = null;
+      const usdHint = Number(change.usdDeltaHint);
+
+      if (Number.isFinite(usdHint)) {
+        deltaUsd = usdHint;
+      } else {
+        const priceUsd = Number(marketData[mint]?.priceUsd ?? Number.NaN);
+        const amountRaw = Number(change?.amount ?? 0);
+        const decimals = Number(change?.decimals ?? 0);
+
+        if (
+          Number.isFinite(priceUsd) &&
+          Number.isFinite(amountRaw) &&
+          Number.isFinite(decimals)
+        ) {
+          const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
+          deltaUsd = normalizedAmount * priceUsd;
+        }
+      }
+
+      if (deltaUsd == null || !Number.isFinite(deltaUsd)) {
+        continue;
+      }
+
+      txDeltaUsd += deltaUsd;
+      txHasPricing = true;
+      pricedChangesCount += 1;
+    }
+
+    if (txHasPricing) {
+      pnlAcc += txDeltaUsd;
+      volumeAcc += Math.abs(txDeltaUsd);
+    }
+  }
+
+  return {
+    transactionCount24h: transactions.length,
+    tokensTradedCount: tokenSet.size,
+    tradingVolumeUsd24h: pricedChangesCount > 0 ? volumeAcc : null,
+    pnlUsdTotal: pricedChangesCount > 0 ? pnlAcc : null,
+    pricedChangesCount,
+  };
+}
+
+function buildOverviewResponse(input: {
+  address: string;
+  chain: SupportedChain;
+  periodSec: number;
+  holdingsSnapshot: OverviewHoldingsSnapshot;
+  activitySnapshot: OverviewActivitySnapshot;
+}): WalletOverview {
+  const {
+    address,
+    chain,
+    periodSec,
+    holdingsSnapshot,
+    activitySnapshot,
+  } = input;
+
+  return {
+    address,
+    chain,
+    totalAssetValueUsd: holdingsSnapshot.totalAssetValueUsd,
+    tradingVolumeUsd24h: activitySnapshot.tradingVolumeUsd24h,
+    pnlUsdTotal: activitySnapshot.pnlUsdTotal,
+    transactionCount24h: activitySnapshot.transactionCount24h,
+    tokensTradedCount: activitySnapshot.tokensTradedCount,
+    tokensHoldingCount: holdingsSnapshot.tokensHoldingCount,
+    tradingVolumeUsdWindow: activitySnapshot.tradingVolumeUsd24h,
+    pnlUsdWindow: activitySnapshot.pnlUsdTotal,
+    metricsPeriod: formatOverviewMetricsPeriod(periodSec),
+  };
+}
+
+export async function getWalletOverview(
+  address: string,
+  chain: SupportedChain,
+  options?: { periodSec?: number },
+): Promise<WalletOverview> {
+  const effectiveChain = resolveChainForAddress(address, chain);
+  const periodSec = normalizeOverviewPeriodSec(options?.periodSec);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const requestedRange = getHistoryRange({
+    fromSec: nowSec - periodSec,
+    toSec: nowSec,
+  });
+
+  const cacheRow = await getLatestOverviewCacheRow(address, effectiveChain);
+  const cachedOverview = getOverviewFromFreshCache(
+    cacheRow,
+    address,
+    effectiveChain,
+    periodSec,
+  );
+  if (cachedOverview) {
+    console.log("[wallet-overview]", {
+      address,
+      chain: effectiveChain,
+      periodSec,
+      cacheHit: true,
+    });
+    return cachedOverview;
+  }
+
+  const holdingsSnapshot = await buildHoldingsSnapshotFromBalancesOrProviders(
+    address,
+    effectiveChain,
+    cacheRow,
+  );
+
+  let activitySnapshot: OverviewActivitySnapshot;
+  let activityFetchFailed = false;
+
+  try {
+    const normalizedTransactions =
+      effectiveChain === "solana"
+        ? await getSolanaOverviewActivityTransactions(address, effectiveChain, requestedRange)
+        : await getEvmOverviewActivityTransactions(address, effectiveChain, requestedRange);
+
+    const reducedMetrics = await reduceActivityMetricsFromTransactions(normalizedTransactions);
+
+    activitySnapshot = {
+      ...reducedMetrics,
+      source: effectiveChain === "solana" ? "helius-transactions" : "moralis-history",
+    };
+  } catch (err) {
+    activityFetchFailed = true;
+    console.error("[wallet-overview] Failed to compute activity snapshot", {
+      address,
+      chain: effectiveChain,
+      periodSec,
+      error: err,
+    });
+
+    if (cacheRow && periodSec === DEFAULT_OVERVIEW_PERIOD_SEC) {
+      activitySnapshot = {
+        transactionCount24h: cacheRow.transactionCount24h ?? null,
+        tokensTradedCount: cacheRow.tokensTradedCount ?? null,
+        tradingVolumeUsd24h:
+          cacheRow.tradingVolumeUsd24h != null
+            ? toFiniteNumber(cacheRow.tradingVolumeUsd24h, 0)
+            : null,
+        pnlUsdTotal:
+          cacheRow.pnlUsdTotal != null ? toFiniteNumber(cacheRow.pnlUsdTotal, 0) : null,
+        pricedChangesCount: 0,
+        source: "overview-cache",
+      };
+    } else {
+      activitySnapshot = {
+        transactionCount24h: null,
+        tokensTradedCount: null,
+        tradingVolumeUsd24h: null,
+        pnlUsdTotal: null,
+        pricedChangesCount: 0,
+        source: "none",
+      };
+    }
+  }
+
+  const overview = buildOverviewResponse({
     address,
     chain: effectiveChain,
-    totalAssetValueUsd,
-    tokensHoldingCount: tokenItems.length,
-    tradingVolumeUsd24h,
-    pnlUsdTotal: pnlUsd24h,
-    transactionCount24h,
-    tokensTradedCount,
-  };
-  await saveOverviewCache(overview);
+    periodSec,
+    holdingsSnapshot,
+    activitySnapshot,
+  });
+
+  const shouldPersistOverview = periodSec === DEFAULT_OVERVIEW_PERIOD_SEC;
+  if (shouldPersistOverview) {
+    await saveOverviewCache(overview);
+  }
+
+  console.log("[wallet-overview]", {
+    address,
+    chain: effectiveChain,
+    periodSec,
+    cacheHit: false,
+    holdingsSource: holdingsSnapshot.source,
+    activitySource: activitySnapshot.source,
+    providerFailure: activityFetchFailed,
+    pricedChangesCount: activitySnapshot.pricedChangesCount,
+    persisted: shouldPersistOverview,
+  });
+
   return overview;
 }
 
@@ -519,7 +879,7 @@ export async function getWalletPortfolio(
 
   // 1) Try DB balances first
   try {
-    const balances = getWalletBalances.get(address) as unknown as WalletBalanceInsert[] | null;
+    const balances = await getWalletBalances(address);
     if (balances && balances.length > 0) {
       const portfolio: WalletPortfolioItem[] = balances.map((b) => ({
         tokenAddress: b.tokenAddress,

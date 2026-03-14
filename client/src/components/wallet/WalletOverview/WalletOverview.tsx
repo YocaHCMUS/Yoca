@@ -11,7 +11,6 @@ import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsM
 import styles from './WalletOverview.module.scss';
 
 export enum OverviewFilterSelection {
-    month,
     week,
     day,
     custom
@@ -92,7 +91,20 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
     const [filterValue, setFilterValue] = useState(1); // 24h
     const [showCustomControl, setShowCustomControl] = useState(false);
-    const [customDays, setCustomDays] = useState(30);
+    const [customDays, setCustomDays] = useState(2);
+
+    const getSelectedOverviewPeriod = () => {
+        if (filterOption === OverviewFilterSelection.day) {
+            return '24h';
+        }
+
+        if (filterOption === OverviewFilterSelection.week) {
+            return '7d';
+        }
+
+        const boundedDays = Math.max(1, Math.min(7, customDays));
+        return boundedDays === 1 ? '24h' : `${boundedDays}d`;
+    };
 
     const { tr, fmt } = useLocalization();
 
@@ -102,7 +114,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             try {
                 setLoading(true);
                 setError(null);
-                const data = await fetchWalletOverview(walletAddress, 'solana');
+                const data = await fetchWalletOverview(
+                    walletAddress,
+                    'solana',
+                    getSelectedOverviewPeriod(),
+                );
                 setOverview(data);
             } catch (err) {
                 console.error('Failed to fetch wallet overview:', err);
@@ -114,14 +130,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
         if (walletAddress && walletAddress !== 'null') {
             loadOverview();
-            
+
             // Set up auto-refresh if enabled
             if (autoRefresh) {
                 const interval = setInterval(loadOverview, refreshInterval);
                 return () => clearInterval(interval);
             }
         }
-    }, [walletAddress, autoRefresh, refreshInterval]);
+    }, [walletAddress, autoRefresh, refreshInterval, filterOption, customDays]);
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -153,16 +169,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleCustomFilter = () => {
+        setFilterOptions(OverviewFilterSelection.custom);
         setShowCustomControl(!showCustomControl);
-        if (!showCustomControl) {
-            setFilterOptions(OverviewFilterSelection.custom);
-        }
     };
 
     const handleCustomDaysChange = ({ value }: { value: number }) => {
-        setCustomDays(value);
-        setFilterValue(value);
-        console.log(`Custom filter: ${value} days`);
+        const boundedValue = Math.max(1, Math.min(7, Math.round(value)));
+        setCustomDays(boundedValue);
+        setFilterValue(boundedValue);
+        setFilterOptions(OverviewFilterSelection.custom);
+        console.log(`Custom filter: ${boundedValue} days`);
     };
 
     const handleCopyAddress = async () => {
@@ -177,203 +193,197 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     return (
         <>
-        {/* main container: column */}
-        <div className={styles.walletOverview}>
-            {error && (
-                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
-                    {tr('common.error')}: {error}
-                </div>
-            )}
-            {loading && (
-                <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
-                    {tr('common.loading')}...
-                </div>
-            )}
-            {/* 1st row: row containing 3 columns */}
-            <div className={styles.topSection}> 
-                {/* 1st column: profile picture */}
-                <div className={styles.profilePicture}>
-                    {name.charAt(0)}
-                </div>
-                
-                {/* 2nd column: basic profile information (name, wallet address, tags) */}
-                <div className={styles.profileInfo}>
-                    <div className={styles.walletNameRow}>
-                        <h2 className={styles.walletName}>{name}</h2>
-                        <button
-                            className={styles.editLabelBtn}
-                            onClick={() => setIsLabelModalOpen(true)}
-                            aria-label="Edit wallet label"
-                            title="Assign custom label"
-                        >
-                            <Edit size={16} />
-                        </button>
+            {/* main container: column */}
+            <div className={styles.walletOverview}>
+                {error && (
+                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
+                        {tr('common.error')}: {error}
                     </div>
-                    <div className={styles.walletAddressContainer}>
-                        {/* <Tooltip align="bottom" label={walletAddress}>
-                        </Tooltip> */}
-                        <h4
-                            className={styles.walletAddress}
-                        >
-                            {walletAddress}
-                        </h4>
-                        <CopyButton onClick={handleCopyAddress}/>
+                )}
+                {loading && (
+                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
+                        {tr('common.loading')}...
                     </div>
-                    <div className={styles.tagsRow}>
-                        {tags.map((tag, index) => (
-                            <Tag
-                                key={index}
-                                size="md"
-                                type="cyan"
-                            >
-                                {tag}
-                            </Tag>
-                        ))}
-                        <Tooltip
-                            label={user ? 'Manage tags' : 'Sign in to manage tags'}
-                            align="bottom"
-                        >
+                )}
+                {/* 1st row: row containing 3 columns */}
+                <div className={styles.topSection}>
+                    {/* 1st column: profile picture */}
+                    <div className={styles.profilePicture}>
+                        {name.charAt(0)}
+                    </div>
+
+                    {/* 2nd column: basic profile information (name, wallet address, tags) */}
+                    <div className={styles.profileInfo}>
+                        <div className={styles.walletNameRow}>
+                            <h2 className={styles.walletName}>{name}</h2>
                             <button
                                 className={styles.editLabelBtn}
-                                onClick={() => user && setIsTagsModalOpen(true)}
-                                aria-label="Manage wallet tags"
-                                disabled={!user}
+                                onClick={() => setIsLabelModalOpen(true)}
+                                aria-label="Edit wallet label"
+                                title="Assign custom label"
                             >
-                                <TagIcon size={16} />
+                                <Edit size={16} />
                             </button>
-                        </Tooltip>
-                    </div>
-                </div>
-                
-                {/* 3rd column: 1st line: filter buttons ; 2nd line: utilities links (bookmark, create alert, share, compare) */}
-                <div className={styles.actions}>
-                    <div className={styles.filterButtons}>
-                        <button 
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
-                            onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
-                        >
-                            {tr('wallet.filter24h')}
-                        </button>
-                        <button 
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
-                            onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
-                        >
-                            {tr('wallet.filter7d')}
-                        </button>
-                        <button 
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.month ? styles.active : ''}`}
-                            onClick={() => handleFilterClick(OverviewFilterSelection.month, 30)}
-                        >
-                            {tr('wallet.filter30d')}
-                        </button>
-                        <button 
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
-                            onClick={handleCustomFilter}
-                        >
-                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
-                            {showCustomControl && (
-                                <div className={styles.customControl}>
-                                    <Slider
-                                        min={1}
-                                        max={365}
-                                        value={customDays}
-                                        onChange={handleCustomDaysChange}
-                                        step={1}
-                                        hideTextInput
-                                    />
-                                </div>
-                            )}
-                        </button>
-                    </div>
-                    <div className={styles.utilityButtons}>
-                        <Link onClick={handleShare} renderIcon={Share}>
-                            {tr('wallet.shareWallet')}
-                        </Link>
-                        <Link onClick={handleCompare} renderIcon={Repeat}>
-                            {tr('wallet.compareWallet')}
-                        </Link>
-                        <Link onClick={handleCreateAlert} renderIcon={Notification}>
-                            {tr('wallet.createAlert')}
-                        </Link>
-                        <Link onClick={handleBookmark} 
-                            renderIcon={bookmark ? BookmarkFilled : Bookmark}>
-                            {bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}
-                        </Link>
-                    </div>
-                </div>
-            </div>
-            
-            {/* 2nd row: row containing 6 columns, separated by a line*/}
-            <div className={styles.statsSection}>
-                <div className={styles.statsGrid}>
-                    {/* Total Asset Value */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            {tr('wallet.totalAssetValue')}
                         </div>
-                        <div className={styles.statValue}>
-                            {fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
+                        <div className={styles.walletAddressContainer}>
+                            {/* <Tooltip align="bottom" label={walletAddress}>
+                        </Tooltip> */}
+                            <h4
+                                className={styles.walletAddress}
+                            >
+                                {walletAddress}
+                            </h4>
+                            <CopyButton onClick={handleCopyAddress} />
+                        </div>
+                        <div className={styles.tagsRow}>
+                            {tags.map((tag, index) => (
+                                <Tag
+                                    key={index}
+                                    size="md"
+                                    type="cyan"
+                                >
+                                    {tag}
+                                </Tag>
+                            ))}
+                            <Tooltip
+                                label={user ? 'Manage tags' : 'Sign in to manage tags'}
+                                align="bottom"
+                            >
+                                <button
+                                    className={styles.editLabelBtn}
+                                    onClick={() => user && setIsTagsModalOpen(true)}
+                                    aria-label="Manage wallet tags"
+                                    disabled={!user}
+                                >
+                                    <TagIcon size={16} />
+                                </button>
+                            </Tooltip>
                         </div>
                     </div>
-                    
-                    {/* Trading Volume */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            {tr('wallet.tradingVolume')}
-                        </div>
-                        <div className={styles.statValue}>
-                            {fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null)}
-                        </div>
-                    </div>
-                    
-                    {/* Total PnL */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            {tr('wallet.totalPnL')}
-                        </div>
-                        <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                            {fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null)}
-                        </div>
-                    </div>
-                    
-                    {/* Transaction Count */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            {tr('wallet.tokensTraded')}
-                        </div>
-                        <div className={styles.statValue}>
-                            {fmt.num.decimal(tokenTraded)}
-                        </div>
-                    </div>
-                    
-                    {/* Tokens Holding */}
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>
-                            {tr('wallet.tokensHolding')}
-                        </div>
-                        <div className={styles.statValue}>
-                            {fmt.num.decimal(numberOfTokenHolding)}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <WalletLabelModal
-            isOpen={isLabelModalOpen}
-            onClose={() => setIsLabelModalOpen(false)}
-            onSave={handleLabelSave}
-            walletAddress={walletAddress}
-            initialLabel={label}
-        />
-        <WalletTagsModal
-            isOpen={isTagsModalOpen}
-            onClose={() => setIsTagsModalOpen(false)}
-            onSave={handleTagsSave}
-            walletAddress={walletAddress}
-            walletLabel={label || undefined}
-            initialTags={tags}
-        />
+                    {/* 3rd column: 1st line: filter buttons ; 2nd line: utilities links (bookmark, create alert, share, compare) */}
+                    <div className={styles.actions}>
+                        <div className={styles.filterButtons}>
+                            <button
+                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
+                                onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
+                            >
+                                {tr('wallet.filter24h')}
+                            </button>
+                            <button
+                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
+                                onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
+                            >
+                                {tr('wallet.filter7d')}
+                            </button>
+                            <button
+                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
+                                onClick={handleCustomFilter}
+                            >
+                                {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
+                                {showCustomControl && (
+                                    <div className={styles.customControl}>
+                                        <Slider
+                                            min={1}
+                                            max={7}
+                                            value={customDays}
+                                            onChange={handleCustomDaysChange}
+                                            step={1}
+                                            hideTextInput
+                                        />
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+                        <div className={styles.utilityButtons}>
+                            <Link onClick={handleShare} renderIcon={Share}>
+                                {tr('wallet.shareWallet')}
+                            </Link>
+                            <Link onClick={handleCompare} renderIcon={Repeat}>
+                                {tr('wallet.compareWallet')}
+                            </Link>
+                            <Link onClick={handleCreateAlert} renderIcon={Notification}>
+                                {tr('wallet.createAlert')}
+                            </Link>
+                            <Link onClick={handleBookmark}
+                                renderIcon={bookmark ? BookmarkFilled : Bookmark}>
+                                {bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2nd row: row containing 6 columns, separated by a line*/}
+                <div className={styles.statsSection}>
+                    <div className={styles.statsGrid}>
+                        {/* Total Asset Value */}
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>
+                                {tr('wallet.totalAssetValue')}
+                            </div>
+                            <div className={styles.statValue}>
+                                {fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
+                            </div>
+                        </div>
+
+                        {/* Trading Volume */}
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>
+                                {tr('wallet.tradingVolume')}
+                            </div>
+                            <div className={styles.statValue}>
+                                {fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null)}
+                            </div>
+                        </div>
+
+                        {/* Total PnL */}
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>
+                                {tr('wallet.totalPnL')}
+                            </div>
+                            <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
+                                {fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null)}
+                            </div>
+                        </div>
+
+                        {/* Transaction Count */}
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>
+                                {tr('wallet.tokensTraded')}
+                            </div>
+                            <div className={styles.statValue}>
+                                {fmt.num.decimal(tokenTraded)}
+                            </div>
+                        </div>
+
+                        {/* Tokens Holding */}
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>
+                                {tr('wallet.tokensHolding')}
+                            </div>
+                            <div className={styles.statValue}>
+                                {fmt.num.decimal(numberOfTokenHolding)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <WalletLabelModal
+                isOpen={isLabelModalOpen}
+                onClose={() => setIsLabelModalOpen(false)}
+                onSave={handleLabelSave}
+                walletAddress={walletAddress}
+                initialLabel={label}
+            />
+            <WalletTagsModal
+                isOpen={isTagsModalOpen}
+                onClose={() => setIsTagsModalOpen(false)}
+                onSave={handleTagsSave}
+                walletAddress={walletAddress}
+                walletLabel={label || undefined}
+                initialTags={tags}
+            />
         </>
     );
 }

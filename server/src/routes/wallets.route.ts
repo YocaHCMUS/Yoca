@@ -21,8 +21,53 @@ import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.
 
 const walletRequestSchema = z.object({
   address: z.string(),
-  chain: z.string()
+  chain: z.string().optional(),
 });
+
+const walletOverviewRequestSchema = walletRequestSchema.extend({
+  period: z.string().optional(),
+});
+
+const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
+const MIN_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
+const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
+
+function parseOverviewPeriodSec(rawPeriod?: string): {
+  periodSec: number;
+  normalized: boolean;
+} {
+  if (!rawPeriod) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+  }
+
+  const trimmed = rawPeriod.trim().toLowerCase();
+  if (!trimmed) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+  }
+
+  const explicitUnitMatch = trimmed.match(/^(\d+)\s*([hd])$/);
+  const dayOnlyMatch = trimmed.match(/^(\d+)$/);
+
+  let periodSec: number | null = null;
+  if (explicitUnitMatch) {
+    const amount = Number(explicitUnitMatch[1]);
+    const unit = explicitUnitMatch[2];
+    periodSec = unit === "h" ? amount * 60 * 60 : amount * 24 * 60 * 60;
+  } else if (dayOnlyMatch) {
+    periodSec = Number(dayOnlyMatch[1]) * 24 * 60 * 60;
+  }
+
+  if (
+    periodSec == null ||
+    !Number.isFinite(periodSec) ||
+    periodSec < MIN_OVERVIEW_PERIOD_SEC ||
+    periodSec > MAX_OVERVIEW_PERIOD_SEC
+  ) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: true };
+  }
+
+  return { periodSec, normalized: false };
+}
 
 router.get("/overview", async (c) => {
   //  .get("/", async (c) => {
@@ -30,10 +75,10 @@ router.get("/overview", async (c) => {
   //       // Validate query parameters
   //       const query = c.req.query();
   //       console.log('[balance.route] Raw query:', query);
-        
+
   //       const params = balanceRequestSchema.parse(query);
   //       console.log('[balance.route] Parsed params:', params);
-  
+
   //       // Generate balance trend data
   //       const data = generateBalanceTrend(
   //         params.timePeriod,
@@ -41,12 +86,21 @@ router.get("/overview", async (c) => {
   //         params.wallets,
   //       );
   const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
+  const params = walletOverviewRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana";
+  const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
+
+  if (normalized && params.period) {
+    console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
+      address,
+      chain,
+      requestedPeriod: params.period,
+    });
+  }
 
   try {
-    const overview = await getWalletOverview(address, chain);
+    const overview = await getWalletOverview(address, chain, { periodSec });
     return c.json(overview);
   } catch (err) {
     console.error("Failed to get wallet overview", err);
@@ -58,7 +112,7 @@ router.get("/portfolio", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   try {
     const portfolio = await getWalletPortfolio(address, chain);
@@ -73,7 +127,7 @@ router.get("/transactions", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -100,7 +154,7 @@ router.get("/swap", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -122,11 +176,11 @@ router.get("/swap", async (c) => {
   }
 });
 
-router.get("/transfers", async(c) => {
+router.get("/transfers", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -152,16 +206,16 @@ router.get("/distribution", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   try {
     // Get portfolio data which forms the asset distribution
     const portfolio = await getWalletPortfolio(address, chain);
-    
+
     // Transform portfolio data into distribution format
     // Calculate percentages based on total value
     const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
-    
+
     const distributionData = portfolio.map((item: any) => ({
       name: item.symbol || item.token || 'Unknown',
       value: item.valueUsd ?? 0,
@@ -189,7 +243,7 @@ router.get("/exchanges", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
   const limitParam = c.req.query("limit");
   const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
@@ -215,6 +269,23 @@ router.get("/debug/test-transactions", async (c) => {
   } catch (err) {
     console.error("Failed to fetch test transactions", err);
     return c.json({ error: "Failed to fetch test transactions" }, 500);
+  }
+});
+
+router.get("/debug/identity", async (c) => {
+  const address = c.req.query("address");
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const { getWalletIdentity } = await import("@sv/services/wallet/walletIdentity.service.js");
+    const data = await getWalletIdentity(address);
+    return c.json({ address, data });
+  } catch (err) {
+    console.error("Failed to fetch wallet identity", err);
+    return c.json({ error: "Failed to fetch wallet identity" }, 500);
   }
 });
 

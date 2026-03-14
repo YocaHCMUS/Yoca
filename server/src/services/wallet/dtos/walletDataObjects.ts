@@ -1,24 +1,27 @@
 export type SupportedChain = "solana" | "eth" | "polygon" | "bsc" | string;
 
 export interface WalletOverview {
-  address: string;
-  chain: SupportedChain;
-  totalAssetValueUsd: number;
-  tradingVolumeUsd24h: number | null;
-  pnlUsdTotal: number | null;
-  transactionCount24h: number | null;
-  tokensTradedCount: number | null;
-  tokensHoldingCount: number;
+    address: string;
+    chain: SupportedChain;
+    totalAssetValueUsd: number;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+    tradingVolumeUsdWindow?: number | null;
+    pnlUsdWindow?: number | null;
+    metricsPeriod?: string;
 }
 
 export interface WalletPortfolioItem {
-  tokenAddress: string;
-  symbol: string;
-  name?: string;
-  amount: number;
-  priceUsd?: number;
-  valueUsd: number;
-  change24hPercent?: number;
+    tokenAddress: string;
+    symbol: string;
+    name?: string;
+    amount: number;
+    priceUsd?: number;
+    valueUsd: number;
+    change24hPercent?: number;
 }
 
 
@@ -54,7 +57,7 @@ export interface WalletSwap {
     feePayer: string,
     balanceChanges: WalletSwapBalanceChange[],
     feeChanges: WalletSwapBalanceChange[],
-    
+
 }
 
 export interface WalletTransactionHelius {
@@ -89,12 +92,12 @@ export interface WalletTransactionsResponse {
 export interface WalletTransfersResponse {
     address: string;
     chain: SupportedChain;
-    transfers: WalletTransfer[]; 
+    transfers: WalletTransfer[];
 }
 
 /** Exchange comparison item for chart (transaction count by platform). */
 export interface WalletExchangeCountItem {
-    name: string; 
+    name: string;
     deposits: number;
     withdrawals: number;
     depositsVolume: number;
