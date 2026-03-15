@@ -311,9 +311,8 @@ export const tokenHolderStats = pgTable("token_holder_stats", {
   holdersCount: integer("holders_count").notNull(),
   // Percentage of market cap held by top 10%
   top10Percent: decimal("top_10_percent").notNull(),
-  rank11To30Percent: decimal("rank_11_to_30_percent").notNull(),
-  rank31To50Percent: decimal("rank_31_to_50_percent").notNull(),
-  rank51PlusPercent: decimal("rank_51_plus_percent").notNull(),
+  rank11To20Percent: decimal("rank_11_to_20_percent").notNull(),
+  rank21To40Percent: decimal("rank_21_to_40_percent").notNull(),
   updatedAt: timestamp("updated_at")
     .notNull()
     .$onUpdate(() => new Date()),
