@@ -28,6 +28,19 @@
   }
 }
 
+.tblToolbar {
+  overflow-x: auto;
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+
+.tblToolbarContent {
+  min-width: max-content;
+  display: flex;
+  justify-content: end;
+  gap: 8px;
+}
+
 .tblDsc {
   font-size: 0.875rem;
   font-weight: var(--cds-body-compact-01-font-weight);

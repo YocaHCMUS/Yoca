@@ -97,7 +97,7 @@ export async function getRecentTrades(options: GetRecentTradesOptions = {}) {
 
   // Determine sort order based on sortBy parameter
   const orderBy =
-    sortBy === "volume"
+    sortBy == "volume"
       ? desc(recentTrades.volumeUsd)
       : desc(recentTrades.blockUnixTime);
 

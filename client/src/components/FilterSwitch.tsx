@@ -22,7 +22,7 @@ export function FilterSwitch<V extends string>({
   const selectedIndex = options.findIndex((opt) => opt.value == value);
 
   return (
-    <Tooltip label={tooltipLabel} enterDelayMs={2000} align="bottom">
+    <Tooltip label={tooltipLabel} enterDelayMs={2000} align="top">
       <ContentSwitcher
         className={overwriteStyles.fltrOpt}
         onChange={({ name }) => {

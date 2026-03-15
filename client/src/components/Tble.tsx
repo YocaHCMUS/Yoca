@@ -59,25 +59,14 @@ export default function Tble({
     return (
       <TableContainer
         title={
-          <Stack
-            orientation="horizontal"
-            style={{
-              width: "100%",
-              justifyContent: "space-between",
-              alignItems: "end",
-            }}
-          >
+          <Stack>
             <Stack>
               <strong style={{ textTransform: "uppercase" }}>{title}</strong>
               <span className={overwriteStyles.tblDsc}>{description}</span>
             </Stack>
-            <Stack
-              orientation="horizontal"
-              gap={3}
-              style={{ justifyContent: "end" }}
-            >
-              {toolBar}
-            </Stack>
+            <div className={overwriteStyles.tblToolbar}>
+              <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
+            </div>
           </Stack>
         }
         className={overwriteStyles.tbl}
@@ -98,25 +87,14 @@ export default function Tble({
   return (
     <TableContainer
       title={
-        <Stack
-          orientation="horizontal"
-          style={{
-            width: "100%",
-            justifyContent: "space-between",
-            alignItems: "end",
-          }}
-        >
+        <Stack>
           <Stack>
             <strong style={{ textTransform: "uppercase" }}>{title}</strong>
             <span className={overwriteStyles.tblDsc}>{description}</span>
           </Stack>
-          <Stack
-            orientation="horizontal"
-            gap={3}
-            style={{ justifyContent: "end" }}
-          >
-            {toolBar}
-          </Stack>
+          <div className={overwriteStyles.tblToolbar}>
+            <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
+          </div>
         </Stack>
       }
       className={overwriteStyles.tbl}

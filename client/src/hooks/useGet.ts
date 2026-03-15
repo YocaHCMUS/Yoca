@@ -90,5 +90,10 @@ export function useGet<
 
       return select ? select(json as Success) : (json as Transformed);
     },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    },
   );
 }
