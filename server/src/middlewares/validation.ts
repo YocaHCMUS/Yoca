@@ -83,6 +83,12 @@ export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
+export const recentTradesQuerySchema = z.object({
+  timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
+  usdThreshold: z.coerce.number().min(0).default(0).optional(),
+  sortBy: z.enum(["volume", "time"]).default("volume").optional(),
+});
+
 // Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,

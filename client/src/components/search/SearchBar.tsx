@@ -48,6 +48,9 @@ export function SearchBar({ onClose }: SearchBarProps) {
             imgUrl: token.imgUrl,
             priceUsd: token.priceUsd,
             priceChangePercentage24h: token.priceChangePercentage24h ?? 0,
+            sparkline7d: token.sparkline7d,
+            marketCap: token.marketCap,
+            volume24h: token.volume24h,
           }),
         ),
         pools: data.pools.map(

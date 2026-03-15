@@ -1,7 +1,7 @@
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
   DataTable,
-  DataTableSkeleton,
+  InlineLoading,
   Stack,
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
   TableRow,
   type DataTableProps,
 } from "@carbon/react";
-import type { ReactNode } from "react";
+import { type ReactNode } from "react";
 
 interface TblHdr {
   header: string;
@@ -37,7 +37,6 @@ interface TblProps
   loading?: boolean;
   height?: number | string;
   toolBar?: ReactNode;
-  toolBarHeight?: number | string;
 }
 
 export default function Tble({
@@ -55,9 +54,48 @@ export default function Tble({
     headers.map((header) => [header.key, header]),
   );
 
-  return loading ? (
-    <DataTableSkeleton headers={headers} showHeader={!hideHeaders} />
-  ) : (
+  // Show inline loading when loading and no data
+  if (loading && rows.length == 0) {
+    return (
+      <TableContainer
+        title={
+          <Stack
+            orientation="horizontal"
+            style={{
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "end",
+            }}
+          >
+            <Stack>
+              <strong style={{ textTransform: "uppercase" }}>{title}</strong>
+              <span className={overwriteStyles.tblDsc}>{description}</span>
+            </Stack>
+            <Stack
+              orientation="horizontal"
+              gap={3}
+              style={{ justifyContent: "end" }}
+            >
+              {toolBar}
+            </Stack>
+          </Stack>
+        }
+        className={overwriteStyles.tbl}
+      >
+        <Stack
+          style={{
+            height,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <InlineLoading description="Loading" />
+        </Stack>
+      </TableContainer>
+    );
+  }
+
+  return (
     <TableContainer
       title={
         <Stack
@@ -72,7 +110,13 @@ export default function Tble({
             <strong style={{ textTransform: "uppercase" }}>{title}</strong>
             <span className={overwriteStyles.tblDsc}>{description}</span>
           </Stack>
-          {toolBar}
+          <Stack
+            orientation="horizontal"
+            gap={3}
+            style={{ justifyContent: "end" }}
+          >
+            {toolBar}
+          </Stack>
         </Stack>
       }
       className={overwriteStyles.tbl}
@@ -107,24 +151,43 @@ export default function Tble({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow {...getRowProps({ row })}>
-                    {row.cells.map((cell) => (
-                      <TableCell
-                        {...getCellProps({ cell })}
-                        style={{
-                          paddingBlockStart: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          inlineSize: headerLookup[cell.info.header].width,
-                          justifyContent: headerLookup[cell.info.header].align,
-                        }}
-                      >
-                        {cell.value}
-                      </TableCell>
-                    ))}
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={headers.length}
+                      style={{
+                        textAlign: "center",
+                        paddingBlockStart: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100px",
+                      }}
+                    >
+                      No data available
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <TableRow {...getRowProps({ row })}>
+                      {row.cells.map((cell) => (
+                        <TableCell
+                          {...getCellProps({ cell })}
+                          style={{
+                            paddingBlockStart: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            inlineSize: headerLookup[cell.info.header].width,
+                            justifyContent:
+                              headerLookup[cell.info.header].align,
+                          }}
+                        >
+                          {cell.value}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

@@ -2,6 +2,7 @@ import client from "@/api/main";
 import TokenTreeMap, {
   type TokenTreeMapNode,
 } from "@/components/charts/TokenTreeMap";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import Tble from "@/components/Tble";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
@@ -9,110 +10,19 @@ import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
-import {
-  Column,
-  ContentSwitcher,
-  Grid,
-  IconButton,
-  Link,
-  Stack,
-  Switch,
-  Tooltip,
-} from "@carbon/react";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
 import { Launch } from "@carbon/react/icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-type TradeVolumeOption = "$10k" | "$50k" | "$100k";
+type TradeVolumeOption = "0" | "1" | "5" | "10";
 type TradeTimeOption = "6h" | "12h" | "24h";
-
-interface TradeFilterOptionsProps {
-  volume: TradeVolumeOption;
-  time: TradeTimeOption;
-  onVolumeChange: (value: TradeVolumeOption) => void;
-  onTimeChange: (value: TradeTimeOption) => void;
-}
-
-interface FilterOption<T> {
-  value: T;
-  label: string;
-}
-
-interface FilterSwitchProps<T> {
-  value: T;
-  options: FilterOption<T>[];
-  onChange: (value: T) => void;
-  tooltipLabel: string;
-}
-
-function FilterSwitch<T extends string | number>({
-  value,
-  options,
-  onChange,
-  tooltipLabel,
-}: FilterSwitchProps<T>) {
-  const selectedIndex = options.findIndex((opt) => opt.value == value);
-
-  return (
-    <Tooltip label={tooltipLabel} enterDelayMs={2000} align="left">
-      <ContentSwitcher
-        className={overwriteStyles.fltrOpt}
-        onChange={({ name }) => {
-          if (!name) return;
-          const selected = options.find((opt) => opt.value == name);
-          if (selected) {
-            onChange(selected.value);
-          }
-        }}
-        selectedIndex={selectedIndex >= 0 ? selectedIndex : 0}
-        size="sm"
-        style={{ minInlineSize: 200 }}
-      >
-        {options.map((opt) => (
-          <Switch key={opt.value} name={opt.value} text={opt.label} />
-        ))}
-      </ContentSwitcher>
-    </Tooltip>
-  );
-}
-
-function TradeFilterOptions({
-  volume,
-  time,
-  onVolumeChange,
-  onTimeChange,
-}: TradeFilterOptionsProps) {
-  const volumeOptions: FilterOption<TradeVolumeOption>[] = [
-    { value: "$10k", label: ">$10k" },
-    { value: "$50k", label: ">$50k" },
-    { value: "$100k", label: ">$100k" },
-  ];
-
-  const timeOptions: FilterOption<TradeTimeOption>[] = [
-    { value: "6h", label: "6h" },
-    { value: "12h", label: "12h" },
-    { value: "24h", label: "24h" },
-  ];
-
-  return (
-    <Stack gap={3} orientation="horizontal" style={{ justifyContent: "end" }}>
-      <FilterSwitch
-        value={volume}
-        options={volumeOptions}
-        onChange={onVolumeChange}
-        tooltipLabel="Trading Volume"
-      />
-      <FilterSwitch
-        value={time}
-        options={timeOptions}
-        onChange={onTimeChange}
-        tooltipLabel="Trading Time"
-      />
-    </Stack>
-  );
-}
+type TradesSortOption = "volume" | "time";
 
 export default function MarketPage() {
   const { fmt, tr } = useLocalization();
+  const [tradeVolume, setTradeVolume] = useState<TradeVolumeOption>("1");
+  const [tradeTime, setTradeTime] = useState<TradeTimeOption>("24h");
+  const [tradesSort, setTradesSort] = useState<TradesSortOption>("volume");
 
   const topTokens = useGet(client.api.tokens["top-marketcap"], 200);
 
@@ -167,7 +77,13 @@ export default function MarketPage() {
 
   const tradersLoading = topTraders.isLoading;
 
-  const recentTradesData = useGet(client.api.trades.recent, 200);
+  const recentTradesData = useGet(client.api.trades.recent, 200, {
+    query: {
+      timeWindow: tradeTime,
+      usdThreshold: Number(tradeVolume),
+      sortBy: tradesSort,
+    },
+  });
 
   const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
@@ -469,14 +385,6 @@ export default function MarketPage() {
         <Column sm={2} md={8} lg={8}>
           <Tble
             title={tr("marketPage.recentTrades")}
-            toolBar={
-              <TradeFilterOptions
-                volume="$10k"
-                time="6h"
-                onVolumeChange={() => {}}
-                onTimeChange={() => {}}
-              />
-            }
             description={"Description"}
             height={400}
             loading={recentTradesData.isLoading}
@@ -492,6 +400,40 @@ export default function MarketPage() {
               },
             ]}
             rows={recentTradesRows}
+            toolBar={
+              <>
+                <FilterSwitch<TradeVolumeOption>
+                  value={tradeVolume}
+                  options={[
+                    { value: "0", label: "All" },
+                    { value: "1", label: ">$1" },
+                    { value: "5", label: ">$5" },
+                    { value: "10", label: ">$10" },
+                  ]}
+                  onChange={setTradeVolume}
+                  tooltipLabel="USD Threshold"
+                />
+                <FilterSwitch<TradeTimeOption>
+                  value={tradeTime}
+                  options={[
+                    { value: "6h", label: "6h" },
+                    { value: "12h", label: "12h" },
+                    { value: "24h", label: "24h" },
+                  ]}
+                  onChange={setTradeTime}
+                  tooltipLabel="Time Window"
+                />
+                <FilterSwitch<TradesSortOption>
+                  value={tradesSort}
+                  options={[
+                    { value: "volume", label: "Volume" },
+                    { value: "time", label: "Time" },
+                  ]}
+                  onChange={setTradesSort}
+                  tooltipLabel="Sort By"
+                />
+              </>
+            }
             stickyHeader
           />
         </Column>

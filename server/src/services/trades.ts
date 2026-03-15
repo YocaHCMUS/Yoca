@@ -2,8 +2,17 @@ import { RECENT_TRADES_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { recentTrades, type RecentTradeInsert } from "@sv/db/schema.js";
 import * as bds from "@sv/util/util-birdeye.js";
-import { desc } from "drizzle-orm";
+import { and, desc, gte } from "drizzle-orm";
 import type { BDS_RecentTrades } from "./_types/token_raw_responses.js";
+
+type TimeWindow = "6h" | "12h" | "24h";
+type SortBy = "volume" | "time";
+
+interface GetRecentTradesOptions {
+  timeWindow?: TimeWindow;
+  usdThreshold?: number;
+  sortBy?: SortBy;
+}
 
 async function fetchRecentTrades() {
   const bdsEndpoint = bds.getEndpoint("/defi/v3/txs/recent");
@@ -56,29 +65,62 @@ async function fetchRecentTrades() {
   return await db.insert(recentTrades).values(trades).returning();
 }
 
-export async function getRecentTrades() {
-  const cached = await db
+export async function getRecentTrades(options: GetRecentTradesOptions = {}) {
+  const { timeWindow = "24h", usdThreshold = 1, sortBy = "volume" } = options;
+
+  const existing = await db
     .select()
     .from(recentTrades)
     .orderBy(desc(recentTrades.blockUnixTime))
     .limit(50);
 
-  let stale = false;
+  let isStale = false;
 
-  if (cached.length > 0) {
-    const latestUpdate = cached.reduce((latest, cur) =>
+  if (existing.length == 0) {
+    isStale = true;
+  } else {
+    const latestUpdate = existing.reduce((latest, cur) =>
       cur.updatedAt > latest.updatedAt ? cur : latest,
     );
 
     const thresholdDate = new Date(Date.now() - RECENT_TRADES_TTL_MS);
-    stale = latestUpdate.updatedAt < thresholdDate;
-  } else {
-    stale = true;
+    isStale = latestUpdate.updatedAt < thresholdDate;
   }
 
-  if (stale) {
-    return await fetchRecentTrades();
+  if (isStale) {
+    await fetchRecentTrades();
   }
 
-  return cached;
+  const timeWindowMs = getTimeWindowMs(timeWindow);
+  const cutoffTime = new Date(Date.now() - timeWindowMs);
+  const cutoffUnixTime = Math.floor(cutoffTime.getTime() / 1000);
+
+  // Determine sort order based on sortBy parameter
+  const orderBy =
+    sortBy === "volume"
+      ? desc(recentTrades.volumeUsd)
+      : desc(recentTrades.blockUnixTime);
+
+  const trades = await db
+    .select()
+    .from(recentTrades)
+    .where(
+      and(
+        gte(recentTrades.blockUnixTime, cutoffUnixTime),
+        gte(recentTrades.volumeUsd, usdThreshold),
+      ),
+    )
+    .orderBy(orderBy)
+    .limit(50);
+
+  return trades;
+}
+
+function getTimeWindowMs(timeWindow: TimeWindow): number {
+  const timeWindowMap: Record<TimeWindow, number> = {
+    "6h": 6 * 60 * 60 * 1000,
+    "12h": 12 * 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+  };
+  return timeWindowMap[timeWindow];
 }
