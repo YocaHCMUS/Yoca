@@ -8,9 +8,10 @@ export const format = {
   num: defineNumberFormat(langCode, {
     decimalResolution: {
       resolveCurrency(value: number): number {
-        const frac = Math.abs(value) % 1;
-        if (frac >= 0.01) return 4;
-        if (frac >= 0.0001) return 6;
+        const abs = Math.abs(value);
+        if (abs > 1) return 2;
+        if (abs > 0.01) return 4;
+        if (abs > 0.0001) return 6;
         return 8;
       },
       resolveDecimal(value: number): number {

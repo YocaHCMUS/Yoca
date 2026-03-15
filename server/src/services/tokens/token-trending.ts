@@ -73,6 +73,7 @@ export async function getTrendingTokens() {
 
     const pageAddresses = page.data.tokens.map((token) => token.address);
     const cgLookup = await getCoinGeckoIdsByAddresses(pageAddresses);
+
     const cgAddressSet = new Set(Object.keys(cgLookup));
 
     for (const address of pageAddresses) {
