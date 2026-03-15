@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
-  DecimalResolutionStrategy,
   CurrencyConfigStrategy,
-  ReadableCompactCurrencyStrategy,
+  DecimalResolutionStrategy,
   NumberFormattingStrategy,
+  ReadableCompactCurrencyStrategy,
 } from "../formatter-strategy";
 
 describe("Formatter Strategy Interfaces", () => {
@@ -224,9 +224,9 @@ describe("Formatter Strategy Interfaces", () => {
 
       expect(completeStrategy.decimalResolution.resolveCurrency(1000)).toBe(0);
       expect(completeStrategy.currencyConfig.currencyCode()).toBe("USD");
-      expect(completeStrategy.readableCompactCurrency.format(1e9, {})).toContain(
-        "Billion"
-      );
+      expect(
+        completeStrategy.readableCompactCurrency.format(1e9, {}),
+      ).toContain("Billion");
     });
   });
 
@@ -275,7 +275,9 @@ describe("Formatter Strategy Interfaces", () => {
       };
 
       expect(simpleStrategy.decimalResolution.resolveCurrency(0.5)).toBe(2);
-      expect(dynamicStrategy.decimalResolution.resolveCurrency(0.5)).toBeGreaterThan(2);
+      expect(
+        dynamicStrategy.decimalResolution.resolveCurrency(0.5),
+      ).toBeGreaterThan(2);
     });
   });
 
@@ -341,10 +343,13 @@ describe("Formatter Strategy Interfaces", () => {
           format: (value: number) => {
             const abs = Math.abs(value);
             const sign = value < 0 ? "-" : "";
-            if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(2)} nghìn tỷ đồng`;
+            if (abs >= 1e12)
+              return `${sign}${(abs / 1e12).toFixed(2)} nghìn tỷ đồng`;
             if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(2)} tỷ đồng`;
-            if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(2)} triệu đồng`;
-            if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(2)} nghìn đồng`;
+            if (abs >= 1e6)
+              return `${sign}${(abs / 1e6).toFixed(2)} triệu đồng`;
+            if (abs >= 1e3)
+              return `${sign}${(abs / 1e3).toFixed(2)} nghìn đồng`;
             return `${value} đồng`;
           },
         },

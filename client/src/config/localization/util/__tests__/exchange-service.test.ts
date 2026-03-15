@@ -1,8 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import {
-  getUsdToVndRate,
-  refreshUsdToVndRate,
-} from "../exchange-service";
+import { describe, expect, it } from "vitest";
+import { getUsdToVndRate, refreshUsdToVndRate } from "../exchange-service";
 
 describe("Exchange Rate Service", () => {
   describe("getUsdToVndRate", () => {

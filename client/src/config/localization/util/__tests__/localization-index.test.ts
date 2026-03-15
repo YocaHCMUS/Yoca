@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { locale, type LangKeys, type BaseTranslation, type TranslationSchema, type TranslationKeyPath } from "../../index";
+import { describe, expect, it } from "vitest";
+import { locale, type LangKeys } from "../../index";
 
 describe("Localization Index", () => {
   describe("Locale Object Structure", () => {
@@ -298,7 +298,7 @@ describe("Localization Index", () => {
     it("English locale should handle currency decimals appropriately", () => {
       const small = locale.en.format.num.currency(0.0001);
       const large = locale.en.format.num.currency(1000);
-      
+
       expect(small).toBeTruthy();
       expect(large).toBeTruthy();
     });
@@ -306,7 +306,7 @@ describe("Localization Index", () => {
     it("Vietnamese locale should handle currency decimals appropriately", () => {
       const small = locale.vi.format.num.currency(0.0001);
       const large = locale.vi.format.num.currency(1000);
-      
+
       expect(small).toBeTruthy();
       expect(large).toBeTruthy();
     });

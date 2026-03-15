@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
+  DotPaths,
   FmtStrParams,
   LitTransToShape,
-  DotPaths,
   PathValue,
   SameFmtParams,
   ValidateTranslation,
@@ -110,19 +110,13 @@ describe("Translation Type System", () => {
 
   describe("SameFmtParams - Parameter Validation", () => {
     it("should validate matching format parameters", () => {
-      type T1 = SameFmtParams<
-        "Hello {{name}}",
-        "Bonjour {{name}}"
-      >;
+      type T1 = SameFmtParams<"Hello {{name}}", "Bonjour {{name}}">;
       // Should be true - both have same parameter 'name'
       expect(true).toBe(true);
     });
 
     it("should detect parameter mismatches", () => {
-      type T1 = SameFmtParams<
-        "Hello {{name}}",
-        "You have {{count}} items"
-      >;
+      type T1 = SameFmtParams<"Hello {{name}}", "You have {{count}} items">;
       // Should be false - different parameters
       expect(true).toBe(true);
     });
@@ -254,9 +248,8 @@ describe("Translation Type System", () => {
     });
 
     it("should handle translation with multiple parameter types", () => {
-      type T1 = FmtStrParams<
-        "Hello {{name}}, you have {{count}} messages and {{$link}} to settings"
-      >;
+      type T1 =
+        FmtStrParams<"Hello {{name}}, you have {{count}} messages and {{$link}} to settings">;
       // Should properly handle both numeric and ReactNode parameters
       expect(true).toBe(true);
     });

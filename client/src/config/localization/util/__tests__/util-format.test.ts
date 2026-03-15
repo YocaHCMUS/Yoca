@@ -1,13 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  defineNumberFormat,
-  defineDateTimeFormat,
-} from "../util-format";
-import type {
-  DecimalResolutionStrategy,
-  CurrencyConfigStrategy,
-  ReadableCompactCurrencyStrategy,
-} from "../formatter-strategy";
+import { beforeEach, describe, expect, it } from "vitest";
+import { defineDateTimeFormat, defineNumberFormat } from "../util-format";
 
 describe("Number Formatting", () => {
   describe("defineNumberFormat - Standard Notation", () => {
@@ -59,7 +51,7 @@ describe("Number Formatting", () => {
       const currencyFormatter = defineNumberFormat(
         "en-US",
         mockStrategy,
-        getRate
+        getRate,
       );
 
       // Should apply exchange rate
