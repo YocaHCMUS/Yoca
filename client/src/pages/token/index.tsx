@@ -1,11 +1,11 @@
 import client from "@/api/main";
 import {
-    MarketStats,
-    PoolSelector,
-    RecentTransactions,
-    TokenChart,
-    TokenHeader,
-    TopHolders,
+  MarketStats,
+  PoolSelector,
+  RecentTransactions,
+  TokenChart,
+  TokenHeader,
+  TopHolders,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
@@ -13,9 +13,20 @@ import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
 function useTokenPageData(address: string, poolAddress: string) {
-  const baseMeta = useGet(client.api.tokens.meta[":addresses"], 200, {
-    param: { addresses: address },
-  });
+  const baseMeta = useGet(
+    client.api.tokens.details[":addresses"],
+    200,
+    {
+      param: { addresses: address },
+    },
+    {
+      select: (dataArr) =>
+        dataArr.map((data) => ({
+          ...data.meta,
+          ...data.details,
+        })),
+    },
+  );
 
   const topPools = useGet(client.api.tokens[":address"].pools, 200, {
     param: { address },
