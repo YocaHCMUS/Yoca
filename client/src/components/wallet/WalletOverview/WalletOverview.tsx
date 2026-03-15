@@ -281,7 +281,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             </h4>
                             <CopyButton onClick={handleCopyAddress} />
                         </div>
-                        <div className={styles.identityRow}>
+                        <div className={styles.tagsRow}>
                             {identityStatus === 'known' && identityCategory && (
                                 <Tag size="sm" type="teal">
                                     {identityCategory}
@@ -302,8 +302,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     Risk: {String(riskLevel).toUpperCase()}
                                 </Tag>
                             )}
-                        </div>
-                        <div className={styles.tagsRow}>
                             {tags.map((tag, index) => (
                                 <Tag
                                     key={index}

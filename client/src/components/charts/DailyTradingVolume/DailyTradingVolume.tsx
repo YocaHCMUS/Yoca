@@ -12,11 +12,13 @@ import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { EChartsOption } from 'echarts';
 import type { ExportFormat } from '@/types/chart-filters.types';
+import type { ChartDataSeries } from '@/types/chart-data.types';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { Button } from '@carbon/react';
 import { Add, Close } from '@carbon/react/icons';
@@ -25,6 +27,8 @@ import { fetchDailyTradingVolume } from '@/services/chart/chartApi';
 import type { VolumeBenchmarkResponse } from '@/types/chart-api.types';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useStandardChartController } from '@/hooks/useChartController';
+import { useChartExport } from '@/hooks/useChartExport';
+import { runChartExport } from '@/services/chart/chartExportService';
 import type { ChartProps } from '../shared/ChartProp';
 
 /**
@@ -143,9 +147,16 @@ export function DailyTradingVolume({
   const chartTitle = title || 'Daily Trading Volume Historical Chart';
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
+  const { selectedTimezone: timezone } = useChartContext();
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
+  });
+
+  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+    chartTitle,
+    timezone,
+    baseFilename: 'daily-trading-volume',
   });
 
   const [selectedBenchmarks] = useState<string[]>(['SOL']);
@@ -397,57 +408,46 @@ export function DailyTradingVolume({
       series: [...barSeries, lineSeries],
     };
   }, [data, chartTheme]);
+
+  const csvData = useMemo<ChartDataSeries[]>(() => {
+    const walletSeries: ChartDataSeries[] = data.wallets.map((wallet, walletIndex) => ({
+      id: `daily-volume-wallet-${walletIndex}`,
+      name: wallet.name,
+      type: 'bar',
+      visible: true,
+      data: data.dates.map((date, index) => ({
+        category: date,
+        value: wallet.data[index] ?? 0,
+      })),
+    }));
+
+    const benchmarkSeries: ChartDataSeries = {
+      id: 'daily-volume-benchmark',
+      name: data.benchmark.name,
+      type: 'line',
+      visible: true,
+      data: data.dates.map((date, index) => ({
+        category: date,
+        value: data.benchmark.data[index] ?? 0,
+      })),
+    };
+
+    return [...walletSeries, benchmarkSeries];
+  }, [data]);
   
   /**
    * Handle export
    */
   const handleExport = async (format: ExportFormat) => {
-    const echartsInstance = chartRef.current?.getEchartsInstance();
-    
-    if (!echartsInstance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
-    
-    if (format === 'png') {
-      const url = echartsInstance.getDataURL({
-        type: 'png',
-        pixelRatio: 2,
-        backgroundColor: chartTheme.backgroundColor,
-      });
-      
-      const link = document.createElement('a');
-      link.download = `daily-trading-volume-${Date.now()}.png`;
-      link.href = url;
-      link.click();
-    } else if (format === 'svg') {
-      const url = echartsInstance.getDataURL({
-        type: 'svg',
-        backgroundColor: chartTheme.backgroundColor,
-      });
-      
-      const link = document.createElement('a');
-      link.download = `daily-trading-volume-${Date.now()}.svg`;
-      link.href = url;
-      link.click();
-    } else if (format === 'csv') {
-      // Export CSV data
-      let csvContent = 'Date,';
-      csvContent += data.wallets.map(w => w.name).join(',');
-      csvContent += `,${data.benchmark.name}\n`;
-      
-      data.dates.forEach((date, index) => {
-        csvContent += `${date},`;
-        csvContent += data.wallets.map(w => w.data[index]).join(',');
-        csvContent += `,${data.benchmark.data[index]}\n`;
-      });
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.download = `daily-trading-volume-${Date.now()}.csv`;
-      link.href = URL.createObjectURL(blob);
-      link.click();
-    }
+    runChartExport(
+      {
+        format,
+        filters,
+        chartInstance: chartRef.current?.getEchartsInstance() as any,
+        csvData,
+      },
+      { exportPNG, exportSVG, exportCSV }
+    );
   };
   
   // Show empty state if no wallets selected

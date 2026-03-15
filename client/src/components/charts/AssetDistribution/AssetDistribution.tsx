@@ -35,6 +35,7 @@ import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
+import { runChartExport } from '@/services/chart/chartExportService';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -179,33 +180,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       if (!data) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
+      const csv: ChartDataSeries[] = [];
 
-      if (format === 'csv') {
-        // Convert asset distribution data to CSV format
-        const csv: ChartDataSeries[] = [];
-        
-        // Type guard: check if response has wallets array
-        if ('wallets' in data && data.wallets) {
-          // Per-wallet data
-          data.wallets.forEach((wallet: any) => {
-            const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
-            csv.push({
-              id: `asset-distribution-${wallet.walletAddress}`,
-              name: `Assets Distribution - ${wallet.walletAddress}`,
-              type: 'pie',
-              visible: true,
-              data: grouped.map((a) => ({
-                name: a.name,
-                value: a.value,
-              })),
-            });
-          });
-        } else if ('data' in data && data.data) {
-          // Aggregated data
-          const grouped = applyGrouping(data.data as AssetItem[], topN, minPct, othersLabel);
+      if ('wallets' in data && data.wallets) {
+        data.wallets.forEach((wallet: any) => {
+          const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
           csv.push({
-            id: 'asset-distribution',
-            name: 'Assets Distribution',
+            id: `asset-distribution-${wallet.walletAddress}`,
+            name: `Assets Distribution - ${wallet.walletAddress}`,
             type: 'pie',
             visible: true,
             data: grouped.map((a) => ({
@@ -213,24 +195,35 @@ export const AssetDistribution: React.FC<ChartProps> = ({
               value: a.value,
             })),
           });
-        }
-        
-        exportCSV(csv, { ...filters, wallets: [] }, {
-          'Top N': topN === 0 ? 'All' : `Top ${topN}`,
-          'Min %': minPct === 0 ? 'All' : `>${minPct}%`,
         });
-        return;
+      } else if ('data' in data && data.data) {
+        const grouped = applyGrouping(data.data as AssetItem[], topN, minPct, othersLabel);
+        csv.push({
+          id: 'asset-distribution',
+          name: 'Assets Distribution',
+          type: 'pie',
+          visible: true,
+          data: grouped.map((a) => ({
+            name: a.name,
+            value: a.value,
+          })),
+        });
       }
 
-      if (!instance) {
-        console.error('Chart instance not available for export');
-        return;
-      }
-
-      // Export as PNG or SVG
-      format === 'png'
-        ? exportPNG(instance as any, filters)
-        : exportSVG(instance as any, filters);
+      runChartExport(
+        {
+          format,
+          filters,
+          chartInstance: instance as any,
+          csvData: csv,
+          csvFilters: { ...filters, wallets: [] },
+          extraFilters: {
+            'Top N': topN === 0 ? 'All' : `Top ${topN}`,
+            'Min %': minPct === 0 ? 'All' : `>${minPct}%`,
+          },
+        },
+        { exportPNG, exportSVG, exportCSV }
+      );
     },
     [data, filters, topN, minPct, othersLabel, exportPNG, exportSVG, exportCSV]
   );
