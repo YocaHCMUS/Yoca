@@ -3,13 +3,14 @@ import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx"
 import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
-import TabContainer from "@/components/TabContainer/tabContainer.tsx";
+import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
   renderBase,
   renderCode,
   renderCurrency,
   renderDateTime,
+  renderHash,
   renderPositiveNegative,
   renderReducedNumber,
 } from "@/components/tables/TableCellRenderer.tsx";
