@@ -195,6 +195,8 @@ export const translation = defineTranslation({
   marketPage: {
     topTokens: "Các token hàng đầu",
     topTokensDescription: "Top 50 token theo vốn hóa",
+    trendingTokens: "Token đang thịnh hành",
+    trendingTokensDescription: "Top 10 token đang thịnh hành",
     profitableTraders: "Các ví đang có lời",
     recentTrades: "Giao dịch gần đây",
     marketCap: "Vốn hóa",

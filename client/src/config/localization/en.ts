@@ -214,6 +214,8 @@ export const translation = {
   marketPage: {
     topTokens: "Top tokens",
     topTokensDescription: "Top 50 tokens by market cap",
+    trendingTokens: "Trending tokens",
+    trendingTokensDescription: "Top 10 trending tokens",
     profitableTraders: "Profitable traders",
     recentTrades: "Recent trades",
     marketCap: "Market Cap",

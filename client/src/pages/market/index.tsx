@@ -137,6 +137,32 @@ export default function MarketPage() {
 
   const loading = topTokens.isLoading || meta.isLoading || marketData.isLoading;
 
+  const trendingTokens = useGet(client.api.tokens.trending, 200);
+
+  const trendingAddresses = useMemo(
+    () => trendingTokens.data?.map((t) => t.address).join(","),
+    [trendingTokens.data],
+  );
+
+  const trendingMeta = useGet(
+    client.api.tokens.meta[":addresses"],
+    200,
+    { param: { addresses: trendingAddresses || "" } },
+    { enabled: !!trendingAddresses },
+  );
+
+  const trendingMarketData = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    { param: { addresses: trendingAddresses || "" } },
+    { enabled: !!trendingAddresses },
+  );
+
+  const trendingLoading =
+    trendingTokens.isLoading ||
+    trendingMeta.isLoading ||
+    trendingMarketData.isLoading;
+
   const topTraders = useGet(client.api.traders.top, 200);
 
   const tradersLoading = topTraders.isLoading;
@@ -280,6 +306,66 @@ export default function MarketPage() {
     }));
   }, [topTraders.data, fmt]);
 
+  const trendingTokenRows = useMemo(() => {
+    if (!trendingTokens.data || !trendingMeta.data || !trendingMarketData.data)
+      return [];
+    const addressToMeta = Object.fromEntries(
+      trendingMeta.data.map((m) => [m.address, m]),
+    );
+    const addressToMarket = trendingMarketData.data;
+
+    return trendingTokens.data.map((token) => {
+      const tokenMeta = addressToMeta[token.address];
+      const tokenMarket = addressToMarket[token.address];
+
+      return {
+        id: token.address,
+        rank: token.rank,
+        token: (
+          <Stack
+            orientation="horizontal"
+            gap={2}
+            style={{ alignItems: "center" }}
+          >
+            {tokenMeta.imageUrl && (
+              <img
+                src={tokenMeta.imageUrl}
+                alt={tokenMeta.symbol}
+                width={28}
+                style={{ borderRadius: "50%" }}
+              />
+            )}
+
+            <span>
+              <Tooltip label={tokenMeta.name} align="right">
+                <strong>{tokenMeta.symbol.toUpperCase()}</strong>
+              </Tooltip>
+            </span>
+          </Stack>
+        ),
+        price: fmt.num.currency(tokenMarket.priceUsd),
+        change24h: (
+          <TrendNum
+            value={tokenMarket.priceChange24h}
+            formatter={fmt.num.percent}
+          />
+        ),
+        marketCap: (
+          <TrendNum
+            value={tokenMarket.marketCap}
+            formatter={fmt.num.compact.currency}
+          />
+        ),
+        volume24h: (
+          <TrendNum
+            value={tokenMarket.volume24h}
+            formatter={fmt.num.compact.currency}
+          />
+        ),
+      };
+    });
+  }, [trendingTokens.data, trendingMeta.data, trendingMarketData.data, fmt]);
+
   const recentTradesRows = useMemo(() => {
     if (!recentTradesData.data) return [];
 
@@ -345,6 +431,23 @@ export default function MarketPage() {
             data={treeMapData}
             height={500}
             maxTrendValue={20}
+          />
+        </Column>
+        <Column sm={2} md={8} lg={8}>
+          <Tble
+            title={tr("marketPage.trendingTokens")}
+            description={tr("marketPage.trendingTokensDescription")}
+            height={400}
+            loading={trendingLoading}
+            headers={[
+              { key: "token", header: tr("marketPage.token") },
+              { key: "price", header: tr("marketPage.price") },
+              { key: "change24h", header: tr("marketPage.change24h") },
+              { key: "marketCap", header: tr("marketPage.marketCap") },
+              { key: "volume24h", header: tr("marketPage.volume24h") },
+            ]}
+            rows={trendingTokenRows}
+            stickyHeader
           />
         </Column>
         <Column sm={2} md={8} lg={8}>

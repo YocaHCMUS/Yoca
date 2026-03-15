@@ -42,7 +42,6 @@ async function fetchTrendingPage(params: {
 
   return res;
 }
-
 // lấy ít dữ liệu
 // làm theo hướng sẽ fetch tối thiểu bao nhiêu đồn
 // https://docs.birdeye.so/reference/get-defi-token_trending
@@ -98,7 +97,7 @@ export async function getTrendingTokens() {
     offset += TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT;
   }
 
-  if (selectedAddresses.length == 0) {
+  if (selectedAddresses.length === 0) {
     return [];
   }
   await db.delete(trendingTokens);
