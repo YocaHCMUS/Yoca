@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import utc from "dayjs/plugin/utc";
+import type { NumberFormattingStrategy } from "./formatter-strategy";
 
 const nullDisplay = "-";
 type NumberLike = number | string | null;
@@ -9,34 +10,33 @@ type DayJsConfig = dayjs.ConfigType;
 type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
 
-/**
- * Determines the number of decimal places to display for a numeric value.
- * The rule is based on the fractional part of the absolute value:
- *   - frac in [0.01, 1)      -> 4 decimals  e.g. $1.246678 -> $1.2467
- *   - frac in [0.0001, 0.01) -> 6 decimals  e.g. $81.00147367 -> $81.001474
- *   - frac < 0.0001           -> 8 decimals
- */
-function resolveDecimals(value: number, isVnd: boolean = false): number {
-  const abs = Math.abs(value);
-
-  if (isVnd) {
-    if (abs >= 100) return 0;
-    if (abs >= 1) return 2;
-    return 4;
-  }
-
-  const frac = abs % 1;
-  if (frac >= 0.01) return 4;
-  if (frac >= 0.0001) return 6;
-  return 8;
-}
-
 export function defineNumberFormat(
   langCode: string,
-  styleFormatMap: Record<Style, Intl.NumberFormatOptions>,
+  strategy: NumberFormattingStrategy,
   getExchangeRate?: () => number,
 ) {
   const formatterMap = new Map<string, Intl.NumberFormat>();
+
+  function buildIntlOptions(
+    style: Style,
+    decimals: number,
+  ): Intl.NumberFormatOptions {
+    const opts: Intl.NumberFormatOptions = {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals,
+    };
+
+    if (style == "currency") {
+      return {
+        ...opts,
+        style: "currency",
+        currency: strategy.currencyConfig.currencyCode(),
+        currencyDisplay: strategy.currencyConfig.currencyDisplay(),
+      };
+    }
+
+    return opts;
+  }
 
   function format(
     value: NumberLike,
@@ -46,8 +46,6 @@ export function defineNumberFormat(
     unit?: string | null,
   ) {
     const effectiveStyle = style == "unit" ? "decimal" : style;
-    const isVnd =
-      style === "currency" && styleFormatMap.currency?.currency === "VND";
 
     if (typeof value !== "number" && typeof value !== "string")
       return nullDisplay;
@@ -59,18 +57,21 @@ export function defineNumberFormat(
         ? numValue * getExchangeRate()
         : numValue;
 
-    let key = `${effectiveStyle}|${notation}`;
-    let extraOptions: Intl.NumberFormatOptions = {};
-    if (effectiveStyle == "currency" || effectiveStyle == "decimal") {
-      const decimals = resolveDecimals(exchangedValue);
-      key = `${key}|${decimals}`;
-      extraOptions = { maximumFractionDigits: decimals };
+    let decimals = 2;
+    if (effectiveStyle == "currency") {
+      decimals = strategy.decimalResolution.resolveCurrency(exchangedValue);
+    } else if (effectiveStyle == "decimal") {
+      decimals = strategy.decimalResolution.resolveDecimal(exchangedValue);
+    } else if (effectiveStyle == "percent") {
+      decimals = strategy.decimalResolution.resolvePercent(exchangedValue);
     }
+
+    const key = `${effectiveStyle}|${notation}|${decimals}`;
+    const styleOptions = buildIntlOptions(effectiveStyle, decimals);
 
     if (!formatterMap.has(key)) {
       const numFmt = new Intl.NumberFormat(langCode, {
-        ...styleFormatMap[effectiveStyle],
-        ...extraOptions,
+        ...styleOptions,
         notation,
         style: effectiveStyle,
       });
@@ -106,23 +107,9 @@ export function defineNumberFormat(
     const numValue = typeof value == "string" ? Number(value) : value;
     if (!Number.isFinite(numValue)) return nullDisplay;
     const v = getExchangeRate ? numValue * getExchangeRate() : numValue;
-    const abs = Math.abs(v);
     const opts = { maximumFractionDigits: 2 };
-    if (langCode.startsWith("vi")) {
-      const sym = "đồng";
-      if (abs >= 1e12)
-        return `${(v / 1e12).toLocaleString(langCode, opts)} nghìn tỷ ${sym}`;
-      if (abs >= 1e9)
-        return `${(v / 1e9).toLocaleString(langCode, opts)} tỷ ${sym}`;
-      if (abs >= 1e6)
-        return `${(v / 1e6).toLocaleString(langCode, opts)} triệu ${sym}`;
-      if (abs >= 1e3)
-        return `${(v / 1e3).toLocaleString(langCode, opts)} nghìn ${sym}`;
-      return `${v.toLocaleString(langCode, { maximumFractionDigits: 0 })} ${sym}`;
-    }
-    if (abs > 0 && abs < 1)
-      return createNotation("standard").currency(numValue);
-    return createNotation("compact").currency(numValue);
+
+    return strategy.readableCompactCurrency.format(v, opts);
   }
 
   return {

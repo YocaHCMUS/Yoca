@@ -6,30 +6,50 @@ export const langCode = "en-US";
 
 export const format = {
   num: defineNumberFormat(langCode, {
-    currency: {
-      // > 1, 4 decimals
-      // eg: $1.246678 -> $1.2465
-      // eg: $1.246 -> $1.246
-      // 0.01 - 1, 4 decimals
-      // 0.0001 - 0.01, 6 decimals
-      // eg: $81.00147367 -> $81.001474
-      // < 0.0001, 8 decimals
-      currency: "USD",
-      currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 4,
+    decimalResolution: {
+      resolveCurrency(value: number): number {
+        const frac = Math.abs(value) % 1;
+        if (frac >= 0.01) return 4;
+        if (frac >= 0.0001) return 6;
+        return 8;
+      },
+      resolveDecimal(value: number): number {
+        const frac = Math.abs(value) % 1;
+        if (frac >= 0.01) return 4;
+        if (frac >= 0.0001) return 6;
+        return 8;
+      },
+      resolvePercent(_value: number): number {
+        return 4;
+      },
     },
-    decimal: {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+    currencyConfig: {
+      currencyCode: () => "USD",
+      currencyDisplay: () => "narrowSymbol",
     },
-    percent: {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    },
-    unit: {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+    readableCompactCurrency: {
+      format(value: number, opts: Intl.NumberFormatOptions): string {
+        const abs = Math.abs(value);
+        const sign = value < 0 ? "-" : "";
+
+        if (abs >= 1e12) {
+          return `${sign}$${(abs / 1e12).toLocaleString("en-US", opts)} Trillion`;
+        }
+        if (abs >= 1e9) {
+          return `${sign}$${(abs / 1e9).toLocaleString("en-US", opts)} Billion`;
+        }
+        if (abs >= 1e6) {
+          return `${sign}$${(abs / 1e6).toLocaleString("en-US", opts)} Million`;
+        }
+        if (abs >= 1e3) {
+          return `${sign}$${(abs / 1e3).toLocaleString("en-US", opts)} Thousand`;
+        }
+        return new Intl.NumberFormat("en-US", {
+          ...opts,
+          style: "currency",
+          currency: "USD",
+        }).format(value);
+      },
     },
   }),
   datetime: defineDateTimeFormat(langCode, {

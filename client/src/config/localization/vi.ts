@@ -9,23 +9,46 @@ export const format = {
   num: defineNumberFormat(
     langCode,
     {
-      currency: {
-        currency: "VND",
-        currencyDisplay: "narrowSymbol",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+      decimalResolution: {
+        resolveCurrency(value: number): number {
+          const abs = Math.abs(value);
+          if (abs >= 100) return 0;
+          if (abs >= 1) return 2;
+          return 4;
+        },
+        resolveDecimal(value: number): number {
+          const abs = Math.abs(value);
+          if (abs >= 100) return 0;
+          if (abs >= 1) return 2;
+          return 4;
+        },
+        resolvePercent(value: number): number {
+          return 2;
+        },
       },
-      decimal: {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+      currencyConfig: {
+        currencyCode: () => "VND",
+        currencyDisplay: () => "narrowSymbol",
       },
-      percent: {
-        minimumSignificantDigits: 2,
-        maximumSignificantDigits: 4,
-      },
-      unit: {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+      readableCompactCurrency: {
+        format(value: number, opts: Intl.NumberFormatOptions): string {
+          const abs = Math.abs(value);
+          const sign = value < 0 ? "-" : "";
+
+          if (abs >= 1e12) {
+            return `${sign}${(abs / 1e12).toLocaleString("vi-VN", opts)} nghìn tỷ đồng`;
+          }
+          if (abs >= 1e9) {
+            return `${sign}${(abs / 1e9).toLocaleString("vi-VN", opts)} tỷ đồng`;
+          }
+          if (abs >= 1e6) {
+            return `${sign}${(abs / 1e6).toLocaleString("vi-VN", opts)} triệu đồng`;
+          }
+          if (abs >= 1e3) {
+            return `${sign}${(abs / 1e3).toLocaleString("vi-VN", opts)} nghìn đồng`;
+          }
+          return `${value.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} đồng`;
+        },
       },
     },
     getUsdToVndRate,

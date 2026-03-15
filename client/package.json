@@ -8,6 +8,8 @@
     "build": "npm run clean && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
     "clear": "rimraf ./node_modules && npm run clean",
     "clean": "rimraf ./build ./tsconfig.tsbuildinfo",
     "perf": "tsx src/scripts/performance-test.ts",
@@ -29,8 +31,8 @@
     "echarts": "^5.4.3",
     "echarts-for-react": "^3.0.5",
     "i18next": "^25.6.3",
-    "lucide-react": "^0.563.0",
     "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.563.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.66.1",
@@ -49,6 +51,7 @@
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/ui": "^4.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
@@ -56,7 +59,8 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.7",
-    "vite-plugin-svgr": "^4.5.0"
+    "vite-plugin-svgr": "^4.5.0",
+    "vitest": "^4.1.0"
   },
   "resolutions": {
     "react": "^19.1.1",

@@ -47,7 +47,8 @@
     "globals": "^16.4.0",
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0"
+    "typescript-eslint": "^8.45.0",
+    "vitest": "^4.1.0"
   },
   "description": "Full-stack TypeScript monorepo with React frontend (Vite) and Hono backend.",
   "main": "index.js",
