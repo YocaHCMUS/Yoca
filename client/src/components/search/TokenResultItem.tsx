@@ -9,6 +9,9 @@ export type TokenResult = {
   imgUrl: string | null;
   priceUsd: number;
   priceChangePercentage24h: number;
+  sparkline7d: number[] | null;
+  marketCap: number;
+  volume24h: number;
 };
 
 function TokenPlaceholder({ symbol }: { symbol: string }) {
