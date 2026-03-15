@@ -23,6 +23,11 @@ export const UPDATE_TRENDING_TOKENS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
 export const TRADER_GAINEERS_LOSERS_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
+// Trending tokens fetching
+export const TRENDING_TOKENS_RESULT_LIMIT = 10;
+export const TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT = 20;
+export const TRENDING_TOKENS_MAX_FETCH_ROUNDS = 10;
+
 export const AUTH_COOKIE_NAME = "auth_token";
 
 export const WALLET_OVERVIEW_TTL_MS = 5 * 60 * 1000; // 5 minutes

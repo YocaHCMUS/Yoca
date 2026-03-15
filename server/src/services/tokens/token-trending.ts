@@ -1,10 +1,50 @@
-import { UPDATE_TRENDING_TOKENS_TTL_MS } from "@sv/config/constants.js";
+import {
+  TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT,
+  TRENDING_TOKENS_MAX_FETCH_ROUNDS,
+  TRENDING_TOKENS_RESULT_LIMIT,
+  UPDATE_TRENDING_TOKENS_TTL_MS,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { trendingTokens } from "@sv/db/schema.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { asc } from "drizzle-orm";
 import type { BDS_TrendingList } from "../_types/token_raw_responses.js";
+import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
+async function fetchTrendingPage(params: {
+  offset: number;
+  limit: number;
+}): Promise<BDS_TrendingList | null> {
+  const bdsEndpoint = bds.getEndpoint("/defi/token_trending");
+
+  bdsEndpoint.search = new URLSearchParams({
+    sort_by: "rank",
+    sort_type: "asc",
+    interval: "24h",
+    offset: String(params.offset),
+    limit: String(params.limit),
+  }).toString();
+
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+  if (!resp.ok) {
+    return null;
+  }
+
+  const res: BDS_TrendingList = await resp.json();
+  if (!res.success) {
+    return null;
+  }
+
+  return res;
+}
+
+// lấy ít dữ liệu
+// làm theo hướng sẽ fetch tối thiểu bao nhiêu đồn
 // https://docs.birdeye.so/reference/get-defi-token_trending
 export async function getTrendingTokens() {
   const result = await db
@@ -18,37 +58,56 @@ export async function getTrendingTokens() {
     return result;
   }
 
-  const bdsEndpoint = bds.getEndpoint("/defi/token_trending");
+  let offset = 0;
+  const selectedAddresses: string[] = [];
+  const seenAddresses = new Set<string>();
 
-  bdsEndpoint.search = new URLSearchParams({
-    sort_by: "rank",
-    sort_type: "asc",
-  }).toString();
+  for (let round = 0; round < TRENDING_TOKENS_MAX_FETCH_ROUNDS; round++) {
+    const page = await fetchTrendingPage({
+      offset,
+      limit: TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT,
+    });
 
-  const req = new Request(bdsEndpoint, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
-  });
+    if (page == null) {
+      return null;
+    }
 
-  const resp = await fetch(req);
+    const pageAddresses = page.data.tokens.map((token) => token.address);
+    const cgLookup = await getCoinGeckoIdsByAddresses(pageAddresses);
+    const cgAddressSet = new Set(Object.keys(cgLookup));
 
-  if (!resp.ok) {
-    return null;
+    for (const address of pageAddresses) {
+      if (cgAddressSet.has(address) && !seenAddresses.has(address)) {
+        seenAddresses.add(address);
+        selectedAddresses.push(address);
+      }
+
+      if (selectedAddresses.length >= TRENDING_TOKENS_RESULT_LIMIT) {
+        break;
+      }
+    }
+
+    if (selectedAddresses.length >= TRENDING_TOKENS_RESULT_LIMIT) {
+      break;
+    }
+
+    if (page.data.tokens.length < TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT) {
+      break;
+    }
+
+    offset += TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT;
   }
 
-  const res: BDS_TrendingList = await resp.json();
-
-  if (!res.success) {
-    return null;
+  if (selectedAddresses.length == 0) {
+    return [];
   }
-
   await db.delete(trendingTokens);
   return await db
     .insert(trendingTokens)
     .values(
-      res.data.tokens.map((token) => ({
-        address: token.address,
-        rank: token.rank,
+      selectedAddresses.map((address, index) => ({
+        address,
+        rank: index + 1,
       })),
     )
     .returning();
