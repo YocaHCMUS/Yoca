@@ -29,6 +29,30 @@ export interface MarketGet extends MarketItem {
   sparkline_in_7d: { price: number[] };
 }
 
+export type BDS_TrendingList = {
+  success: boolean;
+  data: {
+    updateUnixTime: number;
+    updateTime: string;
+    tokens: Array<{
+      address: string;
+      decimals: number;
+      liquidity: number;
+      logoURI: string;
+      name: string;
+      symbol: string;
+      volume24hUSD: number;
+      volume24hChangePercent: number;
+      rank: number;
+      price: number;
+      price24hChangePercent: number;
+      fdv: number;
+      marketcap: number;
+    }>;
+    total: number;
+  };
+};
+
 export type CG_CoinMarkets = Array<MarketGet>;
 
 export type CG_TopPoolData = {

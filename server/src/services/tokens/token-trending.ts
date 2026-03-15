@@ -3,37 +3,14 @@ import { db } from "@sv/db/index.js";
 import { trendingTokens } from "@sv/db/schema.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { asc } from "drizzle-orm";
-
-export type BDS_TrendingList = {
-  success: boolean;
-  data: {
-    updateUnixTime: number;
-    updateTime: string;
-    tokens: Array<{
-      address: string;
-      decimals: number;
-      liquidity: number;
-      logoURI: string;
-      name: string;
-      symbol: string;
-      volume24hUSD: number;
-      volume24hChangePercent: number;
-      rank: number;
-      price: number;
-      price24hChangePercent: number;
-      fdv: number;
-      marketcap: number;
-    }>;
-    total: number;
-  };
-};
+import type { BDS_TrendingList } from "../_types/token_raw_responses.js";
 
 // https://docs.birdeye.so/reference/get-defi-token_trending
 export async function getTrendingTokens() {
   const result = await db
     .select()
     .from(trendingTokens)
-    .orderBy(asc(trendingTokens.rank))
+    .orderBy(asc(trendingTokens.rank));
 
   const thresholdTime = new Date(Date.now() - UPDATE_TRENDING_TOKENS_TTL_MS);
 
@@ -66,10 +43,13 @@ export async function getTrendingTokens() {
   }
 
   await db.delete(trendingTokens);
-  return await db.insert(trendingTokens).values(
-    res.data.tokens.map((token) => ({
-      address: token.address,
-      rank: token.rank,
-    })),
-  ).returning();
+  return await db
+    .insert(trendingTokens)
+    .values(
+      res.data.tokens.map((token) => ({
+        address: token.address,
+        rank: token.rank,
+      })),
+    )
+    .returning();
 }
