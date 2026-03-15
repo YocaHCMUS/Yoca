@@ -1,0 +1,168 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    background: transparent;
+    display: block;
+    animation: fadeIn 0.1s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.panel {
+    position: fixed;
+    top: 0;
+    right: 146px; /* Aligned with the search icon in the header */
+    width: 850px;
+    max-width: 90vw;
+    background: var(--cds-layer-01);
+    border: 1px solid var(--cds-border-subtle-01);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    animation: slideDown 0.2s cubic-bezier(0, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-8px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.mainArea {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    height: 640px;
+    background: var(--cds-layer-01);
+
+    @media (max-width: 800px) {
+        grid-template-columns: 1fr;
+
+        .statsPanel {
+            display: none;
+        }
+    }
+}
+
+.inputRow {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--cds-border-subtle-01);
+    background: var(--cds-layer-01);
+    flex-shrink: 0;
+}
+
+.searchIcon {
+    color: var(--cds-text-secondary);
+    flex-shrink: 0;
+}
+
+.input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--cds-text-primary);
+    font-size: 14px;
+    padding: 14px 0;
+    font-family: inherit;
+
+    &::placeholder {
+        color: var(--cds-text-placeholder);
+    }
+}
+
+.clearBtn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--cds-text-secondary);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+
+    &:hover {
+        color: var(--cds-text-primary);
+        background: var(--cds-layer-hover-01);
+    }
+}
+
+.results {
+    overflow-y: auto;
+    border-right: 1px solid var(--cds-border-subtle-01);
+}
+
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sectionLabel {
+    padding: 12px 16px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cds-text-secondary);
+}
+
+.stateMsg {
+    padding: 16px 16px 32px;
+    text-align: center;
+    color: var(--cds-text-secondary);
+    font-size: 14px;
+}
+
+.hint {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--cds-text-placeholder);
+    border-top: 1px solid var(--cds-border-subtle-01);
+    display: flex;
+    gap: 20px;
+    background: var(--cds-layer-01);
+    flex-shrink: 0;
+
+    kbd {
+        font-family: 'Inter', sans-serif;
+        background: var(--cds-layer-02);
+        border: 1px solid var(--cds-border-subtle-01);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 12px;
+        color: var(--cds-text-primary);
+    }
+}
+
+.poolName {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cds-text-primary);
+}
+
+.dexLabel {
+    font-size: 12px;
+    color: var(--cds-text-secondary);
+}
+

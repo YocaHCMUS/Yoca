@@ -94,7 +94,7 @@ function TradeFilterOptions({
   ];
 
   return (
-    <Stack gap={2} orientation="horizontal" style={{ justifyContent: "end" }}>
+    <Stack gap={3} orientation="horizontal" style={{ justifyContent: "end" }}>
       <FilterSwitch
         value={volume}
         options={volumeOptions}
@@ -190,7 +190,7 @@ export default function MarketPage() {
     return data;
   }, [topTokens.data, meta.data, marketData.data, fmt]);
 
-  const rows = useMemo(() => {
+  const topTokenRows = useMemo(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
     const addressToMeta = Object.fromEntries(
       meta.data.map((m) => [m.address, m]),
@@ -214,13 +214,13 @@ export default function MarketPage() {
               <img
                 src={tokenMeta.imageUrl}
                 alt={tokenMeta.symbol}
-                width={24}
+                width={28}
                 style={{ borderRadius: "50%" }}
               />
             )}
 
             <span>
-              <Tooltip label={tokenMeta.name}>
+              <Tooltip label={tokenMeta.name} align="right">
                 <strong>{tokenMeta.symbol.toUpperCase()}</strong>
               </Tooltip>
             </span>
@@ -315,7 +315,7 @@ export default function MarketPage() {
           <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
         </Tooltip>
       ),
-      time: fmt.datetime.relative(trade.blockUnixTime),
+      time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),
     }));
   }, [recentTradesData.data, fmt]);
 
@@ -324,12 +324,8 @@ export default function MarketPage() {
       <Grid narrow className={overwriteStyles.wdGrd}>
         <Column sm={2} md={8} lg={8}>
           <Tble
-            title={
-              <strong style={{ textTransform: "uppercase" }}>
-                {tr("marketPage.topTokens")}
-              </strong>
-            }
-            description={<small>{tr("marketPage.topTokensDescription")}</small>}
+            title={tr("marketPage.topTokens")}
+            description={tr("marketPage.topTokensDescription")}
             height={500}
             loading={loading}
             headers={[
@@ -339,7 +335,7 @@ export default function MarketPage() {
               { key: "marketCap", header: tr("marketPage.marketCap") },
               { key: "volume24h", header: tr("marketPage.volume24h") },
             ]}
-            rows={rows}
+            rows={topTokenRows}
             stickyHeader
           />
         </Column>

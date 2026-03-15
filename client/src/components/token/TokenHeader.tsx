@@ -1,4 +1,4 @@
-import { BUBBLEMAPS_SOL_URL, COINGECKO_THUMBNAIL_URL, PLACEHOLDER_IMAGE_URL } from "@/config/constants";
+import { COINGECKO_THUMBNAIL_URL, PLACEHOLDER_IMAGE_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
 import { useState } from "react";
@@ -35,8 +35,6 @@ export const TokenHeader = ({
 }: TokenHeaderProps) => {
   const copyToClipboard = () => navigator.clipboard.writeText(address);
   const { tr } = useLocalization();
-  const [bubblemapsOpen, setBubblemapsOpen] = useState(false);
-  const bubblemapsUrl = `${BUBBLEMAPS_SOL_URL}/${address}`;
 
   const openWebsite = () => websiteUrl && window.open(websiteUrl, "_blank");
 
@@ -88,17 +86,7 @@ export const TokenHeader = ({
                 <Copy size={14} />
               </button>
 
-              <button className={styles.iconBtn} title="Bubblemaps" onClick={() => setBubblemapsOpen(true)}>
-                <svg width="14" height="14" viewBox="0 0 100 100" fill="currentColor">
-                  <circle cx="50" cy="30" r="18" />
-                  <circle cx="22" cy="65" r="13" />
-                  <circle cx="50" cy="72" r="10" />
-                  <circle cx="76" cy="62" r="15" />
-                  <line x1="50" y1="48" x2="22" y2="65" stroke="currentColor" strokeWidth="4" />
-                  <line x1="50" y1="48" x2="50" y2="72" stroke="currentColor" strokeWidth="4" />
-                  <line x1="50" y1="48" x2="76" y2="62" stroke="currentColor" strokeWidth="4" />
-                </svg>
-              </button>
+
 
               {websiteUrl && (
                 <button className={styles.iconBtn} title={tr("token.website")} onClick={openWebsite}>
@@ -137,29 +125,7 @@ export const TokenHeader = ({
       </div>
     </div>
 
-    {bubblemapsOpen && createPortal(
-      <div
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
-        onClick={() => setBubblemapsOpen(false)}
-      >
-        <div
-          style={{ position: "relative", width: "min(960px, 94vw)", height: "min(700px, 90vh)", background: "#111", borderRadius: 10, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)" }}
-          onClick={e => e.stopPropagation()}
-        >
-          <button
-            style={{ position: "absolute", top: 10, right: 12, zIndex: 10, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "#fff" }}
-            onClick={() => setBubblemapsOpen(false)}
-          >✕</button>
-          <iframe
-            src={bubblemapsUrl}
-            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-            title="Bubblemaps"
-            allow="fullscreen"
-          />
-        </div>
-      </div>,
-      document.body,
-    )}
+
   </>
   );
 };

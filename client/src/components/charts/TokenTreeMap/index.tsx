@@ -277,7 +277,6 @@ export default function TokenTreeMap({
   className,
   maxTrendValue,
 }: TokenTreeMapProps) {
-  console.log("re-render");
   const { tr } = useLocalization();
   const [rectSizes, setRectSizes] = useState<Record<string, RectSize>>({});
   const collectedSizesRef = useRef<Record<string, RectSize>>({});

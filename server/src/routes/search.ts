@@ -6,29 +6,54 @@ import { statusCode } from "@sv/util/responses.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { Hono } from "hono";
 
+function trimIdPrefix(
+  id: string | null | undefined,
+  prefix: string = "solana_",
+): string {
+  if (!id) return "";
+  return id.startsWith(prefix) ? id.slice(prefix.length) : id;
+}
+
+type TokenQuickMeta = {
+  address: string;
+  name: string | null;
+  symbol: string | null;
+  imgUrl: string | null;
+};
+
 async function getSearchPoolsResult(q: string) {
   const res = await cg.client.onchain.search.pools.get({
     query: q,
     network: "solana",
-    include: "base_token,quote_token,dex",
+    include: "base_token,quote_token",
   });
 
-  const pools = res.data!;
-  const quoteTokens = pools.map(
-    (pool) => pool.relationships!.quote_token!.data!.id,
+  const poolTokens = Object.fromEntries(
+    res
+      .included!.filter((raw) => raw.type == "token")
+      .filter((token) => token.attributes!.coingecko_coin_id)
+      .map((token): [string, TokenQuickMeta] => {
+        const address = token.attributes?.address!;
+        return [
+          address,
+          {
+            address: address,
+            symbol: token.attributes?.symbol || null,
+            name: token.attributes?.name || null,
+            imgUrl: token.attributes?.image_url || null,
+          },
+        ];
+      }),
   );
 
-  const tokens = res
-    .included!.filter((raw) => raw.type == "token")
-    .filter(
-      (token) =>
-        token.attributes!.coingecko_coin_id != null &&
-        !quoteTokens.includes(token.id),
-    );
+  const pools = res.data!.filter((pool) => {
+    const address = trimIdPrefix(pool.relationships?.base_token?.data?.id);
+    return poolTokens[address];
+  });
 
   return {
-    tokens,
     pools,
+    poolTokens,
   };
 }
 
@@ -45,63 +70,76 @@ const app = new Hono().get(
   validate("query", searchQuerySchema),
   async (c) => {
     try {
-      // TODO: handle undefined q
       const { q = "" } = c.req.valid("query");
+      const searchQuery = q.toLowerCase().trim();
 
-      const poolSearch = await getSearchPoolsResult(q);
-      const queriesSearch = await getSearchQueriesResult(q);
+      if (!searchQuery) {
+        return c.json(
+          {
+            tokens: [],
+            pools: [],
+          },
+          statusCode.Ok,
+        );
+      }
 
-      if (poolSearch == null || queriesSearch == null) {
+      const poolSearch = await getSearchPoolsResult(searchQuery);
+      const queriesSearch = await getSearchQueriesResult(searchQuery);
+
+      if (!poolSearch || queriesSearch == undefined) {
         return c.json(
           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
           statusCode.BadGateway,
         );
       }
 
-      type Token = {
-        address: string;
-        imgUrl: string | null;
-      };
-
-      const tokenList: Array<Token> = [];
-
-      poolSearch.tokens.forEach((token) => {
-        tokenList.push({
-          address: token.attributes!.address!,
-          imgUrl: token.attributes!.image_url || null,
-        });
-      });
-
-      const cgIdToAddress = await getAddressesByCoinGeckoIds(
+      const cgIdToSolanaAddress = await getAddressesByCoinGeckoIds(
         queriesSearch.map((token) => token.id!),
       );
 
-      queriesSearch.forEach((token) => {
-        const address = cgIdToAddress[token.id!];
-        if (address) {
-          tokenList.push({
-            address,
+      const tokenResultMeta = queriesSearch
+        // Maybe not on Solana chain
+        .filter((token) => cgIdToSolanaAddress[token.id!])
+        .map((token): TokenQuickMeta => {
+          return {
+            address: cgIdToSolanaAddress[token.id!],
+            name: token.name || null,
+            symbol: token.symbol || null,
             imgUrl: token.thumb || null,
-          });
-        }
-      });
+          };
+        });
 
-      let tokenAddresses = tokenList.map((token) => token.address);
+      const tokenAddresses = tokenResultMeta.map((token) => token.address);
       const marketData = await getTokenMarketData(tokenAddresses);
-      tokenAddresses = tokenAddresses.filter((address) => marketData[address]);
-      const addressToTokenImg = Object.fromEntries(
-        tokenList.map((token) => [token.address, token.imgUrl]),
-      );
 
-      const tokens = tokenAddresses.map((address) => ({
-        ...marketData[address],
-        imgUrl: addressToTokenImg[address],
+      const tokenDataList = tokenResultMeta.map((token) => ({
+        ...marketData[token.address],
+        ...token,
       }));
+
+      const pools = poolSearch.pools.map((pool) => {
+        const baseTokenId = trimIdPrefix(
+          pool.relationships?.base_token?.data?.id,
+        );
+        const quoteTokenId = trimIdPrefix(
+          pool.relationships?.quote_token?.data?.id,
+        );
+
+        return {
+          ...pool,
+          baseTokenImg: baseTokenId
+            ? poolSearch.poolTokens[baseTokenId]?.imgUrl
+            : null,
+          quoteTokenImg: quoteTokenId
+            ? poolSearch.poolTokens[quoteTokenId]?.imgUrl
+            : null,
+        };
+      });
 
       return c.json(
         {
-          tokens,
-          pools: poolSearch.pools,
+          tokens: tokenDataList,
+          pools,
         },
         statusCode.Ok,
       );

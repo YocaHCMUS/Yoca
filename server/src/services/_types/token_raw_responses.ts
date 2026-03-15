@@ -15,7 +15,9 @@ export interface CG_TokenMarketChart {
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 type MarketItem = MarketGetResponse[number];
+// The coingecko library does not return results for optional parameters
 export interface MarketGet extends MarketItem {
+  // When: price_change_percentage = "1h,24h,7d,14d,30d,200d,1y"
   price_change_percentage_1h_in_currency: number | null;
   price_change_percentage_24h_in_currency: number | null;
   price_change_percentage_7d_in_currency: number | null;
@@ -23,6 +25,8 @@ export interface MarketGet extends MarketItem {
   price_change_percentage_30d_in_currency: number | null;
   price_change_percentage_200d_in_currency: number | null;
   price_change_percentage_1y_in_currency: number | null;
+  // When: sparkline = true
+  sparkline_in_7d: { price: number[] };
 }
 
 export type CG_CoinMarkets = Array<MarketGet>;

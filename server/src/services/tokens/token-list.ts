@@ -64,7 +64,7 @@ export async function getAddressesByCoinGeckoIds(
     .limit(coinGeckoIds.length);
 
   if (res.length == 0) {
-    const cgIdToAddress = await fetchCoinGeckoIdsByAddresses(coinGeckoIds);
+    const cgIdToAddress = await fetchAddressesByCoinGeckoIds(coinGeckoIds);
     return cgIdToAddress;
   }
 
@@ -113,7 +113,7 @@ export async function fetchCoinGeckoIdsByAddresses(
   return addressToCgId;
 }
 
-export async function fetchAddressesByCoinGeckoIds(
+async function fetchAddressesByCoinGeckoIds(
   coinGeckoIds: string[],
 ): Promise<Record<string, string>> {
   if (coinGeckoIds.length == 0) {

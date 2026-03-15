@@ -4,7 +4,7 @@ import utc from "dayjs/plugin/utc";
 
 const nullDisplay = "-";
 type NumberLike = number | string | null;
-type NullableDayJsConfig = dayjs.ConfigType | null;
+type DayJsConfig = dayjs.ConfigType;
 
 type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
@@ -16,8 +16,16 @@ type Style = "decimal" | "currency" | "percent" | "unit";
  *   - frac in [0.0001, 0.01) -> 6 decimals  e.g. $81.00147367 -> $81.001474
  *   - frac < 0.0001           -> 8 decimals
  */
-function resolveDecimals(value: number): number {
-  const frac = Math.abs(value) % 1;
+function resolveDecimals(value: number, isVnd: boolean = false): number {
+  const abs = Math.abs(value);
+
+  if (isVnd) {
+    if (abs >= 100) return 0;
+    if (abs >= 1) return 2;
+    return 4;
+  }
+
+  const frac = abs % 1;
   if (frac >= 0.01) return 4;
   if (frac >= 0.0001) return 6;
   return 8;
@@ -38,6 +46,8 @@ export function defineNumberFormat(
     unit?: string | null,
   ) {
     const effectiveStyle = style == "unit" ? "decimal" : style;
+    const isVnd =
+      style === "currency" && styleFormatMap.currency?.currency === "VND";
 
     if (typeof value !== "number" && typeof value !== "string")
       return nullDisplay;
@@ -136,24 +146,24 @@ export function defineDateTimeFormat(
     utcDateTimePattern: string;
   },
 ) {
-  function toLocal(value: dayjs.ConfigType) {
+  function toLocal(value: DayJsConfig) {
     return dayjs.utc(value).local().locale(langCode);
   }
 
   return {
-    date: (value: NullableDayJsConfig) =>
+    date: (value: DayJsConfig) =>
       value ? toLocal(value).format(fmtInfo.datePattern) : nullDisplay,
-    time: (value: NullableDayJsConfig) =>
+    time: (value: DayJsConfig) =>
       value ? toLocal(value).format(fmtInfo.timePattern) : nullDisplay,
-    datetime: (value: NullableDayJsConfig) =>
+    datetime: (value: DayJsConfig) =>
       value ? toLocal(value).format(fmtInfo.dateTimePattern) : nullDisplay,
-    utc: (value: NullableDayJsConfig) =>
+    utc: (value: DayJsConfig) =>
       value
         ? dayjs.utc(value).locale(langCode).format(fmtInfo.utcDateTimePattern)
         : nullDisplay,
-    iso: (value: NullableDayJsConfig) =>
+    iso: (value: DayJsConfig) =>
       value ? dayjs.utc(value).toISOString() : nullDisplay,
-    relative: (value: NullableDayJsConfig) =>
+    relative: (value: DayJsConfig) =>
       value ? toLocal(value).fromNow() : nullDisplay,
     fromUnixSeconds: (seconds: number | null) =>
       seconds

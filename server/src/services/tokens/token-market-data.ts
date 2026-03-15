@@ -7,6 +7,43 @@ import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
+export async function fetchCgMarketDataBatched(
+  cgIds: string[],
+): Promise<CG_CoinMarkets> {
+  if (cgIds.length == 0) {
+    return [];
+  }
+
+  // Coin markets endpoint limited to 50 coins per request
+  // https://docs.coingecko.com/v3.0.1/reference/coins-markets
+  const cgBatchSize = 50;
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < cgIds.length; i += cgBatchSize) {
+    chunks.push(cgIds.slice(i, i + cgBatchSize));
+  }
+
+  const results = await Promise.all(
+    chunks.map(
+      async (chunk) =>
+        (await cg.client.coins.markets.get({
+          ids: chunk.join(","),
+          vs_currency: "usd",
+          order: "market_cap_desc",
+          sparkline: true,
+          price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
+        })) as CG_CoinMarkets,
+    ),
+  );
+
+  const allRes: CG_CoinMarkets = [];
+  for (const res of results) {
+    allRes.push(...res);
+  }
+
+  return allRes;
+}
+
 export function getMarketDataFromRaw(
   address: string,
   raw: CG_CoinMarkets[number],
@@ -40,6 +77,7 @@ export function getMarketDataFromRaw(
     atlChangePercentage: raw.atl_change_percentage,
     atlDate: raw.atl_date ? new Date(raw.atl_date) : null,
     volume24h: raw.total_volume!,
+    sparkline7d: raw.sparkline_in_7d.price,
   };
 }
 
@@ -49,12 +87,7 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
     return {};
   }
 
-  const res = (await cg.client.coins.markets.get({
-    ids: cgIds.join(","),
-    vs_currency: "usd",
-    order: "market_cap_desc",
-    price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
-  })) as CG_CoinMarkets;
+  const res = await fetchCgMarketDataBatched(cgIds);
 
   return Object.fromEntries(
     res.map((raw): [string, TokenMarketDataInsert] => [
@@ -82,7 +115,7 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
   const marketDataList = Object.values(addressToMarketData);
 
   // Return empty array if no tokens found on CoinGecko
-  if (marketDataList.length === 0) {
+  if (marketDataList.length == 0) {
     return [];
   }
 
@@ -127,7 +160,7 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
 
   const refreshed = await fetchTokenMarketData(staleAddresses);
 
-  if (!refreshed || refreshed.length === 0) {
+  if (!refreshed || refreshed.length == 0) {
     return addressToMarketData;
   }
 

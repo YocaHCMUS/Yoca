@@ -50,14 +50,31 @@
         border-bottom: none;
     }
 
-    // Right-align all columns except Exchange (2nd) and Pair (3rd)
-    :global(.cds--data-table thead tr th:not(:nth-child(2)):not(:nth-child(3))),
-    :global(.cds--data-table tbody tr td:not(:nth-child(2)):not(:nth-child(3))) {
+    // Alignment: Left-align #, Exchange, Pair, and Price (columns 1-4)
+    :global(.cds--data-table thead tr th:nth-child(-n+4)),
+    :global(.cds--data-table tbody tr td:nth-child(-n+4)) {
+        text-align: left;
+    }
+
+    // Alignment: Right-align all other columns (n >= 5)
+    :global(.cds--data-table thead tr th:nth-child(n+5)),
+    :global(.cds--data-table tbody tr td:nth-child(n+5)) {
         text-align: right;
     }
 
-    // Header button label also needs justify-content for flex layout
-    :global(.cds--data-table thead tr th:not(:nth-child(2)):not(:nth-child(3)) .cds--table-header-label) {
+    // Tighten # column and push Exchange right
+    :global(.cds--data-table thead tr th:first-child),
+    :global(.cds--data-table tbody tr td:first-child) {
+        width: 48px;
+    }
+
+    :global(.cds--data-table thead tr th:nth-child(2)),
+    :global(.cds--data-table tbody tr td:nth-child(2)) {
+        padding-left: 48px;
+    }
+
+    // Header buttons for right-aligned columns
+    :global(.cds--data-table thead tr th:nth-child(n+5) .cds--table-header-label) {
         display: flex;
         justify-content: flex-end;
         width: 100%;

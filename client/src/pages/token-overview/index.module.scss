@@ -28,12 +28,6 @@
     border-right: 1px solid $border-subtle;
     height: 100%;
     overflow-y: auto;
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-
-    &::-webkit-scrollbar {
-        display: none; // Chrome/Safari
-    }
 }
 
 
@@ -70,15 +64,6 @@
     gap: 24px;
     padding: 24px;
     overflow-y: auto;
-
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background: $border-subtle;
-        border-radius: 3px;
-    }
 }
 
 .marketsSection {

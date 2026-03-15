@@ -17,6 +17,7 @@ import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
+import { fetchCgMarketDataBatched } from "./token-market-data.js";
 
 async function fetchHolderStatsItem(
   tokenAddress: string,
@@ -30,6 +31,12 @@ async function fetchHolderStatsItem(
     holdersCount: res.data?.attributes?.holders?.count || 0,
     top10Percent:
       res.data?.attributes?.holders?.distribution_percentage?.top_10 || 0,
+    rank11To30Percent:
+      res.data?.attributes?.holders?.distribution_percentage?.["11_30"] || 0,
+    rank31To50Percent:
+      res.data?.attributes?.holders?.distribution_percentage?.["31_50"] || 0,
+    rank51PlusPercent:
+      res.data?.attributes?.holders?.distribution_percentage?.rest || 0,
   };
 }
 
@@ -177,16 +184,12 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return [];
   }
-  // We cheat and use makert data here as it allow get multiple tokens info in one request
+  // We cheat and use market data here as it allow get multiple tokens info in one request
   // Potential extra 1 API here, but better than fetch each addresses.
   const addressToCgId = await getCoinGeckoIdsByAddresses(tokenAddresses);
   const cgIds = Object.values(addressToCgId);
 
-  const res = await cg.client.coins.markets.get({
-    ids: cgIds.join(","),
-    vs_currency: "usd",
-    order: "market_cap_desc",
-  });
+  const res = await fetchCgMarketDataBatched(cgIds);
 
   const cgIdToAddress = Object.fromEntries(
     Object.entries(addressToCgId).map(([address, id]) => [id, address]),
@@ -202,7 +205,6 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
         imageUrl: raw.image,
       }),
     );
-  console.log(metaValues);
 
   return db
     .insert(tokenMeta)
@@ -293,6 +295,22 @@ export async function getTokenDetails(tokenAddresses: string[]) {
 
   return full;
 }
+
+// export async function getTokenHolderDistribution(tokenAddress: string) {
+//   const network = tokenAddress.startsWith("0x") ? "eth" : "solana";
+//   const res = await cg.client.onchain.networks.tokens.info.get(tokenAddress, {
+//     network,
+//   });
+//   const dist = res.data?.attributes?.holders?.distribution_percentage ?? null;
+//   return dist as {
+//     top_10: string;
+//     "11_20"?: string;
+//     "21_40"?: string;
+//     "11_30"?: string;
+//     "31_50"?: string;
+//     rest: string;
+//   } | null;
+// }
 
 export async function getTokenHolderStats(tokenAddresses: string[]) {
   const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDER_STATS_TTL_MS);

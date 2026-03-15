@@ -23,9 +23,10 @@ import {
   SwitcherItem,
 } from "@carbon/react";
 import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import { Divider } from "../partials/Divider/Divider";
+import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
 
 function ThemeToggleGlobalAction() {
@@ -53,6 +54,19 @@ export function PageWrapper({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Ctrl+K / Cmd+K to open search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
@@ -97,7 +111,10 @@ export function PageWrapper({ children }: { children: ReactNode }) {
         </HeaderNavigation>
 
         <HeaderGlobalBar>
-          <HeaderGlobalAction aria-label={tr("nav.search")}>
+          <HeaderGlobalAction
+            aria-label={tr("nav.search")}
+            onClick={() => setIsSearchOpen(true)}
+          >
             <Search size={20} />
           </HeaderGlobalAction>
 
@@ -225,6 +242,7 @@ export function PageWrapper({ children }: { children: ReactNode }) {
       </Header>
 
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+      {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content id="main-content" style={{ height: "100%" }}>
         {children}
