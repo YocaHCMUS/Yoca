@@ -1,7 +1,22 @@
 import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 import type { WalletPortfolioItem, WalletSwap, WalletTransaction, WalletTransactionHelius, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { apiKeyManager } from "@sv/util/api-key-manager.js";
-import { unknown } from "zod";
+
+function getNextCursor(pagination: any): string | null {
+  // Wallet API docs specify pagination.nextCursor; keep a legacy fallback for beta changes.
+  const raw = pagination?.nextCursor;
+  if (typeof raw !== "string") return null;
+  return raw.length > 0 ? raw : null;
+}
+
+export type HeliusHistoryRange = {
+  fromSec: number;
+  toSec?: number;
+};
+
+type FetchAllTransactionHistoryOptions = {
+  beforeCursor?: string;
+  stopAtKnownSignatures?: Set<string>;
+};
 
 export async function fetchHeliusSolanaPortfolio(
   address: string,
@@ -58,8 +73,8 @@ export async function fetchHeliusSolanaPortfolio(
         token.usdValue != null && !Number.isNaN(Number(token.usdValue))
           ? Number(token.usdValue)
           : pricePerToken != null
-          ? amount * pricePerToken
-          : 0;
+            ? amount * pricePerToken
+            : 0;
 
       portfolio.push({
         tokenAddress: String(token.mint ?? ""),
@@ -145,7 +160,11 @@ export async function fetchHeliusSolanaTransactions(
         typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
           ? entry.timestamp
           : null;
-      if (tsSec == null || tsSec < fromSec) {
+      if (tsSec == null) {
+        // Recent entries can occasionally have null timestamp while still processing.
+        continue;
+      }
+      if (tsSec < fromSec) {
         // Older than our 1-month window; stop collecting further pages
         return transactions;
       }
@@ -171,18 +190,18 @@ export async function fetchHeliusSolanaTransactions(
       }
 
       const mint = typeof entry.mint === "string" ? entry.mint : "";
-      const amountRaw = 
-        typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw) 
+      const amountRaw =
+        typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw)
           ? entry.amountRaw
           : undefined
-      const decimal = 
-        typeof entry.decimal === "number" && Number.isFinite(entry.decimal) 
+      const decimal =
+        typeof entry.decimal === "number" && Number.isFinite(entry.decimal)
           ? entry.decimal
           : undefined
-        
-      const amount = 
+
+      const amount =
         (typeof amountRaw === "number" && typeof decimal === "number")
-          ? amountRaw /  10 ** decimal
+          ? amountRaw / 10 ** decimal
           : entry.amount
       // const amount =
       //   typeof entry.amount === "number" && Number.isFinite(entry.amount)
@@ -217,11 +236,7 @@ export async function fetchHeliusSolanaTransactions(
     }
 
     const hasMore = Boolean(json?.pagination?.hasMore);
-    cursor =
-      typeof json?.pagination?.nextCursor === "string" &&
-      json.pagination.nextCursor.length > 0
-        ? json.pagination.nextCursor
-        : null;
+    cursor = getNextCursor(json?.pagination);
 
     if (!hasMore || !cursor) {
       break;
@@ -244,130 +259,131 @@ export async function fetchHeliusSolanaTransfers(
   address: string,
   from: HeliusHistoryFrom = "7d",
 ): Promise<WalletTransfer[]> {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const fromSec =
-      from === "24h"
-        ? nowSec - 24 * 60 * 60
-        : nowSec - 7 * 24 * 60 * 60;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec =
+    from === "24h"
+      ? nowSec - 24 * 60 * 60
+      : nowSec - 7 * 24 * 60 * 60;
 
-    // Helius transfers endpoint returns at most 100 items per page.
-    const HELIUS_PAGE_LIMIT = 100;
+  // Helius transfers endpoint returns at most 100 items per page.
+  const HELIUS_PAGE_LIMIT = 100;
 
-    const transfers: WalletTransfer[] = [];
-    let cursor: string | null = null;
-    let pageCount = 0;
+  const transfers: WalletTransfer[] = [];
+  let cursor: string | null = null;
+  let pageCount = 0;
 
-    // Fetch pages until no more data or we reach entries older than the requested window.
-    // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
-    while (true) {
-        pageCount++;
-        const url = getEndpoint(`/v1/wallet/${address}/transfers`);
-      url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
-        if (cursor) {
-        url.searchParams.set("cursor", cursor);
-        }
-
-        let json: any = null;
-        try {
-            const headers = getRequiredHeaders();
-            const resp = await heliusFetch(url, {
-                method: "GET",
-                headers,
-            });
-
-            if (!resp.ok) {
-                console.error(
-                "Helius wallet transfers error",
-                resp.status,
-                resp.statusText,
-                );
-                break;
-            }
-
-            json = await resp.json();
-        } catch (err) {
-            console.error("Helius wallet transfers request failed", err);
-            break;
-        }
-
-        const data: any[] = Array.isArray(json?.data) ? json.data : [];
-
-        if (data.length === 0) {
-            break;
-        }
-
-        for (const entry of data) {
-          const tsSec =
-            typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
-            ? entry.timestamp
-            : null;
-
-          if (tsSec == null || tsSec < fromSec) {
-            return transfers;
-          }
-
-            const direction = entry.direction;
-            let from = '';
-            let to = '';
-
-            if (direction === 'in') {
-                from = String(entry.counterparty ?? "");
-                to = address;
-            } else {
-                from = address;
-                to = String(entry.counterparty ?? "");
-            }
-
-            const amountRaw = 
-                typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw) 
-                ? entry.amountRaw
-                : undefined
-
-            const decimal = 
-                typeof entry.decimal === "number" && Number.isFinite(entry.decimal) 
-                ? entry.decimal
-                : undefined
-            
-            const amount = 
-                (typeof amountRaw === "number" && typeof decimal === "number")
-                ? amountRaw /  10 ** decimal
-                : entry.amount
-
-            const transferEntry: WalletTransfer = {
-                from: from,
-                to: to,
-                // In the according token units
-                amount: amount,
-              timestamp: new Date(tsSec * 1000).toISOString(),
-                tokenAddress: entry.mint || unknown,
-                tokenSymbol: entry.symbol || unknown,
-                transactionSignature: entry.signature,
-                instructionIndex: 0, // what is this even for?
-            };
-
-            transfers.push(transferEntry);
-        }
-
-        console.log(`[fetchHeliusSolanaTransfers] Page ${pageCount}: Collected ${transfers.length} transfers so far`);
-
-        const hasMore = Boolean(json?.pagination?.hasMore);
-        cursor =
-            typeof json?.pagination?.nextCursor === "string" &&
-            json.pagination.nextCursor.length > 0
-                ? json.pagination.nextCursor
-                : null;
-
-        if (!hasMore || !cursor) {
-            break;
-        }
+  // Fetch pages until no more data or we reach entries older than the requested window.
+  // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
+  while (true) {
+    pageCount++;
+    const url = getEndpoint(`/v1/wallet/${address}/transfers`);
+    url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
     }
 
-    return transfers;
+    let json: any = null;
+    try {
+      const headers = getRequiredHeaders();
+      const resp = await heliusFetch(url, {
+        method: "GET",
+        headers,
+      });
+
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet transfers error",
+          resp.status,
+          resp.statusText,
+        );
+        break;
+      }
+
+      json = await resp.json();
+    } catch (err) {
+      console.error("Helius wallet transfers request failed", err);
+      break;
+    }
+
+    const data: any[] = Array.isArray(json?.data) ? json.data : [];
+
+    if (data.length === 0) {
+      break;
+    }
+
+    for (const entry of data) {
+      const tsSec =
+        typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          ? entry.timestamp
+          : null;
+
+      if (tsSec == null) {
+        // Recent entries can occasionally have null timestamp while still processing.
+        continue;
+      }
+      if (tsSec < fromSec) {
+        return transfers;
+      }
+
+      const direction = entry.direction;
+      let from = '';
+      let to = '';
+
+      if (direction === 'in') {
+        from = String(entry.counterparty ?? "");
+        to = address;
+      } else {
+        from = address;
+        to = String(entry.counterparty ?? "");
+      }
+
+      const amountRaw =
+        typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw)
+          ? entry.amountRaw
+          : undefined
+
+      const decimal =
+        typeof entry.decimal === "number" && Number.isFinite(entry.decimal)
+          ? entry.decimal
+          : undefined
+
+      const amount =
+        (typeof amountRaw === "number" && typeof decimal === "number")
+          ? amountRaw / 10 ** decimal
+          : entry.amount
+
+      const transferEntry: WalletTransfer = {
+        from: from,
+        to: to,
+        // In the according token units
+        amount: amount,
+        timestamp: new Date(tsSec * 1000).toISOString(),
+        tokenAddress: entry.mint || "unknown",
+        tokenSymbol: entry.symbol || "unknown",
+        transactionSignature: entry.signature,
+        instructionIndex: 0, // what is this even for?
+      };
+
+      transfers.push(transferEntry);
+    }
+
+    console.log(`[fetchHeliusSolanaTransfers] Page ${pageCount}: Collected ${transfers.length} transfers so far`);
+
+
+    const hasMore = Boolean(json?.pagination?.hasMore);
+    cursor = getNextCursor(json?.pagination);
+
+    if (!hasMore || !cursor) {
+      break;
+    }
+  }
+
+  return transfers;
 }
 
 export async function fetchHeliusSolanaSwap(
-    address: string,
-    from: HeliusHistoryFrom = "7d",
+  address: string,
+  from: HeliusHistoryFrom = "7d",
 ): Promise<WalletSwap[]> {
   const nowSec = Math.floor(Date.now() / 1000);
   const fromSec =
@@ -389,30 +405,30 @@ export async function fetchHeliusSolanaSwap(
     const url = getEndpoint(`/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`);
     url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
-        url.searchParams.set("cursor", cursor);
+      url.searchParams.set("before", cursor);
     }
 
     let json: any = null;
     try {
-        const headers = getRequiredHeaders();
-        const resp = await heliusFetch(url, {
-            method: "GET",
-            headers,
-        });
+      const headers = getRequiredHeaders();
+      const resp = await heliusFetch(url, {
+        method: "GET",
+        headers,
+      });
 
-        if (!resp.ok) {
-            console.error(
-            "Helius wallet transaction error",
-            resp.status,
-            resp.statusText,
-            );
-            break;
-        }
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet transaction error",
+          resp.status,
+          resp.statusText,
+        );
+        throw new Error(`Helius history request failed: ${resp.status} ${resp.statusText}`);
+      }
 
-        json = await resp.json();
+      json = await resp.json();
     } catch (err) {
-        console.error("Helius wallet transaction request failed", err);
-        break;
+      console.error("Helius wallet transaction request failed", err);
+      throw err;
     }
 
     const data: any[] = Array.isArray(json?.data) ? json.data : [];
@@ -422,44 +438,48 @@ export async function fetchHeliusSolanaSwap(
     }
 
     for (const entry of data) {
-        const tsSec =
-            typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
-            ? entry.timestamp
-            : null;
+      const tsSec =
+        typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          ? entry.timestamp
+          : null;
 
-        if (tsSec == null || tsSec < fromSec) {
-            return swaps;
-        }
+      if (tsSec == null) {
+        // Recent entries can occasionally have null timestamp while still processing.
+        continue;
+      }
+      if (tsSec < fromSec) {
+        return swaps;
+      }
 
-        const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
-            ? entry.balanceChanges
-            .map((change: any) => ({
-                mint: String(change?.mint ?? ""),
-                amount: Number(change?.amount ?? 0),
-                decimals: Number(change?.decimals ?? 0),
-            }))
-            .filter(
-                (change: { mint: string; amount: number; decimals: number }) =>
-                change.mint.length > 0 &&
-                Number.isFinite(change.amount) &&
-                Number.isFinite(change.decimals),
-            )
-            : [];
+      const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
+        ? entry.balanceChanges
+          .map((change: any) => ({
+            mint: String(change?.mint ?? ""),
+            amount: Number(change?.amount ?? 0),
+            decimals: Number(change?.decimals ?? 0),
+          }))
+          .filter(
+            (change: { mint: string; amount: number; decimals: number }) =>
+              change.mint.length > 0 &&
+              Number.isFinite(change.amount) &&
+              Number.isFinite(change.decimals),
+          )
+        : [];
 
       // First two entries represent swap legs; remaining entries are fee-related movements.
-        const swapBalanceChanges = mappedBalanceChanges.slice(0, 2);
-        const swapFeeBalanceChanges = mappedBalanceChanges.slice(2);
+      const swapBalanceChanges = mappedBalanceChanges.slice(0, 2);
+      const swapFeeBalanceChanges = mappedBalanceChanges.slice(2);
 
-        const txObj: WalletSwap = {
-            walletAddress: address,
-            signature: String(entry.signature ?? ""),
-            timestamp: new Date(tsSec * 1000).toISOString(),
-            slot: Number(entry.slot ?? 0),
-            fee: Number(entry.fee ?? 0),
-            feePayer: String(entry.feePayer ?? ""),
-            balanceChanges: swapBalanceChanges,
-            feeChanges: swapFeeBalanceChanges,
-        };
+      const txObj: WalletSwap = {
+        walletAddress: address,
+        signature: String(entry.signature ?? ""),
+        timestamp: new Date(tsSec * 1000).toISOString(),
+        slot: Number(entry.slot ?? 0),
+        fee: Number(entry.fee ?? 0),
+        feePayer: String(entry.feePayer ?? ""),
+        balanceChanges: swapBalanceChanges,
+        feeChanges: swapFeeBalanceChanges,
+      };
 
       swaps.push(txObj);
     }
@@ -467,14 +487,10 @@ export async function fetchHeliusSolanaSwap(
     console.log(`[fetchHeliusSolanaSwap] Page ${pageCount}: Collected ${swaps.length} swaps so far`);
 
     const hasMore = Boolean(json?.pagination?.hasMore);
-    cursor =
-        typeof json?.pagination?.nextCursor === "string"
-        && json.pagination.nextCursor.length > 0
-            ? json.pagination.nextCursor
-            : null;
+    cursor = getNextCursor(json?.pagination);
 
     if (!hasMore || !cursor) {
-        break;
+      break;
     }
   }
 
@@ -483,54 +499,73 @@ export async function fetchHeliusSolanaSwap(
 
 export type HeliusHistoryFrom = "24h" | "7d";
 
+export function timePeriodToFromSec(timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All"): number {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const daySec = 24 * 60 * 60;
+  switch (timePeriod) {
+    case "7D": return nowSec - 7 * daySec;
+    case "30D": return nowSec - 30 * daySec;
+    case "60D": return nowSec - 60 * daySec;
+    case "90D": return nowSec - 90 * daySec;
+    case "1Y": return nowSec - 365 * daySec;
+    case "All": return 0;
+  }
+}
+
 export async function fetchAllTransactionHistory(
   address: string,
-  from: HeliusHistoryFrom = "7d",
+  from: HeliusHistoryFrom | number | HeliusHistoryRange = "7d",
+  options?: FetchAllTransactionHistoryOptions,
 ) {
   const nowSec = Math.floor(Date.now() / 1000);
-  const fromSec =
-    from === "24h"
-      ? nowSec - 24 * 60 * 60
-      : nowSec - 7 * 24 * 60 * 60;
+  const daySec = 24 * 60 * 60;
+  const fromSec = typeof from === "number"
+    ? from
+    : typeof from === "object"
+      ? from.fromSec
+      : nowSec - (daySec * (from === "24h" ? 1 : 7));
+  const toSec = typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
 
+  // Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60)
   // Helius history endpoint returns at most 100 items per page.
   const HELIUS_PAGE_LIMIT = 100;
 
   const transactions: WalletTransactionHelius[] = [];
-  let cursor: string | null = null;
+  let cursor: string | null = options?.beforeCursor ?? null;
   let pageCount = 0;
+  const knownSignatures = options?.stopAtKnownSignatures;
 
   // Fetch pages until no more data or we reach entries older than the requested window.
   // Uses Wallet API: GET /v1/wallet/{wallet}/history (available on free plan).
-  while (true) {
+  do {
     pageCount++;
     const url = getEndpoint(`/v1/wallet/${address}/history?tokenAccounts=balanceChanged`);
     url.searchParams.set("limit", String(HELIUS_PAGE_LIMIT));
     if (cursor) {
-        url.searchParams.set("cursor", cursor);
+      url.searchParams.set("before", cursor);
     }
 
     let json: any = null;
     try {
-        const headers = getRequiredHeaders();
-        const resp = await heliusFetch(url, {
-            method: "GET",
-            headers,
-        });
+      const headers = getRequiredHeaders();
+      const resp = await heliusFetch(url, {
+        method: "GET",
+        headers,
+      });
 
-        if (!resp.ok) {
-            console.error(
-            "Helius wallet transaction error",
-            resp.status,
-            resp.statusText,
-            );
-            break;
-        }
-
-        json = await resp.json();
-    } catch (err) {
-        console.error("Helius wallet transaction request failed", err);
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet transaction error",
+          resp.status,
+          resp.statusText,
+        );
         break;
+      }
+
+      json = await resp.json();
+    } catch (err) {
+      console.error("Helius wallet transaction request failed", err);
+      break;
     }
 
     const data: any[] = Array.isArray(json?.data) ? json.data : [];
@@ -540,40 +575,57 @@ export async function fetchAllTransactionHistory(
     }
 
     for (const entry of data) {
-        const tsSec =
-            typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
-            ? entry.timestamp
-            : null;
+      const tsSec =
+        typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          ? entry.timestamp
+          : null;
 
-        if (tsSec == null || tsSec < fromSec) {
-            return transactions;
-        }
+      if (tsSec == null) {
+        // Recent entries can occasionally have null timestamp while still processing.
+        continue;
+      }
+      if (tsSec > toSec) {
+        continue;
+      }
 
-        const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
-            ? entry.balanceChanges
-            .map((change: any) => ({
-                mint: String(change?.mint ?? ""),
-                amount: Number(change?.amount ?? 0),
-                decimals: Number(change?.decimals ?? 0),
-            }))
-            .filter(
-                (change: { mint: string; amount: number; decimals: number }) =>
-                change.mint.length > 0 &&
-                Number.isFinite(change.amount) &&
-                Number.isFinite(change.decimals),
-            )
-            : [];
+      if (tsSec < fromSec) {
+        return transactions;
+      }
+
+      const signature = String(entry.signature ?? "");
+      if (!signature) {
+        continue;
+      }
+
+      if (knownSignatures?.has(signature)) {
+        return transactions;
+      }
+
+      const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
+        ? entry.balanceChanges
+          .map((change: any) => ({
+            mint: String(change?.mint ?? ""),
+            amount: Number(change?.amount ?? 0),
+            decimals: Number(change?.decimals ?? 0),
+          }))
+          .filter(
+            (change: { mint: string; amount: number; decimals: number }) =>
+              change.mint.length > 0 &&
+              Number.isFinite(change.amount) &&
+              Number.isFinite(change.decimals),
+          )
+        : [];
 
 
-        const txObj: WalletTransactionHelius = {
-            walletAddress: address,
-            signature: String(entry.signature ?? ""),
-            timestamp: new Date(tsSec * 1000).toISOString(),
-            slot: Number(entry.slot ?? 0),
-            fee: Number(entry.fee ?? 0),
-            feePayer: String(entry.feePayer ?? ""),
-            balanceChanges: mappedBalanceChanges
-        };
+      const txObj: WalletTransactionHelius = {
+        walletAddress: address,
+        signature,
+        timestamp: new Date(tsSec * 1000).toISOString(),
+        slot: Number(entry.slot ?? 0),
+        fee: Number(entry.fee ?? 0),
+        feePayer: String(entry.feePayer ?? ""),
+        balanceChanges: mappedBalanceChanges
+      };
 
       transactions.push(txObj);
     }
@@ -581,16 +633,14 @@ export async function fetchAllTransactionHistory(
     console.log(`[fetchAllTransactionHistory] Page ${pageCount}: Collected ${transactions.length} transactions so far`);
 
     const hasMore = Boolean(json?.pagination?.hasMore);
-    cursor =
-        typeof json?.pagination?.nextCursor === "string"
-        && json.pagination.nextCursor.length > 0
-            ? json.pagination.nextCursor
-            : null;
-
-    if (!hasMore || !cursor) {
-        break;
+    cursor = hasMore ? getNextCursor(json?.pagination) : null;
+    if (transactions.length > 0) {
+      const lastTxTimestamp = transactions[transactions.length - 1].timestamp;
+      console.log(`[fetchAllTransactionHistory] Last transaction timestamp: ${lastTxTimestamp}`);
     }
-  }
+
+  } while (cursor)
+
 
   return transactions;
 };

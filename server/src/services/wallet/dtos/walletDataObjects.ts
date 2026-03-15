@@ -1,24 +1,27 @@
 export type SupportedChain = "solana" | "eth" | "polygon" | "bsc" | string;
 
 export interface WalletOverview {
-  address: string;
-  chain: SupportedChain;
-  totalAssetValueUsd: number;
-  tradingVolumeUsd24h: number | null;
-  pnlUsdTotal: number | null;
-  transactionCount24h: number | null;
-  tokensTradedCount: number | null;
-  tokensHoldingCount: number;
+    address: string;
+    chain: SupportedChain;
+    totalAssetValueUsd: number;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+    tradingVolumeUsdWindow?: number | null;
+    pnlUsdWindow?: number | null;
+    metricsPeriod?: string;
 }
 
 export interface WalletPortfolioItem {
-  tokenAddress: string;
-  symbol: string;
-  name?: string;
-  amount: number;
-  priceUsd?: number;
-  valueUsd: number;
-  change24hPercent?: number;
+    tokenAddress: string;
+    symbol: string;
+    name?: string;
+    amount: number;
+    priceUsd?: number;
+    valueUsd: number;
+    change24hPercent?: number;
 }
 
 
@@ -54,7 +57,7 @@ export interface WalletSwap {
     feePayer: string,
     balanceChanges: WalletSwapBalanceChange[],
     feeChanges: WalletSwapBalanceChange[],
-    
+
 }
 
 export interface WalletTransactionHelius {
@@ -89,12 +92,12 @@ export interface WalletTransactionsResponse {
 export interface WalletTransfersResponse {
     address: string;
     chain: SupportedChain;
-    transfers: WalletTransfer[]; 
+    transfers: WalletTransfer[];
 }
 
 /** Exchange comparison item for chart (transaction count by platform). */
 export interface WalletExchangeCountItem {
-    name: string; 
+    name: string;
     deposits: number;
     withdrawals: number;
     depositsVolume: number;
@@ -104,4 +107,47 @@ export interface WalletExchangeCountItem {
 export interface WalletExchangeCountsResponse {
     exchanges: WalletExchangeCountItem[];
     metadata: { period: string; metric: "count" | "volume" };
+}
+
+export type WalletCounterpartyPeriod = "24h" | "7d";
+
+export interface WalletCounterpartyIdentity {
+    status: "known" | "unknown" | "unavailable";
+    name: string | null;
+    category: string | null;
+    type: string | null;
+}
+
+export interface WalletCounterpartyRow {
+    address: string;
+    identity: WalletCounterpartyIdentity;
+    uniqueTokenCount: number;
+    tokens: string[];
+    transactionCount: number;
+    totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartyRankingItem {
+    address: string;
+    label: string;
+    transactionCount: number;
+    totalVolumeUsd: number;
+}
+
+export interface WalletCounterpartiesResponse {
+    counterparties: WalletCounterpartyRow[];
+    rankings: {
+        byTransactionCount: WalletCounterpartyRankingItem[];
+        byVolume: WalletCounterpartyRankingItem[];
+    };
+    metadata: {
+        period: WalletCounterpartyPeriod;
+        chain: SupportedChain;
+        source: "cache" | "provider" | "mixed";
+        totals: {
+            counterparties: number;
+            transactions: number;
+            volume: number;
+        };
+    };
 }

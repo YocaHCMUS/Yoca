@@ -37,6 +37,7 @@ import { useChartExport } from '@/hooks/useChartExport';
 import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
+import { runChartExport } from '@/services/chart/chartExportService';
 
 // export interface AssetDistributionProps {
 //   minHeight?: number;
@@ -108,40 +109,32 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       if (!isChartSuccess(data, 'wallets')) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
+      const csv: ChartDataSeries[] = [];
 
-      if (format === 'csv') {
-        // Convert trading volume distribution data to CSV format
-        const csv: ChartDataSeries[] = [];
-        
-        if (data.wallets) {
-          // Per-wallet data
-          data.wallets.forEach(wallet => {
-            csv.push({
-              id: `trading-volume-distribution-${wallet.walletAddress}`,
-              name: `Trading Volume Distribution - ${wallet.walletAddress}`,
-              type: 'pie',
-              visible: true,
-              data: wallet.data.map(t => ({
-                name: t.name,
-                value: t.value,
-              })),
-            });
+      if (data.wallets) {
+        data.wallets.forEach(wallet => {
+          csv.push({
+            id: `trading-volume-distribution-${wallet.walletAddress}`,
+            name: `Trading Volume Distribution - ${wallet.walletAddress}`,
+            type: 'pie',
+            visible: true,
+            data: wallet.data.map(t => ({
+              name: t.name,
+              value: t.value,
+            })),
           });
-        }
-        
-        exportCSV(csv, filters);
-        return;
+        });
       }
 
-      if (!instance) {
-        console.error('Chart instance not available for export');
-        return;
-      }
-
-      // Export as PNG or SVG
-      format === 'png'
-        ? exportPNG(instance as any, filters)
-        : exportSVG(instance as any, filters);
+      runChartExport(
+        {
+          format,
+          filters,
+          chartInstance: instance as any,
+          csvData: csv,
+        },
+        { exportPNG, exportSVG, exportCSV }
+      );
     },
     [data, filters, exportPNG, exportSVG, exportCSV]
   );

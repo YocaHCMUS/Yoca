@@ -43,7 +43,7 @@ interface UseChartExportReturn {
   exportSVG: (chartInstance: EChartsInstance, filters: ChartFilters) => void;
   
   /** Export chart data as CSV */
-  exportCSV: (data: ChartDataSeries[], filters: ChartFilters) => void;
+  exportCSV: (data: ChartDataSeries[], filters: ChartFilters, extraFilters?: Record<string, string>) => void;
   
   /** Export with custom configuration */
   exportChart: (
@@ -102,7 +102,18 @@ function dataToCSV(
   lines.push(`# Chart: ${metadata.chartTitle}`);
   lines.push(`# Timezone: ${metadata.timezone}`);
   lines.push(`# Export Date: ${metadata.exportDate}`);
-  lines.push(`# Filters: ${metadata.filters.timePeriod}, ${metadata.filters.tokens?.join(',') || 'All'}, ${metadata.filters.transactionType}`);
+
+  const f = metadata.filters;
+  const filterParts: string[] = [];
+  if (f.timePeriod) filterParts.push(`Period: ${f.timePeriod}`);
+  if (f.wallets && f.wallets.length > 0) filterParts.push(`Wallets: ${f.wallets.join(', ')}`);
+  if (f.tokens && f.tokens.length > 0) filterParts.push(`Tokens: ${f.tokens.join(', ')}`);
+  if (f.transactionType && f.transactionType !== 'all') filterParts.push(`Transaction Type: ${f.transactionType}`);
+  if (metadata.extraFilters) {
+    Object.entries(metadata.extraFilters).forEach(([k, v]) => filterParts.push(`${k}: ${v}`));
+  }
+  lines.push(`# Filters: ${filterParts.join(' | ')}`);
+
   lines.push(`# Data Points: ${metadata.dataPointCount}`);
   lines.push('');
   
@@ -135,16 +146,28 @@ function dataToCSV(
         });
       });
     }
-    // Distribution data
+    // Distribution data — pivot: token names as rows, each series (wallet) as a column
     else if ('name' in firstPoint) {
-      lines.push('Name,Value');
-      
-      data.forEach((series) => {
+      // Extract wallet address from series name (strip "Assets Distribution - " prefix if present)
+      const walletHeaders = data.map(s =>
+        s.name.replace(/^Assets Distribution\s*-\s*/i, '')
+      );
+      lines.push(`Name,${walletHeaders.join(',')}`);
+
+      // Build a map: tokenName → { seriesIndex → value }
+      const tokenMap = new Map<string, Map<number, number>>();
+      data.forEach((series, si) => {
         series.data.forEach((point) => {
           if ('name' in point) {
-            lines.push(`${point.name},${point.value}`);
+            if (!tokenMap.has(point.name)) tokenMap.set(point.name, new Map());
+            tokenMap.get(point.name)!.set(si, point.value as number);
           }
         });
+      });
+
+      tokenMap.forEach((valuesBySeries, tokenName) => {
+        const row = data.map((_, si) => valuesBySeries.get(si) ?? '');
+        lines.push(`${tokenName},${row.join(',')}`);
       });
     }
   }
@@ -235,7 +258,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
    * Export as CSV
    */
   const exportCSV = useCallback(
-    (data: ChartDataSeries[], filters: ChartFilters) => {
+    (data: ChartDataSeries[], filters: ChartFilters, extraFilters?: Record<string, string>) => {
       setIsExporting(true);
       setExportError(null);
       
@@ -246,6 +269,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
           filters,
           exportDate: new Date().toISOString(),
           dataPointCount: data.reduce((sum, series) => sum + series.data.length, 0),
+          extraFilters,
         };
         
         const csvContent = dataToCSV(data, metadata);

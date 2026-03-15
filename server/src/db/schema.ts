@@ -97,6 +97,7 @@ export const tokenDetails = pgTable("token_details", {
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
+  decimals: integer("decimals").notNull(),
   priceUsd: decimal("price_usd").notNull(),
 
   marketCapRank: integer("market_cap_rank"),
@@ -280,6 +281,17 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
+// {
+//     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
+//     "timestamp": 1704067200,
+//     "direction": "in",
+//     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
+//     "mint": "So11111111111111111111111111111111111111112",
+//     "symbol": "SOL",
+//     "amount": 1.5,
+//     "amountRaw": "1500000000",
+//     "decimals": 9
+//   },
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
@@ -511,6 +523,10 @@ export const walletTransactionsMeta = pgTable(
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    // Explicit persisted bounds for coverage checks.
+    // Nullable so pre-migration rows don't break existing reads.
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
   },
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
 );
@@ -602,18 +618,24 @@ export const walletExchangeCountsCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     chain: varchar("chain", { length: 32 }).notNull(),
-    data: jsonb("data")
-      .$type<{
-        exchanges: Array<{
-          name: string;
-          deposits: number;
-          withdrawals: number;
-          depositsVolume: number;
-          withdrawalsVolume: number;
-        }>;
-        metadata: { period: string; metric: string };
-      }>()
-      .notNull(),
+    data: jsonb("data").$type<{ exchanges: Array<{ name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }>; metadata: { period: string; metric: string } }>().notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+);
+
+export const walletIdentityCache = pgTable(
+  "wallet_identity_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    chain: varchar("chain", { length: 32 }).notNull(),
+    status: varchar("status", { length: 16 }).notNull(),
+    type: varchar("type", { length: 64 }),
+    name: varchar("name", { length: 255 }),
+    category: varchar("category", { length: 255 }),
+    tags: jsonb("tags").$type<string[]>().notNull(),
+    domainNames: jsonb("domain_names").$type<string[]>().notNull(),
+    raw: jsonb("raw").$type<Record<string, unknown> | null>(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.address, t.chain] })],
@@ -668,10 +690,9 @@ export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
-export type WalletExchangeCountsCacheInsert =
-  typeof walletExchangeCountsCache.$inferInsert;
-export type walletHeliusTransactionsInsert =
-  typeof walletHeliusTransactions.$inferInsert;
+export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
+export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
+export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;

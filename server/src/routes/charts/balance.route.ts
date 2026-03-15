@@ -9,9 +9,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateBalanceTrend } from '../../services/mockChartData.service.js';
-import { 
-  getWalletBalanceHistory, 
-  type BalanceDataPoint 
+import {
+  getWalletBalanceHistory,
+  getWalletTokenBalanceHistory,
+  type BalanceDataPoint
 } from '../../services/wallet/walletData.service.js';
 import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
@@ -56,126 +57,116 @@ const app = new Hono()
    */
   .get("/", async (c) => {
     try {
-      // Validate query parameters
       const query = c.req.query();
       console.log('[balance.route] Raw query:', query);
-      
+
       const params = balanceRequestSchema.parse(query);
       console.log('[balance.route] Parsed params:', params);
 
-      // If wallets parameter is provided, fetch actual balance history
       if (params.wallets) {
         const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
-        
+        const tokenSelectors = params.tokens
+          ? params.tokens.split(',').map(t => t.trim()).filter(t => t !== '')
+          : [];
+
         if (walletAddresses.length > 0) {
           try {
-            // For single wallet, return direct data
-            if (walletAddresses.length === 1) {
-              const address = walletAddresses[0];
-              const chain: SupportedChain = 'solana'; // Default chain
-              
-              const balanceHistory = await getWalletBalanceHistory(
-                address, 
-                chain, 
-                params.timePeriod
+            const chain: SupportedChain = 'solana';
+
+            if (tokenSelectors.length === 0) {
+              const allHistories = await Promise.all(
+                walletAddresses.map(addr => getWalletBalanceHistory(addr, chain, params.timePeriod))
               );
-              
-              // Format response to match client expectations (series structure)
-              const seriesName = params.tokens || 'Total';
-              
+
+              const series = walletAddresses.length === 1
+                ? [{
+                  name: 'Total',
+                  data: allHistories[0].map(point => ({ timestamp: point.timestamp, value: point.value })),
+                  seriesType: 'line' as const,
+                  unit: 'USD' as const,
+                }]
+                : walletAddresses.map((address, index) => ({
+                  name: `${address.substring(0, 8)}...`,
+                  data: allHistories[index].map(point => ({ timestamp: point.timestamp, value: point.value })),
+                  seriesType: 'line' as const,
+                  unit: 'USD' as const,
+                }));
+
               return c.json({
-                series: [
-                  {
-                    name: seriesName,
-                    data: balanceHistory.map(point => ({
-                      timestamp: point.timestamp,
-                      value: point.value,
-                    })),
-                  }
-                ],
-                wallets: undefined, // Single wallet, not shown in legend
+                series,
+                wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
                 metadata: {
                   timePeriod: params.timePeriod,
                   aggregation: 'daily',
-                  dataPoints: balanceHistory.length,
+                  dataPoints: allHistories[0]?.length ?? 0,
                   currency: 'USD',
                   timezone: params.timezone || 'UTC',
+                  mode: 'total' as const,
+                  tokens: [],
+                  primaryYAxis: 'USD' as const,
                 },
               }, 200);
             }
-            
-            // For multiple wallets, create series for each wallet
-            const chain: SupportedChain = 'solana';
-            const allHistories = await Promise.all(
-              walletAddresses.map(addr => 
-                getWalletBalanceHistory(addr, chain, params.timePeriod)
+
+            const pairs = walletAddresses.flatMap(addr =>
+              tokenSelectors.map(token => ({ addr, token }))
+            );
+
+            const pairResults = await Promise.all(
+              pairs.map(({ addr, token }) =>
+                getWalletTokenBalanceHistory(addr, chain, token, params.timePeriod)
               )
             );
-            
-            // Build series array (one per wallet)
-            const series = walletAddresses.map((address, index) => {
-              const history = allHistories[index];
-              return {
-                name: `${address.substring(0, 8)}...`, // Shortened address for legend
-                data: history.map(point => ({
-                  timestamp: point.timestamp,
-                  value: point.value,
-                })),
+
+            const series = pairs.flatMap(({ addr, token }, index) => {
+              const result = pairResults[index];
+              const prefix = walletAddresses.length > 1 ? `${addr.substring(0, 8)}... ` : '';
+              const tokenUnit: any = {
+                name: `${prefix}${result.tokenSymbol} (units)`,
+                data: result.tokenSeries.map(point => ({ timestamp: point.timestamp, value: point.value })),
+                seriesType: 'line' as const,
+                unit: 'TOKEN' as const,
               };
+              const usdSeries: any = {
+                name: `${prefix}${result.tokenSymbol} (USD)`,
+                data: result.usdSeries.map(point => ({ timestamp: point.timestamp, value: point.value })),
+                seriesType: 'bar' as const,
+                unit: 'USD' as const,
+              };
+              return [tokenUnit, usdSeries];
             });
-            
+
             return c.json({
               series,
-              wallets: walletAddresses,
+              wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
               metadata: {
                 timePeriod: params.timePeriod,
                 aggregation: 'daily',
-                dataPoints: allHistories[0]?.length ?? 0,
+                dataPoints: pairResults[0]?.tokenSeries.length ?? 0,
                 currency: 'USD',
                 timezone: params.timezone || 'UTC',
+                mode: 'token' as const,
+                tokens: tokenSelectors,
+                primaryYAxis: 'TOKEN' as const,
               },
             }, 200);
           } catch (error) {
             console.error("[BalanceChart] Error fetching wallet balance history:", error);
-            // Fall back to mock data on error
-            const data = generateBalanceTrend(
-              params.timePeriod,
-              params.tokens,
-              params.wallets,
-            );
+            const data = generateBalanceTrend(params.timePeriod, params.tokens, params.wallets);
             return c.json(data, 200);
           }
         }
       }
 
-      // Generate balance trend data (mock) if no wallets specified
-      const data = generateBalanceTrend(
-        params.timePeriod,
-        params.tokens,
-        params.wallets,
-      );
-
-      // Return response
+      const data = generateBalanceTrend(params.timePeriod, params.tokens, params.wallets);
       return c.json(data, 200);
     } catch (error) {
-      // Handle validation errors
       if (error instanceof z.ZodError) {
-        return c.json(
-          {
-            error: "Validation error",
-            details: error.issues,
-          },
-          400,
-        );
+        return c.json({ error: "Validation error", details: error.issues }, 400);
       }
-
-      // Handle other errors
       console.error("[BalanceChart] Error fetching balance data:", error);
       return c.json(
-        {
-          error: "Internal server error",
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
+        { error: "Internal server error", message: error instanceof Error ? error.message : "Unknown error" },
         500,
       );
     }

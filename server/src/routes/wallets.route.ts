@@ -8,6 +8,14 @@ import {
   getWalletSwaps,
   getWalletTransfers
 } from "@sv/services/wallet/walletData.service.js";
+import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+import {
+  WALLET_IDENTITY_MAX_BATCH_SIZE,
+  WalletIdentityServiceError,
+  getWalletIdentity,
+  getWalletIdentityBatch,
+} from "@sv/services/wallet/walletIdentity.service.js";
+import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 
 const router = new Hono();
 import { z } from "zod";
@@ -21,8 +29,147 @@ import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.
 
 const walletRequestSchema = z.object({
   address: z.string(),
-  chain: z.string()
+  chain: z.string().optional(),
 });
+
+const walletOverviewRequestSchema = walletRequestSchema.extend({
+  period: z.string().optional(),
+});
+
+const walletCounterpartyRequestSchema = walletRequestSchema.extend({
+  period: z.string().optional(),
+  limit: z.string().optional(),
+  includeTokens: z.string().optional(),
+});
+
+const walletIdentityBatchRequestSchema = z.object({
+  addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
+  chain: z.string().optional(),
+});
+
+const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
+const MIN_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
+const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
+
+const DEFAULT_COUNTERPARTY_PERIOD = "7d";
+const DEFAULT_COUNTERPARTY_LIMIT = 20;
+const MAX_COUNTERPARTY_LIMIT = 100;
+
+function parseOverviewPeriodSec(rawPeriod?: string): {
+  periodSec: number;
+  normalized: boolean;
+} {
+  if (!rawPeriod) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+  }
+
+  const trimmed = rawPeriod.trim().toLowerCase();
+  if (!trimmed) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+  }
+
+  const explicitUnitMatch = trimmed.match(/^(\d+)\s*([hd])$/);
+  const dayOnlyMatch = trimmed.match(/^(\d+)$/);
+
+  let periodSec: number | null = null;
+  if (explicitUnitMatch) {
+    const amount = Number(explicitUnitMatch[1]);
+    const unit = explicitUnitMatch[2];
+    periodSec = unit === "h" ? amount * 60 * 60 : amount * 24 * 60 * 60;
+  } else if (dayOnlyMatch) {
+    periodSec = Number(dayOnlyMatch[1]) * 24 * 60 * 60;
+  }
+
+  if (
+    periodSec == null ||
+    !Number.isFinite(periodSec) ||
+    periodSec < MIN_OVERVIEW_PERIOD_SEC ||
+    periodSec > MAX_OVERVIEW_PERIOD_SEC
+  ) {
+    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: true };
+  }
+
+  return { periodSec, normalized: false };
+}
+
+function mapWalletIdentityError(err: WalletIdentityServiceError): {
+  status: 400 | 401 | 502 | 503;
+  error: string;
+} {
+  if (err.code === "invalid_address") {
+    return { status: 400, error: "Invalid wallet address format" };
+  }
+
+  if (err.code === "invalid_batch") {
+    return { status: 400, error: "Invalid identity batch payload" };
+  }
+
+  if (err.code === "unsupported_chain") {
+    return { status: 400, error: "Wallet identity is currently supported only for Solana" };
+  }
+
+  if (err.code === "provider_unauthorized") {
+    return { status: 401, error: "Wallet identity provider authorization failed" };
+  }
+
+  if (err.code === "provider_rate_limited" || err.code === "provider_unavailable") {
+    return { status: 503, error: "Wallet identity provider is unavailable" };
+  }
+
+  if (err.code === "provider_bad_request") {
+    return { status: 400, error: "Invalid request for wallet identity provider" };
+  }
+
+  const fallbackStatus: 400 | 401 | 502 | 503 =
+    err.statusCode === 400
+      ? 400
+      : err.statusCode === 401
+        ? 401
+        : err.statusCode === 503
+          ? 503
+          : 502;
+
+  return {
+    status: fallbackStatus,
+    error: "Failed to fetch wallet identity",
+  };
+}
+
+function parseCounterpartyPeriod(rawPeriod?: string): "24h" | "7d" {
+  const normalized = String(rawPeriod ?? "").trim().toLowerCase();
+  return normalized === "24h" ? "24h" : normalized === "7d" ? "7d" : DEFAULT_COUNTERPARTY_PERIOD;
+}
+
+function parseCounterpartyLimit(rawLimit?: string): number {
+  const parsed = Number(rawLimit ?? DEFAULT_COUNTERPARTY_LIMIT);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_COUNTERPARTY_LIMIT;
+  }
+
+  const integerLimit = Math.floor(parsed);
+  if (integerLimit < 1) {
+    return 1;
+  }
+
+  if (integerLimit > MAX_COUNTERPARTY_LIMIT) {
+    return MAX_COUNTERPARTY_LIMIT;
+  }
+
+  return integerLimit;
+}
+
+function parseCounterpartyIncludeTokens(rawIncludeTokens?: string): boolean {
+  if (rawIncludeTokens == null) {
+    return true;
+  }
+
+  const normalized = rawIncludeTokens.trim().toLowerCase();
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return true;
+}
 
 router.get("/overview", async (c) => {
   //  .get("/", async (c) => {
@@ -30,10 +177,10 @@ router.get("/overview", async (c) => {
   //       // Validate query parameters
   //       const query = c.req.query();
   //       console.log('[balance.route] Raw query:', query);
-        
+
   //       const params = balanceRequestSchema.parse(query);
   //       console.log('[balance.route] Parsed params:', params);
-  
+
   //       // Generate balance trend data
   //       const data = generateBalanceTrend(
   //         params.timePeriod,
@@ -41,12 +188,21 @@ router.get("/overview", async (c) => {
   //         params.wallets,
   //       );
   const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
+  const params = walletOverviewRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana";
+  const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
+
+  if (normalized && params.period) {
+    console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
+      address,
+      chain,
+      requestedPeriod: params.period,
+    });
+  }
 
   try {
-    const overview = await getWalletOverview(address, chain);
+    const overview = await getWalletOverview(address, chain, { periodSec });
     return c.json(overview);
   } catch (err) {
     console.error("Failed to get wallet overview", err);
@@ -58,7 +214,7 @@ router.get("/portfolio", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   try {
     const portfolio = await getWalletPortfolio(address, chain);
@@ -73,7 +229,7 @@ router.get("/transactions", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -100,7 +256,7 @@ router.get("/swap", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -122,11 +278,11 @@ router.get("/swap", async (c) => {
   }
 });
 
-router.get("/transfers", async(c) => {
+router.get("/transfers", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -152,16 +308,16 @@ router.get("/distribution", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
 
   try {
     // Get portfolio data which forms the asset distribution
     const portfolio = await getWalletPortfolio(address, chain);
-    
+
     // Transform portfolio data into distribution format
     // Calculate percentages based on total value
     const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
-    
+
     const distributionData = portfolio.map((item: any) => ({
       name: item.symbol || item.token || 'Unknown',
       value: item.valueUsd ?? 0,
@@ -189,7 +345,7 @@ router.get("/exchanges", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = params.chain as SupportedChain || "solana"
+  const chain = (params.chain as SupportedChain) || "solana"
   const limitParam = c.req.query("limit");
   const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
@@ -199,6 +355,107 @@ router.get("/exchanges", async (c) => {
   } catch (err) {
     console.error("Failed to get wallet exchange counts", err);
     return c.json({ error: "Failed to get wallet exchange counts" }, 500);
+  }
+});
+
+router.get("/counterparties", async (c) => {
+  const query = c.req.query();
+  const parsed = walletCounterpartyRequestSchema.safeParse(query);
+
+  if (!parsed.success) {
+    return c.json({ error: "Missing or invalid required query param: address" }, 400);
+  }
+
+  const address = parsed.data.address;
+  const chain = (parsed.data.chain as SupportedChain) || "solana";
+  const period = parseCounterpartyPeriod(parsed.data.period);
+  const limit = parseCounterpartyLimit(parsed.data.limit);
+  const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
+
+  try {
+    const counterparties = await getWalletCounterparties(address, chain, {
+      period,
+      limit,
+      includeTokens,
+    });
+    return c.json(counterparties);
+  } catch (err) {
+    console.error("Failed to get wallet counterparties", err);
+    return c.json({ error: "Failed to get wallet counterparties" }, 500);
+  }
+});
+
+router.get("/identity", async (c) => {
+  const address = c.req.query("address");
+  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const identity = await getWalletIdentity(address, chain);
+    return c.json(identity, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to fetch wallet identity", err);
+    return c.json({ error: "Failed to fetch wallet identity" }, 500);
+  }
+});
+
+router.post("/identity/batch", async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON payload" }, 400);
+  }
+
+  const parsed = walletIdentityBatchRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid identity batch payload" }, 400);
+  }
+
+  const chain = (parsed.data.chain as SupportedChain) || "solana";
+
+  try {
+    const identityBatch = await getWalletIdentityBatch(parsed.data.addresses, chain);
+    return c.json(identityBatch, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to fetch wallet identity batch", err);
+    return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
+  }
+});
+
+router.get("/intelligence", async (c) => {
+  const address = c.req.query("address");
+  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+
+  if (!address) {
+    return c.json({ error: "Missing required query param: address" }, 400);
+  }
+
+  try {
+    const intelligence = await composeWalletIntelligence(address, { chain });
+    return c.json(intelligence, 200);
+  } catch (err) {
+    if (err instanceof WalletIdentityServiceError) {
+      const mapped = mapWalletIdentityError(err);
+      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    }
+
+    console.error("Failed to compose wallet intelligence", err);
+    return c.json({ error: "Failed to compose wallet intelligence" }, 500);
   }
 });
 

@@ -28,6 +28,7 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import { ChartGridItem } from '../shared';
+import { runChartExport } from '@/services/chart/chartExportService';
 
 
 /**
@@ -149,44 +150,38 @@ export function ExchangeComparison({
     if (!isChartSuccess(data, 'exchanges')) return;
 
     const instance = chartRef.current?.getEchartsInstance() ?? null;
+    const csvData: ChartDataSeries[] = [
+      {
+        id: 'deposits',
+        name: tr('charts.exchangeComparisonChart.deposits'),
+        type: 'bar',
+        visible: true,
+        data: data.exchanges.map(ex => ({
+          name: ex.name,
+          value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
+        })),
+      },
+      {
+        id: 'withdrawals',
+        name: tr('charts.exchangeComparisonChart.withdrawals'),
+        type: 'bar',
+        visible: true,
+        data: data.exchanges.map(ex => ({
+          name: ex.name,
+          value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
+        })),
+      },
+    ];
 
-    if (format === 'csv') {
-      // Convert data to ChartDataSeries format for CSV export
-      const csvData: ChartDataSeries[] = [
-        {
-          id: 'deposits',
-          name: tr('charts.exchangeComparisonChart.deposits'),
-          type: 'bar',
-          visible: true,
-          data: data.exchanges.map(ex => ({
-            name: ex.name,
-            value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
-          })),
-        },
-        {
-          id: 'withdrawals',
-          name: tr('charts.exchangeComparisonChart.withdrawals'),
-          type: 'bar',
-          visible: true,
-          data: data.exchanges.map(ex => ({
-            name: ex.name,
-            value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
-          })),
-        },
-      ];
-      exportCSV(csvData, filters);
-      return;
-    }
-
-    if (!instance) {
-      console.error('Chart instance not available for export');
-      return;
-    }
-
-    // Export as PNG or SVG
-    format === 'png'
-      ? exportPNG(instance as any, filters)
-      : exportSVG(instance as any, filters);
+    runChartExport(
+      {
+        format,
+        filters,
+        chartInstance: instance as any,
+        csvData,
+      },
+      { exportPNG, exportSVG, exportCSV }
+    );
   }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, tr]);
   
   /**

@@ -34,28 +34,28 @@ import { ChartGridItem } from '../shared';
 // export interface CounterpartyActivityProps {
 //   /** Chart title */
 //   title?: string;
-  
+
 //   /** Chart minimum height in pixels */
 //   minHeight?: number;
-  
+
 //   /** Initial time period (default: 30D) */
 //   initialTimePeriod?: TimePeriod;
-  
+
 //   /** Transaction type filter (default: all) */
 //   initialTransactionType?: TransactionType;
-  
+
 //   /** Limit to top N counterparties (default: 10) */
 //   limit?: number;
-  
+
 //   /** Enable auto-refresh (default: true) */
 //   autoRefresh?: boolean;
-  
+
 //   /** Auto-refresh interval in milliseconds (default: 30000) */
 //   refreshInterval?: number;
-  
+
 //   /** Callback when data is loaded */
 //   onDataLoaded?: (data: CounterpartyActivityResponse) => void;
-  
+
 //   /** Additional CSS class */
 //   className?: string;
 // }
@@ -97,7 +97,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // refreshInterval = 30000,
   // className,
   // onDataLoaded,
-    // title,
+  // title,
 
   title,
   minHeight = 400,
@@ -110,33 +110,42 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // i18n
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.counterpartyActivityChart.title');
-  
+
   // State management
   const [currentLimit, setCurrentLimit] = useState<number>(10);
-  
+
   // Chart instance refs for export
   const transactionCountChartRef = useRef<ReactECharts>(null);
   const totalVolumeChartRef = useRef<ReactECharts>(null);
-  
+
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Get theme configuration
   const chartTheme = useChartTheme();
-  
+
   // Use centralized filter sync hook
   const { filters } = useChartFiltersSync({
     initialFilters: initialFilters
   });
-  
+
+  const walletsQuery = useMemo(() => {
+    if (!Array.isArray(filters.wallets) || filters.wallets.length === 0) {
+      return undefined;
+    }
+
+    return filters.wallets.join(',');
+  }, [filters.wallets]);
+
   // Query for the controller
   const query = useMemo<CounterpartiesRequestParams>(() => ({
     timePeriod: filters.timePeriod,
     transactionType: filters.transactionType,
     limit: currentLimit,
     timezone,
-  }), [filters.timePeriod, filters.transactionType, currentLimit, timezone]);
-  
+    ...(walletsQuery ? { wallets: walletsQuery } : {}),
+  }), [filters.timePeriod, filters.transactionType, currentLimit, timezone, walletsQuery]);
+
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
     fetcher: fetchCounterpartyActivity,
@@ -145,19 +154,19 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     refreshInterval,
     // onDataLoaded,
   });
-  
+
   // Export functionality
   // const { exportChart } = useChartExportr({
   //   chartTitle,
   //   timezone,
   //   baseFilename: 'counterparty-activity',
   // });
-  
+
   // Handle export
   // const handleExport = async (format: ExportFormat) => {
   //   const echartsInstance = chartRef.current?.getEchartsInstance();
   //   const chartInstance = echartsInstance ? (echartsInstance as any) : null;
-    
+
   //   // Prepare CSV data
   //   const csvData = data ? [
   //     {
@@ -181,23 +190,47 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   //       visible: true,
   //     }
   //   ] : [];
-    
+
   //   exportChartr(format, chartInstance, csvData, filters);
   // };
 
+  const counterpartyCountRanking = useMemo(() => {
+    if (!isChartSuccess(data, 'counterparties')) {
+      return [];
+    }
+
+    if (Array.isArray(data.counterpartiesByTransactionCount) && data.counterpartiesByTransactionCount.length > 0) {
+      return data.counterpartiesByTransactionCount;
+    }
+
+    return data.counterparties;
+  }, [data]);
+
+  const counterpartyVolumeRanking = useMemo(() => {
+    if (!isChartSuccess(data, 'counterparties')) {
+      return [];
+    }
+
+    if (Array.isArray(data.counterpartiesByVolume) && data.counterpartiesByVolume.length > 0) {
+      return data.counterpartiesByVolume;
+    }
+
+    return data.counterparties;
+  }, [data]);
+
   // Generate chart options for transaction counts
   const transactionCountOptions: EChartsOption = useMemo(() => {
-    if (!isChartSuccess(data, 'counterparties') || data.counterparties.length === 0) {
+    if (counterpartyCountRanking.length === 0) {
       return {};
     }
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Extract counterparty names and values
-    const counterpartyNames = data.counterparties.map(cp => cp.name);
-    const transactionCounts = data.counterparties.map(cp => cp.transactionCount);
-    
+    const counterpartyNames = counterpartyCountRanking.map(cp => cp.name);
+    const transactionCounts = counterpartyCountRanking.map(cp => cp.transactionCount);
+
     return {
       ...baseOption,
       grid: {
@@ -215,16 +248,16 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          
+
           const counterpartyName = params[0].axisValue;
           const count = params[0].value;
-          
+
           return createTooltipHeader(counterpartyName)
             + createTooltipRow(
-                tr('charts.counterpartyActivityChart.transactionCount'),
-                count.toLocaleString(),
-                { color: params[0].color, showIndicator: true }
-              );
+              tr('charts.counterpartyActivityChart.transactionCount'),
+              count.toLocaleString(),
+              { color: params[0].color, showIndicator: true }
+            );
         },
       },
       legend: getMultiSeriesLegend(
@@ -274,21 +307,21 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, tr]);
-  
+  }, [counterpartyCountRanking, chartTheme, tr]);
+
   // Generate chart options for total volume
   const totalVolumeOptions: EChartsOption = useMemo(() => {
-    if (!isChartSuccess(data, 'counterparties') || data.counterparties.length === 0) {
+    if (counterpartyVolumeRanking.length === 0) {
       return {};
     }
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Extract counterparty names and values
-    const counterpartyNames = data.counterparties.map(cp => cp.name);
-    const totalVolumes = data.counterparties.map(cp => cp.totalVolume);
-    
+    const counterpartyNames = counterpartyVolumeRanking.map(cp => cp.name);
+    const totalVolumes = counterpartyVolumeRanking.map(cp => cp.totalVolume);
+
     return {
       ...baseOption,
       grid: {
@@ -306,16 +339,16 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          
+
           const counterpartyName = params[0].axisValue;
           const volume = params[0].value;
-          
+
           return createTooltipHeader(counterpartyName)
             + createTooltipRow(
-                tr('charts.counterpartyActivityChart.totalVolume'),
-                formatCurrency(volume),
-                { color: params[0].color, showIndicator: true }
-              );
+              tr('charts.counterpartyActivityChart.totalVolume'),
+              formatCurrency(volume),
+              { color: params[0].color, showIndicator: true }
+            );
         },
       },
       legend: getMultiSeriesLegend(
@@ -365,20 +398,20 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [data, chartTheme, tr]);
-  
+  }, [counterpartyVolumeRanking, chartTheme, tr]);
+
   // Handle limit change
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
   };
-  
+
   // Render chart with wrapper
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       onRetry={refetch}
-      isEmpty={!isChartSuccess(data, 'counterparties')}
+      isEmpty={!isChartSuccess(data, 'counterparties') || counterpartyCountRanking.length === 0}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
         <div className={sharedStyles.limitSelector} >
@@ -396,9 +429,9 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           </select>
         </div>
       </div>
-      
+
       {/* Transaction counts chart */}
-      {isChartSuccess(data, 'counterparties') && (
+      {counterpartyCountRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.transactionCount')}</h3>
           <ChartGridItem minHeight={minHeight}>
@@ -412,9 +445,9 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           </ChartGridItem>
         </div>
       )}
-      
+
       {/* Total volume chart */}
-      {isChartSuccess(data, 'counterparties') && (
+      {counterpartyVolumeRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
           <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.totalVolume')}</h3>
           <ChartGridItem minHeight={minHeight}>
