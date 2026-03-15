@@ -254,12 +254,15 @@ export function TokenInsightTabs({
   useEffect(() => {
     if (!address) return;
     setDistLoading(true);
-    client.api.tokens.holders.distribution[":address"]
-      .$get({ param: { address } })
+    client.api.tokens.holders.stats[":addresses"]
+      .$get({ param: { addresses: address } })
       .then(async (res) => {
         if (res.ok) {
-          const data = await res.json();
-          setDistribution(data as DistributionData);
+          const [stats] = await res.json();
+          setDistribution({
+            top_10: String(stats.top10Percent),
+            rest: String(100 - stats.top10Percent),
+          });
         }
       })
       .catch(() => { })

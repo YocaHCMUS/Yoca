@@ -85,13 +85,13 @@ export function TokenStatsPanel({ token }: TokenStatsPanelProps) {
         <div className={styles.statsRow}>
           <span className={styles.label}>{tr("nav.searchMarketCap")}</span>
           <span className={styles.value}>
-            {fmt.num.readableCompact.currency(token.marketCap)}
+            {fmt.num.compact.currency(token.marketCap)}
           </span>
         </div>
         <div className={styles.statsRow}>
           <span className={styles.label}>{tr("nav.searchVolume")}</span>
           <span className={styles.value}>
-            {fmt.num.readableCompact.currency(token.volume24h)}
+            {fmt.num.compact.currency(token.volume24h)}
           </span>
         </div>
       </div>

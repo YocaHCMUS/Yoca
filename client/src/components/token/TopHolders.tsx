@@ -1,7 +1,7 @@
 import client from "@/api/main";
+import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { formatAddress } from "@/util/format";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
 import type { InferResponseType } from "hono/client";
@@ -16,9 +16,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 interface TopHoldersProps {
@@ -44,6 +44,8 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
       </div>
     );
   }
+  console.log("Holders: ");
+  console.log(holdersInfo);
 
   // Tính tổng phần trăm top 10
   // Ưu tiên lấy từ API (holdersInfo), nếu không có thì tính tổng từ danh sách holders
@@ -80,12 +82,14 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
       {isExpanded && (
         <div className={styles.tableWrapper}>
           <Tble
+            title=""
             headers={[
               { key: "rank", header: "#" },
               { key: "address", header: tr("token.topHolders.address") },
               { key: "percentage", header: tr("token.topHolders.percent") },
             ]}
             loading={false}
+            height={300}
             rows={holders.map((holder: any, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,
