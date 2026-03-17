@@ -14,6 +14,22 @@ import client from '@/api/main';
  */
 export type InferFetcherData<T extends (...args: any[]) => Promise<any>> = Awaited<ReturnType<T>>;
 
+/**
+ * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
+ * All additive metadata fields are optional to allow graceful degradation
+ * when enrichment data is partially unavailable.
+ */
+export interface WalletPortfolioItem {
+  tokenAddress: string;
+  symbol: string;
+  name?: string;
+  logoUri?: string;
+  amount: number;
+  priceUsd?: number;
+  valueUsd: number;
+  change24hPercent?: number;
+}
+
 export interface WalletCounterpartyIdentity {
   status: "known" | "unknown" | "unavailable";
   name: string | null;
@@ -106,14 +122,14 @@ export async function fetchWalletOverview(
 export async function fetchWalletPortfolio(
   address: string,
   chain?: string
-) {
+): Promise<WalletPortfolioItem[]> {
   const query = { address, ...(chain && { chain }) };
   const response = await (client.api as any).wallets.portfolio.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletPortfolioItem[];
 }
 
 /**

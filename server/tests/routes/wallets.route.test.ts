@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getWalletOverviewMock } = vi.hoisted(() => ({
+const { getWalletOverviewMock, getWalletPortfolioMock } = vi.hoisted(() => ({
     getWalletOverviewMock: vi.fn(),
+    getWalletPortfolioMock: vi.fn(),
 }));
 
 const { getWalletCounterpartiesMock } = vi.hoisted(() => ({
@@ -21,7 +22,7 @@ const {
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     fetchTestTransaction: vi.fn(async () => ({})),
     getWalletOverview: getWalletOverviewMock,
-    getWalletPortfolio: vi.fn(async () => []),
+    getWalletPortfolio: getWalletPortfolioMock,
     getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
     getWalletExchangeCounts: vi.fn(async () => ({ exchanges: [], metadata: { period: "30D", metric: "count" } })),
     getWalletSwaps: vi.fn(async () => ({ address: "", chain: "solana", swaps: [] })),
@@ -71,6 +72,7 @@ const WEEK_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
 
 beforeEach(() => {
     getWalletOverviewMock.mockReset();
+    getWalletPortfolioMock.mockReset();
     getWalletCounterpartiesMock.mockReset();
     getWalletIdentityMock.mockReset();
     getWalletIdentityBatchMock.mockReset();
@@ -87,6 +89,8 @@ beforeEach(() => {
         tokensHoldingCount: 3,
         metricsPeriod: "24h",
     });
+
+    getWalletPortfolioMock.mockResolvedValue([]);
 
     getWalletIdentityMock.mockResolvedValue({
         address: "wallet-1",
@@ -269,6 +273,95 @@ describe("wallets.route - /overview", () => {
         expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
             periodSec: expectedSec,
         });
+    });
+});
+
+describe("wallets.route - /portfolio", () => {
+    it("returns additive logoUri while preserving legacy fields", async () => {
+        getWalletPortfolioMock.mockResolvedValueOnce([
+            {
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 100,
+                priceUsd: 1,
+                valueUsd: 100,
+                change24hPercent: 0.2,
+            },
+        ]);
+
+        const response = await router.request(
+            "http://localhost/portfolio?address=wallet-1&chain=solana",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body).toEqual([
+            expect.objectContaining({
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 100,
+                valueUsd: 100,
+            }),
+        ]);
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+    });
+});
+
+describe("wallets.route - /distribution", () => {
+    it("includes additive token metadata fields and keeps required distribution shape", async () => {
+        getWalletPortfolioMock.mockResolvedValueOnce([
+            {
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 10,
+                valueUsd: 10,
+            },
+            {
+                tokenAddress: "mint-2",
+                symbol: "SOL",
+                name: "Solana",
+                logoUri: "https://cdn.example/sol.png",
+                amount: 2,
+                valueUsd: 30,
+            },
+        ]);
+
+        const response = await router.request(
+            "http://localhost/distribution?address=wallet-1&chain=solana",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+
+        expect(body.totalValue).toBe(40);
+        expect(body).toEqual(
+            expect.objectContaining({
+                data: expect.any(Array),
+                totalValue: 40,
+                metadata: expect.objectContaining({
+                    currency: "USD",
+                    timestamp: expect.any(Number),
+                }),
+            }),
+        );
+
+        expect(body.data[0]).toEqual(
+            expect.objectContaining({
+                name: "USDC",
+                value: 10,
+                percentage: 25,
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                logoUri: "https://cdn.example/usdc.png",
+            }),
+        );
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
     });
 });
 

@@ -97,7 +97,7 @@ export const tokenDetails = pgTable("token_details", {
 
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  
+
   priceUsd: decimal("price_usd").notNull(),
 
   marketCapRank: integer("market_cap_rank"),
@@ -505,6 +505,7 @@ export const walletPortfolioCache = pgTable(
           tokenAddress: string;
           symbol: string;
           name?: string;
+          logoUri?: string;
           amount: number;
           priceUsd?: number;
           valueUsd: number;

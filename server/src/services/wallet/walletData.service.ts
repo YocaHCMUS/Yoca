@@ -4,20 +4,19 @@ import {
   WALLET_PORTFOLIO_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import type { WalletBalanceInsert } from "@sv/db/schema.js";
 import {
   walletExchangeCountsCache,
   walletOverviewCache,
   walletPortfolioCache,
 } from "@sv/db/schema.js";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { getWalletBalances } from "@sv/services/balances.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
 import {
   getDailyTokenMarketChart,
   getHourlyTokenMarketChart,
 } from "../tokens/token-chart.js";
 import { getTokenHistoricalData } from "../tokens/token-history.js";
+import { getTokenMeta } from "../tokens/token-info.js";
 import {
   fetchAllTransactionHistory,
   fetchHeliusSolanaPortfolio,
@@ -45,7 +44,6 @@ import type {
   WalletTransfer,
   WalletTransfersResponse,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import * as birdeye from "@sv/util/util-birdeye.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { Signature } from "ethers";
@@ -58,6 +56,8 @@ import {
 } from "./db/walletDataCacher.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
+const SOL_SYSTEM_PROGRAM_ADDRESS = "11111111111111111111111111111111";
+const SOL_NATIVE_ALIAS_MINT = "So11111111111111111111111111111111111111111";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY_SEC = 24 * 60 * 60;
 
@@ -72,6 +72,19 @@ const DEFAULT_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
 const MAX_OVERVIEW_MORALIS_PAGES = 5;
+
+const PORTFOLIO_METADATA_PLACEHOLDERS = new Set([
+  "",
+  "unknown",
+  "unk",
+  "n/a",
+  "na",
+  "null",
+  "undefined",
+  "-",
+  "--",
+  "?",
+]);
 
 type WalletOverviewCacheRow = {
   totalAssetValueUsd: number | string;
@@ -100,7 +113,6 @@ type OverviewHoldingsSnapshot = {
   totalAssetValueUsd: number;
   tokensHoldingCount: number;
   source:
-  | "balances-db"
   | "helius-portfolio"
   | "moralis-wallet-tokens"
   | "overview-cache"
@@ -128,10 +140,6 @@ function toIsoTimestamp(value: unknown): string {
   }
 
   return new Date().toISOString();
-}
-
-function sumTotalAssetValueFromBalances(balances: WalletBalanceInsert[]): number {
-  return balances.reduce((sum, bal) => sum + Number(bal.totalValueUsd ?? bal.valueUsd ?? 0), 0);
 }
 
 function getHistoryRange(options?: { from?: "24h" | "7d"; fromSec?: number; toSec?: number }): WalletHistoryRange {
@@ -343,24 +351,11 @@ async function fetchMoralisWalletTokensSnapshot(
   }
 }
 
-async function buildHoldingsSnapshotFromBalancesOrProviders(
+async function buildHoldingsSnapshotFromProviders(
   address: string,
   chain: SupportedChain,
   cacheRow: WalletOverviewCacheRow | null,
 ): Promise<OverviewHoldingsSnapshot> {
-  try {
-    const balances = await getWalletBalances(address);
-    if (balances && balances.length > 0) {
-      return {
-        totalAssetValueUsd: sumTotalAssetValueFromBalances(balances),
-        tokensHoldingCount: balances.length,
-        source: "balances-db",
-      };
-    }
-  } catch (err) {
-    console.error("Failed to fetch wallet balances for overview holdings", err);
-  }
-
   if (chain === "solana") {
     try {
       const heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
@@ -737,6 +732,181 @@ function buildOverviewResponse(input: {
   };
 }
 
+function normalizePortfolioText(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizePortfolioAddressKey(tokenAddress: string): string {
+  return tokenAddress.trim().toLowerCase();
+}
+
+function normalizePortfolioLookupAddress(tokenAddress: string): string {
+  const normalized = tokenAddress.trim();
+  const lower = normalized.toLowerCase();
+
+  if (
+    lower === "native" ||
+    lower === "sol" ||
+    lower === SOL_MINT.toLowerCase() ||
+    lower === SOL_SYSTEM_PROGRAM_ADDRESS.toLowerCase() ||
+    lower === SOL_NATIVE_ALIAS_MINT.toLowerCase()
+  ) {
+    return SOL_MINT;
+  }
+
+  return normalized;
+}
+
+function shouldFillPortfolioText(value: string | undefined): boolean {
+  const normalized = normalizePortfolioText(value);
+  if (!normalized) {
+    return true;
+  }
+
+  return PORTFOLIO_METADATA_PLACEHOLDERS.has(normalized.toLowerCase());
+}
+
+function isMissingPortfolioLogoUri(value: string | undefined): boolean {
+  return normalizePortfolioText(value) == null;
+}
+
+function isValidPortfolioTokenAddress(tokenAddress: string | undefined): boolean {
+  const normalized = normalizePortfolioText(tokenAddress);
+  if (!normalized) {
+    return false;
+  }
+
+  const lower = normalized.toLowerCase();
+  if (PORTFOLIO_METADATA_PLACEHOLDERS.has(lower)) {
+    return false;
+  }
+
+  return normalized.length >= 4;
+}
+
+async function enrichWalletPortfolioMetadata(
+  portfolio: WalletPortfolioItem[],
+  chain: SupportedChain,
+  context: { address: string; source: string },
+): Promise<{ portfolio: WalletPortfolioItem[]; changed: boolean }> {
+  if (chain !== "solana" || portfolio.length === 0) {
+    return { portfolio, changed: false };
+  }
+
+  const candidateAddressByKey = new Map<string, string>();
+
+  for (const item of portfolio) {
+    if (!isValidPortfolioTokenAddress(item.tokenAddress)) {
+      continue;
+    }
+
+    const needsSymbol = shouldFillPortfolioText(item.symbol);
+    const needsName = shouldFillPortfolioText(item.name);
+    const needsLogoUri = isMissingPortfolioLogoUri(item.logoUri);
+    if (!needsSymbol && !needsName && !needsLogoUri) {
+      continue;
+    }
+
+    const rawAddress = String(item.tokenAddress).trim();
+    // CoinGecko uses the WSOL mint for SOL metadata; normalize known SOL aliases.
+    const lookupAddress = normalizePortfolioLookupAddress(rawAddress);
+    const addressKey = normalizePortfolioAddressKey(lookupAddress);
+    if (!candidateAddressByKey.has(addressKey)) {
+      candidateAddressByKey.set(addressKey, lookupAddress);
+    }
+  }
+
+  if (candidateAddressByKey.size === 0) {
+    return { portfolio, changed: false };
+  }
+
+  type TokenMetaRow = {
+    address: string;
+    symbol: string;
+    name: string;
+    imageUrl: string | null;
+  };
+
+  let tokenMeta: TokenMetaRow[] = [];
+  try {
+    tokenMeta = await getTokenMeta(Array.from(candidateAddressByKey.values())) as TokenMetaRow[];
+  } catch (err) {
+    console.warn("[wallet-portfolio] Token metadata enrichment failed", {
+      address: context.address,
+      chain,
+      source: context.source,
+      error: err,
+    });
+    return { portfolio, changed: false };
+  }
+
+  if (tokenMeta.length === 0) {
+    return { portfolio, changed: false };
+  }
+
+  const tokenMetaByKey = new Map<
+    string,
+    {
+      symbol?: string;
+      name?: string;
+      logoUri?: string;
+    }
+  >();
+
+  for (const meta of tokenMeta) {
+    const address = normalizePortfolioText(meta.address);
+    if (!address) {
+      continue;
+    }
+
+    tokenMetaByKey.set(normalizePortfolioAddressKey(address), {
+      symbol: normalizePortfolioText(meta.symbol),
+      name: normalizePortfolioText(meta.name),
+      logoUri: normalizePortfolioText(meta.imageUrl ?? undefined),
+    });
+  }
+
+  let changed = false;
+  const enrichedPortfolio = portfolio.map((item) => {
+    if (!isValidPortfolioTokenAddress(item.tokenAddress)) {
+      return item;
+    }
+
+    const rawAddress = String(item.tokenAddress).trim();
+    const lookupAddress = normalizePortfolioLookupAddress(rawAddress);
+    const meta = tokenMetaByKey.get(normalizePortfolioAddressKey(lookupAddress));
+    if (!meta) {
+      return item;
+    }
+
+    const shouldFillSymbol = shouldFillPortfolioText(item.symbol) && Boolean(meta.symbol);
+    const shouldFillName = shouldFillPortfolioText(item.name) && Boolean(meta.name);
+    const shouldFillLogo = isMissingPortfolioLogoUri(item.logoUri) && Boolean(meta.logoUri);
+
+    if (!shouldFillSymbol && !shouldFillName && !shouldFillLogo) {
+      return item;
+    }
+
+    changed = true;
+    return {
+      ...item,
+      symbol: shouldFillSymbol ? String(meta.symbol) : item.symbol,
+      name: shouldFillName ? String(meta.name) : item.name,
+      logoUri: shouldFillLogo ? String(meta.logoUri) : item.logoUri,
+    };
+  });
+
+  return {
+    portfolio: changed ? enrichedPortfolio : portfolio,
+    changed,
+  };
+}
+
 export async function getWalletOverview(
   address: string,
   chain: SupportedChain,
@@ -767,7 +937,7 @@ export async function getWalletOverview(
     return cachedOverview;
   }
 
-  const holdingsSnapshot = await buildHoldingsSnapshotFromBalancesOrProviders(
+  const holdingsSnapshot = await buildHoldingsSnapshotFromProviders(
     address,
     effectiveChain,
     cacheRow,
@@ -871,41 +1041,29 @@ export async function getWalletPortfolio(
   if (cachedPortfolio.length > 0 && cachedPortfolio[0].fetchedAt >= portfolioThreshold) {
     const cachedData = (cachedPortfolio[0].data as WalletPortfolioItem[]) ?? [];
     if (cachedData.length > 0) {
-      return cachedData;
+      const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, effectiveChain, {
+        address,
+        source: "cache-hit",
+      });
+
+      if (enrichedCached.changed) {
+        await db
+          .insert(walletPortfolioCache)
+          .values({ address, chain: effectiveChain, data: enrichedCached.portfolio })
+          .onConflictDoUpdate({
+            target: [walletPortfolioCache.address, walletPortfolioCache.chain],
+            set: { data: enrichedCached.portfolio, fetchedAt: new Date() },
+          });
+      }
+
+      return enrichedCached.portfolio;
     }
     // If cached portfolio is empty (likely from an earlier failed API call),
     // fall through to external fetch instead of treating it as valid.
   }
 
-  // 1) Try DB balances first
-  try {
-    const balances = await getWalletBalances(address);
-    if (balances && balances.length > 0) {
-      const portfolio: WalletPortfolioItem[] = balances.map((b) => ({
-        tokenAddress: b.tokenAddress,
-        symbol: "",
-        name: undefined,
-        amount: Number(b.amount),
-        priceUsd: undefined,
-        valueUsd: Number(b.valueUsd),
-      }));
-      await db
-        .insert(walletPortfolioCache)
-        .values({ address, chain: effectiveChain, data: portfolio })
-        .onConflictDoUpdate({
-          target: [walletPortfolioCache.address, walletPortfolioCache.chain],
-          set: { data: portfolio, fetchedAt: new Date() },
-        });
-      return portfolio;
-    }
-  } catch {
-    // ignore and fall through
-  }
-
-  // 2) Fallback to external APIs
+  // 1) For Solana: use Helius directly because it provides native portfolio metadata.
   if (effectiveChain === "solana") {
-    // Prefer Helius DAS getAssetsByOwner for Solana portfolio data.
-    // Birdeye implementation is kept below in comments for future reference.
     let heliusPortfolio: WalletPortfolioItem[] = [];
     try {
       heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
@@ -914,74 +1072,24 @@ export async function getWalletPortfolio(
     }
 
     if (heliusPortfolio.length > 0) {
+      const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, effectiveChain, {
+        address,
+        source: "helius",
+      });
+
       await db
         .insert(walletPortfolioCache)
-        .values({ address, chain: effectiveChain, data: heliusPortfolio })
+        .values({ address, chain: effectiveChain, data: enrichedPortfolio.portfolio })
         .onConflictDoUpdate({
           target: [walletPortfolioCache.address, walletPortfolioCache.chain],
-          set: { data: heliusPortfolio, fetchedAt: new Date() },
+          set: { data: enrichedPortfolio.portfolio, fetchedAt: new Date() },
         });
-      return heliusPortfolio;
+      return enrichedPortfolio.portfolio;
     }
-
-    // If Helius failed or returned no items, we currently return an empty portfolio.
-    // The previous Birdeye-based implementation is preserved below in comments if you
-    // want to re-enable it later.
-    //
-    // const endpoint = birdeye.getEndpoint("/wallet/v2/current-net-worth");
-    // endpoint.search = new URLSearchParams({
-    //   wallet: address,
-    //   sort_type: "desc",
-    // }).toString();
-    //
-    // let items: any[] = [];
-    // try {
-    //   const resp = await birdeye.birdeyeFetch(endpoint, {
-    //     method: "GET",
-    //     headers: birdeye.getRequiredHeaders("solana"),
-    //   });
-    //
-    //   if (resp.ok) {
-    //     const payload = await resp.json();
-    //     items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
-    //   } else {
-    //     console.error(
-    //       "Birdeye current-net-worth error",
-    //       resp.status,
-    //       resp.statusText,
-    //     );
-    //   }
-    // } catch (err) {
-    //   console.error("Birdeye current-net-worth request failed", err);
-    // }
-    //
-    // if (items.length > 0) {
-    //   const portfolio: WalletPortfolioItem[] = items.map((item: any) => ({
-    //     tokenAddress: String(item.address),
-    //     symbol: String(item.symbol ?? ""),
-    //     name: item.name ? String(item.name) : undefined,
-    //     amount: Number(item.amount ?? 0),
-    //     priceUsd: item.price !== undefined ? Number(item.price) : undefined,
-    //     valueUsd: Number(item.value ?? 0),
-    //   }));
-    //   await db
-    //     .insert(walletPortfolioCache)
-    //     .values({ address, chain: effectiveChain, data: portfolio })
-    //     .onConflictDoUpdate({
-    //       target: [walletPortfolioCache.address, walletPortfolioCache.chain],
-    //       set: { data: portfolio, fetchedAt: new Date() },
-    //     });
-    //   return portfolio;
-    // }
-    //
-    // // If Birdeye failed or returned no items, do not cache empty array.
-    // // Fall back to empty portfolio in API response.
-    // return [];
-
+    // Helius returned nothing; return empty portfolio for Solana.
     return [];
   }
 
-  // EVM: use Moralis wallets/:address/tokens (includes usd_price, usd_value, 24h change)
   const endpoint = moralis.getEndpoint(`/wallets/${address}/tokens`);
   const searchParams = new URLSearchParams();
   if (effectiveChain) {
@@ -1034,14 +1142,19 @@ export async function getWalletPortfolio(
       change24hPercent,
     };
   });
+  const enrichedPortfolio = await enrichWalletPortfolioMetadata(portfolio, effectiveChain, {
+    address,
+    source: "moralis",
+  });
+
   await db
     .insert(walletPortfolioCache)
-    .values({ address, chain: effectiveChain, data: portfolio })
+    .values({ address, chain: effectiveChain, data: enrichedPortfolio.portfolio })
     .onConflictDoUpdate({
       target: [walletPortfolioCache.address, walletPortfolioCache.chain],
-      set: { data: portfolio, fetchedAt: new Date() },
+      set: { data: enrichedPortfolio.portfolio, fetchedAt: new Date() },
     });
-  return portfolio;
+  return enrichedPortfolio.portfolio;
 }
 
 export async function getWalletTransactions(
@@ -1788,18 +1901,19 @@ function getAggregationIntervalMs(aggregation: PnLAggregation): number {
   return DAY_MS;
 }
 
-const SOL_NATIVE_SYSTEM_ADDRESS = "11111111111111111111111111111111";
-
 function normalizeMint(mint: unknown): string {
   const raw = String(mint ?? "").trim();
   if (!raw) {
     return "";
   }
 
+  const rawLower = raw.toLowerCase();
+
   if (
     raw.toUpperCase() === "SOL" ||
-    raw === SOL_NATIVE_SYSTEM_ADDRESS ||
-    raw.toLowerCase() === SOL_MINT.toLowerCase()
+    raw === SOL_SYSTEM_PROGRAM_ADDRESS ||
+    rawLower === SOL_MINT.toLowerCase() ||
+    rawLower === SOL_NATIVE_ALIAS_MINT.toLowerCase()
   ) {
     return SOL_MINT;
   }

@@ -16,6 +16,7 @@ vi.mock("@sv/util/api-key-manager.js", () => ({
 
 import {
     fetchAllTransactionHistory,
+    fetchHeliusSolanaPortfolio,
     fetchHeliusSolanaTransactions,
     fetchHeliusSolanaTransfers,
 } from "../../../src/services/wallet/fetchers/walletDataFetcher.service.ts";
@@ -38,6 +39,78 @@ describe("walletDataFetcher.service", () => {
 
     afterEach(() => {
         vi.useRealTimers();
+    });
+
+    it("maps logoUri and keeps showZeroBalance=false in balances requests", async () => {
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                balances: [
+                    {
+                        mint: "mint-1",
+                        symbol: "USDC",
+                        name: "USD Coin",
+                        logoURI: "https://cdn.example/usdc.png",
+                        balance: 2,
+                        pricePerToken: 1,
+                        usdValue: 2,
+                    },
+                ],
+                pagination: { hasMore: false, page: 1 },
+            }),
+        );
+
+        const result = await fetchHeliusSolanaPortfolio("wallet-address");
+
+        expect(result).toEqual([
+            {
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 2,
+                priceUsd: 1,
+                valueUsd: 2,
+            },
+        ]);
+
+        expect(heliusFetchMock).toHaveBeenCalledTimes(1);
+        const balancesUrl = heliusFetchMock.mock.calls[0][0] as URL;
+        expect(balancesUrl.pathname).toContain("/v1/wallet/wallet-address/balances");
+        expect(balancesUrl.searchParams.get("showZeroBalance")).toBe("false");
+        expect(balancesUrl.searchParams.get("showNative")).toBe("true");
+        expect(balancesUrl.searchParams.get("showNfts")).toBe("false");
+    });
+
+    it("preserves portfolio mapping when Helius price fields are null", async () => {
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                balances: [
+                    {
+                        mint: "mint-no-price",
+                        symbol: "NOP",
+                        balance: 3,
+                        pricePerToken: null,
+                        usdValue: null,
+                    },
+                    {
+                        mint: "mint-derived",
+                        symbol: "DRV",
+                        balance: 2,
+                        pricePerToken: "4",
+                        usdValue: null,
+                    },
+                ],
+                pagination: { hasMore: false, page: 1 },
+            }),
+        );
+
+        const result = await fetchHeliusSolanaPortfolio("wallet-address");
+
+        expect(result).toHaveLength(2);
+        expect(result[0].priceUsd).toBeUndefined();
+        expect(result[0].valueUsd).toBe(0);
+        expect(result[1].priceUsd).toBe(4);
+        expect(result[1].valueUsd).toBe(8);
     });
 
     it("paginates history with before=nextCursor", async () => {

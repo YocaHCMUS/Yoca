@@ -8,6 +8,16 @@ function getNextCursor(pagination: any): string | null {
   return raw.length > 0 ? raw : null;
 }
 
+function getTokenLogoUri(token: any): string | undefined {
+  const rawLogo = token?.logoURI ?? token?.logoUri ?? token?.image;
+  if (rawLogo == null) {
+    return undefined;
+  }
+
+  const normalized = String(rawLogo).trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 export type HeliusHistoryRange = {
   fromSec: number;
   toSec?: number;
@@ -80,6 +90,7 @@ export async function fetchHeliusSolanaPortfolio(
         tokenAddress: String(token.mint ?? ""),
         symbol: String(token.symbol ?? ""),
         name: token.name ? String(token.name) : undefined,
+        logoUri: getTokenLogoUri(token),
         amount,
         priceUsd: pricePerToken,
         valueUsd: usdValue,

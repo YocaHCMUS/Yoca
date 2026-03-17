@@ -19,7 +19,7 @@ import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligenc
 
 const router = new Hono();
 import { z } from "zod";
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { SupportedChain, WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 // function getChainFromQuery(c: any): SupportedChain {
 //   const chain = c.req.query("chain");
@@ -316,13 +316,16 @@ router.get("/distribution", async (c) => {
 
     // Transform portfolio data into distribution format
     // Calculate percentages based on total value
-    const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
+    const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
 
-    const distributionData = portfolio.map((item: any) => ({
-      name: item.symbol || item.token || 'Unknown',
+    const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
+      name: item.symbol || item.name || item.tokenAddress || "Unknown",
       value: item.valueUsd ?? 0,
       percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
-      rawAmount: item.amount ?? item.holding ?? 0,
+      rawAmount: item.amount ?? 0,
+      tokenAddress: item.tokenAddress ?? "",
+      symbol: item.symbol ?? "",
+      logoUri: item.logoUri ?? undefined,
     }));
 
     return c.json({

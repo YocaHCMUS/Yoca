@@ -18,6 +18,7 @@ export interface WalletPortfolioItem {
     tokenAddress: string;
     symbol: string;
     name?: string;
+    logoUri?: string;
     amount: number;
     priceUsd?: number;
     valueUsd: number;

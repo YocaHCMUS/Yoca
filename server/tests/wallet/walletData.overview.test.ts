@@ -218,21 +218,19 @@ describe("walletData.service - getWalletOverview", () => {
         expect(hoisted.saveOverviewCacheMock).not.toHaveBeenCalled();
     });
 
-    it("computes holdings from balances fast path and persists overview", async () => {
-        hoisted.getWalletBalancesMock.mockResolvedValue([
+    it("computes holdings from Helius portfolio path and persists overview", async () => {
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
             {
-                address: "wallet-1",
                 tokenAddress: "token-a",
                 amount: 1,
                 valueUsd: 50,
-                totalValueUsd: 50,
+                symbol: "A",
             },
             {
-                address: "wallet-1",
                 tokenAddress: "token-b",
                 amount: 3,
                 valueUsd: 70,
-                totalValueUsd: 70,
+                symbol: "B",
             },
         ]);
 
@@ -242,7 +240,7 @@ describe("walletData.service - getWalletOverview", () => {
         expect(result.tokensHoldingCount).toBe(2);
         expect(result.transactionCount24h).toBe(0);
         expect(result.tokensTradedCount).toBe(0);
-        expect(hoisted.fetchHeliusSolanaPortfolioMock).not.toHaveBeenCalled();
+        expect(hoisted.fetchHeliusSolanaPortfolioMock).toHaveBeenCalledTimes(1);
         expect(hoisted.saveOverviewCacheMock).toHaveBeenCalledTimes(1);
     });
 
@@ -397,13 +395,12 @@ describe("walletData.service - getWalletOverview", () => {
             fetchedAt: new Date("2026-01-01T00:00:00.000Z"),
         });
 
-        hoisted.getWalletBalancesMock.mockResolvedValue([
+        hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
             {
-                address: "wallet-1",
                 tokenAddress: "mint-a",
                 amount: 2,
                 valueUsd: 200,
-                totalValueUsd: 200,
+                symbol: "MINTA",
             },
         ]);
 

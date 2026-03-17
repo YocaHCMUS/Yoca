@@ -28,10 +28,15 @@ import {
   fetchWalletTransfers,
   fetchWalletSwaps,
   type WalletCounterpartyRow,
+  type WalletPortfolioItem,
 } from "@/services/wallet/walletApi.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
-import { formatNumber } from "../../util/format.ts";
+import {
+  mapPortfolioItems,
+  buildPortfolioMetaMap,
+} from "../../util/wallet-portfolio-mapper.ts";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
 
 export default function WalletPage() {
@@ -40,7 +45,7 @@ export default function WalletPage() {
   const { address } = useParams<{ address: string }>();
   const [swaps, setSwaps] = useState<any[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
-  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
 
   const [activeTab, setActiveTab] = useState(0);
@@ -56,27 +61,30 @@ export default function WalletPage() {
   // Stores raw API swap objects aligned by index with the swaps state array
   const rawSwapsRef = useRef<any[]>([]);
 
-  // Transform portfolio data from API response for Table component
-  const portfolioData = portfolio.length > 0
-    ? portfolio.map((item: any) => [
-      item.symbol || item.token || 'Unknown',
-      formatNumber(item.priceUsd ?? 0),
-      `${formatNumber(item.amount ?? item.holding ?? 0)} ${item.symbol || item.token}`,
-      formatNumber(item.valueUsd ?? item.value ?? 0),
-      ((item.change24hPercent ?? 0) / 100).toFixed(2),
-    ])
-    : [];
+  // Transform portfolio data from API response for Table component using typed mapper.
+  // Numeric values are kept as numbers (not pre-formatted strings) so that
+  // SortType.Number and FilterType.Range work correctly on price/amount/value/change.
+  const { rows: portfolioData, meta: portfolioMeta } = useMemo(
+    () => mapPortfolioItems(portfolio),
+    [portfolio],
+  );
+
+  // O(1) lookup: resolved token label → portfolio row metadata (logoUri, etc.)
+  const portfolioMetaMap = useMemo(
+    () => buildPortfolioMetaMap(portfolioMeta),
+    [portfolioMeta],
+  );
 
   const balanceTokenOptions = useMemo(
     () =>
       Array.from(
         new Set(
           portfolio
-            .map((item: any) => String(item.symbol || item.token || '').trim().toUpperCase())
-            .filter((symbol: string) => symbol.length > 0)
-        )
+            .map((item) => item.symbol.trim().toUpperCase())
+            .filter((symbol) => symbol.length > 0),
+        ),
       ).slice(0, 12),
-    [portfolio]
+    [portfolio],
   );
 
   // Transform swap data to array format for Table component
@@ -243,10 +251,28 @@ export default function WalletPage() {
   ];
 
   const portfolioCellRenderers = [
-    (value: string) => renderCode(value),
+    // Column 0: token label + optional logo image
+    (value: string) => {
+      const tokenMeta = portfolioMetaMap.get(value);
+
+      return (
+        <TokenIdentityCell
+          symbol={value}
+          fullName={tokenMeta?.fullName}
+          imageUrl={tokenMeta?.logoUri}
+          imageSize={20}
+          showInitialsFallback
+          tooltipAlign="right"
+        />
+      );
+    },
+    // Column 1: USD price per token
     (value: string) => renderCurrency(value),
-    null,
+    // Column 2: raw token amount – formatted for display, sortable as number
+    (value: string) => renderReducedNumber(value, renderBase, bcp47),
+    // Column 3: USD value of holding
     (value: string) => renderCurrency(value),
+    // Column 4: 24-hour change (fractional, e.g. 0.05 = 5%)
     (value: string) => renderPositiveNegative(value, true, true),
   ];
 
@@ -260,11 +286,11 @@ export default function WalletPage() {
   };
 
   const portfolioFilterSchema = {
-    0: { type: FilterType.Select }, // Token - Select filter
-    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 }, // Price - Range filter
-    2: { type: FilterType.Range, min: 0, max: 1000, step: 0.01 }, // Holding - Range filter
-    3: { type: FilterType.Range, min: 0, max: 100000, step: 0.01 }, // Value - Range filter
-    4: { type: FilterType.Range, min: -20, max: 20, step: 0.1 }, // Change - Range filter
+    0: { type: FilterType.Select }, // Token label - Select filter
+    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 }, // Price (USD)
+    2: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 }, // Amount (tokens)
+    3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 }, // Value (USD)
+    4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 }, // Change24h (fraction)
   };
 
   useEffect(() => {
@@ -274,7 +300,7 @@ export default function WalletPage() {
       try {
         // Fetch portfolio data
         const portfolioResponse = await fetchWalletPortfolio(address, "solana");
-        if (portfolioResponse && Array.isArray(portfolioResponse)) {
+        if (Array.isArray(portfolioResponse)) {
           setPortfolio(portfolioResponse);
         }
 
