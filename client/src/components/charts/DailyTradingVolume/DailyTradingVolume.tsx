@@ -366,8 +366,6 @@ export function DailyTradingVolume({
           type: 'value',
           name: 'Unit: $',
           min: 0,
-          max: 200000,
-          interval: 25000,
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => {
