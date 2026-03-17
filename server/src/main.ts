@@ -2,6 +2,7 @@ import "@sv/util/load-env.js";
 
 import { serve } from "@hono/node-server";
 import { swaggerUI } from "@hono/swagger-ui";
+import { Scalar } from '@scalar/hono-api-reference'
 import { OpenAPIHono } from "@hono/zod-openapi";
 import traders from "@sv/routes/traders.js";
 import trades from "@sv/routes/trades.js";
@@ -54,6 +55,7 @@ const app: any = new OpenAPIHono({
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }))
   .get("/api/docs", swaggerUI({ url: "/api/docs/openapi.json" }))
+  .get("/api/docs/scalar", Scalar({ url: "/api/docs/openapi.json" }))
   .route("/api/users", users)
   .route("/api/tokens", tokens)
   .route("/api/misc", misc)
