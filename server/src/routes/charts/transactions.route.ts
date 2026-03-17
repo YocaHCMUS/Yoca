@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { getTransactionDistributionFromDb } from "@sv/services/wallet/transactionDistribution.service.js";
 
 /**
@@ -25,6 +26,27 @@ const transactionRequestSchema = z.object({
     .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
   timezone: z.string().optional().default("UTC"),
 });
+// Response Schemas
+const dataPointSchema = z.object({
+  timestamp: z.number(),
+  value: z.number(),
+  details: z.record(z.any()).optional(),
+});
+
+const transactionsResponseSchema = z.object({
+  data: z.array(dataPointSchema),
+  metadata: z.object({
+    period: z.string(),
+    dataPoints: z.number(),
+    currency: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Transaction distribution route handler
@@ -72,7 +94,7 @@ const app = new Hono()
     } catch (error) {
       console.error('Error fetching transaction distribution data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch transaction distribution data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

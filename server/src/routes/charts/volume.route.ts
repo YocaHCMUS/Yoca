@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { generateVolumeBenchmark } from '../../services/mockChartData.service.js';
 
 /**
@@ -24,6 +25,27 @@ const volumeRequestSchema = z.object({
     .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
   timezone: z.string().optional().default("UTC"),
 });
+// Response Schemas
+const dataPointSchema = z.object({
+  timestamp: z.number(),
+  value: z.number(),
+});
+
+const volumeResponseSchema = z.object({
+  data: z.array(dataPointSchema),
+  metadata: z.object({
+    period: z.string(),
+    aggregation: z.string(),
+    currency: z.string(),
+    timezone: z.string(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Volume benchmark route handler

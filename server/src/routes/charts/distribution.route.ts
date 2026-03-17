@@ -22,6 +22,41 @@ const distributionRequestSchema = z.object({
     .default("30D"),
   wallets: z.string().optional(),
 });
+// Response Schemas
+const distributionItemSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  percentage: z.number(),
+  color: z.string().optional(),
+});
+
+const metadataSchema = z.object({
+  currency: z.string(),
+  timestamp: z.number(),
+});
+
+const singleDistributionResponseSchema = z.object({
+  data: z.array(distributionItemSchema),
+  totalValue: z.number(),
+  metadata: metadataSchema,
+});
+
+const walletDistributionSchema = z.object({
+  walletAddress: z.string(),
+  data: z.array(distributionItemSchema),
+  totalValue: z.number(),
+});
+
+const multiDistributionResponseSchema = z.object({
+  wallets: z.array(walletDistributionSchema),
+  metadata: metadataSchema,
+});
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Distribution chart route handler

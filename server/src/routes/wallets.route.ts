@@ -6,7 +6,7 @@ import {
   getWalletTransactions,
   getWalletExchangeCounts,
   getWalletSwaps,
-  getWalletTransfers
+  getWalletTransfers,
 } from "@sv/services/wallet/walletData.service.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import {
@@ -16,16 +16,13 @@ import {
   getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
+import { z } from "zod";
+import type {
+  SupportedChain,
+  WalletPortfolioItem,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 const router = new Hono();
-import { z } from "zod";
-import type { SupportedChain, WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
-
-// function getChainFromQuery(c: any): SupportedChain {
-//   const chain = c.req.query("chain");
-//   // Default to solana for now if not specified
-//   return (chain as SupportedChain) || "solana";
-// }
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -45,6 +42,116 @@ const walletCounterpartyRequestSchema = walletRequestSchema.extend({
 const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
   chain: z.string().optional(),
+});
+
+// Response Schemas
+const walletOverviewResponseSchema = z
+  .object({
+    address: z.string(),
+    chain: z.string(),
+    balanceData: z.any(),
+    performanceData: z.any(),
+  })
+  .passthrough();
+
+const walletPortfolioItemSchema = z
+  .object({
+    tokenAddress: z.string(),
+    symbol: z.string().optional(),
+    name: z.string().optional(),
+    amount: z.number(),
+    valueUsd: z.number().optional(),
+    percentOfAll: z.number().optional(),
+    logoUri: z.string().optional(),
+  })
+  .passthrough();
+
+const walletPortfolioResponseSchema = z.array(walletPortfolioItemSchema);
+
+const transactionSchema = z
+  .object({
+    signature: z.string(),
+    timestamp: z.number(),
+    type: z.string().optional(),
+    status: z.string().optional(),
+  })
+  .passthrough();
+
+const walletTransactionsResponseSchema = z
+  .object({
+    transactions: z.array(transactionSchema),
+    cursor: z.string().optional(),
+    limit: z.number().optional(),
+  })
+  .passthrough();
+
+const distributionItemSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  percentage: z.number(),
+  rawAmount: z.number().optional(),
+  tokenAddress: z.string().optional(),
+  symbol: z.string().optional(),
+  logoUri: z.string().optional(),
+});
+
+const walletDistributionResponseSchema = z.object({
+  data: z.array(distributionItemSchema),
+  totalValue: z.number(),
+  address: z.string(),
+  chain: z.string(),
+  metadata: z.object({
+    currency: z.string(),
+    timestamp: z.number(),
+  }),
+});
+
+const exchangeCountSchema = z
+  .object({
+    name: z.string(),
+    count: z.number(),
+    percentage: z.number().optional(),
+  })
+  .passthrough();
+
+const walletExchangesResponseSchema = z.array(exchangeCountSchema);
+
+const counterpartySchema = z
+  .object({
+    address: z.string(),
+    label: z.string().optional(),
+    transactionCount: z.number().optional(),
+    tokens: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+const walletCounterpartiesResponseSchema = z
+  .object({
+    counterparties: z.array(counterpartySchema),
+    period: z.string(),
+    address: z.string(),
+  })
+  .passthrough();
+
+const walletIdentityResponseSchema = z
+  .object({
+    address: z.string(),
+    identity: z.any(),
+  })
+  .passthrough();
+
+const walletIdentityBatchResponseSchema = z.array(walletIdentityResponseSchema);
+
+const walletIntelligenceResponseSchema = z
+  .object({
+    address: z.string(),
+    intelligence: z.any(),
+  })
+  .passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  code: z.string().optional(),
 });
 
 const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;

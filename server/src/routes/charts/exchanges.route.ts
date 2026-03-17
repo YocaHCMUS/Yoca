@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { generateExchangeData } from '../../services/mockChartData.service.js';
 
 /**
@@ -21,6 +22,21 @@ const exchangeRequestSchema = z.object({
   metric: z.enum(["count", "volume"]).optional().default("count"),
   timezone: z.string().optional().default("UTC"),
 });
+// Response Schemas
+const exchangeItemSchema = z.object({
+  name: z.string(),
+  count: z.number(),
+  percentage: z.number().optional(),
+  volume: z.number().optional(),
+});
+
+const exchangesResponseSchema = z.array(exchangeItemSchema);
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Exchange comparison route handler

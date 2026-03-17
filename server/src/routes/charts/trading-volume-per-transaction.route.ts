@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Trading Volume Per Transaction Chart API Route
  * 
@@ -19,6 +20,31 @@ const tradingVolumePerTransactionRequestSchema = z.object({
   wallets: z.string().optional(),
   type: z.enum(['all', 'deposits', 'withdrawals']).optional().default('all'),
 });
+// Response Schemas
+const dataPointSchema = z.object({
+  timestamp: z.number(),
+  averageVolume: z.number(),
+  medianVolume: z.number().optional(),
+  minVolume: z.number().optional(),
+  maxVolume: z.number().optional(),
+  transactionCount: z.number().optional(),
+});
+
+const volumePerTransactionResponseSchema = z.object({
+  data: z.array(dataPointSchema),
+  overallAverage: z.number().optional(),
+  metadata: z.object({
+    period: z.string(),
+    aggregation: z.string(),
+    currency: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Trading volume per transaction chart route handler
@@ -51,17 +77,17 @@ const app = new Hono()
       // Validate query parameters
       const query = c.req.query();
       const params = tradingVolumePerTransactionRequestSchema.parse(query);
-      
+
       // Generate trading volume per transaction data
       const data = generateTradingVolumePerTransaction(
         params.period,
         params.wallets,
         params.type
       );
-      
+
       // Return response
       return c.json(data, 200);
-      
+
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
@@ -70,7 +96,7 @@ const app = new Hono()
           details: error.issues,
         }, 400);
       }
-      
+
       // Handle other errors
       console.error('[TradingVolumePerTransactionChart] Error fetching trading volume per transaction data:', error);
       return c.json({

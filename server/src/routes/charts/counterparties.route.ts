@@ -35,6 +35,30 @@ const counterpartyRequestSchema = z.object({
   chain: z.string().optional(),
   period: z.string().optional(),
 });
+// Response Schemas
+const counterpartyItemSchema = z.object({
+  address: z.string(),
+  label: z.string().optional(),
+  transactionCount: z.number().optional(),
+  volume: z.number().optional(),
+  tokens: z.array(z.string()).optional(),
+}).passthrough();
+
+const counterpartiesResponseSchema = z.object({
+  counterparties: z.array(counterpartyItemSchema),
+  period: z.string(),
+  address: z.string().optional(),
+  metadata: z.object({
+    timezone: z.string(),
+    limit: z.number(),
+  }).optional(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 function clampLimit(rawLimit: number): number {
   const parsed = Number(rawLimit);

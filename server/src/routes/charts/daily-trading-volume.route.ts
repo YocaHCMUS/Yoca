@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import {
   getDailyTradingVolumeFromDb,
   type DailyTradingVolumeResponse,
@@ -23,6 +24,28 @@ const dailyTradingVolumeRequestSchema = z.object({
     .optional()
     .transform((val) => (val ? val.split(",").map((w) => w.trim()).filter(Boolean) : [])),
 });
+// Response Schemas
+const dataPointSchema = z.object({
+  date: z.string(),
+  timestamp: z.number(),
+  volume: z.number(),
+  trades: z.number().optional(),
+});
+
+const dailyVolumeResponseSchema = z.object({
+  data: z.array(dataPointSchema),
+  totalVolume: z.number().optional(),
+  metadata: z.object({
+    period: z.string(),
+    currency: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 const app = new Hono()
   /**

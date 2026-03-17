@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { generateMockPriceHistory } from '../../services/mockChartData.service.js';
 
 /**
@@ -24,6 +25,34 @@ const priceHistoryRequestSchema = z.object({
     .optional()
     .default("daily"),
 });
+// Response Schemas
+const dataPointSchema = z.object({
+  timestamp: z.number(),
+  open: z.number().optional(),
+  high: z.number().optional(),
+  low: z.number().optional(),
+  close: z.number().optional(),
+  volume: z.number().optional(),
+});
+
+const priceHistorySeriesSchema = z.object({
+  tokenSymbol: z.string(),
+  data: z.array(dataPointSchema),
+});
+
+const priceHistoryResponseSchema = z.object({
+  series: z.array(priceHistorySeriesSchema),
+  metadata: z.object({
+    period: z.string(),
+    currency: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Price history chart route handler

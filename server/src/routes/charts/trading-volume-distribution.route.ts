@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Trading Volume Distribution Chart API Route
  * 
@@ -18,6 +19,28 @@ const tradingVolumeDistributionRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional(),
 });
+// Response Schemas
+const binSchema = z.object({
+  min: z.number(),
+  max: z.number(),
+  count: z.number(),
+  percentage: z.number().optional(),
+});
+
+const volumeDistributionResponseSchema = z.object({
+  data: z.array(binSchema),
+  metadata: z.object({
+    period: z.string(),
+    bins: z.number(),
+    currency: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string().optional(),
+});
+
 
 /**
  * Trading volume distribution chart route handler
@@ -47,16 +70,16 @@ const app = new Hono()
       // Validate query parameters
       const query = c.req.query();
       const params = tradingVolumeDistributionRequestSchema.parse(query);
-      
+
       // Generate trading volume distribution data
       const data = generateTradingVolumeDistribution(
         params.period,
         params.wallets
       );
-      
+
       // Return response
       return c.json(data, 200);
-      
+
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
@@ -65,7 +88,7 @@ const app = new Hono()
           details: error.issues,
         }, 400);
       }
-      
+
       // Handle other errors
       console.error('[TradingVolumeDistributionChart] Error fetching trading volume distribution data:', error);
       return c.json({

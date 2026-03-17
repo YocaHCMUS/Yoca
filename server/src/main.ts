@@ -1,15 +1,17 @@
 import "@sv/util/load-env.js";
 
 import { serve } from "@hono/node-server";
+import { swaggerUI } from "@hono/swagger-ui";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import traders from "@sv/routes/traders.js";
 import trades from "@sv/routes/trades.js";
 import wallets from "@sv/routes/wallets.route.js";
 import walletTags from "@sv/routes/walletTags.route.js";
-import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { clientDomains } from "./config/security.js";
+import { registerOpenApiRoutes } from "./config/openapi.js";
 import balances from "./routes/balances.js";
 import chartAverageRollingAnnualReturn from "./routes/charts/average-rolling-annual-return.route.js";
 import chartBalance from "./routes/charts/balance.route.js";
@@ -36,7 +38,13 @@ import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
 
 // Routes
-const app = new Hono()
+const app: any = new OpenAPIHono({
+  defaultHook: (result, c) => {
+    if (!result.success) {
+      return c.json({ error: "Invalid request" }, 400);
+    }
+  },
+})
   .use("*", logger())
   .use(
     "/api/*",
@@ -45,6 +53,7 @@ const app = new Hono()
   )
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }))
+  .get("/api/docs", swaggerUI({ url: "/api/docs/openapi.json" }))
   .route("/api/users", users)
   .route("/api/tokens", tokens)
   .route("/api/misc", misc)
@@ -82,6 +91,31 @@ const app = new Hono()
   .route("/api/walletTags", walletTags)
   .route("/api/traders", traders)
   .route("/api/trades", trades);
+
+registerOpenApiRoutes(app);
+
+app.doc("/api/docs/openapi.json", {
+  openapi: "3.0.0",
+  info: {
+    title: "YOCA BACKEND API",
+    version: "1.0.0",
+    description: "API documentation for YOCA backend",
+  },
+  tags: [
+    {
+      name: "Charts",
+      description: "Chart analytics endpoints",
+    },
+    {
+      name: "Wallets",
+      description: "Wallet analytics and intelligence endpoints",
+    },
+    {
+      name: "Wallet Tags",
+      description: "Authenticated wallet tag management endpoints",
+    },
+  ],
+});
 
 // Server
 serve(
