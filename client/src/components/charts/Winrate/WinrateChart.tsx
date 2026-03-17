@@ -34,6 +34,19 @@ import type { ChartProps } from '../shared/ChartProp';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 import { nonnegative } from 'zod';
 
+const SHORT_WALLET_PREFIX_LENGTH = 6;
+const SHORT_WALLET_SUFFIX_LENGTH = 6;
+
+function shortenWalletAddress(address: string): string {
+  if (address.length <= SHORT_WALLET_PREFIX_LENGTH + SHORT_WALLET_SUFFIX_LENGTH + 3) {
+    return address;
+  }
+
+  const prefix = address.slice(0, SHORT_WALLET_PREFIX_LENGTH);
+  const suffix = address.slice(-SHORT_WALLET_SUFFIX_LENGTH);
+  return `${prefix}...${suffix}`;
+}
+
 export function WinrateChart({
   title,
   minHeight = 400,
@@ -87,7 +100,7 @@ export function WinrateChart({
 
     const baseOption = getThemedChartBaseOption(chartTheme);
     
-    const categories = data.wallets.map(w => w.walletName || w.walletAddress);
+    const categories = data.wallets.map(w => w.walletName || shortenWalletAddress(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
     
     return {
@@ -144,7 +157,7 @@ export function WinrateChart({
           const param = params[0];
           const wallet = data.wallets[param.dataIndex];
           return formatItemTooltip(
-            param.name,
+            wallet.walletName || wallet.walletAddress,
             [
               { label: 'Winrate', value: `${param.value}%` },
               { label: 'Winning Trades', value: wallet.winningTrades.toString() },
@@ -183,7 +196,10 @@ export function WinrateChart({
         //   },
         // },
         title: wallet.walletAddress ? {
-          text: wallet.walletAddress,
+          text:
+            wallet.walletName && wallet.walletName !== wallet.walletAddress
+              ? wallet.walletName
+              : shortenWalletAddress(wallet.walletAddress),
           left: 8,
           top: 8,
           textStyle: {

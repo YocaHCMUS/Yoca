@@ -558,7 +558,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           )}
 
           {/* Chart Grid */}
-          <ChartGrid itemCount={chartOptions.length} multiItemColumns={3}>
+          <ChartGrid
+            itemCount={chartOptions.length}
+            multiItemColumns={Math.min(3, chartOptions.length)}
+          >
             {chartOptions.map((chartData: any, index: number) => (
               <ChartGridItem
                 key={chartData.walletAddress}
