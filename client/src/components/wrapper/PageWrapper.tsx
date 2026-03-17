@@ -97,12 +97,12 @@ export function PageWrapper({ children }: { children: ReactNode }) {
         />
 
         <HeaderName href="#" prefix="">
-          <Stack
+          <Stack gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
           >
             <img src={appLogo} alt="Logo" style={{ height: 36 }} />
-            <Heading style={{ fontSize: 21 }}>YOCA</Heading>
+            <strong style={{ fontSize: 21 }}>YOCA</strong>
           </Stack>
         </HeaderName>
 

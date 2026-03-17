@@ -125,7 +125,7 @@ export default function MarketPage() {
         ],
         trendValue: tokenMarket.priceChange24h,
         trendValueFmtr: fmt.num.percent,
-        link: `/token/${token.address}`,
+        link: `/tokens/${token.address}`,
       };
     });
 
