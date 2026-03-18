@@ -26,7 +26,7 @@
   width: 100%;
   border: 1px solid $border-subtle;
   border-radius: 10px;
-  background: #fff;
+  background: $layer-01;
   overflow: hidden;
 }
 
@@ -34,11 +34,39 @@
   :global(.cds--table-container) {
     height: 100%;
     border-bottom: 0;
-    background: #fff;
+    background: $layer-01;
   }
 
   :global(.cds--data-table-content) {
+    background: $layer-01;
+  }
+}
+
+:global([data-carbon-theme='white']) {
+  .panel,
+  .heatmapPanel {
     background: #fff;
+  }
+
+  .panel {
+    :global(.cds--table-container),
+    :global(.cds--data-table-content) {
+      background: #fff;
+    }
+  }
+}
+
+:global([data-carbon-theme='g10']) {
+  .panel,
+  .heatmapPanel {
+    background: #fff;
+  }
+
+  .panel {
+    :global(.cds--table-container),
+    :global(.cds--data-table-content) {
+      background: #fff;
+    }
   }
 }
 
