@@ -128,7 +128,7 @@ export default function TokenOverviewPage() {
   const market = result.data?.market;
 
   return (
-    <PageWrapper>
+    <PageWrapper noTopPadding>
       <div className={styles.tokenOverviewGrid}>
         <div className={styles.leftColumn}>
           <div className={styles.sidebarGroup}>

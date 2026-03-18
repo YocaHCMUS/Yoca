@@ -147,26 +147,33 @@ export default function MarketPage() {
         id: token.address,
         rank: token.rank,
         token: (
-          <Stack
-            orientation="horizontal"
-            gap={2}
-            style={{ alignItems: "center" }}
+          <Link
+            href={`/tokens/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none", color: "inherit" }}
           >
-            {tokenMeta.imageUrl && (
-              <img
-                src={tokenMeta.imageUrl}
-                alt={tokenMeta.symbol}
-                width={28}
-                style={{ borderRadius: "50%" }}
-              />
-            )}
+            <Stack
+              orientation="horizontal"
+              gap={2}
+              style={{ alignItems: "center" }}
+            >
+              {tokenMeta.imageUrl && (
+                <img
+                  src={tokenMeta.imageUrl}
+                  alt={tokenMeta.symbol}
+                  width={28}
+                  style={{ borderRadius: "50%" }}
+                />
+              )}
 
-            <span>
-              <Tooltip label={tokenMeta.name} align="right">
-                <strong>{tokenMeta.symbol.toUpperCase()}</strong>
-              </Tooltip>
-            </span>
-          </Stack>
+              <span>
+                <Tooltip label={tokenMeta.name} align="right">
+                  <strong>{tokenMeta.symbol.toUpperCase()}</strong>
+                </Tooltip>
+              </span>
+            </Stack>
+          </Link>
         ),
         price: fmt.num.currency(tokenMarket.priceUsd),
         change24h: (
@@ -238,26 +245,33 @@ export default function MarketPage() {
         id: token.address,
         rank: token.rank,
         token: (
-          <Stack
-            orientation="horizontal"
-            gap={2}
-            style={{ alignItems: "center" }}
+          <Link
+            href={`/tokens/${token.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none", color: "inherit" }}
           >
-            {tokenMeta.imageUrl && (
-              <img
-                src={tokenMeta.imageUrl}
-                alt={tokenMeta.symbol}
-                width={28}
-                style={{ borderRadius: "50%" }}
-              />
-            )}
+            <Stack
+              orientation="horizontal"
+              gap={2}
+              style={{ alignItems: "center" }}
+            >
+              {tokenMeta.imageUrl && (
+                <img
+                  src={tokenMeta.imageUrl}
+                  alt={tokenMeta.symbol}
+                  width={28}
+                  style={{ borderRadius: "50%" }}
+                />
+              )}
 
-            <span>
-              <Tooltip label={tokenMeta.name} align="right">
-                <strong>{tokenMeta.symbol.toUpperCase()}</strong>
-              </Tooltip>
-            </span>
-          </Stack>
+              <span>
+                <Tooltip label={tokenMeta.name} align="right">
+                  <strong>{tokenMeta.symbol.toUpperCase()}</strong>
+                </Tooltip>
+              </span>
+            </Stack>
+          </Link>
         ),
         price: fmt.num.currency(tokenMarket.priceUsd),
         change24h: (

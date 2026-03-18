@@ -48,7 +48,13 @@ function ThemeToggleGlobalAction() {
   );
 }
 
-export function PageWrapper({ children }: { children: ReactNode }) {
+export function PageWrapper({
+  children,
+  noTopPadding = false,
+}: {
+  children: ReactNode;
+  noTopPadding?: boolean;
+}) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
@@ -244,7 +250,11 @@ export function PageWrapper({ children }: { children: ReactNode }) {
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
-      <Content id="main-content" style={{ height: "100%" }}>
+      <Content
+        id="main-content"
+        style={{ height: "100%" }}
+        className={noTopPadding ? styles.contentNoTopPadding : undefined}
+      >
         {children}
       </Content>
     </>
