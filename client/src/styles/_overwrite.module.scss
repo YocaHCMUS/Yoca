@@ -51,7 +51,11 @@
 }
 
 :global([data-carbon-theme='white']) .tbl,
-:global([data-carbon-theme='g10']) .tbl {
+:global(.cds--white) .tbl,
+:global(.cds-theme-zone--white) .tbl,
+:global([data-carbon-theme='g10']) .tbl,
+:global(.cds--g10) .tbl,
+:global(.cds-theme-zone--g10) .tbl {
   :global(.cds--table-container),
   :global(.cds--data-table-header),
   :global(.cds--data-table) td,
@@ -67,7 +71,11 @@
 }
 
 :global([data-carbon-theme='white']) .tblTitle,
-:global([data-carbon-theme='g10']) .tblTitle {
+:global(.cds--white) .tblTitle,
+:global(.cds-theme-zone--white) .tblTitle,
+:global([data-carbon-theme='g10']) .tblTitle,
+:global(.cds--g10) .tblTitle,
+:global(.cds-theme-zone--g10) .tblTitle {
   color: #000;
 }
 
