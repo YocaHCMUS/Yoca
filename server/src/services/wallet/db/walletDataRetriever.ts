@@ -78,6 +78,15 @@ function toEpochSec(value: unknown): number | null {
 	return null;
 }
 
+function toNullableFiniteNumber(value: unknown): number | null {
+	if (value == null) {
+		return null;
+	}
+
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
 function getChainCandidates(chain: SupportedChain): string[] {
 	const raw = String(chain ?? "").trim();
 	if (!raw) {
@@ -440,6 +449,16 @@ export async function getCachedWalletSwaps(
 			slot: r.slot,
 			fee: r.fee,
 			feePayer: r.feePayer,
+			transactionType: r.transactionType ?? null,
+			subCategory: r.subCategory ?? null,
+			blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
+			exchange: r.exchange ?? null,
+			pair: r.pair ?? null,
+			sold: r.sold ?? null,
+			bought: r.bought ?? null,
+			baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
+			totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
+			source: r.source ?? undefined,
 			balanceChanges: r.swapBalanceChanges,
 			feeChanges: r.feeBalanceChanges,
 		}));

@@ -96,6 +96,7 @@ vi.mock("@sv/services/balances.js", () => ({
 vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
     fetchAllTransactionHistory: vi.fn(async () => []),
     fetchHeliusSolanaPortfolio: hoisted.fetchHeliusSolanaPortfolioMock,
+    fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaTransactions: vi.fn(async () => []),
     fetchHeliusSolanaTransfers: vi.fn(async () => []),

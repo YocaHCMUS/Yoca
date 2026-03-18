@@ -1,13 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { heliusFetchMock } = vi.hoisted(() => ({
+const { heliusFetchMock, moralisFetchMock } = vi.hoisted(() => ({
     heliusFetchMock: vi.fn(),
+    moralisFetchMock: vi.fn(),
 }));
 
 vi.mock("@sv/util/util-helius.js", () => ({
     getEndpoint: (path: string) => new URL(`https://api.helius.xyz${path}`),
     getRequiredHeaders: () => ({ "X-Api-Key": "test-api-key" }),
     heliusFetch: heliusFetchMock,
+}));
+
+vi.mock("@sv/util/util-moralis.js", () => ({
+    getEndpoint: (path: string, provider: "evm" | "solana-gateway" = "evm") => {
+        const host = provider === "solana-gateway"
+            ? "https://solana-gateway.moralis.io"
+            : "https://deep-index.moralis.io/api/v2.2";
+        return new URL(`${host}${path}`);
+    },
+    getRequiredHeaders: () => ({ "X-API-Key": "test-moralis-key" }),
+    moralisFetch: moralisFetchMock,
 }));
 
 vi.mock("@sv/util/api-key-manager.js", () => ({
@@ -17,6 +29,7 @@ vi.mock("@sv/util/api-key-manager.js", () => ({
 import {
     fetchAllTransactionHistory,
     fetchHeliusSolanaPortfolio,
+    fetchMoralisSolanaSwap,
     fetchHeliusSolanaTransactions,
     fetchHeliusSolanaTransfers,
 } from "../../../src/services/wallet/fetchers/walletDataFetcher.service.ts";
@@ -35,6 +48,7 @@ describe("walletDataFetcher.service", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-03-12T00:00:00.000Z"));
         heliusFetchMock.mockReset();
+        moralisFetchMock.mockReset();
     });
 
     afterEach(() => {
@@ -272,5 +286,95 @@ describe("walletDataFetcher.service", () => {
         expect(res).toHaveLength(1);
         expect(res[0].hash).toBe("tx-valid");
         expect(res[0].primaryTokenAmount).toBe(15);
+    });
+
+    it("maps Moralis wallet-swaps and paginates with cursor", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const nowIso = new Date(nowSec * 1000).toISOString();
+
+        moralisFetchMock
+            .mockResolvedValueOnce(
+                okJson({
+                    result: [
+                        {
+                            transaction_hash: "moralis-sig-1",
+                            block_timestamp: nowIso,
+                            block_number: 321,
+                            fee: "0.00001",
+                            fee_payer: "payer-1",
+                            transaction_type: "swap",
+                            exchange: { name: "Jupiter" },
+                            pair: {
+                                pairAddress: "pair-1",
+                                baseTokenAddress: "mint-sold",
+                                quoteTokenAddress: "mint-bought",
+                            },
+                            sold: {
+                                address: "mint-sold",
+                                amount: "1.5",
+                                decimals: 6,
+                                symbol: "SOLD",
+                            },
+                            bought: {
+                                address: "mint-bought",
+                                amount: "2.25",
+                                decimals: 6,
+                                symbol: "BOUGHT",
+                            },
+                            total_value_usd: "13.4",
+                            base_quote_price: "0.77",
+                        },
+                    ],
+                    cursor: "next-cursor-1",
+                }),
+            )
+            .mockResolvedValueOnce(
+                okJson({
+                    result: [
+                        {
+                            transaction_hash: "moralis-sig-2",
+                            block_timestamp: nowIso,
+                            fee: "0",
+                            sold: { address: "mint-a", amount: "2", decimals: 6 },
+                            bought: { address: "mint-b", amount: "4", decimals: 6 },
+                        },
+                    ],
+                    cursor: null,
+                }),
+            );
+
+        const swaps = await fetchMoralisSolanaSwap("wallet-address", "7d", {
+            limit: 50,
+        });
+
+        expect(swaps).toHaveLength(2);
+        expect(swaps[0]).toEqual(
+            expect.objectContaining({
+                signature: "moralis-sig-1",
+                transactionType: "swap",
+                blockNumber: 321,
+                source: "moralis",
+                sold: expect.objectContaining({ mint: "mint-sold", amount: 1.5 }),
+                bought: expect.objectContaining({ mint: "mint-bought", amount: 2.25 }),
+                totalValueUsd: 13.4,
+                baseQuotePrice: 0.77,
+            }),
+        );
+
+        expect(swaps[0].balanceChanges).toEqual([
+            expect.objectContaining({ mint: "mint-sold", amount: -1.5 }),
+            expect.objectContaining({ mint: "mint-bought", amount: 2.25 }),
+        ]);
+
+        expect(moralisFetchMock).toHaveBeenCalledTimes(2);
+
+        const firstUrl = moralisFetchMock.mock.calls[0][0] as URL;
+        expect(firstUrl.pathname).toContain("/account/mainnet/wallet-address/swaps");
+        expect(firstUrl.searchParams.get("limit")).toBeNull();
+        expect(firstUrl.searchParams.get("fromDate")).toBeTruthy();
+        expect(firstUrl.searchParams.get("toDate")).toBeTruthy();
+
+        const secondUrl = moralisFetchMock.mock.calls[1][0] as URL;
+        expect(secondUrl.searchParams.get("cursor")).toBe("next-cursor-1");
     });
 });

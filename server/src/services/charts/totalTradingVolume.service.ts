@@ -49,7 +49,6 @@ function getDaysForPeriod(period: TimePeriod): number {
  * Get total trading volume per wallet from DB cache.
  *
  * Solana: wallet_helius_transactions (balanceChanges priced via token_market_data).
- * EVM:    wallet_transactions (totalUsd / primaryTokenAmount * priceUsd).
  */
 export async function getTotalTradingVolumeFromDb(
   walletAddresses: string[],

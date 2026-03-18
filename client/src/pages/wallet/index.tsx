@@ -16,7 +16,6 @@ import {
 } from "@/components/tables/TableCellRenderer.tsx";
 import {
   SwapDetailModal,
-  type TransferRecord,
 } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -29,8 +28,9 @@ import {
   fetchWalletSwaps,
   type WalletCounterpartyRow,
   type WalletPortfolioItem,
+  type WalletSwap,
 } from "@/services/wallet/walletApi.ts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import {
   mapPortfolioItems,
@@ -43,7 +43,7 @@ export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
   const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
-  const [swaps, setSwaps] = useState<any[]>([]);
+  const [swaps, setSwaps] = useState<WalletSwap[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
@@ -53,13 +53,7 @@ export default function WalletPage() {
 
   // Swap detail modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
-  const [selectedTransfers, setSelectedTransfers] = useState<
-    TransferRecord[] | null
-  >(null);
-  const [selectedSwap, setSelectedSwap] = useState<any>(null);
-
-  // Stores raw API swap objects aligned by index with the swaps state array
-  const rawSwapsRef = useRef<any[]>([]);
+  const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
   // Transform portfolio data from API response for Table component using typed mapper.
   // Numeric values are kept as numbers (not pre-formatted strings) so that
@@ -87,32 +81,58 @@ export default function WalletPage() {
     [portfolio],
   );
 
+  const getSoldBoughtChanges = (swap: WalletSwap) => {
+    const soldFromBalance = swap.balanceChanges.find((change) => change.amount < 0);
+    const boughtFromBalance = swap.balanceChanges.find((change) => change.amount > 0);
+
+    return {
+      sold: swap.sold ?? soldFromBalance ?? null,
+      bought: swap.bought ?? boughtFromBalance ?? null,
+    };
+  };
+
+  const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
+    if (!change) return "—";
+
+    const amount = Math.abs(change.amount).toFixed(4);
+    const symbolCandidate = (change.symbol ?? "").trim();
+    if (symbolCandidate.length > 0) {
+      return `${amount} ${symbolCandidate.toUpperCase()}`;
+    }
+
+    const mint = change.mint || "";
+    const fallback =
+      mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
+    return `${amount} ${fallback || "UNKNOWN"}`;
+  };
+
+  const formatSwapPair = (swap: WalletSwap): string => {
+    const pairLabel = swap.pair?.label?.trim();
+    if (pairLabel) {
+      return pairLabel;
+    }
+
+    const pairAddress = swap.pair?.address ?? null;
+    if (pairAddress && pairAddress.length > 8) {
+      return `${pairAddress.slice(0, 4)}...${pairAddress.slice(-4)}`;
+    }
+
+    return pairAddress ?? "—";
+  };
+
   // Transform swap data to array format for Table component
   const swapData = useMemo(
     () =>
-      swaps.map((swap: any) => {
-        const balanceChanges = swap.balanceChanges || [];
-        const soldChange = balanceChanges.find((bc: any) => bc.amount < 0);
-        const boughtChange = balanceChanges.find((bc: any) => bc.amount > 0);
-
-
-        // Format token display: amount + truncated mint
-        const formatTokenDisplay = (change: any) => {
-          if (!change) return "—";
-          const amount = Math.abs(change.amount).toFixed(4);
-          const mint = change.mint || "";
-          const symbol =
-            mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
-          return `${amount} ${symbol}`;
-        };
-
-
+      swaps.map((swap) => {
+        const { sold, bought } = getSoldBoughtChanges(swap);
         return [
           swap.timestamp,
+          swap.exchange?.name ?? "—",
+          formatSwapPair(swap),
+          formatSwapTokenDisplay(sold),
+          formatSwapTokenDisplay(bought),
+          swap.totalValueUsd ?? "—",
           swap.fee,
-          formatTokenDisplay(soldChange),
-          formatTokenDisplay(boughtChange),
-          swap.balanceChanges?.length ?? 0,
         ];
       }),
     [swaps],
@@ -173,10 +193,12 @@ export default function WalletPage() {
 
   const swapHeaders = [
     tr("walletPage.time"),
-    "Fee (lamport)",
+    "Exchange",
+    "Pair",
     "Token Sold",
     "Token Bought",
-    "Total Changes",
+    "Total Value (USD)",
+    "Fee (lamport)",
   ];
 
   const transferHeaders = [
@@ -197,7 +219,7 @@ export default function WalletPage() {
 
   const isSortableCounterparties = [false, false, true, false, true, true];
   const isSortablePortfolio = [false, true, true, true, true];
-  const isSortableSwaps = [true, true, false, false, false];
+  const isSortableSwaps = [true, false, false, false, false, true, true];
   const isSortableTransfers = [false, false, false, true, true];
 
   // Sort configurations for sortable columns
@@ -209,7 +231,8 @@ export default function WalletPage() {
 
   const swapSortConfigs = {
     0: { type: SortType.Date }, // Time
-    1: { type: SortType.Number }, // Fee
+    5: { type: SortType.Number }, // Total Value (USD)
+    6: { type: SortType.Number }, // Fee
   };
 
   const transferSortConfigs = {
@@ -236,10 +259,15 @@ export default function WalletPage() {
 
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
+    (value: string) => renderCode(value),
+    (value: string) => renderCode(value),
+    (value: string) => renderCode(value),
+    (value: string) => renderCode(value),
+    (value: string) =>
+      value === "—"
+        ? renderBase(value)
+        : renderReducedNumber(value, renderCurrency, bcp47),
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    (value: string) => renderCode(value),
-    (value: string) => renderCode(value),
-    (value: string) => renderBase(value),
   ];
 
   const transferCellRenderers = [
@@ -311,7 +339,6 @@ export default function WalletPage() {
         });
         const swapsData = swapResponse?.swaps || [];
         if (Array.isArray(swapsData)) {
-          rawSwapsRef.current = swapsData;
           setSwaps(swapsData);
           console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
         }
@@ -346,27 +373,11 @@ export default function WalletPage() {
     loadData();
   }, [address]);
 
-  function handleSwapRowClick(row: any[], rowIndex: number) {
-    const rawSwap = rawSwapsRef.current[rowIndex >= 0 ? rowIndex : -1];
-    if (!rawSwap) return;
+  function handleSwapRowClick(_row: any[], rowIndex: number) {
+    const swap = swaps[rowIndex >= 0 ? rowIndex : -1];
+    if (!swap) return;
 
-    // Store the selected swap
-    setSelectedSwap(rawSwap);
-
-    // Convert swap data to transfer records for the modal
-    const records: TransferRecord[] =
-      rawSwap.balanceChanges?.map((change: any) => ({
-        signature: rawSwap.signature,
-        timestamp: Math.floor(new Date(rawSwap.timestamp).getTime() / 1000),
-        direction: change.amount > 0 ? "in" : "out",
-        counterparty: rawSwap.walletAddress,
-        mint: change.mint || "",
-        symbol: null,
-        amount: Math.abs(change.amount),
-        amountRaw: String(change.amount),
-        decimals: change.decimals || 0,
-      })) || [];
-    setSelectedTransfers(records);
+    setSelectedSwap(swap);
     setSwapModalOpen(true);
   }
 
@@ -440,10 +451,12 @@ export default function WalletPage() {
               fetcher={Promise.resolve(swapData)}
               filterSchema={{
                 0: { type: FilterType.Select },
-                1: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
+                1: { type: FilterType.Select },
                 2: { type: FilterType.Select },
                 3: { type: FilterType.Select },
                 4: { type: FilterType.Select },
+                5: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.01 },
+                6: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
               }}
               cellRenderers={swapCellRenderers}
               dataEntries={swapData}
@@ -555,10 +568,7 @@ export default function WalletPage() {
       <SwapDetailModal
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
-        transfers={selectedTransfers}
-        fee={selectedSwap?.fee}
-        slot={selectedSwap?.slot}
-        feePayer={selectedSwap?.feePayer}
+        swap={selectedSwap}
       />
     </PageWrapper>
   );

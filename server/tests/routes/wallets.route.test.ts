@@ -241,7 +241,7 @@ describe("wallets.route - /overview", () => {
         const response = await router.request("http://localhost/overview?address=wallet-1&chain=eth");
 
         expect(response.status).toBe(200);
-        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", "eth", {
+        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", "solana", {
             periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
         });
     });

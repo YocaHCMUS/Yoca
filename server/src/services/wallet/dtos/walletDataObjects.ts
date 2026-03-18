@@ -1,4 +1,4 @@
-export type SupportedChain = "solana" | "eth" | "polygon" | "bsc" | string;
+export type SupportedChain = "solana";
 
 export interface WalletOverview {
     address: string;
@@ -47,6 +47,22 @@ export interface WalletSwapBalanceChange {
     mint: string,
     amount: number,
     decimals: number,
+    symbol?: string | null,
+    priceUsd?: number | null,
+    valueUsd?: number | null,
+}
+
+export interface WalletSwapExchange {
+    name?: string | null,
+    address?: string | null,
+    logo?: string | null,
+}
+
+export interface WalletSwapPair {
+    address?: string | null,
+    label?: string | null,
+    baseTokenAddress?: string | null,
+    quoteTokenAddress?: string | null,
 }
 
 export interface WalletSwap {
@@ -58,6 +74,16 @@ export interface WalletSwap {
     feePayer: string,
     balanceChanges: WalletSwapBalanceChange[],
     feeChanges: WalletSwapBalanceChange[],
+    transactionType?: string | null,
+    subCategory?: string | null,
+    blockNumber?: number | null,
+    exchange?: WalletSwapExchange | null,
+    pair?: WalletSwapPair | null,
+    sold?: WalletSwapBalanceChange | null,
+    bought?: WalletSwapBalanceChange | null,
+    baseQuotePrice?: number | null,
+    totalValueUsd?: number | null,
+    source?: "helius" | "moralis" | string,
 
 }
 

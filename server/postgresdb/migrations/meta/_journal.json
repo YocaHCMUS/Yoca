@@ -36,6 +36,13 @@
       "when": 1741910400000,
       "tag": "0004_wallet_identity_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773825600000,
+      "tag": "0006_wallet_swap_moralis_fields",
+      "breakpoints": true
     }
   ]
 }

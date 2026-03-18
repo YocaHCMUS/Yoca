@@ -1,4 +1,5 @@
 import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
+import * as moralis from "@sv/util/util-moralis.js";
 import type { WalletPortfolioItem, WalletSwap, WalletTransaction, WalletTransactionHelius, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 function getNextCursor(pagination: any): string | null {
@@ -16,6 +17,124 @@ function getTokenLogoUri(token: any): string | undefined {
 
   const normalized = String(rawLogo).trim();
   return normalized.length > 0 ? normalized : undefined;
+}
+
+function getMoralisCursor(payload: any): string | null {
+  const candidates = [
+    payload?.cursor,
+    payload?.nextCursor,
+    payload?.pagination?.cursor,
+    payload?.pagination?.nextCursor,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function toOptionalNumber(value: unknown): number | null {
+  if (value == null) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toIsoTimestamp(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const millis = value > 1_000_000_000_000 ? value : value * 1000;
+    const date = new Date(millis);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+
+  return null;
+}
+
+function mapMoralisLeg(raw: any): WalletSwap["sold"] {
+  if (raw == null || typeof raw !== "object") {
+    return null;
+  }
+
+  return {
+    mint: raw.address,
+    amount: Math.abs(raw.amount ?? 0),
+    decimals: 0,
+    symbol: raw.symbol,
+    priceUsd: raw.usdPrice,
+    valueUsd: raw.usdAmount,
+  };
+}
+
+function mapMoralisSwapEntry(entry: any, address: string): WalletSwap | null {
+  const signature = entry.transactionHash ?? null;
+
+  if (!signature) {
+    return null;
+  }
+
+  const timestamp = toIsoTimestamp(
+    entry.blockTimestamp
+  );
+  if (!timestamp) {
+    return null;
+  }
+
+  const sold = mapMoralisLeg(entry.sold);
+  const bought = mapMoralisLeg(entry.bought);
+
+  const balanceChanges = [
+    sold ? { ...sold, amount: -Math.abs(sold.amount) } : null,
+    bought ? { ...bought, amount: Math.abs(bought.amount) } : null,
+  ].filter((item): item is NonNullable<WalletSwap["sold"]> => item != null);
+
+  const blockNumber = toOptionalNumber(
+    entry.blockNumber ?? entry.block_number,
+  );
+
+  return {
+    walletAddress: address,
+    signature,
+    timestamp,
+    slot: toOptionalNumber(entry.slot) ?? blockNumber ?? 0,
+    fee: toOptionalNumber(entry.fee ?? entry.transactionFee ?? entry.transaction_fee) ?? 0,
+    feePayer: address,
+    transactionType: entry.transactionType,
+    subCategory: entry.subCategory,
+    blockNumber,
+    exchange: {
+      name: entry.exchangeName,
+      address: entry.exchangeAddress,
+      logo: entry.exchangeLogo,
+    },
+    pair: {
+      address: entry.pairAddress,
+      label: entry.pairLabel,
+      baseTokenAddress: entry.baseToken,
+      quoteTokenAddress: entry.quoteToken,
+    },
+
+    sold,
+    bought,
+    baseQuotePrice: toOptionalNumber(entry.baseQuotePrice ?? entry.base_quote_price),
+    totalValueUsd: toOptionalNumber(entry.totalValueUsd ?? entry.total_value_usd),
+    source: "moralis",
+    balanceChanges,
+    feeChanges: [],
+  };
 }
 
 export type HeliusHistoryRange = {
@@ -503,6 +622,106 @@ export async function fetchHeliusSolanaSwap(
     if (!hasMore || !cursor) {
       break;
     }
+  }
+
+  return swaps;
+}
+
+type MoralisSwapFetchOptions = {
+  limit?: number;
+  cursor?: string;
+};
+
+export async function fetchMoralisSolanaSwap(
+  address: string,
+  from: HeliusHistoryFrom = "7d",
+  options?: MoralisSwapFetchOptions,
+): Promise<WalletSwap[]> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec =
+    from === "24h"
+      ? nowSec - 24 * 60 * 60
+      : nowSec - 7 * 24 * 60 * 60;
+
+  const MORALIS_PAGE_LIMIT = Math.min(Math.max(options?.limit ?? 100, 1), 100);
+  const fromDateIso = new Date(fromSec * 1000).toISOString();
+  const toDateIso = new Date(nowSec * 1000).toISOString();
+
+  const swaps: WalletSwap[] = [];
+  let cursor: string | null = options?.cursor ?? null;
+  let pageCount = 0;
+  const seenCursors = new Set<string>();
+
+  while (true) {
+    pageCount++;
+
+    const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
+    // url.searchParams.set("limit", String(MORALIS_PAGE_LIMIT));
+    url.searchParams.set("fromDate", fromDateIso);
+    url.searchParams.set("toDate", toDateIso);
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    }
+
+    let json: any;
+    try {
+      const response = await moralis.moralisFetch(url, {
+        method: "GET",
+        headers: moralis.getRequiredHeaders(),
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Moralis wallet-swaps error",
+          response.status,
+          response.statusText,
+        );
+        throw new Error(
+          `Moralis wallet-swaps request failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      json = await response.json();
+    } catch (err) {
+      console.error("Moralis wallet-swaps request failed", err);
+      throw err;
+    }
+
+    const rows: any[] = Array.isArray(json?.result)
+      ? json.result
+      : Array.isArray(json?.data)
+        ? json.data
+        : [];
+
+    if (rows.length === 0) {
+      break;
+    }
+
+    for (const row of rows) {
+      const mapped = mapMoralisSwapEntry(row, address);
+      if (!mapped) {
+        continue;
+      }
+
+      const tsSec = Math.floor(Date.parse(mapped.timestamp) / 1000);
+      if (!Number.isFinite(tsSec) || tsSec < fromSec || tsSec > nowSec) {
+        continue;
+      }
+
+      swaps.push(mapped);
+    }
+
+    console.log(
+      `[fetchMoralisSolanaSwap] Page ${pageCount}: Collected ${swaps.length} swaps so far`,
+    );
+
+    const nextCursor = getMoralisCursor(json);
+    if (!nextCursor || seenCursors.has(nextCursor)) {
+      break;
+    }
+
+    seenCursors.add(nextCursor);
+    cursor = nextCursor;
   }
 
   return swaps;

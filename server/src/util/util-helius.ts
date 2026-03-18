@@ -67,21 +67,9 @@ export function getRequiredHeaders(): HeadersInit {
   };
 }
 
-export function resolveChainForAddress(address: string, requestedChain: SupportedChain): SupportedChain {
-  if (isEvmAddress(address)) {
-    // For EVM addresses default to 'eth' if caller passed solana
-    if (requestedChain === "solana" || !requestedChain) {
-      return "eth";
-    }
-    return requestedChain;
-  }
-  // Non-0x address – default to solana for now
-  if (!requestedChain || requestedChain === "solana") {
-    return "solana";
-  }
-  return requestedChain;
-}
-
-function isEvmAddress(address: string): boolean {
-  return address.startsWith("0x") && address.length === 42;
+export function resolveChainForAddress(
+  _address: string,
+  _requestedChain: SupportedChain,
+): SupportedChain {
+  return "solana";
 }

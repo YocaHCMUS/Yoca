@@ -602,6 +602,39 @@ export const walletSwap = pgTable(
     slot: bigint("slot", { mode: "number" }).notNull(),
     fee: decimal("fee").notNull(),
     feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    transactionType: text("transaction_type"),
+    subCategory: text("sub_category"),
+    blockNumber: bigint("block_number", { mode: "number" }),
+    exchange: jsonb("exchange").$type<{
+      name?: string | null;
+      address?: string | null;
+      logo?: string | null;
+    } | null>(),
+    pair: jsonb("pair").$type<{
+      address?: string | null;
+      label?: string | null;
+      baseTokenAddress?: string | null;
+      quoteTokenAddress?: string | null;
+    } | null>(),
+    sold: jsonb("sold").$type<{
+      mint: string;
+      amount: number;
+      decimals: number;
+      symbol?: string | null;
+      priceUsd?: number | null;
+      valueUsd?: number | null;
+    } | null>(),
+    bought: jsonb("bought").$type<{
+      mint: string;
+      amount: number;
+      decimals: number;
+      symbol?: string | null;
+      priceUsd?: number | null;
+      valueUsd?: number | null;
+    } | null>(),
+    baseQuotePrice: decimal("base_quote_price"),
+    totalValueUsd: decimal("total_value_usd"),
+    source: varchar("source", { length: 16 }),
     // First two entries are the swap legs
     swapBalanceChanges: jsonb("swap_balance_changes")
       .$type<Array<{ mint: string; amount: number; decimals: number }>>()

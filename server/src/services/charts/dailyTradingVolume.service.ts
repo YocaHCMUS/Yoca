@@ -93,8 +93,6 @@ function buildResult(
  * For Solana wallets: reads `wallet_helius_transactions` (balanceChanges)
  * and prices each mint via `token_market_data`.
  *
- * For EVM wallets: reads `wallet_transactions` (totalUsd / primaryTokenAmount * priceUsd).
- *
  * Only reads from DB cache; does not call Helius or any external API.
  */
 export async function getDailyTradingVolumeFromDb(

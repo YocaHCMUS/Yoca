@@ -30,6 +30,55 @@ export interface WalletPortfolioItem {
   change24hPercent?: number;
 }
 
+export interface WalletSwapBalanceChange {
+  mint: string;
+  amount: number;
+  decimals: number;
+  symbol?: string | null;
+  priceUsd?: number | null;
+  valueUsd?: number | null;
+}
+
+export interface WalletSwapExchange {
+  name?: string | null;
+  address?: string | null;
+  logo?: string | null;
+}
+
+export interface WalletSwapPair {
+  address?: string | null;
+  label?: string | null;
+  baseTokenAddress?: string | null;
+  quoteTokenAddress?: string | null;
+}
+
+export interface WalletSwap {
+  walletAddress: string;
+  signature: string;
+  timestamp: string;
+  slot: number;
+  fee: number;
+  feePayer: string;
+  balanceChanges: WalletSwapBalanceChange[];
+  feeChanges: WalletSwapBalanceChange[];
+  transactionType?: string | null;
+  subCategory?: string | null;
+  blockNumber?: number | null;
+  exchange?: WalletSwapExchange | null;
+  pair?: WalletSwapPair | null;
+  sold?: WalletSwapBalanceChange | null;
+  bought?: WalletSwapBalanceChange | null;
+  baseQuotePrice?: number | null;
+  totalValueUsd?: number | null;
+  source?: "helius" | "moralis" | string;
+}
+
+export interface WalletSwapsResponse {
+  address: string;
+  chain: string;
+  swaps: WalletSwap[];
+}
+
 export interface WalletCounterpartyIdentity {
   status: "known" | "unknown" | "unavailable";
   name: string | null;
@@ -186,15 +235,16 @@ export async function fetchWalletSwaps(
     chain?: string;
     limit?: number;
     cursor?: string;
+    before?: string;
   }
-) {
+): Promise<WalletSwapsResponse> {
   const query = { address, ...params };
   const response = await (client.api as any).wallets.swap.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletSwapsResponse;
 }
 
 /**

@@ -18,9 +18,10 @@ import {
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import { z } from "zod";
 import type {
-  SupportedChain,
   WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
+
+const SOLANA_CHAIN = "solana" as const;
 
 const router = new Hono();
 
@@ -297,7 +298,7 @@ router.get("/overview", async (c) => {
   const query = c.req.query();
   const params = walletOverviewRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana";
+  const chain = SOLANA_CHAIN;
   const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
 
   if (normalized && params.period) {
@@ -321,7 +322,7 @@ router.get("/portfolio", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
 
   try {
     const portfolio = await getWalletPortfolio(address, chain);
@@ -336,7 +337,7 @@ router.get("/transactions", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -363,7 +364,7 @@ router.get("/swap", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -389,7 +390,7 @@ router.get("/transfers", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -415,7 +416,7 @@ router.get("/distribution", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
 
   try {
     // Get portfolio data which forms the asset distribution
@@ -455,7 +456,7 @@ router.get("/exchanges", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = (params.chain as SupportedChain) || "solana"
+  const chain = SOLANA_CHAIN
   const limitParam = c.req.query("limit");
   const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
@@ -477,7 +478,7 @@ router.get("/counterparties", async (c) => {
   }
 
   const address = parsed.data.address;
-  const chain = (parsed.data.chain as SupportedChain) || "solana";
+  const chain = SOLANA_CHAIN;
   const period = parseCounterpartyPeriod(parsed.data.period);
   const limit = parseCounterpartyLimit(parsed.data.limit);
   const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
@@ -497,7 +498,7 @@ router.get("/counterparties", async (c) => {
 
 router.get("/identity", async (c) => {
   const address = c.req.query("address");
-  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+  const chain = SOLANA_CHAIN;
 
   if (!address) {
     return c.json({ error: "Missing required query param: address" }, 400);
@@ -531,7 +532,7 @@ router.post("/identity/batch", async (c) => {
     return c.json({ error: "Invalid identity batch payload" }, 400);
   }
 
-  const chain = (parsed.data.chain as SupportedChain) || "solana";
+  const chain = SOLANA_CHAIN;
 
   try {
     const identityBatch = await getWalletIdentityBatch(parsed.data.addresses, chain);
@@ -549,7 +550,7 @@ router.post("/identity/batch", async (c) => {
 
 router.get("/intelligence", async (c) => {
   const address = c.req.query("address");
-  const chain = (c.req.query("chain") as SupportedChain) || "solana";
+  const chain = SOLANA_CHAIN;
 
   if (!address) {
     return c.json({ error: "Missing required query param: address" }, 400);
