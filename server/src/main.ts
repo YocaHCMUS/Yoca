@@ -38,14 +38,17 @@ import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
 
-// Routes
-const app: any = new OpenAPIHono({
+// intialize OpenAPIHono with default error handling
+const app: OpenAPIHono = new OpenAPIHono({
   defaultHook: (result, c) => {
     if (!result.success) {
       return c.json({ error: "Invalid request" }, 400);
     }
   },
-})
+});
+
+// Routes
+app
   .use("*", logger())
   .use(
     "/api/*",
@@ -130,6 +133,7 @@ serve(
     console.log(`Server is running on http://localhost:${info.port}`);
   },
 );
+
 // RPC for client
 export type AppType = typeof app;
 export type { ErrCode } from "@sv/config/errors.js";
