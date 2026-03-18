@@ -14,7 +14,7 @@
     overflow: hidden;
 
     @media (min-width: 1024px) {
-        grid-template-columns: 420px 1fr;
+        grid-template-columns: 430px 1fr;
         gap: 0;
     }
 }
@@ -28,6 +28,7 @@
     border-right: 1px solid $border-subtle;
     height: 100%;
     overflow-y: auto;
+    
 }
 
 
