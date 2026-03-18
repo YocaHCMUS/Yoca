@@ -2,7 +2,6 @@ import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
   DataTable,
   InlineLoading,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -12,7 +11,7 @@ import {
   TableRow,
   type DataTableProps,
 } from "@carbon/react";
-import { type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 interface TblHdr {
   header: string;
@@ -37,6 +36,32 @@ interface TblProps
   loading?: boolean;
   height?: number | string;
   toolBar?: ReactNode;
+  enablePagination?: boolean;
+  pageSize?: number;
+}
+
+function buildPageItems(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, idx) => idx + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, "ellipsis", totalPages] as const;
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, "ellipsis", totalPages - 2, totalPages - 1, totalPages] as const;
+  }
+
+  return [
+    1,
+    "ellipsis",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "ellipsis",
+    totalPages,
+  ] as const;
 }
 
 export default function Tble({
@@ -48,10 +73,37 @@ export default function Tble({
   loading = false,
   height = 600,
   toolBar,
+  enablePagination = false,
+  pageSize = 8,
   ...dataTableProps
 }: TblProps) {
   const headerLookup = Object.fromEntries(
     headers.map((header) => [header.key, header]),
+  );
+  const hasToolBar = Boolean(toolBar);
+  const safePageSize = Math.max(1, pageSize);
+  const totalPages = enablePagination
+    ? Math.max(1, Math.ceil(rows.length / safePageSize))
+    : 1;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const rowsToRender = useMemo(() => {
+    if (!enablePagination) {
+      return rows;
+    }
+
+    const startIdx = (currentPage - 1) * safePageSize;
+    return rows.slice(startIdx, startIdx + safePageSize);
+  }, [enablePagination, rows, currentPage, safePageSize]);
+
+  const hasPagination = enablePagination && totalPages > 1;
+  const pageItems = useMemo(
+    () => buildPageItems(currentPage, totalPages),
+    [currentPage, totalPages],
   );
 
   // Show inline loading when loading and no data
@@ -59,27 +111,30 @@ export default function Tble({
     return (
       <TableContainer
         title={
-          <Stack>
-            <Stack>
-              <strong style={{ textTransform: "uppercase" }}>{title}</strong>
+          <div className={overwriteStyles.tblHeadWrap}>
+            <div>
+              <strong className={overwriteStyles.tblTitle}>{title}</strong>
               <span className={overwriteStyles.tblDsc}>{description}</span>
-            </Stack>
-            <div className={overwriteStyles.tblToolbar}>
-              <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
             </div>
-          </Stack>
+            {hasToolBar && (
+              <div className={overwriteStyles.tblToolbar}>
+                <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
+              </div>
+            )}
+          </div>
         }
         className={overwriteStyles.tbl}
       >
-        <Stack
+        <div
           style={{
             height,
+            display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           <InlineLoading description="Loading" />
-        </Stack>
+        </div>
       </TableContainer>
     );
   }
@@ -87,19 +142,21 @@ export default function Tble({
   return (
     <TableContainer
       title={
-        <Stack>
-          <Stack>
-            <strong style={{ textTransform: "uppercase" }}>{title}</strong>
+        <div className={overwriteStyles.tblHeadWrap}>
+          <div>
+            <strong className={overwriteStyles.tblTitle}>{title}</strong>
             <span className={overwriteStyles.tblDsc}>{description}</span>
-          </Stack>
-          <div className={overwriteStyles.tblToolbar}>
-            <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
           </div>
-        </Stack>
+          {hasToolBar && (
+            <div className={overwriteStyles.tblToolbar}>
+              <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
+            </div>
+          )}
+        </div>
       }
       className={overwriteStyles.tbl}
     >
-      <DataTable rows={rows} headers={headers} {...dataTableProps}>
+      <DataTable rows={rowsToRender} headers={headers} {...dataTableProps}>
         {({
           rows,
           headers,
@@ -108,66 +165,120 @@ export default function Tble({
           getRowProps,
           getCellProps,
         }) => (
-          <div style={{ height }}>
-            <Table {...getTableProps()}>
-              <TableHead hidden={hideHeaders}>
-                <TableRow>
-                  {headers.map((header) => (
-                    <TableHeader
-                      {...getHeaderProps({ header })}
-                      style={{
-                        paddingBlockStart: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        inlineSize: headerLookup[header.key].width,
-                        justifyContent: headerLookup[header.key].align,
-                      }}
-                    >
-                      {header.header}
-                    </TableHeader>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.length === 0 ? (
+          <div style={{ height, display: "flex", flexDirection: "column" }}>
+            <div className={overwriteStyles.tblTableArea}>
+              <Table {...getTableProps()}>
+                <TableHead hidden={hideHeaders}>
                   <TableRow>
-                    <TableCell
-                      colSpan={headers.length}
-                      style={{
-                        textAlign: "center",
-                        paddingBlockStart: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100px",
-                      }}
-                    >
-                      No data available
-                    </TableCell>
+                    {headers.map((header) => (
+                      <TableHeader
+                        {...getHeaderProps({ header })}
+                        style={{
+                          paddingBlockStart: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          inlineSize: headerLookup[header.key].width,
+                          justifyContent: headerLookup[header.key].align,
+                        }}
+                      >
+                        {header.header}
+                      </TableHeader>
+                    ))}
                   </TableRow>
-                ) : (
-                  rows.map((row) => (
-                    <TableRow {...getRowProps({ row })}>
-                      {row.cells.map((cell) => (
-                        <TableCell
-                          {...getCellProps({ cell })}
-                          style={{
-                            paddingBlockStart: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            inlineSize: headerLookup[cell.info.header].width,
-                            justifyContent:
-                              headerLookup[cell.info.header].align,
-                          }}
-                        >
-                          {cell.value}
-                        </TableCell>
-                      ))}
+                </TableHead>
+                <TableBody>
+                  {rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={headers.length}
+                        style={{
+                          textAlign: "center",
+                          paddingBlockStart: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "100px",
+                        }}
+                      >
+                        No data available
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    rows.map((row) => (
+                      <TableRow {...getRowProps({ row })}>
+                        {row.cells.map((cell) => (
+                          <TableCell
+                            {...getCellProps({ cell })}
+                            style={{
+                              paddingBlockStart: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              inlineSize: headerLookup[cell.info.header].width,
+                              justifyContent:
+                                headerLookup[cell.info.header].align,
+                            }}
+                          >
+                            {cell.value}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {hasPagination && (
+              <div className={overwriteStyles.tblPagerWrap}>
+                <button
+                  type="button"
+                  className={overwriteStyles.tblPagerBtn}
+                  disabled={currentPage == 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  aria-label="Previous page"
+                >
+                  &lt;
+                </button>
+
+                {pageItems.map((item, idx) => {
+                  if (item == "ellipsis") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className={overwriteStyles.tblPagerEllipsis}
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      className={`${overwriteStyles.tblPagerBtn} ${item == currentPage ? overwriteStyles.tblPagerBtnActive : ""}`}
+                      onClick={() => setCurrentPage(item)}
+                      aria-label={`Page ${item}`}
+                      aria-current={item == currentPage ? "page" : undefined}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={overwriteStyles.tblPagerBtn}
+                  disabled={currentPage == totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  aria-label="Next page"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </DataTable>

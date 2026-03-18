@@ -10,8 +10,9 @@ import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import styles from "./index.module.scss";
 import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
-import { Launch } from "@carbon/react/icons";
+import { Information, Launch } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 
 type TradeVolumeOption = "0" | "1" | "5" | "10";
@@ -337,121 +338,154 @@ export default function MarketPage() {
 
   return (
     <PageWrapper>
-      <Grid narrow className={overwriteStyles.wdGrd}>
-        <Column sm={2} md={8} lg={8}>
-          <Tble
-            title={tr("marketPage.topTokens")}
-            description={tr("marketPage.topTokensDescription")}
-            height={500}
-            loading={loading}
-            headers={[
-              { key: "token", header: tr("marketPage.token") },
-              { key: "price", header: tr("marketPage.price") },
-              { key: "change24h", header: tr("marketPage.change24h") },
-              { key: "marketCap", header: tr("marketPage.marketCap") },
-              { key: "volume24h", header: tr("marketPage.volume24h") },
-            ]}
-            rows={topTokenRows}
-            stickyHeader
-          />
-        </Column>
-        <Column sm={2} md={8} lg={8}>
-          <TokenTreeMap
-            loading={loading}
-            data={treeMapData}
-            height={500}
-            maxTrendValue={20}
-          />
-        </Column>
-        <Column sm={2} md={8} lg={8}>
-          <Tble
-            title={tr("marketPage.trendingTokens")}
-            description={tr("marketPage.trendingTokensDescription")}
-            height={400}
-            loading={trendingLoading}
-            headers={[
-              { key: "token", header: tr("marketPage.token") },
-              { key: "price", header: tr("marketPage.price") },
-              { key: "change24h", header: tr("marketPage.change24h") },
-              { key: "marketCap", header: tr("marketPage.marketCap") },
-              { key: "volume24h", header: tr("marketPage.volume24h") },
-            ]}
-            rows={trendingTokenRows}
-            stickyHeader
-          />
-        </Column>
-        <Column sm={2} md={8} lg={8}>
-          <Tble
-            title={tr("marketPage.profitableTraders")}
-            description={tr("marketPage.topTokensDescription")}
-            height={400}
-            loading={tradersLoading}
-            headers={[
-              { key: "trader", header: tr("marketPage.trader") },
-              { key: "pnl", header: tr("marketPage.profits") },
-              { key: "volume", header: tr("marketPage.volume") },
-              { key: "trades", header: tr("marketPage.trades") },
-            ]}
-            rows={traderRows}
-            stickyHeader
-          />
-        </Column>
-        <Column sm={2} md={8} lg={8}>
-          <Tble
-            title={tr("marketPage.recentTrades")}
-            description={"Description"}
-            height={400}
-            loading={recentTradesData.isLoading}
-            headers={[
-              { key: "time", header: tr("marketPage.time") },
-              { key: "volume", header: tr("marketPage.value") },
-              { key: "amount", header: tr("marketPage.amount"), width: "150%" },
-              { key: "trader", header: tr("marketPage.trader") },
-              {
-                key: "solscan",
-                header: tr("marketPage.transaction"),
-                align: "center",
-              },
-            ]}
-            rows={recentTradesRows}
-            toolBar={
-              <>
-                <FilterSwitch<TradeVolumeOption>
-                  value={tradeVolume}
-                  options={[
-                    { value: "0", label: "All" },
-                    { value: "1", label: ">$1" },
-                    { value: "5", label: ">$5" },
-                    { value: "10", label: ">$10" },
+      <section className={styles.marketPage}>
+        <div className={styles.content}>
+          <Grid
+            narrow
+            className={`${overwriteStyles.wdGrd} ${styles.marketGrid}`}
+          >
+            <Column sm={2} md={8} lg={8} className={styles.marketColumn}>
+              <div className={styles.panel}>
+                <Tble
+                  title={tr("marketPage.topTokens")}
+                  description={tr("marketPage.topTokensDescription")}
+                  height={570}
+                  loading={loading}
+                  headers={[
+                    { key: "token", header: tr("marketPage.token") },
+                    { key: "price", header: tr("marketPage.price") },
+                    { key: "change24h", header: tr("marketPage.change24h") },
+                    { key: "marketCap", header: tr("marketPage.marketCap") },
+                    { key: "volume24h", header: tr("marketPage.volume24h") },
                   ]}
-                  onChange={setTradeVolume}
-                  tooltipLabel="USD Threshold"
+                  rows={topTokenRows}
+                  stickyHeader
                 />
-                <FilterSwitch<TradeTimeOption>
-                  value={tradeTime}
-                  options={[
-                    { value: "6h", label: "6h" },
-                    { value: "12h", label: "12h" },
-                    { value: "24h", label: "24h" },
+              </div>
+            </Column>
+
+            <Column sm={2} md={8} lg={8} className={styles.marketColumn}>
+              <section className={styles.heatmapPanel}>
+                <header className={styles.heatmapHeader}>
+                  <span className={styles.heatmapCaption}>
+                    <Information size={12} />
+                    {tr("marketPage.marketHeatmapDescription")}
+                  </span>
+                </header>
+                <div className={styles.heatmapBody}>
+                  <TokenTreeMap
+                    loading={loading}
+                    data={treeMapData}
+                    height={590}
+                    maxTrendValue={20}
+                  />
+                </div>
+              </section>
+            </Column>
+
+            <Column sm={2} md={8} lg={8} className={styles.marketColumn}>
+              <div className={styles.panel}>
+                <Tble
+                  title={tr("marketPage.trendingTokens")}
+                  description={tr("marketPage.trendingTokensDescription")}
+                  height={570}
+                  loading={trendingLoading}
+                  headers={[
+                    { key: "token", header: tr("marketPage.token") },
+                    { key: "price", header: tr("marketPage.price") },
+                    { key: "change24h", header: tr("marketPage.change24h") },
+                    { key: "marketCap", header: tr("marketPage.marketCap") },
+                    { key: "volume24h", header: tr("marketPage.volume24h") },
                   ]}
-                  onChange={setTradeTime}
-                  tooltipLabel="Time Window"
+                  rows={trendingTokenRows}
+                  stickyHeader
                 />
-                <FilterSwitch<TradesSortOption>
-                  value={tradesSort}
-                  options={[
-                    { value: "volume", label: "Volume" },
-                    { value: "time", label: "Time" },
+              </div>
+            </Column>
+
+            <Column sm={2} md={8} lg={8} className={styles.marketColumn}>
+              <div className={styles.panel}>
+                <Tble
+                  title={tr("marketPage.profitableTraders")}
+                  description={tr("marketPage.profitableTradersDescription")}
+                  height={570}
+                  loading={tradersLoading}
+                  headers={[
+                    { key: "trader", header: tr("marketPage.trader") },
+                    { key: "pnl", header: tr("marketPage.profits") },
+                    { key: "volume", header: tr("marketPage.volume") },
+                    { key: "trades", header: tr("marketPage.trades") },
                   ]}
-                  onChange={setTradesSort}
-                  tooltipLabel="Sort By"
+                  rows={traderRows}
+                  stickyHeader
                 />
-              </>
-            }
-            stickyHeader
-          />
-        </Column>
-      </Grid>
+              </div>
+            </Column>
+
+            <Column sm={2} md={8} lg={16} className={styles.marketColumn}>
+              <div className={styles.panel}>
+                <Tble
+                  title={tr("marketPage.recentTrades")}
+                  description={tr("marketPage.recentTradesDescription")}
+                  height={570}
+                  loading={recentTradesData.isLoading}
+                  headers={[
+                    { key: "time", header: tr("marketPage.time") },
+                    { key: "volume", header: tr("marketPage.value") },
+                    {
+                      key: "amount",
+                      header: tr("marketPage.amount"),
+                      width: "150%",
+                    },
+                    { key: "trader", header: tr("marketPage.trader") },
+                    {
+                      key: "solscan",
+                      header: tr("marketPage.transaction"),
+                      align: "center",
+                    },
+                  ]}
+                  rows={recentTradesRows}
+                  toolBar={
+                    <>
+                      <FilterSwitch<TradeVolumeOption>
+                        value={tradeVolume}
+                        options={[
+                          { value: "0", label: "All" },
+                          { value: "1", label: ">$1" },
+                          { value: "5", label: ">$5" },
+                          { value: "10", label: ">$10" },
+                        ]}
+                        onChange={setTradeVolume}
+                        tooltipLabel="USD Threshold"
+                      />
+                      <FilterSwitch<TradeTimeOption>
+                        value={tradeTime}
+                        options={[
+                          { value: "6h", label: "6h" },
+                          { value: "12h", label: "12h" },
+                          { value: "24h", label: "24h" },
+                        ]}
+                        onChange={setTradeTime}
+                        tooltipLabel="Time Window"
+                      />
+                      <FilterSwitch<TradesSortOption>
+                        value={tradesSort}
+                        options={[
+                          { value: "volume", label: "Volume" },
+                          { value: "time", label: "Time" },
+                        ]}
+                        onChange={setTradesSort}
+                        tooltipLabel="Sort By"
+                      />
+                    </>
+                  }
+                  stickyHeader
+                />
+              </div>
+            </Column>
+          </Grid>
+        </div>
+      </section>
     </PageWrapper>
   );
 }

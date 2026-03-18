@@ -1,5 +1,4 @@
-import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { ContentSwitcher, Switch, Tooltip } from "@carbon/react";
+import styles from "./FilterSwitch.module.scss";
 
 type FilterOption<V extends string> = {
   value: V;
@@ -19,27 +18,29 @@ export function FilterSwitch<V extends string>({
   onChange,
   tooltipLabel,
 }: FilterSwitchProps<V>) {
-  const selectedIndex = options.findIndex((opt) => opt.value == value);
-
   return (
-    <Tooltip label={tooltipLabel} enterDelayMs={2000} align="top">
-      <ContentSwitcher
-        className={overwriteStyles.fltrOpt}
-        onChange={({ name }) => {
-          if (!name) return;
-          const selected = options.find((opt) => opt.label == name);
-          if (selected) {
-            onChange(selected.value);
-          }
-        }}
-        selectedIndex={selectedIndex >= 0 ? selectedIndex : 0}
-        size="sm"
-        style={{ minInlineSize: 200 }}
-      >
-        {options.map((opt, optIdx) => (
-          <Switch key={optIdx} name={opt.label} text={opt.label} />
-        ))}
-      </ContentSwitcher>
-    </Tooltip>
+    <div
+      className={styles.group}
+      role="radiogroup"
+      aria-label={tooltipLabel}
+      title={tooltipLabel}
+    >
+      {options.map((opt, idx) => {
+        const selected = opt.value == value;
+
+        return (
+          <button
+            key={idx}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            className={`${styles.button} ${selected ? styles.selected : ""}`}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

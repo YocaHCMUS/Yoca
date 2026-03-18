@@ -7,7 +7,79 @@
 }
 
 .content {
-  max-width: 1584px;
+  max-width: 1680px;
   margin: 0 auto;
-  padding: $spacing-06 $spacing-05;
+  padding: $spacing-04 0 $spacing-06;
+}
+
+.marketGrid {
+  row-gap: $spacing-03;
+}
+
+.marketColumn {
+  display: flex;
+  height: 630px;
+}
+
+.panel,
+.heatmapPanel {
+  width: 100%;
+  border: 1px solid $border-subtle;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.panel {
+  :global(.cds--table-container) {
+    height: 100%;
+    border-bottom: 0;
+    background: #fff;
+  }
+
+  :global(.cds--data-table-content) {
+    background: #fff;
+  }
+}
+
+.heatmapPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.heatmapHeader {
+  padding: $spacing-03 $spacing-04 $spacing-02;
+
+  span {
+    display: block;
+    margin-top: 0;
+    color: $text-secondary;
+    font-size: 0.75rem;
+  }
+}
+
+.heatmapCaption {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+}
+
+.heatmapBody {
+  padding: 0 $spacing-02 $spacing-02;
+
+  :global(canvas) {
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 1056px) {
+  .content {
+    padding-inline: $spacing-03;
+  }
+}
+
+@media (max-width: 672px) {
+  .content {
+    padding-inline: $spacing-03;
+  }
 }

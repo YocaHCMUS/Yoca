@@ -252,7 +252,7 @@ export function PageWrapper({
 
       <Content
         id="main-content"
-        style={{ height: "100%" }}
+        style={{ height: "100%", paddingTop: 0, paddingBottom: 0 }}
         className={noTopPadding ? styles.contentNoTopPadding : undefined}
       >
         {children}
