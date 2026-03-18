@@ -31,6 +31,9 @@ export interface ChartProps {
   /** Allow selecting multiple tokens at the same time */
   allowMultiTokenSelection?: boolean;
 
+  /** Force BalanceChart render/query mode */
+  balanceChartMode?: 'auto' | 'total' | 'token';
+
   /** Enable automatic data refresh (default: true) */
   autoRefresh?: boolean;
 

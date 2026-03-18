@@ -371,6 +371,7 @@ export default function WalletPage() {
                 timePeriod: "7D",
                 wallets: [address],
               }}
+              balanceChartMode="total"
               autoRefresh={true}
             />,
             <BalanceChart
@@ -380,6 +381,7 @@ export default function WalletPage() {
                 wallets: [address],
                 tokens: ["SOL"],
               }}
+              balanceChartMode="token"
               enableTokenSelector={true}
               tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
               allowMultiTokenSelection={true}
