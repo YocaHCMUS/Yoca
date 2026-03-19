@@ -28,7 +28,8 @@
     "ethers": "^6.15.0",
     "google-auth-library": "^10.5.0",
     "hono": "^4.10.4",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "puppeteer": "^24.39.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

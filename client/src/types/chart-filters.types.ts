@@ -55,7 +55,7 @@ export interface ChartFilters {
 /**
  * Export format options
  */
-export type ExportFormat = 'png' | 'svg' | 'csv';
+export type ExportFormat = 'png' | 'svg' | 'csv' | 'pdf';
 
 /**
  * Export configuration

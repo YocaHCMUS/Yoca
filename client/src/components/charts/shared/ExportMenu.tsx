@@ -19,7 +19,7 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './ExportMenu.module.scss';
 import { Download, Image, Svg, Table } from '@carbon/icons-react';
 
-export type ExportFormat = 'png' | 'svg' | 'csv';
+export type ExportFormat = 'png' | 'svg' | 'csv' | 'pdf';
 
 export interface ExportMenuProps {
   /** Callback when export is requested */
@@ -48,7 +48,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   isExporting = false,
   className,
   disabled = false,
-  formats = ['png', 'svg', 'csv'],
+  formats = ['png', 'svg', 'csv', 'pdf'],
 }) => {
   const { tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
@@ -201,6 +201,19 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
               <Table size={16} />
               <span>{tr('charts.exportCSV')}</span>
               <span className={styles.badge}>{tr('charts.dataBadge')}</span>
+            </button>
+          )}
+
+          {formats.includes('pdf') && (
+            <button
+              className={styles.menuItem}
+              onClick={() => handleExport('pdf')}
+              role="menuitem"
+              tabIndex={0}
+            >
+              <Download size={16} />
+              <span>{tr('charts.exportPDF')}</span>
+              <span className={styles.badge}>{tr('charts.pdfBadge')}</span>
             </button>
           )}
         </div>

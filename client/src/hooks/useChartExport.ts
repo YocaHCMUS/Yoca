@@ -41,6 +41,9 @@ interface UseChartExportReturn {
   
   /** Export chart as SVG */
   exportSVG: (chartInstance: EChartsInstance, filters: ChartFilters) => void;
+
+  /** Export chart as PDF */
+  exportPDF: (chartInstance: EChartsInstance, filters: ChartFilters) => Promise<void>;
   
   /** Export chart data as CSV */
   exportCSV: (data: ChartDataSeries[], filters: ChartFilters, extraFilters?: Record<string, string>) => void;
@@ -87,6 +90,137 @@ function downloadFile(url: string, filename: string): void {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+function decodeSvgDataUrl(dataUrl: string): string {
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex < 0) {
+    throw new Error('Invalid SVG data URL');
+  }
+
+  const metadata = dataUrl.slice(0, commaIndex);
+  const payload = dataUrl.slice(commaIndex + 1);
+
+  if (metadata.includes(';base64')) {
+    return atob(payload);
+  }
+
+  return decodeURIComponent(payload);
+}
+
+function generatePagePdfFilename(baseName: string): string {
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .slice(0, -5);
+  return `${baseName}-${timestamp}.pdf`;
+}
+
+function createPageSnapshotHtml(): { html: string; width: number; height: number } {
+  const rootClone = document.documentElement.cloneNode(true) as HTMLElement;
+
+  const originalControls = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+  const clonedControls = rootClone.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+
+  originalControls.forEach((control, index) => {
+    const clone = clonedControls[index];
+    if (!clone) return;
+
+    if (control instanceof HTMLInputElement) {
+      clone.value = control.value;
+      clone.setAttribute('value', control.value);
+      clone.checked = control.checked;
+      if (control.checked) clone.setAttribute('checked', 'checked');
+      if (!control.checked) clone.removeAttribute('checked');
+      return;
+    }
+
+    if (control instanceof HTMLTextAreaElement) {
+      clone.value = control.value;
+      clone.textContent = control.value;
+      return;
+    }
+
+    if (control instanceof HTMLSelectElement) {
+      clone.value = control.value;
+      Array.from(clone.options).forEach((option) => {
+        if (option.value === control.value) {
+          option.setAttribute('selected', 'selected');
+        } else {
+          option.removeAttribute('selected');
+        }
+      });
+    }
+  });
+
+  const originalCanvases = document.querySelectorAll<HTMLCanvasElement>('canvas');
+  const clonedCanvases = rootClone.querySelectorAll<HTMLCanvasElement>('canvas');
+
+  originalCanvases.forEach((canvas, index) => {
+    const clonedCanvas = clonedCanvases[index];
+    if (!clonedCanvas || !clonedCanvas.parentNode) return;
+
+    try {
+      const image = document.createElement('img');
+      image.src = canvas.toDataURL('image/png');
+      image.width = canvas.width;
+      image.height = canvas.height;
+      image.style.width = `${canvas.clientWidth}px`;
+      image.style.height = `${canvas.clientHeight}px`;
+      image.style.display = 'block';
+      clonedCanvas.parentNode.replaceChild(image, clonedCanvas);
+    } catch {
+      // Ignore canvases that cannot be serialized due to browser security restrictions.
+    }
+  });
+
+  rootClone.querySelectorAll('script').forEach((script) => script.remove());
+
+  const head = rootClone.querySelector('head');
+  if (head) {
+    const base = document.createElement('base');
+    base.href = `${window.location.origin}/`;
+    head.prepend(base);
+  }
+
+  const html = `<!doctype html>${rootClone.outerHTML}`;
+  const width = Math.max(1024, window.innerWidth);
+  const height = Math.max(768, window.innerHeight);
+
+  return { html, width, height };
+}
+
+export async function exportCurrentPageAsPdf(options?: {
+  title?: string;
+  baseFilename?: string;
+  filename?: string;
+}): Promise<void> {
+  const snapshot = createPageSnapshotHtml();
+  const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN as string;
+
+  const response = await fetch(`${apiDomain}/api/charts/export/pdf`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: options?.title || document.title || 'page',
+      html: snapshot.html,
+      width: snapshot.width,
+      height: snapshot.height,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Page PDF export failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const filename = options?.filename || generatePagePdfFilename(options?.baseFilename || 'page-export');
+  downloadFile(url, filename);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -253,6 +387,57 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
     },
     [baseFilename]
   );
+
+  const exportPDF = useCallback(
+    async (chartInstance: EChartsInstance, filters: ChartFilters) => {
+      setIsExporting(true);
+      setExportError(null);
+
+      try {
+        const svgDataUrl = chartInstance.getDataURL({
+          type: 'svg',
+          backgroundColor: '#fff',
+        });
+        const svg = decodeSvgDataUrl(svgDataUrl);
+
+        const chartDom = chartInstance.getDom() as HTMLElement;
+        const width = Math.max(800, Math.round(chartDom.clientWidth || 1200));
+        const height = Math.max(450, Math.round(chartDom.clientHeight || 600));
+
+        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN as string;
+        const response = await fetch(`${apiDomain}/api/charts/export/pdf`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: chartTitle,
+            svg,
+            width,
+            height,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`PDF export failed with status ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const filename = generateFilename(baseFilename, filters, 'pdf');
+        downloadFile(url, filename);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('PDF export failed');
+        setExportError(err);
+        console.error('PDF export error:', error);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [baseFilename, chartTitle]
+  );
   
   /**
    * Export as CSV
@@ -307,6 +492,8 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
       } else if (chartInstance) {
         if (format === 'png') {
           exportPNG(chartInstance, filters);
+        } else if (format === 'pdf') {
+          exportPDF(chartInstance, filters);
         } else if (format === 'svg') {
           exportSVG(chartInstance, filters);
         }
@@ -314,7 +501,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
         setExportError(new Error('Chart instance required for PNG/SVG export'));
       }
     },
-    [exportPNG, exportSVG, exportCSV]
+    [exportPNG, exportSVG, exportPDF, exportCSV]
   );
   
   return {
@@ -322,6 +509,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
     exportError,
     exportPNG,
     exportSVG,
+    exportPDF,
     exportCSV,
     exportChart,
   };

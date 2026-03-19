@@ -153,7 +153,7 @@ export function DailyTradingVolume({
     debounceDelay: 300,
   });
 
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
     baseFilename: 'daily-trading-volume',
@@ -437,14 +437,14 @@ export function DailyTradingVolume({
    * Handle export
    */
   const handleExport = async (format: ExportFormat) => {
-    runChartExport(
+    await runChartExport(
       {
         format,
         filters,
         chartInstance: chartRef.current?.getEchartsInstance() as any,
         csvData,
       },
-      { exportPNG, exportSVG, exportCSV }
+      { exportPNG, exportSVG, exportPDF, exportCSV }
     );
   };
   

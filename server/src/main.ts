@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import puppeteer from "puppeteer";
 import { clientDomains } from "./config/security.js";
 import balances from "./routes/balances.js";
 import chartAverageRollingAnnualReturn from "./routes/charts/average-rolling-annual-return.route.js";
@@ -34,6 +35,11 @@ import search from "./routes/search.js";
 import tokens from "./routes/tokens.js";
 import transfers from "./routes/transfers.js";
 import users from "./routes/users.js";
+
+function sanitizeExportFilename(value: string): string {
+  const sanitized = value.replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
+  return sanitized.length > 0 ? sanitized : "chart";
+}
 
 // Routes
 const app = new Hono()
@@ -69,6 +75,104 @@ const app = new Hono()
     "/api/charts/tradingVolumePerTransaction",
     chartTradingVolumePerTransaction,
   )
+  .post("/api/charts/export/pdf", async (c) => {
+    try {
+      const body = await c.req.json<{
+        title?: string;
+        html?: string;
+        svg?: string;
+        width?: number;
+        height?: number;
+      }>();
+
+      const htmlInput = typeof body.html === "string" ? body.html.trim() : "";
+      const svg = typeof body.svg === "string" ? body.svg.trim() : "";
+      if (!htmlInput && !svg) {
+        return c.json({ error: "HTML or SVG content is required" }, 400);
+      }
+
+      const width = Number.isFinite(body.width)
+        ? Math.min(4096, Math.max(600, Math.round(body.width!)))
+        : 1200;
+      const height = Number.isFinite(body.height)
+        ? Math.min(4096, Math.max(400, Math.round(body.height!)))
+        : 640;
+
+      const safeTitle = sanitizeExportFilename(body.title ?? "chart");
+      const html = htmlInput || `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: ${width}px;
+        height: ${height}px;
+        background: #ffffff;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .chart {
+        width: ${width}px;
+        height: ${height}px;
+      }
+      .chart > svg {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chart">${svg}</div>
+  </body>
+</html>`;
+
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width, height, deviceScaleFactor: 2 });
+        await page.setContent(html, { waitUntil: "networkidle0" });
+
+        const pdf = await page.pdf({
+          printBackground: true,
+          format: "A4",
+          preferCSSPageSize: true,
+          margin: {
+            top: "12mm",
+            right: "12mm",
+            bottom: "12mm",
+            left: "12mm",
+          },
+        });
+
+        const pdfBuffer = Buffer.from(pdf);
+
+        return c.newResponse(pdfBuffer, 200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${safeTitle}.pdf"`,
+        });
+      } finally {
+        await browser.close();
+      }
+    } catch (error) {
+      console.error("[charts.export.pdf] Failed to export PDF:", error);
+      return c.json(
+        {
+          error: "Failed to export PDF",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500,
+      );
+    }
+  })
   .route("/api/charts/rollingAnnualReturn", chartRollingAnnualReturn)
   .route(
     "/api/charts/averageRollingAnnualReturn",
