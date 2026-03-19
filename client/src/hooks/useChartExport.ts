@@ -184,8 +184,26 @@ function createPageSnapshotHtml(): { html: string; width: number; height: number
   }
 
   const html = `<!doctype html>${rootClone.outerHTML}`;
-  const width = Math.max(1024, window.innerWidth);
-  const height = Math.max(768, window.innerHeight);
+  const doc = document.documentElement;
+  const body = document.body;
+  const measuredWidth = Math.max(
+    1024,
+    window.innerWidth,
+    doc.scrollWidth,
+    doc.offsetWidth,
+    body?.scrollWidth ?? 0,
+    body?.offsetWidth ?? 0
+  );
+  const measuredHeight = Math.max(
+    768,
+    window.innerHeight,
+    doc.scrollHeight,
+    doc.offsetHeight,
+    body?.scrollHeight ?? 0,
+    body?.offsetHeight ?? 0
+  );
+  const width = Math.min(3000, measuredWidth);
+  const height = Math.min(14000, measuredHeight);
 
   return { html, width, height };
 }

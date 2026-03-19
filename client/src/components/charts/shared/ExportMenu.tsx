@@ -48,7 +48,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   isExporting = false,
   className,
   disabled = false,
-  formats = ['png', 'svg', 'csv', 'pdf'],
+  formats = ['png', 'svg', 'csv'],
 }) => {
   const { tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(false);
@@ -204,18 +204,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             </button>
           )}
 
-          {formats.includes('pdf') && (
-            <button
-              className={styles.menuItem}
-              onClick={() => handleExport('pdf')}
-              role="menuitem"
-              tabIndex={0}
-            >
-              <Download size={16} />
-              <span>{tr('charts.exportPDF')}</span>
-              <span className={styles.badge}>{tr('charts.pdfBadge')}</span>
-            </button>
-          )}
         </div>
       )}
     </div>

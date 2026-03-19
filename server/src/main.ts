@@ -92,11 +92,12 @@ const app = new Hono()
       }
 
       const width = Number.isFinite(body.width)
-        ? Math.min(4096, Math.max(600, Math.round(body.width!)))
+        ? Math.min(3000, Math.max(600, Math.round(body.width!)))
         : 1200;
       const height = Number.isFinite(body.height)
-        ? Math.min(4096, Math.max(400, Math.round(body.height!)))
+        ? Math.min(14000, Math.max(400, Math.round(body.height!)))
         : 640;
+      const isHtmlExport = htmlInput.length > 0;
 
       const safeTitle = sanitizeExportFilename(body.title ?? "chart");
       const html = htmlInput || `<!doctype html>
@@ -138,20 +139,86 @@ const app = new Hono()
 
       try {
         const page = await browser.newPage();
+        page.setDefaultNavigationTimeout(120000);
+        page.setDefaultTimeout(120000);
         await page.setViewport({ width, height, deviceScaleFactor: 2 });
-        await page.setContent(html, { waitUntil: "networkidle0" });
-
-        const pdf = await page.pdf({
-          printBackground: true,
-          format: "A4",
-          preferCSSPageSize: true,
-          margin: {
-            top: "12mm",
-            right: "12mm",
-            bottom: "12mm",
-            left: "12mm",
-          },
+        await page.setContent(html, {
+          waitUntil: "domcontentloaded",
+          timeout: 120000,
         });
+        await page.emulateMediaType("screen");
+        await page.evaluate(async () => {
+          if ("fonts" in document) {
+            try {
+              await document.fonts.ready;
+            } catch {
+              // Ignore font readiness failures in export context.
+            }
+          }
+        });
+
+        const pdf = isHtmlExport
+          ? await (async () => {
+              const screenshot = await page.screenshot({
+                type: "png",
+                fullPage: true,
+                captureBeyondViewport: true,
+              });
+              const screenshotBase64 = Buffer.from(screenshot).toString("base64");
+
+              await page.setContent(
+                `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <img alt="page-export" src="data:image/png;base64,${screenshotBase64}" />
+  </body>
+</html>`,
+                {
+                  waitUntil: "domcontentloaded",
+                  timeout: 120000,
+                },
+              );
+
+              return page.pdf({
+                printBackground: true,
+                width: `${width}px`,
+                height: `${height}px`,
+                preferCSSPageSize: false,
+                margin: {
+                  top: "0",
+                  right: "0",
+                  bottom: "0",
+                  left: "0",
+                },
+              });
+            })()
+          : await page.pdf({
+              printBackground: true,
+              width: `${width}px`,
+              height: `${height}px`,
+              preferCSSPageSize: false,
+              margin: {
+                top: "0",
+                right: "0",
+                bottom: "0",
+                left: "0",
+              },
+            });
 
         const pdfBuffer = Buffer.from(pdf);
 
