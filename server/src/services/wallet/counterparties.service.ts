@@ -3,7 +3,6 @@ import {
     getWalletTransfers,
 } from "@sv/services/wallet/walletData.service.js";
 import type {
-    SupportedChain,
     WalletCounterpartiesResponse,
     WalletCounterpartyIdentity,
     WalletCounterpartyPeriod,
@@ -13,7 +12,6 @@ import type {
     WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletIdentityBatch } from "@sv/services/wallet/walletIdentity.service.js";
-import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -444,7 +442,6 @@ function mergeCounterpartiesFromSwaps(input: {
 
 async function fetchCounterpartyActivityDataset(
     address: string,
-    chain: SupportedChain,
     options: CounterpartyActivityFetchOptions,
 ): Promise<CounterpartyActivityDataset> {
     const nowMs = Date.now();
@@ -465,7 +462,7 @@ async function fetchCounterpartyActivityDataset(
 
     while ((transferHasMore || swapHasMore) && transferEvents.length + swapEvents.length < maxRecords) {
         if (transferHasMore && transferEvents.length + swapEvents.length < maxRecords) {
-            const transferPage = await getWalletTransfers(address, chain, {
+            const transferPage = await getWalletTransfers(address, {
                 cursor: transferCursor,
             });
             sourceSet.add(transferPage.pageInfo.source);
@@ -507,7 +504,7 @@ async function fetchCounterpartyActivityDataset(
         }
 
         if (swapHasMore && transferEvents.length + swapEvents.length < maxRecords) {
-            const swapPage = await getWalletSwaps(address, chain, {
+            const swapPage = await getWalletSwaps(address, {
                 cursor: swapCursor,
             });
             sourceSet.add(swapPage.pageInfo.source);
@@ -599,19 +596,11 @@ function toCounterpartyIdentity(value: {
 }
 
 async function buildCounterpartyIdentityMap(
-    addresses: string[],
-    chain: SupportedChain,
+    addresses: string[]
 ): Promise<Map<string, WalletCounterpartyIdentity>> {
     const identityByAddress = new Map<string, WalletCounterpartyIdentity>();
 
     if (addresses.length === 0) {
-        return identityByAddress;
-    }
-
-    if (chain !== "solana") {
-        for (const address of addresses) {
-            identityByAddress.set(address, UNAVAILABLE_IDENTITY);
-        }
         return identityByAddress;
     }
 
@@ -627,7 +616,7 @@ async function buildCounterpartyIdentityMap(
     }
 
     try {
-        const identityBatch = await getWalletIdentityBatch(lookupAddresses, chain);
+        const identityBatch = await getWalletIdentityBatch(lookupAddresses);
         for (const item of identityBatch.results) {
             identityByAddress.set(item.address, toCounterpartyIdentity(item.identity));
         }
@@ -732,18 +721,16 @@ function computePeriodStart(period: WalletCounterpartyPeriod, nowMs: number): nu
  */
 export async function getWalletCounterparties(
     address: string,
-    chain: SupportedChain,
     options?: WalletCounterpartiesOptions,
 ): Promise<WalletCounterpartiesResponse> {
     const normalizedAddress = normalizeAddress(address);
-    const effectiveChain = resolveChainForAddress(normalizedAddress, chain);
     const period = normalizeCounterpartyPeriod(options?.period);
     const limit = clampCounterpartyLimit(options?.limit);
     const includeTokens = options?.includeTokens ?? true;
 
     const nowMs = Date.now();
     const fromMs = computePeriodStart(period, nowMs);
-    const activityDataset = await fetchCounterpartyActivityDataset(normalizedAddress, effectiveChain, {
+    const activityDataset = await fetchCounterpartyActivityDataset(normalizedAddress, {
         period,
         maxRecords: COUNTERPARTY_MAX_RECORDS,
     });
@@ -765,7 +752,7 @@ export async function getWalletCounterparties(
     });
 
     const counterpartyAddresses = Array.from(aggregatedByCounterparty.keys());
-    const identityByAddress = await buildCounterpartyIdentityMap(counterpartyAddresses, effectiveChain);
+    const identityByAddress = await buildCounterpartyIdentityMap(counterpartyAddresses);
 
     const allRows = toCounterpartyRows(
         aggregatedByCounterparty,
@@ -800,7 +787,6 @@ export async function getWalletCounterparties(
         },
         metadata: {
             period,
-            chain: effectiveChain,
             source: activityDataset.source,
             totals,
         },

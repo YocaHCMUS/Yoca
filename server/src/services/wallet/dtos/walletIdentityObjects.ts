@@ -1,5 +1,3 @@
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
-
 export type WalletIdentityStatus = "known" | "unknown" | "unavailable";
 
 export interface HeliusWalletIdentityRaw {
@@ -40,7 +38,6 @@ export interface WalletIdentityProviderMetadata {
 
 export interface WalletIdentityResponse {
     address: string;
-    chain: SupportedChain;
     identity: WalletIdentityNormalized;
     metadata: {
         cache: WalletIdentityCacheMetadata;
@@ -49,7 +46,6 @@ export interface WalletIdentityResponse {
 }
 
 export interface WalletIdentityBatchResponse {
-    chain: SupportedChain;
     results: WalletIdentityResponse[];
 }
 
@@ -66,7 +62,6 @@ export interface WalletIdentityAnalysis {
 
 export interface WalletIntelligenceResponse {
     address: string;
-    chain: SupportedChain;
     identity: WalletIdentityNormalized;
     analysis: WalletIdentityAnalysis;
     metadata: {
@@ -81,6 +76,5 @@ export interface WalletIntelligenceResponse {
 }
 
 export interface WalletIntelligenceBatchResponse {
-    chain: SupportedChain;
     results: WalletIntelligenceResponse[];
 }

@@ -9,7 +9,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateCounterpartyData } from '../../services/mockChartData.service.js';
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 
 /**
@@ -32,7 +31,6 @@ const counterpartyRequestSchema = z.object({
   timezone: z.string().optional().default("UTC"),
   wallets: z.string().optional(),
   address: z.string().optional(),
-  chain: z.string().optional(),
   period: z.string().optional(),
 });
 // Response Schemas
@@ -161,7 +159,6 @@ const app = new Hono()
 
         const walletCounterparties = await getWalletCounterparties(
           walletAddress,
-          (params.chain as SupportedChain) || "solana",
           {
             period: walletPeriod,
             limit,
@@ -192,7 +189,6 @@ const app = new Hono()
               period: walletCounterparties.metadata.period.toUpperCase(),
               transactionType: params.transactionType,
               limit,
-              chain: walletCounterparties.metadata.chain,
               source: walletCounterparties.metadata.source,
             },
           },

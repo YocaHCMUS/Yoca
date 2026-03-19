@@ -573,9 +573,6 @@ export interface CounterpartiesRequestParams extends ChartResponseBase {
   /** Optional single wallet override */
   address?: string;
 
-  /** Optional chain for wallet-aware mode */
-  chain?: string;
-
   /** Optional timezone */
   timezone?: string;
 

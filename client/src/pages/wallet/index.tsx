@@ -390,7 +390,6 @@ export default function WalletPage() {
     setSwapLoading(true);
     try {
       const response = await fetchWalletSwaps(address, {
-        chain: "solana",
         cursor: previousPageInfo.nextCursor,
         before: previousPageInfo.nextCursor,
       });
@@ -435,7 +434,6 @@ export default function WalletPage() {
     setTransferLoading(true);
     try {
       const response = await fetchWalletTransfers(address, {
-        chain: "solana",
         cursor: previousPageInfo.nextCursor,
       });
 
@@ -462,15 +460,13 @@ export default function WalletPage() {
 
       try {
         // Fetch portfolio data
-        const portfolioResponse = await fetchWalletPortfolio(address, "solana");
+        const portfolioResponse = await fetchWalletPortfolio(address);
         if (Array.isArray(portfolioResponse)) {
           setPortfolio(portfolioResponse);
         }
 
         // Fetch swaps data for swap table
-        const swapResponse = await fetchWalletSwaps(address, {
-          chain: "solana",
-        });
+        const swapResponse = await fetchWalletSwaps(address);
         const swapsData = swapResponse?.swaps || [];
         if (Array.isArray(swapsData)) {
           setSwapPages({ 1: swapsData });
@@ -480,9 +476,7 @@ export default function WalletPage() {
         }
 
         // Fetch transfers data for inflow/outflow tables
-        const transferResponse = await fetchWalletTransfers(address, {
-          chain: "solana",
-        });
+        const transferResponse = await fetchWalletTransfers(address);
         const transfersData = transferResponse?.transfers || [];
         if (Array.isArray(transfersData)) {
           setTransferPages({ 1: transfersData });
@@ -492,7 +486,6 @@ export default function WalletPage() {
         }
 
         const counterpartyResponse = await fetchWalletCounterparties(address, {
-          chain: 'solana',
           period: '7d',
           limit: 50,
           includeTokens: true,

@@ -65,7 +65,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet overview",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 period: z.string().optional(),
             }),
         },
@@ -74,7 +73,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet portfolio",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
             }),
         },
         {
@@ -82,7 +80,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet transactions",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 limit: z.string().optional(),
                 cursor: z.string().optional(),
                 before: z.string().optional(),
@@ -93,7 +90,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet swaps",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 limit: z.string().optional(),
                 cursor: z.string().optional(),
                 before: z.string().optional(),
@@ -104,7 +100,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet transfers",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 limit: z.string().optional(),
                 cursor: z.string().optional(),
                 before: z.string().optional(),
@@ -115,7 +110,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet asset distribution",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
             }),
         },
         {
@@ -123,7 +117,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet exchange counts",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 limit: z.string().optional(),
             }),
         },
@@ -132,7 +125,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet counterparties",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
                 period: z.string().optional(),
                 limit: z.string().optional(),
                 includeTokens: z.string().optional(),
@@ -143,7 +135,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet identity",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
             }),
         },
         {
@@ -151,7 +142,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
             summary: "Get wallet intelligence",
             query: z.object({
                 address: z.string(),
-                chain: z.string().optional(),
             }),
         },
         {
@@ -192,7 +182,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
                     "application/json": {
                         schema: z.object({
                             addresses: z.array(z.string().trim().min(1)).min(1),
-                            chain: z.string().optional(),
                         }),
                     },
                 },
@@ -316,7 +305,6 @@ export function registerOpenApiRoutes(app: OpenAPIHono): void {
                 timezone: z.string().optional(),
                 wallets: z.string().optional(),
                 address: z.string().optional(),
-                chain: z.string().optional(),
                 period: z.string().optional(),
             }),
         },

@@ -626,7 +626,7 @@ export async function fetchMoralisSolanaSwapChunk(
 ): Promise<WalletProviderChunk<WalletSwap>> {
   const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
 
-  const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`, "solana-gateway");
+  const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
   url.searchParams.set("limit", String(limit));
   if (options?.cursor) {
     url.searchParams.set("cursor", options.cursor);

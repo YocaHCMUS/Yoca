@@ -1,8 +1,5 @@
-export type SupportedChain = "solana";
-
 export interface WalletOverview {
     address: string;
-    chain: SupportedChain;
     totalAssetValueUsd: number;
     tradingVolumeUsd24h: number | null;
     pnlUsdTotal: number | null;
@@ -112,7 +109,6 @@ export interface WalletTransfer {
 
 export interface WalletTransactionsResponse {
     address: string;
-    chain: SupportedChain;
     transactions: WalletTransaction[];
 }
 
@@ -125,14 +121,12 @@ export interface WalletPageInfo {
 
 export interface WalletTransfersResponse {
     address: string;
-    chain: SupportedChain;
     transfers: WalletTransfer[];
     pageInfo: WalletPageInfo;
 }
 
 export interface WalletSwapsResponse {
     address: string;
-    chain: SupportedChain;
     swaps: WalletSwap[];
     pageInfo: WalletPageInfo;
 }
@@ -184,7 +178,6 @@ export interface WalletCounterpartiesResponse {
     };
     metadata: {
         period: WalletCounterpartyPeriod;
-        chain: SupportedChain;
         source: "cache" | "provider" | "mixed";
         totals: {
             counterparties: number;

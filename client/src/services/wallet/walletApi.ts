@@ -182,7 +182,7 @@ export async function fetchWalletOverview(
     ...(chain && { chain }),
     ...(period && { period }),
   };
-  const response = await (client.api as any).wallets.overview.$get({
+  const response = await client.api.wallets.overview.$get({
     query,
   });
   await handleResponse(response);
@@ -199,7 +199,7 @@ export async function fetchWalletPortfolio(
   chain?: string
 ): Promise<WalletPortfolioItem[]> {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.portfolio.$get({
+  const response = await client.api.wallets.portfolio.$get({
     query,
   });
   await handleResponse(response);
@@ -221,7 +221,7 @@ export async function fetchWalletTransactions(
   }
 ) {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.transactions.$get({
+  const response = await client.api.wallets.transactions.$get({
     query,
   });
   await handleResponse(response);
@@ -243,7 +243,7 @@ export async function fetchWalletTransfers(
   }
 ): Promise<WalletTransfersResponse> {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.transfers.$get({
+  const response = await client.api.wallets.transfers.$get({
     query,
   });
   await handleResponse(response);
@@ -265,7 +265,7 @@ export async function fetchWalletSwaps(
   }
 ): Promise<WalletSwapsResponse> {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.swap.$get({
+  const response = await client.api.wallets.swap.$get({
     query,
   });
   await handleResponse(response);
@@ -294,7 +294,7 @@ export async function fetchWalletCounterparties(
     ...(params?.includeTokens != null && { includeTokens: String(params.includeTokens) }),
   };
 
-  const response = await (client.api as any).wallets.counterparties.$get({
+  const response = await client.api.wallets.counterparties.$get({
     query,
   });
   await handleResponse(response);
@@ -314,7 +314,7 @@ export async function fetchWalletExchanges(
   }
 ) {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.exchanges.$get({
+  const response = await client.api.wallets.exchanges.$get({
     query,
   });
   await handleResponse(response);
@@ -327,7 +327,7 @@ export async function fetchWalletExchanges(
  * GET /api/balances
  */
 export async function fetchWalletBalances(address: string) {
-  const response = await (client.api as any).balances.$get({
+  const response = await client.api.balances.$get({
     query: { address },
   });
   await handleResponse(response);
@@ -344,7 +344,7 @@ export async function fetchWalletDistribution(
   chain?: string
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.distribution.$get({
+  const response = await client.api.wallets.distribution.$get({
     query,
   });
   await handleResponse(response);
@@ -361,7 +361,7 @@ export async function fetchWalletIdentity(
   chain?: string,
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.identity.$get({
+  const response = await client.api.wallets.identity.$get({
     query,
   });
   await handleResponse(response);
@@ -377,7 +377,7 @@ export async function fetchWalletIdentityBatch(
   addresses: string[],
   chain?: string,
 ) {
-  const response = await (client.api as any).wallets.identity.batch.$post({
+  const response = await client.api.wallets.identity.batch.$post({
     json: {
       addresses,
       ...(chain && { chain }),
@@ -397,7 +397,7 @@ export async function fetchWalletIntelligence(
   chain?: string,
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.intelligence.$get({
+  const response = await client.api.wallets.intelligence.$get({
     query,
   });
   await handleResponse(response);

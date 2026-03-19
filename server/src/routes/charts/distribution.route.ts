@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { generateAssetDistribution } from "@sv/services/mockChartData.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletData.service.js";
-import type { SupportedChain, WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for distribution endpoint
@@ -101,10 +101,9 @@ const app = new Hono()
         // For single wallet, return aggregated data
         if (walletAddresses.length === 1) {
           const address = walletAddresses[0];
-          const chain: SupportedChain = 'solana'; // Default chain
 
           try {
-            const portfolio = await getWalletPortfolio(address, chain);
+            const portfolio = await getWalletPortfolio(address);
 
             // Transform portfolio data into distribution format
             const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
@@ -123,7 +122,6 @@ const app = new Hono()
               data: distributionData,
               totalValue: totalValue,
               address: address,
-              chain: chain,
               metadata: {
                 currency: 'USD',
                 timestamp: Date.now()

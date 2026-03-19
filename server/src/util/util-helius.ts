@@ -1,5 +1,4 @@
 const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { apiKeyManager } from "./api-key-manager.js";
 
 const HELIUS_SERVICE_NAME = "helius";
@@ -65,11 +64,4 @@ export function getRequiredHeaders(): HeadersInit {
     Accept: "application/json",
     "X-API-Key": apiKey,
   };
-}
-
-export function resolveChainForAddress(
-  _address: string,
-  _requestedChain: SupportedChain,
-): SupportedChain {
-  return "solana";
 }

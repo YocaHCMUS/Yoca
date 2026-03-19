@@ -296,7 +296,6 @@ export const tokenTransfers = pgTable(
   "token_transfers",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     fromOwner: varchar("from_address", { length: 44 }).notNull(),
     toOwner: varchar("to_address", { length: 44 }).notNull(),
     // In the according token units
@@ -482,7 +481,6 @@ export const walletOverviewCache = pgTable(
   "wallet_overview_cache",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
     tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
     pnlUsdTotal: decimal("pnl_usd_total"),
@@ -491,14 +489,13 @@ export const walletOverviewCache = pgTable(
     tokensHoldingCount: integer("tokens_holding_count").notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletPortfolioCache = pgTable(
   "wallet_portfolio_cache",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     data: jsonb("data")
       .$type<
         Array<{
@@ -515,48 +512,44 @@ export const walletPortfolioCache = pgTable(
       .notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletTransactionsMeta = pgTable(
   "wallet_transactions_meta",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
     // Explicit persisted bounds for coverage checks.
     // Nullable so pre-migration rows don't break existing reads.
     coveredFromSec: integer("covered_from_sec"),
     coveredToSec: integer("covered_to_sec"),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletSwapMeta = pgTable(
   "wallet_swap_meta",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletTransferMeta = pgTable(
   "wallet_transfer_meta",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletHeliusTransactions = pgTable(
   "wallet_helius_transactions",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     signature: text("signature").notNull(),
     timestamp: timestamp("block_timestamp").notNull(),
     slot: decimal("slot"),
@@ -566,14 +559,13 @@ export const walletHeliusTransactions = pgTable(
       .$type<Array<{ mint: string; amount: number; decimals: number }>>()
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain, t.signature] })],
+  (t) => [primaryKey({ columns: [t.address, t.signature] })],
 );
 
 export const walletTransactions = pgTable(
   "wallet_transactions",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     hash: text("hash").notNull(),
     blockTimestamp: timestamp("block_timestamp").notNull(),
     fromAddress: varchar("from_address", { length: 66 }).notNull(),
@@ -589,14 +581,13 @@ export const walletTransactions = pgTable(
     totalUsd: decimal("total_usd"),
     tokens: jsonb("tokens").$type<string[]>(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain, t.hash] })],
+  (t) => [primaryKey({ columns: [t.address, t.hash] })],
 );
 
 export const walletSwap = pgTable(
   "wallet_swap",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     signature: varchar("signature", { length: 128 }).notNull(),
     blockTimestamp: timestamp("block_timestamp").notNull(),
     slot: bigint("slot", { mode: "number" }).notNull(),
@@ -644,25 +635,23 @@ export const walletSwap = pgTable(
       .$type<Array<{ mint: string; amount: number; decimals: number }>>()
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain, t.signature] })],
+  (t) => [primaryKey({ columns: [t.address, t.signature] })],
 );
 
 export const walletExchangeCountsCache = pgTable(
   "wallet_exchange_counts_cache",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     data: jsonb("data").$type<{ exchanges: Array<{ name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }>; metadata: { period: string; metric: string } }>().notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletIdentityCache = pgTable(
   "wallet_identity_cache",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    chain: varchar("chain", { length: 32 }).notNull(),
     status: varchar("status", { length: 16 }).notNull(),
     type: varchar("type", { length: 64 }),
     name: varchar("name", { length: 255 }),
@@ -672,7 +661,7 @@ export const walletIdentityCache = pgTable(
     raw: jsonb("raw").$type<Record<string, unknown> | null>(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.address, t.chain] })],
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletUserTags = pgTable(

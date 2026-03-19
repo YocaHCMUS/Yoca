@@ -46,42 +46,37 @@ const hoisted = vi.hoisted(() => {
     };
 
     const schema = {
-        walletSwap: { name: "walletSwap", address: "walletSwap.address", chain: "walletSwap.chain" },
+        walletSwap: { name: "walletSwap", address: "walletSwap.address" },
         walletTransactionsMeta: {
             name: "walletTransactionsMeta",
             address: "walletTransactionsMeta.address",
-            chain: "walletTransactionsMeta.chain",
         },
         walletOverviewCache: {
             name: "walletOverviewCache",
             address: "walletOverviewCache.address",
-            chain: "walletOverviewCache.chain",
         },
         walletTransactions: {
             name: "walletTransactions",
             address: "walletTransactions.address",
-            chain: "walletTransactions.chain",
         },
         tokenTransfers: {
             name: "tokenTransfers",
+            address: "tokenTransfers.address",
             fromOwner: "tokenTransfers.fromOwner",
             toOwner: "tokenTransfers.toOwner",
-            chain: "tokenTransfers.chain",
+            tokenSymbol: "tokenTransfers.tokenSymbol",
         },
         walletHeliusTransactions: {
             name: "walletHeliusTransactions",
             address: "walletHeliusTransactions.address",
-            chain: "walletHeliusTransactions.chain",
         },
         walletSwapMeta: {
             name: "walletSwapMeta",
             address: "walletSwapMeta.address",
-            chain: "walletSwapMeta.chain",
         },
         walletTransferMeta: {
             name: "walletTransferMeta",
             address: "walletTransferMeta.address",
-            chain: "walletTransferMeta.chain",
         },
     };
 
@@ -122,7 +117,7 @@ describe("walletDataCacher", () => {
     });
 
     it("deduplicates transaction hashes before insert", async () => {
-        await saveTransactionsCache("addr-1", "solana", [
+        await saveTransactionsCache("addr-1", [
             {
                 hash: "hash-1",
                 timestamp: "2026-03-12T00:00:00.000Z",
@@ -169,7 +164,7 @@ describe("walletDataCacher", () => {
     });
 
     it("deduplicates transfers by signature and instruction index", async () => {
-        await saveTransfersCache("addr-1", "solana", [
+        await saveTransfersCache("addr-1", [
             {
                 from: "from-1",
                 to: "to-1",
@@ -216,8 +211,8 @@ describe("walletDataCacher", () => {
         expect(metaInsert?.conflict).toBe("update");
     });
 
-    it("deduplicates helius transactions by signature and persists canonical chain rows", async () => {
-        await saveTransactionsHeliusCache("addr-1", "solana", [
+    it("deduplicates helius transactions by signature before insert", async () => {
+        await saveTransactionsHeliusCache("addr-1", [
             {
                 walletAddress: "addr-1",
                 signature: "helius-sig-1",
@@ -241,17 +236,16 @@ describe("walletDataCacher", () => {
         const heliusInsert = hoisted.insertCalls.find(
             (c) => c.table === hoisted.schema.walletHeliusTransactions,
         );
-        const heliusRows = heliusInsert?.values as Array<{ signature: string; chain: string }>;
+        const heliusRows = heliusInsert?.values as Array<{ signature: string }>;
 
         expect(heliusRows).toHaveLength(1);
         expect(heliusRows[0].signature).toBe("helius-sig-1");
-        expect(heliusRows[0].chain).toBe("solana");
     });
 
     it("persists coveredFromSec and coveredToSec in meta when coveredRange is provided", async () => {
         const coveredRange = { fromSec: 1000, toSec: 2000 };
 
-        await saveTransactionsHeliusCache("addr-1", "solana", [], coveredRange);
+        await saveTransactionsHeliusCache("addr-1", [], coveredRange);
 
         const metaInsert = hoisted.insertCalls.find(
             (c) => c.table === hoisted.schema.walletTransactionsMeta,
@@ -265,7 +259,7 @@ describe("walletDataCacher", () => {
     it("updates meta even when zero transactions are provided (zero-row sync)", async () => {
         const coveredRange = { fromSec: 500, toSec: 1500 };
 
-        await saveTransactionsHeliusCache("addr-1", "solana", [], coveredRange);
+        await saveTransactionsHeliusCache("addr-1", [], coveredRange);
 
         // No helius transaction insert should have occurred
         const heliusInsert = hoisted.insertCalls.find(

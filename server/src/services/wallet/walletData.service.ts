@@ -7,7 +7,7 @@ import {
   walletOverviewCache,
   walletPortfolioCache,
 } from "@sv/db/schema.js";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
 import {
   getDailyTokenMarketChart,
@@ -37,7 +37,6 @@ import {
 } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type {
   WalletPageInfo,
-  SupportedChain,
   WalletExchangeCountsResponse,
   WalletOverview,
   WalletPortfolioItem,
@@ -49,7 +48,6 @@ import type {
   WalletTransfer,
   WalletTransfersResponse,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import {
   saveOverviewCache,
   saveSwapsCache,
@@ -68,8 +66,6 @@ type WalletHistoryRange = {
   fromSec: number;
   toSec: number;
 };
-
-let chainRepairPromise: Promise<void> | null = null;
 
 const DEFAULT_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
@@ -219,29 +215,6 @@ function mergeTransactionsBySignature(
   );
 }
 
-async function normalizeWalletCacheChainsOnce(): Promise<void> {
-  if (chainRepairPromise) {
-    await chainRepairPromise;
-    return;
-  }
-
-  chainRepairPromise = (async () => {
-    try {
-      await db.execute(sql`update wallet_helius_transactions set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update wallet_transactions_meta set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update wallet_transactions set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update wallet_swap set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update wallet_swap_meta set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update wallet_transfer_meta set chain = lower(chain) where chain <> lower(chain)`);
-      await db.execute(sql`update token_transfers set chain = lower(chain) where chain <> lower(chain)`);
-    } catch (err) {
-      console.error("[wallet-cache-chain-repair] Failed to normalize chain values", err);
-    }
-  })();
-
-  await chainRepairPromise;
-}
-
 function toFiniteNumber(value: unknown, fallback = 0): number {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -287,7 +260,6 @@ function normalizeOverviewMint(mint: unknown): string {
 function mapOverviewCacheRowToDto(
   row: WalletOverviewCacheRow,
   address: string,
-  chain: SupportedChain,
   periodSec: number,
 ): WalletOverview {
   const tradingVolumeUsd =
@@ -296,7 +268,6 @@ function mapOverviewCacheRowToDto(
 
   return {
     address,
-    chain,
     totalAssetValueUsd: toFiniteNumber(row.totalAssetValueUsd, 0),
     tradingVolumeUsd24h: tradingVolumeUsd,
     pnlUsdTotal: pnlUsd,
@@ -311,7 +282,6 @@ function mapOverviewCacheRowToDto(
 
 async function getLatestOverviewCacheRow(
   address: string,
-  chain: SupportedChain,
 ): Promise<WalletOverviewCacheRow | null> {
   const cached = await db
     .select()
@@ -319,7 +289,6 @@ async function getLatestOverviewCacheRow(
     .where(
       and(
         eq(walletOverviewCache.address, address),
-        eq(walletOverviewCache.chain, chain),
       ),
     )
     .limit(1);
@@ -334,7 +303,6 @@ async function getLatestOverviewCacheRow(
 function getOverviewFromFreshCache(
   cacheRow: WalletOverviewCacheRow | null,
   address: string,
-  chain: SupportedChain,
   periodSec: number,
 ): WalletOverview | null {
   if (!cacheRow || periodSec !== DEFAULT_OVERVIEW_PERIOD_SEC) {
@@ -346,7 +314,7 @@ function getOverviewFromFreshCache(
     return null;
   }
 
-  return mapOverviewCacheRowToDto(cacheRow, address, chain, periodSec);
+  return mapOverviewCacheRowToDto(cacheRow, address, periodSec);
 }
 
 async function buildHoldingsSnapshotFromProviders(
@@ -384,10 +352,9 @@ async function buildHoldingsSnapshotFromProviders(
 
 async function getSolanaOverviewActivityTransactions(
   address: string,
-  chain: SupportedChain,
   range: WalletHistoryRange,
 ): Promise<NormalizedOverviewTransaction[]> {
-  const txs = await getWalletTransactionHelius(address, chain, {
+  const txs = await getWalletTransactionHelius(address, {
     fromSec: range.fromSec,
     toSec: range.toSec,
   });
@@ -500,14 +467,12 @@ async function reduceActivityMetricsFromTransactions(
 
 function buildOverviewResponse(input: {
   address: string;
-  chain: SupportedChain;
   periodSec: number;
   holdingsSnapshot: OverviewHoldingsSnapshot;
   activitySnapshot: OverviewActivitySnapshot;
 }): WalletOverview {
   const {
     address,
-    chain,
     periodSec,
     holdingsSnapshot,
     activitySnapshot,
@@ -515,7 +480,6 @@ function buildOverviewResponse(input: {
 
   return {
     address,
-    chain,
     totalAssetValueUsd: holdingsSnapshot.totalAssetValueUsd,
     tradingVolumeUsd24h: activitySnapshot.tradingVolumeUsd24h,
     pnlUsdTotal: activitySnapshot.pnlUsdTotal,
@@ -587,13 +551,8 @@ function isValidPortfolioTokenAddress(tokenAddress: string | undefined): boolean
 
 async function enrichWalletPortfolioMetadata(
   portfolio: WalletPortfolioItem[],
-  chain: SupportedChain,
   context: { address: string; source: string },
 ): Promise<{ portfolio: WalletPortfolioItem[]; changed: boolean }> {
-  if (chain !== "solana" || portfolio.length === 0) {
-    return { portfolio, changed: false };
-  }
-
   const candidateAddressByKey = new Map<string, string>();
 
   for (const item of portfolio) {
@@ -634,7 +593,6 @@ async function enrichWalletPortfolioMetadata(
   } catch (err) {
     console.warn("[wallet-portfolio] Token metadata enrichment failed", {
       address: context.address,
-      chain,
       source: context.source,
       error: err,
     });
@@ -705,10 +663,8 @@ async function enrichWalletPortfolioMetadata(
 
 export async function getWalletOverview(
   address: string,
-  chain: SupportedChain,
   options?: { periodSec?: number },
 ): Promise<WalletOverview> {
-  const effectiveChain = resolveChainForAddress(address, chain);
   const periodSec = normalizeOverviewPeriodSec(options?.periodSec);
   const nowSec = Math.floor(Date.now() / 1000);
   const requestedRange = getHistoryRange({
@@ -716,17 +672,15 @@ export async function getWalletOverview(
     toSec: nowSec,
   });
 
-  const cacheRow = await getLatestOverviewCacheRow(address, effectiveChain);
+  const cacheRow = await getLatestOverviewCacheRow(address);
   const cachedOverview = getOverviewFromFreshCache(
     cacheRow,
     address,
-    effectiveChain,
     periodSec,
   );
   if (cachedOverview) {
     console.log("[wallet-overview]", {
       address,
-      chain: effectiveChain,
       periodSec,
       cacheHit: true,
     });
@@ -744,7 +698,6 @@ export async function getWalletOverview(
   try {
     const normalizedTransactions = await getSolanaOverviewActivityTransactions(
       address,
-      effectiveChain,
       requestedRange,
     );
 
@@ -758,7 +711,6 @@ export async function getWalletOverview(
     activityFetchFailed = true;
     console.error("[wallet-overview] Failed to compute activity snapshot", {
       address,
-      chain: effectiveChain,
       periodSec,
       error: err,
     });
@@ -790,7 +742,6 @@ export async function getWalletOverview(
 
   const overview = buildOverviewResponse({
     address,
-    chain: effectiveChain,
     periodSec,
     holdingsSnapshot,
     activitySnapshot,
@@ -803,7 +754,6 @@ export async function getWalletOverview(
 
   console.log("[wallet-overview]", {
     address,
-    chain: effectiveChain,
     periodSec,
     cacheHit: false,
     holdingsSource: holdingsSnapshot.source,
@@ -818,10 +768,7 @@ export async function getWalletOverview(
 
 export async function getWalletPortfolio(
   address: string,
-  chain: SupportedChain,
 ): Promise<WalletPortfolioItem[]> {
-  const effectiveChain = resolveChainForAddress(address, chain);
-
   // 0) DB-first: use cached portfolio if fresh
   const portfolioThreshold = new Date(Date.now() - WALLET_PORTFOLIO_TTL_MS);
   const cachedPortfolio = await db
@@ -829,15 +776,14 @@ export async function getWalletPortfolio(
     .from(walletPortfolioCache)
     .where(
       and(
-        eq(walletPortfolioCache.address, address),
-        eq(walletPortfolioCache.chain, effectiveChain),
+        eq(walletPortfolioCache.address, address)
       ),
     )
     .limit(1);
   if (cachedPortfolio.length > 0 && cachedPortfolio[0].fetchedAt >= portfolioThreshold) {
     const cachedData = (cachedPortfolio[0].data as WalletPortfolioItem[]) ?? [];
     if (cachedData.length > 0) {
-      const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, effectiveChain, {
+      const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
         address,
         source: "cache-hit",
       });
@@ -845,9 +791,9 @@ export async function getWalletPortfolio(
       if (enrichedCached.changed) {
         await db
           .insert(walletPortfolioCache)
-          .values({ address, chain: effectiveChain, data: enrichedCached.portfolio })
+          .values({ address, data: enrichedCached.portfolio })
           .onConflictDoUpdate({
-            target: [walletPortfolioCache.address, walletPortfolioCache.chain],
+            target: [walletPortfolioCache.address],
             set: { data: enrichedCached.portfolio, fetchedAt: new Date() },
           });
       }
@@ -869,16 +815,16 @@ export async function getWalletPortfolio(
     return [];
   }
 
-  const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, effectiveChain, {
+  const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, {
     address,
     source: "helius",
   });
 
   await db
     .insert(walletPortfolioCache)
-    .values({ address, chain: effectiveChain, data: enrichedPortfolio.portfolio })
+    .values({ address, data: enrichedPortfolio.portfolio })
     .onConflictDoUpdate({
-      target: [walletPortfolioCache.address, walletPortfolioCache.chain],
+      target: [walletPortfolioCache.address],
       set: { data: enrichedPortfolio.portfolio, fetchedAt: new Date() },
     });
   return enrichedPortfolio.portfolio;
@@ -886,47 +832,36 @@ export async function getWalletPortfolio(
 
 export async function getWalletTransactions(
   address: string,
-  chain: SupportedChain,
   options?: { limit?: number; cursor?: string; before?: string },
 ): Promise<WalletTransactionsResponse> {
-  const effectiveChain = resolveChainForAddress(address, chain);
   const limit = Math.min(options?.limit ?? 100, 500);
-
-  await normalizeWalletCacheChainsOnce();
 
   const cachedTransactions = await getCachedWalletTransactions(
     address,
-    effectiveChain,
     limit,
   );
   if (cachedTransactions) {
     await enrichWithSolanaTokenPrices(cachedTransactions);
-    return { address, chain: effectiveChain, transactions: cachedTransactions };
+    return { address, transactions: cachedTransactions };
   }
   const transactions = await fetchHeliusSolanaTransactions(address, limit);
   await enrichWithSolanaTokenPrices(transactions);
 
-  await saveTransactionsCache(address, effectiveChain, transactions);
+  await saveTransactionsCache(address, transactions);
   return {
     address,
-    chain: effectiveChain,
     transactions,
   };
 }
 
 export async function getWalletTransactionHelius(
   address: string,
-  chain: SupportedChain,
   options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d"; fromSec?: number; toSec?: number },
-): Promise<{ address: string; chain: SupportedChain; transactions: WalletTransactionHelius[] }> {
-  const effectiveChain = resolveChainForAddress(address, chain);
-
-  await normalizeWalletCacheChainsOnce();
+): Promise<{ address: string; transactions: WalletTransactionHelius[] }> {
 
   const requestedRange = getHistoryRange(options);
   const cacheRangeResult = await getCachedWalletTransactionsHelius(
     address,
-    effectiveChain,
     requestedRange,
   );
 
@@ -1038,7 +973,6 @@ export async function getWalletTransactionHelius(
     // only for ranges confirmed by cache + completed provider fetch paths.
     await saveTransactionsHeliusCache(
       address,
-      effectiveChain,
       fetchedTransactions,
       confirmedCoverageRange,
     );
@@ -1054,7 +988,6 @@ export async function getWalletTransactionHelius(
 
   console.log("[wallet-transaction-helius-cache]", {
     address,
-    chain: effectiveChain,
     requestedRange,
     coveredRange: cacheRangeResult.coveredRange,
     cacheHitRatio:
@@ -1069,7 +1002,6 @@ export async function getWalletTransactionHelius(
 
   return {
     address,
-    chain: effectiveChain,
     transactions: mergedTransactions,
   };
 }
@@ -1078,24 +1010,17 @@ export async function getWalletTransactionHelius(
 
 export async function getWalletTransfers(
   address: string,
-  chain: SupportedChain,
   options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d" },
 ): Promise<WalletTransfersResponse> {
-  const effectiveChain = resolveChainForAddress(address, chain);
-
-  await normalizeWalletCacheChainsOnce();
-
   if (options?.from) {
     const cachedTransfers = await getCachedWalletTransfers(
       address,
-      effectiveChain,
       options.from,
     );
     if (cachedTransfers) {
       await enrichWithSolanaTokenPrices(cachedTransfers);
       return {
         address,
-        chain: effectiveChain,
         transfers: cachedTransfers,
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1112,11 +1037,10 @@ export async function getWalletTransfers(
         `[getWalletTransfers] Successfully fetched ${transfers.length} transfers from Helius for ${address}`,
       );
 
-      await saveTransfersCache(address, effectiveChain, transfers);
+      await saveTransfersCache(address, transfers);
 
       return {
         address,
-        chain: effectiveChain,
         transfers,
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1128,7 +1052,6 @@ export async function getWalletTransfers(
       console.error("[getWalletTransfers] Failed to fetch Solana transfers from Helius", err);
       return {
         address,
-        chain: effectiveChain,
         transfers: [],
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1141,7 +1064,7 @@ export async function getWalletTransfers(
 
   const cursor = normalizeCursorValue(options?.cursor ?? options?.before);
 
-  const cachedChunk = await getCachedWalletTransfersChunk(address, effectiveChain, {
+  const cachedChunk = await getCachedWalletTransfersChunk(address, {
     cursor,
     limit: WALLET_TABLE_PAGE_SIZE,
   });
@@ -1150,7 +1073,6 @@ export async function getWalletTransfers(
     await enrichWithSolanaTokenPrices(cachedChunk.items);
     return {
       address,
-      chain: effectiveChain,
       transfers: cachedChunk.items,
       pageInfo: toWalletPageInfo({
         hasMore: cachedChunk.hasMore,
@@ -1164,7 +1086,6 @@ export async function getWalletTransfers(
   if (cursor && cursor.includes(":")) {
     return {
       address,
-      chain: effectiveChain,
       transfers: [],
       pageInfo: toWalletPageInfo({
         hasMore: false,
@@ -1180,12 +1101,11 @@ export async function getWalletTransfers(
       limit: WALLET_TABLE_PAGE_SIZE,
     });
 
-    await saveTransfersCache(address, effectiveChain, chunk.items);
+    await saveTransfersCache(address, chunk.items);
     await enrichWithSolanaTokenPrices(chunk.items);
 
     return {
       address,
-      chain: effectiveChain,
       transfers: chunk.items,
       pageInfo: toWalletPageInfo({
         hasMore: chunk.hasMore,
@@ -1197,7 +1117,6 @@ export async function getWalletTransfers(
     console.error("[getWalletTransfers] Failed to fetch Solana transfer chunk", err);
     return {
       address,
-      chain: effectiveChain,
       transfers: [],
       pageInfo: toWalletPageInfo({
         hasMore: false,
@@ -1210,23 +1129,18 @@ export async function getWalletTransfers(
 
 export async function getWalletSwaps(
   address: string,
-  chain: SupportedChain,
   options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d" },
 ): Promise<WalletSwapsResponse> {
-  const effectiveChain = resolveChainForAddress(address, chain);
   const providerSource = resolveSwapProviderSource();
-
-  await normalizeWalletCacheChainsOnce();
 
   if (options?.from) {
     const limit = Math.min(options?.limit ?? 100, 500);
 
-    const cachedSwaps = await getCachedWalletSwaps(address, effectiveChain, options.from);
+    const cachedSwaps = await getCachedWalletSwaps(address, options.from);
     if (cachedSwaps) {
       await enrichWithSolanaTokenPrices(cachedSwaps);
       return {
         address,
-        chain: effectiveChain,
         swaps: cachedSwaps.slice(0, limit),
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1266,12 +1180,11 @@ export async function getWalletSwaps(
         );
       }
 
-      await saveSwapsCache(address, effectiveChain, swaps);
+      await saveSwapsCache(address, swaps);
       await enrichWithSolanaTokenPrices(swaps);
 
       return {
         address,
-        chain: effectiveChain,
         swaps: swaps.slice(0, limit),
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1283,7 +1196,6 @@ export async function getWalletSwaps(
       console.error("[getWalletSwaps] Failed to fetch Solana swaps", err);
       return {
         address,
-        chain: effectiveChain,
         swaps: [],
         pageInfo: toWalletPageInfo({
           hasMore: false,
@@ -1296,7 +1208,7 @@ export async function getWalletSwaps(
 
   const cursor = normalizeCursorValue(options?.cursor ?? options?.before);
 
-  const cachedChunk = await getCachedWalletSwapsChunk(address, effectiveChain, {
+  const cachedChunk = await getCachedWalletSwapsChunk(address, {
     before: cursor,
     limit: WALLET_TABLE_PAGE_SIZE,
   });
@@ -1305,7 +1217,6 @@ export async function getWalletSwaps(
     await enrichWithSolanaTokenPrices(cachedChunk.items);
     return {
       address,
-      chain: effectiveChain,
       swaps: cachedChunk.items,
       pageInfo: toWalletPageInfo({
         hasMore: cachedChunk.hasMore,
@@ -1352,12 +1263,11 @@ export async function getWalletSwaps(
       );
     }
 
-    await saveSwapsCache(address, effectiveChain, chunk.items);
+    await saveSwapsCache(address, chunk.items);
     await enrichWithSolanaTokenPrices(chunk.items);
 
     return {
       address,
-      chain: effectiveChain,
       swaps: chunk.items,
       pageInfo: toWalletPageInfo({
         hasMore: chunk.hasMore,
@@ -1369,7 +1279,6 @@ export async function getWalletSwaps(
     console.error("[getWalletSwaps] Failed to fetch Solana swap chunk", err);
     return {
       address,
-      chain: effectiveChain,
       swaps: [],
       pageInfo: toWalletPageInfo({
         hasMore: false,
@@ -1388,7 +1297,6 @@ export async function getWalletSwaps(
  */
 export async function getWalletExchangeCounts(
   _address: string,
-  _chain: SupportedChain,
   _options?: { limit?: number }
 ): Promise<WalletExchangeCountsResponse> {
   return { exchanges: [], metadata: { period: "30D", metric: "count" } };
@@ -1618,7 +1526,6 @@ function calculatePortfolioValueUsd(
 
 async function getHistoricalPortfolioValueSeries(
   address: string,
-  chain: SupportedChain,
   startMs: number,
   endMs: number,
   intervalMs: number,
@@ -1628,8 +1535,8 @@ async function getHistoricalPortfolioValueSeries(
   const requestedToSec = Math.floor(endMs / 1000);
 
   const [portfolio, txResponse] = await Promise.all([
-    getWalletPortfolio(address, chain),
-    getWalletTransactionHelius(address, chain, {
+    getWalletPortfolio(address),
+    getWalletTransactionHelius(address, {
       fromSec: requestedFromSec,
       toSec: requestedToSec,
     }),
@@ -1772,16 +1679,13 @@ async function getHistoricalPortfolioValueSeries(
  * Get historical wallet balance by reconstructing from current state and transaction history
  *
  * @param address - Wallet address
- * @param chain - Blockchain (solana)
  * @param timePeriod - Time period for historical data
  * @returns Array of balance data points over time
  */
 export async function getWalletBalanceHistory(
   address: string,
-  chain: SupportedChain,
   timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
 ): Promise<BalanceDataPoint[]> {
-  const effectiveChain = resolveChainForAddress(address, chain);
   const nowMs = Date.now();
   const startMs = getRangeStartMs(nowMs, timePeriod);
   const now = new Date(nowMs);
@@ -1790,7 +1694,6 @@ export async function getWalletBalanceHistory(
   try {
     const portfolioValues = await getHistoricalPortfolioValueSeries(
       address,
-      effectiveChain,
       startMs,
       nowMs,
       DAY_MS,
@@ -1805,7 +1708,7 @@ export async function getWalletBalanceHistory(
     console.error("[WalletBalanceHistory] Error fetching balance history:", error);
 
     // Fallback: return current balance as flat line
-    const currentPortfolio = await getWalletPortfolio(address, effectiveChain);
+    const currentPortfolio = await getWalletPortfolio(address);
     const currentTotalValue = currentPortfolio.reduce(
       (sum, item) => sum + (item.valueUsd ?? 0),
       0,
@@ -1832,11 +1735,9 @@ export async function getWalletBalanceHistory(
  */
 export async function getCumulativePnL(
   address: string,
-  chain: SupportedChain,
   timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D",
   aggregation: PnLAggregation = "daily",
 ): Promise<WalletCumulativePnLResult> {
-  const effectiveChain = resolveChainForAddress(address, chain);
   const nowMs = Date.now();
   const startMs = getRangeStartMs(nowMs, timePeriod);
   const intervalMs = getAggregationIntervalMs(aggregation);
@@ -1850,7 +1751,6 @@ export async function getCumulativePnL(
   try {
     const portfolioValues = await getHistoricalPortfolioValueSeries(
       address,
-      effectiveChain,
       startMs,
       nowMs,
       intervalMs,
@@ -1898,12 +1798,9 @@ export interface TokenBalanceSeriesResult {
 
 export async function getWalletTokenBalanceHistory(
   address: string,
-  chain: SupportedChain,
   tokenSelector: string,
   timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
 ): Promise<TokenBalanceSeriesResult> {
-  const effectiveChain = resolveChainForAddress(address, chain);
-
   const now = new Date();
   let startDate = new Date(now);
   switch (timePeriod) {
@@ -1929,7 +1826,7 @@ export async function getWalletTokenBalanceHistory(
   });
 
   try {
-    const portfolio = await getWalletPortfolio(address, effectiveChain);
+    const portfolio = await getWalletPortfolio(address);
 
     const selectorLower = tokenSelector.trim().toLowerCase();
     const resolvedItem = portfolio.find(
@@ -1955,7 +1852,7 @@ export async function getWalletTokenBalanceHistory(
     const currentTokenBalance = resolvedItem.amount ?? 0;
     const requestedFromSec = timePeriodToFromSec(timePeriod);
 
-    const txResponse = await getWalletTransactionHelius(address, effectiveChain, {
+    const txResponse = await getWalletTransactionHelius(address, {
       fromSec: requestedFromSec,
     });
     const transactions = txResponse.transactions;

@@ -21,13 +21,10 @@ import type {
   WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
-const SOLANA_CHAIN = "solana" as const;
-
 const router = new Hono();
 
 const walletRequestSchema = z.object({
   address: z.string(),
-  chain: z.string().optional(),
 });
 
 const walletOverviewRequestSchema = walletRequestSchema.extend({
@@ -42,14 +39,12 @@ const walletCounterpartyRequestSchema = walletRequestSchema.extend({
 
 const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
-  chain: z.string().optional(),
 });
 
 // Response Schemas
 const walletOverviewResponseSchema = z
   .object({
     address: z.string(),
-    chain: z.string(),
     balanceData: z.any(),
     performanceData: z.any(),
   })
@@ -100,7 +95,6 @@ const walletDistributionResponseSchema = z.object({
   data: z.array(distributionItemSchema),
   totalValue: z.number(),
   address: z.string(),
-  chain: z.string(),
   metadata: z.object({
     currency: z.string(),
     timestamp: z.number(),
@@ -212,9 +206,6 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
     return { status: 400, error: "Invalid identity batch payload" };
   }
 
-  if (err.code === "unsupported_chain") {
-    return { status: 400, error: "Wallet identity is currently supported only for Solana" };
-  }
 
   if (err.code === "provider_unauthorized") {
     return { status: 401, error: "Wallet identity provider authorization failed" };
@@ -298,19 +289,17 @@ router.get("/overview", async (c) => {
   const query = c.req.query();
   const params = walletOverviewRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN;
   const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
 
   if (normalized && params.period) {
     console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
       address,
-      chain,
       requestedPeriod: params.period,
     });
   }
 
   try {
-    const overview = await getWalletOverview(address, chain, { periodSec });
+    const overview = await getWalletOverview(address, { periodSec });
     return c.json(overview);
   } catch (err) {
     console.error("Failed to get wallet overview", err);
@@ -322,10 +311,9 @@ router.get("/portfolio", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
 
   try {
-    const portfolio = await getWalletPortfolio(address, chain);
+    const portfolio = await getWalletPortfolio(address);
     return c.json(portfolio);
   } catch (err) {
     console.error("Failed to get wallet portfolio", err);
@@ -337,7 +325,6 @@ router.get("/transactions", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -346,7 +333,7 @@ router.get("/transactions", async (c) => {
   const limit = limitParam ? Number(limitParam) : undefined;
 
   try {
-    const txs = await getWalletTransactions(address, chain, {
+    const txs = await getWalletTransactions(address, {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor: cursor ?? undefined,
       before: before ?? undefined,
@@ -364,7 +351,6 @@ router.get("/swap", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -373,7 +359,7 @@ router.get("/swap", async (c) => {
   const limit = limitParam ? Number(limitParam) : undefined;
 
   try {
-    const txs = await getWalletSwaps(address, chain, {
+    const txs = await getWalletSwaps(address, {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor: cursor ?? undefined,
       before: before ?? undefined,
@@ -390,7 +376,6 @@ router.get("/transfers", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
 
   const limitParam = c.req.query("limit");
   const cursor = c.req.query("cursor");
@@ -399,7 +384,7 @@ router.get("/transfers", async (c) => {
   const limit = limitParam ? Number(limitParam) : undefined;
 
   try {
-    const txs = await getWalletTransfers(address, chain, {
+    const txs = await getWalletTransfers(address, {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor: cursor ?? undefined,
       before: before ?? undefined,
@@ -416,11 +401,10 @@ router.get("/distribution", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
 
   try {
     // Get portfolio data which forms the asset distribution
-    const portfolio = await getWalletPortfolio(address, chain);
+    const portfolio = await getWalletPortfolio(address);
 
     // Transform portfolio data into distribution format
     // Calculate percentages based on total value
@@ -440,7 +424,6 @@ router.get("/distribution", async (c) => {
       data: distributionData,
       totalValue: totalValue,
       address: address,
-      chain: chain,
       metadata: {
         currency: 'USD',
         timestamp: Date.now()
@@ -456,12 +439,11 @@ router.get("/exchanges", async (c) => {
   const query = c.req.query();
   const params = walletRequestSchema.parse(query)
   const address = params.address;
-  const chain = SOLANA_CHAIN
   const limitParam = c.req.query("limit");
   const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
   try {
-    const data = await getWalletExchangeCounts(address, chain, { limit });
+    const data = await getWalletExchangeCounts(address, { limit });
     return c.json(data);
   } catch (err) {
     console.error("Failed to get wallet exchange counts", err);
@@ -478,13 +460,12 @@ router.get("/counterparties", async (c) => {
   }
 
   const address = parsed.data.address;
-  const chain = SOLANA_CHAIN;
   const period = parseCounterpartyPeriod(parsed.data.period);
   const limit = parseCounterpartyLimit(parsed.data.limit);
   const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
 
   try {
-    const counterparties = await getWalletCounterparties(address, chain, {
+    const counterparties = await getWalletCounterparties(address, {
       period,
       limit,
       includeTokens,
@@ -498,14 +479,13 @@ router.get("/counterparties", async (c) => {
 
 router.get("/identity", async (c) => {
   const address = c.req.query("address");
-  const chain = SOLANA_CHAIN;
 
   if (!address) {
     return c.json({ error: "Missing required query param: address" }, 400);
   }
 
   try {
-    const identity = await getWalletIdentity(address, chain);
+    const identity = await getWalletIdentity(address);
     return c.json(identity, 200);
   } catch (err) {
     if (err instanceof WalletIdentityServiceError) {
@@ -532,10 +512,8 @@ router.post("/identity/batch", async (c) => {
     return c.json({ error: "Invalid identity batch payload" }, 400);
   }
 
-  const chain = SOLANA_CHAIN;
-
   try {
-    const identityBatch = await getWalletIdentityBatch(parsed.data.addresses, chain);
+    const identityBatch = await getWalletIdentityBatch(parsed.data.addresses);
     return c.json(identityBatch, 200);
   } catch (err) {
     if (err instanceof WalletIdentityServiceError) {
@@ -550,14 +528,13 @@ router.post("/identity/batch", async (c) => {
 
 router.get("/intelligence", async (c) => {
   const address = c.req.query("address");
-  const chain = SOLANA_CHAIN;
 
   if (!address) {
     return c.json({ error: "Missing required query param: address" }, 400);
   }
 
   try {
-    const intelligence = await composeWalletIntelligence(address, { chain });
+    const intelligence = await composeWalletIntelligence(address);
     return c.json(intelligence, 200);
   } catch (err) {
     if (err instanceof WalletIdentityServiceError) {

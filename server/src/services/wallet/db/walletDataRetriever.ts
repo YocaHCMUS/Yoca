@@ -15,7 +15,6 @@ import {
 } from "@sv/db/schema.js";
 import { and, desc, eq, or } from "drizzle-orm";
 import type {
-	SupportedChain,
 	WalletSwap,
 	WalletTransaction,
 	WalletTransactionHelius,
@@ -95,17 +94,6 @@ function toNullableFiniteNumber(value: unknown): number | null {
 	return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getChainCandidates(chain: SupportedChain): string[] {
-	const raw = String(chain ?? "").trim();
-	if (!raw) {
-		return ["solana"];
-	}
-
-	const lower = raw.toLowerCase();
-	const title = lower.charAt(0).toUpperCase() + lower.slice(1);
-	return Array.from(new Set([raw, lower, title]));
-}
-
 function resolveRange(input: CachedRange | "24h" | "7d") {
 	const nowSec = Math.floor(Date.now() / 1000);
 	if (typeof input === "object") {
@@ -134,59 +122,49 @@ function mapHeliusRow(row: any): WalletTransactionHelius {
 	};
 }
 
-async function getTransactionMetaRows(address: string, chain: SupportedChain) {
+async function getTransactionMetaRows(address: string) {
 	return await db
 		.select()
 		.from(walletTransactionsMeta)
 		.where(
-			and(
-				eq(walletTransactionsMeta.address, address),
-				eq(walletTransactionsMeta.chain, chain),
-			),
+			eq(walletTransactionsMeta.address, address)
 		)
 		.limit(1);
 }
 
-async function getTransferMetaRows(address: string, chain: SupportedChain) {
+async function getTransferMetaRows(address: string) {
 	return await db
 		.select()
 		.from(walletTransferMeta)
 		.where(
-			and(
-				eq(walletTransferMeta.address, address),
-				eq(walletTransferMeta.chain, chain),
-			),
+			eq(walletTransferMeta.address, address)
 		)
 		.limit(1);
 }
 
-async function getSwapMetaRows(address: string, chain: SupportedChain) {
+async function getSwapMetaRows(address: string) {
 	return await db
 		.select()
 		.from(walletSwapMeta)
 		.where(
-			and(
-				eq(walletSwapMeta.address, address),
-				eq(walletSwapMeta.chain, chain),
-			),
+			eq(walletSwapMeta.address, address),
 		)
 		.limit(1);
 }
 
 async function hasFreshWalletMeta(
 	address: string,
-	chain: SupportedChain,
 	threshold: Date,
 	type: "transfers" | "swaps" | "transactions"
 ): Promise<boolean> {
 	if (type === "transfers") {
-		const metaRows = await getTransferMetaRows(address, chain);
+		const metaRows = await getTransferMetaRows(address);
 		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
 	} else if (type === "swaps") {
-		const metaRows = await getSwapMetaRows(address, chain);
+		const metaRows = await getSwapMetaRows(address);
 		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
 	} else if (type === "transactions") {
-		const metaRows = await getTransactionMetaRows(address, chain);
+		const metaRows = await getTransactionMetaRows(address);
 		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
 	}
 
@@ -196,11 +174,10 @@ async function hasFreshWalletMeta(
 
 export async function getCachedWalletTransactions(
 	address: string,
-	chain: SupportedChain,
 	limit: number,
 ): Promise<WalletTransaction[] | null> {
 	const txThreshold = new Date(Date.now() - WALLET_TRANSACTIONS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, txThreshold, "transactions");
+	const isFresh = await hasFreshWalletMeta(address, txThreshold, "transactions");
 	if (!isFresh) {
 		return null;
 	}
@@ -209,10 +186,7 @@ export async function getCachedWalletTransactions(
 		.select()
 		.from(walletTransactions)
 		.where(
-			and(
-				eq(walletTransactions.address, address),
-				eq(walletTransactions.chain, chain),
-			),
+			eq(walletTransactions.address, address)
 		)
 		.orderBy(desc(walletTransactions.blockTimestamp))
 		.limit(limit);
@@ -242,59 +216,18 @@ export async function getCachedWalletTransactions(
 
 export async function getCachedWalletTransactionsHelius(
 	address: string,
-	chain: SupportedChain,
 	range: CachedRange | "24h" | "7d" = "7d",
 ): Promise<CachedWalletTransactionsHeliusRangeResult> {
 	const requestedRange = resolveRange(range);
-	const chainCandidates = getChainCandidates(chain);
-	const chainCondition =
-		chainCandidates.length === 1
-			? eq(walletHeliusTransactions.chain, chainCandidates[0])
-			: or(...chainCandidates.map((candidate) => eq(walletHeliusTransactions.chain, candidate)));
 
-	// ------------------------------------------------------------------
-	// Bug 1 & 2 fix: determine coverage from the persisted meta bounds,
-	// NOT from min/max of transaction timestamps.  Transaction timestamps
-	// are unreliable for sparse wallets and will produce false head/tail
-	// gaps on every request.
-	// ------------------------------------------------------------------
-	const canonicalChain = chainCandidates.find((candidate) => candidate === candidate.toLowerCase()) ?? chainCandidates[0];
 	let metaRows = await db
 		.select()
 		.from(walletTransactionsMeta)
 		.where(
-			and(
-				eq(walletTransactionsMeta.address, address),
-				eq(walletTransactionsMeta.chain, canonicalChain),
-			),
+			eq(walletTransactionsMeta.address, address),
 		)
+		.orderBy(desc(walletTransactionsMeta.fetchedAt))
 		.limit(1);
-
-	if (metaRows.length === 0) {
-		const legacyChainCandidates = chainCandidates.filter((candidate) => candidate !== canonicalChain);
-		if (legacyChainCandidates.length > 0) {
-			const legacyChainCondition =
-				legacyChainCandidates.length === 1
-					? eq(walletTransactionsMeta.chain, legacyChainCandidates[0])
-					: or(
-						...legacyChainCandidates.map((candidate) =>
-							eq(walletTransactionsMeta.chain, candidate),
-						),
-					);
-
-			metaRows = await db
-				.select()
-				.from(walletTransactionsMeta)
-				.where(
-					and(
-						eq(walletTransactionsMeta.address, address),
-						legacyChainCondition,
-					),
-				)
-				.orderBy(desc(walletTransactionsMeta.fetchedAt))
-				.limit(1);
-		}
-	}
 
 	const metaCoveredFromSec: number | null =
 		metaRows.length > 0 && metaRows[0].coveredFromSec != null
@@ -328,10 +261,7 @@ export async function getCachedWalletTransactionsHelius(
 		.select()
 		.from(walletHeliusTransactions)
 		.where(
-			and(
-				eq(walletHeliusTransactions.address, address),
-				chainCondition,
-			),
+			eq(walletHeliusTransactions.address, address)
 		)
 		.orderBy(desc(walletHeliusTransactions.timestamp));
 
@@ -367,11 +297,10 @@ export async function getCachedWalletTransactionsHelius(
 
 export async function getCachedWalletTransfers(
 	address: string,
-	chain: SupportedChain,
 	from: "24h" | "7d" | CachedRange = "7d",
 ): Promise<WalletTransfer[] | null> {
 	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold, "transfers");
+	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
 	if (!isFresh) {
 		return null;
 	}
@@ -382,10 +311,7 @@ export async function getCachedWalletTransfers(
 		.select()
 		.from(tokenTransfers)
 		.where(
-			and(
-				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-				eq(tokenTransfers.chain, chain),
-			),
+			or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
 		)
 		.orderBy(desc(tokenTransfers.blockTime));
 
@@ -418,11 +344,10 @@ export async function getCachedWalletTransfers(
 
 export async function getCachedWalletSwaps(
 	address: string,
-	chain: SupportedChain,
 	from: "24h" | "7d" | CachedRange = "7d",
 ): Promise<WalletSwap[] | null> {
 	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold, "swaps");
+	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
 	if (!isFresh) {
 		return null;
 	}
@@ -432,7 +357,9 @@ export async function getCachedWalletSwaps(
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(and(eq(walletSwap.address, address), eq(walletSwap.chain, chain)))
+		.where(
+			eq(walletSwap.address, address)
+		)
 		.orderBy(desc(walletSwap.blockTimestamp));
 
 	if (rows.length === 0) {
@@ -474,11 +401,10 @@ export async function getCachedWalletSwaps(
 
 export async function getCachedWalletTransfersChunk(
 	address: string,
-	chain: SupportedChain,
 	options?: { cursor?: string; limit?: number },
 ): Promise<CachedWalletChunkResult<WalletTransfer>> {
 	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold, "transfers");
+	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
 	if (!isFresh) {
 		return {
 			available: false,
@@ -495,10 +421,7 @@ export async function getCachedWalletTransfersChunk(
 		.select()
 		.from(tokenTransfers)
 		.where(
-			and(
-				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-				eq(tokenTransfers.chain, chain),
-			),
+			or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
 		)
 		.orderBy(
 			desc(tokenTransfers.blockTime),
@@ -558,11 +481,10 @@ export async function getCachedWalletTransfersChunk(
 
 export async function getCachedWalletSwapsChunk(
 	address: string,
-	chain: SupportedChain,
 	options?: { before?: string; limit?: number },
 ): Promise<CachedWalletChunkResult<WalletSwap>> {
 	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold, "swaps");
+	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
 	if (!isFresh) {
 		return {
 			available: false,
@@ -578,7 +500,9 @@ export async function getCachedWalletSwapsChunk(
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(and(eq(walletSwap.address, address), eq(walletSwap.chain, chain)))
+		.where(
+			eq(walletSwap.address, address)
+		)
 		.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature));
 
 	const mapped = rows.map((r) => ({

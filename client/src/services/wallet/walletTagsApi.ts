@@ -5,7 +5,7 @@ import client from "@/api/main";
  * Returns an empty array if the user has no tags for this wallet.
  */
 export async function fetchWalletTags(walletAddress: string): Promise<string[]> {
-  const response = await (client.api as any).walletTags.$get({
+  const response = await client.api.walletTags.$get({
     query: { address: walletAddress },
   });
   if (response.status === 401) return [];
@@ -22,7 +22,7 @@ export async function saveWalletTags(
   walletAddress: string,
   tags: string[],
 ): Promise<void> {
-  const response = await (client.api as any).walletTags.$put({
+  const response = await client.api.walletTags.$put({
     json: { address: walletAddress, tags },
   });
   if (!response.ok) {
