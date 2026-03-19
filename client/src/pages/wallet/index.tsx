@@ -21,6 +21,9 @@ import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.ts
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
+import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
+import { Button } from "@carbon/react";
+import { Download } from "@carbon/icons-react";
 import {
   fetchWalletCounterparties,
   fetchWalletPortfolio,
@@ -74,6 +77,7 @@ export default function WalletPage() {
 
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
+  const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
 
   // Swap detail modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -613,6 +617,22 @@ export default function WalletPage() {
     setSwapModalOpen(true);
   }
 
+  async function handleExportPagePdf() {
+    if (isPagePdfExporting) return;
+
+    setIsPagePdfExporting(true);
+    try {
+      await exportCurrentPageAsPdf({
+        title: `${tr("walletPage.activity")} ${address}`,
+        baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
+      });
+    } catch (error) {
+      console.error("[WalletPage] Failed to export page PDF:", error);
+    } finally {
+      setIsPagePdfExporting(false);
+    }
+  }
+
   if (!address) {
     return (
       <PageWrapper>
@@ -624,7 +644,18 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <WalletOverview walletAddress={address} />
-      <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
+      <div className={styles.sectionHeader}>
+        <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
+        <Button
+          size="sm"
+          kind="secondary"
+          renderIcon={Download}
+          onClick={handleExportPagePdf}
+          disabled={isPagePdfExporting}
+        >
+          {isPagePdfExporting ? `${tr("charts.exportPDF")}...` : tr("charts.exportPDF")}
+        </Button>
+      </div>
       <div className={styles.chartContainer}>
         <TabContainer
           activeTab={activeTab}
@@ -640,6 +671,7 @@ export default function WalletPage() {
                 timePeriod: "7D",
                 wallets: [address],
               }}
+              balanceChartMode="total"
               autoRefresh={true}
             />,
             <BalanceChart
@@ -649,6 +681,7 @@ export default function WalletPage() {
                 wallets: [address],
                 tokens: ["SOL"],
               }}
+              balanceChartMode="token"
               enableTokenSelector={true}
               tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
               allowMultiTokenSelection={true}

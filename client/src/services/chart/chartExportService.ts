@@ -5,6 +5,7 @@ import type { ChartFilters, ExportFormat } from '@/types/chart-filters.types';
 interface ChartExportHandlers {
   exportPNG: (chartInstance: EChartsInstance, filters: ChartFilters) => void;
   exportSVG: (chartInstance: EChartsInstance, filters: ChartFilters) => void;
+  exportPDF: (chartInstance: EChartsInstance, filters: ChartFilters) => Promise<void>;
   exportCSV: (
     data: ChartDataSeries[],
     filters: ChartFilters,
@@ -21,10 +22,10 @@ interface RunChartExportOptions {
   extraFilters?: Record<string, string>;
 }
 
-export function runChartExport(
+export async function runChartExport(
   options: RunChartExportOptions,
   handlers: ChartExportHandlers
-): void {
+): Promise<void> {
   const {
     format,
     filters,
@@ -51,6 +52,11 @@ export function runChartExport(
 
   if (format === 'png') {
     handlers.exportPNG(chartInstance, filters);
+    return;
+  }
+
+  if (format === 'pdf') {
+    await handlers.exportPDF(chartInstance, filters);
     return;
   }
 

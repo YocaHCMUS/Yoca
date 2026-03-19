@@ -137,7 +137,7 @@ export function ExchangeComparison({
   /**
    * Setup chart export
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
     baseFilename: 'exchange-comparison',
@@ -173,16 +173,16 @@ export function ExchangeComparison({
       },
     ];
 
-    runChartExport(
+    await runChartExport(
       {
         format,
         filters,
         chartInstance: instance as any,
         csvData,
       },
-      { exportPNG, exportSVG, exportCSV }
+      { exportPNG, exportSVG, exportPDF, exportCSV }
     );
-  }, [data, filters, currentMetric, exportPNG, exportSVG, exportCSV, tr]);
+  }, [data, filters, currentMetric, exportPNG, exportSVG, exportPDF, exportCSV, tr]);
   
   /**
    * Generate eCharts option configuration for grouped bar chart

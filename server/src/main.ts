@@ -17,9 +17,15 @@ import tokens from "@sv/routes/tokens.js";
 import transfers from "@sv/routes/transfers.js";
 import users from "@sv/routes/users.js";
 import { Hono } from "hono";
+import puppeteer from "puppeteer";
 
 // intialize OpenAPIHono with default error handling
 const app = new Hono();
+
+function sanitizeExportFilename(value: string): string {
+  const sanitized = value.replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
+  return sanitized.length > 0 ? sanitized : "chart";
+}
 
 // Routes
 const routes = app

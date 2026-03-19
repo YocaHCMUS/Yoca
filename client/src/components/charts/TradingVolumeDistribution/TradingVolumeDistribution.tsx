@@ -95,7 +95,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   /**
    * Setup chart export
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
     baseFilename: 'trading-volume-distribution',
@@ -126,17 +126,17 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         });
       }
 
-      runChartExport(
+      await runChartExport(
         {
           format,
           filters,
           chartInstance: instance as any,
           csvData: csv,
         },
-        { exportPNG, exportSVG, exportCSV }
+        { exportPNG, exportSVG, exportPDF, exportCSV }
       );
     },
-    [data, filters, exportPNG, exportSVG, exportCSV]
+    [data, filters, exportPNG, exportSVG, exportPDF, exportCSV]
   );
 
   /**

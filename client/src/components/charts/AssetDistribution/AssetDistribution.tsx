@@ -168,7 +168,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   /**
    * Setup chart export
    */
-  const { exportPNG, exportSVG, exportCSV } = useChartExport({
+  const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
     baseFilename: 'asset-distribution',
@@ -212,7 +212,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         });
       }
 
-      runChartExport(
+      await runChartExport(
         {
           format,
           filters,
@@ -224,10 +224,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             'Min %': minPct === 0 ? 'All' : `>${minPct}%`,
           },
         },
-        { exportPNG, exportSVG, exportCSV }
+        { exportPNG, exportSVG, exportPDF, exportCSV }
       );
     },
-    [data, filters, topN, minPct, othersLabel, exportPNG, exportSVG, exportCSV]
+    [data, filters, topN, minPct, othersLabel, exportPNG, exportSVG, exportPDF, exportCSV]
   );
 
   /**
@@ -567,7 +567,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           )}
 
           {/* Chart Grid */}
-          <ChartGrid itemCount={chartOptions.length} multiItemColumns={3}>
+          <ChartGrid
+            itemCount={chartOptions.length}
+            multiItemColumns={Math.min(3, chartOptions.length)}
+          >
             {chartOptions.map((chartData: any, index: number) => (
               <ChartGridItem
                 key={chartData.walletAddress}

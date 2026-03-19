@@ -19,7 +19,7 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './ExportMenu.module.scss';
 import { Download, Image, Svg, Table } from '@carbon/icons-react';
 
-export type ExportFormat = 'png' | 'svg' | 'csv';
+export type ExportFormat = 'png' | 'svg' | 'csv' | 'pdf';
 
 export interface ExportMenuProps {
   /** Callback when export is requested */
@@ -203,6 +203,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
               <span className={styles.badge}>{tr('charts.dataBadge')}</span>
             </button>
           )}
+
         </div>
       )}
     </div>

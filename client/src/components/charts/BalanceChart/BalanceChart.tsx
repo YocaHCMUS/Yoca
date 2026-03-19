@@ -54,6 +54,7 @@ export function BalanceChart({
   enableTokenSelector = false,
   tokenSelectorOptions = [],
   allowMultiTokenSelection = true,
+  balanceChartMode = 'auto',
   // onDataLoaded,
   className,
 }: ChartProps) {
@@ -75,17 +76,19 @@ export function BalanceChart({
     [filters.tokens]
   );
 
+  const queryTokensString = balanceChartMode === 'total' ? undefined : tokensString;
+
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo<BalanceRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
-      tokens: tokensString,
+      tokens: queryTokensString,
       wallets: walletsString,
       timezone,
     }),
-    [filters.timePeriod, tokensString, walletsString, timezone]
+    [filters.timePeriod, queryTokensString, walletsString, timezone]
   );
 
   console.log('[BalanceChart] Query params:', { query, walletsString });
@@ -191,7 +194,12 @@ export function BalanceChart({
     if (!data || 'error' in data) return null;
 
     const meta = data.metadata as Record<string, any>;
-    const isTokenMode = meta?.mode === 'token';
+    const isTokenMode =
+      balanceChartMode === 'token'
+        ? true
+        : balanceChartMode === 'total'
+          ? false
+          : meta?.mode === 'token';
 
     const baseOption = getThemedChartBaseOption(chartTheme);
 
@@ -369,7 +377,7 @@ export function BalanceChart({
         ),
       },
     };
-  }, [data, timezone, chartTheme, tr]);
+  }, [data, timezone, chartTheme, tr, balanceChartMode]);
 
   return (
     <BaseChart

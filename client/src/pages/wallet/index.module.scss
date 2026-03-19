@@ -5,9 +5,17 @@
   min-height: 100vh;
 }
 
-.sectionTitle {
+.sectionHeader {
   margin: $spacing-06 0 $spacing-05 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-04;
   padding: 0 $spacing-06;
+}
+
+.sectionTitle {
+  margin: 0;
   color: $text-primary;
 }
 
