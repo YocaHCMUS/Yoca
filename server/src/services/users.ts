@@ -12,10 +12,6 @@ import { db } from "@sv/db/index.js";
 import { authAccounts, users } from "@sv/db/schema.js";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
-import { verifyMessage } from "ethers";
-
-const toEthereumProviderUserId = (address: string) =>
-  `ethereum:${address.toLowerCase()}`;
 
 export async function findUserByEmail(email: string) {
   const [user] = await db
@@ -162,55 +158,6 @@ export async function updateWalletLoginNounce(userId: string) {
   return nounce;
 }
 
-export async function findUserByEthereumAddress(address: string) {
-  const [user] = await db
-    .select({
-      user: users,
-      account: authAccounts,
-    })
-    .from(authAccounts)
-    .innerJoin(users, eq(users.id, authAccounts.userId))
-    .where(
-      and(
-        eq(authAccounts.provider, "other"),
-        eq(authAccounts.providerUserId, toEthereumProviderUserId(address)),
-      ),
-    )
-    .limit(1);
-  return user;
-}
-
-export async function createUserWithEthereumWallet(address: string) {
-  let userId = "";
-  const nounce = crypto.randomUUID();
-  await db.transaction(async (tx) => {
-    const [newUser] = await tx.insert(users).values({}).returning();
-    await tx.insert(authAccounts).values({
-      provider: "other",
-      userId: newUser.id,
-      providerUserId: toEthereumProviderUserId(address),
-      loginNounce: nounce,
-      nounceExpiredAt: new Date(Date.now() + SOLANA_LOGIN_NOUNCE_TTL_MS),
-    });
-    userId = newUser.id;
-  });
-  return { userId, nounce };
-}
-
-export async function updateEthereumWalletLoginNounce(userId: string) {
-  const nounce = crypto.randomUUID();
-  await db
-    .update(authAccounts)
-    .set({
-      loginNounce: nounce,
-      nounceExpiredAt: new Date(Date.now() + SOLANA_LOGIN_NOUNCE_TTL_MS),
-    })
-    .where(
-      and(eq(authAccounts.provider, "other"), eq(authAccounts.userId, userId)),
-    );
-  return nounce;
-}
-
 export async function verifyWalletLoginNounce(
   pubKey: string,
   signature: string,
@@ -268,61 +215,6 @@ export async function verifyWalletLoginNounce(
   return user;
 }
 
-export async function verifyEthereumWalletLoginNounce(
-  address: string,
-  signature: string,
-) {
-  const providerUserId = toEthereumProviderUserId(address);
-  const [account] = await db
-    .select()
-    .from(authAccounts)
-    .where(
-      and(
-        eq(authAccounts.provider, "other"),
-        eq(authAccounts.providerUserId, providerUserId),
-      ),
-    )
-    .limit(1);
-
-  if (!account || !account.loginNounce || !account.nounceExpiredAt) {
-    return null;
-  }
-
-  const now = new Date();
-  if (account.nounceExpiredAt < now) {
-    return null;
-  }
-
-  const message = getEthereumLoginMessage(
-    account.loginNounce,
-    address.toLowerCase(),
-  );
-  const recoveredAddress = verifyMessage(message, signature);
-
-  if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-    return null;
-  }
-
-  await db
-    .update(authAccounts)
-    .set({
-      loginNounce: null,
-      nounceExpiredAt: null,
-    })
-    .where(
-      and(
-        eq(authAccounts.provider, "other"),
-        eq(authAccounts.providerUserId, providerUserId),
-      ),
-    );
-
-  return account;
-}
-
 export function getSolanaLoginMessage(nonce: string, address: string) {
-  return `Login to Yoca\nWallet: ${address}\nNonce: ${nonce}`;
-}
-
-export function getEthereumLoginMessage(nonce: string, address: string) {
   return `Login to Yoca\nWallet: ${address}\nNonce: ${nonce}`;
 }

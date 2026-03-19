@@ -27,30 +27,6 @@ const pnlRequestSchema = z.object({
     .optional()
     .default("daily"),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  value: z.number(),
-});
-
-const pnlResponseSchema = z.object({
-  dailyPnL: z.array(dataPointSchema),
-  cumulativePnL: z.array(dataPointSchema),
-  metadata: z.object({
-    currency: z.string(),
-    startBalance: z.number(),
-    endBalance: z.number(),
-    period: z.string(),
-    aggregation: z.string().optional(),
-  }).passthrough(),
-});
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  details: z.any().optional(),
-  message: z.string().optional(),
-});
-
 
 /**
  * P&L chart route handler
@@ -86,7 +62,6 @@ const app = new Hono()
         params.wallets,
         params.period,
         params.aggregation,
-        "solana",
       );
 
       return c.json(data, 200);

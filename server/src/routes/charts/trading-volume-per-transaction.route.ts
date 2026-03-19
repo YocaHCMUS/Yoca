@@ -20,31 +20,6 @@ const tradingVolumePerTransactionRequestSchema = z.object({
   wallets: z.string().optional(),
   type: z.enum(['all', 'deposits', 'withdrawals']).optional().default('all'),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  averageVolume: z.number(),
-  medianVolume: z.number().optional(),
-  minVolume: z.number().optional(),
-  maxVolume: z.number().optional(),
-  transactionCount: z.number().optional(),
-});
-
-const volumePerTransactionResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  overallAverage: z.number().optional(),
-  metadata: z.object({
-    period: z.string(),
-    aggregation: z.string(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 /**
  * Trading volume per transaction chart route handler

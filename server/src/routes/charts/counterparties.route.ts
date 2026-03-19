@@ -9,7 +9,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateCounterpartyData } from '../../services/mockChartData.service.js';
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 
 /**
@@ -32,33 +31,8 @@ const counterpartyRequestSchema = z.object({
   timezone: z.string().optional().default("UTC"),
   wallets: z.string().optional(),
   address: z.string().optional(),
-  chain: z.string().optional(),
   period: z.string().optional(),
 });
-// Response Schemas
-const counterpartyItemSchema = z.object({
-  address: z.string(),
-  label: z.string().optional(),
-  transactionCount: z.number().optional(),
-  volume: z.number().optional(),
-  tokens: z.array(z.string()).optional(),
-}).passthrough();
-
-const counterpartiesResponseSchema = z.object({
-  counterparties: z.array(counterpartyItemSchema),
-  period: z.string(),
-  address: z.string().optional(),
-  metadata: z.object({
-    timezone: z.string(),
-    limit: z.number(),
-  }).optional(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 function clampLimit(rawLimit: number): number {
   const parsed = Number(rawLimit);
@@ -161,7 +135,6 @@ const app = new Hono()
 
         const walletCounterparties = await getWalletCounterparties(
           walletAddress,
-          (params.chain as SupportedChain) || "solana",
           {
             period: walletPeriod,
             limit,
@@ -192,7 +165,6 @@ const app = new Hono()
               period: walletCounterparties.metadata.period.toUpperCase(),
               transactionType: params.transactionType,
               limit,
-              chain: walletCounterparties.metadata.chain,
               source: walletCounterparties.metadata.source,
             },
           },

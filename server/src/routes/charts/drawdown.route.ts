@@ -18,27 +18,6 @@ const drawdownRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  value: z.number(),
-  percentage: z.number().optional(),
-});
-
-const drawdownResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  maxDrawdown: z.number().optional(),
-  metadata: z.object({
-    period: z.string(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 /**
  * Drawdown chart route handler

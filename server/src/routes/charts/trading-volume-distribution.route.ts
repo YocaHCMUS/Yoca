@@ -19,28 +19,6 @@ const tradingVolumeDistributionRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional(),
 });
-// Response Schemas
-const binSchema = z.object({
-  min: z.number(),
-  max: z.number(),
-  count: z.number(),
-  percentage: z.number().optional(),
-});
-
-const volumeDistributionResponseSchema = z.object({
-  data: z.array(binSchema),
-  metadata: z.object({
-    period: z.string(),
-    bins: z.number(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 /**
  * Trading volume distribution chart route handler

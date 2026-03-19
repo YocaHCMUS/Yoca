@@ -1,24 +1,17 @@
 import { db } from "@sv/db/index.js";
 import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta } from "@sv/db/schema.js";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius } from "@sv/services/wallet/dtos/walletDataObjects.js";
-
-function normalizeChainValue(chain: string): string {
-  const normalized = chain.trim().toLowerCase();
-  return normalized.length > 0 ? normalized : "solana";
-}
 
 
 export async function saveSwapsCache(
   address: string,
-  chain: string,
   transactions: WalletSwap[],
 ) {
   try {
-    const canonicalChain = normalizeChainValue(chain);
     if (transactions.length > 0) {
       // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
+      // (address, signature) primary key when providers return several
       // legs for a single on-chain transaction.
       const uniqueBySignature = new Map<string, WalletSwap>();
       for (const tx of transactions) {
@@ -31,12 +24,21 @@ export async function saveSwapsCache(
 
       const rows = uniqueTransactions.map((tx) => ({
         address: tx.walletAddress,
-        chain: canonicalChain,
         signature: tx.signature,
         blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
         slot: tx.slot,
         fee: tx.fee,
         feePayer: tx.feePayer,
+        transactionType: tx.transactionType ?? null,
+        subCategory: tx.subCategory ?? null,
+        blockNumber: tx.blockNumber ?? null,
+        exchange: tx.exchange ?? null,
+        pair: tx.pair ?? null,
+        sold: tx.sold ?? null,
+        bought: tx.bought ?? null,
+        baseQuotePrice: tx.baseQuotePrice ?? null,
+        totalValueUsd: tx.totalValueUsd ?? null,
+        source: tx.source ?? null,
         // First two entries are the swap legs
         swapBalanceChanges: tx.balanceChanges,
         feeBalanceChanges: tx.feeChanges,
@@ -46,9 +48,9 @@ export async function saveSwapsCache(
     }
     await db
       .insert(walletSwapMeta)
-      .values({ address, chain: canonicalChain })
+      .values({ address })
       .onConflictDoUpdate({
-        target: [walletSwapMeta.address, walletSwapMeta.chain],
+        target: [walletSwapMeta.address],
         set: { fetchedAt: new Date() },
       });
   } catch (err) {
@@ -62,7 +64,6 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
       .insert(walletOverviewCache)
       .values({
         address: overview.address,
-        chain: overview.chain,
         totalAssetValueUsd: overview.totalAssetValueUsd,
         tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
         pnlUsdTotal: overview.pnlUsdTotal ?? null,
@@ -71,7 +72,7 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
         tokensHoldingCount: overview.tokensHoldingCount,
       })
       .onConflictDoUpdate({
-        target: [walletOverviewCache.address, walletOverviewCache.chain],
+        target: [walletOverviewCache.address],
         set: {
           totalAssetValueUsd: overview.totalAssetValueUsd,
           tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
@@ -89,21 +90,16 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
 
 export async function saveTransactionsCache(
   address: string,
-  chain: string,
   transactions: WalletTransaction[],
 ): Promise<void> {
   try {
-    const canonicalChain = normalizeChainValue(chain);
     await db.delete(walletTransactions).where(
-      and(
-        eq(walletTransactions.address, address),
-        eq(walletTransactions.chain, canonicalChain),
-      ),
+      eq(walletTransactions.address, address)
     );
 
     if (transactions.length > 0) {
       // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, chain, hash) primary key when providers return several
+      // (address, hash) primary key when providers return several
       // legs for a single on-chain transaction.
       const uniqueByHash = new Map<string, WalletTransaction>();
       for (const tx of transactions) {
@@ -116,7 +112,6 @@ export async function saveTransactionsCache(
 
       const rows = uniqueTransactions.map((tx) => ({
         address,
-        chain: canonicalChain,
         hash: tx.hash,
         blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
         fromAddress: tx.from,
@@ -138,9 +133,9 @@ export async function saveTransactionsCache(
     }
     await db
       .insert(walletTransactionsMeta)
-      .values({ address, chain: canonicalChain })
+      .values({ address })
       .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+        target: [walletTransactionsMeta.address],
         set: { fetchedAt: new Date() },
       });
   } catch (err) {
@@ -151,12 +146,10 @@ export async function saveTransactionsCache(
 // not very optimised I know, this will have some overlap with swap db
 export async function saveTransactionsHeliusCache(
   address: string,
-  chain: string,
   transactions: WalletTransactionHelius[],
   coveredRange?: { fromSec: number; toSec: number },
 ) {
   try {
-    const canonicalChain = normalizeChainValue(chain);
     if (transactions.length > 0) {
 
       const uniqueBySignature = new Map<string, WalletTransactionHelius>();
@@ -170,7 +163,6 @@ export async function saveTransactionsHeliusCache(
 
       const rows = uniqueTransactions.map((tx) => ({
         address: tx.walletAddress,
-        chain: canonicalChain,
         signature: tx.signature,
         timestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
         slot: tx.slot,
@@ -190,9 +182,9 @@ export async function saveTransactionsHeliusCache(
       const { fromSec, toSec } = coveredRange;
       await db
         .insert(walletTransactionsMeta)
-        .values({ address, chain: canonicalChain, coveredFromSec: fromSec, coveredToSec: toSec })
+        .values({ address, coveredFromSec: fromSec, coveredToSec: toSec })
         .onConflictDoUpdate({
-          target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+          target: [walletTransactionsMeta.address],
           // Grow the persisted window: take the minimum lower bound (LEAST) and
           // the maximum upper bound (GREATEST) so that repeated partial syncs
           // accumulate into a continuously widening covered range.
@@ -205,9 +197,9 @@ export async function saveTransactionsHeliusCache(
     } else {
       await db
         .insert(walletTransactionsMeta)
-        .values({ address, chain: canonicalChain })
+        .values({ address })
         .onConflictDoUpdate({
-          target: [walletTransactionsMeta.address, walletTransactionsMeta.chain],
+          target: [walletTransactionsMeta.address],
           set: { fetchedAt: new Date() },
         });
     }
@@ -218,11 +210,9 @@ export async function saveTransactionsHeliusCache(
 
 export async function saveTransfersCache(
   address: string,
-  chain: string,
   transfers: WalletTransfer[],
 ): Promise<void> {
   try {
-    const canonicalChain = normalizeChainValue(chain);
     if (transfers.length > 0) {
       // Deduplicate by transaction signature + instruction index to avoid multiple rows
       // with the same primary key when providers return duplicate transfer records.
@@ -239,7 +229,6 @@ export async function saveTransfersCache(
 
       const rows = uniqueTransfers.map((t) => ({
         address,
-        chain: canonicalChain,
         fromOwner: t.from,
         toOwner: t.to,
         amount: t.amount,
@@ -257,9 +246,9 @@ export async function saveTransfersCache(
     }
     await db
       .insert(walletTransferMeta)
-      .values({ address, chain: canonicalChain })
+      .values({ address })
       .onConflictDoUpdate({
-        target: [walletTransferMeta.address, walletTransferMeta.chain],
+        target: [walletTransferMeta.address],
         set: { fetchedAt: new Date() },
       });
   } catch (err) {

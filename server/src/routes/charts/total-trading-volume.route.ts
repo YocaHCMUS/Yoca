@@ -18,27 +18,6 @@ const totalTradingVolumeRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  volume: z.number(),
-  trades: z.number().optional(),
-});
-
-const totalVolumeResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  totalVolume: z.number().optional(),
-  metadata: z.object({
-    period: z.string(),
-    aggregation: z.string(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
 
 
 /**

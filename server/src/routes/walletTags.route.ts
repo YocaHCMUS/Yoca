@@ -18,23 +18,6 @@ const saveTagsSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(50, "Maximum 50 tags allowed"),
 });
 
-const getTagsQuerySchema = z.object({
-  address: z.string().min(1, "Address query parameter is required"),
-});
-
-// Response Schemas
-const getTagsResponseSchema = z.object({
-  tags: z.array(z.string()),
-});
-
-const saveTagsResponseSchema = z.object({
-  message: z.string(),
-});
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-});
-
 const app = new Hono()
   // GET /api/walletTags?address=<walletAddress>
   .get("/", honoJwt, async (c) => {

@@ -25,33 +25,6 @@ const holdingRequestSchema = z.object({
   timeUnit: z.enum(["days", "weeks", "months"]).optional().default("days"),
   timezone: z.string().optional().default("UTC"),
 });
-// Response Schemas
-const holdingItemSchema = z.object({
-  tokenSymbol: z.string(),
-  duration: z.number(),
-  percentage: z.number().optional(),
-  value: z.number().optional(),
-}).passthrough();
-
-const walletHoldingsSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
-  holdings: z.array(holdingItemSchema),
-}).passthrough();
-
-const holdingsResponseSchema = z.object({
-  wallets: z.array(walletHoldingsSchema),
-  metadata: z.object({
-    timeUnit: z.string(),
-    timezone: z.string(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 /**
  * Holding durations route handler

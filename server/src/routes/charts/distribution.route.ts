@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { generateAssetDistribution } from "@sv/services/mockChartData.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletData.service.js";
-import type { SupportedChain, WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for distribution endpoint
@@ -22,41 +22,6 @@ const distributionRequestSchema = z.object({
     .default("30D"),
   wallets: z.string().optional(),
 });
-// Response Schemas
-const distributionItemSchema = z.object({
-  name: z.string(),
-  value: z.number(),
-  percentage: z.number(),
-  color: z.string().optional(),
-});
-
-const metadataSchema = z.object({
-  currency: z.string(),
-  timestamp: z.number(),
-});
-
-const singleDistributionResponseSchema = z.object({
-  data: z.array(distributionItemSchema),
-  totalValue: z.number(),
-  metadata: metadataSchema,
-});
-
-const walletDistributionSchema = z.object({
-  walletAddress: z.string(),
-  data: z.array(distributionItemSchema),
-  totalValue: z.number(),
-});
-
-const multiDistributionResponseSchema = z.object({
-  wallets: z.array(walletDistributionSchema),
-  metadata: metadataSchema,
-});
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
-
 
 /**
  * Distribution chart route handler
@@ -101,10 +66,9 @@ const app = new Hono()
         // For single wallet, return aggregated data
         if (walletAddresses.length === 1) {
           const address = walletAddresses[0];
-          const chain: SupportedChain = 'solana'; // Default chain
 
           try {
-            const portfolio = await getWalletPortfolio(address, chain);
+            const portfolio = await getWalletPortfolio(address);
 
             // Transform portfolio data into distribution format
             const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
@@ -123,7 +87,6 @@ const app = new Hono()
               data: distributionData,
               totalValue: totalValue,
               address: address,
-              chain: chain,
               metadata: {
                 currency: 'USD',
                 timestamp: Date.now()

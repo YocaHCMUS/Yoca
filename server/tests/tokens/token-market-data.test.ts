@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => {
     const marketsGetMock = vi.fn();
-    const getCoinGeckoIdListMock = vi.fn();
+    const getCoinGeckoIdsByAddressesMock = vi.fn();
     const insertCalls: unknown[] = [];
     let freshRows: any[] = [];
 
@@ -34,7 +34,7 @@ const hoisted = vi.hoisted(() => {
     return {
         db,
         marketsGetMock,
-        getCoinGeckoIdListMock,
+        getCoinGeckoIdsByAddressesMock,
         tokenMarketData,
         insertCalls,
         get freshRows() {
@@ -73,7 +73,7 @@ vi.mock("@sv/util/util-coingecko.js", () => ({
 }));
 
 vi.mock("@sv/services/tokens/token-list.js", () => ({
-    getCoinGeckoIdList: hoisted.getCoinGeckoIdListMock,
+    getCoinGeckoIdsByAddresses: hoisted.getCoinGeckoIdsByAddressesMock,
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -86,12 +86,12 @@ describe("token-market-data service", () => {
     beforeEach(() => {
         vi.resetModules();
         hoisted.marketsGetMock.mockReset();
-        hoisted.getCoinGeckoIdListMock.mockReset();
+        hoisted.getCoinGeckoIdsByAddressesMock.mockReset();
         hoisted.insertCalls.length = 0;
         hoisted.freshRows = [];
     });
 
-    it("normalizes null required values and sets non-null decimals", async () => {
+    it("normalizes null required values and safely handles missing sparkline", async () => {
         const { getMarketDataFromRaw } = await import("../../src/services/tokens/token-market-data.ts");
 
         const mapped = getMarketDataFromRaw("So11111111111111111111111111111111111111112", {
@@ -124,20 +124,20 @@ describe("token-market-data service", () => {
             atl_change_percentage: null,
         } as any);
 
-        expect(mapped.decimals).toBe(9);
         expect(mapped.priceUsd).toBe(0);
         expect(mapped.marketCap).toBe(0);
         expect(mapped.fullyDilutedValuation).toBe(0);
         expect(mapped.volume24h).toBe(0);
         expect(mapped.athDate).toBeNull();
         expect(mapped.atlDate).toBeNull();
+        expect(mapped.sparkline7d).toEqual([]);
     });
 
     it("deduplicates concurrent stale refresh for identical token set", async () => {
         const { getTokenMarketData } = await import("../../src/services/tokens/token-market-data.ts");
 
         const address = "So11111111111111111111111111111111111111112";
-        hoisted.getCoinGeckoIdListMock.mockResolvedValue({ [address]: "solana" });
+        hoisted.getCoinGeckoIdsByAddressesMock.mockResolvedValue({ [address]: "solana" });
 
         let resolveApi!: (value: any[]) => void;
         const apiPromise = new Promise<any[]>((resolve) => {
@@ -189,8 +189,6 @@ describe("token-market-data service", () => {
         const [r1, r2] = await Promise.all([p1, p2]);
 
         expect(hoisted.insertCalls).toHaveLength(1);
-        expect(r1[address].decimals).toBe(9);
-        expect(r2[address].decimals).toBe(9);
         expect(r1[address].priceUsd).toBe(85.47);
         expect(r2[address].priceUsd).toBe(85.47);
     });

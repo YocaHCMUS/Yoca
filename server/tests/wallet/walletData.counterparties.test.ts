@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => ({
     getWalletTransfersMock: vi.fn(),
+    getWalletSwapsMock: vi.fn(),
     getTokenMarketDataMock: vi.fn(),
     getWalletIdentityBatchMock: vi.fn(),
     resolveChainForAddressMock: vi.fn(),
@@ -9,6 +10,7 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     getWalletTransfers: hoisted.getWalletTransfersMock,
+    getWalletSwaps: hoisted.getWalletSwapsMock,
 }));
 
 vi.mock("@sv/services/tokens/token-market-data.js", () => ({
@@ -24,6 +26,34 @@ vi.mock("@sv/util/util-helius.js", () => ({
 }));
 
 import { getWalletCounterparties } from "../../src/services/wallet/counterparties.service.ts";
+
+function buildTransferPage(transfers: any[]) {
+    return {
+        address: "wallet-1",
+        chain: "solana",
+        transfers,
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider" as const,
+        },
+    };
+}
+
+function buildSwapPage(swaps: any[]) {
+    return {
+        address: "wallet-1",
+        chain: "solana",
+        swaps,
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider" as const,
+        },
+    };
+}
 
 function buildTransfer(overrides: Partial<Record<string, unknown>> = {}) {
     return {
@@ -45,12 +75,14 @@ describe("wallet counterparty service", () => {
         vi.setSystemTime(new Date("2026-03-14T12:00:00.000Z"));
 
         hoisted.getWalletTransfersMock.mockReset();
+        hoisted.getWalletSwapsMock.mockReset();
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.getWalletIdentityBatchMock.mockReset();
         hoisted.resolveChainForAddressMock.mockReset();
 
         hoisted.resolveChainForAddressMock.mockImplementation((_: string, chain: string) => chain || "solana");
-        hoisted.getWalletTransfersMock.mockResolvedValue({ address: "wallet-1", chain: "solana", transfers: [] });
+        hoisted.getWalletTransfersMock.mockResolvedValue(buildTransferPage([]));
+        hoisted.getWalletSwapsMock.mockResolvedValue(buildSwapPage([]));
         hoisted.getTokenMarketDataMock.mockResolvedValue({});
         hoisted.getWalletIdentityBatchMock.mockResolvedValue({ chain: "solana", results: [] });
     });
