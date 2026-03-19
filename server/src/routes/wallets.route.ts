@@ -270,298 +270,288 @@ function parseCounterpartyIncludeTokens(rawIncludeTokens?: string): boolean {
   return true;
 }
 
-router.get("/overview", async (c) => {
-  //  .get("/", async (c) => {
-  //     try {
-  //       // Validate query parameters
-  //       const query = c.req.query();
-  //       console.log('[balance.route] Raw query:', query);
+const routes = router
+  .get("/overview", async (c) => {
+    //  .get("/", async (c) => {
+    //     try {
+    //       // Validate query parameters
+    //       const query = c.req.query();
+    //       console.log('[balance.route] Raw query:', query);
 
-  //       const params = balanceRequestSchema.parse(query);
-  //       console.log('[balance.route] Parsed params:', params);
+    //       const params = balanceRequestSchema.parse(query);
+    //       console.log('[balance.route] Parsed params:', params);
 
-  //       // Generate balance trend data
-  //       const data = generateBalanceTrend(
-  //         params.timePeriod,
-  //         params.tokens,
-  //         params.wallets,
-  //       );
-  const query = c.req.query();
-  const params = walletOverviewRequestSchema.parse(query)
-  const address = params.address;
-  const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
+    //       // Generate balance trend data
+    //       const data = generateBalanceTrend(
+    //         params.timePeriod,
+    //         params.tokens,
+    //         params.wallets,
+    //       );
+    const query = c.req.query();
+    const params = walletOverviewRequestSchema.parse(query)
+    const address = params.address;
+    const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
 
-  if (normalized && params.period) {
-    console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
-      address,
-      requestedPeriod: params.period,
-    });
-  }
+    if (normalized && params.period) {
+      console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
+        address,
+        requestedPeriod: params.period,
+      });
+    }
 
-  try {
-    const overview = await getWalletOverview(address, { periodSec });
-    return c.json(overview);
-  } catch (err) {
-    console.error("Failed to get wallet overview", err);
-    return c.json({ error: "Failed to get wallet overview" }, 500);
-  }
-});
+    try {
+      const overview = await getWalletOverview(address, { periodSec });
+      return c.json(overview);
+    } catch (err) {
+      console.error("Failed to get wallet overview", err);
+      return c.json({ error: "Failed to get wallet overview" }, 500);
+    }
+  })
+  .get("/portfolio", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
 
-router.get("/portfolio", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
+    try {
+      const portfolio = await getWalletPortfolio(address);
+      return c.json(portfolio);
+    } catch (err) {
+      console.error("Failed to get wallet portfolio", err);
+      return c.json({ error: "Failed to get wallet portfolio" }, 500);
+    }
+  })
+  .get("/transactions", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
 
-  try {
-    const portfolio = await getWalletPortfolio(address);
-    return c.json(portfolio);
-  } catch (err) {
-    console.error("Failed to get wallet portfolio", err);
-    return c.json({ error: "Failed to get wallet portfolio" }, 500);
-  }
-});
+    const limitParam = c.req.query("limit");
+    const cursor = c.req.query("cursor");
+    const before = c.req.query("before");
 
-router.get("/transactions", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
+    const limit = limitParam ? Number(limitParam) : undefined;
 
-  const limitParam = c.req.query("limit");
-  const cursor = c.req.query("cursor");
-  const before = c.req.query("before");
+    try {
+      const txs = await getWalletTransactions(address, {
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor: cursor ?? undefined,
+        before: before ?? undefined,
+      });
+      // console.log("[transaction route] data:")
+      // console.log(txs);
+      return c.json(txs);
+    } catch (err) {
+      console.error("Failed to get wallet transactions", err);
+      return c.json({ error: "Failed to get wallet transactions" }, 500);
+    }
+  })
+  .get("/swap", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
 
-  const limit = limitParam ? Number(limitParam) : undefined;
+    const limitParam = c.req.query("limit");
+    const cursor = c.req.query("cursor");
+    const before = c.req.query("before");
 
-  try {
-    const txs = await getWalletTransactions(address, {
-      limit: Number.isFinite(limit) ? limit : undefined,
-      cursor: cursor ?? undefined,
-      before: before ?? undefined,
-    });
-    // console.log("[transaction route] data:")
-    // console.log(txs);
-    return c.json(txs);
-  } catch (err) {
-    console.error("Failed to get wallet transactions", err);
-    return c.json({ error: "Failed to get wallet transactions" }, 500);
-  }
-});
+    const limit = limitParam ? Number(limitParam) : undefined;
 
-router.get("/swap", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
+    try {
+      const txs = await getWalletSwaps(address, {
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor: cursor ?? undefined,
+        before: before ?? undefined,
+      });
 
-  const limitParam = c.req.query("limit");
-  const cursor = c.req.query("cursor");
-  const before = c.req.query("before");
+      return c.json(txs);
+    } catch (err) {
+      console.error("Failed to get wallet swaps", err);
+      return c.json({ error: "Failed to get wallet swaps" }, 500);
+    }
+  })
+  .get("/transfers", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
 
-  const limit = limitParam ? Number(limitParam) : undefined;
+    const limitParam = c.req.query("limit");
+    const cursor = c.req.query("cursor");
+    const before = c.req.query("before");
 
-  try {
-    const txs = await getWalletSwaps(address, {
-      limit: Number.isFinite(limit) ? limit : undefined,
-      cursor: cursor ?? undefined,
-      before: before ?? undefined,
-    });
+    const limit = limitParam ? Number(limitParam) : undefined;
 
-    return c.json(txs);
-  } catch (err) {
-    console.error("Failed to get wallet swaps", err);
-    return c.json({ error: "Failed to get wallet swaps" }, 500);
-  }
-});
+    try {
+      const txs = await getWalletTransfers(address, {
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor: cursor ?? undefined,
+        before: before ?? undefined,
+      });
 
-router.get("/transfers", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
+      return c.json(txs);
+    } catch (err) {
+      console.error("Failed to get wallet transfers", err);
+      return c.json({ error: "Failed to get wallet transfers" }, 500);
+    }
+  })
+  .get("/distribution", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
 
-  const limitParam = c.req.query("limit");
-  const cursor = c.req.query("cursor");
-  const before = c.req.query("before");
+    try {
+      // Get portfolio data which forms the asset distribution
+      const portfolio = await getWalletPortfolio(address);
 
-  const limit = limitParam ? Number(limitParam) : undefined;
+      // Transform portfolio data into distribution format
+      // Calculate percentages based on total value
+      const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
 
-  try {
-    const txs = await getWalletTransfers(address, {
-      limit: Number.isFinite(limit) ? limit : undefined,
-      cursor: cursor ?? undefined,
-      before: before ?? undefined,
-    });
+      const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
+        name: item.symbol || item.name || item.tokenAddress || "Unknown",
+        value: item.valueUsd ?? 0,
+        percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
+        rawAmount: item.amount ?? 0,
+        tokenAddress: item.tokenAddress ?? "",
+        symbol: item.symbol ?? "",
+        logoUri: item.logoUri ?? undefined,
+      }));
 
-    return c.json(txs);
-  } catch (err) {
-    console.error("Failed to get wallet transfers", err);
-    return c.json({ error: "Failed to get wallet transfers" }, 500);
-  }
-})
+      return c.json({
+        data: distributionData,
+        totalValue: totalValue,
+        address: address,
+        metadata: {
+          currency: 'USD',
+          timestamp: Date.now()
+        }
+      });
+    } catch (err) {
+      console.error("Failed to get wallet asset distribution", err);
+      return c.json({ error: "Failed to get wallet asset distribution" }, 500);
+    }
+  })
+  .get("/exchanges", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query)
+    const address = params.address;
+    const limitParam = c.req.query("limit");
+    const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
-router.get("/distribution", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
+    try {
+      const data = await getWalletExchangeCounts(address, { limit });
+      return c.json(data);
+    } catch (err) {
+      console.error("Failed to get wallet exchange counts", err);
+      return c.json({ error: "Failed to get wallet exchange counts" }, 500);
+    }
+  })
+  .get("/counterparties", async (c) => {
+    const query = c.req.query();
+    const parsed = walletCounterpartyRequestSchema.safeParse(query);
 
-  try {
-    // Get portfolio data which forms the asset distribution
-    const portfolio = await getWalletPortfolio(address);
+    if (!parsed.success) {
+      return c.json({ error: "Missing or invalid required query param: address" }, 400);
+    }
 
-    // Transform portfolio data into distribution format
-    // Calculate percentages based on total value
-    const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
+    const address = parsed.data.address;
+    const period = parseCounterpartyPeriod(parsed.data.period);
+    const limit = parseCounterpartyLimit(parsed.data.limit);
+    const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
 
-    const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
-      name: item.symbol || item.name || item.tokenAddress || "Unknown",
-      value: item.valueUsd ?? 0,
-      percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
-      rawAmount: item.amount ?? 0,
-      tokenAddress: item.tokenAddress ?? "",
-      symbol: item.symbol ?? "",
-      logoUri: item.logoUri ?? undefined,
-    }));
+    try {
+      const counterparties = await getWalletCounterparties(address, {
+        period,
+        limit,
+        includeTokens,
+      });
+      return c.json(counterparties);
+    } catch (err) {
+      console.error("Failed to get wallet counterparties", err);
+      return c.json({ error: "Failed to get wallet counterparties" }, 500);
+    }
+  })
+  .get("/identity", async (c) => {
+    const address = c.req.query("address");
 
-    return c.json({
-      data: distributionData,
-      totalValue: totalValue,
-      address: address,
-      metadata: {
-        currency: 'USD',
-        timestamp: Date.now()
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+
+    try {
+      const identity = await getWalletIdentity(address);
+      return c.json(identity, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
       }
-    });
-  } catch (err) {
-    console.error("Failed to get wallet asset distribution", err);
-    return c.json({ error: "Failed to get wallet asset distribution" }, 500);
-  }
-});
 
-router.get("/exchanges", async (c) => {
-  const query = c.req.query();
-  const params = walletRequestSchema.parse(query)
-  const address = params.address;
-  const limitParam = c.req.query("limit");
-  const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
+      console.error("Failed to fetch wallet identity", err);
+      return c.json({ error: "Failed to fetch wallet identity" }, 500);
+    }
+  })
+  .post("/identity/batch", async (c) => {
+    let body: unknown;
 
-  try {
-    const data = await getWalletExchangeCounts(address, { limit });
-    return c.json(data);
-  } catch (err) {
-    console.error("Failed to get wallet exchange counts", err);
-    return c.json({ error: "Failed to get wallet exchange counts" }, 500);
-  }
-});
-
-router.get("/counterparties", async (c) => {
-  const query = c.req.query();
-  const parsed = walletCounterpartyRequestSchema.safeParse(query);
-
-  if (!parsed.success) {
-    return c.json({ error: "Missing or invalid required query param: address" }, 400);
-  }
-
-  const address = parsed.data.address;
-  const period = parseCounterpartyPeriod(parsed.data.period);
-  const limit = parseCounterpartyLimit(parsed.data.limit);
-  const includeTokens = parseCounterpartyIncludeTokens(parsed.data.includeTokens);
-
-  try {
-    const counterparties = await getWalletCounterparties(address, {
-      period,
-      limit,
-      includeTokens,
-    });
-    return c.json(counterparties);
-  } catch (err) {
-    console.error("Failed to get wallet counterparties", err);
-    return c.json({ error: "Failed to get wallet counterparties" }, 500);
-  }
-});
-
-router.get("/identity", async (c) => {
-  const address = c.req.query("address");
-
-  if (!address) {
-    return c.json({ error: "Missing required query param: address" }, 400);
-  }
-
-  try {
-    const identity = await getWalletIdentity(address);
-    return c.json(identity, 200);
-  } catch (err) {
-    if (err instanceof WalletIdentityServiceError) {
-      const mapped = mapWalletIdentityError(err);
-      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
     }
 
-    console.error("Failed to fetch wallet identity", err);
-    return c.json({ error: "Failed to fetch wallet identity" }, 500);
-  }
-});
-
-router.post("/identity/batch", async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON payload" }, 400);
-  }
-
-  const parsed = walletIdentityBatchRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: "Invalid identity batch payload" }, 400);
-  }
-
-  try {
-    const identityBatch = await getWalletIdentityBatch(parsed.data.addresses);
-    return c.json(identityBatch, 200);
-  } catch (err) {
-    if (err instanceof WalletIdentityServiceError) {
-      const mapped = mapWalletIdentityError(err);
-      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    const parsed = walletIdentityBatchRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Invalid identity batch payload" }, 400);
     }
 
-    console.error("Failed to fetch wallet identity batch", err);
-    return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
-  }
-});
+    try {
+      const identityBatch = await getWalletIdentityBatch(parsed.data.addresses);
+      return c.json(identityBatch, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
+      }
 
-router.get("/intelligence", async (c) => {
-  const address = c.req.query("address");
+      console.error("Failed to fetch wallet identity batch", err);
+      return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
+    }
+  })
+  .get("/intelligence", async (c) => {
+    const address = c.req.query("address");
 
-  if (!address) {
-    return c.json({ error: "Missing required query param: address" }, 400);
-  }
-
-  try {
-    const intelligence = await composeWalletIntelligence(address);
-    return c.json(intelligence, 200);
-  } catch (err) {
-    if (err instanceof WalletIdentityServiceError) {
-      const mapped = mapWalletIdentityError(err);
-      return c.json({ error: mapped.error, code: err.code }, mapped.status);
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
     }
 
-    console.error("Failed to compose wallet intelligence", err);
-    return c.json({ error: "Failed to compose wallet intelligence" }, 500);
-  }
-});
+    try {
+      const intelligence = await composeWalletIntelligence(address);
+      return c.json(intelligence, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
+      }
 
-router.get("/debug/test-transactions", async (c) => {
-  const address = c.req.query("address");
+      console.error("Failed to compose wallet intelligence", err);
+      return c.json({ error: "Failed to compose wallet intelligence" }, 500);
+    }
+  })
+  .get("/debug/test-transactions", async (c) => {
+    const address = c.req.query("address");
 
-  if (!address) {
-    return c.json({ error: "Missing required query param: address" }, 400);
-  }
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
 
-  try {
-    const data = await fetchTestTransaction(address);
-    return c.json({ address, data });
-  } catch (err) {
-    console.error("Failed to fetch test transactions", err);
-    return c.json({ error: "Failed to fetch test transactions" }, 500);
-  }
-});
+    try {
+      const data = await fetchTestTransaction(address);
+      return c.json({ address, data });
+    } catch (err) {
+      console.error("Failed to fetch test transactions", err);
+      return c.json({ error: "Failed to fetch test transactions" }, 500);
+    }
+  });
 
-export default router;
+export default routes;
 

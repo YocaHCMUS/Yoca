@@ -299,7 +299,7 @@ export async function fetchWalletCounterparties(
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletCounterpartiesResponse;
 }
 
 /**
@@ -327,8 +327,8 @@ export async function fetchWalletExchanges(
  * GET /api/balances
  */
 export async function fetchWalletBalances(address: string) {
-  const response = await client.api.balances.$get({
-    query: { address },
+  const response = await client.api.balances[":address"].$get({
+    param: { address },
   });
   await handleResponse(response);
   const data = await response.json();

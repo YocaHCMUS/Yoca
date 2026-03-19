@@ -8,38 +8,21 @@ import traders from "@sv/routes/traders.js";
 import trades from "@sv/routes/trades.js";
 import wallets from "@sv/routes/wallets.route.js";
 import walletTags from "@sv/routes/walletTags.route.js";
+import chartRoutes from "@sv/routes/chart.route.js";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
-import { clientDomains } from "./config/security.js";
-import { registerOpenApiRoutes } from "./config/openapi.js";
-import balances from "./routes/balances.js";
-import chartAverageRollingAnnualReturn from "./routes/charts/average-rolling-annual-return.route.js";
-import chartBalance from "./routes/charts/balance.route.js";
-import chartCounterparties from "./routes/charts/counterparties.route.js";
-import chartDailyTradingVolume from "./routes/charts/daily-trading-volume.route.js";
-import chartDistribution from "./routes/charts/distribution.route.js";
-import chartDrawdown from "./routes/charts/drawdown.route.js";
-import chartExchanges from "./routes/charts/exchanges.route.js";
-import chartHoldings from "./routes/charts/holdings.route.js";
-import chartPnL from "./routes/charts/pnl.route.js";
-import chartPriceHistory from "./routes/charts/price-history.route.js";
-import chartRollingAnnualReturn from "./routes/charts/rolling-annual-return.route.js";
-import chartStablecoinRatio from "./routes/charts/stablecoin-ratio.route.js";
-import chartTotalTradingVolume from "./routes/charts/total-trading-volume.route.js";
-import chartTradingVolumeDistribution from "./routes/charts/trading-volume-distribution.route.js";
-import chartTradingVolumePerTransaction from "./routes/charts/trading-volume-per-transaction.route.js";
-import chartTransactions from "./routes/charts/transactions.route.js";
-import chartVolume from "./routes/charts/volume.route.js";
-import chartWinrate from "./routes/charts/winrate.route.js";
-import misc from "./routes/misc.js";
-import search from "./routes/search.js";
-import tokens from "./routes/tokens.js";
-import transfers from "./routes/transfers.js";
-import users from "./routes/users.js";
+import { clientDomains } from "@sv/config/security.js";
+import { registerOpenApiRoutes } from "@sv/config/openapi.js";
+import balances from "@sv/routes/balances.js";
+import misc from "@sv/routes/misc.js";
+import search from "@sv/routes/search.js";
+import tokens from "@sv/routes/tokens.js";
+import transfers from "@sv/routes/transfers.js";
+import users from "@sv/routes/users.js";
 
 // intialize OpenAPIHono with default error handling
-const app: OpenAPIHono = new OpenAPIHono({
+const app = new OpenAPIHono({
   defaultHook: (result, c) => {
     if (!result.success) {
       return c.json({ error: "Invalid request" }, 400);
@@ -48,7 +31,7 @@ const app: OpenAPIHono = new OpenAPIHono({
 });
 
 // Routes
-app
+const routes = app
   .use("*", logger())
   .use(
     "/api/*",
@@ -65,33 +48,7 @@ app
   .route("/api/search", search)
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
-  .route("/api/charts/balance", chartBalance)
-  .route("/api/charts/distribution", chartDistribution)
-  .route("/api/charts/pnl", chartPnL)
-  .route("/api/charts/exchanges", chartExchanges)
-  .route("/api/charts/counterparties", chartCounterparties)
-  .route("/api/charts/volume", chartVolume)
-  .route("/api/charts/transactions", chartTransactions)
-  .route("/api/charts/holdings", chartHoldings)
-  .route("/api/charts/price-history", chartPriceHistory)
-  .route("/api/charts/dailyTradingVolume", chartDailyTradingVolume)
-  .route(
-    "/api/charts/tradingVolumeDistribution",
-    chartTradingVolumeDistribution,
-  )
-  .route(
-    "/api/charts/tradingVolumePerTransaction",
-    chartTradingVolumePerTransaction,
-  )
-  .route("/api/charts/rollingAnnualReturn", chartRollingAnnualReturn)
-  .route(
-    "/api/charts/averageRollingAnnualReturn",
-    chartAverageRollingAnnualReturn,
-  )
-  .route("/api/charts/winrate", chartWinrate)
-  .route("/api/charts/drawdown", chartDrawdown)
-  .route("/api/charts/totalTradingVolume", chartTotalTradingVolume)
-  .route("/api/charts/stablecoinRatio", chartStablecoinRatio)
+  .route("/api/charts", chartRoutes)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
   .route("/api/traders", traders)
@@ -135,5 +92,5 @@ serve(
 );
 
 // RPC for client
-export type AppType = typeof app;
+export type AppType = typeof routes;
 export type { ErrCode } from "@sv/config/errors.js";
