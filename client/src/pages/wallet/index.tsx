@@ -27,8 +27,10 @@ import {
   fetchWalletTransfers,
   fetchWalletSwaps,
   type WalletCounterpartyRow,
+  type WalletPageInfo,
   type WalletPortfolioItem,
   type WalletSwap,
+  type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
@@ -39,12 +41,30 @@ import {
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
 
+const WALLET_TABLE_PAGE_SIZE = 100;
+
+function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
+  const loadedPages = Object.keys(pages)
+    .map((page) => Number(page))
+    .filter((page) => Number.isInteger(page) && page > 0);
+
+  return loadedPages.length > 0 ? Math.max(...loadedPages) : 0;
+}
+
 export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
   const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
-  const [swaps, setSwaps] = useState<WalletSwap[]>([]);
-  const [transfers, setTransfers] = useState<any[]>([]);
+  const [swapPages, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
+  const [swapPageInfoByPage, setSwapPageInfoByPage] = useState<Record<number, WalletPageInfo>>({});
+  const [swapCurrentPage, setSwapCurrentPage] = useState(1);
+  const [swapLoading, setSwapLoading] = useState(false);
+
+  const [transferPages, setTransferPages] = useState<Record<number, WalletTransfer[]>>({});
+  const [transferPageInfoByPage, setTransferPageInfoByPage] = useState<Record<number, WalletPageInfo>>({});
+  const [transferCurrentPage, setTransferCurrentPage] = useState(1);
+  const [transferLoading, setTransferLoading] = useState(false);
+
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
 
@@ -54,6 +74,32 @@ export default function WalletPage() {
   // Swap detail modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
+
+  const currentSwaps = useMemo(
+    () => swapPages[swapCurrentPage] ?? [],
+    [swapCurrentPage, swapPages],
+  );
+
+  const currentTransfers = useMemo(
+    () => transferPages[transferCurrentPage] ?? [],
+    [transferCurrentPage, transferPages],
+  );
+
+  const swapHasMore = useMemo(() => {
+    if (swapPages[swapCurrentPage + 1]) {
+      return true;
+    }
+
+    return Boolean(swapPageInfoByPage[swapCurrentPage]?.hasMore);
+  }, [swapCurrentPage, swapPageInfoByPage, swapPages]);
+
+  const transferHasMore = useMemo(() => {
+    if (transferPages[transferCurrentPage + 1]) {
+      return true;
+    }
+
+    return Boolean(transferPageInfoByPage[transferCurrentPage]?.hasMore);
+  }, [transferCurrentPage, transferPageInfoByPage, transferPages]);
 
   // Transform portfolio data from API response for Table component using typed mapper.
   // Numeric values are kept as numbers (not pre-formatted strings) so that
@@ -123,7 +169,7 @@ export default function WalletPage() {
   // Transform swap data to array format for Table component
   const swapData = useMemo(
     () =>
-      swaps.map((swap) => {
+      currentSwaps.map((swap) => {
         const { sold, bought } = getSoldBoughtChanges(swap);
         return [
           swap.timestamp,
@@ -135,20 +181,20 @@ export default function WalletPage() {
           swap.fee,
         ];
       }),
-    [swaps],
+    [currentSwaps],
   );
 
   // Transform transfer data to array format for Table component
   const transferData = useMemo(
     () =>
-      transfers.map((transfer: any) => [
+      currentTransfers.map((transfer) => [
         transfer.from,
         transfer.to,
         transfer.tokenSymbol,
         transfer.amount,
         transfer.timestamp,
       ]),
-    [transfers],
+    [currentTransfers],
   );
 
   // Filter transfers by direction
@@ -321,6 +367,95 @@ export default function WalletPage() {
     4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 }, // Change24h (fraction)
   };
 
+  const handleSwapPageChange = async (targetPage: number) => {
+    if (!address || targetPage < 1 || swapLoading) {
+      return;
+    }
+
+    if (swapPages[targetPage]) {
+      setSwapCurrentPage(targetPage);
+      return;
+    }
+
+    const maxLoadedPage = getMaxLoadedPage(swapPages);
+    if (targetPage !== maxLoadedPage + 1) {
+      return;
+    }
+
+    const previousPageInfo = swapPageInfoByPage[maxLoadedPage];
+    if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor) {
+      return;
+    }
+
+    setSwapLoading(true);
+    try {
+      const response = await fetchWalletSwaps(address, {
+        chain: "solana",
+        cursor: previousPageInfo.nextCursor,
+        before: previousPageInfo.nextCursor,
+      });
+
+      const nextRows = Array.isArray(response.swaps) ? response.swaps : [];
+      setSwapPages((prev) => ({
+        ...prev,
+        [targetPage]: nextRows,
+      }));
+      setSwapPageInfoByPage((prev) => ({
+        ...prev,
+        [targetPage]: response.pageInfo,
+      }));
+      setSwapCurrentPage(targetPage);
+    } catch (err) {
+      console.error("Failed to load wallet swap page", err);
+    } finally {
+      setSwapLoading(false);
+    }
+  };
+
+  const handleTransferPageChange = async (targetPage: number) => {
+    if (!address || targetPage < 1 || transferLoading) {
+      return;
+    }
+
+    if (transferPages[targetPage]) {
+      setTransferCurrentPage(targetPage);
+      return;
+    }
+
+    const maxLoadedPage = getMaxLoadedPage(transferPages);
+    if (targetPage !== maxLoadedPage + 1) {
+      return;
+    }
+
+    const previousPageInfo = transferPageInfoByPage[maxLoadedPage];
+    if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor) {
+      return;
+    }
+
+    setTransferLoading(true);
+    try {
+      const response = await fetchWalletTransfers(address, {
+        chain: "solana",
+        cursor: previousPageInfo.nextCursor,
+      });
+
+      const nextRows = Array.isArray(response.transfers) ? response.transfers : [];
+      setTransferPages((prev) => ({
+        ...prev,
+        [targetPage]: nextRows,
+      }));
+      setTransferPageInfoByPage((prev) => ({
+        ...prev,
+        [targetPage]: response.pageInfo,
+      }));
+      setTransferCurrentPage(targetPage);
+    } catch (err) {
+      console.error("Failed to load wallet transfer page", err);
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (!address || address === 'null') return;
@@ -335,22 +470,24 @@ export default function WalletPage() {
         // Fetch swaps data for swap table
         const swapResponse = await fetchWalletSwaps(address, {
           chain: "solana",
-          limit: 50,
         });
         const swapsData = swapResponse?.swaps || [];
         if (Array.isArray(swapsData)) {
-          setSwaps(swapsData);
+          setSwapPages({ 1: swapsData });
+          setSwapPageInfoByPage({ 1: swapResponse.pageInfo });
+          setSwapCurrentPage(1);
           console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
         }
 
         // Fetch transfers data for inflow/outflow tables
         const transferResponse = await fetchWalletTransfers(address, {
           chain: "solana",
-          limit: 50,
         });
         const transfersData = transferResponse?.transfers || [];
         if (Array.isArray(transfersData)) {
-          setTransfers(transfersData);
+          setTransferPages({ 1: transfersData });
+          setTransferPageInfoByPage({ 1: transferResponse.pageInfo });
+          setTransferCurrentPage(1);
           console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
         }
 
@@ -374,7 +511,7 @@ export default function WalletPage() {
   }, [address]);
 
   function handleSwapRowClick(_row: any[], rowIndex: number) {
-    const swap = swaps[rowIndex >= 0 ? rowIndex : -1];
+    const swap = currentSwaps[rowIndex >= 0 ? rowIndex : -1];
     if (!swap) return;
 
     setSelectedSwap(swap);
@@ -463,6 +600,14 @@ export default function WalletPage() {
               isSortable={isSortableSwaps}
               sortConfigs={swapSortConfigs}
               onRowClick={handleSwapRowClick}
+              serverPagination={{
+                enabled: true,
+                page: swapCurrentPage,
+                pageSize: WALLET_TABLE_PAGE_SIZE,
+                hasMore: swapHasMore,
+                isLoading: swapLoading,
+                onPageChange: handleSwapPageChange,
+              }}
             />,
             <Table
               maxHeight={400}
@@ -481,6 +626,14 @@ export default function WalletPage() {
               dataEntries={inflowData}
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
+              serverPagination={{
+                enabled: true,
+                page: transferCurrentPage,
+                pageSize: WALLET_TABLE_PAGE_SIZE,
+                hasMore: transferHasMore,
+                isLoading: transferLoading,
+                onPageChange: handleTransferPageChange,
+              }}
             />,
             <Table
               maxHeight={400}
@@ -499,6 +652,14 @@ export default function WalletPage() {
               dataEntries={outflowData}
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
+              serverPagination={{
+                enabled: true,
+                page: transferCurrentPage,
+                pageSize: WALLET_TABLE_PAGE_SIZE,
+                hasMore: transferHasMore,
+                isLoading: transferLoading,
+                onPageChange: handleTransferPageChange,
+              }}
             />,
             <Table
               maxHeight={400}

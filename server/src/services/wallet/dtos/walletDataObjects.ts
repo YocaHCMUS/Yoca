@@ -116,10 +116,25 @@ export interface WalletTransactionsResponse {
     transactions: WalletTransaction[];
 }
 
+export interface WalletPageInfo {
+    pageSize: 100;
+    hasMore: boolean;
+    nextCursor: string | null;
+    source: "cache" | "provider" | "mixed";
+}
+
 export interface WalletTransfersResponse {
     address: string;
     chain: SupportedChain;
     transfers: WalletTransfer[];
+    pageInfo: WalletPageInfo;
+}
+
+export interface WalletSwapsResponse {
+    address: string;
+    chain: SupportedChain;
+    swaps: WalletSwap[];
+    pageInfo: WalletPageInfo;
 }
 
 /** Exchange comparison item for chart (transaction count by platform). */

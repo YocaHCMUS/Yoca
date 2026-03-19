@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getWalletOverviewMock, getWalletPortfolioMock } = vi.hoisted(() => ({
+const { getWalletOverviewMock, getWalletPortfolioMock, getWalletSwapsMock, getWalletTransfersMock } = vi.hoisted(() => ({
     getWalletOverviewMock: vi.fn(),
     getWalletPortfolioMock: vi.fn(),
+    getWalletSwapsMock: vi.fn(),
+    getWalletTransfersMock: vi.fn(),
 }));
 
 const { getWalletCounterpartiesMock } = vi.hoisted(() => ({
@@ -25,8 +27,8 @@ vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     getWalletPortfolio: getWalletPortfolioMock,
     getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
     getWalletExchangeCounts: vi.fn(async () => ({ exchanges: [], metadata: { period: "30D", metric: "count" } })),
-    getWalletSwaps: vi.fn(async () => ({ address: "", chain: "solana", swaps: [] })),
-    getWalletTransfers: vi.fn(async () => ({ address: "", chain: "solana", transfers: [] })),
+    getWalletSwaps: getWalletSwapsMock,
+    getWalletTransfers: getWalletTransfersMock,
 }));
 
 vi.mock("@sv/services/wallet/counterparties.service.js", () => ({
@@ -73,6 +75,8 @@ const WEEK_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
 beforeEach(() => {
     getWalletOverviewMock.mockReset();
     getWalletPortfolioMock.mockReset();
+    getWalletSwapsMock.mockReset();
+    getWalletTransfersMock.mockReset();
     getWalletCounterpartiesMock.mockReset();
     getWalletIdentityMock.mockReset();
     getWalletIdentityBatchMock.mockReset();
@@ -91,6 +95,30 @@ beforeEach(() => {
     });
 
     getWalletPortfolioMock.mockResolvedValue([]);
+
+    getWalletSwapsMock.mockResolvedValue({
+        address: "wallet-1",
+        chain: "solana",
+        swaps: [],
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider",
+        },
+    });
+
+    getWalletTransfersMock.mockResolvedValue({
+        address: "wallet-1",
+        chain: "solana",
+        transfers: [],
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider",
+        },
+    });
 
     getWalletIdentityMock.mockResolvedValue({
         address: "wallet-1",
@@ -362,6 +390,99 @@ describe("wallets.route - /distribution", () => {
             }),
         );
         expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+    });
+});
+
+describe("wallets.route - paginated table endpoints", () => {
+    it("returns swap pageInfo and forwards cursor alias params", async () => {
+        getWalletSwapsMock.mockResolvedValueOnce({
+            address: "wallet-1",
+            chain: "solana",
+            swaps: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "swap-signature",
+                    timestamp: "2026-03-14T00:00:00.000Z",
+                    slot: 123,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [],
+                    feeChanges: [],
+                },
+            ],
+            pageInfo: {
+                pageSize: 100,
+                hasMore: true,
+                nextCursor: "next-before",
+                source: "provider",
+            },
+        });
+
+        const response = await router.request(
+            "http://localhost/swap?address=wallet-1&cursor=cursor-1&before=before-1&limit=999",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.pageInfo).toEqual(
+            expect.objectContaining({
+                pageSize: 100,
+                hasMore: true,
+                nextCursor: "next-before",
+            }),
+        );
+
+        expect(getWalletSwapsMock).toHaveBeenCalledWith("wallet-1", "solana", {
+            limit: 999,
+            cursor: "cursor-1",
+            before: "before-1",
+        });
+    });
+
+    it("returns transfer pageInfo and handles non-numeric limit", async () => {
+        getWalletTransfersMock.mockResolvedValueOnce({
+            address: "wallet-1",
+            chain: "solana",
+            transfers: [
+                {
+                    from: "wallet-1",
+                    to: "wallet-2",
+                    amount: 1,
+                    timestamp: "2026-03-14T00:00:00.000Z",
+                    tokenAddress: "mint-1",
+                    tokenSymbol: "SOL",
+                    transactionSignature: "transfer-signature",
+                    instructionIndex: 0,
+                },
+            ],
+            pageInfo: {
+                pageSize: 100,
+                hasMore: false,
+                nextCursor: null,
+                source: "cache",
+            },
+        });
+
+        const response = await router.request(
+            "http://localhost/transfers?address=wallet-1&before=transfer-before&limit=bad",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.pageInfo).toEqual(
+            expect.objectContaining({
+                pageSize: 100,
+                hasMore: false,
+                nextCursor: null,
+                source: "cache",
+            }),
+        );
+
+        expect(getWalletTransfersMock).toHaveBeenCalledWith("wallet-1", "solana", {
+            limit: undefined,
+            cursor: undefined,
+            before: "transfer-before",
+        });
     });
 });
 

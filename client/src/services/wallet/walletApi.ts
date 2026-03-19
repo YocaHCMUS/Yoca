@@ -73,10 +73,36 @@ export interface WalletSwap {
   source?: "helius" | "moralis" | string;
 }
 
+export interface WalletPageInfo {
+  pageSize: 100;
+  hasMore: boolean;
+  nextCursor: string | null;
+  source: "cache" | "provider" | "mixed";
+}
+
 export interface WalletSwapsResponse {
   address: string;
   chain: string;
   swaps: WalletSwap[];
+  pageInfo: WalletPageInfo;
+}
+
+export interface WalletTransfer {
+  from: string;
+  to: string;
+  amount: number;
+  timestamp: string;
+  tokenAddress: string;
+  tokenSymbol: string;
+  transactionSignature: string;
+  instructionIndex: number;
+}
+
+export interface WalletTransfersResponse {
+  address: string;
+  chain: string;
+  transfers: WalletTransfer[];
+  pageInfo: WalletPageInfo;
 }
 
 export interface WalletCounterpartyIdentity {
@@ -215,14 +241,14 @@ export async function fetchWalletTransfers(
     cursor?: string;
     before?: string;
   }
-) {
+): Promise<WalletTransfersResponse> {
   const query = { address, ...params };
   const response = await (client.api as any).wallets.transfers.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletTransfersResponse;
 }
 
 /**

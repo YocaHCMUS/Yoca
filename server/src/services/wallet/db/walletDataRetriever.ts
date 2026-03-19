@@ -34,6 +34,14 @@ export type CachedWalletTransactionsHeliusRangeResult = {
 	isFullyCovered: boolean;
 };
 
+export type CachedWalletChunkResult<T> = {
+	available: boolean;
+	cursorMatched: boolean;
+	items: T[];
+	nextCursor: string | null;
+	hasMore: boolean;
+};
+
 const MOVING_NOW_HEAD_LAG_ALLOWANCE_SEC = 5;
 const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
 	30,
@@ -462,4 +470,168 @@ export async function getCachedWalletSwaps(
 			balanceChanges: r.swapBalanceChanges,
 			feeChanges: r.feeBalanceChanges,
 		}));
+}
+
+export async function getCachedWalletTransfersChunk(
+	address: string,
+	chain: SupportedChain,
+	options?: { cursor?: string; limit?: number },
+): Promise<CachedWalletChunkResult<WalletTransfer>> {
+	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
+	const isFresh = await hasFreshWalletMeta(address, chain, transferThreshold, "transfers");
+	if (!isFresh) {
+		return {
+			available: false,
+			cursorMatched: false,
+			items: [],
+			nextCursor: null,
+			hasMore: false,
+		};
+	}
+
+	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
+
+	const rows = await db
+		.select()
+		.from(tokenTransfers)
+		.where(
+			and(
+				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
+				eq(tokenTransfers.chain, chain),
+			),
+		)
+		.orderBy(
+			desc(tokenTransfers.blockTime),
+			desc(tokenTransfers.transactionSignature),
+			desc(tokenTransfers.instructionIndex),
+		);
+
+	const mapped = rows.map((r) => ({
+		from: r.fromOwner,
+		to: r.toOwner,
+		amount: r.amount,
+		timestamp: toIsoTimestamp(r.blockTime),
+		tokenAddress: r.tokenAddress,
+		tokenSymbol: r.tokenSymbol,
+		transactionSignature: r.transactionSignature,
+		instructionIndex: r.instructionIndex,
+	}));
+
+	const cursor = String(options?.cursor ?? "").trim();
+	let startIndex = 0;
+
+	if (cursor) {
+		const matchIndex = mapped.findIndex(
+			(item) =>
+				item.transactionSignature === cursor ||
+				`${item.transactionSignature}:${item.instructionIndex}` === cursor,
+		);
+
+		if (matchIndex < 0) {
+			return {
+				available: true,
+				cursorMatched: false,
+				items: [],
+				nextCursor: null,
+				hasMore: false,
+			};
+		}
+
+		startIndex = matchIndex + 1;
+	}
+
+	const pageItems = mapped.slice(startIndex, startIndex + limit);
+	const hasMore = startIndex + limit < mapped.length;
+	const nextCursor =
+		hasMore && pageItems.length > 0
+			? `${pageItems[pageItems.length - 1].transactionSignature}:${pageItems[pageItems.length - 1].instructionIndex}`
+			: null;
+
+	return {
+		available: true,
+		cursorMatched: true,
+		items: pageItems,
+		nextCursor,
+		hasMore,
+	};
+}
+
+export async function getCachedWalletSwapsChunk(
+	address: string,
+	chain: SupportedChain,
+	options?: { before?: string; limit?: number },
+): Promise<CachedWalletChunkResult<WalletSwap>> {
+	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
+	const isFresh = await hasFreshWalletMeta(address, chain, swapThreshold, "swaps");
+	if (!isFresh) {
+		return {
+			available: false,
+			cursorMatched: false,
+			items: [],
+			nextCursor: null,
+			hasMore: false,
+		};
+	}
+
+	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
+
+	const rows = await db
+		.select()
+		.from(walletSwap)
+		.where(and(eq(walletSwap.address, address), eq(walletSwap.chain, chain)))
+		.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature));
+
+	const mapped = rows.map((r) => ({
+		walletAddress: r.address,
+		signature: r.signature,
+		timestamp: toIsoTimestamp(r.blockTimestamp),
+		slot: r.slot,
+		fee: r.fee,
+		feePayer: r.feePayer,
+		transactionType: r.transactionType ?? null,
+		subCategory: r.subCategory ?? null,
+		blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
+		exchange: r.exchange ?? null,
+		pair: r.pair ?? null,
+		sold: r.sold ?? null,
+		bought: r.bought ?? null,
+		baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
+		totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
+		source: r.source ?? undefined,
+		balanceChanges: r.swapBalanceChanges,
+		feeChanges: r.feeBalanceChanges,
+	}));
+
+	const before = String(options?.before ?? "").trim();
+	let startIndex = 0;
+
+	if (before) {
+		const matchIndex = mapped.findIndex((item) => item.signature === before);
+		if (matchIndex < 0) {
+			return {
+				available: true,
+				cursorMatched: false,
+				items: [],
+				nextCursor: null,
+				hasMore: false,
+			};
+		}
+
+		startIndex = matchIndex + 1;
+	}
+
+	const pageItems = mapped.slice(startIndex, startIndex + limit);
+	const hasMore = startIndex + limit < mapped.length;
+	const nextCursor =
+		hasMore && pageItems.length > 0
+			? pageItems[pageItems.length - 1].signature
+			: null;
+
+	return {
+		available: true,
+		cursorMatched: true,
+		items: pageItems,
+		nextCursor,
+		hasMore,
+	};
 }
