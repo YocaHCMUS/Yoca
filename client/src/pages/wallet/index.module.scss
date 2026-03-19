@@ -18,7 +18,7 @@
   padding: 0 $spacing-06;
   gap: $spacing-04;
 
-  > * {
+  >* {
     border: 1px solid $border-subtle;
   }
 }
@@ -28,4 +28,20 @@
   flex-direction: column;
   width: 100%;
   padding: 0;
+}
+
+.swapTokenCell {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-03;
+  min-width: 0;
+}
+
+.swapTokenAmount {
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 4.25rem;
+  text-align: right;
 }

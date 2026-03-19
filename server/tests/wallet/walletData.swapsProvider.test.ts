@@ -4,6 +4,13 @@ const hoisted = vi.hoisted(() => {
     const fetchHeliusSolanaSwapMock = vi.fn(async () => []);
     const fetchMoralisSolanaSwapMock = vi.fn(async () => []);
     const getCachedWalletSwapsMock = vi.fn(async () => null);
+    const getCachedWalletSwapsChunkMock = vi.fn(async () => ({
+        available: false,
+        cursorMatched: false,
+        items: [],
+        nextCursor: null,
+        hasMore: false,
+    }));
     const saveSwapsCacheMock = vi.fn(async () => undefined);
 
     const db = {
@@ -59,6 +66,7 @@ const hoisted = vi.hoisted(() => {
         fetchHeliusSolanaSwapMock,
         fetchMoralisSolanaSwapMock,
         getCachedWalletSwapsMock,
+        getCachedWalletSwapsChunkMock,
         saveSwapsCacheMock,
         db,
         schema,
@@ -93,16 +101,21 @@ vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
     fetchAllTransactionHistory: vi.fn(async () => []),
     fetchHeliusSolanaPortfolio: vi.fn(async () => []),
     fetchMoralisSolanaSwap: hoisted.fetchMoralisSolanaSwapMock,
+    fetchMoralisSolanaSwapChunk: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
     fetchHeliusSolanaSwap: hoisted.fetchHeliusSolanaSwapMock,
+    fetchHeliusSolanaSwapChunk: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
     fetchHeliusSolanaTransactions: vi.fn(async () => []),
+    fetchHeliusSolanaTransfersChunk: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
     fetchHeliusSolanaTransfers: vi.fn(async () => []),
     timePeriodToFromSec: vi.fn(() => 0),
 }));
 
 vi.mock("@sv/services/wallet/db/walletDataRetriever.js", () => ({
     getCachedWalletTransactionsHelius: vi.fn(async () => null),
+    getCachedWalletSwapsChunk: hoisted.getCachedWalletSwapsChunkMock,
     getCachedWalletSwaps: hoisted.getCachedWalletSwapsMock,
     getCachedWalletTransactions: vi.fn(async () => null),
+    getCachedWalletTransfersChunk: vi.fn(async () => ({ available: false, cursorMatched: false, items: [], nextCursor: null, hasMore: false })),
     getCachedWalletTransfers: vi.fn(async () => null),
 }));
 
@@ -149,8 +162,16 @@ describe("walletData.service - getWalletSwaps provider selection", () => {
         hoisted.fetchHeliusSolanaSwapMock.mockReset();
         hoisted.fetchMoralisSolanaSwapMock.mockReset();
         hoisted.getCachedWalletSwapsMock.mockReset();
+        hoisted.getCachedWalletSwapsChunkMock.mockReset();
         hoisted.saveSwapsCacheMock.mockReset();
         hoisted.getCachedWalletSwapsMock.mockResolvedValue(null);
+        hoisted.getCachedWalletSwapsChunkMock.mockResolvedValue({
+            available: false,
+            cursorMatched: false,
+            items: [],
+            nextCursor: null,
+            hasMore: false,
+        });
 
         delete process.env.SWAP_PROVIDER_SOURCE;
         delete process.env.SWAP_PROVIDER_FALLBACK_TO_HELIUS;
@@ -165,7 +186,7 @@ describe("walletData.service - getWalletSwaps provider selection", () => {
         process.env.SWAP_PROVIDER_SOURCE = "moralis";
         hoisted.fetchMoralisSolanaSwapMock.mockResolvedValueOnce([]);
 
-        const result = await getWalletSwaps("wallet-1", "solana", { from: "7d" });
+        const result = await getWalletSwaps("wallet-1", { from: "7d" });
 
         expect(result.swaps).toEqual([]);
         expect(hoisted.fetchMoralisSolanaSwapMock).toHaveBeenCalledTimes(1);
@@ -177,7 +198,7 @@ describe("walletData.service - getWalletSwaps provider selection", () => {
         hoisted.fetchMoralisSolanaSwapMock.mockRejectedValueOnce(new Error("moralis-down"));
         hoisted.fetchHeliusSolanaSwapMock.mockResolvedValueOnce([]);
 
-        const result = await getWalletSwaps("wallet-2", "solana", { from: "24h" });
+        const result = await getWalletSwaps("wallet-2", { from: "24h" });
 
         expect(result.swaps).toEqual([]);
         expect(hoisted.fetchMoralisSolanaSwapMock).toHaveBeenCalledTimes(1);
@@ -190,7 +211,7 @@ describe("walletData.service - getWalletSwaps provider selection", () => {
 
         hoisted.fetchMoralisSolanaSwapMock.mockRejectedValueOnce(new Error("moralis-down"));
 
-        const result = await getWalletSwaps("wallet-3", "solana", { from: "7d" });
+        const result = await getWalletSwaps("wallet-3", { from: "7d" });
 
         expect(result.swaps).toEqual([]);
         expect(hoisted.fetchMoralisSolanaSwapMock).toHaveBeenCalledTimes(1);

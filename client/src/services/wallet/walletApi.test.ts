@@ -8,7 +8,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { WalletPortfolioItem } from './walletApi';
+import type {
+    WalletPortfolioItem,
+    WalletTransfer,
+    WalletSwapBalanceChange,
+} from './walletApi';
 
 // ─── WalletPortfolioItem interface contract ───────────────────────────────────
 
@@ -97,5 +101,79 @@ describe('WalletPortfolioItem', () => {
         expect(portfolio).toHaveLength(2);
         expect(portfolio[0].logoUri).toBeDefined();
         expect(portfolio[1].logoUri).toBeUndefined();
+    });
+});
+
+describe('WalletTransfer', () => {
+    it('accepts additive identity and USD fields', () => {
+        const transfer: WalletTransfer = {
+            from: 'wallet-a',
+            to: 'wallet-b',
+            amount: 2,
+            amountUsd: 240,
+            timestamp: '2026-03-19T12:00:00.000Z',
+            tokenAddress: 'So11111111111111111111111111111111111111112',
+            tokenSymbol: 'SOL',
+            tokenName: 'Solana',
+            tokenLogoUri: 'https://cdn.example.com/sol.png',
+            priceUsd: 120,
+            transactionSignature: 'sig-1',
+            instructionIndex: 0,
+        };
+
+        expect(transfer.tokenName).toBe('Solana');
+        expect(transfer.tokenLogoUri).toContain('sol.png');
+        expect(transfer.amountUsd).toBe(240);
+        expect(transfer.priceUsd).toBe(120);
+    });
+
+    it('keeps legacy transfer payloads assignable', () => {
+        const legacyTransfer: WalletTransfer = {
+            from: 'wallet-a',
+            to: 'wallet-b',
+            amount: 1,
+            timestamp: '2026-03-19T12:00:00.000Z',
+            tokenAddress: 'mint-1',
+            tokenSymbol: 'UNK',
+            transactionSignature: 'legacy-sig',
+            instructionIndex: 0,
+        };
+
+        expect(legacyTransfer.tokenName).toBeUndefined();
+        expect(legacyTransfer.tokenLogoUri).toBeUndefined();
+        expect(legacyTransfer.amountUsd).toBeUndefined();
+        expect(legacyTransfer.priceUsd).toBeUndefined();
+    });
+});
+
+describe('WalletSwapBalanceChange', () => {
+    it('accepts additive token identity fields', () => {
+        const leg: WalletSwapBalanceChange = {
+            mint: 'So11111111111111111111111111111111111111112',
+            amount: -1,
+            decimals: 9,
+            symbol: 'SOL',
+            name: 'Solana',
+            logoUri: 'https://cdn.example.com/sol.png',
+            priceUsd: 120,
+            valueUsd: 120,
+        };
+
+        expect(leg.symbol).toBe('SOL');
+        expect(leg.name).toBe('Solana');
+        expect(leg.logoUri).toContain('sol.png');
+    });
+
+    it('keeps legacy swap leg payloads assignable', () => {
+        const legacyLeg: WalletSwapBalanceChange = {
+            mint: 'mint-legacy',
+            amount: 10,
+            decimals: 6,
+        };
+
+        expect(legacyLeg.name).toBeUndefined();
+        expect(legacyLeg.logoUri).toBeUndefined();
+        expect(legacyLeg.priceUsd).toBeUndefined();
+        expect(legacyLeg.valueUsd).toBeUndefined();
     });
 });

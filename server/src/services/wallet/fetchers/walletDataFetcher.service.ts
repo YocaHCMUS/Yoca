@@ -8,6 +8,10 @@ export type WalletProviderChunk<T> = {
   hasMore: boolean;
 };
 
+const MAX_HELIUS_PORTFOLIO_BALANCE_PAGES = 250;
+const MAX_HELIUS_PORTFOLIO_ITEMS = 5_000;
+const MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES = 3;
+
 function getNextCursor(pagination: any): string | null {
   // Wallet API docs specify pagination.nextCursor; keep a legacy fallback for beta changes.
   const raw = pagination?.nextCursor;
@@ -310,12 +314,25 @@ export async function fetchHeliusSolanaPortfolio(
   address: string,
 ): Promise<WalletPortfolioItem[]> {
   const portfolio: WalletPortfolioItem[] = [];
+  const seenPortfolioKeys = new Set<string>();
 
   let page = 1;
   const limit = 100;
   let hasMore = true;
+  let pageCount = 0;
+  let stagnantPageCount = 0;
 
   while (hasMore) {
+    pageCount += 1;
+    if (pageCount > MAX_HELIUS_PORTFOLIO_BALANCE_PAGES) {
+      console.warn("[wallet-portfolio-fetch] Max balances page limit reached", {
+        address,
+        pageCount,
+        itemCount: portfolio.length,
+      });
+      break;
+    }
+
     const url = getEndpoint(`/v1/wallet/${address}/balances`);
     url.searchParams.set("page", String(page));
     url.searchParams.set("limit", String(limit));
@@ -348,10 +365,28 @@ export async function fetchHeliusSolanaPortfolio(
     }
 
     const balances: any[] = Array.isArray(json?.balances) ? json.balances : [];
+    if (balances.length === 0) {
+      break;
+    }
+
+    let addedOnPage = 0;
 
     for (const token of balances) {
       const amount = Number(token.balance ?? 0);
       if (!(amount > 0) || Number.isNaN(amount)) continue;
+
+      const tokenAddress = String(token.mint ?? "");
+      const tokenAddressKey = tokenAddress.trim().toLowerCase();
+      const fallbackKey = `${String(token.symbol ?? "").trim().toLowerCase()}::${String(token.name ?? "").trim().toLowerCase()}`;
+      const dedupeKey = tokenAddressKey || fallbackKey;
+
+      if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
+        continue;
+      }
+
+      if (dedupeKey) {
+        seenPortfolioKeys.add(dedupeKey);
+      }
 
       const pricePerToken =
         token.pricePerToken != null && !Number.isNaN(Number(token.pricePerToken))
@@ -365,7 +400,7 @@ export async function fetchHeliusSolanaPortfolio(
             : 0;
 
       portfolio.push({
-        tokenAddress: String(token.mint ?? ""),
+        tokenAddress,
         symbol: String(token.symbol ?? ""),
         name: token.name ? String(token.name) : undefined,
         logoUri: getTokenLogoUri(token),
@@ -373,11 +408,44 @@ export async function fetchHeliusSolanaPortfolio(
         priceUsd: pricePerToken,
         valueUsd: usdValue,
       });
+
+      addedOnPage += 1;
+      if (portfolio.length >= MAX_HELIUS_PORTFOLIO_ITEMS) {
+        console.warn("[wallet-portfolio-fetch] Max portfolio item limit reached", {
+          address,
+          pageCount,
+          itemCount: portfolio.length,
+        });
+        hasMore = false;
+        break;
+      }
+    }
+
+    if (!hasMore) {
+      break;
+    }
+
+    if (addedOnPage === 0) {
+      stagnantPageCount += 1;
+      if (stagnantPageCount >= MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES) {
+        console.warn("[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch", {
+          address,
+          pageCount,
+          itemCount: portfolio.length,
+        });
+        break;
+      }
+    } else {
+      stagnantPageCount = 0;
     }
 
     const pagination = json?.pagination;
     hasMore = Boolean(pagination?.hasMore);
-    page = (pagination?.page ?? page) + 1;
+    const currentPageRaw = Number(pagination?.page);
+    const nextPage = Number.isFinite(currentPageRaw)
+      ? Math.max(page + 1, Math.floor(currentPageRaw) + 1)
+      : page + 1;
+    page = nextPage;
   }
 
   return portfolio;

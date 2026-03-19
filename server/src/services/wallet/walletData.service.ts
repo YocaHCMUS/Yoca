@@ -1038,6 +1038,7 @@ export async function getWalletTransfers(
       );
 
       await saveTransfersCache(address, transfers);
+      await enrichWithSolanaTokenPrices(transfers);
 
       return {
         address,
@@ -2061,93 +2062,353 @@ async function enrichWithSolanaTokenPrices(
     tx: WalletTransaction | WalletTransfer | WalletSwap,
   ): tx is WalletSwap => "balanceChanges" in tx && "feeChanges" in tx;
 
-  const uniqueTokenAddresses = new Set<string>();
+  const candidateAddressesByKey = new Map<string, string>();
+
+  const resolveLookupAddress = (
+    rawTokenAddress: unknown,
+    rawTokenSymbol?: unknown,
+  ): string | undefined => {
+    const normalizedSymbol = normalizePortfolioText(rawTokenSymbol);
+    if (normalizedSymbol?.toLowerCase() === "sol") {
+      return SOL_MINT;
+    }
+
+    const normalizedAddress = normalizePortfolioText(rawTokenAddress);
+    if (!normalizedAddress) {
+      return undefined;
+    }
+
+    const lookupAddress = normalizePortfolioLookupAddress(normalizedAddress);
+    if (!isValidPortfolioTokenAddress(lookupAddress)) {
+      return undefined;
+    }
+
+    return lookupAddress;
+  };
+
+  const getAddressKey = (
+    rawTokenAddress: unknown,
+    rawTokenSymbol?: unknown,
+  ): string | undefined => {
+    const lookupAddress = resolveLookupAddress(rawTokenAddress, rawTokenSymbol);
+    return lookupAddress ? normalizePortfolioAddressKey(lookupAddress) : undefined;
+  };
 
   for (const tx of transactions) {
     if (isWalletTransaction(tx)) {
-      if (!tx.primaryTokenAddress && tx.primaryTokenSymbol !== "SOL") {
-        continue;
-      }
-
-      // Some providers may return non-canonical SOL mint strings. Ensure we
-      // always fetch native SOL price when symbol indicates SOL.
-      if (tx.primaryTokenSymbol === "SOL") {
-        uniqueTokenAddresses.add(SOL_MINT);
-      } else if (tx.primaryTokenAddress) {
-        uniqueTokenAddresses.add(tx.primaryTokenAddress);
+      const lookupAddress = resolveLookupAddress(
+        tx.primaryTokenAddress,
+        tx.primaryTokenSymbol,
+      );
+      if (lookupAddress) {
+        candidateAddressesByKey.set(
+          normalizePortfolioAddressKey(lookupAddress),
+          lookupAddress,
+        );
       }
       continue;
     }
 
     if (isWalletTransfer(tx)) {
-      if (tx.tokenSymbol === "SOL") {
-        uniqueTokenAddresses.add(SOL_MINT);
-      } else if (tx.tokenAddress) {
-        uniqueTokenAddresses.add(tx.tokenAddress);
+      const lookupAddress = resolveLookupAddress(tx.tokenAddress, tx.tokenSymbol);
+      if (lookupAddress) {
+        candidateAddressesByKey.set(
+          normalizePortfolioAddressKey(lookupAddress),
+          lookupAddress,
+        );
       }
       continue;
     }
 
     if (isWalletSwap(tx)) {
-      for (const change of [...tx.balanceChanges, ...tx.feeChanges]) {
-        const mint = String(change.mint ?? "").trim();
-        if (!mint) continue;
-        uniqueTokenAddresses.add(mint === "SOL" ? SOL_MINT : mint);
+      const swapChanges = [
+        ...tx.balanceChanges,
+        ...tx.feeChanges,
+        ...(tx.sold ? [tx.sold] : []),
+        ...(tx.bought ? [tx.bought] : []),
+      ];
+
+      for (const change of swapChanges) {
+        const lookupAddress = resolveLookupAddress(change.mint, change.symbol);
+        if (!lookupAddress) {
+          continue;
+        }
+
+        candidateAddressesByKey.set(
+          normalizePortfolioAddressKey(lookupAddress),
+          lookupAddress,
+        );
       }
     }
   }
 
-  console.log(`[enrichWithSolanaTokenPrices] Processing ${transactions.length} records with ${uniqueTokenAddresses.size} unique tokens`);
+  console.log(
+    `[enrichWithSolanaTokenPrices] Processing ${transactions.length} records with ${candidateAddressesByKey.size} unique tokens`,
+  );
 
-  if (uniqueTokenAddresses.size === 0) {
+  if (candidateAddressesByKey.size === 0) {
     // No tokens to enrich.
     return;
   }
 
   try {
-    const marketData = await getTokenMarketData(
-      Array.from(uniqueTokenAddresses),
-    );
-    console.log(`[enrichWithSolanaTokenPrices] Got market data for ${Object.keys(marketData).length} tokens`);
+    type TokenMetaRow = {
+      address?: unknown;
+      symbol?: unknown;
+      name?: unknown;
+      imageUrl?: unknown;
+    };
 
-    let enrichedCount = 0;
-    for (const tx of transactions) {
-      if (!isWalletTransaction(tx)) {
-        continue;
+    const candidateAddresses = Array.from(candidateAddressesByKey.values());
+
+    const tokenMetaByKey = new Map<
+      string,
+      {
+        symbol?: string;
+        name?: string;
+        logoUri?: string;
       }
+    >();
+    const marketPriceByKey = new Map<string, number>();
 
-      if (!tx.primaryTokenAddress && tx.primaryTokenSymbol !== "SOL") {
-        tx.priceUsd = undefined;
-        tx.totalUsd = undefined;
-        continue;
-      }
-
-      const tokenAddress =
-        tx.primaryTokenSymbol === "SOL" ? SOL_MINT : tx.primaryTokenAddress;
-      if (!tokenAddress) {
-        tx.priceUsd = undefined;
-        tx.totalUsd = undefined;
-        continue;
-      }
-
-      const tokenData = marketData[tokenAddress];
-      const priceUsd = tokenData?.priceUsd;
-
-      if (priceUsd != null && !isNaN(priceUsd)) {
-        tx.priceUsd = priceUsd;
-        if (tx.primaryTokenAmount != null) {
-          tx.totalUsd = priceUsd * tx.primaryTokenAmount;
-        } else {
-          tx.totalUsd = undefined;
+    try {
+      const tokenMeta = await getTokenMeta(candidateAddresses) as TokenMetaRow[];
+      for (const meta of tokenMeta) {
+        const address = normalizePortfolioText(meta.address);
+        if (!address) {
+          continue;
         }
-        enrichedCount++;
-      } else {
-        // Set explicitly to undefined for consistency
-        tx.priceUsd = undefined;
-        tx.totalUsd = undefined;
+
+        const lookupAddress = normalizePortfolioLookupAddress(address);
+        if (!isValidPortfolioTokenAddress(lookupAddress)) {
+          continue;
+        }
+
+        tokenMetaByKey.set(normalizePortfolioAddressKey(lookupAddress), {
+          symbol: normalizePortfolioText(meta.symbol),
+          name: normalizePortfolioText(meta.name),
+          logoUri: normalizePortfolioText(meta.imageUrl),
+        });
+      }
+    } catch (err) {
+      console.warn("[enrichWithSolanaTokenPrices] Token metadata enrichment failed", err);
+    }
+
+    try {
+      const marketData = await getTokenMarketData(candidateAddresses);
+      for (const [rawAddress, data] of Object.entries(marketData ?? {})) {
+        const normalizedAddress = normalizePortfolioText(rawAddress);
+        if (!normalizedAddress) {
+          continue;
+        }
+
+        const lookupAddress = normalizePortfolioLookupAddress(normalizedAddress);
+        if (!isValidPortfolioTokenAddress(lookupAddress)) {
+          continue;
+        }
+
+        const priceUsd = Number(data?.priceUsd);
+        if (!Number.isFinite(priceUsd)) {
+          continue;
+        }
+
+        marketPriceByKey.set(normalizePortfolioAddressKey(lookupAddress), priceUsd);
+      }
+    } catch (err) {
+      console.warn("[enrichWithSolanaTokenPrices] Token market-data enrichment failed", err);
+    }
+
+    const resolvePriceUsd = (addressKey: string | undefined): number | undefined => {
+      if (!addressKey) {
+        return undefined;
+      }
+
+      const priceUsd = marketPriceByKey.get(addressKey);
+      return Number.isFinite(priceUsd) ? priceUsd : undefined;
+    };
+
+    let transactionEnrichedCount = 0;
+    let transferEnrichedCount = 0;
+    let swapEnrichedCount = 0;
+
+    for (const tx of transactions) {
+      if (isWalletTransaction(tx)) {
+        const addressKey = getAddressKey(
+          tx.primaryTokenAddress,
+          tx.primaryTokenSymbol,
+        );
+
+        if (!addressKey) {
+          tx.priceUsd = undefined;
+          tx.totalUsd = undefined;
+          continue;
+        }
+
+        const priceUsd = resolvePriceUsd(addressKey);
+        if (priceUsd == null) {
+          tx.priceUsd = undefined;
+          tx.totalUsd = undefined;
+          continue;
+        }
+
+        tx.priceUsd = priceUsd;
+        tx.totalUsd =
+          tx.primaryTokenAmount != null ? priceUsd * tx.primaryTokenAmount : undefined;
+        transactionEnrichedCount += 1;
+        continue;
+      }
+
+      if (isWalletTransfer(tx)) {
+        let changed = false;
+
+        const addressKey = getAddressKey(tx.tokenAddress, tx.tokenSymbol);
+        if (addressKey) {
+          const tokenMeta = tokenMetaByKey.get(addressKey);
+          if (tokenMeta) {
+            const shouldFillSymbol = shouldFillPortfolioText(tx.tokenSymbol) && Boolean(tokenMeta.symbol);
+            const shouldFillName = shouldFillPortfolioText(tx.tokenName) && Boolean(tokenMeta.name);
+            const shouldFillLogo = isMissingPortfolioLogoUri(tx.tokenLogoUri) && Boolean(tokenMeta.logoUri);
+
+            if (shouldFillSymbol) {
+              tx.tokenSymbol = String(tokenMeta.symbol);
+              changed = true;
+            }
+
+            if (shouldFillName) {
+              tx.tokenName = String(tokenMeta.name);
+              changed = true;
+            }
+
+            if (shouldFillLogo) {
+              tx.tokenLogoUri = String(tokenMeta.logoUri);
+              changed = true;
+            }
+          }
+
+          const priceUsd = resolvePriceUsd(addressKey);
+          if (priceUsd != null) {
+            const hasPriceUsd = tx.priceUsd != null && Number.isFinite(Number(tx.priceUsd));
+            if (!hasPriceUsd) {
+              tx.priceUsd = priceUsd;
+              changed = true;
+            }
+
+            const amountUsd = Number(tx.amount) * Number(tx.priceUsd ?? priceUsd);
+            const hasAmountUsd = tx.amountUsd != null && Number.isFinite(Number(tx.amountUsd));
+            if (!hasAmountUsd && Number.isFinite(amountUsd)) {
+              tx.amountUsd = amountUsd;
+              changed = true;
+            }
+          }
+        }
+
+        if (changed) {
+          transferEnrichedCount += 1;
+        }
+        continue;
+      }
+
+      if (!isWalletSwap(tx)) {
+        continue;
+      }
+
+      let changed = false;
+
+      const enrichSwapChange = (change: WalletSwap["sold"]) => {
+        if (!change) {
+          return;
+        }
+
+        const addressKey = getAddressKey(change.mint, change.symbol);
+        if (!addressKey) {
+          return;
+        }
+
+        const tokenMeta = tokenMetaByKey.get(addressKey);
+        if (tokenMeta) {
+          const shouldFillSymbol = shouldFillPortfolioText(change.symbol ?? undefined) && Boolean(tokenMeta.symbol);
+          const shouldFillName = shouldFillPortfolioText(change.name ?? undefined) && Boolean(tokenMeta.name);
+          const shouldFillLogo = isMissingPortfolioLogoUri(change.logoUri ?? undefined) && Boolean(tokenMeta.logoUri);
+
+          if (shouldFillSymbol) {
+            change.symbol = String(tokenMeta.symbol);
+            changed = true;
+          }
+
+          if (shouldFillName) {
+            change.name = String(tokenMeta.name);
+            changed = true;
+          }
+
+          if (shouldFillLogo) {
+            change.logoUri = String(tokenMeta.logoUri);
+            changed = true;
+          }
+        }
+
+        const priceUsd = resolvePriceUsd(addressKey);
+        if (priceUsd == null) {
+          return;
+        }
+
+        const hasPriceUsd = change.priceUsd != null && Number.isFinite(Number(change.priceUsd));
+        if (!hasPriceUsd) {
+          change.priceUsd = priceUsd;
+          changed = true;
+        }
+
+        const hasValueUsd = change.valueUsd != null && Number.isFinite(Number(change.valueUsd));
+        if (!hasValueUsd) {
+          const computedValueUsd = Math.abs(Number(change.amount)) * Number(change.priceUsd ?? priceUsd);
+          if (Number.isFinite(computedValueUsd)) {
+            change.valueUsd = computedValueUsd;
+            changed = true;
+          }
+        }
+      };
+
+      for (const change of tx.balanceChanges) {
+        enrichSwapChange(change);
+      }
+
+      for (const change of tx.feeChanges) {
+        enrichSwapChange(change);
+      }
+
+      enrichSwapChange(tx.sold);
+      enrichSwapChange(tx.bought);
+
+      const hasTotalValueUsd = tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
+      if (!hasTotalValueUsd) {
+        const fallbackCandidates = [
+          Number(tx.sold?.valueUsd),
+          Number(tx.bought?.valueUsd),
+          ...tx.balanceChanges.map((change) => Number(change.valueUsd)),
+        ];
+
+        const derivedTotalValueUsd = fallbackCandidates.find(
+          (value) => Number.isFinite(value) && value > 0,
+        );
+
+        if (derivedTotalValueUsd != null) {
+          tx.totalValueUsd = derivedTotalValueUsd;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        swapEnrichedCount += 1;
       }
     }
-    console.log(`[enrichWithSolanaTokenPrices] Successfully enriched ${enrichedCount}/${transactions.length} transactions with prices`);
+
+    console.log("[enrichWithSolanaTokenPrices] Enrichment summary", {
+      processed: transactions.length,
+      tokenMetaCount: tokenMetaByKey.size,
+      marketPriceCount: marketPriceByKey.size,
+      transactionEnrichedCount,
+      transferEnrichedCount,
+      swapEnrichedCount,
+    });
   } catch (err) {
     console.error(
       "Failed to enrich transactions with Solana token prices",

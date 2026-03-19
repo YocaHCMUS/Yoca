@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { ArrowRight, Close } from "@carbon/react/icons";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import type { WalletSwap, WalletSwapBalanceChange } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
 
@@ -19,6 +20,24 @@ function getSymbolOrMint(change: WalletSwapBalanceChange | null): string {
   }
 
   return change.mint.slice(0, 8);
+}
+
+function getTokenImageUrl(change: WalletSwapBalanceChange | null): string | undefined {
+  if (!change) {
+    return undefined;
+  }
+
+  const logoUri = (change.logoUri ?? "").trim();
+  return logoUri.length > 0 ? logoUri : undefined;
+}
+
+function getTokenName(change: WalletSwapBalanceChange | null): string | undefined {
+  if (!change) {
+    return undefined;
+  }
+
+  const tokenName = (change.name ?? "").trim();
+  return tokenName.length > 0 ? tokenName : undefined;
 }
 
 function truncateSig(sig: string): string {
@@ -210,8 +229,15 @@ export function SwapDetailModal({
                 <span className={styles.tokenAmt} title={String(outTransfer.amount)}>
                   {formatAmount(Math.abs(outTransfer.amount))}
                 </span>
-                <span className={styles.tokenSym} title={outTransfer.symbol ?? outTransfer.mint}>
-                  {getSymbolOrMint(outTransfer)}
+                <span className={styles.tokenIdentity} title={outTransfer.symbol ?? outTransfer.mint}>
+                  <TokenIdentityCell
+                    symbol={getSymbolOrMint(outTransfer)}
+                    fullName={getTokenName(outTransfer)}
+                    imageUrl={getTokenImageUrl(outTransfer)}
+                    imageSize={18}
+                    showInitialsFallback
+                    tooltipAlign="right"
+                  />
                 </span>
               </>
             ) : (
@@ -230,8 +256,15 @@ export function SwapDetailModal({
                 <span className={styles.tokenAmt} title={String(inTransfer.amount)}>
                   {formatAmount(Math.abs(inTransfer.amount))}
                 </span>
-                <span className={styles.tokenSym} title={inTransfer.symbol ?? inTransfer.mint}>
-                  {getSymbolOrMint(inTransfer)}
+                <span className={styles.tokenIdentity} title={inTransfer.symbol ?? inTransfer.mint}>
+                  <TokenIdentityCell
+                    symbol={getSymbolOrMint(inTransfer)}
+                    fullName={getTokenName(inTransfer)}
+                    imageUrl={getTokenImageUrl(inTransfer)}
+                    imageSize={18}
+                    showInitialsFallback
+                    tooltipAlign="right"
+                  />
                 </span>
               </>
             ) : (
@@ -355,8 +388,15 @@ export function SwapDetailModal({
                   <span className={styles.changeAmount} title={String(change.amount)}>
                     {formatAmount(Math.abs(change.amount))}
                   </span>
-                  <span className={styles.changeSymbol} title={change.symbol ?? change.mint}>
-                    {getSymbolOrMint(change)}
+                  <span className={styles.changeTokenIdentity} title={change.symbol ?? change.mint}>
+                    <TokenIdentityCell
+                      symbol={getSymbolOrMint(change)}
+                      fullName={getTokenName(change)}
+                      imageUrl={getTokenImageUrl(change)}
+                      imageSize={16}
+                      showInitialsFallback
+                      tooltipAlign="right"
+                    />
                   </span>
                   <span className={styles.changeMint} title={change.mint}>
                     {truncateAddr(change.mint)}

@@ -89,6 +89,22 @@ export default function WalletPage() {
     [transferPages],
   );
 
+  const swapBySignature = useMemo(
+    () => new Map(loadedSwaps.map((swap) => [swap.signature, swap])),
+    [loadedSwaps],
+  );
+
+  const transferByKey = useMemo(
+    () =>
+      new Map(
+        loadedTransfers.map((transfer) => [
+          `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+          transfer,
+        ]),
+      ),
+    [loadedTransfers],
+  );
+
   const swapHasMore = useMemo(() => {
     const maxLoadedPage = getMaxLoadedPage(swapPages);
     if (maxLoadedPage < 1) {
@@ -143,19 +159,29 @@ export default function WalletPage() {
     };
   };
 
+  const getSwapTokenLabel = (change: WalletSwap["sold"]): string => {
+    if (!change) {
+      return "UNKNOWN";
+    }
+
+    const symbolCandidate = (change.symbol ?? "").trim();
+    if (symbolCandidate.length > 0) {
+      return symbolCandidate.toUpperCase();
+    }
+
+    const mint = change.mint || "";
+    if (mint.length > 8) {
+      return `${mint.slice(0, 4)}...${mint.slice(-4)}`;
+    }
+
+    return mint || "UNKNOWN";
+  };
+
   const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
     if (!change) return "—";
 
     const amount = Math.abs(change.amount).toFixed(4);
-    const symbolCandidate = (change.symbol ?? "").trim();
-    if (symbolCandidate.length > 0) {
-      return `${amount} ${symbolCandidate.toUpperCase()}`;
-    }
-
-    const mint = change.mint || "";
-    const fallback =
-      mint.length > 8 ? `${mint.slice(0, 4)}...${mint.slice(-4)}` : mint;
-    return `${amount} ${fallback || "UNKNOWN"}`;
+    return `${amount} ${getSwapTokenLabel(change)}`;
   };
 
   const formatSwapPair = (swap: WalletSwap): string => {
@@ -185,9 +211,10 @@ export default function WalletPage() {
           formatSwapTokenDisplay(bought),
           swap.totalValueUsd ?? "—",
           swap.fee,
+          swap.signature,
         ];
       }),
-    [loadedSwaps],
+    [loadedSwaps, formatSwapPair, formatSwapTokenDisplay, getSoldBoughtChanges],
   );
 
   // Transform transfer data to array format for Table component
@@ -199,6 +226,7 @@ export default function WalletPage() {
         transfer.tokenSymbol,
         transfer.amount,
         transfer.timestamp,
+        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
       ]),
     [loadedTransfers],
   );
@@ -313,8 +341,58 @@ export default function WalletPage() {
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: string) => renderCode(value),
-    (value: string) => renderCode(value),
+    (value: string, row: unknown[]) => {
+      const signature = String(row[7] ?? "");
+      const swap = swapBySignature.get(signature);
+      if (!swap) {
+        return renderCode(value);
+      }
+
+      const { sold } = getSoldBoughtChanges(swap);
+      if (!sold) {
+        return renderBase("—");
+      }
+
+      return (
+        <span className={styles.swapTokenCell}>
+          <span className={styles.swapTokenAmount}>{Math.abs(sold.amount).toFixed(4)}</span>
+          <TokenIdentityCell
+            symbol={getSwapTokenLabel(sold)}
+            fullName={sold.name ?? undefined}
+            imageUrl={sold.logoUri ?? undefined}
+            imageSize={18}
+            showInitialsFallback
+            tooltipAlign="right"
+          />
+        </span>
+      );
+    },
+    (value: string, row: unknown[]) => {
+      const signature = String(row[7] ?? "");
+      const swap = swapBySignature.get(signature);
+      if (!swap) {
+        return renderCode(value);
+      }
+
+      const { bought } = getSoldBoughtChanges(swap);
+      if (!bought) {
+        return renderBase("—");
+      }
+
+      return (
+        <span className={styles.swapTokenCell}>
+          <span className={styles.swapTokenAmount}>{Math.abs(bought.amount).toFixed(4)}</span>
+          <TokenIdentityCell
+            symbol={getSwapTokenLabel(bought)}
+            fullName={bought.name ?? undefined}
+            imageUrl={bought.logoUri ?? undefined}
+            imageSize={18}
+            showInitialsFallback
+            tooltipAlign="right"
+          />
+        </span>
+      );
+    },
     (value: string) =>
       value === "—"
         ? renderBase(value)
@@ -325,7 +403,29 @@ export default function WalletPage() {
   const transferCellRenderers = [
     (value: string) => renderHash(value),
     (value: string) => renderHash(value),
-    (value: string) => renderCode(value),
+    (value: string, row?: unknown[] | null) => {
+      if (!Array.isArray(row) || row.length < 6) {
+        return renderCode(value);
+      }
+
+      const transferKey = String(row[5] ?? "");
+      const transfer = transferByKey.get(transferKey);
+
+      if (!transfer) {
+        return renderCode(value);
+      }
+
+      return (
+        <TokenIdentityCell
+          symbol={String(transfer.tokenSymbol ?? value)}
+          fullName={transfer.tokenName}
+          imageUrl={transfer.tokenLogoUri}
+          imageSize={18}
+          showInitialsFallback
+          tooltipAlign="right"
+        />
+      );
+    },
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
   ];
@@ -373,7 +473,9 @@ export default function WalletPage() {
     4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 }, // Change24h (fraction)
   };
 
-  const handleSwapPageChange = async (_targetPage: number): Promise<boolean> => {
+  const handleSwapPageChange = async (targetPage: number): Promise<boolean> => {
+    void targetPage;
+
     if (!address || swapLoading) {
       return false;
     }
@@ -414,7 +516,9 @@ export default function WalletPage() {
     }
   };
 
-  const handleTransferPageChange = async (_targetPage: number): Promise<boolean> => {
+  const handleTransferPageChange = async (targetPage: number): Promise<boolean> => {
+    void targetPage;
+
     if (!address || transferLoading) {
       return false;
     }
@@ -501,7 +605,7 @@ export default function WalletPage() {
     loadData();
   }, [address]);
 
-  function handleSwapRowClick(_row: any[], rowIndex: number) {
+  function handleSwapRowClick(_row: unknown[], rowIndex: number) {
     const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
     if (!swap) return;
 

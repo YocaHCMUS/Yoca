@@ -45,6 +45,8 @@ export interface WalletSwapBalanceChange {
     amount: number,
     decimals: number,
     symbol?: string | null,
+    name?: string | null,
+    logoUri?: string | null,
     priceUsd?: number | null,
     valueUsd?: number | null,
 }
@@ -99,10 +101,13 @@ export interface WalletTransfer {
     to: string,
     // In the according token units
     amount: number,
-    // amountUsd: number,
+    amountUsd?: number,
     timestamp: string,
     tokenAddress: string,
     tokenSymbol: string,
+    tokenName?: string,
+    tokenLogoUri?: string,
+    priceUsd?: number,
     transactionSignature: string,
     instructionIndex: number,
 }

@@ -127,6 +127,37 @@ describe("walletDataFetcher.service", () => {
         expect(result[1].valueUsd).toBe(8);
     });
 
+    it("stops balances pagination when repeated pages add no new tokens", async () => {
+        heliusFetchMock.mockResolvedValue(
+            okJson({
+                balances: [
+                    {
+                        mint: "mint-stuck",
+                        symbol: "STK",
+                        name: "Stuck Token",
+                        balance: 1,
+                        pricePerToken: 2,
+                        usdValue: 2,
+                    },
+                ],
+                pagination: { hasMore: true, page: 1 },
+            }),
+        );
+
+        const result = await fetchHeliusSolanaPortfolio("wallet-address");
+
+        expect(result).toEqual([
+            expect.objectContaining({
+                tokenAddress: "mint-stuck",
+                amount: 1,
+                valueUsd: 2,
+            }),
+        ]);
+
+        // Guard should stop repeated no-progress pages before runaway growth.
+        expect(heliusFetchMock).toHaveBeenCalledTimes(4);
+    });
+
     it("paginates history with before=nextCursor", async () => {
         const nowSec = Math.floor(Date.now() / 1000);
 

@@ -12,7 +12,7 @@ import client from '@/api/main';
 /**
  * Utility type to extract the inferred response type from a fetcher function
  */
-export type InferFetcherData<T extends (...args: any[]) => Promise<any>> = Awaited<ReturnType<T>>;
+export type InferFetcherData<T extends (...args: unknown[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
 
 /**
  * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
@@ -35,6 +35,8 @@ export interface WalletSwapBalanceChange {
   amount: number;
   decimals: number;
   symbol?: string | null;
+  name?: string | null;
+  logoUri?: string | null;
   priceUsd?: number | null;
   valueUsd?: number | null;
 }
@@ -91,9 +93,13 @@ export interface WalletTransfer {
   from: string;
   to: string;
   amount: number;
+  amountUsd?: number;
   timestamp: string;
   tokenAddress: string;
   tokenSymbol: string;
+  tokenName?: string;
+  tokenLogoUri?: string;
+  priceUsd?: number;
   transactionSignature: string;
   instructionIndex: number;
 }
