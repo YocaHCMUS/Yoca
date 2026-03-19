@@ -12,7 +12,6 @@ import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 import {
   getWalletBalanceHistory,
   getWalletTokenBalanceHistory,
-  type BalanceDataPoint
 } from '../../services/wallet/walletData.service.js';
 
 /**
@@ -26,40 +25,6 @@ const balanceRequestSchema = z.object({
   tokens: z.string().optional(),
   wallets: z.string().optional(),
   timezone: z.string().optional().default("UTC"),
-});
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  value: z.number(),
-});
-
-const seriesSchema = z.object({
-  name: z.string(),
-  data: z.array(dataPointSchema),
-  seriesType: z.enum(["line", "bar", "area"]),
-  unit: z.enum(["USD", "TOKEN"]),
-});
-
-const balanceMetadataSchema = z.object({
-  timePeriod: z.string(),
-  aggregation: z.string(),
-  dataPoints: z.number(),
-  currency: z.string(),
-  timezone: z.string(),
-  mode: z.enum(["total", "token"]),
-  tokens: z.array(z.string()),
-  primaryYAxis: z.string(),
-});
-
-const balanceResponseSchema = z.object({
-  series: z.array(seriesSchema),
-  wallets: z.array(z.string()).optional(),
-  metadata: balanceMetadataSchema,
-});
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
 });
 
 

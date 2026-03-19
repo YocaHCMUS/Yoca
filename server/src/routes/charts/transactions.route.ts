@@ -26,26 +26,6 @@ const transactionRequestSchema = z.object({
     .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
   timezone: z.string().optional().default("UTC"),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  value: z.number(),
-  details: z.record(z.any()).optional(),
-});
-
-const transactionsResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  metadata: z.object({
-    period: z.string(),
-    dataPoints: z.number(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
 
 
 /**

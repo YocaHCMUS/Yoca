@@ -18,25 +18,6 @@ const winrateRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
-// Response Schemas
-const winrateResponseSchema = z.object({
-  data: z.object({
-    winCount: z.number(),
-    lossCount: z.number(),
-    winrate: z.number(),
-    winAmount: z.number().optional(),
-    lossAmount: z.number().optional(),
-  }).passthrough(),
-  metadata: z.object({
-    period: z.string(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
 
 
 /**

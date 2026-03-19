@@ -34,11 +34,9 @@ export interface SortConfig {
 
 export interface ServerPaginationConfig {
     enabled: boolean;
-    page: number;
-    pageSize: number;
     hasMore: boolean;
     isLoading?: boolean;
-    onPageChange: (page: number) => void;
+    onPageChange: (page: number) => void | boolean | Promise<void | boolean>;
 }
 
 export interface TableProps {
@@ -85,12 +83,9 @@ export const Table: React.FC<TableProps> = ({
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
     const isServerPagination = Boolean(serverPagination?.enabled);
-    const page = isServerPagination
-        ? Math.max(1, serverPagination?.page ?? 1)
-        : clientPage;
-    const pageSize = isServerPagination
-        ? Math.max(1, serverPagination?.pageSize ?? 20)
-        : clientPageSize;
+    // Pagination UI is always client-side; server mode only controls when to load more data.
+    const page = clientPage;
+    const pageSize = clientPageSize;
 
     // Handle click outside to close popup
     useEffect(() => {
@@ -170,9 +165,7 @@ export const Table: React.FC<TableProps> = ({
                 [columnIndex]: tempFilterValue
             }));
         }
-        if (!isServerPagination) {
-            setClientPage(1);
-        }
+        setClientPage(1);
         closeFilterModal();
     };
 
@@ -185,9 +178,7 @@ export const Table: React.FC<TableProps> = ({
             delete newFilters[columnIndex];
             return newFilters;
         });
-        if (!isServerPagination) {
-            setClientPage(1);
-        }
+        setClientPage(1);
     };
 
     /**
@@ -289,9 +280,14 @@ export const Table: React.FC<TableProps> = ({
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
 
-    const paginatedRows = isServerPagination
-        ? filteredData
-        : filteredData.slice(start, end);
+    const paginatedRows = filteredData.slice(start, end);
+    const maxLoadedClientPage = Math.max(1, Math.ceil(filteredData.length / pageSize));
+
+    useEffect(() => {
+        if (clientPage > maxLoadedClientPage) {
+            setClientPage(maxLoadedClientPage);
+        }
+    }, [clientPage, maxLoadedClientPage]);
 
 
     /**
@@ -503,8 +499,9 @@ export const Table: React.FC<TableProps> = ({
 
     const paginationTotalItems = isServerPagination
         ? serverPagination?.hasMore
-            ? page * pageSize + 1
-            : (page - 1) * pageSize + dataEntries.length
+            // Keep exactly one extra "virtual" page available to trigger load-more.
+            ? Math.max(1, Math.ceil(filteredData.length / pageSize)) * pageSize + 1
+            : filteredData.length
         : filteredData.length;
 
     return (
@@ -517,9 +514,7 @@ export const Table: React.FC<TableProps> = ({
             searchValue={searchValue}
             onSearchChange={(value) => {
                 setSearchValue(value);
-                if (!isServerPagination) {
-                    setClientPage(1);
-                }
+                setClientPage(1);
             }}
         >
             <div className={styles.tableWrapper}>
@@ -656,7 +651,7 @@ export const Table: React.FC<TableProps> = ({
                     <Pagination
                         page={page}
                         pageSize={pageSize}
-                        pageSizes={isServerPagination ? [pageSize] : [20, 30, 40, 50]}
+                        pageSizes={[20, 30, 40, 50]}
                         totalItems={paginationTotalItems}
                         onChange={({ page: nextPage, pageSize: nextPageSize }) => {
                             if (isServerPagination) {
@@ -664,8 +659,33 @@ export const Table: React.FC<TableProps> = ({
                                     return;
                                 }
 
-                                if (nextPage !== page) {
-                                    serverPagination?.onPageChange(nextPage);
+                                if (nextPageSize !== pageSize) {
+                                    setClientPageSize(nextPageSize);
+                                    const resizedMaxPage = Math.max(1, Math.ceil(filteredData.length / nextPageSize));
+                                    setClientPage(Math.min(nextPage, resizedMaxPage));
+                                    return;
+                                }
+
+                                if (nextPage <= maxLoadedClientPage) {
+                                    setClientPage(nextPage);
+                                    return;
+                                }
+
+                                const requestingLoadMorePage =
+                                    page === maxLoadedClientPage &&
+                                    nextPage === page + 1;
+                                if (requestingLoadMorePage && serverPagination?.hasMore) {
+                                    void (async () => {
+                                        try {
+                                            const didLoad = await serverPagination.onPageChange(nextPage);
+                                            if (didLoad === false) {
+                                                return;
+                                            }
+                                            setClientPage(nextPage);
+                                        } catch {
+                                            // Parent handles error reporting and loading state.
+                                        }
+                                    })();
                                 }
                                 return;
                             }

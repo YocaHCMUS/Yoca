@@ -10,7 +10,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { generateAverageRollingAnnualReturn } from '../../services/mockChartData.service.js';
-import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 
 /**
  * Request parameter schema for average rolling annual return endpoint
@@ -20,25 +19,6 @@ const averageRollingAnnualReturnRequestSchema = z.object({
   period: z.string().optional().default('1Y'),
   timeUnit: z.enum(['month', 'quarter', 'year', 'custom']).optional().default('month'),
   windowSize: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
-});
-// Response Schemas
-const averageReturnResponseSchema = z.object({
-  data: z.object({
-    average: z.number(),
-    median: z.number().optional(),
-    min: z.number().optional(),
-    max: z.number().optional(),
-  }).passthrough(),
-  metadata: z.object({
-    period: z.string(),
-    windowSizeInDays: z.number(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
 });
 
 

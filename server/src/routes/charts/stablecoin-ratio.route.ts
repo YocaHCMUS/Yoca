@@ -18,27 +18,6 @@ const stablecoinRatioRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  stablecoinPercentage: z.number(),
-  stablecoinValue: z.number().optional(),
-  totalValue: z.number().optional(),
-});
-
-const stablecoinRatioResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  averageRatio: z.number().optional(),
-  metadata: z.object({
-    period: z.string(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
 
 
 /**

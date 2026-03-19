@@ -21,26 +21,6 @@ const rollingAnnualReturnRequestSchema = z.object({
   windowSize: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
   timezone: z.string().optional().default('UTC'),
 });
-// Response Schemas
-const dataPointSchema = z.object({
-  timestamp: z.number(),
-  annualReturn: z.number(),
-  returns: z.number().optional(),
-});
-
-const rollingReturnResponseSchema = z.object({
-  data: z.array(dataPointSchema),
-  metadata: z.object({
-    period: z.string(),
-    windowSizeInDays: z.number(),
-    currency: z.string().optional(),
-  }).passthrough(),
-}).passthrough();
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-});
 
 
 /**
