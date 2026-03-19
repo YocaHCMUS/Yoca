@@ -12,7 +12,104 @@ import client from '@/api/main';
 /**
  * Utility type to extract the inferred response type from a fetcher function
  */
-export type InferFetcherData<T extends (...args: any[]) => Promise<any>> = Awaited<ReturnType<T>>;
+export type InferFetcherData<T extends (...args: unknown[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
+
+/**
+ * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
+ * All additive metadata fields are optional to allow graceful degradation
+ * when enrichment data is partially unavailable.
+ */
+export interface WalletPortfolioItem {
+  tokenAddress: string;
+  symbol: string;
+  name?: string;
+  logoUri?: string;
+  amount: number;
+  priceUsd?: number;
+  valueUsd: number;
+  change24hPercent?: number;
+}
+
+export interface WalletSwapBalanceChange {
+  mint: string;
+  amount: number;
+  decimals: number;
+  symbol?: string | null;
+  name?: string | null;
+  logoUri?: string | null;
+  priceUsd?: number | null;
+  valueUsd?: number | null;
+}
+
+export interface WalletSwapExchange {
+  name?: string | null;
+  address?: string | null;
+  logo?: string | null;
+}
+
+export interface WalletSwapPair {
+  address?: string | null;
+  label?: string | null;
+  baseTokenAddress?: string | null;
+  quoteTokenAddress?: string | null;
+}
+
+export interface WalletSwap {
+  walletAddress: string;
+  signature: string;
+  timestamp: string;
+  slot: number;
+  fee: number;
+  feePayer: string;
+  balanceChanges: WalletSwapBalanceChange[];
+  feeChanges: WalletSwapBalanceChange[];
+  transactionType?: string | null;
+  subCategory?: string | null;
+  blockNumber?: number | null;
+  exchange?: WalletSwapExchange | null;
+  pair?: WalletSwapPair | null;
+  sold?: WalletSwapBalanceChange | null;
+  bought?: WalletSwapBalanceChange | null;
+  baseQuotePrice?: number | null;
+  totalValueUsd?: number | null;
+  source?: "helius" | "moralis" | string;
+}
+
+export interface WalletPageInfo {
+  pageSize: 100;
+  hasMore: boolean;
+  nextCursor: string | null;
+  source: "cache" | "provider" | "mixed";
+}
+
+export interface WalletSwapsResponse {
+  address: string;
+  chain: string;
+  swaps: WalletSwap[];
+  pageInfo: WalletPageInfo;
+}
+
+export interface WalletTransfer {
+  from: string;
+  to: string;
+  amount: number;
+  amountUsd?: number;
+  timestamp: string;
+  tokenAddress: string;
+  tokenSymbol: string;
+  tokenName?: string;
+  tokenLogoUri?: string;
+  priceUsd?: number;
+  transactionSignature: string;
+  instructionIndex: number;
+}
+
+export interface WalletTransfersResponse {
+  address: string;
+  chain: string;
+  transfers: WalletTransfer[];
+  pageInfo: WalletPageInfo;
+}
 
 export interface WalletCounterpartyIdentity {
   status: "known" | "unknown" | "unavailable";
@@ -91,7 +188,7 @@ export async function fetchWalletOverview(
     ...(chain && { chain }),
     ...(period && { period }),
   };
-  const response = await (client.api as any).wallets.overview.$get({
+  const response = await client.api.wallets.overview.$get({
     query,
   });
   await handleResponse(response);
@@ -106,14 +203,14 @@ export async function fetchWalletOverview(
 export async function fetchWalletPortfolio(
   address: string,
   chain?: string
-) {
+): Promise<WalletPortfolioItem[]> {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.portfolio.$get({
+  const response = await client.api.wallets.portfolio.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletPortfolioItem[];
 }
 
 /**
@@ -130,7 +227,7 @@ export async function fetchWalletTransactions(
   }
 ) {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.transactions.$get({
+  const response = await client.api.wallets.transactions.$get({
     query,
   });
   await handleResponse(response);
@@ -150,14 +247,14 @@ export async function fetchWalletTransfers(
     cursor?: string;
     before?: string;
   }
-) {
+): Promise<WalletTransfersResponse> {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.transfers.$get({
+  const response = await client.api.wallets.transfers.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletTransfersResponse;
 }
 
 /**
@@ -170,15 +267,16 @@ export async function fetchWalletSwaps(
     chain?: string;
     limit?: number;
     cursor?: string;
+    before?: string;
   }
-) {
+): Promise<WalletSwapsResponse> {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.swap.$get({
+  const response = await client.api.wallets.swap.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletSwapsResponse;
 }
 
 /**
@@ -202,12 +300,12 @@ export async function fetchWalletCounterparties(
     ...(params?.includeTokens != null && { includeTokens: String(params.includeTokens) }),
   };
 
-  const response = await (client.api as any).wallets.counterparties.$get({
+  const response = await client.api.wallets.counterparties.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletCounterpartiesResponse;
 }
 
 /**
@@ -222,7 +320,7 @@ export async function fetchWalletExchanges(
   }
 ) {
   const query = { address, ...params };
-  const response = await (client.api as any).wallets.exchanges.$get({
+  const response = await client.api.wallets.exchanges.$get({
     query,
   });
   await handleResponse(response);
@@ -235,8 +333,8 @@ export async function fetchWalletExchanges(
  * GET /api/balances
  */
 export async function fetchWalletBalances(address: string) {
-  const response = await (client.api as any).balances.$get({
-    query: { address },
+  const response = await client.api.balances[":address"].$get({
+    param: { address },
   });
   await handleResponse(response);
   const data = await response.json();
@@ -252,7 +350,7 @@ export async function fetchWalletDistribution(
   chain?: string
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.distribution.$get({
+  const response = await client.api.wallets.distribution.$get({
     query,
   });
   await handleResponse(response);
@@ -269,7 +367,7 @@ export async function fetchWalletIdentity(
   chain?: string,
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.identity.$get({
+  const response = await client.api.wallets.identity.$get({
     query,
   });
   await handleResponse(response);
@@ -285,7 +383,7 @@ export async function fetchWalletIdentityBatch(
   addresses: string[],
   chain?: string,
 ) {
-  const response = await (client.api as any).wallets.identity.batch.$post({
+  const response = await client.api.wallets.identity.batch.$post({
     json: {
       addresses,
       ...(chain && { chain }),
@@ -305,7 +403,7 @@ export async function fetchWalletIntelligence(
   chain?: string,
 ) {
   const query = { address, ...(chain && { chain }) };
-  const response = await (client.api as any).wallets.intelligence.$get({
+  const response = await client.api.wallets.intelligence.$get({
     query,
   });
   await handleResponse(response);

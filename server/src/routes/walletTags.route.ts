@@ -12,9 +12,10 @@ const honoJwt = jwt({
   cookie: AUTH_COOKIE_NAME,
 });
 
+// Request Schemas
 const saveTagsSchema = z.object({
-  address: z.string().min(1),
-  tags: z.array(z.string().trim().min(1).max(30)).max(50),
+  address: z.string().min(1, "Address is required"),
+  tags: z.array(z.string().trim().min(1).max(30)).max(50, "Maximum 50 tags allowed"),
 });
 
 const app = new Hono()

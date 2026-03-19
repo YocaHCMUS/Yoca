@@ -72,7 +72,7 @@
   flex-direction: column;
   align-items: center;
   gap: $spacing-02;
-  min-width: 0;   // allows text children to shrink below their natural size
+  min-width: 0; // allows text children to shrink below their natural size
   overflow: hidden;
 }
 
@@ -104,6 +104,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tokenIdentity {
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
 }
 
 .arrow {
@@ -193,7 +200,7 @@
 
 .changeItem {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto auto minmax(7.5rem, 1fr) auto;
   gap: $spacing-03;
   align-items: center;
   padding: $spacing-03;
@@ -207,7 +214,7 @@
   font-weight: 600;
   width: 1.25rem;
   text-align: center;
-  
+
   &:has(+.changeAmount) {
     color: $support-success;
   }
@@ -223,6 +230,12 @@
   @include type-style('body-compact-01');
   color: $text-primary;
   font-weight: 600;
+}
+
+.changeTokenIdentity {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .changeMint {

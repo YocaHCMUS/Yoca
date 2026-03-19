@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Stablecoin Ratio Chart API Route
  * 
@@ -17,6 +18,7 @@ const stablecoinRatioRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
+
 
 /**
  * Stablecoin ratio chart route handler
@@ -48,19 +50,19 @@ const app = new Hono()
       // Parse and validate query parameters
       const query = c.req.query();
       const params = stablecoinRatioRequestSchema.parse(query);
-      
+
       // Generate stablecoin ratio data
       const data = generateStablecoinRatioData(
         params.wallets,
         params.period
       );
-      
+
       // Return response
       return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching stablecoin ratio data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch stablecoin ratio data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

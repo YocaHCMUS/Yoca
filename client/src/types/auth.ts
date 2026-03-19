@@ -72,13 +72,14 @@ export interface WalletConnection {
 
 /**
  * Supported blockchain types
+ * Currently Solana only
  */
-export type BlockchainType = 'solana' | 'ethereum' | 'bitcoin';
+export type BlockchainType = 'solana';
 
 /**
  * Supported wallet types
  */
-export type WalletType = 
+export type WalletType =
   | 'phantom'
   | 'solflare'
   | 'ledger'

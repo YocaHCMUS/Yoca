@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Winrate Chart API Route
  * 
@@ -17,6 +18,7 @@ const winrateRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
+
 
 /**
  * Winrate chart route handler
@@ -51,19 +53,19 @@ const app = new Hono()
       // Parse and validate query parameters
       const query = c.req.query();
       const params = winrateRequestSchema.parse(query);
-      
+
       // Generate winrate data
       const data = generateWinrateData(
         params.wallets,
         params.period
       );
-      
+
       // Return response
       return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching winrate data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch winrate data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

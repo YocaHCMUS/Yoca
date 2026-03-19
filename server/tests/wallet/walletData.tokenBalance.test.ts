@@ -11,6 +11,7 @@ const hoisted = vi.hoisted(() => {
     const getTokenHistoricalDataMock = vi.fn();
     const getHourlyTokenMarketChartMock = vi.fn();
     const getDailyTokenMarketChartMock = vi.fn();
+    const getTokenMetaMock = vi.fn();
     const saveTransactionsHeliusCacheMock = vi.fn();
 
     const db = {
@@ -56,6 +57,7 @@ const hoisted = vi.hoisted(() => {
         getTokenHistoricalDataMock,
         getHourlyTokenMarketChartMock,
         getDailyTokenMarketChartMock,
+        getTokenMetaMock,
         saveTransactionsHeliusCacheMock,
         db,
     };
@@ -72,6 +74,7 @@ vi.mock("@sv/services/balances.js", () => ({
 vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
     fetchAllTransactionHistory: hoisted.fetchAllTransactionHistoryMock,
     fetchHeliusSolanaPortfolio: hoisted.fetchHeliusSolanaPortfolioMock,
+    fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaTransactions: vi.fn(async () => []),
     fetchHeliusSolanaTransfers: vi.fn(async () => []),
@@ -123,6 +126,10 @@ vi.mock("@sv/services/tokens/token-chart.js", () => ({
     getDailyTokenMarketChart: hoisted.getDailyTokenMarketChartMock,
 }));
 
+vi.mock("@sv/services/tokens/token-info.js", () => ({
+    getTokenMeta: hoisted.getTokenMetaMock,
+}));
+
 import {
     getCumulativePnL,
     getWalletBalanceHistory,
@@ -162,6 +169,7 @@ describe("walletData.service - token USD historical pricing", () => {
         hoisted.getTokenHistoricalDataMock.mockReset();
         hoisted.getHourlyTokenMarketChartMock.mockReset();
         hoisted.getDailyTokenMarketChartMock.mockReset();
+        hoisted.getTokenMetaMock.mockReset();
         hoisted.saveTransactionsHeliusCacheMock.mockReset();
 
         hoisted.getWalletBalancesMock.mockReturnValue(null);
@@ -182,6 +190,7 @@ describe("walletData.service - token USD historical pricing", () => {
             isFullyCovered: true,
         });
         hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.getTokenMetaMock.mockResolvedValue([]);
         hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
     });
 
@@ -260,6 +269,7 @@ describe("walletData.service - balance history historical valuation", () => {
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.getHourlyTokenMarketChartMock.mockReset();
         hoisted.getDailyTokenMarketChartMock.mockReset();
+        hoisted.getTokenMetaMock.mockReset();
         hoisted.saveTransactionsHeliusCacheMock.mockReset();
 
         hoisted.getWalletBalancesMock.mockReturnValue(null);
@@ -280,6 +290,7 @@ describe("walletData.service - balance history historical valuation", () => {
             isFullyCovered: true,
         });
         hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.getTokenMetaMock.mockResolvedValue([]);
         hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
         hoisted.getTokenMarketDataMock.mockResolvedValue({
             [SOL_MINT]: { priceUsd: 100 },
@@ -565,10 +576,12 @@ describe("walletData.service - cumulative PnL", () => {
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.getHourlyTokenMarketChartMock.mockReset();
         hoisted.getDailyTokenMarketChartMock.mockReset();
+        hoisted.getTokenMetaMock.mockReset();
         hoisted.saveTransactionsHeliusCacheMock.mockReset();
 
         hoisted.getWalletBalancesMock.mockReturnValue(null);
         hoisted.fetchAllTransactionHistoryMock.mockResolvedValue([]);
+        hoisted.getTokenMetaMock.mockResolvedValue([]);
         hoisted.saveTransactionsHeliusCacheMock.mockResolvedValue(undefined);
     });
 

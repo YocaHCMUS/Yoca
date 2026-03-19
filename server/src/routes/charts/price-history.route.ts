@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { generateMockPriceHistory } from '../../services/mockChartData.service.js';
 
 /**

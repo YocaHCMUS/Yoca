@@ -1,17 +1,17 @@
 import {
+    getWalletSwaps,
     getWalletTransfers,
 } from "@sv/services/wallet/walletData.service.js";
 import type {
-    SupportedChain,
     WalletCounterpartiesResponse,
     WalletCounterpartyIdentity,
     WalletCounterpartyPeriod,
     WalletCounterpartyRankingItem,
     WalletCounterpartyRow,
+    WalletSwap,
     WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletIdentityBatch } from "@sv/services/wallet/walletIdentity.service.js";
-import { resolveChainForAddress } from "@sv/util/util-helius.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -19,6 +19,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_COUNTERPARTY_PERIOD: WalletCounterpartyPeriod = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
+const COUNTERPARTY_MAX_RECORDS = 5000;
 
 const UNKNOWN_IDENTITY: WalletCounterpartyIdentity = {
     status: "unknown",
@@ -46,6 +47,32 @@ export type WalletCounterpartiesOptions = {
     limit?: number;
     includeTokens?: boolean;
 };
+
+type CounterpartyActivityFetchOptions = {
+    period: WalletCounterpartyPeriod;
+    maxRecords: number;
+};
+
+type CounterpartyActivityDataset = {
+    transfers: WalletTransfer[];
+    swaps: WalletSwap[];
+    truncated: boolean;
+    source: "cache" | "provider" | "mixed";
+};
+
+type CounterpartyActivityEvent =
+    | {
+        kind: "transfer";
+        key: string;
+        timestampMs: number;
+        item: WalletTransfer;
+    }
+    | {
+        kind: "swap";
+        key: string;
+        timestampMs: number;
+        item: WalletSwap;
+    };
 
 function normalizeCounterpartyPeriod(rawPeriod?: string): WalletCounterpartyPeriod {
     const normalized = String(rawPeriod ?? "").trim().toLowerCase();
@@ -78,6 +105,52 @@ function clampCounterpartyLimit(rawLimit?: number): number {
     }
 
     return integerLimit;
+}
+
+function clampCounterpartyMaxRecords(rawMaxRecords?: number): number {
+    const parsed = Number(rawMaxRecords ?? COUNTERPARTY_MAX_RECORDS);
+    if (!Number.isFinite(parsed)) {
+        return COUNTERPARTY_MAX_RECORDS;
+    }
+
+    const integerLimit = Math.floor(parsed);
+    if (integerLimit < 1) {
+        return 1;
+    }
+
+    if (integerLimit > COUNTERPARTY_MAX_RECORDS) {
+        return COUNTERPARTY_MAX_RECORDS;
+    }
+
+    return integerLimit;
+}
+
+function collapseCounterpartySource(
+    sources: Set<"cache" | "provider" | "mixed">,
+): "cache" | "provider" | "mixed" {
+    if (sources.size === 0) {
+        return "mixed";
+    }
+
+    if (sources.has("mixed")) {
+        return "mixed";
+    }
+
+    if (sources.size === 1) {
+        const [single] = Array.from(sources);
+        return single;
+    }
+
+    return "mixed";
+}
+
+function isLikelySolanaAddress(address: string): boolean {
+    const normalized = normalizeAddress(address);
+    if (normalized.length < 32 || normalized.length > 44) {
+        return false;
+    }
+
+    return /^[1-9A-HJ-NP-Za-km-z]+$/.test(normalized);
 }
 
 function normalizeAddress(value: unknown): string {
@@ -148,6 +221,56 @@ function getCounterpartyFromTransfer(transfer: WalletTransfer, walletLower: stri
     }
 
     return null;
+}
+
+function getCounterpartyFromSwap(swap: WalletSwap): string {
+    const exchangeAddress = normalizeAddress(swap.exchange?.address);
+    if (exchangeAddress) {
+        return exchangeAddress;
+    }
+
+    const pairAddress = normalizeAddress(swap.pair?.address);
+    if (pairAddress) {
+        return pairAddress;
+    }
+
+    const normalizedSignature = normalizeSignature(swap.signature) || "unknown";
+    return `swap:unknown:${normalizedSignature}`;
+}
+
+function getSwapVolumeUsd(swap: WalletSwap): number {
+    const totalValueUsd = toFiniteNonNegative(swap.totalValueUsd);
+    if (totalValueUsd > 0) {
+        return totalValueUsd;
+    }
+
+    const soldValueUsd = toFiniteNonNegative(swap.sold?.valueUsd);
+    if (soldValueUsd > 0) {
+        return soldValueUsd;
+    }
+
+    const boughtValueUsd = toFiniteNonNegative(swap.bought?.valueUsd);
+    if (boughtValueUsd > 0) {
+        return boughtValueUsd;
+    }
+
+    return 0;
+}
+
+function getSwapTokenLabels(swap: WalletSwap): string[] {
+    const labels = new Set<string>();
+
+    const soldSymbol = String(swap.sold?.symbol ?? "").trim();
+    if (soldSymbol) {
+        labels.add(soldSymbol.toUpperCase());
+    }
+
+    const boughtSymbol = String(swap.bought?.symbol ?? "").trim();
+    if (boughtSymbol) {
+        labels.add(boughtSymbol.toUpperCase());
+    }
+
+    return Array.from(labels.values());
 }
 
 function getOrCreateAccumulator(
@@ -281,6 +404,179 @@ function aggregateCounterpartiesFromTransfers(input: {
     return byCounterparty;
 }
 
+function mergeCounterpartiesFromSwaps(input: {
+    swaps: WalletSwap[];
+    byCounterparty: Map<string, CounterpartyAccumulator>;
+    fromMs: number;
+    toMs: number;
+}): void {
+    const { swaps, byCounterparty, fromMs, toMs } = input;
+
+    for (const swap of swaps) {
+        const timestampMs = toTimestampMs(swap.timestamp);
+        if (!inRange(timestampMs, fromMs, toMs)) {
+            continue;
+        }
+
+        const counterpartyAddress = getCounterpartyFromSwap(swap);
+        if (!counterpartyAddress) {
+            continue;
+        }
+
+        const normalizedSignature = normalizeSignature(swap.signature);
+        const signature = normalizedSignature || `${counterpartyAddress.toLowerCase()}:${timestampMs}`;
+        const dedupeKey = `${signature}:${counterpartyAddress.toLowerCase()}`;
+
+        const accumulator = getOrCreateAccumulator(byCounterparty, counterpartyAddress);
+        accumulator.transactionSignatures.add(dedupeKey);
+
+        for (const label of getSwapTokenLabels(swap)) {
+            accumulator.tokens.add(label);
+        }
+
+        if (!accumulator.signatureVolumeUsd.has(dedupeKey)) {
+            accumulator.signatureVolumeUsd.set(dedupeKey, getSwapVolumeUsd(swap));
+        }
+    }
+}
+
+async function fetchCounterpartyActivityDataset(
+    address: string,
+    options: CounterpartyActivityFetchOptions,
+): Promise<CounterpartyActivityDataset> {
+    const nowMs = Date.now();
+    const fromMs = computePeriodStart(options.period, nowMs);
+    const maxRecords = clampCounterpartyMaxRecords(options.maxRecords);
+
+    const sourceSet = new Set<"cache" | "provider" | "mixed">();
+
+    let transferCursor: string | undefined;
+    let swapCursor: string | undefined;
+    let transferHasMore = true;
+    let swapHasMore = true;
+
+    const transferEvents: CounterpartyActivityEvent[] = [];
+    const swapEvents: CounterpartyActivityEvent[] = [];
+    const seenTransferKeys = new Set<string>();
+    const seenSwapKeys = new Set<string>();
+
+    while ((transferHasMore || swapHasMore) && transferEvents.length + swapEvents.length < maxRecords) {
+        if (transferHasMore && transferEvents.length + swapEvents.length < maxRecords) {
+            const transferPage = await getWalletTransfers(address, {
+                cursor: transferCursor,
+            });
+            sourceSet.add(transferPage.pageInfo.source);
+
+            let reachedTransferBoundary = false;
+            for (const transfer of transferPage.transfers) {
+                const timestampMs = toTimestampMs(transfer.timestamp);
+                if (!Number.isFinite(timestampMs) || timestampMs > nowMs) {
+                    continue;
+                }
+
+                if (timestampMs < fromMs) {
+                    reachedTransferBoundary = true;
+                    continue;
+                }
+
+                const signature = normalizeSignature(transfer.transactionSignature) || "unknown";
+                const dedupeKey = `${signature}:${transfer.instructionIndex}`;
+                if (seenTransferKeys.has(dedupeKey)) {
+                    continue;
+                }
+
+                seenTransferKeys.add(dedupeKey);
+                transferEvents.push({
+                    kind: "transfer",
+                    key: dedupeKey,
+                    timestampMs,
+                    item: transfer,
+                });
+            }
+
+            transferHasMore =
+                !reachedTransferBoundary &&
+                transferPage.pageInfo.hasMore &&
+                Boolean(transferPage.pageInfo.nextCursor);
+            transferCursor = transferHasMore
+                ? transferPage.pageInfo.nextCursor ?? undefined
+                : undefined;
+        }
+
+        if (swapHasMore && transferEvents.length + swapEvents.length < maxRecords) {
+            const swapPage = await getWalletSwaps(address, {
+                cursor: swapCursor,
+            });
+            sourceSet.add(swapPage.pageInfo.source);
+
+            let reachedSwapBoundary = false;
+            for (const swap of swapPage.swaps) {
+                const timestampMs = toTimestampMs(swap.timestamp);
+                if (!Number.isFinite(timestampMs) || timestampMs > nowMs) {
+                    continue;
+                }
+
+                if (timestampMs < fromMs) {
+                    reachedSwapBoundary = true;
+                    continue;
+                }
+
+                const signature = normalizeSignature(swap.signature) || "unknown";
+                const dedupeKey = `swap:${signature}`;
+                if (seenSwapKeys.has(dedupeKey)) {
+                    continue;
+                }
+
+                seenSwapKeys.add(dedupeKey);
+                swapEvents.push({
+                    kind: "swap",
+                    key: dedupeKey,
+                    timestampMs,
+                    item: swap,
+                });
+            }
+
+            swapHasMore =
+                !reachedSwapBoundary &&
+                swapPage.pageInfo.hasMore &&
+                Boolean(swapPage.pageInfo.nextCursor);
+            swapCursor = swapHasMore ? swapPage.pageInfo.nextCursor ?? undefined : undefined;
+        }
+    }
+
+    const mergedEvents = [...transferEvents, ...swapEvents]
+        .sort((a, b) => {
+            if (b.timestampMs !== a.timestampMs) {
+                return b.timestampMs - a.timestampMs;
+            }
+
+            return a.key.localeCompare(b.key);
+        });
+
+    const truncatedByVolume = mergedEvents.length > maxRecords;
+    const selectedEvents = mergedEvents.slice(0, maxRecords);
+    const truncated = truncatedByVolume || transferHasMore || swapHasMore;
+
+    const transfers = selectedEvents
+        .filter((event): event is Extract<CounterpartyActivityEvent, { kind: "transfer" }> =>
+            event.kind === "transfer",
+        )
+        .map((event) => event.item);
+
+    const swaps = selectedEvents
+        .filter((event): event is Extract<CounterpartyActivityEvent, { kind: "swap" }> =>
+            event.kind === "swap",
+        )
+        .map((event) => event.item);
+
+    return {
+        transfers,
+        swaps,
+        truncated,
+        source: collapseCounterpartySource(sourceSet),
+    };
+}
+
 function toCounterpartyIdentity(value: {
     status?: "known" | "unknown" | "unavailable";
     name?: string | null;
@@ -300,8 +596,7 @@ function toCounterpartyIdentity(value: {
 }
 
 async function buildCounterpartyIdentityMap(
-    addresses: string[],
-    chain: SupportedChain,
+    addresses: string[]
 ): Promise<Map<string, WalletCounterpartyIdentity>> {
     const identityByAddress = new Map<string, WalletCounterpartyIdentity>();
 
@@ -309,20 +604,24 @@ async function buildCounterpartyIdentityMap(
         return identityByAddress;
     }
 
-    if (chain !== "solana") {
-        for (const address of addresses) {
-            identityByAddress.set(address, UNAVAILABLE_IDENTITY);
+    const lookupAddresses = addresses.filter(isLikelySolanaAddress);
+    for (const address of addresses) {
+        if (!isLikelySolanaAddress(address)) {
+            identityByAddress.set(address, UNKNOWN_IDENTITY);
         }
+    }
+
+    if (lookupAddresses.length === 0) {
         return identityByAddress;
     }
 
     try {
-        const identityBatch = await getWalletIdentityBatch(addresses, chain);
+        const identityBatch = await getWalletIdentityBatch(lookupAddresses);
         for (const item of identityBatch.results) {
             identityByAddress.set(item.address, toCounterpartyIdentity(item.identity));
         }
 
-        for (const address of addresses) {
+        for (const address of lookupAddresses) {
             if (!identityByAddress.has(address)) {
                 identityByAddress.set(address, UNKNOWN_IDENTITY);
             }
@@ -422,32 +721,38 @@ function computePeriodStart(period: WalletCounterpartyPeriod, nowMs: number): nu
  */
 export async function getWalletCounterparties(
     address: string,
-    chain: SupportedChain,
     options?: WalletCounterpartiesOptions,
 ): Promise<WalletCounterpartiesResponse> {
     const normalizedAddress = normalizeAddress(address);
-    const effectiveChain = resolveChainForAddress(normalizedAddress, chain);
     const period = normalizeCounterpartyPeriod(options?.period);
     const limit = clampCounterpartyLimit(options?.limit);
     const includeTokens = options?.includeTokens ?? true;
 
     const nowMs = Date.now();
     const fromMs = computePeriodStart(period, nowMs);
-    const transfers = (
-        await getWalletTransfers(normalizedAddress, effectiveChain, { from: period })
-    ).transfers;
-    const priceByTokenAddress = await buildTransferPriceMap(transfers, fromMs, nowMs);
+    const activityDataset = await fetchCounterpartyActivityDataset(normalizedAddress, {
+        period,
+        maxRecords: COUNTERPARTY_MAX_RECORDS,
+    });
+    const priceByTokenAddress = await buildTransferPriceMap(activityDataset.transfers, fromMs, nowMs);
 
     const aggregatedByCounterparty = aggregateCounterpartiesFromTransfers({
         walletAddress: normalizedAddress,
-        transfers,
+        transfers: activityDataset.transfers,
         priceByTokenAddress,
         fromMs,
         toMs: nowMs,
     });
 
+    mergeCounterpartiesFromSwaps({
+        swaps: activityDataset.swaps,
+        byCounterparty: aggregatedByCounterparty,
+        fromMs,
+        toMs: nowMs,
+    });
+
     const counterpartyAddresses = Array.from(aggregatedByCounterparty.keys());
-    const identityByAddress = await buildCounterpartyIdentityMap(counterpartyAddresses, effectiveChain);
+    const identityByAddress = await buildCounterpartyIdentityMap(counterpartyAddresses);
 
     const allRows = toCounterpartyRows(
         aggregatedByCounterparty,
@@ -482,8 +787,7 @@ export async function getWalletCounterparties(
         },
         metadata: {
             period,
-            chain: effectiveChain,
-            source: "mixed",
+            source: activityDataset.source,
             totals,
         },
     };

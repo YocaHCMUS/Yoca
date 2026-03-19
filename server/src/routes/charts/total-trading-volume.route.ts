@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Total Trading Volume Chart API Route
  * 
@@ -17,6 +18,7 @@ const totalTradingVolumeRequestSchema = z.object({
   period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
+
 
 /**
  * Total trading volume chart route handler
@@ -50,18 +52,18 @@ const app = new Hono()
       // Parse and validate query parameters
       const query = c.req.query();
       const params = totalTradingVolumeRequestSchema.parse(query);
-      
+
       const data = await getTotalTradingVolumeFromDb(
         params.wallets,
         params.period
       );
-      
+
       // Return response
       return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching total trading volume data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch total trading volume data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

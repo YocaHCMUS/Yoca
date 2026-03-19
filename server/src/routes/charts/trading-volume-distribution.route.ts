@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Trading Volume Distribution Chart API Route
  * 
@@ -47,16 +48,16 @@ const app = new Hono()
       // Validate query parameters
       const query = c.req.query();
       const params = tradingVolumeDistributionRequestSchema.parse(query);
-      
+
       // Generate trading volume distribution data
       const data = generateTradingVolumeDistribution(
         params.period,
         params.wallets
       );
-      
+
       // Return response
       return c.json(data, 200);
-      
+
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
@@ -65,7 +66,7 @@ const app = new Hono()
           details: error.issues,
         }, 400);
       }
-      
+
       // Handle other errors
       console.error('[TradingVolumeDistributionChart] Error fetching trading volume distribution data:', error);
       return c.json({

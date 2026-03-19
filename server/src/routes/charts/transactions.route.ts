@@ -8,6 +8,7 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+// Request Schema
 import { getTransactionDistributionFromDb } from "@sv/services/wallet/transactionDistribution.service.js";
 
 /**
@@ -25,6 +26,7 @@ const transactionRequestSchema = z.object({
     .transform((val) => (val ? val.split(",").filter(Boolean) : [])),
   timezone: z.string().optional().default("UTC"),
 });
+
 
 /**
  * Transaction distribution route handler
@@ -72,7 +74,7 @@ const app = new Hono()
     } catch (error) {
       console.error('Error fetching transaction distribution data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch transaction distribution data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

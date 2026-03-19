@@ -8,8 +8,9 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { generateAssetDistribution } from '../../services/mockChartData.service.js';
-import { getWalletPortfolio, type SupportedChain } from '../../services/wallet/walletData.service.js';
+import { generateAssetDistribution } from "@sv/services/mockChartData.service.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletData.service.js";
+import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for distribution endpoint
@@ -61,30 +62,31 @@ const app = new Hono()
       // If wallets parameter is provided, fetch actual portfolio data
       if (params.wallets) {
         const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
-        
+
         // For single wallet, return aggregated data
         if (walletAddresses.length === 1) {
           const address = walletAddresses[0];
-          const chain: SupportedChain = 'solana'; // Default chain
-          
+
           try {
-            const portfolio = await getWalletPortfolio(address, chain);
-            
+            const portfolio = await getWalletPortfolio(address);
+
             // Transform portfolio data into distribution format
-            const totalValue = portfolio.reduce((sum: number, item: any) => sum + (item.valueUsd ?? 0), 0);
-            
-            const distributionData = portfolio.map((item: any) => ({
-              name: item.symbol || item.token || 'Unknown',
+            const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
+
+            const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
+              name: item.symbol || item.name || item.tokenAddress || "Unknown",
               value: item.valueUsd ?? 0,
               percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
-              rawAmount: item.amount ?? item.holding ?? 0,
+              rawAmount: item.amount ?? 0,
+              tokenAddress: item.tokenAddress ?? "",
+              symbol: item.symbol ?? "",
+              logoUri: item.logoUri ?? undefined,
             }));
-        
+
             return c.json({
               data: distributionData,
               totalValue: totalValue,
               address: address,
-              chain: chain,
               metadata: {
                 currency: 'USD',
                 timestamp: Date.now()
@@ -97,7 +99,7 @@ const app = new Hono()
             return c.json(data, 200);
           }
         }
-        
+
         // For multiple wallets, fall back to mock data generation
         const data = generateAssetDistribution(params.period, params.wallets);
         return c.json(data, 200);

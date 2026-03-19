@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getWalletOverviewMock } = vi.hoisted(() => ({
+const { getWalletOverviewMock, getWalletPortfolioMock, getWalletSwapsMock, getWalletTransfersMock } = vi.hoisted(() => ({
     getWalletOverviewMock: vi.fn(),
+    getWalletPortfolioMock: vi.fn(),
+    getWalletSwapsMock: vi.fn(),
+    getWalletTransfersMock: vi.fn(),
 }));
 
 const { getWalletCounterpartiesMock } = vi.hoisted(() => ({
@@ -21,11 +24,11 @@ const {
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     fetchTestTransaction: vi.fn(async () => ({})),
     getWalletOverview: getWalletOverviewMock,
-    getWalletPortfolio: vi.fn(async () => []),
+    getWalletPortfolio: getWalletPortfolioMock,
     getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
     getWalletExchangeCounts: vi.fn(async () => ({ exchanges: [], metadata: { period: "30D", metric: "count" } })),
-    getWalletSwaps: vi.fn(async () => ({ address: "", chain: "solana", swaps: [] })),
-    getWalletTransfers: vi.fn(async () => ({ address: "", chain: "solana", transfers: [] })),
+    getWalletSwaps: getWalletSwapsMock,
+    getWalletTransfers: getWalletTransfersMock,
 }));
 
 vi.mock("@sv/services/wallet/counterparties.service.js", () => ({
@@ -71,6 +74,9 @@ const WEEK_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
 
 beforeEach(() => {
     getWalletOverviewMock.mockReset();
+    getWalletPortfolioMock.mockReset();
+    getWalletSwapsMock.mockReset();
+    getWalletTransfersMock.mockReset();
     getWalletCounterpartiesMock.mockReset();
     getWalletIdentityMock.mockReset();
     getWalletIdentityBatchMock.mockReset();
@@ -78,7 +84,6 @@ beforeEach(() => {
 
     getWalletOverviewMock.mockResolvedValue({
         address: "wallet-1",
-        chain: "solana",
         totalAssetValueUsd: 100,
         tradingVolumeUsd24h: 10,
         pnlUsdTotal: 5,
@@ -88,9 +93,32 @@ beforeEach(() => {
         metricsPeriod: "24h",
     });
 
+    getWalletPortfolioMock.mockResolvedValue([]);
+
+    getWalletSwapsMock.mockResolvedValue({
+        address: "wallet-1",
+        swaps: [],
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider",
+        },
+    });
+
+    getWalletTransfersMock.mockResolvedValue({
+        address: "wallet-1",
+        transfers: [],
+        pageInfo: {
+            pageSize: 100,
+            hasMore: false,
+            nextCursor: null,
+            source: "provider",
+        },
+    });
+
     getWalletIdentityMock.mockResolvedValue({
         address: "wallet-1",
-        chain: "solana",
         identity: {
             status: "known",
             type: "exchange",
@@ -115,7 +143,6 @@ beforeEach(() => {
     });
 
     getWalletIdentityBatchMock.mockResolvedValue({
-        chain: "solana",
         results: [],
     });
 
@@ -155,7 +182,6 @@ beforeEach(() => {
         },
         metadata: {
             period: "7d",
-            chain: "solana",
             source: "mixed",
             totals: {
                 counterparties: 1,
@@ -167,7 +193,6 @@ beforeEach(() => {
 
     composeWalletIntelligenceMock.mockResolvedValue({
         address: "wallet-1",
-        chain: "solana",
         identity: {
             status: "known",
             type: "exchange",
@@ -206,7 +231,7 @@ describe("wallets.route - /overview", () => {
 
     it("returns 200 and forwards validated query params", async () => {
         const response = await router.request(
-            "http://localhost/overview?address=wallet-1&chain=solana&period=24h",
+            "http://localhost/overview?address=wallet-1&period=24h",
         );
 
         expect(response.status).toBe(200);
@@ -214,30 +239,20 @@ describe("wallets.route - /overview", () => {
         const body = await response.json();
         expect(body).toMatchObject({
             address: "wallet-1",
-            chain: "solana",
             totalAssetValueUsd: 100,
             tokensHoldingCount: 3,
         });
 
-        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", "solana", {
-            periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
-        });
-    });
-
-    it("defaults chain to solana when omitted", async () => {
-        const response = await router.request("http://localhost/overview?address=wallet-1");
-
-        expect(response.status).toBe(200);
-        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", "solana", {
+        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", {
             periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
         });
     });
 
     it("defaults period to 24h when omitted", async () => {
-        const response = await router.request("http://localhost/overview?address=wallet-1&chain=eth");
+        const response = await router.request("http://localhost/overview?address=wallet-1");
 
         expect(response.status).toBe(200);
-        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", "eth", {
+        expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", {
             periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
         });
     });
@@ -248,11 +263,11 @@ describe("wallets.route - /overview", () => {
         ["invalid"],
     ])("normalizes unsupported period %s to 24h", async (period) => {
         const response = await router.request(
-            `http://localhost/overview?address=wallet-1&chain=solana&period=${period}`,
+            `http://localhost/overview?address=wallet-1&period=${period}`,
         );
 
         expect(response.status).toBe(200);
-        expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+        expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", {
             periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
         });
     });
@@ -262,12 +277,194 @@ describe("wallets.route - /overview", () => {
         ["7d", WEEK_OVERVIEW_PERIOD_SEC],
     ])("passes supported period %s as %d seconds", async (period, expectedSec) => {
         const response = await router.request(
-            `http://localhost/overview?address=wallet-1&chain=solana&period=${period}`,
+            `http://localhost/overview?address=wallet-1&period=${period}`,
         );
 
         expect(response.status).toBe(200);
-        expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+        expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", {
             periodSec: expectedSec,
+        });
+    });
+});
+
+describe("wallets.route - /portfolio", () => {
+    it("returns additive logoUri while preserving legacy fields", async () => {
+        getWalletPortfolioMock.mockResolvedValueOnce([
+            {
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 100,
+                priceUsd: 1,
+                valueUsd: 100,
+                change24hPercent: 0.2,
+            },
+        ]);
+
+        const response = await router.request(
+            "http://localhost/portfolio?address=wallet-1",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body).toEqual([
+            expect.objectContaining({
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 100,
+                valueUsd: 100,
+            }),
+        ]);
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+    });
+});
+
+describe("wallets.route - /distribution", () => {
+    it("includes additive token metadata fields and keeps required distribution shape", async () => {
+        getWalletPortfolioMock.mockResolvedValueOnce([
+            {
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                name: "USD Coin",
+                logoUri: "https://cdn.example/usdc.png",
+                amount: 10,
+                valueUsd: 10,
+            },
+            {
+                tokenAddress: "mint-2",
+                symbol: "SOL",
+                name: "Solana",
+                logoUri: "https://cdn.example/sol.png",
+                amount: 2,
+                valueUsd: 30,
+            },
+        ]);
+
+        const response = await router.request(
+            "http://localhost/distribution?address=wallet-1",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+
+        expect(body.totalValue).toBe(40);
+        expect(body).toEqual(
+            expect.objectContaining({
+                data: expect.any(Array),
+                totalValue: 40,
+                metadata: expect.objectContaining({
+                    currency: "USD",
+                    timestamp: expect.any(Number),
+                }),
+            }),
+        );
+
+        expect(body.data[0]).toEqual(
+            expect.objectContaining({
+                name: "USDC",
+                value: 10,
+                percentage: 25,
+                tokenAddress: "mint-1",
+                symbol: "USDC",
+                logoUri: "https://cdn.example/usdc.png",
+            }),
+        );
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+    });
+});
+
+describe("wallets.route - paginated table endpoints", () => {
+    it("returns swap pageInfo and forwards cursor alias params", async () => {
+        getWalletSwapsMock.mockResolvedValueOnce({
+            address: "wallet-1",
+            chain: "solana",
+            swaps: [
+                {
+                    walletAddress: "wallet-1",
+                    signature: "swap-signature",
+                    timestamp: "2026-03-14T00:00:00.000Z",
+                    slot: 123,
+                    fee: 0,
+                    feePayer: "wallet-1",
+                    balanceChanges: [],
+                    feeChanges: [],
+                },
+            ],
+            pageInfo: {
+                pageSize: 100,
+                hasMore: true,
+                nextCursor: "next-before",
+                source: "provider",
+            },
+        });
+
+        const response = await router.request(
+            "http://localhost/swap?address=wallet-1&cursor=cursor-1&before=before-1&limit=999",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.pageInfo).toEqual(
+            expect.objectContaining({
+                pageSize: 100,
+                hasMore: true,
+                nextCursor: "next-before",
+            }),
+        );
+
+        expect(getWalletSwapsMock).toHaveBeenCalledWith("wallet-1", "solana", {
+            limit: 999,
+            cursor: "cursor-1",
+            before: "before-1",
+        });
+    });
+
+    it("returns transfer pageInfo and handles non-numeric limit", async () => {
+        getWalletTransfersMock.mockResolvedValueOnce({
+            address: "wallet-1",
+            chain: "solana",
+            transfers: [
+                {
+                    from: "wallet-1",
+                    to: "wallet-2",
+                    amount: 1,
+                    timestamp: "2026-03-14T00:00:00.000Z",
+                    tokenAddress: "mint-1",
+                    tokenSymbol: "SOL",
+                    transactionSignature: "transfer-signature",
+                    instructionIndex: 0,
+                },
+            ],
+            pageInfo: {
+                pageSize: 100,
+                hasMore: false,
+                nextCursor: null,
+                source: "cache",
+            },
+        });
+
+        const response = await router.request(
+            "http://localhost/transfers?address=wallet-1&before=transfer-before&limit=bad",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.pageInfo).toEqual(
+            expect.objectContaining({
+                pageSize: 100,
+                hasMore: false,
+                nextCursor: null,
+                source: "cache",
+            }),
+        );
+
+        expect(getWalletTransfersMock).toHaveBeenCalledWith("wallet-1", "solana", {
+            limit: undefined,
+            cursor: undefined,
+            before: "transfer-before",
         });
     });
 });
@@ -275,7 +472,7 @@ describe("wallets.route - /overview", () => {
 describe("wallets.route - /identity", () => {
     it("returns normalized known identity response", async () => {
         const response = await router.request(
-            "http://localhost/identity?address=wallet-1&chain=solana",
+            "http://localhost/identity?address=wallet-1",
         );
 
         expect(response.status).toBe(200);

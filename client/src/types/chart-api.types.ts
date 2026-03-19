@@ -72,12 +72,28 @@ export interface BalanceTrendResponse extends ChartResponseBase {
  * Returns either aggregated data (when no wallets or single wallet)
  * or per-wallet data (when multiple wallets specified)
  */
+/**
+ * Additive metadata fields included in enriched distribution points.
+ * All fields are optional to maintain backward-compatibility with
+ * legacy payloads that do not carry enriched token data.
+ */
+export interface DistributionPointMeta {
+  /** Raw token holding amount */
+  rawAmount?: number;
+  /** On-chain token address */
+  tokenAddress?: string;
+  /** Token ticker symbol */
+  symbol?: string;
+  /** Logo image URL – may be absent if metadata enrichment was unavailable */
+  logoUri?: string;
+}
+
 export interface AssetDistributionResponse extends ChartResponseBase {
   /** Distribution data points (for aggregated/single wallet) */
   data?: (DistributionPoint & {
     /** Percentage of total (calculated) */
     percentage: number;
-  })[];
+  } & DistributionPointMeta)[];
 
   /** Total portfolio value (for aggregated/single wallet) */
   totalValue?: number;
@@ -91,7 +107,7 @@ export interface AssetDistributionResponse extends ChartResponseBase {
     data: (DistributionPoint & {
       /** Percentage of total (calculated) */
       percentage: number;
-    })[];
+    } & DistributionPointMeta)[];
 
     /** Total value for this wallet */
     totalValue: number;
@@ -556,9 +572,6 @@ export interface CounterpartiesRequestParams extends ChartResponseBase {
 
   /** Optional single wallet override */
   address?: string;
-
-  /** Optional chain for wallet-aware mode */
-  chain?: string;
 
   /** Optional timezone */
   timezone?: string;

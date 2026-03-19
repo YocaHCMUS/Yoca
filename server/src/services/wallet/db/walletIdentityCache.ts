@@ -4,26 +4,19 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { walletIdentityCache } from "@sv/db/schema.js";
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import type { WalletIdentityNormalized } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 let warnedMissingIdentityCacheTable = false;
 
 export type CachedWalletIdentity = {
     address: string;
-    chain: SupportedChain;
     identity: WalletIdentityNormalized;
     raw: Record<string, unknown> | null;
     fetchedAt: Date;
     ttlSec: number;
     isFresh: boolean;
 };
-
-function normalizeChainValue(chain: SupportedChain): SupportedChain {
-    const normalized = String(chain ?? "").trim().toLowerCase();
-    return (normalized.length > 0 ? normalized : "solana") as SupportedChain;
-}
 
 function normalizeIdentityStatus(status: string): "known" | "unknown" | "unavailable" {
     if (status === "known" || status === "unknown" || status === "unavailable") {
@@ -106,10 +99,8 @@ function warnMissingIdentityCacheTableOnce(): void {
 
 export async function getCachedWalletIdentity(
     address: string,
-    chain: SupportedChain,
 ): Promise<CachedWalletIdentity | null> {
     const normalizedAddress = address.trim();
-    const normalizedChain = normalizeChainValue(chain);
 
     let rows: unknown[];
 
@@ -118,10 +109,7 @@ export async function getCachedWalletIdentity(
             .select()
             .from(walletIdentityCache)
             .where(
-                and(
-                    eq(walletIdentityCache.address, normalizedAddress),
-                    eq(walletIdentityCache.chain, normalizedChain),
-                ),
+                eq(walletIdentityCache.address, normalizedAddress),
             )
             .limit(1);
     } catch (error) {
@@ -148,7 +136,6 @@ export async function getCachedWalletIdentity(
 
     return {
         address: normalizedAddress,
-        chain: normalizedChain,
         identity: mapRowToIdentity(row),
         raw:
             row.raw != null && typeof row.raw === "object" && !Array.isArray(row.raw)
@@ -162,12 +149,10 @@ export async function getCachedWalletIdentity(
 
 export async function saveWalletIdentityCache(input: {
     address: string;
-    chain: SupportedChain;
     identity: WalletIdentityNormalized;
     raw?: Record<string, unknown> | null;
 }): Promise<void> {
     const normalizedAddress = input.address.trim();
-    const normalizedChain = normalizeChainValue(input.chain);
 
     if (input.identity.status === "unavailable") {
         return;
@@ -178,7 +163,6 @@ export async function saveWalletIdentityCache(input: {
             .insert(walletIdentityCache)
             .values({
                 address: normalizedAddress,
-                chain: normalizedChain,
                 status: input.identity.status,
                 type: input.identity.type,
                 name: input.identity.name,
@@ -188,7 +172,7 @@ export async function saveWalletIdentityCache(input: {
                 raw: input.raw ?? null,
             })
             .onConflictDoUpdate({
-                target: [walletIdentityCache.address, walletIdentityCache.chain],
+                target: [walletIdentityCache.address],
                 set: {
                     status: input.identity.status,
                     type: input.identity.type,

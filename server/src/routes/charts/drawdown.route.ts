@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Drawdown Chart API Route
  * 
@@ -50,19 +51,19 @@ const app = new Hono()
       // Parse and validate query parameters
       const query = c.req.query();
       const params = drawdownRequestSchema.parse(query);
-      
+
       // Generate drawdown data
       const data = generateDrawdownData(
         params.wallets,
         params.period
       );
-      
+
       // Return response
       return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching drawdown data:', error);
       return c.json(
-        { 
+        {
           error: 'Failed to fetch drawdown data',
           message: error instanceof Error ? error.message : 'Unknown error'
         },

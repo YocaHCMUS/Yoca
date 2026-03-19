@@ -12,9 +12,7 @@ import { generateBalanceTrend } from '../../services/mockChartData.service.js';
 import {
   getWalletBalanceHistory,
   getWalletTokenBalanceHistory,
-  type BalanceDataPoint
 } from '../../services/wallet/walletData.service.js';
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 /**
  * Request parameter schema for balance trend endpoint
@@ -28,6 +26,7 @@ const balanceRequestSchema = z.object({
   wallets: z.string().optional(),
   timezone: z.string().optional().default("UTC"),
 });
+
 
 /**
  * Balance chart route handler
@@ -71,11 +70,9 @@ const app = new Hono()
 
         if (walletAddresses.length > 0) {
           try {
-            const chain: SupportedChain = 'solana';
-
             if (tokenSelectors.length === 0) {
               const allHistories = await Promise.all(
-                walletAddresses.map(addr => getWalletBalanceHistory(addr, chain, params.timePeriod))
+                walletAddresses.map(addr => getWalletBalanceHistory(addr, params.timePeriod))
               );
 
               const series = walletAddresses.length === 1
@@ -114,7 +111,7 @@ const app = new Hono()
 
             const pairResults = await Promise.all(
               pairs.map(({ addr, token }) =>
-                getWalletTokenBalanceHistory(addr, chain, token, params.timePeriod)
+                getWalletTokenBalanceHistory(addr, token, params.timePeriod)
               )
             );
 

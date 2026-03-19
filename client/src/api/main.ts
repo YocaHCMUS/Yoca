@@ -1,5 +1,6 @@
 import type { AppType, ErrCode } from "@sv/main.js";
 import { hc } from "hono/client";
+
 const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN!;
 const client = hc<AppType>(apiDomain, {
   init: {

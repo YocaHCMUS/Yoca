@@ -32,6 +32,13 @@ export interface SortConfig {
     priorityMap?: Record<string, number>;
 }
 
+export interface ServerPaginationConfig {
+    enabled: boolean;
+    hasMore: boolean;
+    isLoading?: boolean;
+    onPageChange: (page: number) => void | boolean | Promise<void | boolean>;
+}
+
 export interface TableProps {
     title: string;
     headers: string[];
@@ -42,10 +49,11 @@ export interface TableProps {
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
     isSortable?: boolean[];
-    sortConfigs?: Record<number, SortConfig>; 
+    sortConfigs?: Record<number, SortConfig>;
     maxHeight?: number;
     /** Called when the user clicks a data row. Receives the original row array and its index inside dataEntries. */
     onRowClick?: (row: any[], rowIndex: number) => void;
+    serverPagination?: ServerPaginationConfig;
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -60,9 +68,10 @@ export const Table: React.FC<TableProps> = ({
     sortConfigs,
     maxHeight,
     onRowClick,
+    serverPagination,
 }) => {
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(20);
+    const [clientPage, setClientPage] = useState(1);
+    const [clientPageSize, setClientPageSize] = useState(20);
     // const [sortIndex, setSortIndex] = useState(0);
     const [searchValue, setSearchValue] = useState("");
     const [filters, setFilters] = useState<Partial<any>>(initialFilters);
@@ -72,6 +81,11 @@ export const Table: React.FC<TableProps> = ({
     const filterPopupRef = useRef<HTMLDivElement>(null);
     const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
     const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    const isServerPagination = Boolean(serverPagination?.enabled);
+    // Pagination UI is always client-side; server mode only controls when to load more data.
+    const page = clientPage;
+    const pageSize = clientPageSize;
 
     // Handle click outside to close popup
     useEffect(() => {
@@ -97,13 +111,13 @@ export const Table: React.FC<TableProps> = ({
     const openFilterForColumn = (columnIndex: number) => {
         const buttonElement = filterButtonRefs.current[columnIndex];
         const tableContainer = tableContainerRef.current;
-        
+
         if (buttonElement && tableContainer) {
             const buttonRect = buttonElement.getBoundingClientRect();
             const tableRect = tableContainer.getBoundingClientRect();
             const popupWidth = 280; // min-width from CSS, risky value
             const spaceFromTableStart = buttonRect.right - tableRect.left;
-            
+
             // If not enough space from table start to button right, align to left
             setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
         }
@@ -151,7 +165,7 @@ export const Table: React.FC<TableProps> = ({
                 [columnIndex]: tempFilterValue
             }));
         }
-        setPage(1);
+        setClientPage(1);
         closeFilterModal();
     };
 
@@ -164,7 +178,7 @@ export const Table: React.FC<TableProps> = ({
             delete newFilters[columnIndex];
             return newFilters;
         });
-        setPage(1);
+        setClientPage(1);
     };
 
     /**
@@ -172,16 +186,16 @@ export const Table: React.FC<TableProps> = ({
      */
     const getActiveFilters = (): ActiveFilter[] => {
         const active: ActiveFilter[] = [];
-        
+
         Object.entries(filters).forEach(([columnIndex, filterValue]) => {
             const colIdx = parseInt(columnIndex);
             const schema = filterSchema[colIdx];
             const columnName = headers[colIdx] || `Column ${colIdx}`;
-            
+
             if (!schema || !filterValue) return;
-            
+
             let displayText = '';
-            
+
             if (schema.type === FilterType.Range) {
                 const rangeFilter = filterValue as { min?: number; max?: number };
                 if (rangeFilter.min !== undefined && rangeFilter.max !== undefined) {
@@ -196,7 +210,7 @@ export const Table: React.FC<TableProps> = ({
             } else {
                 displayText = String(filterValue);
             }
-            
+
             if (displayText && filterValue !== 'all' && !(Array.isArray(filterValue) && filterValue.length === 0)) {
                 active.push({
                     columnIndex: colIdx,
@@ -206,7 +220,7 @@ export const Table: React.FC<TableProps> = ({
                 });
             }
         });
-        
+
         return active;
     };
 
@@ -220,23 +234,23 @@ export const Table: React.FC<TableProps> = ({
             });
             if (!matchesSearch) return false;
         }
-        
+
         // Apply column filters
         if (filterSchema && Object.keys(filters).length > 0) {
             for (const [columnIndex, filterValue] of Object.entries(filters)) {
                 const colIdx = parseInt(columnIndex);
                 const schema = filterSchema[colIdx];
-                
+
                 if (!schema) continue;
 
                 if (schema.type === FilterType.Range) {
                     // Handle range filter
                     const numValue = Number(row[colIdx]);
                     if (isNaN(numValue)) continue;
-                    
+
                     const rangeFilter = filterValue as { min?: number; max?: number };
                     if (!rangeFilter) continue;
-                    
+
                     if (rangeFilter.min !== undefined && numValue < rangeFilter.min) {
                         return false;
                     }
@@ -259,7 +273,7 @@ export const Table: React.FC<TableProps> = ({
                 }
             }
         }
-        
+
         return true;
     });
 
@@ -267,6 +281,13 @@ export const Table: React.FC<TableProps> = ({
     const end = start + pageSize;
 
     const paginatedRows = filteredData.slice(start, end);
+    const maxLoadedClientPage = Math.max(1, Math.ceil(filteredData.length / pageSize));
+
+    useEffect(() => {
+        if (clientPage > maxLoadedClientPage) {
+            setClientPage(maxLoadedClientPage);
+        }
+    }, [clientPage, maxLoadedClientPage]);
 
 
     /**
@@ -277,7 +298,7 @@ export const Table: React.FC<TableProps> = ({
             // Export as CSV (filtered data)
             const csvHeaders = headers.join(',');
             const csvRows = filteredData.map(row =>
-                row.map(entry => 
+                row.map(entry =>
                     typeof entry === 'string' ? `"${entry.replace(/"/g, '""')}"` : entry
                 ).join(',')
             );
@@ -303,10 +324,10 @@ export const Table: React.FC<TableProps> = ({
     }));
 
     const rows = paginatedRows.map((row, rowIndex) => {
-        const rowData: any = { id: `row-${rowIndex}` };
+        const rowData: any = { id: `row-${page}-${rowIndex}` };
         row.forEach((entry, index) => {
             // Store raw data for sorting
-            rowData[`header-${index}`] = entry; 
+            rowData[`header-${index}`] = entry;
         });
         return rowData;
     });
@@ -315,8 +336,8 @@ export const Table: React.FC<TableProps> = ({
     * Handle custom sorts
     */
     const universalSortRow = (
-        cellA: any, 
-        cellB: any, 
+        cellA: any,
+        cellB: any,
         { key, sortDirection, sortStates, locale }: any
     ) => {
         // Guard against undefined key
@@ -324,11 +345,11 @@ export const Table: React.FC<TableProps> = ({
             console.log("key not found / undefined");
             return String(cellA).localeCompare(String(cellB), locale);
         }
-       
+
         // Find the config for the current column
         const colIndex = parseInt(key.split('-')[1], 10);
         const columnConfig = sortConfigs?.[colIndex];
-        
+
         let comparison = 0;
 
         if (!columnConfig) {
@@ -371,15 +392,15 @@ export const Table: React.FC<TableProps> = ({
      */
     const renderFilterPopup = (columnIndex: number) => {
         if (openFilterModal !== columnIndex) return null;
-        
+
         const schema = filterSchema[columnIndex];
         const columnHeader = headers[columnIndex] || `Column ${columnIndex}`;
-        
+
         if (!schema) return null;
 
         return (
-            <div 
-                className={`${styles.filterPopup} ${popupAlignment === 'left' ? styles.filterPopupLeft : styles.filterPopupRight}`} 
+            <div
+                className={`${styles.filterPopup} ${popupAlignment === 'left' ? styles.filterPopupLeft : styles.filterPopupRight}`}
                 ref={filterPopupRef}
             >
                 <div className={styles.filterPopupContent}>
@@ -387,9 +408,9 @@ export const Table: React.FC<TableProps> = ({
                         Filter: {columnHeader}
                     </div>
                     {schema.type === FilterType.Range ? (
-                        <Slider 
-                            ariaLabelInput="Minimum Value" 
-                            unstable_ariaLabelInputUpper="Maximum Value" 
+                        <Slider
+                            ariaLabelInput="Minimum Value"
+                            unstable_ariaLabelInputUpper="Maximum Value"
                             value={tempFilterValue?.min ?? schema.min ?? 0}
                             unstable_valueUpper={tempFilterValue?.max ?? schema.max ?? 100}
                             min={schema.min ?? 0}
@@ -416,7 +437,7 @@ export const Table: React.FC<TableProps> = ({
                                 const selectedValues = Array.isArray(tempFilterValue) ? tempFilterValue : [];
                                 const allSelected = allValues.length > 0 && allValues.every(v => selectedValues.includes(v));
                                 const indeterminate = selectedValues.length > 0 && allValues.some(v => selectedValues.includes(v)) && !allSelected;
-                                
+
                                 return (
                                     <>
                                         <Checkbox
@@ -476,144 +497,151 @@ export const Table: React.FC<TableProps> = ({
         );
     };
 
+    const paginationTotalItems = isServerPagination
+        ? serverPagination?.hasMore
+            // Keep exactly one extra "virtual" page available to trigger load-more.
+            ? Math.max(1, Math.ceil(filteredData.length / pageSize)) * pageSize + 1
+            : filteredData.length
+        : filteredData.length;
+
     return (
         <TableWrapper
-                title={title}
-                onExport={handleExport}
-                isEmpty={filteredData.length === 0}
-                enableToolbar={true}
-                searchPlaceholder="Search table..."
-                searchValue={searchValue}
-                onSearchChange={(value) => {
-                    setSearchValue(value);
-                    setPage(1);
-                }}
-            >
+            title={title}
+            onExport={handleExport}
+            isEmpty={filteredData.length === 0}
+            enableToolbar={true}
+            searchPlaceholder="Search table..."
+            searchValue={searchValue}
+            onSearchChange={(value) => {
+                setSearchValue(value);
+                setClientPage(1);
+            }}
+        >
             <div className={styles.tableWrapper}>
                 <div ref={tableContainerRef}>
                     <DataTable
-                        rows={rows} 
-                        headers={carbonHeaders} 
+                        rows={rows}
+                        headers={carbonHeaders}
                         sortRow={universalSortRow}
-                        >
+                    >
                         {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
                             <CarbonTable {...getTableProps()}>
                                 <TableContainer
                                     className={styles.tableContainer}
                                     style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
-                                    >
-                                {getActiveFilters().length > 0 && (
-                                    <div className={styles.activeFilters}>
-                                        {getActiveFilters().map((filter) => (
-                                        <Tag
-                                            key={filter.columnIndex}
-                                            type="blue"
-                                            filter
-                                            onClose={() => removeFilter(filter.columnIndex)}
-                                            title={`Filter: ${filter.columnName} = ${filter.displayText}`}
-                                        >
-                                            {filter.columnName}: {filter.displayText}
-                                        </Tag>
-                                        ))}
-                                    </div>
-                                )}        
-                                <TableHead>
-                                    <TableRow className={styles.stickyHeader}>
-                                        {headers.map((header, index) => {
-                                            const isColumnSortable = isSortable[index] ?? false;
-                                            const { key, ...headerProps } = getHeaderProps({ 
-                                                header,
-                                                isSortable: isColumnSortable
-                                            });
-                                            const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
-                                            return (
-                                                <TableHeader 
-                                                    key={key} 
-                                                    {...headerProps}
-                                                    className={isColumnSortable ? styles.sortableHeader : undefined}
-                                                    // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
-                                                    // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                    style={{minWidth: `${(100 + headers.length) / headers.length}%`}}
+                                >
+                                    {getActiveFilters().length > 0 && (
+                                        <div className={styles.activeFilters}>
+                                            {getActiveFilters().map((filter) => (
+                                                <Tag
+                                                    key={filter.columnIndex}
+                                                    type="blue"
+                                                    filter
+                                                    onClose={() => removeFilter(filter.columnIndex)}
+                                                    title={`Filter: ${filter.columnName} = ${filter.displayText}`}
                                                 >
-                                                    <div className={styles.headerContent}>
-                                                        <span className={styles.headerText}>
-                                                            {header.header}
-                                                        </span>
-                                                        {filterSchema[index] && (
-                                                            <div 
-                                                                className={styles.headerCell}
-                                                                ref={(el) => { filterButtonRefs.current[index] = el; }}
-                                                            >
-                                                                <IconButton 
-                                                                    label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
-                                                                    align="bottom-right"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openFilterForColumn(index);
-                                                                    }}
-                                                                    kind = 'ghost'
-                                                                    size="sm"
-                                                                    className={activeFilter ? styles.activeFilterButton : undefined}
-                                                                    data-filter-button
-                                                                >
-                                                                    <Filter/>
-                                                                </IconButton>
-                                                                {renderFilterPopup(index)}
-                                                            </div>
-                                                        )} 
-                                                    </div>
-                                                </TableHeader>
-                                            );
-                                        })}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {rows.map((row, rowIndex) => {
-                                        const { key, ...rowProps } = getRowProps({ row });
-                                        const originalRow = paginatedRows[rowIndex];
-                                        const originalIndex = onRowClick
-                                            ? dataEntries.indexOf(originalRow)
-                                            : -1;
-                                        return (
-                                            <TableRow
-                                                key={key}
-                                                {...rowProps}
-                                                onClick={onRowClick ? () => onRowClick(originalRow, originalIndex) : undefined}
-                                                style={onRowClick ? { cursor: 'pointer' } : undefined}
-                                            >
-                                                {row.cells.map((cell, cellIndex) => {
-                                                    // Extract raw value and apply renderer/class logic here
-                                                    const rawValue = cell.value;
-                                                    const renderer = cellRenderers[cellIndex];
-                                                    const className = classnames[cellIndex];
-
-                                                    return (
+                                                    {filter.columnName}: {filter.displayText}
+                                                </Tag>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <TableHead>
+                                        <TableRow className={styles.stickyHeader}>
+                                            {headers.map((header, index) => {
+                                                const isColumnSortable = isSortable[index] ?? false;
+                                                const { key, ...headerProps } = getHeaderProps({
+                                                    header,
+                                                    isSortable: isColumnSortable
+                                                });
+                                                const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
+                                                return (
+                                                    <TableHeader
+                                                        key={key}
+                                                        {...headerProps}
+                                                        className={isColumnSortable ? styles.sortableHeader : undefined}
                                                         // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
                                                         // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                        <TableCell key={cell.id} style={{minWidth: `${(100 + headers.length) / headers.length}%`}}>
-                                                            {renderer 
-                                                                ? renderer(rawValue, paginatedRows[rowIndex], rowIndex) 
-                                                                : <span className={className}>{rawValue}</span>
-                                                            }
-                                                        </TableCell>
-                                                    );
-                                                })}
-                                            </TableRow>                                        
-                                        );
-                                    })}
-
-                                    {rows.length === 0 && (
-                                        <TableRow className={styles.noHover}>
-                                            <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    No data available
-                                                </div>
-                                            </TableCell>
+                                                        style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}
+                                                    >
+                                                        <div className={styles.headerContent}>
+                                                            <span className={styles.headerText}>
+                                                                {header.header}
+                                                            </span>
+                                                            {filterSchema[index] && (
+                                                                <div
+                                                                    className={styles.headerCell}
+                                                                    ref={(el) => { filterButtonRefs.current[index] = el; }}
+                                                                >
+                                                                    <IconButton
+                                                                        label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
+                                                                        align="bottom-right"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openFilterForColumn(index);
+                                                                        }}
+                                                                        kind='ghost'
+                                                                        size="sm"
+                                                                        className={activeFilter ? styles.activeFilterButton : undefined}
+                                                                        data-filter-button
+                                                                    >
+                                                                        <Filter />
+                                                                    </IconButton>
+                                                                    {renderFilterPopup(index)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </TableHeader>
+                                                );
+                                            })}
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </TableContainer>
-                        </CarbonTable>
+                                    </TableHead>
+                                    <TableBody>
+                                        {rows.map((row, rowIndex) => {
+                                            const { key, ...rowProps } = getRowProps({ row });
+                                            const originalRow = paginatedRows[rowIndex];
+                                            const originalIndex = onRowClick
+                                                ? dataEntries.indexOf(originalRow)
+                                                : -1;
+                                            return (
+                                                <TableRow
+                                                    key={key}
+                                                    {...rowProps}
+                                                    onClick={onRowClick ? () => onRowClick(originalRow, originalIndex) : undefined}
+                                                    style={onRowClick ? { cursor: 'pointer' } : undefined}
+                                                >
+                                                    {row.cells.map((cell, cellIndex) => {
+                                                        // Extract raw value and apply renderer/class logic here
+                                                        const rawValue = cell.value;
+                                                        const renderer = cellRenderers[cellIndex];
+                                                        const className = classnames[cellIndex];
+
+                                                        return (
+                                                            // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
+                                                            // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
+                                                            <TableCell key={cell.id} style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}>
+                                                                {renderer
+                                                                    ? renderer(rawValue, paginatedRows[rowIndex], rowIndex)
+                                                                    : <span className={className}>{rawValue}</span>
+                                                                }
+                                                            </TableCell>
+                                                        );
+                                                    })}
+                                                </TableRow>
+                                            );
+                                        })}
+
+                                        {rows.length === 0 && (
+                                            <TableRow className={styles.noHover}>
+                                                <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                    <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        No data available
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </TableContainer>
+                            </CarbonTable>
                         )}
                     </DataTable>
                 </div>
@@ -624,15 +652,51 @@ export const Table: React.FC<TableProps> = ({
                         page={page}
                         pageSize={pageSize}
                         pageSizes={[20, 30, 40, 50]}
-                        totalItems={filteredData.length}
-                        onChange={({ page, pageSize }) => {
-                            setPage(page);
-                            setPageSize(pageSize);
+                        totalItems={paginationTotalItems}
+                        onChange={({ page: nextPage, pageSize: nextPageSize }) => {
+                            if (isServerPagination) {
+                                if (serverPagination?.isLoading) {
+                                    return;
+                                }
+
+                                if (nextPageSize !== pageSize) {
+                                    setClientPageSize(nextPageSize);
+                                    const resizedMaxPage = Math.max(1, Math.ceil(filteredData.length / nextPageSize));
+                                    setClientPage(Math.min(nextPage, resizedMaxPage));
+                                    return;
+                                }
+
+                                if (nextPage <= maxLoadedClientPage) {
+                                    setClientPage(nextPage);
+                                    return;
+                                }
+
+                                const requestingLoadMorePage =
+                                    page === maxLoadedClientPage &&
+                                    nextPage === page + 1;
+                                if (requestingLoadMorePage && serverPagination?.hasMore) {
+                                    void (async () => {
+                                        try {
+                                            const didLoad = await serverPagination.onPageChange(nextPage);
+                                            if (didLoad === false) {
+                                                return;
+                                            }
+                                            setClientPage(nextPage);
+                                        } catch {
+                                            // Parent handles error reporting and loading state.
+                                        }
+                                    })();
+                                }
+                                return;
+                            }
+
+                            setClientPage(nextPage);
+                            setClientPageSize(nextPageSize);
                         }}
                     />
                 </div>
             </div>
         </TableWrapper>
     );
-} 
+}
 

@@ -3,7 +3,6 @@ import {
   type PnLAggregation,
   type PnLDataPoint,
 } from "@sv/services/wallet/walletData.service.js";
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 type TimePeriod = "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
 type Aggregation = PnLAggregation;
@@ -45,7 +44,6 @@ export async function getHistoricalPnLData(
   wallets: string[] = [],
   timePeriod: TimePeriod = "30D",
   aggregation: Aggregation = "daily",
-  chain: SupportedChain = "solana",
 ): Promise<HistoricalPnLResponse> {
   const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
 
@@ -64,7 +62,7 @@ export async function getHistoricalPnLData(
   if (normalizedWallets.length >= 2) {
     const walletPnLItems = await Promise.all(
       normalizedWallets.map((walletAddress) =>
-        getCumulativePnL(walletAddress, chain, timePeriod, aggregation),
+        getCumulativePnL(walletAddress, timePeriod, aggregation),
       ),
     );
 
@@ -90,7 +88,6 @@ export async function getHistoricalPnLData(
 
   const walletPnL = await getCumulativePnL(
     normalizedWallets[0],
-    chain,
     timePeriod,
     aggregation,
   );

@@ -62,7 +62,6 @@ const app = new Hono()
         params.wallets,
         params.period,
         params.aggregation,
-        "solana",
       );
 
       return c.json(data, 200);

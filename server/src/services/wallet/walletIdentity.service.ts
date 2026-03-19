@@ -1,4 +1,3 @@
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import type {
     HeliusWalletIdentityBatchRaw,
     HeliusWalletIdentityRaw,
@@ -15,7 +14,6 @@ import {
     getEndpoint,
     getRequiredHeaders,
     heliusFetch,
-    resolveChainForAddress,
 } from "@sv/util/util-helius.js";
 
 export const WALLET_IDENTITY_MAX_BATCH_SIZE = 100;
@@ -25,7 +23,6 @@ const SOLANA_BASE58_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 export type WalletIdentityErrorCode =
     | "invalid_address"
     | "invalid_batch"
-    | "unsupported_chain"
     | "provider_bad_request"
     | "provider_unauthorized"
     | "provider_rate_limited"
@@ -140,19 +137,6 @@ function assertValidIdentityAddress(address: string): string {
     return normalized;
 }
 
-function assertSupportedIdentityChain(address: string, chain: SupportedChain): SupportedChain {
-    const resolvedChain = resolveChainForAddress(address, chain);
-    if (resolvedChain !== "solana") {
-        throw new WalletIdentityServiceError(
-            `Wallet identity is currently supported only for Solana (resolved chain: ${resolvedChain})`,
-            "unsupported_chain",
-            400,
-        );
-    }
-
-    return resolvedChain;
-}
-
 function asStringOrNull(value: unknown): string | null {
     if (typeof value !== "string") {
         return null;
@@ -227,7 +211,6 @@ export function buildUnavailableIdentity(): WalletIdentityNormalized {
 
 function buildWalletIdentityResponse(
     address: string,
-    chain: SupportedChain,
     identity: WalletIdentityNormalized,
     options?: WalletIdentityResponseOptions,
 ): WalletIdentityResponse {
@@ -235,7 +218,6 @@ function buildWalletIdentityResponse(
 
     return {
         address,
-        chain,
         identity,
         metadata: {
             cache: {
@@ -450,16 +432,13 @@ function buildRawBatchMap(
 
 export async function getWalletIdentity(
     address: string,
-    chain: SupportedChain = "solana",
 ): Promise<WalletIdentityResponse> {
     const validatedAddress = assertValidIdentityAddress(address);
-    const resolvedChain = assertSupportedIdentityChain(validatedAddress, chain);
-    const cachedIdentity = await getCachedWalletIdentity(validatedAddress, resolvedChain);
+    const cachedIdentity = await getCachedWalletIdentity(validatedAddress);
 
     if (cachedIdentity?.isFresh) {
         return buildWalletIdentityResponse(
             validatedAddress,
-            resolvedChain,
             cachedIdentity.identity,
             {
                 cacheHit: true,
@@ -476,14 +455,12 @@ export async function getWalletIdentity(
             const unknownIdentity = normalizeWalletIdentity(null);
             await saveWalletIdentityCache({
                 address: validatedAddress,
-                chain: resolvedChain,
                 identity: unknownIdentity,
                 raw: null,
             });
 
             return buildWalletIdentityResponse(
                 validatedAddress,
-                resolvedChain,
                 unknownIdentity,
                 {
                     cacheHit: false,
@@ -501,14 +478,12 @@ export async function getWalletIdentity(
 
         await saveWalletIdentityCache({
             address: validatedAddress,
-            chain: resolvedChain,
             identity: normalizedIdentity,
             raw: rawPayload,
         });
 
         return buildWalletIdentityResponse(
             validatedAddress,
-            resolvedChain,
             normalizedIdentity,
             {
                 cacheHit: false,
@@ -521,7 +496,6 @@ export async function getWalletIdentity(
             const providerError = err instanceof WalletIdentityServiceError ? err : null;
             return buildWalletIdentityResponse(
                 validatedAddress,
-                resolvedChain,
                 cachedIdentity.identity,
                 {
                     cacheHit: true,
@@ -539,7 +513,6 @@ export async function getWalletIdentity(
 
 export async function getWalletIdentityBatch(
     addresses: string[],
-    chain: SupportedChain = "solana",
 ): Promise<WalletIdentityBatchResponse> {
     const normalizedInputAddresses = Array.isArray(addresses)
         ? addresses.map((address) => assertValidIdentityAddress(address))
@@ -553,12 +526,10 @@ export async function getWalletIdentityBatch(
         );
     }
 
-    const resolvedChain = assertSupportedIdentityChain(normalizedInputAddresses[0], chain);
-
     const uniqueAddresses = normalizeBatchRequestAddresses(normalizedInputAddresses);
     const cacheEntries = await Promise.all(
         uniqueAddresses.map(async (address) => {
-            const cached = await getCachedWalletIdentity(address, resolvedChain);
+            const cached = await getCachedWalletIdentity(address);
             return [address, cached] as const;
         }),
     );
@@ -573,7 +544,7 @@ export async function getWalletIdentityBatch(
         if (cached?.isFresh) {
             resultByAddress.set(
                 address,
-                buildWalletIdentityResponse(address, resolvedChain, cached.identity, {
+                buildWalletIdentityResponse(address, cached.identity, {
                     cacheHit: true,
                     cacheStale: false,
                     cacheTtlSec: cached.ttlSec,
@@ -600,14 +571,13 @@ export async function getWalletIdentityBatch(
 
                 await saveWalletIdentityCache({
                     address,
-                    chain: resolvedChain,
                     identity: normalizedIdentity,
                     raw: rawPayload,
                 });
 
                 resultByAddress.set(
                     address,
-                    buildWalletIdentityResponse(address, resolvedChain, normalizedIdentity, {
+                    buildWalletIdentityResponse(address, normalizedIdentity, {
                         cacheHit: false,
                         cacheStale: false,
                         providerStatusCode: batchRawResult.statusCode,
@@ -622,7 +592,7 @@ export async function getWalletIdentityBatch(
                 if (cached) {
                     resultByAddress.set(
                         address,
-                        buildWalletIdentityResponse(address, resolvedChain, cached.identity, {
+                        buildWalletIdentityResponse(address, cached.identity, {
                             cacheHit: true,
                             cacheStale: true,
                             cacheTtlSec: cached.ttlSec,
@@ -635,7 +605,7 @@ export async function getWalletIdentityBatch(
 
                 resultByAddress.set(
                     address,
-                    buildWalletIdentityResponse(address, resolvedChain, buildUnavailableIdentity(), {
+                    buildWalletIdentityResponse(address, buildUnavailableIdentity(), {
                         cacheHit: false,
                         cacheStale: false,
                         providerStatusCode: providerError?.providerStatusCode,
@@ -649,11 +619,9 @@ export async function getWalletIdentityBatch(
     const byAddress = new Map(resultByAddress.entries());
 
     return {
-        chain: resolvedChain,
         results: normalizedInputAddresses.map(
             (address) => byAddress.get(address) ?? buildWalletIdentityResponse(
                 address,
-                resolvedChain,
                 normalizeWalletIdentity(null),
                 { providerStatusCode: 404 },
             ),

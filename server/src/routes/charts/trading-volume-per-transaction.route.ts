@@ -1,3 +1,4 @@
+// Request Schema
 /**
  * Trading Volume Per Transaction Chart API Route
  * 
@@ -51,17 +52,17 @@ const app = new Hono()
       // Validate query parameters
       const query = c.req.query();
       const params = tradingVolumePerTransactionRequestSchema.parse(query);
-      
+
       // Generate trading volume per transaction data
       const data = generateTradingVolumePerTransaction(
         params.period,
         params.wallets,
         params.type
       );
-      
+
       // Return response
       return c.json(data, 200);
-      
+
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
@@ -70,7 +71,7 @@ const app = new Hono()
           details: error.issues,
         }, 400);
       }
-      
+
       // Handle other errors
       console.error('[TradingVolumePerTransactionChart] Error fetching trading volume per transaction data:', error);
       return c.json({

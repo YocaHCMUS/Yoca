@@ -47,6 +47,8 @@ interface AssetItem {
   value: number;
   percentage: number;
   color?: string;
+  /** Logo image URL from enriched backend metadata – undefined when unavailable */
+  logoUri?: string;
 }
 
 // ── Grouping helper ────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Track selected assets for legend filtering
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
@@ -238,7 +240,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     isMultiWallet?: boolean
   ): EChartsOption => {
     const base = getThemedChartBaseOption(chartTheme);
-    
+
     // Filter data based on selected assets in multi-wallet view
     const preGrouped = isMultiWallet && selectedAssets.size > 0
       ? distributionData.filter(a => selectedAssets.has(a.name))
@@ -269,7 +271,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => {
           const isOthers = p.name === othersLabel;
-          let html = createTooltipHeader(p.name);
+          const logoUri: string | undefined = p.data.logoUri;
+          // Build header: optional logo image followed by the token name
+          const logoHtml = logoUri
+            ? `<img src="${logoUri}" alt="${p.name}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">`
+            : '';
+          let html = createTooltipHeader(`${logoHtml}${p.name}`);
           if (isOthers && p.data.hiddenNames?.length > 0) {
             html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
             html += (p.data.hiddenNames as string[])
@@ -319,12 +326,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             value: a.value,
             percentage: a.percentage,
             hiddenNames: (a as any).hiddenNames,
+            // Forward logoUri so the tooltip formatter can render it
+            logoUri: (a as AssetItem).logoUri,
             itemStyle: {
               color:
                 a.name === othersLabel
                   ? chartTheme.textColorSecondary   // neutral grey for Others
                   : (a as any).color ??
-                    chartTheme.colorPalette[i % chartTheme.colorPalette.length],
+                  chartTheme.colorPalette[i % chartTheme.colorPalette.length],
               borderColor: '#ffffff',
               borderWidth: 2,
               borderRadius: 6,
@@ -367,9 +376,9 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    */
   const aggregatedLegendData = useMemo(() => {
     if (!data || !('wallets' in data) || !data.wallets || data.wallets.length <= 1) return null;
-    
+
     const uniqueAssets = new Map<string, { name: string; color: string }>();
-    
+
     data.wallets.forEach((wallet: any, walletIndex: number) => {
       wallet.data.forEach((asset: any, assetIndex: number) => {
         if (!uniqueAssets.has(asset.name)) {
@@ -380,10 +389,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         }
       });
     });
-    
+
     return Array.from(uniqueAssets.values());
   }, [data, chartTheme.colorPalette]);
-  
+
   /**
    * Initialize selected assets when data changes
    */
@@ -392,7 +401,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
     }
   }, [aggregatedLegendData]);
-  
+
   /**
    * Toggle asset selection for legend filtering
    */
@@ -491,11 +500,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
-      emptyState={filters.wallets && filters.wallets.length === 0 
+      emptyState={filters.wallets && filters.wallets.length === 0
         ? {
-            title: tr('charts.noWalletsTitle'),
-            message: tr('charts.assetDistributionChart.noWalletsMessage'),
-          }
+          title: tr('charts.noWalletsTitle'),
+          message: tr('charts.assetDistributionChart.noWalletsMessage'),
+        }
         : undefined}
       onRetry={() => refetch(false)}
       onExport={handleExport}

@@ -1,4 +1,3 @@
-import type { SupportedChain } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import type {
     WalletIdentityAnalysis,
     WalletIdentityResponse,
@@ -14,11 +13,9 @@ import {
     getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 
-const DEFAULT_CHAIN: SupportedChain = "solana";
 const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
 
 type ComposeWalletIntelligenceOptions = {
-    chain?: SupportedChain;
     userId?: string;
     includeUserTags?: boolean;
 };
@@ -146,12 +143,12 @@ function buildWalletIdentityAnalysis(input: {
     };
 }
 
-async function getAnalysisInputs(address: string, chain: SupportedChain): Promise<AnalysisInputs> {
+async function getAnalysisInputs(address: string): Promise<AnalysisInputs> {
     const [overviewResult, exchangeResult] = await Promise.all([
-        getWalletOverview(address, chain, { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC })
+        getWalletOverview(address, { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC })
             .then((overview) => ({ ok: true as const, value: overview }))
             .catch(() => ({ ok: false as const, value: null })),
-        getWalletExchangeCounts(address, chain, { limit: 100 })
+        getWalletExchangeCounts(address, { limit: 100 })
             .then((exchanges) => ({ ok: true as const, value: exchanges }))
             .catch(() => ({ ok: false as const, value: null })),
     ]);
@@ -197,12 +194,10 @@ async function getOptionalUserTags(userId: string | undefined, address: string):
 
 function buildUnavailableIdentityResponse(
     address: string,
-    chain: SupportedChain,
     err: WalletIdentityServiceError,
 ): WalletIdentityResponse {
     return {
         address,
-        chain,
         identity: buildUnavailableIdentity(),
         metadata: {
             cache: {
@@ -223,7 +218,7 @@ async function composeFromIdentityResponse(
     options?: ComposeWalletIntelligenceOptions,
 ): Promise<WalletIntelligenceResponse> {
     const [analysisInputs, userTags] = await Promise.all([
-        getAnalysisInputs(identityResponse.address, identityResponse.chain),
+        getAnalysisInputs(identityResponse.address),
         options?.includeUserTags === false
             ? Promise.resolve([])
             : getOptionalUserTags(options?.userId, identityResponse.address),
@@ -237,7 +232,6 @@ async function composeFromIdentityResponse(
 
     return {
         address: identityResponse.address,
-        chain: identityResponse.chain,
         identity: identityResponse.identity,
         analysis,
         metadata: {
@@ -259,15 +253,13 @@ export async function composeWalletIntelligence(
     address: string,
     options?: ComposeWalletIntelligenceOptions,
 ): Promise<WalletIntelligenceResponse> {
-    const chain = options?.chain ?? DEFAULT_CHAIN;
-
     let identityResponse: WalletIdentityResponse;
 
     try {
-        identityResponse = await getWalletIdentity(address, chain);
+        identityResponse = await getWalletIdentity(address);
     } catch (err) {
         if (isRecoverableProviderError(err)) {
-            identityResponse = buildUnavailableIdentityResponse(address, chain, err);
+            identityResponse = buildUnavailableIdentityResponse(address, err);
         } else {
             throw err;
         }
@@ -280,8 +272,7 @@ export async function composeWalletIntelligenceBatch(
     addresses: string[],
     options?: ComposeWalletIntelligenceOptions,
 ): Promise<WalletIntelligenceBatchResponse> {
-    const chain = options?.chain ?? DEFAULT_CHAIN;
-    const identityBatch = await getWalletIdentityBatch(addresses, chain);
+    const identityBatch = await getWalletIdentityBatch(addresses);
 
     const intelligenceResults = await Promise.all(
         identityBatch.results.map((identityResponse) =>
@@ -290,7 +281,6 @@ export async function composeWalletIntelligenceBatch(
     );
 
     return {
-        chain,
         results: intelligenceResults,
     };
 }
