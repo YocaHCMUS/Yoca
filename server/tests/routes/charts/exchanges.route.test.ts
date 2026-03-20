@@ -50,7 +50,7 @@ describe("charts/exchanges.route", () => {
                 period: "7D",
                 metric: "count",
                 source: "cache",
-                limit: 10,
+                limit: 2000,
             },
         });
     });
@@ -89,7 +89,7 @@ describe("charts/exchanges.route", () => {
 
         expect(getWalletExchangeCountsMock).toHaveBeenCalledWith("wallet-2", {
             period: "60D",
-            limit: 10,
+            limit: 2000,
             metric: "count",
             chain: "solana",
         });

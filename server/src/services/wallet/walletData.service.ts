@@ -72,15 +72,9 @@ const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
 const DEFAULT_SWAP_PROVIDER_SOURCE = "helius";
 const WALLET_TABLE_PAGE_SIZE = 100;
-const DEFAULT_EXCHANGE_PERIOD = "30D";
-const DEFAULT_EXCHANGE_LIMIT = 10;
-const MIN_EXCHANGE_LIMIT = 1;
-const MAX_EXCHANGE_LIMIT = 100;
-const MAX_EXCHANGE_SWAPS = 5000;
-const MAX_EXCHANGE_PAGES = 100;
+const DEFAULT_EXCHANGE_LIMIT = 2000;
 
 type SwapProviderSource = "helius" | "moralis";
-type WalletExchangeTimePeriod = "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
 type WalletExchangeAccumulator = {
   name: string;
   deposits: number;
@@ -1304,44 +1298,6 @@ export async function getWalletSwaps(
   }
 }
 
-function normalizeExchangePeriod(rawPeriod?: string): WalletExchangeTimePeriod {
-  const normalized = String(rawPeriod ?? "").trim().toUpperCase();
-
-  if (normalized === "ALL") {
-    return "All";
-  }
-
-  if (
-    normalized === "7D" ||
-    normalized === "30D" ||
-    normalized === "60D" ||
-    normalized === "90D" ||
-    normalized === "1Y"
-  ) {
-    return normalized;
-  }
-
-  return DEFAULT_EXCHANGE_PERIOD;
-}
-
-function clampExchangeLimit(rawLimit?: number): number {
-  const parsed = Number(rawLimit ?? DEFAULT_EXCHANGE_LIMIT);
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_EXCHANGE_LIMIT;
-  }
-
-  const integerLimit = Math.floor(parsed);
-  if (integerLimit < MIN_EXCHANGE_LIMIT) {
-    return MIN_EXCHANGE_LIMIT;
-  }
-
-  if (integerLimit > MAX_EXCHANGE_LIMIT) {
-    return MAX_EXCHANGE_LIMIT;
-  }
-
-  return integerLimit;
-}
-
 function normalizeExchangeMetric(rawMetric?: "count" | "volume"): "count" | "volume" {
   return rawMetric === "volume" ? "volume" : "count";
 }
@@ -1452,31 +1408,26 @@ function collapseSwapSources(
 
 async function collectWalletSwapsForExchangeAggregation(
   address: string,
-  period: WalletExchangeTimePeriod,
+  transactionLimit: number,
 ): Promise<{
   swaps: WalletSwap[];
   source: WalletPageInfo["source"];
   truncated: boolean;
 }> {
-  const nowMs = Date.now();
-  const fromMs = getRangeStartMs(nowMs, period);
   const swaps: WalletSwap[] = [];
   const sources = new Set<WalletPageInfo["source"]>();
 
   let cursor: string | undefined;
   let hasMore = true;
   let pageCount = 0;
-  let reachedPeriodBoundary = false;
 
   while (
     hasMore &&
-    !reachedPeriodBoundary &&
-    swaps.length < MAX_EXCHANGE_SWAPS &&
-    pageCount < MAX_EXCHANGE_PAGES
+    swaps.length < transactionLimit
   ) {
     pageCount += 1;
 
-    const remainingCapacity = Math.max(1, MAX_EXCHANGE_SWAPS - swaps.length);
+    const remainingCapacity = Math.max(1, transactionLimit - swaps.length);
     const pageLimit = Math.min(WALLET_TABLE_PAGE_SIZE, remainingCapacity);
     const page = await getWalletSwaps(address, {
       limit: pageLimit,
@@ -1487,26 +1438,11 @@ async function collectWalletSwapsForExchangeAggregation(
     sources.add(page.pageInfo.source);
 
     for (const swap of page.swaps) {
-      const timestampMs = Date.parse(String(swap.timestamp ?? ""));
-
-      if (!Number.isFinite(timestampMs)) {
-        continue;
-      }
-
-      if (period !== "All" && timestampMs < fromMs) {
-        reachedPeriodBoundary = true;
-        break;
-      }
-
       swaps.push(swap);
 
-      if (swaps.length >= MAX_EXCHANGE_SWAPS) {
+      if (swaps.length >= transactionLimit) {
         break;
       }
-    }
-
-    if (reachedPeriodBoundary || swaps.length >= MAX_EXCHANGE_SWAPS) {
-      break;
     }
 
     hasMore = Boolean(page.pageInfo.hasMore);
@@ -1519,9 +1455,8 @@ async function collectWalletSwapsForExchangeAggregation(
   }
 
   const truncated =
-    !reachedPeriodBoundary &&
     hasMore &&
-    (swaps.length >= MAX_EXCHANGE_SWAPS || pageCount >= MAX_EXCHANGE_PAGES);
+    (swaps.length >= transactionLimit);
 
   return {
     swaps,
@@ -1531,10 +1466,8 @@ async function collectWalletSwapsForExchangeAggregation(
 }
 
 export type WalletExchangeCountsOptions = {
-  period?: string;
   limit?: number;
   metric?: "count" | "volume";
-  chain?: string;
 };
 
 /**
@@ -1549,39 +1482,20 @@ export async function getWalletExchangeCounts(
   address: string,
   options?: WalletExchangeCountsOptions,
 ): Promise<WalletExchangeCountsResponse> {
-  const normalizedAddress = String(address ?? "").trim();
-  const normalizedChain = String(options?.chain ?? "solana").trim().toLowerCase();
-  const period = normalizeExchangePeriod(options?.period);
-  const limit = clampExchangeLimit(options?.limit);
+  const transactionLimit = options?.limit ?? DEFAULT_EXCHANGE_LIMIT;
   const metric = normalizeExchangeMetric(options?.metric);
 
-  if (!normalizedAddress || normalizedChain !== "solana") {
-    return {
-      exchanges: [],
-      metadata: {
-        period,
-        metric,
-        source: "mixed",
-        limit,
-        truncated: false,
-      },
-    };
-  }
-
-  const dataset = await collectWalletSwapsForExchangeAggregation(normalizedAddress, period);
+  const dataset = await collectWalletSwapsForExchangeAggregation(
+    address,
+    transactionLimit,
+  );
   const byBucket = new Map<string, WalletExchangeAccumulator>();
   const dedupe = new Set<string>();
-  const walletLower = normalizedAddress.toLowerCase();
+  const walletLower = address.toLowerCase();
 
   for (const swap of dataset.swaps) {
     const signature = String(swap.signature ?? "").trim().toLowerCase();
     if (!signature) {
-      continue;
-    }
-
-    const hasBoughtLeg = swap.bought != null;
-    const hasSoldLeg = swap.sold != null;
-    if (!hasBoughtLeg && !hasSoldLeg) {
       continue;
     }
 
@@ -1602,12 +1516,11 @@ export async function getWalletExchangeCounts(
 
     const { depositsVolume, withdrawalsVolume } = resolveSwapSideVolumes(swap);
 
-    if (hasBoughtLeg) {
+    const transactionType = swap.transactionType ?? "unknown";
+    if (transactionType === "buy") {
       accumulator.deposits += 1;
       accumulator.depositsVolume += depositsVolume;
-    }
-
-    if (hasSoldLeg) {
+    } else if (transactionType === "sell") {
       accumulator.withdrawals += 1;
       accumulator.withdrawalsVolume += withdrawalsVolume;
     }
@@ -1631,7 +1544,6 @@ export async function getWalletExchangeCounts(
 
       return a.name.localeCompare(b.name);
     })
-    .slice(0, limit)
     .map((item) => ({
       ...item,
       depositsVolume: roundUsd(item.depositsVolume),
@@ -1641,10 +1553,9 @@ export async function getWalletExchangeCounts(
   return {
     exchanges,
     metadata: {
-      period,
       metric,
       source: dataset.source,
-      limit,
+      limit: transactionLimit,
       truncated: dataset.truncated,
     },
   };

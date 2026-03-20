@@ -17,10 +17,10 @@ import { DEFAULT_FILTERS, validateFilters } from '../types/chart-filters.types';
 interface UseChartFiltersOptions {
   /** Initial filter state */
   initialFilters?: Partial<ChartFilters>;
-  
+
   /** Debounce delay in milliseconds (default: 300ms) */
   debounceDelay?: number;
-  
+
   /** Callback when filters change (after debounce) */
   onFiltersChange?: (filters: ChartFilters) => void;
 }
@@ -31,31 +31,34 @@ interface UseChartFiltersOptions {
 interface UseChartFiltersReturn {
   /** Current filter state */
   filters: ChartFilters;
-  
+
   /** Immediate filter state (before debounce) */
   immediateFilters: ChartFilters;
-  
+
   /** Update time period filter */
   setTimePeriod: (period: TimePeriod) => void;
-  
+
   /** Update tokens filter */
   setTokens: (tokens: string[]) => void;
-  
+
   /** Update transaction type filter */
   setTransactionType: (type: TransactionType) => void;
-  
+
   /** Update wallets filter */
   setWallets: (wallets: string[] | undefined) => void;
-  
+
   /** Update custom date range */
   setCustomDateRange: (range: DateRange | undefined) => void;
-  
+
+  /** Update limit */
+  setLimit: (limit: number) => void;
+
   /** Reset filters to default */
   resetFilters: () => void;
-  
+
   /** Check if filters are valid */
   isValid: boolean;
-  
+
   /** Check if filters are loading (debouncing) */
   isDebouncing: boolean;
 }
@@ -85,44 +88,44 @@ export function useChartFilters(options: UseChartFiltersOptions = {}): UseChartF
     debounceDelay = 300,
     onFiltersChange,
   } = options;
-  
+
   // Merge initial filters with defaults
   const mergedInitialFilters: ChartFilters = {
     ...DEFAULT_FILTERS,
     ...initialFilters,
   };
-  
+
   // Immediate filter state (updates instantly)
   const [immediateFilters, setImmediateFilters] = useState<ChartFilters>(mergedInitialFilters);
-  
+
   // Debounced filter state (updates after delay)
   const [filters, setFilters] = useState<ChartFilters>(mergedInitialFilters);
-  
+
   // Track if debouncing is in progress
   const [isDebouncing, setIsDebouncing] = useState(false);
-  
+
   // Validate filters
   const isValid = validateFilters(immediateFilters);
-  
+
   // Create debounced update function
   const debouncedUpdate = useRef(
     debounce((newFilters: ChartFilters) => {
       setFilters(newFilters);
       setIsDebouncing(false);
-      
+
       if (onFiltersChange) {
         onFiltersChange(newFilters);
       }
     }, debounceDelay)
   ).current;
-  
+
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
       debouncedUpdate.cancel();
     };
   }, [debouncedUpdate]);
-  
+
   // Generic update function
   const updateFilter = useCallback(
     (updates: Partial<ChartFilters>) => {
@@ -133,7 +136,7 @@ export function useChartFilters(options: UseChartFiltersOptions = {}): UseChartF
     },
     [immediateFilters, debouncedUpdate]
   );
-  
+
   // Specific update functions
   const setTimePeriod = useCallback(
     (period: TimePeriod) => {
@@ -145,28 +148,28 @@ export function useChartFilters(options: UseChartFiltersOptions = {}): UseChartF
     },
     [updateFilter, immediateFilters.customDateRange]
   );
-  
+
   const setTokens = useCallback(
     (tokens: string[]) => {
       updateFilter({ tokens });
     },
     [updateFilter]
   );
-  
+
   const setTransactionType = useCallback(
     (type: TransactionType) => {
       updateFilter({ transactionType: type });
     },
     [updateFilter]
   );
-  
+
   const setWallets = useCallback(
     (wallets: string[] | undefined) => {
       updateFilter({ wallets });
     },
     [updateFilter]
   );
-  
+
   const setCustomDateRange = useCallback(
     (range: DateRange | undefined) => {
       updateFilter({
@@ -177,18 +180,27 @@ export function useChartFilters(options: UseChartFiltersOptions = {}): UseChartF
     },
     [updateFilter, immediateFilters.timePeriod]
   );
-  
+
+  const setLimit = useCallback(
+    (limit: number) => {
+      updateFilter({ limit });
+    },
+    [updateFilter]
+  );
+
+
   const resetFilters = useCallback(() => {
     setImmediateFilters(DEFAULT_FILTERS);
     setFilters(DEFAULT_FILTERS);
     setIsDebouncing(false);
     debouncedUpdate.cancel();
-    
+
     if (onFiltersChange) {
       onFiltersChange(DEFAULT_FILTERS);
     }
   }, [debouncedUpdate, onFiltersChange]);
-  
+
+
   return {
     filters,
     immediateFilters,
@@ -200,5 +212,6 @@ export function useChartFilters(options: UseChartFiltersOptions = {}): UseChartF
     resetFilters,
     isValid,
     isDebouncing,
+    setLimit,
   };
 }

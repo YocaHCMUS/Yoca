@@ -27,7 +27,7 @@ export type TransactionType =
 export interface DateRange {
   /** Start date (inclusive) */
   start: Date;
-  
+
   /** End date (inclusive) */
   end: Date;
 }
@@ -38,16 +38,19 @@ export interface DateRange {
 export interface ChartFilters {
   /** Time range filter */
   timePeriod: TimePeriod;
-  
+
   /** Selected tokens (['All'] or specific tokens) */
   tokens?: string[];
-  
+
   /** Transaction type filter */
   transactionType: TransactionType;
-  
+
+  /** limit the amount of data used (default: 2000) */
+  limit?: number;
+
   /** Optional wallet filter */
   wallets?: string[];
-  
+
   /** Custom date range (if timePeriod is 'custom') */
   customDateRange?: DateRange;
 }
@@ -63,13 +66,13 @@ export type ExportFormat = 'png' | 'svg' | 'csv' | 'pdf';
 export interface ExportConfig {
   /** Export file format */
   format: ExportFormat;
-  
+
   /** Include metadata in export */
   includeMetadata: boolean;
-  
+
   /** Generated filename */
   filename: string;
-  
+
   /** Image quality (PNG only, 1-3) */
   quality?: number;
 }
@@ -80,16 +83,16 @@ export interface ExportConfig {
 export interface ExportMetadata {
   /** Chart title */
   chartTitle: string;
-  
+
   /** Active timezone */
   timezone: string;
-  
+
   /** Applied filters */
   filters: ChartFilters;
-  
+
   /** ISO 8601 timestamp */
   exportDate: string;
-  
+
   /** Number of data points */
   dataPointCount: number;
 
@@ -106,6 +109,7 @@ export const DEFAULT_FILTERS: ChartFilters = {
   transactionType: 'all',
   wallets: undefined,
   customDateRange: undefined,
+  limit: 2000,
 };
 
 /**
@@ -170,6 +174,7 @@ export function isDefaultFilters(filters: ChartFilters): boolean {
     (!filters.tokens || filters.tokens.length === 0) &&
     filters.transactionType === DEFAULT_FILTERS.transactionType &&
     filters.wallets === undefined &&
-    filters.customDateRange === undefined
+    filters.customDateRange === undefined &&
+    filters.limit === DEFAULT_FILTERS.limit
   );
 }

@@ -36,6 +36,14 @@ Final fallback to deterministic `Unknown` bucket.
 ## Exchange Aggregation Rules
 Each swap contributes one interaction to its resolved exchange bucket.
 
+Aggregation fetch window is transaction-count based, not time-window based:
+
+`limit` controls how many most-recent swaps are scanned.
+
+Default is `2000` transactions.
+
+Maximum is `10000` transactions to prevent large fetches.
+
 Count metrics:
 
 `deposits` maps to buy-side interactions when `bought` leg exists.
@@ -63,6 +71,8 @@ Target function:
 
 Input options should include period and limit with sensible bounds.
 
+`limit` represents number of swaps to aggregate (transaction count), not top-exchange rows.
+
 Aggregation should read from cached swaps when fresh and fetch provider gaps when needed.
 
 ### Phase 2: Extend Wallet Exchange Endpoint Contract
@@ -82,6 +92,8 @@ Add optional query inputs:
 `address` as single wallet override.
 
 `chain` and `period` for wallet-aware requests.
+
+`limit` as optional transaction-count cap for wallet-aware aggregation (default `2000`, max `10000`).
 
 Behavior:
 

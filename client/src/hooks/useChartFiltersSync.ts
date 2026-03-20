@@ -14,7 +14,7 @@ import type { ChartFilters } from '@/types/chart-filters.types';
 interface UseChartFiltersSyncOptions {
   /** Initial filter values */
   initialFilters?: Partial<ChartFilters>;
-  
+
   /** Debounce delay in milliseconds (default: 300) */
   debounceDelay?: number;
 }
@@ -34,8 +34,8 @@ interface UseChartFiltersSyncOptions {
  */
 export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
   const { initialFilters, debounceDelay = 300 } = options;
-  
-  const { filters, setTimePeriod, setWallets, setTokens, isValid } = useChartFilters({
+
+  const { filters, setTimePeriod, setWallets, setTokens, isValid, setLimit } = useChartFilters({
     initialFilters,
     debounceDelay,
   });
@@ -48,7 +48,7 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
    */
   useEffect(() => {
     const prevFilters = prevInitialFiltersRef.current;
-    
+
     // Check if wallets changed
     if (initialFilters?.wallets && Array.isArray(initialFilters.wallets)) {
       const prevWallets = Array.isArray(prevFilters?.wallets) ? prevFilters.wallets : [];
@@ -58,12 +58,12 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
         setWallets(initialFilters.wallets);
       }
     }
-    
+
     // Check if time period changed
     if (initialFilters?.timePeriod && prevFilters?.timePeriod !== initialFilters.timePeriod) {
       setTimePeriod(initialFilters.timePeriod);
     }
-    
+
     // Check if tokens changed
     if (initialFilters?.tokens && Array.isArray(initialFilters.tokens)) {
       const prevTokens = Array.isArray(prevFilters?.tokens) ? prevFilters.tokens : [];
@@ -73,7 +73,12 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
         setTokens(initialFilters.tokens);
       }
     }
-    
+
+    // Check if limit changed
+    if (initialFilters?.limit !== undefined && initialFilters.limit !== prevFilters?.limit) {
+      setLimit(initialFilters.limit);
+    }
+
     // Update ref for next comparison
     prevInitialFiltersRef.current = initialFilters;
   }, [initialFilters, setWallets, setTimePeriod, setTokens]);
@@ -103,6 +108,7 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
     setTimePeriod,
     setWallets,
     setTokens,
+    setLimit,
     isValid,
     walletsString,
     tokensString,

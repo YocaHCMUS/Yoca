@@ -41,17 +41,12 @@ export interface ExchangeComparisonProps {
   /** Chart minimum height in pixels */
   minHeight?: number;
 
-  /** Initial time period (default: 30D) */
-  initialTimePeriod?: TimePeriod;
+  walletAddress: string;
+
+  limit?: number;
 
   /** Metric to display: count (transaction count) or volume (USD value) */
   metric?: 'count' | 'volume';
-
-  /** Optional wallet context for wallet-aware exchange data */
-  walletAddress?: string;
-
-  /** Chain used for wallet-aware requests (default: solana) */
-  chain?: string;
 
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
@@ -64,28 +59,6 @@ export interface ExchangeComparisonProps {
 
   /** Additional CSS class */
   className?: string;
-}
-
-export function buildExchangeComparisonQuery(input: {
-  timePeriod: string;
-  metric: 'count' | 'volume';
-  timezone: string;
-  walletAddress?: string;
-  chain?: string;
-}): ExchangesRequestParams {
-  const query: ExchangesRequestParams = {
-    timePeriod: input.timePeriod,
-    metric: input.metric,
-    timezone: input.timezone,
-  };
-
-  const normalizedWalletAddress = String(input.walletAddress ?? '').trim();
-  if (normalizedWalletAddress) {
-    query.address = normalizedWalletAddress;
-    query.chain = String(input.chain ?? 'solana').trim() || 'solana';
-  }
-
-  return query;
 }
 
 /**
@@ -115,10 +88,9 @@ export function buildExchangeComparisonQuery(input: {
 export function ExchangeComparison({
   title,
   minHeight = 400,
-  initialTimePeriod = '30D',
-  metric = 'count',
   walletAddress,
-  chain = 'solana',
+  limit = 2000,
+  metric = 'count',
   autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
@@ -143,19 +115,18 @@ export function ExchangeComparison({
   // Use centralized filter sync hook
   const { filters } = useChartFiltersSync({
     initialFilters: {
-      timePeriod: initialTimePeriod,
+      limit,
     },
     debounceDelay: 300,
   });
 
   // Query for the controller
-  const query = useMemo<ExchangesRequestParams>(() => buildExchangeComparisonQuery({
-    timePeriod: filters.timePeriod,
+  const query = useMemo<ExchangesRequestParams>(() => ({
+    limit: filters.limit,
+    wallet: walletAddress,
     metric: currentMetric,
     timezone,
-    walletAddress,
-    chain,
-  }), [filters.timePeriod, currentMetric, timezone, walletAddress, chain]);
+  }), [filters.limit, currentMetric, timezone, walletAddress]);
 
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({

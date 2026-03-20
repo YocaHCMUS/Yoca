@@ -196,7 +196,7 @@ describe("walletData.service - getWalletExchangeCounts", () => {
         vi.useRealTimers();
     });
 
-    it("aggregates exchanges with bucket priority, dedupe, and period filtering", async () => {
+    it("aggregates exchanges with bucket priority and dedupe using transaction-count scan", async () => {
         hoisted.getCachedWalletSwapsChunkMock.mockResolvedValueOnce({
             available: true,
             cursorMatched: true,
@@ -258,11 +258,12 @@ describe("walletData.service - getWalletExchangeCounts", () => {
             truncated: false,
         });
 
-        expect(result.exchanges).toHaveLength(3);
+        expect(result.exchanges).toHaveLength(4);
 
         const jupiter = result.exchanges.find((row) => row.name === "Jupiter");
         const raydium = result.exchanges.find((row) => row.name === "Raydium CLMM");
         const unknown = result.exchanges.find((row) => row.name === "Unknown");
+        const oldExchange = result.exchanges.find((row) => row.name === "Old Exchange");
 
         expect(jupiter).toMatchObject({
             deposits: 1,
@@ -283,6 +284,13 @@ describe("walletData.service - getWalletExchangeCounts", () => {
             withdrawals: 1,
             depositsVolume: 40,
             withdrawalsVolume: 40,
+        });
+
+        expect(oldExchange).toMatchObject({
+            deposits: 1,
+            withdrawals: 1,
+            depositsVolume: 77,
+            withdrawalsVolume: 60,
         });
     });
 
@@ -318,7 +326,7 @@ describe("walletData.service - getWalletExchangeCounts", () => {
         });
     });
 
-    it("normalizes invalid period and clamps limit", async () => {
+    it("normalizes invalid period and clamps transaction limit", async () => {
         hoisted.getCachedWalletSwapsChunkMock.mockResolvedValueOnce({
             available: true,
             cursorMatched: true,
@@ -329,11 +337,11 @@ describe("walletData.service - getWalletExchangeCounts", () => {
 
         const result = await getWalletExchangeCounts("wallet-1", {
             period: "bad-period",
-            limit: 999,
+            limit: 999999,
         });
 
         expect(result.metadata.period).toBe("30D");
-        expect(result.metadata.limit).toBe(100);
+        expect(result.metadata.limit).toBe(10000);
         expect(result.exchanges).toEqual([]);
     });
 });
