@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getWalletOverviewMock, getWalletPortfolioMock, getWalletSwapsMock, getWalletTransfersMock } = vi.hoisted(() => ({
+const { getWalletOverviewMock, getWalletPortfolioMock, getWalletSwapsMock, getWalletTransfersMock, getWalletExchangeCountsMock } = vi.hoisted(() => ({
     getWalletOverviewMock: vi.fn(),
     getWalletPortfolioMock: vi.fn(),
     getWalletSwapsMock: vi.fn(),
     getWalletTransfersMock: vi.fn(),
+    getWalletExchangeCountsMock: vi.fn(),
 }));
 
 const { getWalletCounterpartiesMock } = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     getWalletOverview: getWalletOverviewMock,
     getWalletPortfolio: getWalletPortfolioMock,
     getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
-    getWalletExchangeCounts: vi.fn(async () => ({ exchanges: [], metadata: { period: "30D", metric: "count" } })),
+    getWalletExchangeCounts: getWalletExchangeCountsMock,
     getWalletSwaps: getWalletSwapsMock,
     getWalletTransfers: getWalletTransfersMock,
 }));
@@ -77,6 +78,7 @@ beforeEach(() => {
     getWalletPortfolioMock.mockReset();
     getWalletSwapsMock.mockReset();
     getWalletTransfersMock.mockReset();
+    getWalletExchangeCountsMock.mockReset();
     getWalletCounterpartiesMock.mockReset();
     getWalletIdentityMock.mockReset();
     getWalletIdentityBatchMock.mockReset();
@@ -114,6 +116,17 @@ beforeEach(() => {
             hasMore: false,
             nextCursor: null,
             source: "provider",
+        },
+    });
+
+    getWalletExchangeCountsMock.mockResolvedValue({
+        exchanges: [],
+        metadata: {
+            period: "30D",
+            metric: "count",
+            source: "cache",
+            limit: 10,
+            truncated: false,
         },
     });
 
@@ -318,7 +331,7 @@ describe("wallets.route - /portfolio", () => {
                 valueUsd: 100,
             }),
         ]);
-        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1");
     });
 });
 
@@ -372,7 +385,57 @@ describe("wallets.route - /distribution", () => {
                 logoUri: "https://cdn.example/usdc.png",
             }),
         );
-        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1", "solana");
+        expect(getWalletPortfolioMock).toHaveBeenCalledWith("wallet-1");
+    });
+});
+
+describe("wallets.route - /exchanges", () => {
+    it("forwards period, chain, and limit to exchange aggregation service", async () => {
+        getWalletExchangeCountsMock.mockResolvedValueOnce({
+            exchanges: [
+                {
+                    name: "Jupiter",
+                    deposits: 2,
+                    withdrawals: 1,
+                    depositsVolume: 200,
+                    withdrawalsVolume: 120,
+                },
+            ],
+            metadata: {
+                period: "7D",
+                metric: "count",
+                source: "provider",
+                limit: 5,
+                truncated: false,
+            },
+        });
+
+        const response = await router.request(
+            "http://localhost/exchanges?address=wallet-1&period=7D&chain=solana&limit=5",
+        );
+
+        expect(response.status).toBe(200);
+        const body = await response.json();
+
+        expect(body.exchanges).toHaveLength(1);
+        expect(getWalletExchangeCountsMock).toHaveBeenCalledWith("wallet-1", {
+            period: "7D",
+            chain: "solana",
+            limit: 5,
+        });
+    });
+
+    it("omits invalid limit while keeping address-only fallback behavior", async () => {
+        const response = await router.request(
+            "http://localhost/exchanges?address=wallet-1&limit=oops",
+        );
+
+        expect(response.status).toBe(200);
+        expect(getWalletExchangeCountsMock).toHaveBeenCalledWith("wallet-1", {
+            period: undefined,
+            chain: undefined,
+            limit: undefined,
+        });
     });
 });
 
@@ -415,7 +478,7 @@ describe("wallets.route - paginated table endpoints", () => {
             }),
         );
 
-        expect(getWalletSwapsMock).toHaveBeenCalledWith("wallet-1", "solana", {
+        expect(getWalletSwapsMock).toHaveBeenCalledWith("wallet-1", {
             limit: 999,
             cursor: "cursor-1",
             before: "before-1",
@@ -461,7 +524,7 @@ describe("wallets.route - paginated table endpoints", () => {
             }),
         );
 
-        expect(getWalletTransfersMock).toHaveBeenCalledWith("wallet-1", "solana", {
+        expect(getWalletTransfersMock).toHaveBeenCalledWith("wallet-1", {
             limit: undefined,
             cursor: undefined,
             before: "transfer-before",
@@ -478,7 +541,7 @@ describe("wallets.route - /identity", () => {
         expect(response.status).toBe(200);
         const body = await response.json();
         expect(body.identity.status).toBe("known");
-        expect(getWalletIdentityMock).toHaveBeenCalledWith("wallet-1", "solana");
+        expect(getWalletIdentityMock).toHaveBeenCalledWith("wallet-1");
     });
 
     it("returns normalized unknown identity with 200", async () => {
@@ -535,7 +598,7 @@ describe("wallets.route - /counterparties", () => {
         const body = await response.json();
         expect(body.counterparties).toHaveLength(1);
 
-        expect(getWalletCounterpartiesMock).toHaveBeenCalledWith("wallet-1", "solana", {
+        expect(getWalletCounterpartiesMock).toHaveBeenCalledWith("wallet-1", {
             period: "7d",
             limit: 10,
             includeTokens: true,
@@ -555,7 +618,7 @@ describe("wallets.route - /counterparties", () => {
         );
 
         expect(response.status).toBe(200);
-        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", {
             period: "7d",
             limit: 20,
             includeTokens: true,
@@ -568,7 +631,7 @@ describe("wallets.route - /counterparties", () => {
         );
 
         expect(response.status).toBe(200);
-        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", "solana", {
+        expect(getWalletCounterpartiesMock).toHaveBeenLastCalledWith("wallet-1", {
             period: "7d",
             limit: 100,
             includeTokens: true,
@@ -629,7 +692,7 @@ describe("wallets.route - /identity/batch", () => {
         expect(response.status).toBe(200);
         const body = await response.json();
         expect(body.results).toHaveLength(1);
-        expect(getWalletIdentityBatchMock).toHaveBeenCalledWith(["wallet-1"], "solana");
+        expect(getWalletIdentityBatchMock).toHaveBeenCalledWith(["wallet-1"]);
     });
 });
 
@@ -642,9 +705,7 @@ describe("wallets.route - /intelligence", () => {
         expect(response.status).toBe(200);
         const body = await response.json();
         expect(body.analysis.riskLevel).toBe("low");
-        expect(composeWalletIntelligenceMock).toHaveBeenCalledWith("wallet-1", {
-            chain: "solana",
-        });
+        expect(composeWalletIntelligenceMock).toHaveBeenCalledWith("wallet-1");
     });
 
     it("returns 400 when address is missing", async () => {

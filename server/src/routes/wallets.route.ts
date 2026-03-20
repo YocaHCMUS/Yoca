@@ -326,11 +326,17 @@ const routes = router
     const query = c.req.query();
     const params = walletRequestSchema.parse(query)
     const address = params.address;
+    const period = c.req.query("period") ?? undefined;
+    const chain = c.req.query("chain") ?? undefined;
     const limitParam = c.req.query("limit");
     const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
 
     try {
-      const data = await getWalletExchangeCounts(address, { limit });
+      const data = await getWalletExchangeCounts(address, {
+        period,
+        chain,
+        limit,
+      });
       return c.json(data);
     } catch (err) {
       console.error("Failed to get wallet exchange counts", err);

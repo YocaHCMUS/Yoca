@@ -147,7 +147,13 @@ export interface WalletExchangeCountItem {
 
 export interface WalletExchangeCountsResponse {
     exchanges: WalletExchangeCountItem[];
-    metadata: { period: string; metric: "count" | "volume" };
+    metadata: {
+        period: string;
+        metric: "count" | "volume";
+        source?: "cache" | "provider" | "mixed";
+        limit?: number;
+        truncated?: boolean;
+    };
 }
 
 export type WalletCounterpartyPeriod = "24h" | "7d";

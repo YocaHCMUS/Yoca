@@ -831,7 +831,7 @@ export default function WalletPage() {
       <h1 className={styles.sectionTitle}>{tr("walletPage.topExchange")}</h1>
       {/* mock component for space, replace with implemented components */}
       <div className={styles.chartContainer}>
-        <ExchangeComparison />
+        <ExchangeComparison walletAddress={address} chain="solana" />
       </div>
 
       <h1 className={styles.sectionTitle}>

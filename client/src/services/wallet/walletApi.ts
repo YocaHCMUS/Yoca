@@ -316,7 +316,9 @@ export async function fetchWalletExchanges(
   address: string,
   params?: {
     chain?: string;
+    period?: string;
     limit?: number;
+    metric?: "count" | "volume";
   }
 ) {
   const query = { address, ...params };

@@ -147,6 +147,9 @@ export interface ExchangeComparisonResponse extends ChartResponseBase {
   metadata: {
     period: string;
     metric: 'count' | 'volume';
+    source?: 'cache' | 'provider' | 'mixed';
+    limit?: number;
+    truncated?: boolean;
   };
 }
 
@@ -539,6 +542,9 @@ export interface DistributionRequestParams extends ChartResponseBase {
  * API request parameters for exchanges endpoint
  */
 export interface ExchangesRequestParams extends ChartResponseBase {
+  /** Chart time period filter */
+  timePeriod?: string;
+
   /** Time period filter */
   period?: string;
 
@@ -547,6 +553,18 @@ export interface ExchangesRequestParams extends ChartResponseBase {
 
   /** Metric type */
   metric?: 'count' | 'volume';
+
+  /** Optional comma-separated wallet addresses */
+  wallets?: string;
+
+  /** Optional single-wallet override */
+  address?: string;
+
+  /** Optional chain selector for wallet-aware mode */
+  chain?: string;
+
+  /** Optional timezone */
+  timezone?: string;
 
   [key: string]: string | number | undefined;
 }

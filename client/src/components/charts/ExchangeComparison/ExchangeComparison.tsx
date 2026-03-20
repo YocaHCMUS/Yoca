@@ -37,27 +37,55 @@ import { runChartExport } from '@/services/chart/chartExportService';
 export interface ExchangeComparisonProps {
   /** Chart title */
   title?: string;
-  
+
   /** Chart minimum height in pixels */
   minHeight?: number;
-  
+
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
-  
+
   /** Metric to display: count (transaction count) or volume (USD value) */
   metric?: 'count' | 'volume';
-  
+
+  /** Optional wallet context for wallet-aware exchange data */
+  walletAddress?: string;
+
+  /** Chain used for wallet-aware requests (default: solana) */
+  chain?: string;
+
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
-  
+
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-  
+
   /** Callback when data is loaded */
   onDataLoaded?: (data: ExchangeComparisonData) => void;
-  
+
   /** Additional CSS class */
   className?: string;
+}
+
+export function buildExchangeComparisonQuery(input: {
+  timePeriod: string;
+  metric: 'count' | 'volume';
+  timezone: string;
+  walletAddress?: string;
+  chain?: string;
+}): ExchangesRequestParams {
+  const query: ExchangesRequestParams = {
+    timePeriod: input.timePeriod,
+    metric: input.metric,
+    timezone: input.timezone,
+  };
+
+  const normalizedWalletAddress = String(input.walletAddress ?? '').trim();
+  if (normalizedWalletAddress) {
+    query.address = normalizedWalletAddress;
+    query.chain = String(input.chain ?? 'solana').trim() || 'solana';
+  }
+
+  return query;
 }
 
 /**
@@ -89,6 +117,8 @@ export function ExchangeComparison({
   minHeight = 400,
   initialTimePeriod = '30D',
   metric = 'count',
+  walletAddress,
+  chain = 'solana',
   autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
@@ -97,19 +127,19 @@ export function ExchangeComparison({
   // i18n
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.exchangeComparisonChart.title');
-  
+
   // State management
   const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
-  
+
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
-  
+
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Get theme configuration
   const chartTheme = useChartTheme();
-  
+
   // Use centralized filter sync hook
   const { filters } = useChartFiltersSync({
     initialFilters: {
@@ -117,14 +147,16 @@ export function ExchangeComparison({
     },
     debounceDelay: 300,
   });
-  
+
   // Query for the controller
-  const query = useMemo<ExchangesRequestParams>(() => ({
+  const query = useMemo<ExchangesRequestParams>(() => buildExchangeComparisonQuery({
     timePeriod: filters.timePeriod,
     metric: currentMetric,
     timezone,
-  }), [filters.timePeriod, currentMetric, timezone]);
-  
+    walletAddress,
+    chain,
+  }), [filters.timePeriod, currentMetric, timezone, walletAddress, chain]);
+
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({
     fetcher: fetchExchangeComparison,
@@ -133,7 +165,7 @@ export function ExchangeComparison({
     refreshInterval,
     onDataLoaded,
   });
-  
+
   /**
    * Setup chart export
    */
@@ -142,7 +174,7 @@ export function ExchangeComparison({
     timezone,
     baseFilename: 'exchange-comparison',
   });
-  
+
   /**
    * Handle export based on format
    */
@@ -183,25 +215,25 @@ export function ExchangeComparison({
       { exportPNG, exportSVG, exportPDF, exportCSV }
     );
   }, [data, filters, currentMetric, exportPNG, exportSVG, exportPDF, exportCSV, tr]);
-  
+
   /**
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
     if (!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0) return null;
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Extract exchange names and values
     const exchangeNames = data.exchanges.map(ex => ex.name);
-    const deposits = data.exchanges.map(ex => 
+    const deposits = data.exchanges.map(ex =>
       currentMetric === 'count' ? ex.deposits : ex.depositsVolume
     );
-    const withdrawals = data.exchanges.map(ex => 
+    const withdrawals = data.exchanges.map(ex =>
       currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume
     );
-    
+
     return {
       ...baseOption,
       grid: {
@@ -219,19 +251,19 @@ export function ExchangeComparison({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          
+
           const exchangeName = params[0].axisValue;
           let tooltipContent = createTooltipHeader(exchangeName);
-          
+
           params.forEach((param: any) => {
-            const value = currentMetric === 'count' 
+            const value = currentMetric === 'count'
               ? `${param.value.toLocaleString()} txns`
               : formatCurrency(param.value);
             tooltipContent += `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">`
               + `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>`
               + `<strong>${value}</strong></div>`;
           });
-          
+
           return tooltipContent;
         },
       },
@@ -276,7 +308,7 @@ export function ExchangeComparison({
             position: 'top',
             formatter: (params: any) => {
               if (currentMetric === 'count') {
-                return params.value >= 1000 
+                return params.value >= 1000
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
@@ -298,7 +330,7 @@ export function ExchangeComparison({
             position: 'top',
             formatter: (params: any) => {
               if (currentMetric === 'count') {
-                return params.value >= 1000 
+                return params.value >= 1000
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
@@ -311,7 +343,7 @@ export function ExchangeComparison({
       ],
     };
   }, [data, currentMetric, chartTheme, tr]);
-  
+
   /**
    * Setup chart export
    */
@@ -320,7 +352,7 @@ export function ExchangeComparison({
   //   timezone,
   //   baseFilename: 'exchange-comparison',
   // });
-  
+
   /**
    * Handle export based on format
    */
@@ -330,7 +362,7 @@ export function ExchangeComparison({
   //     console.error('Chart instance not available for export');
   //     return;
   //   }
-    
+
   //   if (format === 'png') {
   //     exportPNG(chartInstance as any, filters);
   //   } else if (format === 'svg') {
@@ -362,7 +394,7 @@ export function ExchangeComparison({
   //     exportCSV(csvData, filters);
   //   }
   // };
-  
+
   return (
     <ChartWrapper
       title={chartTitle}

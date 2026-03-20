@@ -104,7 +104,21 @@ paths:
         Shows deposits and withdrawals for each exchange.
       operationId: getExchangeComparison
       parameters:
-        - $ref: "#/components/parameters/TimePeriod"
+        - name: timePeriod
+          in: query
+          description: Legacy chart time period selector
+          required: false
+          schema:
+            type: string
+            enum: ["7D", "30D", "60D", "90D", "1Y", "All"]
+            default: "30D"
+        - name: period
+          in: query
+          description: Wallet-aware time period selector (overrides timePeriod when provided)
+          required: false
+          schema:
+            type: string
+            enum: ["7D", "30D", "60D", "90D", "1Y", "All"]
         - name: metric
           in: query
           description: Metric to compare (count of transactions or total volume)
@@ -112,6 +126,34 @@ paths:
             type: string
             enum: [count, volume]
             default: count
+        - name: wallets
+          in: query
+          description: Optional comma-separated wallet list; when provided route uses wallet-aware exchange aggregation
+          required: false
+          schema:
+            type: string
+        - name: address
+          in: query
+          description: Optional single-wallet override for wallet-aware exchange aggregation
+          required: false
+          schema:
+            type: string
+        - name: chain
+          in: query
+          description: Optional wallet chain for wallet-aware mode (default solana)
+          required: false
+          schema:
+            type: string
+            default: solana
+        - name: limit
+          in: query
+          description: Optional top-N cap applied in wallet-aware mode
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
       responses:
         "200":
           description: Exchange comparison data
