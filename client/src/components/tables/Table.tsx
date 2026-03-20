@@ -598,7 +598,12 @@ export const Table: React.FC<TableProps> = ({
                                     <TableBody>
                                         {rows.map((row, rowIndex) => {
                                             const { key, ...rowProps } = getRowProps({ row });
-                                            const originalRow = paginatedRows[rowIndex];
+                                            const rowId = String(row.id ?? "");
+                                            const parsedRowIndex = Number.parseInt(rowId.split("-").pop() ?? "", 10);
+                                            const originalRow = Number.isInteger(parsedRowIndex)
+                                                ? paginatedRows[parsedRowIndex]
+                                                : paginatedRows[rowIndex];
+                                            const safeRow = Array.isArray(originalRow) ? originalRow : [];
                                             const originalIndex = onRowClick
                                                 ? dataEntries.indexOf(originalRow)
                                                 : -1;
@@ -606,7 +611,7 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableRow
                                                     key={key}
                                                     {...rowProps}
-                                                    onClick={onRowClick ? () => onRowClick(originalRow, originalIndex) : undefined}
+                                                    onClick={onRowClick ? () => onRowClick(safeRow, originalIndex) : undefined}
                                                     style={onRowClick ? { cursor: 'pointer' } : undefined}
                                                 >
                                                     {row.cells.map((cell, cellIndex) => {
@@ -620,7 +625,7 @@ export const Table: React.FC<TableProps> = ({
                                                             // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
                                                             <TableCell key={cell.id} style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}>
                                                                 {renderer
-                                                                    ? renderer(rawValue, paginatedRows[rowIndex], rowIndex)
+                                                                    ? renderer(rawValue, safeRow, rowIndex)
                                                                     : <span className={className}>{rawValue}</span>
                                                                 }
                                                             </TableCell>

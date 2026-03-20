@@ -345,7 +345,11 @@ export default function WalletPage() {
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: string, row: unknown[]) => {
+    (value: string, row?: unknown[] | null) => {
+      if (!Array.isArray(row)) {
+        return renderCode(value);
+      }
+
       const signature = String(row[7] ?? "");
       const swap = swapBySignature.get(signature);
       if (!swap) {
@@ -371,7 +375,11 @@ export default function WalletPage() {
         </span>
       );
     },
-    (value: string, row: unknown[]) => {
+    (value: string, row?: unknown[] | null) => {
+      if (!Array.isArray(row)) {
+        return renderCode(value);
+      }
+
       const signature = String(row[7] ?? "");
       const swap = swapBySignature.get(signature);
       if (!swap) {

@@ -84,7 +84,7 @@ export interface WalletPageInfo {
 
 export interface WalletSwapsResponse {
   address: string;
-  chain: string;
+  chain?: string;
   swaps: WalletSwap[];
   pageInfo: WalletPageInfo;
 }
@@ -106,7 +106,7 @@ export interface WalletTransfer {
 
 export interface WalletTransfersResponse {
   address: string;
-  chain: string;
+  chain?: string;
   transfers: WalletTransfer[];
   pageInfo: WalletPageInfo;
 }
