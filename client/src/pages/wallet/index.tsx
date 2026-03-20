@@ -1,8 +1,6 @@
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
-import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
-import { PnLChart } from "@/components/charts/PnLChart/PnLChart.tsx";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
@@ -43,6 +41,8 @@ import {
 } from "../../util/wallet-portfolio-mapper.ts";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
+import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
+import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)

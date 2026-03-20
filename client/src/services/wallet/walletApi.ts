@@ -214,28 +214,6 @@ export async function fetchWalletPortfolio(
 }
 
 /**
- * Fetch wallet transactions
- * GET /api/wallets/transactions
- */
-export async function fetchWalletTransactions(
-  address: string,
-  params?: {
-    chain?: string;
-    limit?: number;
-    cursor?: string;
-    before?: string;
-  }
-) {
-  const query = { address, ...params };
-  const response = await client.api.wallets.transactions.$get({
-    query,
-  });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
-}
-
-/**
  * Fetch wallet transfers
  * GET /api/wallets/transfers
  */
@@ -416,7 +394,6 @@ export async function fetchWalletIntelligence(
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
-  fetchWalletTransactions,
   fetchWalletTransfers,
   fetchWalletSwaps,
   fetchWalletCounterparties,
@@ -429,7 +406,6 @@ export const walletApi = {
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
-  getTransactions: fetchWalletTransactions,
   getTransfers: fetchWalletTransfers,
   getSwaps: fetchWalletSwaps,
   getCounterparties: fetchWalletCounterparties,
