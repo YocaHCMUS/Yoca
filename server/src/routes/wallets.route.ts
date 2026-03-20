@@ -3,7 +3,6 @@ import {
   fetchTestTransaction,
   getWalletOverview,
   getWalletPortfolio,
-  getWalletTransactions,
   getWalletExchangeCounts,
   getWalletSwaps,
   getWalletTransfers,
@@ -48,6 +47,7 @@ const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
+const MAX_EXCHANGE_LIMIT = 5000;
 
 function parseOverviewPeriodSec(rawPeriod?: string): {
   periodSec: number;
@@ -162,6 +162,24 @@ function parseCounterpartyIncludeTokens(rawIncludeTokens?: string): boolean {
   return true;
 }
 
+function parseExchangeLimit(rawLimit?: string): number | undefined {
+  if (rawLimit == null) {
+    return undefined;
+  }
+
+  const parsed = Number(rawLimit);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  const integerLimit = Math.floor(parsed);
+  if (integerLimit < 1) {
+    return 1;
+  }
+
+  return Math.min(integerLimit, MAX_EXCHANGE_LIMIT);
+}
+
 const routes = router
   .get("/overview", async (c) => {
     //  .get("/", async (c) => {
@@ -212,31 +230,31 @@ const routes = router
       return c.json({ error: "Failed to get wallet portfolio" }, 500);
     }
   })
-  .get("/transactions", async (c) => {
-    const query = c.req.query();
-    const params = walletRequestSchema.parse(query)
-    const address = params.address;
+  // .get("/transactions", async (c) => {
+  //   const query = c.req.query();
+  //   const params = walletRequestSchema.parse(query)
+  //   const address = params.address;
 
-    const limitParam = c.req.query("limit");
-    const cursor = c.req.query("cursor");
-    const before = c.req.query("before");
+  //   const limitParam = c.req.query("limit");
+  //   const cursor = c.req.query("cursor");
+  //   const before = c.req.query("before");
 
-    const limit = limitParam ? Number(limitParam) : undefined;
+  //   const limit = limitParam ? Number(limitParam) : undefined;
 
-    try {
-      const txs = await getWalletTransactions(address, {
-        limit: Number.isFinite(limit) ? limit : undefined,
-        cursor: cursor ?? undefined,
-        before: before ?? undefined,
-      });
-      // console.log("[transaction route] data:")
-      // console.log(txs);
-      return c.json(txs);
-    } catch (err) {
-      console.error("Failed to get wallet transactions", err);
-      return c.json({ error: "Failed to get wallet transactions" }, 500);
-    }
-  })
+  //   try {
+  //     const txs = await getWalletTransactions(address, {
+  //       limit: Number.isFinite(limit) ? limit : undefined,
+  //       cursor: cursor ?? undefined,
+  //       before: before ?? undefined,
+  //     });
+  //     // console.log("[transaction route] data:")
+  //     // console.log(txs);
+  //     return c.json(txs);
+  //   } catch (err) {
+  //     console.error("Failed to get wallet transactions", err);
+  //     return c.json({ error: "Failed to get wallet transactions" }, 500);
+  //   }
+  // })
   .get("/swap", async (c) => {
     const query = c.req.query();
     const params = walletRequestSchema.parse(query)
@@ -329,7 +347,7 @@ const routes = router
     const period = c.req.query("period") ?? undefined;
     const chain = c.req.query("chain") ?? undefined;
     const limitParam = c.req.query("limit");
-    const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
+    const limit = parseExchangeLimit(limitParam);
 
     try {
       const data = await getWalletExchangeCounts(address, {

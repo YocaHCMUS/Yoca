@@ -91,6 +91,13 @@ vi.mock("@sv/services/balances.js", () => ({
 
 vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
     fetchAllTransactionHistory: vi.fn(async () => []),
+    fetchAllTransactionHistoryChunk: vi.fn(async () => ({
+        transactions: [],
+        nextCursor: null,
+        hasMore: false,
+        pagesFetched: 0,
+        stopReason: "provider-end",
+    })),
     fetchHeliusSolanaPortfolio: vi.fn(async () => []),
     fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchMoralisSolanaSwapChunk: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),

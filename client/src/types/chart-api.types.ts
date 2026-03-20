@@ -31,6 +31,21 @@ export interface ApiResponseMetadata extends ChartResponseBase {
   timestamp?: number;
 }
 
+export interface ChartPageInfo {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+  source: 'cache' | 'provider' | 'mixed';
+}
+
+export interface ChartChunkInfo {
+  chunkFromSec: number;
+  chunkToSec: number;
+  requestedFromSec: number;
+  requestedToSec: number;
+  effectiveAggregation: 'hourly' | 'daily' | 'weekly' | 'monthly';
+}
+
 /**
  * Balance trend API response
  * GET /api/charts/balance
@@ -63,6 +78,9 @@ export interface BalanceTrendResponse extends ChartResponseBase {
     tokens?: string[];
     primaryYAxis?: 'TOKEN' | 'USD';
   };
+
+  pageInfo?: ChartPageInfo;
+  chunkInfo?: ChartChunkInfo;
 }
 
 /**
@@ -235,6 +253,9 @@ export interface PnLChartResponse extends ChartResponseBase {
     startBalance?: number;
     endBalance?: number;
   };
+
+  pageInfo?: ChartPageInfo;
+  chunkInfo?: ChartChunkInfo;
 }
 
 /**
@@ -519,6 +540,12 @@ export interface BalanceRequestParams extends ChartResponseBase {
   /** Aggregation level */
   aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
 
+  /** Chunk size for paginated chart backfill */
+  limit?: number;
+
+  /** Opaque cursor for incremental backfill */
+  cursor?: string;
+
   [key: string]: string | number | undefined;
 }
 
@@ -594,6 +621,12 @@ export interface PnLRequestParams extends ChartResponseBase {
 
   /** Comma-separated wallet list */
   wallets?: string;
+
+  /** Chunk size for paginated chart backfill */
+  limit?: number;
+
+  /** Opaque cursor for incremental backfill */
+  cursor?: string;
 
   [key: string]: string | number | undefined;
 }

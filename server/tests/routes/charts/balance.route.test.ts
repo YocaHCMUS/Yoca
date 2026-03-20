@@ -1,152 +1,147 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { decodeChartCursor } from "../../../src/util/chartCursor.js";
 
-// Simplified route-level tests focusing on service call validation
-// Full integration testing handled by manual testing or E2E test suite
-
-const getWalletBalanceHistoryMock = vi.fn();
-const getWalletTokenBalanceHistoryMock = vi.fn();
-const generateBalanceTrendMock = vi.fn();
+const {
+    getWalletBalanceHistoryMock,
+    getWalletBalanceHistoryChunkMock,
+    getWalletTokenBalanceHistoryMock,
+    getWalletTokenBalanceHistoryChunkMock,
+    resolveWalletTimeRangeSecMock,
+    generateBalanceTrendMock,
+} = vi.hoisted(() => ({
+    getWalletBalanceHistoryMock: vi.fn(),
+    getWalletBalanceHistoryChunkMock: vi.fn(),
+    getWalletTokenBalanceHistoryMock: vi.fn(),
+    getWalletTokenBalanceHistoryChunkMock: vi.fn(),
+    resolveWalletTimeRangeSecMock: vi.fn(),
+    generateBalanceTrendMock: vi.fn(),
+}));
 
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     getWalletBalanceHistory: getWalletBalanceHistoryMock,
+    getWalletBalanceHistoryChunk: getWalletBalanceHistoryChunkMock,
     getWalletTokenBalanceHistory: getWalletTokenBalanceHistoryMock,
+    getWalletTokenBalanceHistoryChunk: getWalletTokenBalanceHistoryChunkMock,
+    resolveWalletTimeRangeSec: resolveWalletTimeRangeSecMock,
 }));
 
 vi.mock("@sv/services/mockChartData.service.js", () => ({
     generateBalanceTrend: generateBalanceTrendMock,
 }));
 
-describe("Balance Route Service Dispatch Logic", () => {
+import app from "../../../src/routes/charts/balance.route.ts";
+
+describe("charts/balance.route", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+
+        resolveWalletTimeRangeSecMock.mockReturnValue({
+            fromSec: 1,
+            toSec: 10,
+        });
+
+        getWalletBalanceHistoryMock.mockResolvedValue([
+            { timestamp: 1, value: 100, date: "2026-03-20T00:00:00.000Z" },
+        ]);
+
+        getWalletBalanceHistoryChunkMock.mockResolvedValue({
+            series: [
+                { timestamp: 1, value: 100, date: "2026-03-20T00:00:00.000Z" },
+            ],
+            chunkInfo: {
+                chunkFromSec: 1,
+                chunkToSec: 10,
+                requestedFromSec: 0,
+                requestedToSec: 100,
+                effectiveAggregation: "daily",
+            },
+            chunkState: {
+                hasMore: true,
+                nextChunkToSec: 0,
+                heliusCursor: "sig-older",
+                lastProcessedSignature: "sig-last",
+            },
+        });
+
+        getWalletTokenBalanceHistoryMock.mockResolvedValue({
+            tokenSeries: [{ timestamp: 1, value: 1, date: "2026-03-20T00:00:00.000Z" }],
+            usdSeries: [{ timestamp: 1, value: 100, date: "2026-03-20T00:00:00.000Z" }],
+            tokenSymbol: "SOL",
+            tokenAddress: "mint-1",
+        });
+
+        getWalletTokenBalanceHistoryChunkMock.mockResolvedValue({
+            tokenSeries: [{ timestamp: 1, value: 1, date: "2026-03-20T00:00:00.000Z" }],
+            usdSeries: [{ timestamp: 1, value: 100, date: "2026-03-20T00:00:00.000Z" }],
+            tokenSymbol: "SOL",
+            tokenAddress: "mint-1",
+            chunkInfo: {
+                chunkFromSec: 1,
+                chunkToSec: 10,
+                requestedFromSec: 0,
+                requestedToSec: 100,
+                effectiveAggregation: "daily",
+            },
+            chunkState: {
+                hasMore: false,
+                nextChunkToSec: null,
+                heliusCursor: null,
+                lastProcessedSignature: null,
+            },
+        });
+
+        generateBalanceTrendMock.mockReturnValue({
+            series: [],
+            metadata: { timePeriod: "30D" },
+        });
     });
 
-    it("should route single wallet + no token to getWalletBalanceHistory", () => {
-        // When no tokens specified, the route should call getWalletBalanceHistory
-        const walletAddr = "wallet-addr-1";
-        const timePeriod = "30D";
+    it("returns 400 when wallets exceed route cap", async () => {
+        const response = await app.request(
+            "http://localhost/?wallets=w1,w2,w3,w4,w5,w6&timePeriod=30D",
+        );
 
-        // Query parameters parse
-        const wallets = walletAddr.split(",");
-        const tokens = undefined;
-
-        expect(wallets).toHaveLength(1);
-        expect(tokens).toBeUndefined();
-        // Route logic: if tokens is undefined, call getWalletBalanceHistory
-        if (!tokens) {
-            expect(getWalletBalanceHistoryMock).not.toHaveBeenCalled(); // Will be called by route handler
-        }
+        expect(response.status).toBe(400);
+        const body = await response.json();
+        expect(body.message).toMatch(/wallets exceeds max/i);
     });
 
-    it("should route single wallet + one token to getWalletTokenBalanceHistory", () => {
-        // When tokens specified, the route should call getWalletTokenBalanceHistory
-        const walletAddr = "wallet-addr-1";
-        const tokenSelector = "SOL";
-        const timePeriod = "30D";
+    it("returns 400 for malformed cursor", async () => {
+        const response = await app.request(
+            "http://localhost/?wallets=w1&timePeriod=30D&cursor=not-valid",
+        );
 
-        const wallets = walletAddr.split(",");
-        const tokens = tokenSelector.split(",");
-
-        expect(wallets).toHaveLength(1);
-        expect(tokens).toHaveLength(1);
-        // Route logic: if tokens specified, call getWalletTokenBalanceHistory
-        if (tokens && tokens.length > 0) {
-            expect(getWalletTokenBalanceHistoryMock).not.toHaveBeenCalled(); // Will be called by route handler
-        }
+        expect(response.status).toBe(400);
+        const body = await response.json();
+        expect(body.message).toMatch(/cursor/i);
     });
 
-    it("should handle multi-wallet + one token as cartesian product", () => {
-        // With 2 wallets and 1 token, should call service 2 times
-        const wallets = ["wallet-1", "wallet-2"];
-        const tokens = ["SOL"];
+    it("rejects unsafe multi-wallet All requests without explicit chunk params", async () => {
+        const response = await app.request(
+            "http://localhost/?wallets=w1,w2&timePeriod=All",
+        );
 
-        const callCount = wallets.length * tokens.length;
-        expect(callCount).toBe(2);
+        expect(response.status).toBe(400);
+        const body = await response.json();
+        expect(body.message).toMatch(/chunk params/i);
     });
 
-    it("should handle multi-wallet + multi-token as cartesian product", () => {
-        // With 3 wallets and 2 tokens, should call service 6 times
-        const wallets = ["wallet-1", "wallet-2", "wallet-3"];
-        const tokens = ["SOL", "USDC"];
+    it("returns pageInfo and encoded nextCursor for chunked total-balance responses", async () => {
+        const response = await app.request(
+            "http://localhost/?wallets=w1&timePeriod=30D&limit=120",
+        );
 
-        const callCount = wallets.length * tokens.length;
-        expect(callCount).toBe(6);
-    });
+        expect(response.status).toBe(200);
+        const body = await response.json();
 
-    it("should format series names with wallet prefix for multiple wallets", () => {
-        // With multiple wallets, series names should include wallet prefix
-        const walletAddr = "wallet-very-long-address-here";
-        const wallets = [walletAddr, "another-wallet"];
+        expect(getWalletBalanceHistoryChunkMock).toHaveBeenCalled();
+        expect(body.pageInfo).toBeDefined();
+        expect(body.pageInfo.hasMore).toBe(true);
+        expect(typeof body.pageInfo.nextCursor).toBe("string");
 
-        const isMultiWallet = wallets.length > 1;
-        if (isMultiWallet) {
-            const prefix = wallets[0].substring(0, 8) + "...";
-            expect(prefix).toBe("wallet-v...");
-        }
-    });
-
-    it("should return token mode metadata when token specified", () => {
-        // Metadata should include mode: 'token' when tokens are specified
-        const metadata = {
-            mode: "token" as const,
-            tokens: ["SOL"],
-            primaryYAxis: "TOKEN",
-        };
-
-        expect(metadata.mode).toBe("token");
-        expect(metadata.tokens).toContain("SOL");
-        expect(metadata.primaryYAxis).toBe("TOKEN");
-    });
-
-    it("should return total mode metadata when no token specified", () => {
-        // Metadata should include mode: 'total' when no tokens specified
-        const metadata = {
-            mode: "total" as const,
-            tokens: undefined,
-            primaryYAxis: "USD",
-        };
-
-        expect(metadata.mode).toBe("total");
-        expect(metadata.tokens).toBeUndefined();
-        expect(metadata.primaryYAxis).toBe("USD");
-    });
-
-    it("should set series unit field for token-aware rendering", () => {
-        // Series should have unit field for client-side formatting
-        const tokenSeries = {
-            name: "SOL (units)",
-            data: [],
-            unit: "TOKEN" as const,
-            seriesType: "line" as const,
-        };
-
-        const usdSeries = {
-            name: "SOL (USD)",
-            data: [],
-            unit: "USD" as const,
-            seriesType: "bar" as const,
-        };
-
-        expect(tokenSeries.unit).toBe("TOKEN");
-        expect(tokenSeries.seriesType).toBe("line");
-        expect(usdSeries.unit).toBe("USD");
-        expect(usdSeries.seriesType).toBe("bar");
-    });
-
-    it("should generate dual series (token + USD) for token mode", () => {
-        // Token mode should produce 1 token series and 1 USD series per wallet-token pair
-        const tokenSeriesCount = 1;
-        const usdSeriesCount = 1;
-        const totalPerPair = tokenSeriesCount + usdSeriesCount;
-
-        expect(totalPerPair).toBe(2);
-
-        // For single wallet + single token:
-        const singleWalletSingleTokenSeries = 1 * 1 * totalPerPair;
-        expect(singleWalletSingleTokenSeries).toBe(2);
-
-        // For dual wallet + dual token:
-        const dualWalletDualTokenSeries = 2 * 2 * totalPerPair;
-        expect(dualWalletDualTokenSeries).toBe(8);
+        const decoded = decodeChartCursor(body.pageInfo.nextCursor, "balance");
+        expect(decoded.endpoint).toBe("balance");
+        expect(decoded.requestedFromSec).toBe(0);
+        expect(decoded.requestedToSec).toBe(100);
     });
 });

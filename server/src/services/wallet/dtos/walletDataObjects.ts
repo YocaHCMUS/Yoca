@@ -148,6 +148,8 @@ export interface WalletExchangeCountItem {
 export interface WalletExchangeCountsResponse {
     exchanges: WalletExchangeCountItem[];
     metadata: {
+        period?: "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
+        chain?: string;
         metric: "count" | "volume";
         source?: "cache" | "provider" | "mixed";
         limit?: number;

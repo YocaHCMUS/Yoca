@@ -73,6 +73,13 @@ vi.mock("@sv/services/balances.js", () => ({
 
 vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
     fetchAllTransactionHistory: hoisted.fetchAllTransactionHistoryMock,
+    fetchAllTransactionHistoryChunk: vi.fn(async () => ({
+        transactions: [],
+        nextCursor: null,
+        hasMore: false,
+        pagesFetched: 0,
+        stopReason: "provider-end",
+    })),
     fetchHeliusSolanaPortfolio: hoisted.fetchHeliusSolanaPortfolioMock,
     fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaSwap: vi.fn(async () => []),
@@ -226,7 +233,7 @@ describe("walletData.service - token USD historical pricing", () => {
             },
         ]);
 
-        const result = await getWalletTokenBalanceHistory("wallet-1", "solana", "SOL", "7D");
+        const result = await getWalletTokenBalanceHistory("wallet-1", "SOL", "7D");
 
         expect(result.tokenSeries.length).toBe(result.usdSeries.length);
 
@@ -242,7 +249,7 @@ describe("walletData.service - token USD historical pricing", () => {
         });
         hoisted.getTokenHistoricalDataMock.mockResolvedValue(null);
 
-        const result = await getWalletTokenBalanceHistory("wallet-1", "solana", "SOL", "7D");
+        const result = await getWalletTokenBalanceHistory("wallet-1", "SOL", "7D");
 
         expect(result.tokenSeries.length).toBe(result.usdSeries.length);
         expect(result.tokenSeries.length).toBeGreaterThan(1);
@@ -356,7 +363,7 @@ describe("walletData.service - balance history historical valuation", () => {
             [SOL_MINT]: { priceUsd: 5 },
         });
 
-        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+        const result = await getWalletBalanceHistory("wallet-1", "7D");
 
         expect(result.length).toBe(8);
         expect(getSeriesValueByDate(result, "2026-03-05")).toBe(110);
@@ -397,7 +404,7 @@ describe("walletData.service - balance history historical valuation", () => {
             [SOL_MINT]: { priceUsd: 100 },
         });
 
-        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+        const result = await getWalletBalanceHistory("wallet-1", "7D");
 
         expect(getSeriesValueByDate(result, "2026-03-05")).toBe(1000);
         expect(getSeriesValueByDate(result, "2026-03-06")).toBe(1000);
@@ -427,7 +434,7 @@ describe("walletData.service - balance history historical valuation", () => {
             [SOL_MINT]: { priceUsd: 75 },
         });
 
-        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+        const result = await getWalletBalanceHistory("wallet-1", "7D");
 
         expect(result.length).toBe(8);
         const uniqueValues = new Set(result.map((point) => point.value));
@@ -456,7 +463,7 @@ describe("walletData.service - balance history historical valuation", () => {
             [SOL_MINT]: { priceUsd: 100 },
         });
 
-        const result = await getWalletTokenBalanceHistory("wallet-1", "solana", "SOL", "7D");
+        const result = await getWalletTokenBalanceHistory("wallet-1", "SOL", "7D");
 
         expect(result.tokenAddress).toBe(SOL_MINT);
         expect(result.usdSeries.length).toBeGreaterThan(1);
@@ -483,7 +490,7 @@ describe("walletData.service - balance history historical valuation", () => {
         hoisted.getHourlyTokenMarketChartMock.mockResolvedValue([]);
         hoisted.getTokenMarketDataMock.mockResolvedValue({});
 
-        const result = await getWalletBalanceHistory("wallet-1", "solana", "7D");
+        const result = await getWalletBalanceHistory("wallet-1", "7D");
 
         expect(result.length).toBe(8);
         expect(result.every((point) => Number.isFinite(point.value))).toBe(true);
@@ -544,8 +551,8 @@ describe("walletData.service - balance history historical valuation", () => {
         });
 
         const [balanceHistory, pnl] = await Promise.all([
-            getWalletBalanceHistory("wallet-1", "solana", "7D"),
-            getCumulativePnL("wallet-1", "solana", "7D", "daily"),
+            getWalletBalanceHistory("wallet-1", "7D"),
+            getCumulativePnL("wallet-1", "7D", "daily"),
         ]);
 
         expect(balanceHistory.length).toBe(8);
@@ -644,7 +651,7 @@ describe("walletData.service - cumulative PnL", () => {
             [SOL_MINT]: { priceUsd: 5 },
         });
 
-        const result = await getCumulativePnL("wallet-1", "solana", "7D", "daily");
+        const result = await getCumulativePnL("wallet-1", "7D", "daily");
 
         expect(result.dailyPnL.length).toBe(8);
         expect(result.cumulativePnL.length).toBe(8);
@@ -678,7 +685,7 @@ describe("walletData.service - cumulative PnL", () => {
         hoisted.getDailyTokenMarketChartMock.mockResolvedValue([]);
         hoisted.getTokenMarketDataMock.mockResolvedValue({});
 
-        const result = await getCumulativePnL("wallet-1", "solana", "7D", "daily");
+        const result = await getCumulativePnL("wallet-1", "7D", "daily");
 
         expect(result.dailyPnL.length).toBeGreaterThan(1);
         expect(result.cumulativePnL.length).toBe(result.dailyPnL.length);
@@ -720,7 +727,7 @@ describe("walletData.service - cache coverage sync behavior", () => {
             isFullyCovered: false,
         });
 
-        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+        await getWalletTransactionHelius("wallet-1", { fromSec, toSec: nowSec });
 
         expect(hoisted.fetchAllTransactionHistoryMock).toHaveBeenCalledTimes(1);
         const fetchCall = hoisted.fetchAllTransactionHistoryMock.mock.calls[0];
@@ -771,7 +778,7 @@ describe("walletData.service - cache coverage sync behavior", () => {
             isFullyCovered: false,
         });
 
-        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+        await getWalletTransactionHelius("wallet-1", { fromSec, toSec: nowSec });
 
         expect(hoisted.fetchAllTransactionHistoryMock).toHaveBeenCalledTimes(1);
         const fetchCall = hoisted.fetchAllTransactionHistoryMock.mock.calls[0];
@@ -796,7 +803,7 @@ describe("walletData.service - cache coverage sync behavior", () => {
         });
         hoisted.fetchAllTransactionHistoryMock.mockRejectedValueOnce(new Error("tail fetch failed"));
 
-        await getWalletTransactionHelius("wallet-1", "solana", { fromSec, toSec: nowSec });
+        await getWalletTransactionHelius("wallet-1", { fromSec, toSec: nowSec });
 
         expect(hoisted.saveTransactionsHeliusCacheMock).toHaveBeenCalledTimes(1);
         const saveCall = hoisted.saveTransactionsHeliusCacheMock.mock.calls[0];

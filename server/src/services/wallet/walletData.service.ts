@@ -17,6 +17,7 @@ import { getTokenHistoricalData } from "../tokens/token-history.js";
 import { getTokenMeta } from "../tokens/token-info.js";
 import {
   fetchAllTransactionHistory,
+  fetchAllTransactionHistoryChunk,
   fetchHeliusSolanaPortfolio,
   fetchMoralisSolanaSwap,
   fetchMoralisSolanaSwapChunk,
@@ -62,6 +63,8 @@ const SOL_NATIVE_ALIAS_MINT = "So11111111111111111111111111111111111111111";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY_SEC = 24 * 60 * 60;
 
+export type WalletTimePeriod = "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
+
 type WalletHistoryRange = {
   fromSec: number;
   toSec: number;
@@ -73,6 +76,11 @@ const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
 const DEFAULT_SWAP_PROVIDER_SOURCE = "helius";
 const WALLET_TABLE_PAGE_SIZE = 100;
 const DEFAULT_EXCHANGE_LIMIT = 2000;
+const MAX_EXCHANGE_LIMIT = 10000;
+const DEFAULT_HELIUS_HISTORY_CHUNK_PAGES = 5;
+const MAX_HELIUS_HISTORY_CHUNK_PAGES = 50;
+const DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 1_500;
+const MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 10_000;
 
 type SwapProviderSource = "helius" | "moralis";
 type WalletExchangeAccumulator = {
@@ -99,6 +107,20 @@ function toWalletPageInfo(input: {
     nextCursor: input.nextCursor,
     source: input.source,
   };
+}
+
+function clampHistoryTransactionLimit(limit?: number): number | null {
+  const parsed = Number(limit);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  const normalized = Math.floor(parsed);
+  if (normalized < 1) {
+    return 1;
+  }
+
+  return Math.min(normalized, MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS);
 }
 
 function resolveSwapProviderSource(): SwapProviderSource {
@@ -838,36 +860,67 @@ export async function getWalletPortfolio(
   return enrichedPortfolio.portfolio;
 }
 
-export async function getWalletTransactions(
-  address: string,
-  options?: { limit?: number; cursor?: string; before?: string },
-): Promise<WalletTransactionsResponse> {
-  const limit = Math.min(options?.limit ?? 100, 500);
-
-  const cachedTransactions = await getCachedWalletTransactions(
-    address,
-    limit,
-  );
-  if (cachedTransactions) {
-    await enrichWithSolanaTokenPrices(cachedTransactions);
-    return { address, transactions: cachedTransactions };
-  }
-  const transactions = await fetchHeliusSolanaTransactions(address, limit);
-  await enrichWithSolanaTokenPrices(transactions);
-
-  await saveTransactionsCache(address, transactions);
-  return {
-    address,
-    transactions,
-  };
-}
-
 export async function getWalletTransactionHelius(
   address: string,
   options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d"; fromSec?: number; toSec?: number },
 ): Promise<{ address: string; transactions: WalletTransactionHelius[] }> {
 
   const requestedRange = getHistoryRange(options);
+  const providerBeforeCursor = normalizeCursorValue(options?.before ?? options?.cursor);
+  const requestedLimit = clampHistoryTransactionLimit(options?.limit);
+
+  // Cursor- or limit-driven requests should avoid broad cache-range scans and
+  // use a bounded provider fetch path to keep request memory stable.
+  if (providerBeforeCursor || requestedLimit != null) {
+    const maxTransactions = requestedLimit ?? DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS;
+    const maxPages = Math.min(
+      Math.max(
+        DEFAULT_HELIUS_HISTORY_CHUNK_PAGES,
+        Math.ceil(maxTransactions / WALLET_TABLE_PAGE_SIZE),
+      ),
+      MAX_HELIUS_HISTORY_CHUNK_PAGES,
+    );
+
+    try {
+      const chunk = await fetchAllTransactionHistoryChunk(address, requestedRange, {
+        beforeCursor: providerBeforeCursor,
+        maxPages,
+        maxTransactions,
+      });
+
+      const transactions = chunk.transactions.filter((tx) => {
+        const txSec = getTimestampSecFromIso(tx.timestamp);
+        return txSec >= requestedRange.fromSec && txSec <= requestedRange.toSec;
+      });
+
+      await saveTransactionsHeliusCache(address, transactions);
+
+      console.log("[wallet-transaction-helius-cache]", {
+        address,
+        requestedRange,
+        fetchMode: "bounded-provider",
+        requestedLimit,
+        maxPages,
+        pagesFetched: chunk.pagesFetched,
+        stopReason: chunk.stopReason,
+        hasMore: chunk.hasMore,
+        nextCursor: chunk.nextCursor,
+        returnedCount: transactions.length,
+      });
+
+      return {
+        address,
+        transactions,
+      };
+    } catch (fetchErr) {
+      console.error("[wallet-transaction-helius-cache] Bounded provider fetch failed", fetchErr);
+      return {
+        address,
+        transactions: [],
+      };
+    }
+  }
+
   const cacheRangeResult = await getCachedWalletTransactionsHelius(
     address,
     requestedRange,
@@ -892,7 +945,9 @@ export async function getWalletTransactionHelius(
 
     if (hasNoCoverage) {
       try {
-        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange, {
+          beforeCursor: providerBeforeCursor,
+        });
         headCoverageConfirmed = true;
         tailCoverageConfirmed = true;
       } catch (fetchErr) {
@@ -904,7 +959,9 @@ export async function getWalletTransactionHelius(
 
       if (coveredLatestSec == null || coveredEarliestSec == null) {
         try {
-          fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange);
+          fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange, {
+            beforeCursor: providerBeforeCursor,
+          });
           headCoverageConfirmed = true;
           tailCoverageConfirmed = true;
         } catch (fetchErr) {
@@ -920,6 +977,7 @@ export async function getWalletTransactionHelius(
         if (needsHeadGapFill) {
           try {
             const headFetched = await fetchAllTransactionHistory(address, requestedRange, {
+              beforeCursor: providerBeforeCursor,
               stopAtKnownSignatures: knownSignatures,
             });
             fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, headFetched);
@@ -1466,9 +1524,32 @@ async function collectWalletSwapsForExchangeAggregation(
 }
 
 export type WalletExchangeCountsOptions = {
+  period?: string;
+  chain?: string;
   limit?: number;
   metric?: "count" | "volume";
 };
+
+function normalizeExchangePeriod(rawPeriod?: string): WalletTimePeriod {
+  const normalized = String(rawPeriod ?? "").trim().toUpperCase();
+  if (
+    normalized === "7D" ||
+    normalized === "30D" ||
+    normalized === "60D" ||
+    normalized === "90D" ||
+    normalized === "1Y" ||
+    normalized === "ALL"
+  ) {
+    return normalized === "ALL" ? "All" : (normalized as WalletTimePeriod);
+  }
+
+  return "30D";
+}
+
+function normalizeExchangeChain(rawChain?: string): string {
+  const normalized = String(rawChain ?? "solana").trim().toLowerCase();
+  return normalized || "solana";
+}
 
 /**
  * PURPOSE: Aggregate per-exchange swap activity for a wallet.
@@ -1482,7 +1563,12 @@ export async function getWalletExchangeCounts(
   address: string,
   options?: WalletExchangeCountsOptions,
 ): Promise<WalletExchangeCountsResponse> {
-  const transactionLimit = options?.limit ?? DEFAULT_EXCHANGE_LIMIT;
+  const transactionLimit = Math.min(
+    Math.max(Math.floor(options?.limit ?? DEFAULT_EXCHANGE_LIMIT), 1),
+    MAX_EXCHANGE_LIMIT,
+  );
+  const period = normalizeExchangePeriod(options?.period);
+  const chain = normalizeExchangeChain(options?.chain);
   const metric = normalizeExchangeMetric(options?.metric);
 
   const dataset = await collectWalletSwapsForExchangeAggregation(
@@ -1553,6 +1639,8 @@ export async function getWalletExchangeCounts(
   return {
     exchanges,
     metadata: {
+      period,
+      chain,
       metric,
       source: dataset.source,
       limit: transactionLimit,
@@ -1585,12 +1673,38 @@ export interface WalletCumulativePnLResult {
   realizedPnL?: number;
 }
 
+export type ChartAggregation = "hourly" | "daily" | "weekly" | "monthly";
+
+export interface ChartPageInfo {
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+  source: "cache" | "provider" | "mixed";
+}
+
+export interface ChartChunkInfo {
+  chunkFromSec: number;
+  chunkToSec: number;
+  requestedFromSec: number;
+  requestedToSec: number;
+  effectiveAggregation: ChartAggregation;
+}
+
+export interface ChartChunkState {
+  hasMore: boolean;
+  nextChunkToSec: number | null;
+  heliusCursor: string | null;
+  lastProcessedSignature: string | null;
+}
+
 type PriceTimelinePoint = {
   timestampMs: number;
   price: number;
 };
 
 const MAX_PNL_SNAPSHOT_POINTS = 1500;
+const DEFAULT_CHART_POINTS_PER_CHUNK = 180;
+const MAX_CHART_POINTS_PER_CHUNK = 500;
 
 function roundUsd(value: number): number {
   return Number(value.toFixed(2));
@@ -1598,7 +1712,7 @@ function roundUsd(value: number): number {
 
 function getRangeStartMs(
   nowMs: number,
-  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All",
+  timePeriod: WalletTimePeriod,
 ): number {
   if (timePeriod === "All") {
     return 0;
@@ -1788,6 +1902,11 @@ async function getHistoricalPortfolioValueSeries(
   startMs: number,
   endMs: number,
   intervalMs: number,
+  options?: {
+    beforeCursor?: string;
+    transactionLimit?: number;
+    onTransactionsLoaded?: (transactions: WalletTransactionHelius[]) => void;
+  },
 ): Promise<PnLDataPoint[]> {
   const snapshots = buildSnapshotTimestamps(startMs, endMs, intervalMs);
   const requestedFromSec = Math.floor(startMs / 1000);
@@ -1798,6 +1917,8 @@ async function getHistoricalPortfolioValueSeries(
     getWalletTransactionHelius(address, {
       fromSec: requestedFromSec,
       toSec: requestedToSec,
+      before: options?.beforeCursor,
+      limit: options?.transactionLimit,
     }),
   ]);
 
@@ -1830,6 +1951,8 @@ async function getHistoricalPortfolioValueSeries(
       return timestampMs >= startMs && timestampMs <= endMs;
     })
     .sort((a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp));
+
+  options?.onTransactionsLoaded?.(transactions);
 
   for (const tx of transactions) {
     for (const change of tx.balanceChanges ?? []) {
@@ -1943,7 +2066,7 @@ async function getHistoricalPortfolioValueSeries(
  */
 export async function getWalletBalanceHistory(
   address: string,
-  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
+  timePeriod: WalletTimePeriod = "30D"
 ): Promise<BalanceDataPoint[]> {
   const nowMs = Date.now();
   const startMs = getRangeStartMs(nowMs, timePeriod);
@@ -1988,13 +2111,136 @@ export async function getWalletBalanceHistory(
   }
 }
 
+export async function getWalletBalanceHistoryChunk(
+  address: string,
+  options: {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+    heliusCursor?: string | null;
+  },
+): Promise<{
+  series: BalanceDataPoint[];
+  chunkInfo: ChartChunkInfo;
+  chunkState: ChartChunkState;
+}> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const resolvedRequestedRange =
+    options.requestedFromSec != null || options.requestedToSec != null
+      ? {
+        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+        toSec: Math.max(
+          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          Math.floor(options.requestedToSec ?? nowSec),
+        ),
+      }
+      : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
+
+  const requestedGapSec = Math.max(
+    0,
+    resolvedRequestedRange.toSec - resolvedRequestedRange.fromSec,
+  );
+  const effectiveAggregation = resolveBalanceAggregationByGapSec(requestedGapSec);
+  const intervalMs = getBalanceAggregationIntervalMs(effectiveAggregation);
+  const intervalSec = Math.max(1, Math.floor(intervalMs / 1000));
+  const limit = clampChartPointsPerChunk(options.limit);
+  const transactionLimit = resolveChartTransactionLimit(limit);
+  const chunkWindow = resolveChunkWindow({
+    requestedFromSec: resolvedRequestedRange.fromSec,
+    requestedToSec: resolvedRequestedRange.toSec,
+    chunkToSec: options.chunkToSec,
+    limit,
+    intervalSec,
+  });
+
+  const chunkFromMs = chunkWindow.chunkFromSec * 1000;
+  const chunkToMs = chunkWindow.chunkToSec * 1000;
+  let lastProcessedSignature: string | null = null;
+
+  try {
+    const portfolioValues = await getHistoricalPortfolioValueSeries(
+      address,
+      chunkFromMs,
+      chunkToMs,
+      intervalMs,
+      {
+        beforeCursor: normalizeCursorValue(options.heliusCursor ?? undefined),
+        transactionLimit,
+        onTransactionsLoaded: (transactions) => {
+          lastProcessedSignature =
+            transactions[transactions.length - 1]?.signature ?? null;
+        },
+      },
+    );
+
+    return {
+      series: portfolioValues.map((point) => ({
+        timestamp: point.timestamp,
+        value: point.value,
+        date: new Date(point.timestamp).toISOString(),
+      })),
+      chunkInfo: {
+        chunkFromSec: chunkWindow.chunkFromSec,
+        chunkToSec: chunkWindow.chunkToSec,
+        requestedFromSec: resolvedRequestedRange.fromSec,
+        requestedToSec: resolvedRequestedRange.toSec,
+        effectiveAggregation,
+      },
+      chunkState: {
+        hasMore: chunkWindow.hasMore,
+        nextChunkToSec: chunkWindow.nextChunkToSec,
+        heliusCursor: lastProcessedSignature ?? options.heliusCursor ?? null,
+        lastProcessedSignature,
+      },
+    };
+  } catch (error) {
+    console.error("[WalletBalanceHistoryChunk] Error fetching balance chunk:", error);
+
+    const currentPortfolio = await getWalletPortfolio(address);
+    const currentTotalValue = currentPortfolio.reduce(
+      (sum, item) => sum + (item.valueUsd ?? 0),
+      0,
+    );
+
+    return {
+      series: [
+        {
+          timestamp: chunkFromMs,
+          value: Math.max(0, currentTotalValue),
+          date: new Date(chunkFromMs).toISOString(),
+        },
+        {
+          timestamp: chunkToMs,
+          value: Math.max(0, currentTotalValue),
+          date: new Date(chunkToMs).toISOString(),
+        },
+      ],
+      chunkInfo: {
+        chunkFromSec: chunkWindow.chunkFromSec,
+        chunkToSec: chunkWindow.chunkToSec,
+        requestedFromSec: resolvedRequestedRange.fromSec,
+        requestedToSec: resolvedRequestedRange.toSec,
+        effectiveAggregation,
+      },
+      chunkState: {
+        hasMore: chunkWindow.hasMore,
+        nextChunkToSec: chunkWindow.nextChunkToSec,
+        heliusCursor: options.heliusCursor ?? null,
+        lastProcessedSignature: null,
+      },
+    };
+  }
+}
+
 /**
  * Get cumulative wallet PnL using transaction-derived balance snapshots
  * and historical token prices from cached token chart services.
  */
 export async function getCumulativePnL(
   address: string,
-  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D",
+  timePeriod: WalletTimePeriod = "30D",
   aggregation: PnLAggregation = "daily",
 ): Promise<WalletCumulativePnLResult> {
   const nowMs = Date.now();
@@ -2048,6 +2294,139 @@ export async function getCumulativePnL(
   }
 }
 
+export async function getCumulativePnLChunk(
+  address: string,
+  options: {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+    aggregation?: PnLAggregation;
+    heliusCursor?: string | null;
+  },
+): Promise<WalletCumulativePnLResult & {
+  chunkInfo: ChartChunkInfo;
+  chunkState: ChartChunkState;
+}> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const resolvedRequestedRange =
+    options.requestedFromSec != null || options.requestedToSec != null
+      ? {
+        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+        toSec: Math.max(
+          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          Math.floor(options.requestedToSec ?? nowSec),
+        ),
+      }
+      : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
+
+  const requestedGapSec = Math.max(
+    0,
+    resolvedRequestedRange.toSec - resolvedRequestedRange.fromSec,
+  );
+  const effectivePnLAggregation = resolvePnLAggregationByGap(
+    options.aggregation ?? "daily",
+    requestedGapSec,
+  );
+  const effectiveAggregation: ChartAggregation = effectivePnLAggregation;
+  const intervalMs = getAggregationIntervalMs(effectivePnLAggregation);
+  const intervalSec = Math.max(1, Math.floor(intervalMs / 1000));
+  const limit = clampChartPointsPerChunk(options.limit);
+  const transactionLimit = resolveChartTransactionLimit(limit);
+  const chunkWindow = resolveChunkWindow({
+    requestedFromSec: resolvedRequestedRange.fromSec,
+    requestedToSec: resolvedRequestedRange.toSec,
+    chunkToSec: options.chunkToSec,
+    limit,
+    intervalSec,
+  });
+
+  const chunkFromMs = chunkWindow.chunkFromSec * 1000;
+  const chunkToMs = chunkWindow.chunkToSec * 1000;
+  const snapshots = buildSnapshotTimestamps(chunkFromMs, chunkToMs, intervalMs);
+  const zeroSeries: PnLDataPoint[] = snapshots.map((timestamp) => ({
+    timestamp,
+    value: 0,
+  }));
+
+  let lastProcessedSignature: string | null = null;
+
+  try {
+    const portfolioValues = await getHistoricalPortfolioValueSeries(
+      address,
+      chunkFromMs,
+      chunkToMs,
+      intervalMs,
+      {
+        beforeCursor: normalizeCursorValue(options.heliusCursor ?? undefined),
+        transactionLimit,
+        onTransactionsLoaded: (transactions) => {
+          lastProcessedSignature =
+            transactions[transactions.length - 1]?.signature ?? null;
+        },
+      },
+    );
+    const startingValue = portfolioValues[0]?.value ?? 0;
+
+    let previousValue = startingValue;
+    const dailyPnL = portfolioValues.map((point, index) => {
+      const periodDelta = index === 0 ? 0 : point.value - previousValue;
+      previousValue = point.value;
+      return {
+        timestamp: point.timestamp,
+        value: roundUsd(periodDelta),
+      };
+    });
+
+    const cumulativePnL = portfolioValues.map((point) => ({
+      timestamp: point.timestamp,
+      value: roundUsd(point.value - startingValue),
+    }));
+
+    return {
+      dailyPnL,
+      cumulativePnL,
+      startBalance: roundUsd(startingValue),
+      endBalance: roundUsd(portfolioValues[portfolioValues.length - 1]?.value ?? 0),
+      chunkInfo: {
+        chunkFromSec: chunkWindow.chunkFromSec,
+        chunkToSec: chunkWindow.chunkToSec,
+        requestedFromSec: resolvedRequestedRange.fromSec,
+        requestedToSec: resolvedRequestedRange.toSec,
+        effectiveAggregation,
+      },
+      chunkState: {
+        hasMore: chunkWindow.hasMore,
+        nextChunkToSec: chunkWindow.nextChunkToSec,
+        heliusCursor: lastProcessedSignature ?? options.heliusCursor ?? null,
+        lastProcessedSignature,
+      },
+    };
+  } catch (error) {
+    console.error("[WalletCumulativePnLChunk] Error computing cumulative PnL chunk:", error);
+    return {
+      dailyPnL: zeroSeries,
+      cumulativePnL: zeroSeries,
+      startBalance: 0,
+      endBalance: 0,
+      chunkInfo: {
+        chunkFromSec: chunkWindow.chunkFromSec,
+        chunkToSec: chunkWindow.chunkToSec,
+        requestedFromSec: resolvedRequestedRange.fromSec,
+        requestedToSec: resolvedRequestedRange.toSec,
+        effectiveAggregation,
+      },
+      chunkState: {
+        hasMore: chunkWindow.hasMore,
+        nextChunkToSec: chunkWindow.nextChunkToSec,
+        heliusCursor: options.heliusCursor ?? null,
+        lastProcessedSignature: null,
+      },
+    };
+  }
+}
+
 export interface TokenBalanceSeriesResult {
   tokenSeries: BalanceDataPoint[];
   usdSeries: BalanceDataPoint[];
@@ -2058,7 +2437,7 @@ export interface TokenBalanceSeriesResult {
 export async function getWalletTokenBalanceHistory(
   address: string,
   tokenSelector: string,
-  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All" = "30D"
+  timePeriod: WalletTimePeriod = "30D"
 ): Promise<TokenBalanceSeriesResult> {
   const now = new Date();
   let startDate = new Date(now);
@@ -2250,6 +2629,114 @@ export async function getWalletTokenBalanceHistory(
     console.error("[getWalletTokenBalanceHistory] Error:", err);
     return flatZero();
   }
+}
+
+function sliceBalanceSeriesToChunk(
+  series: BalanceDataPoint[],
+  chunkFromSec: number,
+  chunkToSec: number,
+  maxPoints: number,
+): BalanceDataPoint[] {
+  const fromMs = chunkFromSec * 1000;
+  const toMs = chunkToSec * 1000;
+
+  const filtered = series
+    .filter((point) => point.timestamp >= fromMs && point.timestamp <= toMs)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  if (filtered.length <= maxPoints) {
+    return filtered;
+  }
+
+  const step = Math.max(1, Math.ceil(filtered.length / maxPoints));
+  const sampled = filtered.filter((_, index) => index % step === 0);
+  const lastPoint = filtered[filtered.length - 1];
+
+  if (sampled[sampled.length - 1]?.timestamp !== lastPoint.timestamp) {
+    sampled.push(lastPoint);
+  }
+
+  return sampled;
+}
+
+export async function getWalletTokenBalanceHistoryChunk(
+  address: string,
+  tokenSelector: string,
+  options: {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+  },
+): Promise<TokenBalanceSeriesResult & {
+  chunkInfo: ChartChunkInfo;
+  chunkState: ChartChunkState;
+}> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const resolvedRequestedRange =
+    options.requestedFromSec != null || options.requestedToSec != null
+      ? {
+        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+        toSec: Math.max(
+          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          Math.floor(options.requestedToSec ?? nowSec),
+        ),
+      }
+      : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
+
+  const requestedGapSec = Math.max(
+    0,
+    resolvedRequestedRange.toSec - resolvedRequestedRange.fromSec,
+  );
+  const effectiveAggregation = resolveBalanceAggregationByGapSec(requestedGapSec);
+  const intervalMs = getBalanceAggregationIntervalMs(effectiveAggregation);
+  const intervalSec = Math.max(1, Math.floor(intervalMs / 1000));
+  const limit = clampChartPointsPerChunk(options.limit);
+
+  const chunkWindow = resolveChunkWindow({
+    requestedFromSec: resolvedRequestedRange.fromSec,
+    requestedToSec: resolvedRequestedRange.toSec,
+    chunkToSec: options.chunkToSec,
+    limit,
+    intervalSec,
+  });
+
+  const fullSeries = await getWalletTokenBalanceHistory(
+    address,
+    tokenSelector,
+    options.timePeriod ?? "30D",
+  );
+
+  return {
+    tokenSeries: sliceBalanceSeriesToChunk(
+      fullSeries.tokenSeries,
+      chunkWindow.chunkFromSec,
+      chunkWindow.chunkToSec,
+      limit,
+    ),
+    usdSeries: sliceBalanceSeriesToChunk(
+      fullSeries.usdSeries,
+      chunkWindow.chunkFromSec,
+      chunkWindow.chunkToSec,
+      limit,
+    ),
+    tokenSymbol: fullSeries.tokenSymbol,
+    tokenAddress: fullSeries.tokenAddress,
+    chunkInfo: {
+      chunkFromSec: chunkWindow.chunkFromSec,
+      chunkToSec: chunkWindow.chunkToSec,
+      requestedFromSec: resolvedRequestedRange.fromSec,
+      requestedToSec: resolvedRequestedRange.toSec,
+      effectiveAggregation,
+    },
+    chunkState: {
+      hasMore: chunkWindow.hasMore,
+      nextChunkToSec: chunkWindow.nextChunkToSec,
+      heliusCursor: null,
+      lastProcessedSignature: null,
+    },
+  };
 }
 
 // async function getTokenPriceMapFromTransactions(
@@ -2680,4 +3167,118 @@ async function enrichWithSolanaTokenPrices(
       }
     }
   }
+}
+
+export function resolveWalletTimeRangeSec(
+  timePeriod: WalletTimePeriod,
+  nowSec = Math.floor(Date.now() / 1000),
+): { fromSec: number; toSec: number } {
+  const nowMs = nowSec * 1000;
+  const fromMs = getRangeStartMs(nowMs, timePeriod);
+  return {
+    fromSec: Math.max(0, Math.floor(fromMs / 1000)),
+    toSec: nowSec,
+  };
+}
+
+export function clampChartPointsPerChunk(limit?: number): number {
+  const parsed = Number(limit ?? DEFAULT_CHART_POINTS_PER_CHUNK);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_CHART_POINTS_PER_CHUNK;
+  }
+
+  const normalized = Math.floor(parsed);
+  if (normalized < 1) {
+    return 1;
+  }
+
+  if (normalized > MAX_CHART_POINTS_PER_CHUNK) {
+    return MAX_CHART_POINTS_PER_CHUNK;
+  }
+
+  return normalized;
+}
+
+function resolveChartTransactionLimit(pointLimit: number): number {
+  const estimated = Math.max(
+    DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS,
+    pointLimit * 20,
+  );
+
+  return Math.min(estimated, MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS);
+}
+
+function resolveBalanceAggregationByGapSec(gapSec: number): ChartAggregation {
+  if (gapSec > 2 * 365 * DAY_SEC) {
+    return "monthly";
+  }
+
+  if (gapSec > 120 * DAY_SEC) {
+    return "weekly";
+  }
+
+  return "daily";
+}
+
+function getBalanceAggregationIntervalMs(aggregation: ChartAggregation): number {
+  if (aggregation === "monthly") {
+    return 30 * DAY_MS;
+  }
+
+  if (aggregation === "weekly") {
+    return 7 * DAY_MS;
+  }
+
+  return DAY_MS;
+}
+
+function resolvePnLAggregationByGap(
+  aggregation: PnLAggregation,
+  gapSec: number,
+): PnLAggregation {
+  if (gapSec > 2 * 365 * DAY_SEC) {
+    return "monthly";
+  }
+
+  if (gapSec > 180 * DAY_SEC && aggregation === "daily") {
+    return "weekly";
+  }
+
+  return aggregation;
+}
+
+function resolveChunkWindow(args: {
+  requestedFromSec: number;
+  requestedToSec: number;
+  chunkToSec?: number;
+  limit: number;
+  intervalSec: number;
+}): {
+  chunkFromSec: number;
+  chunkToSec: number;
+  hasMore: boolean;
+  nextChunkToSec: number | null;
+} {
+  const requestedFromSec = Math.max(0, Math.floor(args.requestedFromSec));
+  const requestedToSec = Math.max(requestedFromSec, Math.floor(args.requestedToSec));
+  const normalizedToSec = Math.min(
+    requestedToSec,
+    Math.max(requestedFromSec, Math.floor(args.chunkToSec ?? requestedToSec)),
+  );
+  const safeLimit = Math.max(1, Math.floor(args.limit));
+  const safeIntervalSec = Math.max(1, Math.floor(args.intervalSec));
+  const windowSpanSec = Math.max(safeIntervalSec, (safeLimit - 1) * safeIntervalSec);
+
+  const chunkFromSec = Math.max(requestedFromSec, normalizedToSec - windowSpanSec);
+  const hasMore = chunkFromSec > requestedFromSec;
+  const nextChunkToSec = hasMore
+    ? Math.max(requestedFromSec, chunkFromSec - safeIntervalSec)
+    : null;
+
+  return {
+    chunkFromSec,
+    chunkToSec: normalizedToSec,
+    hasMore,
+    nextChunkToSec,
+  };
 }

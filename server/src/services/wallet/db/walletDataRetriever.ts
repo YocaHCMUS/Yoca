@@ -13,7 +13,7 @@ import {
 	walletTransactionsMeta,
 	walletTransferMeta,
 } from "@sv/db/schema.js";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
 	WalletSwap,
 	WalletTransaction,
@@ -256,12 +256,18 @@ export async function getCachedWalletTransactionsHelius(
 		metaCoveredToSec != null && metaCoveredToSec >= requestedRange.toSec;
 
 	const isFullyCovered = coversTail && (coversHead || hasFreshMovingNowHead);
+	const fromDate = new Date(requestedRange.fromSec * 1000);
+	const toDate = new Date(requestedRange.toSec * 1000);
 
 	const rows = await db
 		.select()
 		.from(walletHeliusTransactions)
 		.where(
-			eq(walletHeliusTransactions.address, address)
+			and(
+				eq(walletHeliusTransactions.address, address),
+				gte(walletHeliusTransactions.timestamp, fromDate),
+				lte(walletHeliusTransactions.timestamp, toDate),
+			),
 		)
 		.orderBy(desc(walletHeliusTransactions.timestamp));
 
@@ -274,18 +280,7 @@ export async function getCachedWalletTransactionsHelius(
 		};
 	}
 
-	const transactions = rows
-		.filter((row) => {
-			const date = row.timestamp instanceof Date ? row.timestamp : new Date(row.timestamp);
-			const ms = date.getTime();
-			if (Number.isNaN(ms)) {
-				return false;
-			}
-
-			const sec = Math.floor(ms / 1000);
-			return sec >= requestedRange.fromSec && sec <= requestedRange.toSec;
-		})
-		.map(mapHeliusRow);
+	const transactions = rows.map(mapHeliusRow);
 
 	return {
 		transactions,
@@ -306,12 +301,18 @@ export async function getCachedWalletTransfers(
 	}
 
 	const range = resolveRange(from);
+	const fromDate = new Date(range.fromSec * 1000);
+	const toDate = new Date(range.toSec * 1000);
 
 	const rows = await db
 		.select()
 		.from(tokenTransfers)
 		.where(
-			or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
+			and(
+				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
+				gte(tokenTransfers.blockTime, fromDate),
+				lte(tokenTransfers.blockTime, toDate),
+			),
 		)
 		.orderBy(desc(tokenTransfers.blockTime));
 
@@ -319,27 +320,16 @@ export async function getCachedWalletTransfers(
 		return null;
 	}
 
-	return rows
-		.filter((r) => {
-			const rowDate = r.blockTime instanceof Date ? r.blockTime : new Date(r.blockTime);
-			const ms = rowDate.getTime();
-			if (Number.isNaN(ms)) {
-				return false;
-			}
-
-			const rowSec = Math.floor(ms / 1000);
-			return rowSec >= range.fromSec && rowSec <= range.toSec;
-		})
-		.map((r) => ({
-			from: r.fromOwner,
-			to: r.toOwner,
-			amount: r.amount,
-			timestamp: toIsoTimestamp(r.blockTime),
-			tokenAddress: r.tokenAddress,
-			tokenSymbol: r.tokenSymbol,
-			transactionSignature: r.transactionSignature,
-			instructionIndex: r.instructionIndex,
-		}));
+	return rows.map((r) => ({
+		from: r.fromOwner,
+		to: r.toOwner,
+		amount: r.amount,
+		timestamp: toIsoTimestamp(r.blockTime),
+		tokenAddress: r.tokenAddress,
+		tokenSymbol: r.tokenSymbol,
+		transactionSignature: r.transactionSignature,
+		instructionIndex: r.instructionIndex,
+	}));
 }
 
 export async function getCachedWalletSwaps(
@@ -353,12 +343,18 @@ export async function getCachedWalletSwaps(
 	}
 
 	const range = resolveRange(from);
+	const fromDate = new Date(range.fromSec * 1000);
+	const toDate = new Date(range.toSec * 1000);
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
 		.where(
-			eq(walletSwap.address, address)
+			and(
+				eq(walletSwap.address, address),
+				gte(walletSwap.blockTimestamp, fromDate),
+				lte(walletSwap.blockTimestamp, toDate),
+			),
 		)
 		.orderBy(desc(walletSwap.blockTimestamp));
 
@@ -366,37 +362,26 @@ export async function getCachedWalletSwaps(
 		return null;
 	}
 
-	return rows
-		.filter((r) => {
-			const rowDate = r.blockTimestamp instanceof Date ? r.blockTimestamp : new Date(r.blockTimestamp);
-			const ms = rowDate.getTime();
-			if (Number.isNaN(ms)) {
-				return false;
-			}
-
-			const rowSec = Math.floor(ms / 1000);
-			return rowSec >= range.fromSec && rowSec <= range.toSec;
-		})
-		.map((r) => ({
-			walletAddress: r.address,
-			signature: r.signature,
-			timestamp: toIsoTimestamp(r.blockTimestamp),
-			slot: r.slot,
-			fee: r.fee,
-			feePayer: r.feePayer,
-			transactionType: r.transactionType ?? null,
-			subCategory: r.subCategory ?? null,
-			blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
-			exchange: r.exchange ?? null,
-			pair: r.pair ?? null,
-			sold: r.sold ?? null,
-			bought: r.bought ?? null,
-			baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
-			totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
-			source: r.source ?? undefined,
-			balanceChanges: r.swapBalanceChanges,
-			feeChanges: r.feeBalanceChanges,
-		}));
+	return rows.map((r) => ({
+		walletAddress: r.address,
+		signature: r.signature,
+		timestamp: toIsoTimestamp(r.blockTimestamp),
+		slot: r.slot,
+		fee: r.fee,
+		feePayer: r.feePayer,
+		transactionType: r.transactionType ?? null,
+		subCategory: r.subCategory ?? null,
+		blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
+		exchange: r.exchange ?? null,
+		pair: r.pair ?? null,
+		sold: r.sold ?? null,
+		bought: r.bought ?? null,
+		baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
+		totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
+		source: r.source ?? undefined,
+		balanceChanges: r.swapBalanceChanges,
+		feeChanges: r.feeBalanceChanges,
+	}));
 }
 
 export async function getCachedWalletTransfersChunk(
@@ -416,41 +401,49 @@ export async function getCachedWalletTransfersChunk(
 	}
 
 	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
-
-	const rows = await db
-		.select()
-		.from(tokenTransfers)
-		.where(
-			or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-		)
-		.orderBy(
-			desc(tokenTransfers.blockTime),
-			desc(tokenTransfers.transactionSignature),
-			desc(tokenTransfers.instructionIndex),
-		);
-
-	const mapped = rows.map((r) => ({
-		from: r.fromOwner,
-		to: r.toOwner,
-		amount: r.amount,
-		timestamp: toIsoTimestamp(r.blockTime),
-		tokenAddress: r.tokenAddress,
-		tokenSymbol: r.tokenSymbol,
-		transactionSignature: r.transactionSignature,
-		instructionIndex: r.instructionIndex,
-	}));
+	const addressPredicate = or(
+		eq(tokenTransfers.fromOwner, address),
+		eq(tokenTransfers.toOwner, address),
+	);
 
 	const cursor = String(options?.cursor ?? "").trim();
-	let startIndex = 0;
+	let pagePredicate = addressPredicate;
 
 	if (cursor) {
-		const matchIndex = mapped.findIndex(
-			(item) =>
-				item.transactionSignature === cursor ||
-				`${item.transactionSignature}:${item.instructionIndex}` === cursor,
-		);
+		const [cursorSignatureRaw, cursorInstructionRaw] = cursor.split(":");
+		const cursorSignature = String(cursorSignatureRaw ?? "").trim();
+		const cursorInstructionIndex =
+			cursorInstructionRaw != null && Number.isFinite(Number(cursorInstructionRaw))
+				? Math.floor(Number(cursorInstructionRaw))
+				: null;
 
-		if (matchIndex < 0) {
+		const cursorPredicate = cursorInstructionIndex == null
+			? and(
+				addressPredicate,
+				eq(tokenTransfers.transactionSignature, cursorSignature),
+			)
+			: and(
+				addressPredicate,
+				eq(tokenTransfers.transactionSignature, cursorSignature),
+				eq(tokenTransfers.instructionIndex, cursorInstructionIndex),
+			);
+
+		const cursorRows = await db
+			.select({
+				blockTime: tokenTransfers.blockTime,
+				transactionSignature: tokenTransfers.transactionSignature,
+				instructionIndex: tokenTransfers.instructionIndex,
+			})
+			.from(tokenTransfers)
+			.where(cursorPredicate)
+			.orderBy(
+				desc(tokenTransfers.blockTime),
+				desc(tokenTransfers.transactionSignature),
+				desc(tokenTransfers.instructionIndex),
+			)
+			.limit(1);
+
+		if (cursorRows.length === 0) {
 			return {
 				available: true,
 				cursorMatched: false,
@@ -460,11 +453,47 @@ export async function getCachedWalletTransfersChunk(
 			};
 		}
 
-		startIndex = matchIndex + 1;
+		const anchor = cursorRows[0];
+		pagePredicate = and(
+			addressPredicate,
+			or(
+				lt(tokenTransfers.blockTime, anchor.blockTime),
+				and(
+					eq(tokenTransfers.blockTime, anchor.blockTime),
+					lt(tokenTransfers.transactionSignature, anchor.transactionSignature),
+				),
+				and(
+					eq(tokenTransfers.blockTime, anchor.blockTime),
+					eq(tokenTransfers.transactionSignature, anchor.transactionSignature),
+					lt(tokenTransfers.instructionIndex, anchor.instructionIndex),
+				),
+			),
+		);
 	}
 
-	const pageItems = mapped.slice(startIndex, startIndex + limit);
-	const hasMore = startIndex + limit < mapped.length;
+	const rows = await db
+		.select()
+		.from(tokenTransfers)
+		.where(pagePredicate)
+		.orderBy(
+			desc(tokenTransfers.blockTime),
+			desc(tokenTransfers.transactionSignature),
+			desc(tokenTransfers.instructionIndex),
+		)
+		.limit(limit + 1);
+
+	const pageRows = rows.slice(0, limit);
+	const pageItems = pageRows.map((r) => ({
+		from: r.fromOwner,
+		to: r.toOwner,
+		amount: r.amount,
+		timestamp: toIsoTimestamp(r.blockTime),
+		tokenAddress: r.tokenAddress,
+		tokenSymbol: r.tokenSymbol,
+		transactionSignature: r.transactionSignature,
+		instructionIndex: r.instructionIndex,
+	}));
+	const hasMore = rows.length > limit;
 	const nextCursor =
 		hasMore && pageItems.length > 0
 			? `${pageItems[pageItems.length - 1].transactionSignature}:${pageItems[pageItems.length - 1].instructionIndex}`
@@ -496,16 +525,58 @@ export async function getCachedWalletSwapsChunk(
 	}
 
 	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
+	const addressPredicate = eq(walletSwap.address, address);
+	const before = String(options?.before ?? "").trim();
+	let pagePredicate = addressPredicate;
+
+	if (before) {
+		const cursorRows = await db
+			.select({
+				blockTimestamp: walletSwap.blockTimestamp,
+				signature: walletSwap.signature,
+			})
+			.from(walletSwap)
+			.where(
+				and(
+					addressPredicate,
+					eq(walletSwap.signature, before),
+				),
+			)
+			.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature))
+			.limit(1);
+
+		if (cursorRows.length === 0) {
+			return {
+				available: true,
+				cursorMatched: false,
+				items: [],
+				nextCursor: null,
+				hasMore: false,
+			};
+		}
+
+		const anchor = cursorRows[0];
+		pagePredicate = and(
+			addressPredicate,
+			or(
+				lt(walletSwap.blockTimestamp, anchor.blockTimestamp),
+				and(
+					eq(walletSwap.blockTimestamp, anchor.blockTimestamp),
+					lt(walletSwap.signature, anchor.signature),
+				),
+			),
+		)!;
+	}
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(
-			eq(walletSwap.address, address)
-		)
-		.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature));
+		.where(pagePredicate)
+		.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature))
+		.limit(limit + 1);
 
-	const mapped = rows.map((r) => ({
+	const pageRows = rows.slice(0, limit);
+	const pageItems = pageRows.map((r) => ({
 		walletAddress: r.address,
 		signature: r.signature,
 		timestamp: toIsoTimestamp(r.blockTimestamp),
@@ -525,27 +596,7 @@ export async function getCachedWalletSwapsChunk(
 		balanceChanges: r.swapBalanceChanges,
 		feeChanges: r.feeBalanceChanges,
 	}));
-
-	const before = String(options?.before ?? "").trim();
-	let startIndex = 0;
-
-	if (before) {
-		const matchIndex = mapped.findIndex((item) => item.signature === before);
-		if (matchIndex < 0) {
-			return {
-				available: true,
-				cursorMatched: false,
-				items: [],
-				nextCursor: null,
-				hasMore: false,
-			};
-		}
-
-		startIndex = matchIndex + 1;
-	}
-
-	const pageItems = mapped.slice(startIndex, startIndex + limit);
-	const hasMore = startIndex + limit < mapped.length;
+	const hasMore = rows.length > limit;
 	const nextCursor =
 		hasMore && pageItems.length > 0
 			? pageItems[pageItems.length - 1].signature

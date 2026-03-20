@@ -437,6 +437,19 @@ describe("wallets.route - /exchanges", () => {
             limit: undefined,
         });
     });
+
+    it("clamps oversized limit to route max", async () => {
+        const response = await router.request(
+            "http://localhost/exchanges?address=wallet-1&limit=999999",
+        );
+
+        expect(response.status).toBe(200);
+        expect(getWalletExchangeCountsMock).toHaveBeenCalledWith("wallet-1", {
+            period: undefined,
+            chain: undefined,
+            limit: 5000,
+        });
+    });
 });
 
 describe("wallets.route - paginated table endpoints", () => {

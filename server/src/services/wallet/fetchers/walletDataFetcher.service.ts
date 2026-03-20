@@ -305,10 +305,226 @@ export type HeliusHistoryRange = {
   toSec?: number;
 };
 
-type FetchAllTransactionHistoryOptions = {
+export type FetchAllTransactionHistoryOptions = {
   beforeCursor?: string;
   stopAtKnownSignatures?: Set<string>;
 };
+
+export type FetchAllTransactionHistoryChunkOptions =
+  FetchAllTransactionHistoryOptions & {
+    maxPages?: number;
+    maxTransactions?: number;
+  };
+
+export type FetchAllTransactionHistoryChunkResult = {
+  transactions: WalletTransactionHelius[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  pagesFetched: number;
+  stopReason:
+  | "provider-end"
+  | "range-cutoff"
+  | "known-signature"
+  | "max-pages"
+  | "max-transactions"
+  | "empty-page";
+};
+
+const HELIUS_HISTORY_PAGE_LIMIT = 100;
+const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES = 5;
+const MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES = 50;
+const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS = 500;
+const MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS = 10_000;
+
+function resolveHistoryWindow(
+  from: HeliusHistoryFrom | number | HeliusHistoryRange,
+): { fromSec: number; toSec: number } {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const daySec = 24 * 60 * 60;
+
+  const fromSec = typeof from === "number"
+    ? from
+    : typeof from === "object"
+      ? from.fromSec
+      : nowSec - (daySec * (from === "24h" ? 1 : 7));
+  const toSec = typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
+
+  return {
+    fromSec,
+    toSec,
+  };
+}
+
+export async function fetchAllTransactionHistoryChunk(
+  address: string,
+  from: HeliusHistoryFrom | number | HeliusHistoryRange = "7d",
+  options?: FetchAllTransactionHistoryChunkOptions,
+): Promise<FetchAllTransactionHistoryChunkResult> {
+  const { fromSec, toSec } = resolveHistoryWindow(from);
+  const maxPages = Math.min(
+    Math.max(Math.floor(options?.maxPages ?? DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES), 1),
+    MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES,
+  );
+  const maxTransactions = Math.min(
+    Math.max(
+      Math.floor(options?.maxTransactions ?? DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS),
+      1,
+    ),
+    MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
+  );
+
+  const knownSignatures = options?.stopAtKnownSignatures;
+  const transactions: WalletTransactionHelius[] = [];
+
+  let cursor: string | null = options?.beforeCursor ?? null;
+  let pagesFetched = 0;
+  let hasMoreFromProvider = false;
+  let stopReason: FetchAllTransactionHistoryChunkResult["stopReason"] = "provider-end";
+
+  while (pagesFetched < maxPages && transactions.length < maxTransactions) {
+    pagesFetched += 1;
+
+    const url = getEndpoint(`/v1/wallet/${address}/history?tokenAccounts=balanceChanged`);
+    url.searchParams.set("limit", String(HELIUS_HISTORY_PAGE_LIMIT));
+    if (cursor) {
+      url.searchParams.set("before", cursor);
+    }
+
+    let json: any = null;
+    try {
+      const headers = getRequiredHeaders();
+      const resp = await heliusFetch(url, {
+        method: "GET",
+        headers,
+      });
+
+      if (!resp.ok) {
+        console.error(
+          "Helius wallet transaction chunk error",
+          resp.status,
+          resp.statusText,
+        );
+        break;
+      }
+
+      json = await resp.json();
+    } catch (err) {
+      console.error("Helius wallet transaction chunk request failed", err);
+      break;
+    }
+
+    const data: any[] = Array.isArray(json?.data) ? json.data : [];
+    if (data.length === 0) {
+      stopReason = "empty-page";
+      hasMoreFromProvider = false;
+      cursor = null;
+      break;
+    }
+
+    let reachedRangeCutoff = false;
+    let reachedKnownSignature = false;
+
+    for (const entry of data) {
+      const tsSec =
+        typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          ? entry.timestamp
+          : null;
+
+      if (tsSec == null) {
+        continue;
+      }
+
+      if (tsSec > toSec) {
+        continue;
+      }
+
+      if (tsSec < fromSec) {
+        reachedRangeCutoff = true;
+        break;
+      }
+
+      const signature = String(entry.signature ?? "").trim();
+      if (!signature) {
+        continue;
+      }
+
+      if (knownSignatures?.has(signature)) {
+        reachedKnownSignature = true;
+        break;
+      }
+
+      const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
+        ? entry.balanceChanges
+          .map((change: any) => ({
+            mint: String(change?.mint ?? ""),
+            amount: Number(change?.amount ?? 0),
+            decimals: Number(change?.decimals ?? 0),
+          }))
+          .filter(
+            (change: { mint: string; amount: number; decimals: number }) =>
+              change.mint.length > 0 &&
+              Number.isFinite(change.amount) &&
+              Number.isFinite(change.decimals),
+          )
+        : [];
+
+      transactions.push({
+        walletAddress: address,
+        signature,
+        timestamp: new Date(tsSec * 1000).toISOString(),
+        slot: Number(entry.slot ?? 0),
+        fee: Number(entry.fee ?? 0),
+        feePayer: String(entry.feePayer ?? ""),
+        balanceChanges: mappedBalanceChanges,
+      });
+
+      if (transactions.length >= maxTransactions) {
+        break;
+      }
+    }
+
+    hasMoreFromProvider = Boolean(json?.pagination?.hasMore);
+    cursor = hasMoreFromProvider ? getNextCursor(json?.pagination) : null;
+
+    if (reachedKnownSignature) {
+      stopReason = "known-signature";
+      break;
+    }
+
+    if (reachedRangeCutoff) {
+      stopReason = "range-cutoff";
+      break;
+    }
+
+    if (transactions.length >= maxTransactions) {
+      stopReason = "max-transactions";
+      break;
+    }
+
+    if (!hasMoreFromProvider || !cursor) {
+      stopReason = "provider-end";
+      break;
+    }
+  }
+
+  if (
+    stopReason === "provider-end" &&
+    hasMoreFromProvider &&
+    cursor &&
+    pagesFetched >= maxPages &&
+    transactions.length < maxTransactions
+  ) {
+    stopReason = "max-pages";
+  }
+
+  return {
+    transactions,
+    nextCursor: hasMoreFromProvider ? cursor : null,
+    hasMore: Boolean(hasMoreFromProvider && cursor),
+    pagesFetched,
+    stopReason,
+  };
+}
 
 export async function fetchHeliusSolanaPortfolio(
   address: string,
@@ -1026,18 +1242,11 @@ export async function fetchAllTransactionHistory(
   from: HeliusHistoryFrom | number | HeliusHistoryRange = "7d",
   options?: FetchAllTransactionHistoryOptions,
 ) {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const daySec = 24 * 60 * 60;
-  const fromSec = typeof from === "number"
-    ? from
-    : typeof from === "object"
-      ? from.fromSec
-      : nowSec - (daySec * (from === "24h" ? 1 : 7));
-  const toSec = typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
+  const { fromSec, toSec } = resolveHistoryWindow(from);
 
   // Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60)
   // Helius history endpoint returns at most 100 items per page.
-  const HELIUS_PAGE_LIMIT = 100;
+  const HELIUS_PAGE_LIMIT = HELIUS_HISTORY_PAGE_LIMIT;
 
   const transactions: WalletTransactionHelius[] = [];
   let cursor: string | null = options?.beforeCursor ?? null;

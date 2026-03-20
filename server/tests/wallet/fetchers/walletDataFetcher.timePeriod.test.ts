@@ -16,6 +16,7 @@ vi.mock("@sv/util/api-key-manager.js", () => ({
 
 import {
     fetchAllTransactionHistory,
+    fetchAllTransactionHistoryChunk,
     timePeriodToFromSec,
 } from "../../../src/services/wallet/fetchers/walletDataFetcher.service.ts";
 
@@ -257,5 +258,84 @@ describe("fetchAllTransactionHistory - time-window cutoff", () => {
 
         const firstUrl = heliusFetchMock.mock.calls[0][0] as URL;
         expect(firstUrl.searchParams.get("before")).toBe("oldest-cached-sig");
+    });
+});
+
+describe("fetchAllTransactionHistoryChunk - bounded paging", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(NOW_ISO));
+        heliusFetchMock.mockReset();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("returns provider nextCursor when transaction cap is reached", async () => {
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "sig-1",
+                        timestamp: NOW_SEC - 10,
+                        slot: 1,
+                        fee: 5000,
+                        feePayer: "payer",
+                        balanceChanges: [],
+                    },
+                    {
+                        signature: "sig-2",
+                        timestamp: NOW_SEC - 20,
+                        slot: 2,
+                        fee: 5000,
+                        feePayer: "payer",
+                        balanceChanges: [],
+                    },
+                ],
+                pagination: { hasMore: true, nextCursor: "cursor-1" },
+            }),
+        );
+
+        const result = await fetchAllTransactionHistoryChunk(
+            "wallet-addr",
+            { fromSec: NOW_SEC - 7 * DAY_SEC, toSec: NOW_SEC },
+            { maxTransactions: 1 },
+        );
+
+        expect(result.transactions).toHaveLength(1);
+        expect(result.stopReason).toBe("max-transactions");
+        expect(result.hasMore).toBe(true);
+        expect(result.nextCursor).toBe("cursor-1");
+        expect(result.pagesFetched).toBe(1);
+    });
+
+    it("stops on max-pages and preserves resume cursor", async () => {
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "sig-page-1",
+                        timestamp: NOW_SEC - 10,
+                        slot: 1,
+                        fee: 5000,
+                        feePayer: "payer",
+                        balanceChanges: [],
+                    },
+                ],
+                pagination: { hasMore: true, nextCursor: "cursor-next" },
+            }),
+        );
+
+        const result = await fetchAllTransactionHistoryChunk(
+            "wallet-addr",
+            { fromSec: NOW_SEC - 7 * DAY_SEC, toSec: NOW_SEC },
+            { maxPages: 1, maxTransactions: 500 },
+        );
+
+        expect(result.stopReason).toBe("max-pages");
+        expect(result.hasMore).toBe(true);
+        expect(result.nextCursor).toBe("cursor-next");
+        expect(result.pagesFetched).toBe(1);
     });
 });

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const hoisted = vi.hoisted(() => {
     const rowsByTable = new Map<unknown, unknown[]>();
     const queuedRowsByTable = new Map<unknown, unknown[][]>();
+    const whereCalls: unknown[] = [];
 
     const getRows = (table: unknown) => {
         const queued = queuedRowsByTable.get(table);
@@ -29,10 +30,13 @@ const hoisted = vi.hoisted(() => {
     const db = {
         select: vi.fn(() => ({
             from: vi.fn((table: unknown) => ({
-                where: vi.fn(() => ({
-                    limit: vi.fn(async (n: number) => getRows(table).slice(0, n)),
-                    orderBy: vi.fn(() => makeOrderByResult(table)),
-                })),
+                where: vi.fn((predicate: unknown) => {
+                    whereCalls.push(predicate);
+                    return {
+                        limit: vi.fn(async (n: number) => getRows(table).slice(0, n)),
+                        orderBy: vi.fn(() => makeOrderByResult(table)),
+                    };
+                }),
                 orderBy: vi.fn(() => makeOrderByResult(table)),
             })),
         })),
@@ -81,7 +85,7 @@ const hoisted = vi.hoisted(() => {
         },
     };
 
-    return { db, rowsByTable, queuedRowsByTable, queueRows, schema };
+    return { db, rowsByTable, queuedRowsByTable, queueRows, schema, whereCalls };
 });
 
 vi.mock("@sv/config/constants.js", () => ({
@@ -100,6 +104,9 @@ vi.mock("drizzle-orm", () => ({
     and: (...args: unknown[]) => ({ op: "and", args }),
     or: (...args: unknown[]) => ({ op: "or", args }),
     eq: (...args: unknown[]) => ({ op: "eq", args }),
+    gte: (...args: unknown[]) => ({ op: "gte", args }),
+    lte: (...args: unknown[]) => ({ op: "lte", args }),
+    lt: (...args: unknown[]) => ({ op: "lt", args }),
     desc: (arg: unknown) => ({ op: "desc", arg }),
 }));
 
@@ -109,12 +116,28 @@ import {
     getCachedWalletTransfers,
 } from "../../../src/services/wallet/db/walletDataRetriever.ts";
 
+function collectPredicateOps(node: unknown): string[] {
+    if (!node || typeof node !== "object") {
+        return [];
+    }
+
+    const record = node as Record<string, unknown>;
+    const op = typeof record.op === "string" ? [record.op] : [];
+    const args = Array.isArray(record.args) ? record.args : [];
+
+    return args.reduce<string[]>((acc, entry) => {
+        acc.push(...collectPredicateOps(entry));
+        return acc;
+    }, [...op]);
+}
+
 describe("walletDataRetriever", () => {
     beforeEach(() => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-03-12T12:00:00.000Z"));
         hoisted.rowsByTable.clear();
         hoisted.queuedRowsByTable.clear();
+        hoisted.whereCalls.length = 0;
     });
 
     afterEach(() => {
@@ -126,7 +149,7 @@ describe("walletDataRetriever", () => {
             { fetchedAt: new Date("2026-03-12T09:30:00.000Z") },
         ]);
 
-        const res = await getCachedWalletTransactions("wallet-1", "solana" as any, 100);
+        const res = await getCachedWalletTransactions("wallet-1", 100);
 
         expect(res).toBeNull();
     });
@@ -153,7 +176,7 @@ describe("walletDataRetriever", () => {
             },
         ]);
 
-        const res = await getCachedWalletTransactions("wallet-1", "solana" as any, 100);
+        const res = await getCachedWalletTransactions("wallet-1", 100);
 
         expect(res).not.toBeNull();
         expect(res).toHaveLength(1);
@@ -163,7 +186,7 @@ describe("walletDataRetriever", () => {
         expect(res?.[0].timestamp).toContain("T");
     });
 
-    it("filters transfer rows by requested from-window", async () => {
+    it("applies SQL range predicates for transfer window queries", async () => {
         hoisted.rowsByTable.set(hoisted.schema.walletTransferMeta, [
             { fetchedAt: new Date("2026-03-12T11:59:00.000Z") },
         ]);
@@ -191,14 +214,18 @@ describe("walletDataRetriever", () => {
             },
         ]);
 
-        const res = await getCachedWalletTransfers("wallet-1", "solana" as any, "7d");
+        const res = await getCachedWalletTransfers("wallet-1", "7d");
 
         expect(res).not.toBeNull();
-        expect(res).toHaveLength(1);
-        expect(res?.[0].transactionSignature).toBe("sig-recent");
+        expect(res).toHaveLength(2);
+
+        const wherePredicate = hoisted.whereCalls[hoisted.whereCalls.length - 1];
+        const ops = collectPredicateOps(wherePredicate);
+        expect(ops).toContain("gte");
+        expect(ops).toContain("lte");
     });
 
-    it("filters helius transactions by requested range and reports coverage from meta bounds", async () => {
+    it("applies SQL range predicates for helius cached transaction range queries", async () => {
         // When the meta row has no coverage bounds, isFullyCovered should be false
         // and coveredRange should reflect null (no bounds persisted yet).
         hoisted.rowsByTable.set(hoisted.schema.walletTransactionsMeta, [
@@ -228,16 +255,19 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: Math.floor(new Date("2026-03-11T12:00:00.000Z").getTime() / 1000) },
         );
 
-        expect(res.transactions).toHaveLength(1);
-        expect(res.transactions[0].signature).toBe("helius-recent");
+        expect(res.transactions).toHaveLength(2);
         // No persisted bounds yet — meta-based coverage is null
         expect(res.coveredRange.earliestSec).toBeNull();
         expect(res.coveredRange.latestSec).toBeNull();
         expect(res.isFullyCovered).toBe(false);
+
+        const wherePredicate = hoisted.whereCalls[hoisted.whereCalls.length - 1];
+        const ops = collectPredicateOps(wherePredicate);
+        expect(ops).toContain("gte");
+        expect(ops).toContain("lte");
     });
 
     it("reports isFullyCovered when persisted meta bounds contain the requested range", async () => {
@@ -267,7 +297,6 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: requestedFrom, toSec: requestedTo },
         );
 
@@ -293,7 +322,6 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: requestedFrom, toSec: requestedTo },
         );
 
@@ -320,7 +348,6 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: Math.floor(new Date("2026-03-12T00:00:00.000Z").getTime() / 1000) },
         );
 
@@ -344,7 +371,6 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: requestedFrom },
         );
 
@@ -369,14 +395,13 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: requestedFrom },
         );
 
         expect(res.isFullyCovered).toBe(false);
     });
 
-    it("falls back to legacy chain-cased metadata when canonical lowercase metadata row is missing", async () => {
+    it("reports uncovered range when metadata row is missing", async () => {
         const requestedFrom = Math.floor(new Date("2026-03-11T12:00:00.000Z").getTime() / 1000);
         const requestedTo = Math.floor(new Date("2026-03-12T12:00:00.000Z").getTime() / 1000);
 
@@ -395,12 +420,11 @@ describe("walletDataRetriever", () => {
 
         const res = await getCachedWalletTransactionsHelius(
             "wallet-1",
-            "solana" as any,
             { fromSec: requestedFrom, toSec: requestedTo },
         );
 
-        expect(res.isFullyCovered).toBe(true);
-        expect(res.coveredRange.earliestSec).toBe(requestedFrom - 60);
-        expect(res.coveredRange.latestSec).toBe(requestedTo + 60);
+        expect(res.isFullyCovered).toBe(false);
+        expect(res.coveredRange.earliestSec).toBeNull();
+        expect(res.coveredRange.latestSec).toBeNull();
     });
 });
