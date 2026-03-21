@@ -10,12 +10,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { getHistoricalPnLData } from "@sv/services/charts/pnlChart.service.js";
-import { resolveWalletTimeRangeSec, type WalletTimePeriod } from "@sv/services/wallet/walletData.service.js";
+import { type WalletTimePeriod } from "@sv/services/wallet/walletData.service.js";
 import {
-    ChartCursorDecodeError,
-    decodeChartCursor,
     encodeChartCursor,
 } from "@sv/util/chartCursor.js";
+import { parseChartChunkInput } from "@sv/util/chartChunkParams.js";
 
 const MAX_CHART_WALLETS = 5;
 const DEFAULT_CHART_CHUNK_LIMIT = 180;
@@ -88,32 +87,17 @@ const app = new Hono().get("/", async (c) => {
         }
 
         const chunkingEnabled = isChartChunkingEnabled();
-        let cursorPayload: ReturnType<typeof decodeChartCursor> | undefined;
-
-        if (params.cursor) {
-            try {
-                cursorPayload = decodeChartCursor(params.cursor, "pnl");
-            } catch (err) {
-                if (err instanceof ChartCursorDecodeError) {
-                    return c.json(
-                        {
-                            error: "Validation error",
-                            message: err.message,
-                        },
-                        400,
-                    );
-                }
-
-                throw err;
-            }
+        const parsedChunkInput = parseChartChunkInput({
+            c,
+            cursor: params.cursor,
+            endpoint: "pnl",
+            timePeriod: params.period as WalletTimePeriod,
+        });
+        if (!parsedChunkInput.ok) {
+            return parsedChunkInput.response;
         }
 
-        const requestedRange = cursorPayload
-            ? {
-                fromSec: cursorPayload.requestedFromSec,
-                toSec: cursorPayload.requestedToSec,
-            }
-            : resolveWalletTimeRangeSec(params.period as WalletTimePeriod);
+        const requestedRange = parsedChunkInput.value.requestedRange;
 
         logPnLRouteMemory("start", {
             wallets: wallets.length,
@@ -121,7 +105,8 @@ const app = new Hono().get("/", async (c) => {
             aggregation: params.aggregation,
             chunkingEnabled,
             limit: params.limit,
-            chunkToSec: cursorPayload?.currentChunkToSec,
+            chunkToSec: parsedChunkInput.value.chunkToSec,
+            heliusCursor: parsedChunkInput.value.heliusCursor,
         });
 
         const data = await getHistoricalPnLData(
@@ -133,8 +118,8 @@ const app = new Hono().get("/", async (c) => {
                     limit: params.limit,
                     requestedFromSec: requestedRange.fromSec,
                     requestedToSec: requestedRange.toSec,
-                    chunkToSec: cursorPayload?.currentChunkToSec,
-                    heliusCursor: cursorPayload?.heliusCursor,
+                    chunkToSec: parsedChunkInput.value.chunkToSec,
+                    heliusCursor: parsedChunkInput.value.heliusCursor,
                 }
                 : undefined,
         );

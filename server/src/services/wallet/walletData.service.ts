@@ -18,6 +18,9 @@ import { getTokenMeta } from "../tokens/token-info.js";
 import {
   fetchAllTransactionHistory,
   fetchAllTransactionHistoryChunk,
+  fetchBirdeyeBalanceHistory,
+  fetchBirdeyeOverallPnL,
+  fetchBirdeyePortfolio,
   fetchHeliusSolanaPortfolio,
   fetchMoralisSolanaSwap,
   fetchMoralisSolanaSwapChunk,
@@ -74,6 +77,7 @@ const DEFAULT_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
 const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
 const DEFAULT_SWAP_PROVIDER_SOURCE = "helius";
+const DEFAULT_WALLET_PROVIDER_POLICY = "helius";
 const WALLET_TABLE_PAGE_SIZE = 100;
 const DEFAULT_EXCHANGE_LIMIT = 2000;
 const MAX_EXCHANGE_LIMIT = 10000;
@@ -83,6 +87,7 @@ const DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 1_500;
 const MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 10_000;
 
 type SwapProviderSource = "helius" | "moralis";
+type WalletProviderPolicy = "helius" | "birdeye" | "fallback";
 type WalletExchangeAccumulator = {
   name: string;
   deposits: number;
@@ -129,6 +134,48 @@ function resolveSwapProviderSource(): SwapProviderSource {
     .toLowerCase();
 
   return raw === "moralis" ? "moralis" : "helius";
+}
+
+function resolveWalletProviderPolicy(envKey: string): WalletProviderPolicy {
+  const raw = String(process.env[envKey] ?? DEFAULT_WALLET_PROVIDER_POLICY)
+    .trim()
+    .toLowerCase();
+
+  if (raw === "birdeye") {
+    return "birdeye";
+  }
+
+  if (raw === "fallback") {
+    return "fallback";
+  }
+
+  return "helius";
+}
+
+function isWalletProviderShadowModeEnabled(): boolean {
+  const raw = String(process.env.WALLET_PROVIDER_SHADOW_MODE ?? "true")
+    .trim()
+    .toLowerCase();
+  return raw !== "false" && raw !== "0" && raw !== "no";
+}
+
+function mapTimePeriodToBirdeyeDuration(
+  timePeriod: WalletTimePeriod,
+): "all" | "90d" | "30d" | "7d" | "24h" {
+  switch (timePeriod) {
+    case "7D":
+      return "7d";
+    case "30D":
+      return "30d";
+    case "60D":
+    case "90D":
+      return "90d";
+    case "1Y":
+    case "All":
+      return "all";
+    default:
+      return "30d";
+  }
 }
 
 function isHeliusSwapFallbackEnabled(): boolean {
@@ -799,6 +846,9 @@ export async function getWalletOverview(
 export async function getWalletPortfolio(
   address: string,
 ): Promise<WalletPortfolioItem[]> {
+  const providerPolicy = resolveWalletProviderPolicy("WALLET_PORTFOLIO_PROVIDER");
+  const shadowModeEnabled = isWalletProviderShadowModeEnabled();
+
   // 0) DB-first: use cached portfolio if fresh
   const portfolioThreshold = new Date(Date.now() - WALLET_PORTFOLIO_TTL_MS);
   const cachedPortfolio = await db
@@ -843,6 +893,34 @@ export async function getWalletPortfolio(
 
   if (heliusPortfolio.length === 0) {
     return [];
+  }
+
+  if (shadowModeEnabled && providerPolicy !== "helius") {
+    try {
+      const birdeyePortfolio = await fetchBirdeyePortfolio(address);
+      const heliusValue = heliusPortfolio.reduce(
+        (sum, item) => sum + Number(item.valueUsd ?? 0),
+        0,
+      );
+      const birdeyeValue = Number(birdeyePortfolio.totalAssetValueUsd ?? 0);
+
+      console.log("[wallet-provider-shadow][portfolio]", {
+        address,
+        policy: providerPolicy,
+        sourceUsed: "helius",
+        heliusItems: heliusPortfolio.length,
+        birdeyeItems: birdeyePortfolio.items.length,
+        heliusValueUsd: heliusValue,
+        birdeyeValueUsd: birdeyeValue,
+        valueDiffUsd: Math.round((heliusValue - birdeyeValue) * 100) / 100,
+      });
+    } catch (shadowErr) {
+      console.warn("[wallet-provider-shadow][portfolio] Birdeye comparison failed", {
+        address,
+        policy: providerPolicy,
+        error: shadowErr,
+      });
+    }
   }
 
   const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, {
@@ -2068,47 +2146,47 @@ export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D"
 ): Promise<BalanceDataPoint[]> {
-  const nowMs = Date.now();
-  const startMs = getRangeStartMs(nowMs, timePeriod);
-  const now = new Date(nowMs);
-  const startDate = new Date(startMs);
+  const providerPolicy = resolveWalletProviderPolicy("WALLET_BALANCE_PROVIDER");
+  const shadowModeEnabled = isWalletProviderShadowModeEnabled();
 
-  try {
-    const portfolioValues = await getHistoricalPortfolioValueSeries(
-      address,
-      startMs,
-      nowMs,
-      DAY_MS,
-    );
+  const chunk = await getWalletBalanceHistoryChunk(address, {
+    timePeriod,
+    limit: MAX_CHART_POINTS_PER_CHUNK,
+  });
 
-    return portfolioValues.map((point) => ({
-      timestamp: point.timestamp,
-      value: point.value,
-      date: new Date(point.timestamp).toISOString(),
-    }));
-  } catch (error) {
-    console.error("[WalletBalanceHistory] Error fetching balance history:", error);
+  if (shadowModeEnabled && providerPolicy !== "helius") {
+    try {
+      const birdeyeSeries = await fetchBirdeyeBalanceHistory(address, {
+        count: 30,
+        type: "1d",
+        sortType: "asc",
+      });
 
-    // Fallback: return current balance as flat line
-    const currentPortfolio = await getWalletPortfolio(address);
-    const currentTotalValue = currentPortfolio.reduce(
-      (sum, item) => sum + (item.valueUsd ?? 0),
-      0,
-    );
+      const heliusEnd = chunk.series[chunk.series.length - 1]?.value ?? 0;
+      const birdeyeEnd = birdeyeSeries[birdeyeSeries.length - 1]?.valueUsd ?? 0;
 
-    return [
-      {
-        timestamp: startMs,
-        value: Math.max(0, currentTotalValue),
-        date: startDate.toISOString(),
-      },
-      {
-        timestamp: nowMs,
-        value: Math.max(0, currentTotalValue),
-        date: now.toISOString(),
-      },
-    ];
+      console.log("[wallet-provider-shadow][balance]", {
+        address,
+        timePeriod,
+        policy: providerPolicy,
+        sourceUsed: "helius",
+        heliusPoints: chunk.series.length,
+        birdeyePoints: birdeyeSeries.length,
+        heliusEndValueUsd: heliusEnd,
+        birdeyeEndValueUsd: birdeyeEnd,
+        endValueDiffUsd: Math.round((heliusEnd - birdeyeEnd) * 100) / 100,
+      });
+    } catch (shadowErr) {
+      console.warn("[wallet-provider-shadow][balance] Birdeye comparison failed", {
+        address,
+        timePeriod,
+        policy: providerPolicy,
+        error: shadowErr,
+      });
+    }
   }
+
+  return chunk.series;
 }
 
 export async function getWalletBalanceHistoryChunk(
@@ -2243,55 +2321,50 @@ export async function getCumulativePnL(
   timePeriod: WalletTimePeriod = "30D",
   aggregation: PnLAggregation = "daily",
 ): Promise<WalletCumulativePnLResult> {
-  const nowMs = Date.now();
-  const startMs = getRangeStartMs(nowMs, timePeriod);
-  const intervalMs = getAggregationIntervalMs(aggregation);
-  const snapshots = buildSnapshotTimestamps(startMs, nowMs, intervalMs);
+  const providerPolicy = resolveWalletProviderPolicy("WALLET_PNL_PROVIDER");
+  const shadowModeEnabled = isWalletProviderShadowModeEnabled();
 
-  const zeroSeries: PnLDataPoint[] = snapshots.map((timestamp) => ({
-    timestamp,
-    value: 0,
-  }));
+  const chunk = await getCumulativePnLChunk(address, {
+    timePeriod,
+    aggregation,
+    limit: MAX_CHART_POINTS_PER_CHUNK,
+  });
 
-  try {
-    const portfolioValues = await getHistoricalPortfolioValueSeries(
-      address,
-      startMs,
-      nowMs,
-      intervalMs,
-    );
-    const startingValue = portfolioValues[0]?.value ?? 0;
+  if (shadowModeEnabled && providerPolicy !== "helius") {
+    try {
+      const birdeyeSummary = await fetchBirdeyeOverallPnL(address, {
+        duration: mapTimePeriodToBirdeyeDuration(timePeriod),
+      });
 
-    let previousValue = startingValue;
-    const dailyPnL = portfolioValues.map((point, index) => {
-      const periodDelta = index === 0 ? 0 : point.value - previousValue;
-      previousValue = point.value;
-      return {
-        timestamp: point.timestamp,
-        value: roundUsd(periodDelta),
-      };
-    });
+      const heliusEndPnl = chunk.cumulativePnL[chunk.cumulativePnL.length - 1]?.value ?? 0;
+      const birdeyePnl = Number(birdeyeSummary.summary?.total_pnl ?? 0);
 
-    const cumulativePnL = portfolioValues.map((point) => ({
-      timestamp: point.timestamp,
-      value: roundUsd(point.value - startingValue),
-    }));
-
-    return {
-      dailyPnL,
-      cumulativePnL,
-      startBalance: roundUsd(startingValue),
-      endBalance: roundUsd(portfolioValues[portfolioValues.length - 1]?.value ?? 0),
-    };
-  } catch (error) {
-    console.error("[WalletCumulativePnL] Error computing cumulative PnL:", error);
-    return {
-      dailyPnL: zeroSeries,
-      cumulativePnL: zeroSeries,
-      startBalance: 0,
-      endBalance: 0,
-    };
+      console.log("[wallet-provider-shadow][pnl]", {
+        address,
+        timePeriod,
+        aggregation,
+        policy: providerPolicy,
+        sourceUsed: "helius",
+        heliusEndPnlUsd: heliusEndPnl,
+        birdeyeTotalPnlUsd: birdeyePnl,
+        pnlDiffUsd: Math.round((heliusEndPnl - birdeyePnl) * 100) / 100,
+      });
+    } catch (shadowErr) {
+      console.warn("[wallet-provider-shadow][pnl] Birdeye comparison failed", {
+        address,
+        timePeriod,
+        policy: providerPolicy,
+        error: shadowErr,
+      });
+    }
   }
+
+  return {
+    dailyPnL: chunk.dailyPnL,
+    cumulativePnL: chunk.cumulativePnL,
+    startBalance: chunk.startBalance,
+    endBalance: chunk.endBalance,
+  };
 }
 
 export async function getCumulativePnLChunk(

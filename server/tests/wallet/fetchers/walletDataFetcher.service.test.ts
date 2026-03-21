@@ -30,6 +30,7 @@ import {
     fetchAllTransactionHistory,
     fetchHeliusSolanaPortfolio,
     fetchMoralisSolanaSwap,
+    fetchHeliusSolanaSwap,
     fetchHeliusSolanaTransactions,
     fetchHeliusSolanaTransfers,
 } from "../../../src/services/wallet/fetchers/walletDataFetcher.service.ts";
@@ -280,6 +281,87 @@ describe("walletDataFetcher.service", () => {
         expect(secondUrl.pathname).toContain("/v1/wallet/wallet-address/transfers");
         expect(secondUrl.searchParams.get("cursor")).toBe("transfer-cursor-1");
         expect(secondUrl.searchParams.get("before")).toBeNull();
+    });
+
+    it("paginates swap history with before=nextCursor", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+
+        heliusFetchMock
+            .mockResolvedValueOnce(
+                okJson({
+                    data: [
+                        {
+                            signature: "swap-1",
+                            timestamp: nowSec - 20,
+                            slot: 1,
+                            fee: 10,
+                            feePayer: "payer-1",
+                            balanceChanges: [
+                                { mint: "mint-a", amount: -100, decimals: 2 },
+                                { mint: "mint-b", amount: 200, decimals: 2 },
+                            ],
+                        },
+                    ],
+                    pagination: { hasMore: true, nextCursor: "swap-cursor-1" },
+                }),
+            )
+            .mockResolvedValueOnce(
+                okJson({
+                    data: [
+                        {
+                            signature: "swap-2",
+                            timestamp: nowSec - 40,
+                            slot: 2,
+                            fee: 11,
+                            feePayer: "payer-2",
+                            balanceChanges: [
+                                { mint: "mint-c", amount: -300, decimals: 2 },
+                                { mint: "mint-d", amount: 500, decimals: 2 },
+                            ],
+                        },
+                    ],
+                    pagination: { hasMore: false, nextCursor: "swap-cursor-2" },
+                }),
+            );
+
+        const result = await fetchHeliusSolanaSwap("wallet-address", "7d");
+
+        expect(result).toHaveLength(2);
+        expect(heliusFetchMock).toHaveBeenCalledTimes(2);
+
+        const secondUrl = heliusFetchMock.mock.calls[1][0] as URL;
+        expect(secondUrl.pathname).toContain("/v1/wallet/wallet-address/history");
+        expect(secondUrl.searchParams.get("before")).toBe("swap-cursor-1");
+        expect(secondUrl.searchParams.get("type")).toBe("SWAP");
+    });
+
+    it("stops swap history pagination when page crosses requested time window", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const olderThanSevenDays = nowSec - (8 * 24 * 60 * 60);
+
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "swap-old",
+                        timestamp: olderThanSevenDays,
+                        slot: 99,
+                        fee: 10,
+                        feePayer: "payer-old",
+                        balanceChanges: [
+                            { mint: "mint-a", amount: -100, decimals: 2 },
+                            { mint: "mint-b", amount: 200, decimals: 2 },
+                        ],
+                    },
+                ],
+                pagination: { hasMore: true, nextCursor: "swap-cursor-old" },
+            }),
+        );
+
+        const result = await fetchHeliusSolanaSwap("wallet-address", "7d");
+
+        expect(result).toHaveLength(0);
+        expect(heliusFetchMock).toHaveBeenCalledTimes(1);
     });
 
     it("skips null timestamps and continues collecting transactions", async () => {

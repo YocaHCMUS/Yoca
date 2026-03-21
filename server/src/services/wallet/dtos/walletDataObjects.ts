@@ -11,6 +11,12 @@ export interface WalletOverview {
     metricsPeriod?: string;
 }
 
+export interface WalletPortfolio {
+    address: string;
+    totalAssetValueUsd: number;
+    items: WalletPortfolioItem[];
+}
+
 export interface WalletPortfolioItem {
     tokenAddress: string;
     symbol: string;
@@ -198,3 +204,62 @@ export interface WalletCounterpartiesResponse {
         };
     };
 }
+
+export type BirdeyeNetworthDirection = "back" | "forward";
+export type BirdeyeNetworthType = "1h" | "1d";
+export type BirdeyeSortType = "asc" | "desc";
+export type BirdeyePnlDuration = "all" | "90d" | "30d" | "7d" | "24h";
+
+export type BirdeyeNetworthHistoryPoint = {
+    timestamp: string;
+    netWorthUsd: number;
+    netWorthChangeUsd: number | null;
+    netWorthChangePercent: number | null;
+};
+
+export type BirdeyeNetworthHistoryResult = {
+    address: string;
+    currency: string;
+    currentTimestamp: string | null;
+    pastTimestamp: string | null;
+    history: BirdeyeNetworthHistoryPoint[];
+};
+
+export type BirdeyePortfolioSnapshotAsset = {
+    symbol: string;
+    tokenAddress: string;
+    decimals: number;
+    balanceRaw: string;
+    priceUsd: number | null;
+    valueUsd: number;
+};
+
+export type BirdeyePortfolioSnapshotResult = {
+    address: string;
+    currency: string;
+    netWorthUsd: number;
+    requestedTimestamp: string | null;
+    resolvedTimestamp: string | null;
+    assets: BirdeyePortfolioSnapshotAsset[];
+};
+
+export type BirdeyeOverallPnlResult = {
+    address: string;
+    duration: BirdeyePnlDuration;
+    summary: any;
+};
+
+export type BirdeyeTokenPnlDetailsOptions = {
+    tokenAddresses?: string[];
+    duration?: BirdeyePnlDuration;
+    sortType?: BirdeyeSortType;
+    sortBy?: "last_trade";
+    limit?: number;
+    offset?: number;
+};
+
+export type BirdeyeTokenPnlDetailsResult = {
+    meta: any;
+    tokens: any[];
+    summary: any;
+};

@@ -15,15 +15,13 @@ import {
     getWalletBalanceHistoryChunk,
     getWalletTokenBalanceHistory,
     getWalletTokenBalanceHistoryChunk,
-    resolveWalletTimeRangeSec,
     type WalletTimePeriod,
 } from "@sv/services/wallet/walletData.service.js";
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import {
-    ChartCursorDecodeError,
-    decodeChartCursor,
     encodeChartCursor,
 } from "@sv/util/chartCursor.js";
+import { parseChartChunkInput } from "@sv/util/chartChunkParams.js";
 
 const MAX_CHART_WALLETS = 5;
 const MAX_CHART_TOKENS = 10;
@@ -124,34 +122,18 @@ const app = new Hono().get("/", async (c) => {
         }
 
         const chunkingEnabled = isChartChunkingEnabled();
-        let cursorPayload: ReturnType<typeof decodeChartCursor> | undefined;
-
-        if (params.cursor) {
-            try {
-                cursorPayload = decodeChartCursor(params.cursor, "balance");
-            } catch (err) {
-                if (err instanceof ChartCursorDecodeError) {
-                    return c.json(
-                        {
-                            error: "Validation error",
-                            message: err.message,
-                        },
-                        400,
-                    );
-                }
-
-                throw err;
-            }
+        const parsedChunkInput = parseChartChunkInput({
+            c,
+            cursor: params.cursor,
+            endpoint: "balance",
+            timePeriod: params.timePeriod as WalletTimePeriod,
+        });
+        if (!parsedChunkInput.ok) {
+            return parsedChunkInput.response;
         }
 
-        const requestedRange = cursorPayload
-            ? {
-                fromSec: cursorPayload.requestedFromSec,
-                toSec: cursorPayload.requestedToSec,
-            }
-            : resolveWalletTimeRangeSec(params.timePeriod as WalletTimePeriod);
-
-        const chunkToSec = cursorPayload?.currentChunkToSec;
+        const requestedRange = parsedChunkInput.value.requestedRange;
+        const chunkToSec = parsedChunkInput.value.chunkToSec;
         const chunkLimit = params.limit;
 
         logBalanceRouteMemory("start", {
@@ -175,7 +157,7 @@ const app = new Hono().get("/", async (c) => {
                             requestedToSec: requestedRange.toSec,
                             chunkToSec,
                             limit: chunkLimit,
-                            heliusCursor: cursorPayload?.heliusCursor ?? null,
+                            heliusCursor: parsedChunkInput.value.heliusCursor ?? null,
                         }),
                 );
 
