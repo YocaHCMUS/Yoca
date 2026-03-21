@@ -1,4 +1,8 @@
+import * as hl from "@sv/util/util-helius";
+
 export async function getWalletFirstFund(wallet: string) {
-  heliusClient
-  return addressToFirstFund;
+  const res = await hl.client.wallet.getFundedBy({
+    wallet,
+  });
+  return res.date;
 }

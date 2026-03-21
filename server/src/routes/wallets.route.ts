@@ -1,5 +1,5 @@
 import { setErr } from "@sv/config/errors.js";
-import { addressListSchema, validate } from "@sv/middlewares/validation.js";
+import { addressSchema, validate } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as walletService from "@sv/services/wallet/index.js";
@@ -484,29 +484,25 @@ const routes = router
       return c.json({ error: "Failed to fetch test transactions" }, 500);
     }
   })
-  .get(
-    "/first-funds/:addresses",
-    validate("param", addressListSchema),
-    async (c) => {
-      try {
-        const { addresses } = c.req.valid("param");
-        const firstFunds = await walletService.getWalletFirstFund(addresses);
-        if (firstFunds == null) {
-          return c.json(
-            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-            statusCode.BadGateway,
-          );
-        }
-
-        return c.json(firstFunds, 200);
-      } catch (err) {
-        console.log(err);
+  .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
+    try {
+      const { address } = c.req.valid("param");
+      const firstFunds = await walletService.getWalletFirstFund(address);
+      if (firstFunds == null) {
         return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
         );
       }
-    },
-  );
+
+      return c.json(firstFunds, 200);
+    } catch (err) {
+      console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  });
 
 export default routes;
