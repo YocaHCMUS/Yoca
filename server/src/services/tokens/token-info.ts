@@ -301,22 +301,6 @@ export async function getTokenDetails(tokenAddresses: string[]) {
   return full;
 }
 
-// export async function getTokenHolderDistribution(tokenAddress: string) {
-//   const network = tokenAddress.startsWith("0x") ? "eth" : "solana";
-//   const res = await cg.client.onchain.networks.tokens.info.get(tokenAddress, {
-//     network,
-//   });
-//   const dist = res.data?.attributes?.holders?.distribution_percentage ?? null;
-//   return dist as {
-//     top_10: string;
-//     "11_20"?: string;
-//     "21_40"?: string;
-//     "11_30"?: string;
-//     "31_50"?: string;
-//     rest: string;
-//   } | null;
-// }
-
 export async function getTokenHolderStats(tokenAddresses: string[]) {
   const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDER_STATS_TTL_MS);
 

@@ -3,8 +3,8 @@ export function getStreamingEndpoint(): URL {
 }
 
 // Please use this carefully since it is more expensive than query from streaming API
-export function getEndpoint(): URL {
-  return new URL(process.env.BITQUERY_API_ENDPOINT!);
+export function getEndpoint(endpoint: string): URL {
+  return new URL(`${process.env.BITQUERY_API_ENDPOINT!}${endpoint}`);
 }
 
 export function getRequiredHeaders(): HeadersInit {

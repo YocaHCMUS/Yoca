@@ -1,4 +1,5 @@
 import * as cg from "@sv/util/util-coingecko.js";
+import type { CG_TokenMarketChart } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export type HistoricalDataPoint = {
@@ -7,12 +8,6 @@ export type HistoricalDataPoint = {
   price: number | null;
   marketCap: number | null;
   volume: number | null;
-};
-
-type CG_MarketChart = {
-  prices: [number, number][];
-  market_caps: [number, number][];
-  total_volumes: [number, number][];
 };
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart
@@ -41,7 +36,7 @@ export async function getTokenHistoricalData(
   const resp = await fetch(req);
   if (!resp.ok) return null;
 
-  const data: CG_MarketChart = await resp.json();
+  const data: CG_TokenMarketChart = await resp.json();
 
   // CoinGecko trả về dữ liệu mỗi ngày, index đồng bộ giữa prices/market_caps/total_volumes
   return data.prices.map(([ts, price], i): HistoricalDataPoint => {

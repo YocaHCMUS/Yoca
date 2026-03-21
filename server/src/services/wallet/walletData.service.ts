@@ -3,56 +3,49 @@ import {
   WALLET_PORTFOLIO_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
+import { walletOverviewCache, walletPortfolioCache } from "@sv/db/schema.js";
 import {
-  walletOverviewCache,
-  walletPortfolioCache,
-} from "@sv/db/schema.js";
-import { and, desc, eq } from "drizzle-orm";
-import { getTokenMarketData } from "../tokens/token-market-data.js";
+  getCachedWalletSwaps,
+  getCachedWalletSwapsChunk,
+  getCachedWalletTransactionsHelius,
+  getCachedWalletTransfers,
+  getCachedWalletTransfersChunk,
+} from "@sv/services/wallet/db/walletDataRetriever.js";
+import type {
+  WalletExchangeCountsResponse,
+  WalletOverview,
+  WalletPageInfo,
+  WalletPortfolioItem,
+  WalletSwap,
+  WalletSwapsResponse,
+  WalletTransaction,
+  WalletTransactionHelius,
+  WalletTransfer,
+  WalletTransfersResponse,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  fetchAllTransactionHistory,
+  fetchAllTransactionHistoryChunk,
+  fetchHeliusSolanaPortfolio,
+  fetchHeliusSolanaSwap,
+  fetchHeliusSolanaSwapChunk,
+  fetchHeliusSolanaTransfers,
+  fetchHeliusSolanaTransfersChunk,
+  fetchMoralisSolanaSwap,
+  fetchMoralisSolanaSwapChunk,
+  timePeriodToFromSec,
+} from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { and, eq } from "drizzle-orm";
 import {
   getDailyTokenMarketChart,
   getHourlyTokenMarketChart,
 } from "../tokens/token-chart.js";
 import { getTokenHistoricalData } from "../tokens/token-history.js";
 import { getTokenMeta } from "../tokens/token-info.js";
-import {
-  fetchAllTransactionHistory,
-  fetchAllTransactionHistoryChunk,
-  fetchHeliusSolanaPortfolio,
-  fetchMoralisSolanaSwap,
-  fetchMoralisSolanaSwapChunk,
-  fetchHeliusSolanaSwap,
-  fetchHeliusSolanaSwapChunk,
-  fetchHeliusSolanaTransactions,
-  fetchHeliusSolanaTransfers,
-  fetchHeliusSolanaTransfersChunk,
-  timePeriodToFromSec,
-} from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
-import {
-  getCachedWalletTransactionsHelius,
-  getCachedWalletSwapsChunk,
-  getCachedWalletSwaps,
-  getCachedWalletTransactions,
-  getCachedWalletTransfersChunk,
-  getCachedWalletTransfers,
-} from "@sv/services/wallet/db/walletDataRetriever.js";
-import type {
-  WalletPageInfo,
-  WalletExchangeCountsResponse,
-  WalletOverview,
-  WalletPortfolioItem,
-  WalletSwap,
-  WalletSwapsResponse,
-  WalletTransaction,
-  WalletTransactionHelius,
-  WalletTransactionsResponse,
-  WalletTransfer,
-  WalletTransfersResponse,
-} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getTokenMarketData } from "../tokens/token-market-data.js";
 import {
   saveOverviewCache,
   saveSwapsCache,
-  saveTransactionsCache,
   saveTransactionsHeliusCache,
   saveTransfersCache,
 } from "./db/walletDataCacher.js";
@@ -124,7 +117,9 @@ function clampHistoryTransactionLimit(limit?: number): number | null {
 }
 
 function resolveSwapProviderSource(): SwapProviderSource {
-  const raw = String(process.env.SWAP_PROVIDER_SOURCE ?? DEFAULT_SWAP_PROVIDER_SOURCE)
+  const raw = String(
+    process.env.SWAP_PROVIDER_SOURCE ?? DEFAULT_SWAP_PROVIDER_SOURCE,
+  )
     .trim()
     .toLowerCase();
 
@@ -177,10 +172,7 @@ type NormalizedOverviewTransaction = {
 type OverviewHoldingsSnapshot = {
   totalAssetValueUsd: number;
   tokensHoldingCount: number;
-  source:
-  | "helius-portfolio"
-  | "overview-cache"
-  | "none";
+  source: "helius-portfolio" | "overview-cache" | "none";
 };
 
 type OverviewActivitySnapshot = {
@@ -194,19 +186,27 @@ type OverviewActivitySnapshot = {
 
 function toIsoTimestamp(value: unknown): string {
   if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString();
+    return Number.isNaN(value.getTime())
+      ? new Date().toISOString()
+      : value.toISOString();
   }
 
   if (typeof value === "string") {
     const normalized = value.includes("T") ? value : value.replace(" ", "T");
     const parsed = new Date(normalized);
-    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    return Number.isNaN(parsed.getTime())
+      ? new Date().toISOString()
+      : parsed.toISOString();
   }
 
   return new Date().toISOString();
 }
 
-function getHistoryRange(options?: { from?: "24h" | "7d"; fromSec?: number; toSec?: number }): WalletHistoryRange {
+function getHistoryRange(options?: {
+  from?: "24h" | "7d";
+  fromSec?: number;
+  toSec?: number;
+}): WalletHistoryRange {
   const nowSec = Math.floor(Date.now() / 1000);
   const fromSec =
     options?.fromSec != null
@@ -214,7 +214,8 @@ function getHistoryRange(options?: { from?: "24h" | "7d"; fromSec?: number; toSe
       : options?.from === "24h"
         ? nowSec - DAY_SEC
         : nowSec - 7 * DAY_SEC;
-  const toSec = options?.toSec != null ? Math.max(fromSec, options.toSec) : nowSec;
+  const toSec =
+    options?.toSec != null ? Math.max(fromSec, options.toSec) : nowSec;
   return { fromSec, toSec };
 }
 
@@ -241,7 +242,8 @@ function mergeTransactionsBySignature(
   }
 
   return Array.from(bySignature.values()).sort(
-    (a, b) => getTimestampSecFromIso(b.timestamp) - getTimestampSecFromIso(a.timestamp),
+    (a, b) =>
+      getTimestampSecFromIso(b.timestamp) - getTimestampSecFromIso(a.timestamp),
   );
 }
 
@@ -257,7 +259,10 @@ function normalizeOverviewPeriodSec(periodSec?: number): number {
   }
 
   const normalized = Math.floor(parsed);
-  if (normalized < MIN_OVERVIEW_PERIOD_SEC || normalized > MAX_OVERVIEW_PERIOD_SEC) {
+  if (
+    normalized < MIN_OVERVIEW_PERIOD_SEC ||
+    normalized > MAX_OVERVIEW_PERIOD_SEC
+  ) {
     return DEFAULT_OVERVIEW_PERIOD_SEC;
   }
 
@@ -293,8 +298,11 @@ function mapOverviewCacheRowToDto(
   periodSec: number,
 ): WalletOverview {
   const tradingVolumeUsd =
-    row.tradingVolumeUsd24h != null ? toFiniteNumber(row.tradingVolumeUsd24h, 0) : null;
-  const pnlUsd = row.pnlUsdTotal != null ? toFiniteNumber(row.pnlUsdTotal, 0) : null;
+    row.tradingVolumeUsd24h != null
+      ? toFiniteNumber(row.tradingVolumeUsd24h, 0)
+      : null;
+  const pnlUsd =
+    row.pnlUsdTotal != null ? toFiniteNumber(row.pnlUsdTotal, 0) : null;
 
   return {
     address,
@@ -316,11 +324,7 @@ async function getLatestOverviewCacheRow(
   const cached = await db
     .select()
     .from(walletOverviewCache)
-    .where(
-      and(
-        eq(walletOverviewCache.address, address),
-      ),
-    )
+    .where(and(eq(walletOverviewCache.address, address)))
     .limit(1);
 
   if (cached.length === 0) {
@@ -362,7 +366,10 @@ async function buildHoldingsSnapshotFromProviders(
       source: "helius-portfolio",
     };
   } catch (err) {
-    console.error("Failed to fetch Solana portfolio for overview holdings", err);
+    console.error(
+      "Failed to fetch Solana portfolio for overview holdings",
+      err,
+    );
   }
 
   if (cacheRow) {
@@ -501,12 +508,7 @@ function buildOverviewResponse(input: {
   holdingsSnapshot: OverviewHoldingsSnapshot;
   activitySnapshot: OverviewActivitySnapshot;
 }): WalletOverview {
-  const {
-    address,
-    periodSec,
-    holdingsSnapshot,
-    activitySnapshot,
-  } = input;
+  const { address, periodSec, holdingsSnapshot, activitySnapshot } = input;
 
   return {
     address,
@@ -565,7 +567,9 @@ function isMissingPortfolioLogoUri(value: string | undefined): boolean {
   return normalizePortfolioText(value) == null;
 }
 
-function isValidPortfolioTokenAddress(tokenAddress: string | undefined): boolean {
+function isValidPortfolioTokenAddress(
+  tokenAddress: string | undefined,
+): boolean {
   const normalized = normalizePortfolioText(tokenAddress);
   if (!normalized) {
     return false;
@@ -619,7 +623,9 @@ async function enrichWalletPortfolioMetadata(
 
   let tokenMeta: TokenMetaRow[] = [];
   try {
-    tokenMeta = await getTokenMeta(Array.from(candidateAddressByKey.values())) as TokenMetaRow[];
+    tokenMeta = (await getTokenMeta(
+      Array.from(candidateAddressByKey.values()),
+    )) as TokenMetaRow[];
   } catch (err) {
     console.warn("[wallet-portfolio] Token metadata enrichment failed", {
       address: context.address,
@@ -663,14 +669,19 @@ async function enrichWalletPortfolioMetadata(
 
     const rawAddress = String(item.tokenAddress).trim();
     const lookupAddress = normalizePortfolioLookupAddress(rawAddress);
-    const meta = tokenMetaByKey.get(normalizePortfolioAddressKey(lookupAddress));
+    const meta = tokenMetaByKey.get(
+      normalizePortfolioAddressKey(lookupAddress),
+    );
     if (!meta) {
       return item;
     }
 
-    const shouldFillSymbol = shouldFillPortfolioText(item.symbol) && Boolean(meta.symbol);
-    const shouldFillName = shouldFillPortfolioText(item.name) && Boolean(meta.name);
-    const shouldFillLogo = isMissingPortfolioLogoUri(item.logoUri) && Boolean(meta.logoUri);
+    const shouldFillSymbol =
+      shouldFillPortfolioText(item.symbol) && Boolean(meta.symbol);
+    const shouldFillName =
+      shouldFillPortfolioText(item.name) && Boolean(meta.name);
+    const shouldFillLogo =
+      isMissingPortfolioLogoUri(item.logoUri) && Boolean(meta.logoUri);
 
     if (!shouldFillSymbol && !shouldFillName && !shouldFillLogo) {
       return item;
@@ -731,7 +742,9 @@ export async function getWalletOverview(
       requestedRange,
     );
 
-    const reducedMetrics = await reduceActivityMetricsFromTransactions(normalizedTransactions);
+    const reducedMetrics = await reduceActivityMetricsFromTransactions(
+      normalizedTransactions,
+    );
 
     activitySnapshot = {
       ...reducedMetrics,
@@ -754,7 +767,9 @@ export async function getWalletOverview(
             ? toFiniteNumber(cacheRow.tradingVolumeUsd24h, 0)
             : null,
         pnlUsdTotal:
-          cacheRow.pnlUsdTotal != null ? toFiniteNumber(cacheRow.pnlUsdTotal, 0) : null,
+          cacheRow.pnlUsdTotal != null
+            ? toFiniteNumber(cacheRow.pnlUsdTotal, 0)
+            : null,
         pricedChangesCount: 0,
         source: "overview-cache",
       };
@@ -804,13 +819,12 @@ export async function getWalletPortfolio(
   const cachedPortfolio = await db
     .select()
     .from(walletPortfolioCache)
-    .where(
-      and(
-        eq(walletPortfolioCache.address, address)
-      ),
-    )
+    .where(and(eq(walletPortfolioCache.address, address)))
     .limit(1);
-  if (cachedPortfolio.length > 0 && cachedPortfolio[0].fetchedAt >= portfolioThreshold) {
+  if (
+    cachedPortfolio.length > 0 &&
+    cachedPortfolio[0].fetchedAt >= portfolioThreshold
+  ) {
     const cachedData = (cachedPortfolio[0].data as WalletPortfolioItem[]) ?? [];
     if (cachedData.length > 0) {
       const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
@@ -845,10 +859,13 @@ export async function getWalletPortfolio(
     return [];
   }
 
-  const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, {
-    address,
-    source: "helius",
-  });
+  const enrichedPortfolio = await enrichWalletPortfolioMetadata(
+    heliusPortfolio,
+    {
+      address,
+      source: "helius",
+    },
+  );
 
   await db
     .insert(walletPortfolioCache)
@@ -862,17 +879,26 @@ export async function getWalletPortfolio(
 
 export async function getWalletTransactionHelius(
   address: string,
-  options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d"; fromSec?: number; toSec?: number },
+  options?: {
+    limit?: number;
+    cursor?: string;
+    before?: string;
+    from?: "24h" | "7d";
+    fromSec?: number;
+    toSec?: number;
+  },
 ): Promise<{ address: string; transactions: WalletTransactionHelius[] }> {
-
   const requestedRange = getHistoryRange(options);
-  const providerBeforeCursor = normalizeCursorValue(options?.before ?? options?.cursor);
+  const providerBeforeCursor = normalizeCursorValue(
+    options?.before ?? options?.cursor,
+  );
   const requestedLimit = clampHistoryTransactionLimit(options?.limit);
 
   // Cursor- or limit-driven requests should avoid broad cache-range scans and
   // use a bounded provider fetch path to keep request memory stable.
   if (providerBeforeCursor || requestedLimit != null) {
-    const maxTransactions = requestedLimit ?? DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS;
+    const maxTransactions =
+      requestedLimit ?? DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS;
     const maxPages = Math.min(
       Math.max(
         DEFAULT_HELIUS_HISTORY_CHUNK_PAGES,
@@ -882,11 +908,15 @@ export async function getWalletTransactionHelius(
     );
 
     try {
-      const chunk = await fetchAllTransactionHistoryChunk(address, requestedRange, {
-        beforeCursor: providerBeforeCursor,
-        maxPages,
-        maxTransactions,
-      });
+      const chunk = await fetchAllTransactionHistoryChunk(
+        address,
+        requestedRange,
+        {
+          beforeCursor: providerBeforeCursor,
+          maxPages,
+          maxTransactions,
+        },
+      );
 
       const transactions = chunk.transactions.filter((tx) => {
         const txSec = getTimestampSecFromIso(tx.timestamp);
@@ -913,7 +943,10 @@ export async function getWalletTransactionHelius(
         transactions,
       };
     } catch (fetchErr) {
-      console.error("[wallet-transaction-helius-cache] Bounded provider fetch failed", fetchErr);
+      console.error(
+        "[wallet-transaction-helius-cache] Bounded provider fetch failed",
+        fetchErr,
+      );
       return {
         address,
         transactions: [],
@@ -945,13 +978,20 @@ export async function getWalletTransactionHelius(
 
     if (hasNoCoverage) {
       try {
-        fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange, {
-          beforeCursor: providerBeforeCursor,
-        });
+        fetchedTransactions = await fetchAllTransactionHistory(
+          address,
+          requestedRange,
+          {
+            beforeCursor: providerBeforeCursor,
+          },
+        );
         headCoverageConfirmed = true;
         tailCoverageConfirmed = true;
       } catch (fetchErr) {
-        console.error("[wallet-transaction-helius-cache] Full-range fetch failed", fetchErr);
+        console.error(
+          "[wallet-transaction-helius-cache] Full-range fetch failed",
+          fetchErr,
+        );
       }
     } else {
       const coveredLatestSec = cacheRangeResult.coveredRange.latestSec;
@@ -959,13 +999,20 @@ export async function getWalletTransactionHelius(
 
       if (coveredLatestSec == null || coveredEarliestSec == null) {
         try {
-          fetchedTransactions = await fetchAllTransactionHistory(address, requestedRange, {
-            beforeCursor: providerBeforeCursor,
-          });
+          fetchedTransactions = await fetchAllTransactionHistory(
+            address,
+            requestedRange,
+            {
+              beforeCursor: providerBeforeCursor,
+            },
+          );
           headCoverageConfirmed = true;
           tailCoverageConfirmed = true;
         } catch (fetchErr) {
-          console.error("[wallet-transaction-helius-cache] Full-range fallback fetch failed", fetchErr);
+          console.error(
+            "[wallet-transaction-helius-cache] Full-range fallback fetch failed",
+            fetchErr,
+          );
         }
       } else {
         const needsHeadGapFill = coveredLatestSec < requestedRange.toSec;
@@ -976,34 +1023,46 @@ export async function getWalletTransactionHelius(
 
         if (needsHeadGapFill) {
           try {
-            const headFetched = await fetchAllTransactionHistory(address, requestedRange, {
-              beforeCursor: providerBeforeCursor,
-              stopAtKnownSignatures: knownSignatures,
-            });
-            fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, headFetched);
+            const headFetched = await fetchAllTransactionHistory(
+              address,
+              requestedRange,
+              {
+                beforeCursor: providerBeforeCursor,
+                stopAtKnownSignatures: knownSignatures,
+              },
+            );
+            fetchedTransactions = mergeTransactionsBySignature(
+              fetchedTransactions,
+              headFetched,
+            );
             for (const tx of headFetched) {
               knownSignatures.add(tx.signature);
             }
             headCoverageConfirmed = true;
           } catch (headErr) {
             headCoverageConfirmed = false;
-            console.error("[wallet-transaction-helius-cache] Head-gap fetch failed", headErr);
+            console.error(
+              "[wallet-transaction-helius-cache] Head-gap fetch failed",
+              headErr,
+            );
           }
         }
 
         if (needsTailGapFill) {
-          const oldestCachedTx = cacheRangeResult.transactions.reduce<WalletTransactionHelius | null>(
-            (oldest, tx) => {
-              if (!oldest) {
-                return tx;
-              }
+          const oldestCachedTx =
+            cacheRangeResult.transactions.reduce<WalletTransactionHelius | null>(
+              (oldest, tx) => {
+                if (!oldest) {
+                  return tx;
+                }
 
-              return getTimestampSecFromIso(tx.timestamp) < getTimestampSecFromIso(oldest.timestamp)
-                ? tx
-                : oldest;
-            },
-            null,
-          );
+                return getTimestampSecFromIso(tx.timestamp) <
+                  getTimestampSecFromIso(oldest.timestamp)
+                  ? tx
+                  : oldest;
+              },
+              null,
+            );
 
           const tailToSec = Math.max(
             requestedRange.fromSec,
@@ -1013,27 +1072,35 @@ export async function getWalletTransactionHelius(
           try {
             const tailFetched = oldestCachedTx
               ? await fetchAllTransactionHistory(
-                address,
-                { fromSec: requestedRange.fromSec, toSec: tailToSec },
-                { beforeCursor: oldestCachedTx.signature },
-              )
-              : await fetchAllTransactionHistory(
-                address,
-                { fromSec: requestedRange.fromSec, toSec: tailToSec },
-              );
+                  address,
+                  { fromSec: requestedRange.fromSec, toSec: tailToSec },
+                  { beforeCursor: oldestCachedTx.signature },
+                )
+              : await fetchAllTransactionHistory(address, {
+                  fromSec: requestedRange.fromSec,
+                  toSec: tailToSec,
+                });
 
-            fetchedTransactions = mergeTransactionsBySignature(fetchedTransactions, tailFetched);
+            fetchedTransactions = mergeTransactionsBySignature(
+              fetchedTransactions,
+              tailFetched,
+            );
             tailCoverageConfirmed = true;
           } catch (tailErr) {
             tailCoverageConfirmed = false;
-            console.error("[wallet-transaction-helius-cache] Tail-gap fetch failed", tailErr);
+            console.error(
+              "[wallet-transaction-helius-cache] Tail-gap fetch failed",
+              tailErr,
+            );
           }
         }
       }
     }
 
     confirmedCoverageRange =
-      headCoverageConfirmed && tailCoverageConfirmed ? requestedRange : undefined;
+      headCoverageConfirmed && tailCoverageConfirmed
+        ? requestedRange
+        : undefined;
 
     // Persist fetched rows on every sync attempt. Coverage bounds are widened
     // only for ranges confirmed by cache + completed provider fetch paths.
@@ -1058,7 +1125,11 @@ export async function getWalletTransactionHelius(
     coveredRange: cacheRangeResult.coveredRange,
     cacheHitRatio:
       mergedTransactions.length > 0
-        ? Number((cacheRangeResult.transactions.length / mergedTransactions.length).toFixed(4))
+        ? Number(
+            (
+              cacheRangeResult.transactions.length / mergedTransactions.length
+            ).toFixed(4),
+          )
         : 0,
     cachedCount: cacheRangeResult.transactions.length,
     fetchedCount: fetchedTransactions.length,
@@ -1072,11 +1143,14 @@ export async function getWalletTransactionHelius(
   };
 }
 
-
-
 export async function getWalletTransfers(
   address: string,
-  options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d" },
+  options?: {
+    limit?: number;
+    cursor?: string;
+    before?: string;
+    from?: "24h" | "7d";
+  },
 ): Promise<WalletTransfersResponse> {
   if (options?.from) {
     const cachedTransfers = await getCachedWalletTransfers(
@@ -1116,7 +1190,10 @@ export async function getWalletTransfers(
         }),
       };
     } catch (err) {
-      console.error("[getWalletTransfers] Failed to fetch Solana transfers from Helius", err);
+      console.error(
+        "[getWalletTransfers] Failed to fetch Solana transfers from Helius",
+        err,
+      );
       return {
         address,
         transfers: [],
@@ -1181,7 +1258,10 @@ export async function getWalletTransfers(
       }),
     };
   } catch (err) {
-    console.error("[getWalletTransfers] Failed to fetch Solana transfer chunk", err);
+    console.error(
+      "[getWalletTransfers] Failed to fetch Solana transfer chunk",
+      err,
+    );
     return {
       address,
       transfers: [],
@@ -1196,7 +1276,12 @@ export async function getWalletTransfers(
 
 export async function getWalletSwaps(
   address: string,
-  options?: { limit?: number; cursor?: string; before?: string; from?: "24h" | "7d" },
+  options?: {
+    limit?: number;
+    cursor?: string;
+    before?: string;
+    from?: "24h" | "7d";
+  },
 ): Promise<WalletSwapsResponse> {
   const providerSource = resolveSwapProviderSource();
 
@@ -1230,7 +1315,10 @@ export async function getWalletSwaps(
             `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Moralis for ${address}`,
           );
         } catch (moralisErr) {
-          console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
+          console.error(
+            "[getWalletSwaps] Moralis swap fetch failed",
+            moralisErr,
+          );
           if (!isHeliusSwapFallbackEnabled()) {
             throw moralisErr;
           }
@@ -1294,7 +1382,11 @@ export async function getWalletSwaps(
   }
 
   try {
-    let chunk: { items: WalletSwap[]; nextCursor: string | null; hasMore: boolean };
+    let chunk: {
+      items: WalletSwap[];
+      nextCursor: string | null;
+      hasMore: boolean;
+    };
 
     if (providerSource === "moralis") {
       try {
@@ -1356,12 +1448,16 @@ export async function getWalletSwaps(
   }
 }
 
-function normalizeExchangeMetric(rawMetric?: "count" | "volume"): "count" | "volume" {
+function normalizeExchangeMetric(
+  rawMetric?: "count" | "volume",
+): "count" | "volume" {
   return rawMetric === "volume" ? "volume" : "count";
 }
 
 function normalizeExchangeBucketToken(value: unknown): string {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function toFiniteNonNegativeNumber(value: unknown): number {
@@ -1373,7 +1469,10 @@ function toFiniteNonNegativeNumber(value: unknown): number {
   return Math.max(0, parsed);
 }
 
-function resolveExchangeBucketFromSwap(swap: WalletSwap): { key: string; name: string } {
+function resolveExchangeBucketFromSwap(swap: WalletSwap): {
+  key: string;
+  name: string;
+} {
   const exchangeName = String(swap.exchange?.name ?? "").trim();
   const exchangeAddress = String(swap.exchange?.address ?? "").trim();
   if (exchangeName || exchangeAddress) {
@@ -1479,10 +1578,7 @@ async function collectWalletSwapsForExchangeAggregation(
   let hasMore = true;
   let pageCount = 0;
 
-  while (
-    hasMore &&
-    swaps.length < transactionLimit
-  ) {
+  while (hasMore && swaps.length < transactionLimit) {
     pageCount += 1;
 
     const remainingCapacity = Math.max(1, transactionLimit - swaps.length);
@@ -1504,17 +1600,22 @@ async function collectWalletSwapsForExchangeAggregation(
     }
 
     hasMore = Boolean(page.pageInfo.hasMore);
-    const nextCursor = normalizeCursorValue(page.pageInfo.nextCursor ?? undefined);
-    if (!hasMore || !nextCursor || nextCursor === cursor || page.swaps.length === 0) {
+    const nextCursor = normalizeCursorValue(
+      page.pageInfo.nextCursor ?? undefined,
+    );
+    if (
+      !hasMore ||
+      !nextCursor ||
+      nextCursor === cursor ||
+      page.swaps.length === 0
+    ) {
       break;
     }
 
     cursor = nextCursor;
   }
 
-  const truncated =
-    hasMore &&
-    (swaps.length >= transactionLimit);
+  const truncated = hasMore && swaps.length >= transactionLimit;
 
   return {
     swaps,
@@ -1531,7 +1632,9 @@ export type WalletExchangeCountsOptions = {
 };
 
 function normalizeExchangePeriod(rawPeriod?: string): WalletTimePeriod {
-  const normalized = String(rawPeriod ?? "").trim().toUpperCase();
+  const normalized = String(rawPeriod ?? "")
+    .trim()
+    .toUpperCase();
   if (
     normalized === "7D" ||
     normalized === "30D" ||
@@ -1547,7 +1650,9 @@ function normalizeExchangePeriod(rawPeriod?: string): WalletTimePeriod {
 }
 
 function normalizeExchangeChain(rawChain?: string): string {
-  const normalized = String(rawChain ?? "solana").trim().toLowerCase();
+  const normalized = String(rawChain ?? "solana")
+    .trim()
+    .toLowerCase();
   return normalized || "solana";
 }
 
@@ -1580,7 +1685,9 @@ export async function getWalletExchangeCounts(
   const walletLower = address.toLowerCase();
 
   for (const swap of dataset.swaps) {
-    const signature = String(swap.signature ?? "").trim().toLowerCase();
+    const signature = String(swap.signature ?? "")
+      .trim()
+      .toLowerCase();
     if (!signature) {
       continue;
     }
@@ -1623,7 +1730,9 @@ export async function getWalletExchangeCounts(
       }
 
       const volumeDiff =
-        b.depositsVolume + b.withdrawalsVolume - (a.depositsVolume + a.withdrawalsVolume);
+        b.depositsVolume +
+        b.withdrawalsVolume -
+        (a.depositsVolume + a.withdrawalsVolume);
       if (volumeDiff !== 0) {
         return volumeDiff;
       }
@@ -1710,21 +1819,19 @@ function roundUsd(value: number): number {
   return Number(value.toFixed(2));
 }
 
-function getRangeStartMs(
-  nowMs: number,
-  timePeriod: WalletTimePeriod,
-): number {
+function getRangeStartMs(nowMs: number, timePeriod: WalletTimePeriod): number {
   if (timePeriod === "All") {
     return 0;
   }
 
-  const dayCountByPeriod: Record<"7D" | "30D" | "60D" | "90D" | "1Y", number> = {
-    "7D": 7,
-    "30D": 30,
-    "60D": 60,
-    "90D": 90,
-    "1Y": 365,
-  };
+  const dayCountByPeriod: Record<"7D" | "30D" | "60D" | "90D" | "1Y", number> =
+    {
+      "7D": 7,
+      "30D": 30,
+      "60D": 60,
+      "90D": 90,
+      "1Y": 365,
+    };
 
   return nowMs - dayCountByPeriod[timePeriod] * DAY_MS;
 }
@@ -1760,7 +1867,11 @@ function normalizeMint(mint: unknown): string {
 }
 
 function isSolSymbol(symbol: unknown): boolean {
-  return String(symbol ?? "").trim().toUpperCase() === "SOL";
+  return (
+    String(symbol ?? "")
+      .trim()
+      .toUpperCase() === "SOL"
+  );
 }
 
 function parseTimestampMs(timestamp: string): number {
@@ -1768,9 +1879,10 @@ function parseTimestampMs(timestamp: string): number {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
-function normalizeBalanceDelta(
-  change: { amount: number; decimals: number },
-): number {
+function normalizeBalanceDelta(change: {
+  amount: number;
+  decimals: number;
+}): number {
   const amountRaw = Number(change.amount);
   const decimals = Number(change.decimals);
   if (!Number.isFinite(amountRaw) || !Number.isFinite(decimals)) {
@@ -1793,7 +1905,10 @@ function buildSnapshotTimestamps(
   const expectedPointCount = Math.floor(totalRangeMs / intervalMs) + 1;
   const effectiveIntervalMs =
     expectedPointCount > MAX_PNL_SNAPSHOT_POINTS
-      ? Math.max(intervalMs, Math.ceil(totalRangeMs / (MAX_PNL_SNAPSHOT_POINTS - 1)))
+      ? Math.max(
+          intervalMs,
+          Math.ceil(totalRangeMs / (MAX_PNL_SNAPSHOT_POINTS - 1)),
+        )
       : intervalMs;
 
   const points: number[] = [];
@@ -1950,7 +2065,9 @@ async function getHistoricalPortfolioValueSeries(
       const timestampMs = parseTimestampMs(tx.timestamp);
       return timestampMs >= startMs && timestampMs <= endMs;
     })
-    .sort((a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp));
+    .sort(
+      (a, b) => parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp),
+    );
 
   options?.onTransactionsLoaded?.(transactions);
 
@@ -2066,7 +2183,7 @@ async function getHistoricalPortfolioValueSeries(
  */
 export async function getWalletBalanceHistory(
   address: string,
-  timePeriod: WalletTimePeriod = "30D"
+  timePeriod: WalletTimePeriod = "30D",
 ): Promise<BalanceDataPoint[]> {
   const nowMs = Date.now();
   const startMs = getRangeStartMs(nowMs, timePeriod);
@@ -2087,7 +2204,10 @@ export async function getWalletBalanceHistory(
       date: new Date(point.timestamp).toISOString(),
     }));
   } catch (error) {
-    console.error("[WalletBalanceHistory] Error fetching balance history:", error);
+    console.error(
+      "[WalletBalanceHistory] Error fetching balance history:",
+      error,
+    );
 
     // Fallback: return current balance as flat line
     const currentPortfolio = await getWalletPortfolio(address);
@@ -2130,19 +2250,20 @@ export async function getWalletBalanceHistoryChunk(
   const resolvedRequestedRange =
     options.requestedFromSec != null || options.requestedToSec != null
       ? {
-        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-        toSec: Math.max(
-          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-          Math.floor(options.requestedToSec ?? nowSec),
-        ),
-      }
+          fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          toSec: Math.max(
+            Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+            Math.floor(options.requestedToSec ?? nowSec),
+          ),
+        }
       : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
 
   const requestedGapSec = Math.max(
     0,
     resolvedRequestedRange.toSec - resolvedRequestedRange.fromSec,
   );
-  const effectiveAggregation = resolveBalanceAggregationByGapSec(requestedGapSec);
+  const effectiveAggregation =
+    resolveBalanceAggregationByGapSec(requestedGapSec);
   const intervalMs = getBalanceAggregationIntervalMs(effectiveAggregation);
   const intervalSec = Math.max(1, Math.floor(intervalMs / 1000));
   const limit = clampChartPointsPerChunk(options.limit);
@@ -2196,7 +2317,10 @@ export async function getWalletBalanceHistoryChunk(
       },
     };
   } catch (error) {
-    console.error("[WalletBalanceHistoryChunk] Error fetching balance chunk:", error);
+    console.error(
+      "[WalletBalanceHistoryChunk] Error fetching balance chunk:",
+      error,
+    );
 
     const currentPortfolio = await getWalletPortfolio(address);
     const currentTotalValue = currentPortfolio.reduce(
@@ -2281,10 +2405,15 @@ export async function getCumulativePnL(
       dailyPnL,
       cumulativePnL,
       startBalance: roundUsd(startingValue),
-      endBalance: roundUsd(portfolioValues[portfolioValues.length - 1]?.value ?? 0),
+      endBalance: roundUsd(
+        portfolioValues[portfolioValues.length - 1]?.value ?? 0,
+      ),
     };
   } catch (error) {
-    console.error("[WalletCumulativePnL] Error computing cumulative PnL:", error);
+    console.error(
+      "[WalletCumulativePnL] Error computing cumulative PnL:",
+      error,
+    );
     return {
       dailyPnL: zeroSeries,
       cumulativePnL: zeroSeries,
@@ -2305,20 +2434,22 @@ export async function getCumulativePnLChunk(
     aggregation?: PnLAggregation;
     heliusCursor?: string | null;
   },
-): Promise<WalletCumulativePnLResult & {
-  chunkInfo: ChartChunkInfo;
-  chunkState: ChartChunkState;
-}> {
+): Promise<
+  WalletCumulativePnLResult & {
+    chunkInfo: ChartChunkInfo;
+    chunkState: ChartChunkState;
+  }
+> {
   const nowSec = Math.floor(Date.now() / 1000);
   const resolvedRequestedRange =
     options.requestedFromSec != null || options.requestedToSec != null
       ? {
-        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-        toSec: Math.max(
-          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-          Math.floor(options.requestedToSec ?? nowSec),
-        ),
-      }
+          fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          toSec: Math.max(
+            Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+            Math.floor(options.requestedToSec ?? nowSec),
+          ),
+        }
       : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
 
   const requestedGapSec = Math.max(
@@ -2388,7 +2519,9 @@ export async function getCumulativePnLChunk(
       dailyPnL,
       cumulativePnL,
       startBalance: roundUsd(startingValue),
-      endBalance: roundUsd(portfolioValues[portfolioValues.length - 1]?.value ?? 0),
+      endBalance: roundUsd(
+        portfolioValues[portfolioValues.length - 1]?.value ?? 0,
+      ),
       chunkInfo: {
         chunkFromSec: chunkWindow.chunkFromSec,
         chunkToSec: chunkWindow.chunkToSec,
@@ -2404,7 +2537,10 @@ export async function getCumulativePnLChunk(
       },
     };
   } catch (error) {
-    console.error("[WalletCumulativePnLChunk] Error computing cumulative PnL chunk:", error);
+    console.error(
+      "[WalletCumulativePnLChunk] Error computing cumulative PnL chunk:",
+      error,
+    );
     return {
       dailyPnL: zeroSeries,
       cumulativePnL: zeroSeries,
@@ -2437,26 +2573,46 @@ export interface TokenBalanceSeriesResult {
 export async function getWalletTokenBalanceHistory(
   address: string,
   tokenSelector: string,
-  timePeriod: WalletTimePeriod = "30D"
+  timePeriod: WalletTimePeriod = "30D",
 ): Promise<TokenBalanceSeriesResult> {
   const now = new Date();
   let startDate = new Date(now);
   switch (timePeriod) {
-    case "7D": startDate.setDate(now.getDate() - 7); break;
-    case "30D": startDate.setDate(now.getDate() - 30); break;
-    case "60D": startDate.setDate(now.getDate() - 60); break;
-    case "90D": startDate.setDate(now.getDate() - 90); break;
-    case "1Y": startDate.setFullYear(now.getFullYear() - 1); break;
-    case "All": startDate = new Date(0); break;
+    case "7D":
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case "30D":
+      startDate.setDate(now.getDate() - 30);
+      break;
+    case "60D":
+      startDate.setDate(now.getDate() - 60);
+      break;
+    case "90D":
+      startDate.setDate(now.getDate() - 90);
+      break;
+    case "1Y":
+      startDate.setFullYear(now.getFullYear() - 1);
+      break;
+    case "All":
+      startDate = new Date(0);
+      break;
   }
 
   const flatZero = (): TokenBalanceSeriesResult => ({
     tokenSeries: [
-      { timestamp: startDate.getTime(), value: 0, date: startDate.toISOString() },
+      {
+        timestamp: startDate.getTime(),
+        value: 0,
+        date: startDate.toISOString(),
+      },
       { timestamp: now.getTime(), value: 0, date: now.toISOString() },
     ],
     usdSeries: [
-      { timestamp: startDate.getTime(), value: 0, date: startDate.toISOString() },
+      {
+        timestamp: startDate.getTime(),
+        value: 0,
+        date: startDate.toISOString(),
+      },
       { timestamp: now.getTime(), value: 0, date: now.toISOString() },
     ],
     tokenSymbol: tokenSelector,
@@ -2471,7 +2627,7 @@ export async function getWalletTokenBalanceHistory(
       (item) =>
         item.tokenAddress.toLowerCase() === selectorLower ||
         item.symbol.toLowerCase() === selectorLower ||
-        (selectorLower === "sol" && item.tokenAddress === SOL_MINT)
+        (selectorLower === "sol" && item.tokenAddress === SOL_MINT),
     );
 
     if (!resolvedItem) {
@@ -2500,22 +2656,37 @@ export async function getWalletTokenBalanceHistory(
         const txDate = new Date(tx.timestamp);
         return txDate >= startDate && txDate <= now;
       })
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
 
     const marketData = await getTokenMarketData([resolvedMint]);
-    const currentPriceRaw = Number(marketData[resolvedMint]?.priceUsd ?? Number.NaN);
-    const currentPrice = Number.isFinite(currentPriceRaw) && currentPriceRaw > 0
-      ? currentPriceRaw
-      : 0;
+    const currentPriceRaw = Number(
+      marketData[resolvedMint]?.priceUsd ?? Number.NaN,
+    );
+    const currentPrice =
+      Number.isFinite(currentPriceRaw) && currentPriceRaw > 0
+        ? currentPriceRaw
+        : 0;
 
     const daysSpan = Math.max(
       1,
-      Math.min(3650, Math.ceil((now.getTime() - startDate.getTime()) / DAY_MS) + 2),
+      Math.min(
+        3650,
+        Math.ceil((now.getTime() - startDate.getTime()) / DAY_MS) + 2,
+      ),
     );
 
-    let historicalPriceTimeline: Array<{ timestampSec: number; price: number }> = [];
+    let historicalPriceTimeline: Array<{
+      timestampSec: number;
+      price: number;
+    }> = [];
     try {
-      const historicalData = await getTokenHistoricalData(resolvedMint, daysSpan);
+      const historicalData = await getTokenHistoricalData(
+        resolvedMint,
+        daysSpan,
+      );
       historicalPriceTimeline = (historicalData ?? [])
         .map((point) => ({
           timestampSec: Math.floor(point.timestampMs / 1000),
@@ -2524,15 +2695,26 @@ export async function getWalletTokenBalanceHistory(
         .filter((point) => Number.isFinite(point.price) && point.price > 0)
         .sort((a, b) => a.timestampSec - b.timestampSec);
     } catch (historyErr) {
-      console.error("[getWalletTokenBalanceHistory] Failed to fetch historical prices", historyErr);
+      console.error(
+        "[getWalletTokenBalanceHistory] Failed to fetch historical prices",
+        historyErr,
+      );
     }
 
     const tokenBalanceHistory: BalanceDataPoint[] = [];
 
     if (relevantTxs.length === 0) {
       tokenBalanceHistory.push(
-        { timestamp: startDate.getTime(), value: currentTokenBalance, date: startDate.toISOString() },
-        { timestamp: now.getTime(), value: currentTokenBalance, date: now.toISOString() },
+        {
+          timestamp: startDate.getTime(),
+          value: currentTokenBalance,
+          date: startDate.toISOString(),
+        },
+        {
+          timestamp: now.getTime(),
+          value: currentTokenBalance,
+          date: now.toISOString(),
+        },
       );
     } else {
       let runningTokenBalance = currentTokenBalance;
@@ -2579,9 +2761,14 @@ export async function getWalletTokenBalanceHistory(
     let historicalPricedPoints = 0;
     let fallbackPricedPoints = 0;
 
-    for (let date = new Date(startDate); date <= now; date = new Date(date.getTime() + DAY_MS)) {
+    for (
+      let date = new Date(startDate);
+      date <= now;
+      date = new Date(date.getTime() + DAY_MS)
+    ) {
       const timestamp = date.getTime();
-      let closestTokenBalance = tokenBalanceHistory[0]?.value ?? currentTokenBalance;
+      let closestTokenBalance =
+        tokenBalanceHistory[0]?.value ?? currentTokenBalance;
       for (const point of tokenBalanceHistory) {
         if (point.timestamp <= timestamp) {
           closestTokenBalance = point.value;
@@ -2590,7 +2777,11 @@ export async function getWalletTokenBalanceHistory(
         }
       }
 
-      tokenSeries.push({ timestamp, value: closestTokenBalance, date: date.toISOString() });
+      tokenSeries.push({
+        timestamp,
+        value: closestTokenBalance,
+        date: date.toISOString(),
+      });
 
       const pointSec = Math.floor(timestamp / 1000);
       while (
@@ -2618,13 +2809,21 @@ export async function getWalletTokenBalanceHistory(
     console.log("[wallet-token-balance-history-price]", {
       address,
       tokenAddress: resolvedMint,
-      requestedRange: { fromSec: requestedFromSec, toSec: Math.floor(now.getTime() / 1000) },
+      requestedRange: {
+        fromSec: requestedFromSec,
+        toSec: Math.floor(now.getTime() / 1000),
+      },
       historicalPricePoints: historicalPriceTimeline.length,
       historicalPricedPoints,
       fallbackPricedPoints,
     });
 
-    return { tokenSeries, usdSeries, tokenSymbol: resolvedSymbol, tokenAddress: resolvedMint };
+    return {
+      tokenSeries,
+      usdSeries,
+      tokenSymbol: resolvedSymbol,
+      tokenAddress: resolvedMint,
+    };
   } catch (err) {
     console.error("[getWalletTokenBalanceHistory] Error:", err);
     return flatZero();
@@ -2669,27 +2868,30 @@ export async function getWalletTokenBalanceHistoryChunk(
     chunkToSec?: number;
     limit?: number;
   },
-): Promise<TokenBalanceSeriesResult & {
-  chunkInfo: ChartChunkInfo;
-  chunkState: ChartChunkState;
-}> {
+): Promise<
+  TokenBalanceSeriesResult & {
+    chunkInfo: ChartChunkInfo;
+    chunkState: ChartChunkState;
+  }
+> {
   const nowSec = Math.floor(Date.now() / 1000);
   const resolvedRequestedRange =
     options.requestedFromSec != null || options.requestedToSec != null
       ? {
-        fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-        toSec: Math.max(
-          Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
-          Math.floor(options.requestedToSec ?? nowSec),
-        ),
-      }
+          fromSec: Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+          toSec: Math.max(
+            Math.max(0, Math.floor(options.requestedFromSec ?? 0)),
+            Math.floor(options.requestedToSec ?? nowSec),
+          ),
+        }
       : resolveWalletTimeRangeSec(options.timePeriod ?? "30D", nowSec);
 
   const requestedGapSec = Math.max(
     0,
     resolvedRequestedRange.toSec - resolvedRequestedRange.fromSec,
   );
-  const effectiveAggregation = resolveBalanceAggregationByGapSec(requestedGapSec);
+  const effectiveAggregation =
+    resolveBalanceAggregationByGapSec(requestedGapSec);
   const intervalMs = getBalanceAggregationIntervalMs(effectiveAggregation);
   const intervalSec = Math.max(1, Math.floor(intervalMs / 1000));
   const limit = clampChartPointsPerChunk(options.limit);
@@ -2773,7 +2975,7 @@ export async function fetchTestTransaction(address: string) {
     // Display recent transactions
     data.data.forEach((tx: any) => {
       const date = new Date(tx.timestamp * 1000).toLocaleString();
-      const status = tx.error ? 'Failed' : 'Success';
+      const status = tx.error ? "Failed" : "Success";
 
       console.log(`\n${status} - ${date}`);
       console.log(`Signature: ${tx.signature.slice(0, 20)}...`);
@@ -2781,8 +2983,10 @@ export async function fetchTestTransaction(address: string) {
 
       // Show balance changes
       tx.balanceChanges.forEach((change: any) => {
-        const sign = change.amount > 0 ? '+' : '';
-        console.log(`  ${sign}${change.amount} ${change.mint === 'SOL' ? 'SOL' : change.mint.slice(0, 8)}...`);
+        const sign = change.amount > 0 ? "+" : "";
+        console.log(
+          `  ${sign}${change.amount} ${change.mint === "SOL" ? "SOL" : change.mint.slice(0, 8)}...`,
+        );
       });
     });
 
@@ -2836,7 +3040,9 @@ async function enrichWithSolanaTokenPrices(
     rawTokenSymbol?: unknown,
   ): string | undefined => {
     const lookupAddress = resolveLookupAddress(rawTokenAddress, rawTokenSymbol);
-    return lookupAddress ? normalizePortfolioAddressKey(lookupAddress) : undefined;
+    return lookupAddress
+      ? normalizePortfolioAddressKey(lookupAddress)
+      : undefined;
   };
 
   for (const tx of transactions) {
@@ -2855,7 +3061,10 @@ async function enrichWithSolanaTokenPrices(
     }
 
     if (isWalletTransfer(tx)) {
-      const lookupAddress = resolveLookupAddress(tx.tokenAddress, tx.tokenSymbol);
+      const lookupAddress = resolveLookupAddress(
+        tx.tokenAddress,
+        tx.tokenSymbol,
+      );
       if (lookupAddress) {
         candidateAddressesByKey.set(
           normalizePortfolioAddressKey(lookupAddress),
@@ -2917,7 +3126,9 @@ async function enrichWithSolanaTokenPrices(
     const marketPriceByKey = new Map<string, number>();
 
     try {
-      const tokenMeta = await getTokenMeta(candidateAddresses) as TokenMetaRow[];
+      const tokenMeta = (await getTokenMeta(
+        candidateAddresses,
+      )) as TokenMetaRow[];
       for (const meta of tokenMeta) {
         const address = normalizePortfolioText(meta.address);
         if (!address) {
@@ -2936,7 +3147,10 @@ async function enrichWithSolanaTokenPrices(
         });
       }
     } catch (err) {
-      console.warn("[enrichWithSolanaTokenPrices] Token metadata enrichment failed", err);
+      console.warn(
+        "[enrichWithSolanaTokenPrices] Token metadata enrichment failed",
+        err,
+      );
     }
 
     try {
@@ -2947,7 +3161,8 @@ async function enrichWithSolanaTokenPrices(
           continue;
         }
 
-        const lookupAddress = normalizePortfolioLookupAddress(normalizedAddress);
+        const lookupAddress =
+          normalizePortfolioLookupAddress(normalizedAddress);
         if (!isValidPortfolioTokenAddress(lookupAddress)) {
           continue;
         }
@@ -2957,13 +3172,21 @@ async function enrichWithSolanaTokenPrices(
           continue;
         }
 
-        marketPriceByKey.set(normalizePortfolioAddressKey(lookupAddress), priceUsd);
+        marketPriceByKey.set(
+          normalizePortfolioAddressKey(lookupAddress),
+          priceUsd,
+        );
       }
     } catch (err) {
-      console.warn("[enrichWithSolanaTokenPrices] Token market-data enrichment failed", err);
+      console.warn(
+        "[enrichWithSolanaTokenPrices] Token market-data enrichment failed",
+        err,
+      );
     }
 
-    const resolvePriceUsd = (addressKey: string | undefined): number | undefined => {
+    const resolvePriceUsd = (
+      addressKey: string | undefined,
+    ): number | undefined => {
       if (!addressKey) {
         return undefined;
       }
@@ -2998,7 +3221,9 @@ async function enrichWithSolanaTokenPrices(
 
         tx.priceUsd = priceUsd;
         tx.totalUsd =
-          tx.primaryTokenAmount != null ? priceUsd * tx.primaryTokenAmount : undefined;
+          tx.primaryTokenAmount != null
+            ? priceUsd * tx.primaryTokenAmount
+            : undefined;
         transactionEnrichedCount += 1;
         continue;
       }
@@ -3010,9 +3235,14 @@ async function enrichWithSolanaTokenPrices(
         if (addressKey) {
           const tokenMeta = tokenMetaByKey.get(addressKey);
           if (tokenMeta) {
-            const shouldFillSymbol = shouldFillPortfolioText(tx.tokenSymbol) && Boolean(tokenMeta.symbol);
-            const shouldFillName = shouldFillPortfolioText(tx.tokenName) && Boolean(tokenMeta.name);
-            const shouldFillLogo = isMissingPortfolioLogoUri(tx.tokenLogoUri) && Boolean(tokenMeta.logoUri);
+            const shouldFillSymbol =
+              shouldFillPortfolioText(tx.tokenSymbol) &&
+              Boolean(tokenMeta.symbol);
+            const shouldFillName =
+              shouldFillPortfolioText(tx.tokenName) && Boolean(tokenMeta.name);
+            const shouldFillLogo =
+              isMissingPortfolioLogoUri(tx.tokenLogoUri) &&
+              Boolean(tokenMeta.logoUri);
 
             if (shouldFillSymbol) {
               tx.tokenSymbol = String(tokenMeta.symbol);
@@ -3032,14 +3262,17 @@ async function enrichWithSolanaTokenPrices(
 
           const priceUsd = resolvePriceUsd(addressKey);
           if (priceUsd != null) {
-            const hasPriceUsd = tx.priceUsd != null && Number.isFinite(Number(tx.priceUsd));
+            const hasPriceUsd =
+              tx.priceUsd != null && Number.isFinite(Number(tx.priceUsd));
             if (!hasPriceUsd) {
               tx.priceUsd = priceUsd;
               changed = true;
             }
 
-            const amountUsd = Number(tx.amount) * Number(tx.priceUsd ?? priceUsd);
-            const hasAmountUsd = tx.amountUsd != null && Number.isFinite(Number(tx.amountUsd));
+            const amountUsd =
+              Number(tx.amount) * Number(tx.priceUsd ?? priceUsd);
+            const hasAmountUsd =
+              tx.amountUsd != null && Number.isFinite(Number(tx.amountUsd));
             if (!hasAmountUsd && Number.isFinite(amountUsd)) {
               tx.amountUsd = amountUsd;
               changed = true;
@@ -3071,9 +3304,15 @@ async function enrichWithSolanaTokenPrices(
 
         const tokenMeta = tokenMetaByKey.get(addressKey);
         if (tokenMeta) {
-          const shouldFillSymbol = shouldFillPortfolioText(change.symbol ?? undefined) && Boolean(tokenMeta.symbol);
-          const shouldFillName = shouldFillPortfolioText(change.name ?? undefined) && Boolean(tokenMeta.name);
-          const shouldFillLogo = isMissingPortfolioLogoUri(change.logoUri ?? undefined) && Boolean(tokenMeta.logoUri);
+          const shouldFillSymbol =
+            shouldFillPortfolioText(change.symbol ?? undefined) &&
+            Boolean(tokenMeta.symbol);
+          const shouldFillName =
+            shouldFillPortfolioText(change.name ?? undefined) &&
+            Boolean(tokenMeta.name);
+          const shouldFillLogo =
+            isMissingPortfolioLogoUri(change.logoUri ?? undefined) &&
+            Boolean(tokenMeta.logoUri);
 
           if (shouldFillSymbol) {
             change.symbol = String(tokenMeta.symbol);
@@ -3096,15 +3335,19 @@ async function enrichWithSolanaTokenPrices(
           return;
         }
 
-        const hasPriceUsd = change.priceUsd != null && Number.isFinite(Number(change.priceUsd));
+        const hasPriceUsd =
+          change.priceUsd != null && Number.isFinite(Number(change.priceUsd));
         if (!hasPriceUsd) {
           change.priceUsd = priceUsd;
           changed = true;
         }
 
-        const hasValueUsd = change.valueUsd != null && Number.isFinite(Number(change.valueUsd));
+        const hasValueUsd =
+          change.valueUsd != null && Number.isFinite(Number(change.valueUsd));
         if (!hasValueUsd) {
-          const computedValueUsd = Math.abs(Number(change.amount)) * Number(change.priceUsd ?? priceUsd);
+          const computedValueUsd =
+            Math.abs(Number(change.amount)) *
+            Number(change.priceUsd ?? priceUsd);
           if (Number.isFinite(computedValueUsd)) {
             change.valueUsd = computedValueUsd;
             changed = true;
@@ -3123,7 +3366,8 @@ async function enrichWithSolanaTokenPrices(
       enrichSwapChange(tx.sold);
       enrichSwapChange(tx.bought);
 
-      const hasTotalValueUsd = tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
+      const hasTotalValueUsd =
+        tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
       if (!hasTotalValueUsd) {
         const fallbackCandidates = [
           Number(tx.sold?.valueUsd),
@@ -3220,7 +3464,9 @@ function resolveBalanceAggregationByGapSec(gapSec: number): ChartAggregation {
   return "daily";
 }
 
-function getBalanceAggregationIntervalMs(aggregation: ChartAggregation): number {
+function getBalanceAggregationIntervalMs(
+  aggregation: ChartAggregation,
+): number {
   if (aggregation === "monthly") {
     return 30 * DAY_MS;
   }
@@ -3260,16 +3506,25 @@ function resolveChunkWindow(args: {
   nextChunkToSec: number | null;
 } {
   const requestedFromSec = Math.max(0, Math.floor(args.requestedFromSec));
-  const requestedToSec = Math.max(requestedFromSec, Math.floor(args.requestedToSec));
+  const requestedToSec = Math.max(
+    requestedFromSec,
+    Math.floor(args.requestedToSec),
+  );
   const normalizedToSec = Math.min(
     requestedToSec,
     Math.max(requestedFromSec, Math.floor(args.chunkToSec ?? requestedToSec)),
   );
   const safeLimit = Math.max(1, Math.floor(args.limit));
   const safeIntervalSec = Math.max(1, Math.floor(args.intervalSec));
-  const windowSpanSec = Math.max(safeIntervalSec, (safeLimit - 1) * safeIntervalSec);
+  const windowSpanSec = Math.max(
+    safeIntervalSec,
+    (safeLimit - 1) * safeIntervalSec,
+  );
 
-  const chunkFromSec = Math.max(requestedFromSec, normalizedToSec - windowSpanSec);
+  const chunkFromSec = Math.max(
+    requestedFromSec,
+    normalizedToSec - windowSpanSec,
+  );
   const hasMore = chunkFromSec > requestedFromSec;
   const nextChunkToSec = hasMore
     ? Math.max(requestedFromSec, chunkFromSec - safeIntervalSec)

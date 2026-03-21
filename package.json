@@ -13,11 +13,11 @@
   },
   "scripts": {
     "dev": "npm run dev -w=server & npm run dev -w=client",
-    "build": "npm run build -ws",
+    "build": "npm run build --workspaces",
     "preview": "npm run start -w=server & npm run preview -w=client",
-    "lint": "npm run lint -ws",
-    "clear": "rm -rf ./node_modules ./package-lock.json & npm run clear -ws",
-    "clean": "npm run clean -ws",
+    "lint": "npm run lint --workspaces",
+    "clear": "rm -rf ./node_modules ./package-lock.json & npm run clear --workspaces",
+    "clean": "npm run clean --workspaces",
     "client:dev": "npm run dev -w=client",
     "client:build": "npm run build -w=client",
     "client:preview": "npm run preview -w=client",
@@ -34,8 +34,6 @@
     "db:studio": "npm run db:studio -w server"
   },
   "dependencies": {
-    "@coingecko/coingecko-typescript": "^2.5.0",
-    "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.19",
     "zod": "^4.3.6"
   },
@@ -47,8 +45,7 @@
     "globals": "^16.4.0",
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0",
-    "vitest": "^4.1.0"
+    "typescript-eslint": "^8.45.0"
   },
   "description": "Full-stack TypeScript monorepo with React frontend (Vite) and Hono backend.",
   "main": "index.js",
