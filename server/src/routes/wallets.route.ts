@@ -237,31 +237,6 @@ const routes = router
       return c.json({ error: "Failed to get wallet portfolio" }, 500);
     }
   })
-  // .get("/transactions", async (c) => {
-  //   const query = c.req.query();
-  //   const params = walletRequestSchema.parse(query)
-  //   const address = params.address;
-
-  //   const limitParam = c.req.query("limit");
-  //   const cursor = c.req.query("cursor");
-  //   const before = c.req.query("before");
-
-  //   const limit = limitParam ? Number(limitParam) : undefined;
-
-  //   try {
-  //     const txs = await getWalletTransactions(address, {
-  //       limit: Number.isFinite(limit) ? limit : undefined,
-  //       cursor: cursor ?? undefined,
-  //       before: before ?? undefined,
-  //     });
-  //     // console.log("[transaction route] data:")
-  //     // console.log(txs);
-  //     return c.json(txs);
-  //   } catch (err) {
-  //     console.error("Failed to get wallet transactions", err);
-  //     return c.json({ error: "Failed to get wallet transactions" }, 500);
-  //   }
-  // })
   .get("/swap", async (c) => {
     const query = c.req.query();
     const params = walletRequestSchema.parse(query);
