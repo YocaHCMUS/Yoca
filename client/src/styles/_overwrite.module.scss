@@ -11,18 +11,34 @@
 
   :global(.cds--data-table) td,
   :global(.cds--data-table) th {
-    padding-inline: 0.5rem 0rem;
+    padding-inline: 0.5rem 0.5rem;
+    padding-block: 14px !important;
     background: var(--cds-layer-01);
+    vertical-align: middle !important;
+  }
+
+  :global(.cds--data-table tr) {
+    min-height: 64px;
+  }
+
+  :global(.cds--table-header-label) {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: inherit;
   }
 
   :global(.cds--data-table tbody td) {
     color: var(--cds-text-primary);
+    vertical-align: middle !important;
+    font-family: 'Inter', sans-serif !important;
   }
 
   :global(.cds--data-table thead th) {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--cds-text-primary);
+    font-family: 'Inter', sans-serif !important;
   }
 
   :global(.cds--data-table_inner-container) {

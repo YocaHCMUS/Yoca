@@ -104,12 +104,12 @@ export default function TokenOverviewPage() {
         break;
     }
     if (targetRef?.current) {
-      const container = targetRef.current.parentElement;
+      const container = document.getElementById("main-content");
       if (container) {
         const containerTop = container.getBoundingClientRect().top;
         const targetTop = targetRef.current.getBoundingClientRect().top;
         container.scrollBy({
-          top: targetTop - containerTop - 24, // Adjust for the 24px padding
+          top: targetTop - containerTop - 120, // Adjust for the header height + padding
           behavior: "smooth",
         });
       }

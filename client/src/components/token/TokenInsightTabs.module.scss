@@ -4,26 +4,7 @@
     width: 100%;
 }
 
-// ── Tabs ──────────────────────────────────────────
-.tabList {
-    :global(.cds--tabs__nav-link) {
-        font-size: 14px;
-        font-weight: 600;
-        color: $text-secondary;
-        border-bottom: 2px solid transparent;
-        padding: 10px 16px;
-    }
-
-    :global(.cds--tabs__nav-item--selected .cds--tabs__nav-link) {
-        color: $text-primary;
-        border-bottom-color: $interactive;
-    }
-
-    :global(.cds--tabs__nav-link:hover) {
-        color: $text-primary;
-        background: transparent;
-    }
-}
+// Eliminated .tabList since we use TabContainer now
 
 // ── Tab Content ───────────────────────────────────
 .tabContent {

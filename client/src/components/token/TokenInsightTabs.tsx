@@ -1,7 +1,7 @@
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { Tab, TabList, Tabs } from "@carbon/react";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import type { InferResponseType } from "hono/client";
@@ -347,19 +347,20 @@ export function TokenInsightTabs({
 
   return (
     <div className={styles.container}>
-      <Tabs
-        selectedIndex={activeTab}
-        onChange={({ selectedIndex }) => setActiveTab(selectedIndex)}
-      >
-        <TabList aria-label="Token info tabs" className={styles.tabList}>
-          <Tab>{tr("token.insightTabs.about")}</Tab>
-          <Tab>{tr("token.insightTabs.holders")}</Tab>
-        </TabList>
-      </Tabs>
+      <div>
+        <FilterSwitch
+          options={[
+            { value: "0", label: tr("token.insightTabs.about") || "Stats" },
+            { value: "1", label: tr("token.insightTabs.holders") || "Holders" }
+          ]}
+          value={activeTab.toString()}
+          onChange={(v) => setActiveTab(parseInt(v, 10))}
+          tooltipLabel="Insights"
+        />
+      </div>
 
-      {/* ── About Tab ─────────────────────────────────────── */}
       {activeTab === 0 && (
-        <div className={styles.tabContent}>
+        <div className={styles.tabContent} key="about">
           {insightCards.length > 0 && (
             <div className={styles.insightGrid}>
               {insightCards.map((card, i) => (
@@ -370,9 +371,8 @@ export function TokenInsightTabs({
         </div>
       )}
 
-      {/* ── Holders Tab ───────────────────────────────────── */}
       {activeTab === 1 && (
-        <div className={styles.tabContent}>
+        <div className={styles.tabContent} key="holders">
           <div className={styles.holdersLayout}>
             <div className={styles.holdersTable}>
               <TopHoldersTable holders={holders} loading={holdersLoading} />

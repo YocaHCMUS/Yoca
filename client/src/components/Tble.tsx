@@ -110,19 +110,19 @@ export default function Tble({
   if (loading && rows.length == 0) {
     return (
       <TableContainer
-        title={
-          <div className={overwriteStyles.tblHeadWrap}>
-            <div>
-              <strong className={overwriteStyles.tblTitle}>{title}</strong>
-              <span className={overwriteStyles.tblDsc}>{description}</span>
-            </div>
-            {hasToolBar && (
-              <div className={overwriteStyles.tblToolbar}>
-                <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
-              </div>
-            )}
+      title={(title || description) ? (
+        <div className={overwriteStyles.tblHeadWrap}>
+          <div>
+            <strong className={overwriteStyles.tblTitle}>{title}</strong>
+            <span className={overwriteStyles.tblDsc}>{description}</span>
           </div>
-        }
+          {hasToolBar && (
+            <div className={overwriteStyles.tblToolbar}>
+              <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
+            </div>
+          )}
+        </div>
+      ) : null}
         className={overwriteStyles.tbl}
       >
         <div
@@ -141,7 +141,7 @@ export default function Tble({
 
   return (
     <TableContainer
-      title={
+      title={(title || description) ? (
         <div className={overwriteStyles.tblHeadWrap}>
           <div>
             <strong className={overwriteStyles.tblTitle}>{title}</strong>
@@ -153,7 +153,7 @@ export default function Tble({
             </div>
           )}
         </div>
-      }
+      ) : null}
       className={overwriteStyles.tbl}
     >
       <DataTable rows={rowsToRender} headers={headers} {...dataTableProps}>
@@ -174,11 +174,10 @@ export default function Tble({
                       <TableHeader
                         {...getHeaderProps({ header })}
                         style={{
-                          paddingBlockStart: 0,
-                          display: "flex",
-                          alignItems: "center",
+                          verticalAlign: "middle",
                           inlineSize: headerLookup[header.key].width,
-                          justifyContent: headerLookup[header.key].align,
+                          textAlign: headerLookup[header.key].align === "start" ? "left" : headerLookup[header.key].align === "end" ? "right" : "center",
+                          justifyContent: headerLookup[header.key].align === "start" ? "flex-start" : headerLookup[header.key].align === "end" ? "flex-end" : "center",
                         }}
                       >
                         {header.header}
@@ -192,11 +191,10 @@ export default function Tble({
                       <TableCell
                         colSpan={headers.length}
                         style={{
-                          textAlign: "center",
-                          paddingBlockStart: 0,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          textAlign: "center",
                           height: "100px",
                         }}
                       >
@@ -210,12 +208,10 @@ export default function Tble({
                           <TableCell
                             {...getCellProps({ cell })}
                             style={{
-                              paddingBlockStart: 0,
-                              display: "flex",
-                              alignItems: "center",
+                              verticalAlign: "middle",
                               inlineSize: headerLookup[cell.info.header].width,
-                              justifyContent:
-                                headerLookup[cell.info.header].align,
+                              textAlign: headerLookup[cell.info.header].align === "start" ? "left" : headerLookup[cell.info.header].align === "end" ? "right" : "center",
+                              justifyContent: headerLookup[cell.info.header].align === "start" ? "flex-start" : headerLookup[cell.info.header].align === "end" ? "flex-end" : "center",
                             }}
                           >
                             {cell.value}

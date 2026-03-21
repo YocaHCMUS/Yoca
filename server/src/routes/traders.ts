@@ -21,6 +21,41 @@ export type BDS_TopTraders = {
 };
 
 // https://docs.birdeye.so/reference/get-defi-v3-trader-gainers-losers
+export async function getTraderGainersLosers(sortType: "asc" | "desc") {
+  const bdsEndpoint = bds.getEndpoint("/trader/gainers-losers");
+
+  bdsEndpoint.search = new URLSearchParams({
+    type: "1W",
+    sort_by: "PnL",
+    sort_type: sortType,
+  }).toString();
+
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+
+  if (!resp.ok) {
+    return null;
+  }
+
+  const res: BDS_TopTraders = await resp.json();
+
+  if (!res.success) {
+    return null;
+  }
+
+  return res.data.items.map((trader, index) => ({
+    address: trader.address,
+    rank: index + 1,
+    pnl: trader.pnl,
+    volume: trader.volume,
+    tradeCount: trader.trade_count,
+  }));
+}
+
 export async function getTopTraders() {
   const cached = await db
     .select()
@@ -33,41 +68,11 @@ export async function getTopTraders() {
     return cached;
   }
 
-  const bdsEndpoint = bds.getEndpoint("/trader/gainers-losers");
-
-  bdsEndpoint.search = new URLSearchParams({
-    type: "1W",
-    sort_by: "PnL",
-    sort_type: "desc",
-  }).toString();
-
-  const req = new Request(bdsEndpoint, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
-  });
-
-  const resp = await fetch(req);
-
-  if (!resp.ok) {
-    return cached.length > 0 ? cached : null;
-  }
-
-  const res: BDS_TopTraders = await resp.json();
-
-  if (!res.success) {
-    return cached.length > 0 ? cached : null;
-  }
+  const items = await getTraderGainersLosers("desc");
+  if (!items) return cached.length > 0 ? cached : null;
 
   await db.delete(topTraders);
-  await db.insert(topTraders).values(
-    res.data.items.map((trader, index) => ({
-      address: trader.address,
-      rank: index + 1,
-      pnl: trader.pnl,
-      volume: trader.volume,
-      tradeCount: trader.trade_count,
-    })),
-  );
+  await db.insert(topTraders).values(items);
 
   return await db
     .select()
@@ -75,26 +80,47 @@ export async function getTopTraders() {
     .orderBy(asc(topTraders.rank));
 }
 
-const app = new Hono().get("/top", async (c) => {
-  try {
-    const topTraders = await getTopTraders();
+const app = new Hono()
+  .get("/top", async (c) => {
+    try {
+      const topTraders = await getTopTraders();
 
-    if (topTraders) {
-      return c.json(topTraders, statusCode.Ok);
+      if (topTraders) {
+        return c.json(topTraders, statusCode.Ok);
+      }
+
+      return c.json(
+        setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+        statusCode.BadGateway,
+      );
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
     }
+  })
+  .get("/losers", async (c) => {
+    try {
+      const losers = await getTraderGainersLosers("asc");
 
-    return c.json(
-      setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-      statusCode.BadGateway,
-    );
-  } catch (err) {
-    console.error(err);
-    return c.json(
-      setErr("INTERNAL_SERVER_ERR"),
-      statusCode.InternalServerError,
-    );
-  }
-});
+      if (losers) {
+        return c.json(losers, statusCode.Ok);
+      }
+
+      return c.json(
+        setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+        statusCode.BadGateway,
+      );
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  });
 
 export default app;
 

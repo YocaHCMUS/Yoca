@@ -373,6 +373,10 @@ export default function TokenTreeMap({
       option={options}
       style={{ width: "100%", height }}
       className={className}
+      opts={{
+        renderer: "canvas",
+        devicePixelRatio: window.devicePixelRatio,
+      }}
     />
   );
 }
