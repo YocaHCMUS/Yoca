@@ -1,6 +1,7 @@
 import { apiKeyManager } from "./api-key-manager.js";
 
-const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL = "https://solana-gateway.moralis.io";
+const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL =
+  "https://solana-gateway.moralis.io";
 
 const MORALIS_SERVICE_NAME = "moralis";
 let moralisKeysInitialized = false;
@@ -34,7 +35,10 @@ function resolveBaseUrl(): string {
   return DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL;
 }
 
-export async function moralisFetch(url: URL, init: RequestInit): Promise<Response> {
+export async function moralisFetch(
+  url: URL,
+  init: RequestInit,
+): Promise<Response> {
   let lastResponse: Response | null = null;
   let attempts = 0;
 
@@ -62,9 +66,12 @@ export function getEndpoint(path: string): URL {
   return buildEndpoint(resolveBaseUrl(), path);
 }
 
-export function getRequiredHeaders(): HeadersInit {
+export function getRequiredHeaders() {
   if (!moralisKeysInitialized) {
-    apiKeyManager.initializeKeys(MORALIS_SERVICE_NAME, process.env.MORALIS_API_KEY);
+    apiKeyManager.initializeKeys(
+      MORALIS_SERVICE_NAME,
+      process.env.MORALIS_API_KEY,
+    );
     moralisKeysInitialized = true;
   }
 

@@ -35,7 +35,7 @@ async function fetchTrendingPage(params: {
     return null;
   }
 
-  const res = (await resp.json()) as BDS_TrendingList;
+  const res: BDS_TrendingList = await resp.json();
   if (!res.success) {
     return null;
   }

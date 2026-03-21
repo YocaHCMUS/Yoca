@@ -60,7 +60,7 @@ export async function fetch24hTokenMarketChart(
   const resp = await fetch(req);
 
   if (resp.ok) {
-    const res = (await resp.json()) as CG_TokenMarketChart;
+    const res: CG_TokenMarketChart = await resp.json();
     const chartDataPoints = res.prices.map(
       ([timestamp, price], index): TokenMarketChart24hInsert => ({
         address: tokenAddress,
@@ -193,7 +193,7 @@ async function fetchAndCacheRangedChart(
   const resp = await fetch(req);
   if (!resp.ok) return;
 
-  const res = (await resp.json()) as CG_TokenMarketChart;
+  const res: CG_TokenMarketChart = await resp.json();
   if (res.prices.length == 0) return;
 
   const unixUpdatedAtMs = now;

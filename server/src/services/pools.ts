@@ -86,7 +86,7 @@ export async function getTopPoolsByToken(
     return [];
   }
 
-  const res = (await resp.json()) as CG_PoolResponse;
+  const res: CG_PoolResponse = await resp.json();
 
   // Build token lookup from included data
   const tokenLookup: Record<string, { name: string; symbol: string }> = {};
@@ -297,7 +297,7 @@ export async function getPoolDetails(
     return null;
   }
 
-  const res = (await resp.json()) as CG_PoolDetailResponse;
+  const res: CG_PoolDetailResponse = await resp.json();
   const pool = res.data;
 
   // Debug: Log raw response from CoinGecko
@@ -400,7 +400,7 @@ export async function getPoolTrades(
     return [];
   }
 
-  const res = (await resp.json()) as CG_TradesResponse;
+  const res: CG_TradesResponse = await resp.json();
 
   return res.data.slice(0, limit).map((trade) => ({
     id: trade.id,

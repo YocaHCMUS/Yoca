@@ -2969,7 +2969,7 @@ export async function fetchTestTransaction(address: string) {
     }
 
     // TODO: kindly add a type here
-    const data = await response.json();
+    const data = (await response.json()) as any;
 
     console.log(`Found ${data.data.length} transactions`);
 
