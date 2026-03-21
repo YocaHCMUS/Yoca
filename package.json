@@ -3,10 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "client",
-    "server"
-  ],
+  "workspaces": {
+    "packages": [
+      "client",
+      "server"
+    ],
+    "nohoist": [
+      "**/node_modules",
+      "**/@solana"
+    ]
+  },
   "overrides": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
