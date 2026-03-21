@@ -1026,6 +1026,37 @@ async function fetchBirdeyeJson(
   }
 }
 
+function normalizeBirdeyeTimeParam(time?: string): string | undefined {
+  if (!time) {
+    return undefined;
+  }
+
+  const trimmed = time.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  // Birdeye expects: YYYY-MM-DD HH:mm:ss
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  if (!Number.isFinite(parsedMs)) {
+    return undefined;
+  }
+
+  const date = new Date(parsedMs);
+  const yyyy = String(date.getUTCFullYear());
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const min = String(date.getUTCMinutes()).padStart(2, "0");
+  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+}
+
 export async function fetchBirdeyePortfolio(address: string): Promise<WalletPortfolio> {
   const limit = 100;
   const seenPortfolioKeys = new Set<string>();
@@ -1136,6 +1167,7 @@ export async function fetchBirdeyeNetworthHistory(
   const direction = options?.direction ?? "back";
   const type = options?.type ?? "1d";
   const sortType = options?.sortType ?? "desc";
+  const time = normalizeBirdeyeTimeParam(options?.time);
 
   const json = await fetchBirdeyeJson("/wallet/v2/net-worth", "GET", {
     searchParams: {
@@ -1144,7 +1176,7 @@ export async function fetchBirdeyeNetworthHistory(
       direction,
       type,
       sort_type: sortType,
-      ...(options?.time ? { time: options.time } : {}),
+      ...(time ? { time } : {}),
     },
   });
   const data = json?.data ?? {};
@@ -1202,6 +1234,7 @@ export async function fetchBirdeyePortfolioSnapshot(
   const offset = Math.max(Math.floor(options?.offset ?? 0), 0);
   const type = options?.type ?? "1d";
   const sortType = options?.sortType ?? "desc";
+  const time = normalizeBirdeyeTimeParam(options?.time);
 
   const json = await fetchBirdeyeJson("/wallet/v2/net-worth-details", "GET", {
     searchParams: {
@@ -1210,7 +1243,7 @@ export async function fetchBirdeyePortfolioSnapshot(
       sort_type: sortType,
       limit,
       offset,
-      ...(options?.time ? { time: options.time } : {}),
+      ...(time ? { time } : {}),
     },
   });
   const data = json?.data ?? {};
