@@ -642,7 +642,18 @@ export const walletExchangeCountsCache = pgTable(
   "wallet_exchange_counts_cache",
   {
     address: varchar("address", { length: 66 }).notNull(),
-    data: jsonb("data").$type<{ exchanges: Array<{ name: string; deposits: number; withdrawals: number; depositsVolume: number; withdrawalsVolume: number }>; metadata: { period: string; metric: string } }>().notNull(),
+    data: jsonb("data")
+      .$type<{
+        exchanges: Array<{
+          name: string;
+          deposits: number;
+          withdrawals: number;
+          depositsVolume: number;
+          withdrawalsVolume: number;
+        }>;
+        metadata: { period: string; metric: string };
+      }>()
+      .notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.address] })],
@@ -680,6 +691,75 @@ export const walletUserTags = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.walletAddress] })],
 );
 
+export const walletTokenDetails = pgTable(
+  "wallet_token_details",
+  {
+    address: varchar("address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol").notNull(),
+    decimals: integer("decimals").notNull(),
+    lastTradeUnixTime: integer("last_trade_unix_time").notNull(),
+
+    // Counts
+    totalBuy: integer("total_buy").notNull(),
+    totalSell: integer("total_sell").notNull(),
+    totalTrade: integer("total_trade").notNull(),
+
+    // Quantity
+    totalBoughtAmount: decimal("total_bought_amount").notNull(),
+    totalSoldAmount: decimal("total_sold_amount").notNull(),
+    holding: decimal("holding").notNull(),
+
+    // Cashflow
+    costOfQuantitySold: decimal("cost_of_quantity_sold").notNull(),
+    totalInvested: decimal("total_invested").notNull(),
+    totalSold: decimal("total_sold").notNull(),
+    currentValue: decimal("current_value").notNull(),
+
+    // PnL
+    realizedProfitUsd: decimal("realized_profit_usd").notNull(),
+    realizedProfitPercent: decimal("realized_profit_percent").notNull(),
+    unrealizedUsd: decimal("unrealized_usd").notNull(),
+    unrealizedPercent: decimal("unrealized_percent").notNull(),
+    totalUsd: decimal("total_usd").notNull(),
+    totalPercent: decimal("total_percent").notNull(),
+    avgProfitPerTradeUsd: decimal("avg_profit_per_trade_usd").notNull(),
+
+    // Pricing
+    currentPrice: decimal("current_price"),
+    avgBuyCost: decimal("avg_buy_cost").notNull(),
+    avgSellCost: decimal("avg_sell_cost").notNull(),
+
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
+);
+
+// export const walletTokenDetailsSummary = pgTable(
+//   "wallet_token_details_summary",
+//   {
+//     address: varchar("address", { length: 44 }).notNull().primaryKey(),
+//     uniqueTokens: integer("unique_tokens").notNull(),
+//     totalBuy: integer("total_buy").notNull(),
+//     totalSell: integer("total_sell").notNull(),
+//     totalTrade: integer("total_trade").notNull(),
+//     totalWin: integer("total_win").notNull(),
+//     totalLoss: integer("total_loss").notNull(),
+//     winRate: decimal("win_rate").notNull(),
+//     totalInvested: decimal("total_invested").notNull(),
+//     totalSold: decimal("total_sold").notNull(),
+//     currentValue: decimal("current_value").notNull(),
+//     realizedProfitUsd: decimal("realized_profit_usd").notNull(),
+//     realizedProfitPercent: decimal("realized_profit_percent").notNull(),
+//     unrealizedUsd: decimal("unrealized_usd").notNull(),
+//     totalUsd: decimal("total_usd").notNull(),
+//     avgProfitPerTradeUsd: decimal("avg_profit_per_trade_usd").notNull(),
+//     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+//   },
+// );
+
 // #endregion
 
 // #region Types
@@ -713,11 +793,14 @@ export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
-export type WalletExchangeCountsCacheInsert = typeof walletExchangeCountsCache.$inferInsert;
+export type WalletExchangeCountsCacheInsert =
+  typeof walletExchangeCountsCache.$inferInsert;
 export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
-export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletHeliusTransactionsInsert =
+  typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
+export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 
 // #endregion

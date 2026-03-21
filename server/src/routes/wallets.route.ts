@@ -478,6 +478,30 @@ const routes = router
         statusCode.InternalServerError,
       );
     }
-  });
+  })
+  .get(
+    "/:address/token-details",
+    validate("param", addressSchema),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const tokenDetails = await walletService.getTokenDetails(address);
+        if (tokenDetails == null) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+
+        return c.json(tokenDetails, 200);
+      } catch (err) {
+        console.log(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  );
 
 export default routes;
