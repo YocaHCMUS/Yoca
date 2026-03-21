@@ -86,21 +86,23 @@ async function fetchLatestTransfers(limit: number, offset: number) {
   const resp = await fetch(req);
 
   if (resp.ok) {
-    const res: BQ_TransfersResponse = await resp.json();
+    const res = (await resp.json()) as BQ_TransfersResponse;
 
     const transfersList = await Promise.all(
       res.data.Solana.Transfers.map(
-        async (rawTransfer): Promise<TokenTransferInsert> => ({
-          fromOwner: rawTransfer.Transfer.Sender.Address,
-          toOwner: rawTransfer.Transfer.Receiver.Address,
-          amount: rawTransfer.Transfer.Amount,
-          amountUsd: rawTransfer.Transfer.AmountInUSD,
-          blockTime: new Date(rawTransfer.Block.Time),
-          instructionIndex: rawTransfer.Instruction.Index,
-          transactionSignature: rawTransfer.Transaction.Signature,
-          tokenAddress: rawTransfer.Transfer.Currency.Native
+        async (raw): Promise<TokenTransferInsert> => ({
+          address: raw.Transfer.Currency.MintAddress,
+          fromOwner: raw.Transfer.Sender.Address,
+          toOwner: raw.Transfer.Receiver.Address,
+          amount: raw.Transfer.Amount,
+          amountUsd: raw.Transfer.AmountInUSD,
+          blockTime: new Date(raw.Block.Time),
+          instructionIndex: raw.Instruction.Index,
+          transactionSignature: raw.Transaction.Signature,
+          tokenAddress: raw.Transfer.Currency.Native
             ? "native"
-            : rawTransfer.Transfer.Currency.MintAddress,
+            : raw.Transfer.Currency.MintAddress,
+          tokenSymbol: "",
         }),
       ),
     );

@@ -1,5 +1,5 @@
 import { paginationSchema, validate } from "@sv/middlewares/validation.js";
-import * as transferService from "@sv/services/transfers.js";
+import * as transferService from "@sv/services/transfers.deprecated.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 

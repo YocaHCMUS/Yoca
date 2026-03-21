@@ -2968,6 +2968,7 @@ export async function fetchTestTransaction(address: string) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
+    // TODO: kindly add a type here
     const data = await response.json();
 
     console.log(`Found ${data.data.length} transactions`);

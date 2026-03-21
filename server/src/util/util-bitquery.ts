@@ -7,7 +7,7 @@ export function getEndpoint(endpoint: string): URL {
   return new URL(`${process.env.BITQUERY_API_ENDPOINT!}${endpoint}`);
 }
 
-export function getRequiredHeaders(): HeadersInit {
+export function getRequiredHeaders() {
   return {
     Authorization: `Bearer ${process.env.BITQUERY_API_KEY!}`,
     "Content-Type": "application/json",

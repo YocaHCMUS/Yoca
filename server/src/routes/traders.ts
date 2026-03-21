@@ -52,7 +52,7 @@ export async function getTopTraders() {
     return cached.length > 0 ? cached : null;
   }
 
-  const res: BDS_TopTraders = await resp.json();
+  const res = (await resp.json()) as BDS_TopTraders;
 
   if (!res.success) {
     return cached.length > 0 ? cached : null;
@@ -69,10 +69,7 @@ export async function getTopTraders() {
     })),
   );
 
-  return await db
-    .select()
-    .from(topTraders)
-    .orderBy(asc(topTraders.rank));
+  return await db.select().from(topTraders).orderBy(asc(topTraders.rank));
 }
 
 const app = new Hono().get("/top", async (c) => {
@@ -97,4 +94,3 @@ const app = new Hono().get("/top", async (c) => {
 });
 
 export default app;
-

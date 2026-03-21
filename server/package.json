@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@coingecko/coingecko-typescript": "^3.1.0",
     "@hono/node-server": "^1.19.6",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
@@ -27,6 +28,7 @@
     "drizzle-seed": "^0.3.1",
     "ethers": "^6.15.0",
     "google-auth-library": "^10.5.0",
+    "helius-sdk": "^2.2.2",
     "hono": "^4.10.4",
     "postgres": "^3.4.7"
   },

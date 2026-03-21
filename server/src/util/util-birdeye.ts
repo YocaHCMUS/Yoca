@@ -5,7 +5,7 @@ export function getEndpoint(path: string): URL {
   return new URL(`${process.env.BIRDEYE_API_BASE_URL}${path}`);
 }
 
-export function getRequiredHeaders(): HeadersInit {
+export function getRequiredHeaders() {
   if (!process.env.BIRDEYE_API_KEY) {
     throw new Error("Birdey API key was not set");
   }

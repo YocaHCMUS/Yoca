@@ -17,7 +17,7 @@ export async function getWalletFirstFund(wallets: string[]) {
     return null;
   }
 
-  const res: BDS_WalletFirstFund = await resp.json();
+  const res = (await resp.json()) as BDS_WalletFirstFund;
 
   if (!res.success) {
     console.log(await resp.json());
