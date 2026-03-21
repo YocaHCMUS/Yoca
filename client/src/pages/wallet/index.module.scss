@@ -5,6 +5,14 @@
   min-height: 100vh;
 }
 
+.stickyHeaderShell {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: $background;
+  border-bottom: 1px solid $border-subtle-01;
+}
+
 .sectionHeader {
   margin: $spacing-06 0 $spacing-05 0;
   display: flex;
@@ -17,6 +25,13 @@
 .sectionTitle {
   margin: 0;
   color: $text-primary;
+}
+
+.pageUtilityBar {
+  margin: 0 0 $spacing-05 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 $spacing-06;
 }
 
 .chartContainer {
@@ -36,6 +51,37 @@
   flex-direction: column;
   width: 100%;
   padding: 0;
+}
+
+.mainTabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  padding: $spacing-05 $spacing-06 $spacing-12;
+}
+
+.topChartsGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+  gap: $spacing-04;
+  align-items: stretch;
+}
+
+.pieChartPanel,
+.primaryChartPanel,
+.fullWidthPanel {
+  border: 1px solid $border-subtle;
+  min-width: 0;
+}
+
+.fullWidthPanel {
+  width: 100%;
+}
+
+@media (max-width: 1056px) {
+  .topChartsGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .swapTokenCell {
