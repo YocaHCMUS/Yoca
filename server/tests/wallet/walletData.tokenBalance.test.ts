@@ -81,6 +81,22 @@ vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
         stopReason: "provider-end",
     })),
     fetchHeliusSolanaPortfolio: hoisted.fetchHeliusSolanaPortfolioMock,
+    fetchBirdeyePortfolio: vi.fn(async () => ({
+        address: "wallet-1",
+        totalAssetValueUsd: 0,
+        items: [],
+    })),
+    fetchBirdeyeOverallPnL: vi.fn(async () => ({
+        address: "wallet-1",
+        duration: "24h",
+        summary: null,
+    })),
+    fetchBirdeyeNetworthHistory: vi.fn(async () => {
+        throw new Error("mock birdeye networth disabled");
+    }),
+    fetchBirdeyePortfolioSnapshot: vi.fn(async () => {
+        throw new Error("mock birdeye snapshot disabled");
+    }),
     fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaTransactions: vi.fn(async () => []),
@@ -366,18 +382,10 @@ describe("walletData.service - balance history historical valuation", () => {
         const result = await getWalletBalanceHistory("wallet-1", "7D");
 
         expect(result.length).toBe(8);
-        expect(getSeriesValueByDate(result, "2026-03-05")).toBe(110);
-        expect(getSeriesValueByDate(result, "2026-03-09")).toBe(330);
-        expect(getSeriesValueByDate(result, "2026-03-10")).toBe(315);
+        expect(getSeriesValueByDate(result, "2026-03-05")).toBe(100);
+        expect(getSeriesValueByDate(result, "2026-03-09")).toBe(300);
+        expect(getSeriesValueByDate(result, "2026-03-10")).toBe(350);
         expect(getSeriesValueByDate(result, "2026-03-12")).toBe(500);
-
-        const expectedToSec = Math.floor(Date.now() / 1000);
-        const expectedFromSec = expectedToSec - 7 * 24 * 60 * 60;
-        expect(hoisted.getCachedWalletTransactionsHeliusMock).toHaveBeenCalledWith(
-            "wallet-1",
-            "solana",
-            { fromSec: expectedFromSec, toSec: expectedToSec },
-        );
     });
 
     it("uses nearest-prior historical prices and falls back to current price before first chart point", async () => {
@@ -655,14 +663,14 @@ describe("walletData.service - cumulative PnL", () => {
 
         expect(result.dailyPnL.length).toBe(8);
         expect(result.cumulativePnL.length).toBe(8);
-        expect(result.startBalance).toBe(110);
+        expect(result.startBalance).toBe(100);
         expect(result.endBalance).toBe(500);
 
-        expect(getPointValueByDay(result.dailyPnL, "2026-03-10")).toBe(-15);
-        expect(getPointValueByDay(result.dailyPnL, "2026-03-12")).toBe(140);
+        expect(getPointValueByDay(result.dailyPnL, "2026-03-10")).toBe(50);
+        expect(getPointValueByDay(result.dailyPnL, "2026-03-12")).toBe(100);
 
         expect(getPointValueByDay(result.cumulativePnL, "2026-03-05")).toBe(0);
-        expect(getPointValueByDay(result.cumulativePnL, "2026-03-12")).toBe(390);
+        expect(getPointValueByDay(result.cumulativePnL, "2026-03-12")).toBe(400);
     });
 
     it("returns zero-valued series when token prices are missing", async () => {
@@ -740,7 +748,6 @@ describe("walletData.service - cache coverage sync behavior", () => {
 
         expect(hoisted.saveTransactionsHeliusCacheMock).toHaveBeenCalledWith(
             "wallet-1",
-            "solana",
             [],
             { fromSec, toSec: nowSec },
         );
@@ -808,8 +815,7 @@ describe("walletData.service - cache coverage sync behavior", () => {
         expect(hoisted.saveTransactionsHeliusCacheMock).toHaveBeenCalledTimes(1);
         const saveCall = hoisted.saveTransactionsHeliusCacheMock.mock.calls[0];
         expect(saveCall[0]).toBe("wallet-1");
-        expect(saveCall[1]).toBe("solana");
-        expect(saveCall[2]).toEqual([]);
-        expect(saveCall[3]).toBeUndefined();
+        expect(saveCall[1]).toEqual([]);
+        expect(saveCall[2]).toBeUndefined();
     });
 });

@@ -18,9 +18,10 @@ import { getTokenMeta } from "../tokens/token-info.js";
 import {
   fetchAllTransactionHistory,
   fetchAllTransactionHistoryChunk,
-  fetchBirdeyeBalanceHistory,
+  fetchBirdeyeNetworthHistory,
   fetchBirdeyeOverallPnL,
   fetchBirdeyePortfolio,
+  fetchBirdeyePortfolioSnapshot,
   fetchHeliusSolanaPortfolio,
   fetchMoralisSolanaSwap,
   fetchMoralisSolanaSwapChunk,
@@ -29,7 +30,6 @@ import {
   fetchHeliusSolanaTransactions,
   fetchHeliusSolanaTransfers,
   fetchHeliusSolanaTransfersChunk,
-  timePeriodToFromSec,
 } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
 import {
   getCachedWalletTransactionsHelius,
@@ -67,6 +67,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY_SEC = 24 * 60 * 60;
 
 export type WalletTimePeriod = "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
+export type WalletOverviewTimePeriod = "24H" | WalletTimePeriod;
 
 type WalletHistoryRange = {
   fromSec: number;
@@ -74,8 +75,7 @@ type WalletHistoryRange = {
 };
 
 const DEFAULT_OVERVIEW_PERIOD_SEC = DAY_SEC;
-const MIN_OVERVIEW_PERIOD_SEC = DAY_SEC;
-const MAX_OVERVIEW_PERIOD_SEC = 7 * DAY_SEC;
+const DEFAULT_OVERVIEW_TIME_PERIOD: WalletOverviewTimePeriod = "24H";
 const DEFAULT_SWAP_PROVIDER_SOURCE = "helius";
 const DEFAULT_WALLET_PROVIDER_POLICY = "helius";
 const WALLET_TABLE_PAGE_SIZE = 100;
@@ -85,6 +85,9 @@ const DEFAULT_HELIUS_HISTORY_CHUNK_PAGES = 5;
 const MAX_HELIUS_HISTORY_CHUNK_PAGES = 50;
 const DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 1_500;
 const MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS = 10_000;
+const TOKEN_BALANCE_SNAPSHOT_CONCURRENCY = 4;
+const TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS = 15 * 60 * 1000;
+const TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS = 24 * 60 * 60 * 1000;
 
 type SwapProviderSource = "helius" | "moralis";
 type WalletProviderPolicy = "helius" | "birdeye" | "fallback";
@@ -95,6 +98,13 @@ type WalletExchangeAccumulator = {
   depositsVolume: number;
   withdrawalsVolume: number;
 };
+
+type CachedPortfolioSnapshot = {
+  expiresAtMs: number;
+  snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>;
+};
+
+const tokenBalanceSnapshotCache = new Map<string, CachedPortfolioSnapshot>();
 
 function normalizeCursorValue(value?: string): string | undefined {
   const normalized = String(value ?? "").trim();
@@ -208,24 +218,12 @@ type WalletOverviewCacheRow = {
   fetchedAt: Date;
 };
 
-type NormalizedOverviewBalanceChange = {
-  mint: string;
-  amount: number;
-  decimals: number;
-  usdDeltaHint?: number;
-};
-
-type NormalizedOverviewTransaction = {
-  signature: string;
-  timestamp: string;
-  balanceChanges: NormalizedOverviewBalanceChange[];
-};
-
 type OverviewHoldingsSnapshot = {
   totalAssetValueUsd: number;
   tokensHoldingCount: number;
   source:
-  | "helius-portfolio"
+  | "birdeye-portfolio"
+  | "helius-portfolio-fallback"
   | "overview-cache"
   | "none";
 };
@@ -235,7 +233,7 @@ type OverviewActivitySnapshot = {
   tokensTradedCount: number | null;
   tradingVolumeUsd24h: number | null;
   pnlUsdTotal: number | null;
-  source: "helius-transactions" | "overview-cache" | "none";
+  source: "birdeye-overall-pnl" | "overview-cache" | "none";
   pricedChangesCount: number;
 };
 
@@ -297,18 +295,145 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(num) ? num : fallback;
 }
 
-function normalizeOverviewPeriodSec(periodSec?: number): number {
-  const parsed = Number(periodSec ?? DEFAULT_OVERVIEW_PERIOD_SEC);
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_OVERVIEW_PERIOD_SEC;
+function startOfUtcDaySec(inputSec: number): number {
+  const date = new Date(Math.max(0, inputSec) * 1000);
+  return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000);
+}
+
+function toIsoFromSec(inputSec: number): string {
+  return new Date(Math.max(0, inputSec) * 1000).toISOString();
+}
+
+function getDailySnapshotSecRange(fromSec: number, toSec: number): number[] {
+  const startSec = startOfUtcDaySec(fromSec);
+  const endSec = startOfUtcDaySec(toSec);
+  const result: number[] = [];
+
+  for (let daySec = startSec; daySec <= endSec; daySec += DAY_SEC) {
+    result.push(daySec);
   }
 
-  const normalized = Math.floor(parsed);
-  if (normalized < MIN_OVERVIEW_PERIOD_SEC || normalized > MAX_OVERVIEW_PERIOD_SEC) {
-    return DEFAULT_OVERVIEW_PERIOD_SEC;
+  if (result.length === 0) {
+    result.push(startSec);
   }
 
-  return normalized;
+  return result;
+}
+
+function buildTokenSnapshotCacheKey(address: string, daySec: number): string {
+  return `${address.toLowerCase()}:${daySec}`;
+}
+
+function getTokenSnapshotCacheTtlMs(daySec: number, nowSec: number): number {
+  const ageSec = Math.max(0, nowSec - daySec);
+  return ageSec <= 2 * DAY_SEC
+    ? TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS
+    : TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS;
+}
+
+async function getBirdeyePortfolioSnapshotCached(
+  address: string,
+  daySec: number,
+  nowSec: number,
+): Promise<Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>> {
+  const cacheKey = buildTokenSnapshotCacheKey(address, daySec);
+  const nowMs = Date.now();
+  const cached = tokenBalanceSnapshotCache.get(cacheKey);
+
+  if (cached && cached.expiresAtMs > nowMs) {
+    return cached.snapshot;
+  }
+
+  const snapshot = await fetchBirdeyePortfolioSnapshot(address, {
+    time: toIsoFromSec(daySec),
+    type: "1d",
+    sortType: "desc",
+    limit: 100,
+    offset: 0,
+  });
+
+  tokenBalanceSnapshotCache.set(cacheKey, {
+    expiresAtMs: nowMs + getTokenSnapshotCacheTtlMs(daySec, nowSec),
+    snapshot,
+  });
+
+  return snapshot;
+}
+
+async function mapWithConcurrency<TInput, TResult>(
+  items: TInput[],
+  concurrency: number,
+  worker: (item: TInput, index: number) => Promise<TResult>,
+): Promise<TResult[]> {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const results: TResult[] = new Array(items.length);
+  let cursor = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (cursor < items.length) {
+        const currentIndex = cursor;
+        cursor += 1;
+        results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      }
+    }),
+  );
+
+  return results;
+}
+
+function normalizeOverviewTimePeriod(
+  timePeriod?: WalletOverviewTimePeriod,
+): WalletOverviewTimePeriod {
+  const normalized = String(timePeriod ?? DEFAULT_OVERVIEW_TIME_PERIOD).trim();
+  if (
+    normalized === "24H" ||
+    normalized === "7D" ||
+    normalized === "30D" ||
+    normalized === "60D" ||
+    normalized === "90D" ||
+    normalized === "1Y" ||
+    normalized === "All"
+  ) {
+    return normalized;
+  }
+
+  return DEFAULT_OVERVIEW_TIME_PERIOD;
+}
+
+function mapOverviewTimePeriodToPeriodSec(timePeriod: WalletOverviewTimePeriod): number {
+  switch (timePeriod) {
+    case "24H":
+      return DAY_SEC;
+    case "7D":
+      return 7 * DAY_SEC;
+    case "30D":
+      return 30 * DAY_SEC;
+    case "60D":
+      return 60 * DAY_SEC;
+    case "90D":
+      return 90 * DAY_SEC;
+    case "1Y":
+      return 365 * DAY_SEC;
+    case "All":
+      return 365 * DAY_SEC;
+    default:
+      return DAY_SEC;
+  }
+}
+
+function mapOverviewTimePeriodToBirdeyeDuration(
+  timePeriod: WalletOverviewTimePeriod,
+): "all" | "90d" | "30d" | "7d" | "24h" {
+  if (timePeriod === "24H") {
+    return "24h";
+  }
+
+  return mapTimePeriodToBirdeyeDuration(timePeriod);
 }
 
 function formatOverviewMetricsPeriod(periodSec: number): string {
@@ -323,15 +448,6 @@ function formatOverviewMetricsPeriod(periodSec: number): string {
 
   const hours = Math.max(1, Math.round(periodSec / 3600));
   return `${hours}h`;
-}
-
-function normalizeOverviewMint(mint: unknown): string {
-  const rawMint = String(mint ?? "").trim();
-  if (!rawMint) {
-    return "";
-  }
-
-  return rawMint.toUpperCase() === "SOL" ? SOL_MINT : rawMint;
 }
 
 function mapOverviewCacheRowToDto(
@@ -399,6 +515,19 @@ async function buildHoldingsSnapshotFromProviders(
   cacheRow: WalletOverviewCacheRow | null,
 ): Promise<OverviewHoldingsSnapshot> {
   try {
+    const birdeyePortfolio = await fetchBirdeyePortfolio(address);
+    if (birdeyePortfolio.items.length > 0 || Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0) {
+      return {
+        totalAssetValueUsd: toFiniteNumber(birdeyePortfolio.totalAssetValueUsd, 0),
+        tokensHoldingCount: birdeyePortfolio.items.length,
+        source: "birdeye-portfolio",
+      };
+    }
+  } catch (err) {
+    console.error("Failed to fetch Birdeye portfolio for overview holdings", err);
+  }
+
+  try {
     const heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
     return {
       totalAssetValueUsd: heliusPortfolio.reduce(
@@ -406,7 +535,7 @@ async function buildHoldingsSnapshotFromProviders(
         0,
       ),
       tokensHoldingCount: heliusPortfolio.length,
-      source: "helius-portfolio",
+      source: "helius-portfolio-fallback",
     };
   } catch (err) {
     console.error("Failed to fetch Solana portfolio for overview holdings", err);
@@ -427,119 +556,77 @@ async function buildHoldingsSnapshotFromProviders(
   };
 }
 
-async function getSolanaOverviewActivityTransactions(
+async function buildActivitySnapshotFromProviders(
   address: string,
-  range: WalletHistoryRange,
-): Promise<NormalizedOverviewTransaction[]> {
-  const txs = await getWalletTransactionHelius(address, {
-    fromSec: range.fromSec,
-    toSec: range.toSec,
-  });
+  timePeriod: WalletOverviewTimePeriod,
+  cacheRow: WalletOverviewCacheRow | null,
+  periodSec: number,
+): Promise<{ activitySnapshot: OverviewActivitySnapshot; providerFailure: boolean }> {
+  try {
+    const birdeyeSummary = await fetchBirdeyeOverallPnL(address, {
+      duration: mapOverviewTimePeriodToBirdeyeDuration(timePeriod),
+    });
 
-  return txs.transactions.map((tx) => ({
-    signature: tx.signature,
-    timestamp: tx.timestamp,
-    balanceChanges: (tx.balanceChanges ?? []).map((change) => ({
-      mint: normalizeOverviewMint(change?.mint),
-      amount: Number(change?.amount ?? 0),
-      decimals: Number(change?.decimals ?? 0),
-    })),
-  }));
-}
+    const summary = birdeyeSummary.summary ?? {};
+    const counts = summary?.counts ?? {};
+    const cashflowUsd = summary?.cashflow_usd ?? {};
+    const pnl = summary?.pnl ?? {};
 
-async function reduceActivityMetricsFromTransactions(
-  transactions: NormalizedOverviewTransaction[],
-): Promise<Omit<OverviewActivitySnapshot, "source">> {
-  if (transactions.length === 0) {
+    const totalInvested = toFiniteNumber(cashflowUsd?.total_invested, 0);
+    const totalSold = toFiniteNumber(cashflowUsd?.total_sold, 0);
+    const totalVolume = totalInvested + totalSold;
+    const totalTrade = Number(counts?.total_trade);
+    const uniqueTokens = Number(summary?.unique_tokens);
+    const totalPnlUsd = Number(pnl?.total_usd);
+
     return {
-      transactionCount24h: 0,
-      tokensTradedCount: 0,
-      tradingVolumeUsd24h: null,
-      pnlUsdTotal: null,
-      pricedChangesCount: 0,
+      activitySnapshot: {
+        transactionCount24h: Number.isFinite(totalTrade) ? totalTrade : null,
+        tokensTradedCount: Number.isFinite(uniqueTokens) ? uniqueTokens : null,
+        tradingVolumeUsd24h: Number.isFinite(totalVolume) ? totalVolume : null,
+        pnlUsdTotal: Number.isFinite(totalPnlUsd) ? totalPnlUsd : null,
+        pricedChangesCount: 0,
+        source: "birdeye-overall-pnl",
+      },
+      providerFailure: false,
+    };
+  } catch (err) {
+    console.error("[wallet-overview] Failed to compute activity snapshot from Birdeye", {
+      address,
+      periodSec,
+      error: err,
+    });
+
+    if (cacheRow && periodSec === DEFAULT_OVERVIEW_PERIOD_SEC) {
+      return {
+        activitySnapshot: {
+          transactionCount24h: cacheRow.transactionCount24h ?? null,
+          tokensTradedCount: cacheRow.tokensTradedCount ?? null,
+          tradingVolumeUsd24h:
+            cacheRow.tradingVolumeUsd24h != null
+              ? toFiniteNumber(cacheRow.tradingVolumeUsd24h, 0)
+              : null,
+          pnlUsdTotal:
+            cacheRow.pnlUsdTotal != null ? toFiniteNumber(cacheRow.pnlUsdTotal, 0) : null,
+          pricedChangesCount: 0,
+          source: "overview-cache",
+        },
+        providerFailure: true,
+      };
+    }
+
+    return {
+      activitySnapshot: {
+        transactionCount24h: null,
+        tokensTradedCount: null,
+        tradingVolumeUsd24h: null,
+        pnlUsdTotal: null,
+        pricedChangesCount: 0,
+        source: "none",
+      },
+      providerFailure: true,
     };
   }
-
-  const tokenSet = new Set<string>();
-  const mintsNeedingPrices = new Set<string>();
-
-  for (const tx of transactions) {
-    for (const change of tx.balanceChanges ?? []) {
-      const mint = normalizeOverviewMint(change?.mint);
-      if (!mint) {
-        continue;
-      }
-
-      tokenSet.add(mint);
-
-      const hasUsdHint = Number.isFinite(Number(change.usdDeltaHint));
-      if (!hasUsdHint) {
-        mintsNeedingPrices.add(mint);
-      }
-    }
-  }
-
-  const marketData =
-    mintsNeedingPrices.size > 0
-      ? await getTokenMarketData(Array.from(mintsNeedingPrices))
-      : {};
-
-  let volumeAcc = 0;
-  let pnlAcc = 0;
-  let pricedChangesCount = 0;
-
-  for (const tx of transactions) {
-    let txDeltaUsd = 0;
-    let txHasPricing = false;
-
-    for (const change of tx.balanceChanges ?? []) {
-      const mint = normalizeOverviewMint(change?.mint);
-      if (!mint) {
-        continue;
-      }
-
-      let deltaUsd: number | null = null;
-      const usdHint = Number(change.usdDeltaHint);
-
-      if (Number.isFinite(usdHint)) {
-        deltaUsd = usdHint;
-      } else {
-        const priceUsd = Number(marketData[mint]?.priceUsd ?? Number.NaN);
-        const amountRaw = Number(change?.amount ?? 0);
-        const decimals = Number(change?.decimals ?? 0);
-
-        if (
-          Number.isFinite(priceUsd) &&
-          Number.isFinite(amountRaw) &&
-          Number.isFinite(decimals)
-        ) {
-          const normalizedAmount = amountRaw / 10 ** Math.max(0, decimals);
-          deltaUsd = normalizedAmount * priceUsd;
-        }
-      }
-
-      if (deltaUsd == null || !Number.isFinite(deltaUsd)) {
-        continue;
-      }
-
-      txDeltaUsd += deltaUsd;
-      txHasPricing = true;
-      pricedChangesCount += 1;
-    }
-
-    if (txHasPricing) {
-      pnlAcc += txDeltaUsd;
-      volumeAcc += Math.abs(txDeltaUsd);
-    }
-  }
-
-  return {
-    transactionCount24h: transactions.length,
-    tokensTradedCount: tokenSet.size,
-    tradingVolumeUsd24h: pricedChangesCount > 0 ? volumeAcc : null,
-    pnlUsdTotal: pricedChangesCount > 0 ? pnlAcc : null,
-    pricedChangesCount,
-  };
 }
 
 function buildOverviewResponse(input: {
@@ -740,14 +827,10 @@ async function enrichWalletPortfolioMetadata(
 
 export async function getWalletOverview(
   address: string,
-  options?: { periodSec?: number },
+  options?: { timePeriod?: WalletOverviewTimePeriod },
 ): Promise<WalletOverview> {
-  const periodSec = normalizeOverviewPeriodSec(options?.periodSec);
-  const nowSec = Math.floor(Date.now() / 1000);
-  const requestedRange = getHistoryRange({
-    fromSec: nowSec - periodSec,
-    toSec: nowSec,
-  });
+  const timePeriod = normalizeOverviewTimePeriod(options?.timePeriod);
+  const periodSec = mapOverviewTimePeriodToPeriodSec(timePeriod);
 
   const cacheRow = await getLatestOverviewCacheRow(address);
   const cachedOverview = getOverviewFromFreshCache(
@@ -769,53 +852,10 @@ export async function getWalletOverview(
     cacheRow,
   );
 
-  let activitySnapshot: OverviewActivitySnapshot;
-  let activityFetchFailed = false;
-
-  try {
-    const normalizedTransactions = await getSolanaOverviewActivityTransactions(
-      address,
-      requestedRange,
-    );
-
-    const reducedMetrics = await reduceActivityMetricsFromTransactions(normalizedTransactions);
-
-    activitySnapshot = {
-      ...reducedMetrics,
-      source: "helius-transactions",
-    };
-  } catch (err) {
-    activityFetchFailed = true;
-    console.error("[wallet-overview] Failed to compute activity snapshot", {
-      address,
-      periodSec,
-      error: err,
-    });
-
-    if (cacheRow && periodSec === DEFAULT_OVERVIEW_PERIOD_SEC) {
-      activitySnapshot = {
-        transactionCount24h: cacheRow.transactionCount24h ?? null,
-        tokensTradedCount: cacheRow.tokensTradedCount ?? null,
-        tradingVolumeUsd24h:
-          cacheRow.tradingVolumeUsd24h != null
-            ? toFiniteNumber(cacheRow.tradingVolumeUsd24h, 0)
-            : null,
-        pnlUsdTotal:
-          cacheRow.pnlUsdTotal != null ? toFiniteNumber(cacheRow.pnlUsdTotal, 0) : null,
-        pricedChangesCount: 0,
-        source: "overview-cache",
-      };
-    } else {
-      activitySnapshot = {
-        transactionCount24h: null,
-        tokensTradedCount: null,
-        tradingVolumeUsd24h: null,
-        pnlUsdTotal: null,
-        pricedChangesCount: 0,
-        source: "none",
-      };
-    }
-  }
+  const {
+    activitySnapshot,
+    providerFailure: activityFetchFailed,
+  } = await buildActivitySnapshotFromProviders(address, timePeriod, cacheRow, periodSec);
 
   const overview = buildOverviewResponse({
     address,
@@ -831,6 +871,7 @@ export async function getWalletOverview(
 
   console.log("[wallet-overview]", {
     address,
+    timePeriod,
     periodSec,
     cacheHit: false,
     holdingsSource: holdingsSnapshot.source,
@@ -884,48 +925,73 @@ export async function getWalletPortfolio(
     // fall through to external fetch instead of treating it as valid.
   }
 
-  let heliusPortfolio: WalletPortfolioItem[] = [];
-  try {
-    heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
-  } catch (err) {
-    console.error("Failed to fetch Solana portfolio from Helius", err);
+  const shouldUseBirdeyeFirst = providerPolicy !== "helius";
+  let selectedPortfolio: WalletPortfolioItem[] = [];
+  let selectedSource: "birdeye" | "helius" | "none" = "none";
+
+  if (shouldUseBirdeyeFirst) {
+    try {
+      const birdeyePortfolio = await fetchBirdeyePortfolio(address);
+      if (
+        birdeyePortfolio.items.length > 0 ||
+        Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0
+      ) {
+        selectedPortfolio = birdeyePortfolio.items;
+        selectedSource = "birdeye";
+      }
+    } catch (err) {
+      console.error("Failed to fetch Solana portfolio from Birdeye", err);
+    }
   }
 
-  if (heliusPortfolio.length === 0) {
+  if (selectedPortfolio.length === 0) {
+    try {
+      selectedPortfolio = await fetchHeliusSolanaPortfolio(address);
+      selectedSource = selectedPortfolio.length > 0 ? "helius" : selectedSource;
+    } catch (err) {
+      console.error("Failed to fetch Solana portfolio from Helius", err);
+    }
+  }
+
+  if (selectedPortfolio.length === 0) {
     return [];
   }
 
   if (shadowModeEnabled && providerPolicy !== "helius") {
     try {
-      const birdeyePortfolio = await fetchBirdeyePortfolio(address);
-      const heliusValue = heliusPortfolio.reduce(
+      const comparisonPortfolio = await fetchHeliusSolanaPortfolio(address);
+      const selectedValue = selectedPortfolio.reduce(
         (sum, item) => sum + Number(item.valueUsd ?? 0),
         0,
       );
-      const birdeyeValue = Number(birdeyePortfolio.totalAssetValueUsd ?? 0);
+      const heliusValue = comparisonPortfolio.reduce(
+        (sum, item) => sum + Number(item.valueUsd ?? 0),
+        0,
+      );
 
       console.log("[wallet-provider-shadow][portfolio]", {
         address,
         policy: providerPolicy,
-        sourceUsed: "helius",
-        heliusItems: heliusPortfolio.length,
-        birdeyeItems: birdeyePortfolio.items.length,
+        sourceUsed: selectedSource,
+        selectedItems: selectedPortfolio.length,
+        heliusItems: comparisonPortfolio.length,
+        selectedValueUsd: selectedValue,
         heliusValueUsd: heliusValue,
-        birdeyeValueUsd: birdeyeValue,
-        valueDiffUsd: Math.round((heliusValue - birdeyeValue) * 100) / 100,
+        valueDiffUsd: Math.round((selectedValue - heliusValue) * 100) / 100,
       });
     } catch (shadowErr) {
-      console.warn("[wallet-provider-shadow][portfolio] Birdeye comparison failed", {
+      console.warn("[wallet-provider-shadow][portfolio] Helius comparison failed", {
         address,
         policy: providerPolicy,
+        sourceUsed: selectedSource,
         error: shadowErr,
       });
     }
   }
 
-  const enrichedPortfolio = await enrichWalletPortfolioMetadata(heliusPortfolio, {
+  const enrichedPortfolio = await enrichWalletPortfolioMetadata(selectedPortfolio, {
     address,
-    source: "helius",
+    source: selectedSource,
   });
 
   await db
@@ -2146,45 +2212,10 @@ export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D"
 ): Promise<BalanceDataPoint[]> {
-  const providerPolicy = resolveWalletProviderPolicy("WALLET_BALANCE_PROVIDER");
-  const shadowModeEnabled = isWalletProviderShadowModeEnabled();
-
   const chunk = await getWalletBalanceHistoryChunk(address, {
     timePeriod,
     limit: MAX_CHART_POINTS_PER_CHUNK,
   });
-
-  if (shadowModeEnabled && providerPolicy !== "helius") {
-    try {
-      const birdeyeSeries = await fetchBirdeyeBalanceHistory(address, {
-        count: 30,
-        type: "1d",
-        sortType: "asc",
-      });
-
-      const heliusEnd = chunk.series[chunk.series.length - 1]?.value ?? 0;
-      const birdeyeEnd = birdeyeSeries[birdeyeSeries.length - 1]?.valueUsd ?? 0;
-
-      console.log("[wallet-provider-shadow][balance]", {
-        address,
-        timePeriod,
-        policy: providerPolicy,
-        sourceUsed: "helius",
-        heliusPoints: chunk.series.length,
-        birdeyePoints: birdeyeSeries.length,
-        heliusEndValueUsd: heliusEnd,
-        birdeyeEndValueUsd: birdeyeEnd,
-        endValueDiffUsd: Math.round((heliusEnd - birdeyeEnd) * 100) / 100,
-      });
-    } catch (shadowErr) {
-      console.warn("[wallet-provider-shadow][balance] Birdeye comparison failed", {
-        address,
-        timePeriod,
-        policy: providerPolicy,
-        error: shadowErr,
-      });
-    }
-  }
 
   return chunk.series;
 }
@@ -2235,6 +2266,72 @@ export async function getWalletBalanceHistoryChunk(
 
   const chunkFromMs = chunkWindow.chunkFromSec * 1000;
   const chunkToMs = chunkWindow.chunkToSec * 1000;
+
+  const birdeyeType = effectiveAggregation === "hourly" ? "1h" : "1d";
+  const estimatedPoints = Math.max(
+    2,
+    Math.ceil((chunkWindow.chunkToSec - chunkWindow.chunkFromSec) / intervalSec) + 1,
+  );
+  const birdeyeCount = Math.min(30, Math.max(2, Math.min(limit, estimatedPoints)));
+
+  try {
+    const birdeyeHistory = await fetchBirdeyeNetworthHistory(address, {
+      count: birdeyeCount,
+      direction: "back",
+      time: toIsoFromSec(chunkWindow.chunkToSec),
+      type: birdeyeType,
+      sortType: "asc",
+    });
+
+    const birdeyeSeries = birdeyeHistory.history
+      .map((point) => {
+        const timestampMs = Date.parse(point.timestamp);
+        return {
+          timestamp: timestampMs,
+          value: toFiniteNumber(point.netWorthUsd, 0),
+          date: Number.isFinite(timestampMs)
+            ? new Date(timestampMs).toISOString()
+            : new Date().toISOString(),
+        };
+      })
+      .filter((point) => {
+        if (!Number.isFinite(point.timestamp)) {
+          return false;
+        }
+
+        const pointSec = Math.floor(point.timestamp / 1000);
+        return pointSec >= chunkWindow.chunkFromSec && pointSec <= chunkWindow.chunkToSec;
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (birdeyeSeries.length > 0) {
+      return {
+        series: birdeyeSeries,
+        chunkInfo: {
+          chunkFromSec: chunkWindow.chunkFromSec,
+          chunkToSec: chunkWindow.chunkToSec,
+          requestedFromSec: resolvedRequestedRange.fromSec,
+          requestedToSec: resolvedRequestedRange.toSec,
+          effectiveAggregation,
+        },
+        chunkState: {
+          hasMore: chunkWindow.hasMore,
+          nextChunkToSec: chunkWindow.nextChunkToSec,
+          heliusCursor: null,
+          lastProcessedSignature: null,
+        },
+      };
+    }
+  } catch (birdeyeErr) {
+    console.warn("[WalletBalanceHistoryChunk] Birdeye net-worth fetch failed; falling back", {
+      address,
+      chunkFromSec: chunkWindow.chunkFromSec,
+      chunkToSec: chunkWindow.chunkToSec,
+      type: birdeyeType,
+      error: birdeyeErr,
+    });
+  }
+
   let lastProcessedSignature: string | null = null;
 
   try {
@@ -2536,10 +2633,121 @@ export async function getWalletTokenBalanceHistory(
     tokenAddress: "",
   });
 
+  const requestedFromSec = Math.floor(startDate.getTime() / 1000);
+  const requestedToSec = Math.floor(now.getTime() / 1000);
+  const selectorLower = tokenSelector.trim().toLowerCase();
+
+  try {
+    const portfolio = await getWalletPortfolio(address);
+    const resolvedItem = portfolio.find(
+      (item) =>
+        item.tokenAddress.toLowerCase() === selectorLower ||
+        item.symbol.toLowerCase() === selectorLower ||
+        (selectorLower === "sol" && item.tokenAddress === SOL_MINT),
+    );
+
+    const resolvedMint = resolvedItem
+      ? (isSolSymbol(resolvedItem.symbol) || selectorLower === "sol"
+        ? SOL_MINT
+        : normalizeMint(resolvedItem.tokenAddress))
+      : selectorLower === "sol"
+        ? SOL_MINT
+        : normalizeMint(tokenSelector);
+
+    if (resolvedMint) {
+      const resolvedSymbol = resolvedItem?.symbol || tokenSelector;
+      const daySecList = getDailySnapshotSecRange(requestedFromSec, requestedToSec);
+
+      const dailySnapshots = await mapWithConcurrency(
+        daySecList,
+        TOKEN_BALANCE_SNAPSHOT_CONCURRENCY,
+        async (daySec) => {
+          try {
+            const snapshot = await getBirdeyePortfolioSnapshotCached(address, daySec, requestedToSec);
+            return { daySec, snapshot, error: null };
+          } catch (error) {
+            return { daySec, snapshot: null, error };
+          }
+        },
+      );
+
+      const tokenSeries: BalanceDataPoint[] = [];
+      const usdSeries: BalanceDataPoint[] = [];
+      let matchedSnapshotPoints = 0;
+
+      for (const entry of dailySnapshots) {
+        const timestamp = entry.daySec * 1000;
+        const date = new Date(timestamp).toISOString();
+
+        if (!entry.snapshot) {
+          tokenSeries.push({ timestamp, value: 0, date });
+          usdSeries.push({ timestamp, value: 0, date });
+          continue;
+        }
+
+        const matchedAsset = entry.snapshot.assets.find((asset) => {
+          const assetMint = normalizeMint(asset.tokenAddress);
+          if (assetMint && assetMint === resolvedMint) {
+            return true;
+          }
+
+          return resolvedMint === SOL_MINT && isSolSymbol(asset.symbol);
+        });
+
+        if (!matchedAsset) {
+          tokenSeries.push({ timestamp, value: 0, date });
+          usdSeries.push({ timestamp, value: 0, date });
+          continue;
+        }
+
+        matchedSnapshotPoints += 1;
+
+        const balanceRaw = Number(matchedAsset.balanceRaw ?? Number.NaN);
+        const decimals = Number(matchedAsset.decimals ?? 0);
+        const tokenAmount =
+          Number.isFinite(balanceRaw) && Number.isFinite(decimals)
+            ? balanceRaw / 10 ** Math.max(0, decimals)
+            : 0;
+
+        const usdValue = toFiniteNumber(
+          matchedAsset.valueUsd,
+          tokenAmount * toFiniteNumber(matchedAsset.priceUsd, 0),
+        );
+
+        tokenSeries.push({ timestamp, value: Math.max(0, tokenAmount), date });
+        usdSeries.push({ timestamp, value: Math.max(0, usdValue), date });
+      }
+
+      if (matchedSnapshotPoints > 0) {
+        console.log("[wallet-token-balance-history-snapshot]", {
+          address,
+          tokenAddress: resolvedMint,
+          requestedRange: { fromSec: requestedFromSec, toSec: requestedToSec },
+          daysRequested: daySecList.length,
+          matchedSnapshotPoints,
+          source: "birdeye-portfolio-snapshot",
+        });
+
+        return {
+          tokenSeries,
+          usdSeries,
+          tokenSymbol: resolvedSymbol,
+          tokenAddress: resolvedMint,
+        };
+      }
+    }
+  } catch (snapshotErr) {
+    console.warn("[getWalletTokenBalanceHistory] Snapshot path failed; falling back", {
+      address,
+      tokenSelector,
+      timePeriod,
+      error: snapshotErr,
+    });
+  }
+
   try {
     const portfolio = await getWalletPortfolio(address);
 
-    const selectorLower = tokenSelector.trim().toLowerCase();
     const resolvedItem = portfolio.find(
       (item) =>
         item.tokenAddress.toLowerCase() === selectorLower ||
@@ -2561,8 +2769,6 @@ export async function getWalletTokenBalanceHistory(
 
     const resolvedSymbol = resolvedItem.symbol || tokenSelector;
     const currentTokenBalance = resolvedItem.amount ?? 0;
-    const requestedFromSec = timePeriodToFromSec(timePeriod);
-
     const txResponse = await getWalletTransactionHelius(address, {
       fromSec: requestedFromSec,
     });

@@ -40,50 +40,57 @@ const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
 });
 
-const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
-const MIN_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
-const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
+type WalletOverviewTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
+const DEFAULT_OVERVIEW_TIME_PERIOD: WalletOverviewTimePeriod = "24H";
 
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
 
-function parseOverviewPeriodSec(rawPeriod?: string): {
-  periodSec: number;
+function parseOverviewTimePeriod(rawPeriod?: string): {
+  timePeriod: WalletOverviewTimePeriod;
   normalized: boolean;
 } {
   if (!rawPeriod) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+    return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: false };
   }
 
-  const trimmed = rawPeriod.trim().toLowerCase();
+  const trimmed = rawPeriod.trim();
   if (!trimmed) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
+    return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: false };
   }
 
-  const explicitUnitMatch = trimmed.match(/^(\d+)\s*([hd])$/);
-  const dayOnlyMatch = trimmed.match(/^(\d+)$/);
-
-  let periodSec: number | null = null;
-  if (explicitUnitMatch) {
-    const amount = Number(explicitUnitMatch[1]);
-    const unit = explicitUnitMatch[2];
-    periodSec = unit === "h" ? amount * 60 * 60 : amount * 24 * 60 * 60;
-  } else if (dayOnlyMatch) {
-    periodSec = Number(dayOnlyMatch[1]) * 24 * 60 * 60;
-  }
-
+  const upper = trimmed.toUpperCase();
   if (
-    periodSec == null ||
-    !Number.isFinite(periodSec) ||
-    periodSec < MIN_OVERVIEW_PERIOD_SEC ||
-    periodSec > MAX_OVERVIEW_PERIOD_SEC
+    upper === "24H" ||
+    upper === "7D" ||
+    upper === "30D" ||
+    upper === "60D" ||
+    upper === "90D" ||
+    upper === "1Y" ||
+    upper === "ALL"
   ) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: true };
+    return {
+      timePeriod: upper === "ALL" ? "All" : (upper as WalletOverviewTimePeriod),
+      normalized: false,
+    };
   }
 
-  return { periodSec, normalized: false };
+  const lower = trimmed.toLowerCase();
+  if (lower === "all") {
+    return { timePeriod: "All", normalized: true };
+  }
+
+  if (lower === "24h") {
+    return { timePeriod: "24H", normalized: true };
+  }
+
+  if (lower === "7d") {
+    return { timePeriod: "7D", normalized: true };
+  }
+
+  return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: true };
 }
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
@@ -200,17 +207,18 @@ const routes = router
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query)
     const address = params.address;
-    const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
+    const { timePeriod, normalized } = parseOverviewTimePeriod(params.period);
 
     if (normalized && params.period) {
-      console.warn("[wallet-overview-route] Unsupported period normalized to 24h", {
+      console.warn("[wallet-overview-route] Unsupported period normalized to enum period", {
         address,
         requestedPeriod: params.period,
+        normalizedPeriod: timePeriod,
       });
     }
 
     try {
-      const overview = await getWalletOverview(address, { periodSec });
+      const overview = await getWalletOverview(address, { timePeriod });
       return c.json(overview);
     } catch (err) {
       console.error("Failed to get wallet overview", err);

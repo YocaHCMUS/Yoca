@@ -67,13 +67,39 @@ function mergeSeriesByTimestamp(
     return Array.from(byTimestamp.values()).sort((a, b) => a.timestamp - b.timestamp);
 }
 
+function normalizeSeriesData(
+    points: Array<{ timestamp: number; value: number }>,
+): Array<{ timestamp: number; value: number }> {
+    const normalized = points
+        .map((point) => ({
+            timestamp: Number(point.timestamp),
+            value: Number(point.value),
+        }))
+        .filter(
+            (point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value),
+        )
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+    const deduped: Array<{ timestamp: number; value: number }> = [];
+    for (const point of normalized) {
+        if (deduped.length > 0 && deduped[deduped.length - 1].timestamp === point.timestamp) {
+            deduped[deduped.length - 1] = point;
+            continue;
+        }
+
+        deduped.push(point);
+    }
+
+    return deduped;
+}
+
 function mergeBalanceChartData(previous: BalanceChartDisplayData, incoming: BalanceChartDisplayData): BalanceChartDisplayData {
     const previousByName = new Map(previous.series.map((series) => [series.name, series]));
     const mergedSeries = incoming.series.map((series) => {
         const previousSeries = previousByName.get(series.name);
         return {
             ...series,
-            data: mergeSeriesByTimestamp(previousSeries?.data ?? [], series.data),
+            data: normalizeSeriesData(mergeSeriesByTimestamp(previousSeries?.data ?? [], series.data)),
         };
     });
 
@@ -160,8 +186,16 @@ export function BalanceChart({
             return;
         }
 
-        setMergedData(data);
-        setPageInfo(data.pageInfo ?? null);
+        const normalizedData: BalanceChartDisplayData = {
+            ...data,
+            series: data.series.map((series) => ({
+                ...series,
+                data: normalizeSeriesData(series.data),
+            })),
+        };
+
+        setMergedData(normalizedData);
+        setPageInfo(normalizedData.pageInfo ?? null);
     }, [data]);
 
     const displayData = useMemo<BalanceChartDisplayData | null>(() => {
@@ -286,8 +320,10 @@ export function BalanceChart({
             const seriesConfig = displayData.series.map((series, index) => {
                 const isUsd = series.unit === 'USD';
                 const color = colors[index % colors.length];
-                const timestamps = series.data.map((point: any) => point.timestamp);
-                const values = series.data.map((point: any) => point.value);
+                const normalizedData = normalizeSeriesData(series.data);
+                const timestamps = normalizedData.map((point: any) => point.timestamp);
+                const values = normalizedData.map((point: any) => point.value);
+                const isSinglePoint = normalizedData.length <= 1;
 
                 if (series.seriesType === 'bar' || isUsd) {
                     return {
@@ -295,6 +331,7 @@ export function BalanceChart({
                         type: 'bar' as const,
                         yAxisIndex: 1,
                         data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                        barMinHeight: isSinglePoint ? 3 : 0,
                         itemStyle: { color },
                     };
                 }
@@ -305,6 +342,8 @@ export function BalanceChart({
                     smooth: true,
                     yAxisIndex: 0,
                     data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                    showSymbol: isSinglePoint,
+                    symbolSize: isSinglePoint ? 8 : 4,
                     areaStyle: {
                         color: {
                             type: 'linear' as const,
@@ -383,10 +422,12 @@ export function BalanceChart({
         const isMultiWallet = displayData.series.length > 1;
 
         const seriesConfig = displayData.series.map((series, index) => {
-            const enableSampling = series.data.length > 2000;
-            const timestamps = series.data.map((point: any) => point.timestamp);
-            const values = series.data.map((point: any) => point.value);
+            const normalizedData = normalizeSeriesData(series.data);
+            const enableSampling = normalizedData.length > 2000;
+            const timestamps = normalizedData.map((point: any) => point.timestamp);
+            const values = normalizedData.map((point: any) => point.value);
             const color = colors[index % colors.length];
+            const isSinglePoint = normalizedData.length <= 1;
 
             return {
                 name: series.name,
@@ -394,6 +435,8 @@ export function BalanceChart({
                 smooth: true,
                 sampling: enableSampling ? ('lttb' as const) : undefined,
                 data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                showSymbol: isSinglePoint,
+                symbolSize: isSinglePoint ? 8 : 4,
                 areaStyle: isMultiWallet ? undefined : {
                     color: {
                         type: 'linear' as const,
@@ -448,7 +491,11 @@ export function BalanceChart({
         <BaseChart
             title={chartTitle}
             loadingState={loadingState}
-            isEmpty={!displayData || displayData.series.length === 0 || displayData.series[0]?.data.length === 0}
+            isEmpty={
+                !displayData ||
+                displayData.series.length === 0 ||
+                !displayData.series.some((series) => normalizeSeriesData(series.data).length > 0)
+            }
             onRetry={() => refetch(false)}
         >
             {showTokenSelector && (

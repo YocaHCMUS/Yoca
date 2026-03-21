@@ -1233,23 +1233,6 @@ export async function fetchBirdeyePortfolioSnapshot(
   };
 }
 
-export async function fetchBirdeyeBalanceHistory(
-  address: string,
-  options?: {
-    count?: number;
-    direction?: BirdeyeNetworthDirection;
-    time?: string;
-    type?: BirdeyeNetworthType;
-    sortType?: BirdeyeSortType;
-  },
-): Promise<Array<{ timestamp: string; valueUsd: number }>> {
-  const history = await fetchBirdeyeNetworthHistory(address, options);
-  return history.history.map((point) => ({
-    timestamp: point.timestamp,
-    valueUsd: point.netWorthUsd,
-  }));
-}
-
 export async function fetchBirdeyeOverallPnL(
   address: string,
   options?: {
