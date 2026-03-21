@@ -1149,23 +1149,42 @@ export async function fetchBirdeyeNetworthHistory(
   });
   const data = json?.data ?? {};
   const rows: any[] = Array.isArray(data?.history) ? data.history : [];
+  const currentTimestamp = toIsoTimestamp(data?.current_timestamp);
+  const pastTimestamp = toIsoTimestamp(data?.past_timestamp);
+
+  const history = rows
+    .map((row) => ({
+      timestamp: toIsoTimestamp(row?.timestamp),
+      netWorthUsd: toOptionalNumber(row?.net_worth),
+      netWorthChangeUsd: toOptionalNumber(row?.net_worth_change),
+      netWorthChangePercent: toOptionalNumber(row?.net_worth_change_percent),
+    }))
+    .filter(
+      (row): row is BirdeyeNetworthHistoryPoint =>
+        row.timestamp != null && row.netWorthUsd != null,
+    );
+
+  if (history.length === 0) {
+    const snapshotTimestamp =
+      currentTimestamp ?? toIsoTimestamp(data?.requested_timestamp) ?? toIsoTimestamp(data?.resolved_timestamp);
+    const snapshotValue = toOptionalNumber(data?.total_value ?? data?.net_worth);
+
+    if (snapshotTimestamp != null && snapshotValue != null) {
+      history.push({
+        timestamp: snapshotTimestamp,
+        netWorthUsd: snapshotValue,
+        netWorthChangeUsd: null,
+        netWorthChangePercent: null,
+      });
+    }
+  }
 
   return {
     address: String(data?.wallet_address ?? address),
     currency: String(data?.currency ?? "usd"),
-    currentTimestamp: toIsoTimestamp(data?.current_timestamp),
-    pastTimestamp: toIsoTimestamp(data?.past_timestamp),
-    history: rows
-      .map((row) => ({
-        timestamp: toIsoTimestamp(row?.timestamp),
-        netWorthUsd: toOptionalNumber(row?.net_worth),
-        netWorthChangeUsd: toOptionalNumber(row?.net_worth_change),
-        netWorthChangePercent: toOptionalNumber(row?.net_worth_change_percent),
-      }))
-      .filter(
-        (row): row is BirdeyeNetworthHistoryPoint =>
-          row.timestamp != null && row.netWorthUsd != null,
-      ),
+    currentTimestamp: currentTimestamp,
+    pastTimestamp: pastTimestamp,
+    history,
   };
 }
 

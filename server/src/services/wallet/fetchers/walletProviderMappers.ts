@@ -70,7 +70,11 @@ export function toIsoTimestamp(value: unknown): string | null {
     }
 
     if (typeof value === "string") {
-        const date = new Date(value);
+        const normalized = value.trim().replace(
+            /(\.\d{3})\d+(Z|[+-]\d{2}:?\d{2})$/,
+            "$1$2",
+        );
+        const date = new Date(normalized);
         return Number.isNaN(date.getTime()) ? null : date.toISOString();
     }
 
