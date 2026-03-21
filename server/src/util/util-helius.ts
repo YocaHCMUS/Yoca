@@ -77,7 +77,7 @@ export function getRequiredHeaders() {
 }
 
 const client = createHelius({
-  apiKey: apiKeyManager.getNextKey(HELIUS_SERVICE_NAME)!,
+  apiKey: process.env.HELIUS_API_KEY!,
 });
 
 export { client };
