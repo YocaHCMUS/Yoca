@@ -25,6 +25,7 @@ import {
   runCursorPagination,
   runOffsetPagination,
 } from "@sv/services/wallet/fetchers/walletPagination.js";
+import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
 
 
 export type WalletProviderChunk<T> = {
@@ -1026,36 +1027,7 @@ async function fetchBirdeyeJson(
   }
 }
 
-function normalizeBirdeyeTimeParam(time?: string): string | undefined {
-  if (!time) {
-    return undefined;
-  }
 
-  const trimmed = time.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-
-  // Birdeye expects: YYYY-MM-DD HH:mm:ss
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  const parsedMs = Date.parse(trimmed);
-  if (!Number.isFinite(parsedMs)) {
-    return undefined;
-  }
-
-  const date = new Date(parsedMs);
-  const yyyy = String(date.getUTCFullYear());
-  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(date.getUTCDate()).padStart(2, "0");
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const min = String(date.getUTCMinutes()).padStart(2, "0");
-  const ss = String(date.getUTCSeconds()).padStart(2, "0");
-
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
-}
 
 export async function fetchBirdeyePortfolio(address: string): Promise<WalletPortfolio> {
   const limit = 100;
@@ -1094,7 +1066,7 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
         const amount = toTokenAmount(token.balance, token.decimals, token.amount);
         if (!(amount > 0) || Number.isNaN(amount)) continue;
 
-        const tokenAddress = String(token.address ?? token.token_address ?? "");
+        const tokenAddress = token.address;
         const tokenAddressKey = tokenAddress.trim().toLowerCase();
         const fallbackKey = `${String(token.symbol ?? "").trim().toLowerCase()}::${String(token.name ?? "").trim().toLowerCase()}`;
         const dedupeKey = tokenAddressKey || fallbackKey;
@@ -1315,7 +1287,3 @@ export async function fetchBirdeyeTokenPnLDetails(
     summary: data?.summary ?? null,
   };
 }
-
-
-
-// getAllTransactionHistory("86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY");
