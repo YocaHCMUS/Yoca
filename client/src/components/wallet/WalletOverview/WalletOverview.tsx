@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Notification, Share, ColumnDependency, Repeat, BookmarkFilled, Edit, Tag as TagIcon } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon } from '@carbon/react/icons';
 import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,13 +54,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 }) => {
     const { user } = useAuth();
 
-    // State for overview data
     const [overview, setOverview] = useState<any>(null);
     const [intelligence, setIntelligence] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Label state – persisted to localStorage per wallet address
     const labelKey = `wallet-label-${walletAddress}`;
     const [label, setLabel] = useState<string>(
         () => localStorage.getItem(labelKey) ?? ""
@@ -76,11 +74,9 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         }
     };
 
-    // Tags state – server-persisted per user; empty until loaded
     const [tags, setTags] = useState<string[]>([]);
     const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
-    // Load tags from server whenever the authenticated user or wallet changes
     useEffect(() => {
         if (!user || !walletAddress || walletAddress === 'null') {
             setTags([]);
@@ -105,7 +101,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityCategory = intelligence?.identity?.category ?? null;
     const riskLevel = intelligence?.analysis?.riskLevel ?? null;
 
-    // Provide default values for display
     const name = label || (identityStatus === 'known' && identityName ? identityName : "Wallet");
     const displayedAddress = identityStatus === 'unknown'
         ? shortenWalletAddress(walletAddress)
@@ -113,13 +108,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const totalAssetValue = overview?.totalAssetValueUsd ?? null;
     const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
     const totalPnL = overview?.pnlUsdTotal ?? null;
-    const transactionCount = overview?.transactionCount24h ?? null;
     const tokenTraded = overview?.tokensTradedCount ?? null;
     const numberOfTokenHolding = overview?.tokensHoldingCount ?? null;
 
     const [bookmark, setBookmark] = useState(false);
     const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
-    const [filterValue, setFilterValue] = useState(1); // 24h
+    const [filterValue, setFilterValue] = useState(1);
     const [showCustomControl, setShowCustomControl] = useState(false);
     const [customDays, setCustomDays] = useState(2);
 
@@ -138,7 +132,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     const { tr, fmt } = useLocalization();
 
-    // Fetch wallet overview data
     useEffect(() => {
         const loadOverview = async () => {
             try {
@@ -177,7 +170,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         if (walletAddress && walletAddress !== 'null') {
             loadOverview();
 
-            // Set up auto-refresh if enabled
             if (autoRefresh) {
                 const interval = setInterval(loadOverview, refreshInterval);
                 return () => clearInterval(interval);
@@ -187,19 +179,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
-        // Add your bookmark logic here
         console.log('Bookmark toggled:', !bookmark);
     };
 
     const handleCreateAlert = () => {
-        // Add your alert creation logic here
         console.log('Create alert clicked');
     };
 
     const navigate = useNavigate();
 
     const handleShare = () => {
-        // Add your share logic here
         console.log('Share clicked');
     };
 
@@ -211,7 +200,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         setFilterOptions(option);
         setFilterValue(value);
         setShowCustomControl(false);
-        console.log(`Filter changed to: ${OverviewFilterSelection[option]} (${value} days)`);
     };
 
     const handleCustomFilter = () => {
@@ -224,214 +212,194 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         setCustomDays(boundedValue);
         setFilterValue(boundedValue);
         setFilterOptions(OverviewFilterSelection.custom);
-        console.log(`Custom filter: ${boundedValue} days`);
     };
 
     const handleCopyAddress = async () => {
         try {
             await navigator.clipboard.writeText(walletAddress);
-            console.log('Wallet address copied to clipboard');
-            // Optionally add a toast notification here
         } catch (err) {
             console.error('Failed to copy wallet address:', err);
         }
     };
 
+    const statRows = [
+        {
+            id: 'totalAssetValue',
+            label: tr('wallet.totalAssetValue'),
+            value: fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null),
+            style: styles.statValue,
+        },
+        {
+            id: 'tradingVolume',
+            label: tr('wallet.tradingVolume'),
+            value: fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null),
+            style: styles.statValue,
+        },
+        {
+            id: 'totalPnL',
+            label: tr('wallet.totalPnL'),
+            value: fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null),
+            style: totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative,
+        },
+        {
+            id: 'tokensTraded',
+            label: tr('wallet.tokensTraded'),
+            value: fmt.num.decimal(tokenTraded),
+            style: styles.statValue,
+        },
+        {
+            id: 'tokensHolding',
+            label: tr('wallet.tokensHolding'),
+            value: fmt.num.decimal(numberOfTokenHolding),
+            style: styles.statValue,
+        },
+    ];
+
     return (
         <>
-            {/* main container: column */}
             <div className={styles.walletOverview}>
                 {error && (
-                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
+                    <div className={styles.errorBanner}>
                         {tr('common.error')}: {error}
                     </div>
                 )}
                 {loading && (
-                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
+                    <div className={styles.loadingBanner}>
                         {tr('common.loading')}...
                     </div>
                 )}
-                {/* 1st row: row containing 3 columns */}
-                <div className={styles.topSection}>
-                    {/* 1st column: profile picture */}
-                    <div className={styles.profilePicture}>
-                        {name.charAt(0)}
-                    </div>
 
-                    {/* 2nd column: basic profile information (name, wallet address, tags) */}
-                    <div className={styles.profileInfo}>
-                        <div className={styles.walletNameRow}>
-                            <h2 className={styles.walletName}>{name}</h2>
-                            <button
-                                className={styles.editLabelBtn}
-                                onClick={() => setIsLabelModalOpen(true)}
-                                aria-label="Edit wallet label"
-                                title="Assign custom label"
-                            >
-                                <Edit size={16} />
-                            </button>
+                {/* Header: avatar, name, address, tags */}
+                <div className={styles.headerSection}>
+                    <div className={styles.profileRow}>
+                        <div className={styles.profilePicture}>
+                            {name.charAt(0)}
                         </div>
-                        <div className={styles.walletAddressContainer}>
-                            {/* <Tooltip align="bottom" label={walletAddress}>
-                        </Tooltip> */}
-                            <h4
-                                className={styles.walletAddress}
-                            >
-                                {displayedAddress}
-                            </h4>
-                            <CopyButton onClick={handleCopyAddress} />
-                        </div>
-                        <div className={styles.tagsRow}>
-                            {identityStatus === 'known' && identityCategory && (
-                                <Tag size="sm" type="teal">
-                                    {identityCategory}
-                                </Tag>
-                            )}
-                            {identityStatus === 'unknown' && (
-                                <Tag size="sm" type="cool-gray">
-                                    Unknown Entity
-                                </Tag>
-                            )}
-                            {identityStatus === 'unavailable' && (
-                                <Tag size="sm" type="red">
-                                    Identity Unavailable
-                                </Tag>
-                            )}
-                            {riskLevel && (
-                                <Tag size="sm" type={getRiskTagType(riskLevel)}>
-                                    Risk: {String(riskLevel).toUpperCase()}
-                                </Tag>
-                            )}
-                            {tags.map((tag, index) => (
-                                <Tag
-                                    key={index}
-                                    size="md"
-                                    type="cyan"
-                                >
-                                    {tag}
-                                </Tag>
-                            ))}
-                            <Tooltip
-                                label={user ? 'Manage tags' : 'Sign in to manage tags'}
-                                align="bottom"
-                            >
+                        <div className={styles.profileInfo}>
+                            <div className={styles.walletNameRow}>
+                                <h2 className={styles.walletName}>{name}</h2>
                                 <button
                                     className={styles.editLabelBtn}
-                                    onClick={() => user && setIsTagsModalOpen(true)}
-                                    aria-label="Manage wallet tags"
-                                    disabled={!user}
+                                    onClick={() => setIsLabelModalOpen(true)}
+                                    aria-label="Edit wallet label"
+                                    title="Assign custom label"
                                 >
-                                    <TagIcon size={16} />
+                                    <Edit size={16} />
                                 </button>
-                            </Tooltip>
+                            </div>
+                            <div className={styles.walletAddressContainer}>
+                                <h4 className={styles.walletAddress}>
+                                    {displayedAddress}
+                                </h4>
+                                <CopyButton onClick={handleCopyAddress} />
+                            </div>
                         </div>
                     </div>
-
-                    {/* 3rd column: 1st line: filter buttons ; 2nd line: utilities links (bookmark, create alert, share, compare) */}
-                    <div className={styles.actions}>
-                        <div className={styles.filterButtons}>
-                            <button
-                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
-                                onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
+                    <div className={styles.tagsRow}>
+                        {identityStatus === 'known' && identityCategory && (
+                            <Tag size="sm" type="teal">
+                                {identityCategory}
+                            </Tag>
+                        )}
+                        {identityStatus === 'unknown' && (
+                            <Tag size="sm" type="cool-gray">
+                                Unknown Entity
+                            </Tag>
+                        )}
+                        {identityStatus === 'unavailable' && (
+                            <Tag size="sm" type="red">
+                                Identity Unavailable
+                            </Tag>
+                        )}
+                        {riskLevel && (
+                            <Tag size="sm" type={getRiskTagType(riskLevel)}>
+                                Risk: {String(riskLevel).toUpperCase()}
+                            </Tag>
+                        )}
+                        {tags.map((tag, index) => (
+                            <Tag
+                                key={index}
+                                size="md"
+                                type="cyan"
                             >
-                                {tr('wallet.filter24h')}
-                            </button>
+                                {tag}
+                            </Tag>
+                        ))}
+                        <Tooltip
+                            label={user ? 'Manage tags' : 'Sign in to manage tags'}
+                            align="bottom"
+                        >
                             <button
-                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
-                                onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
+                                className={styles.editLabelBtn}
+                                onClick={() => user && setIsTagsModalOpen(true)}
+                                aria-label="Manage wallet tags"
+                                disabled={!user}
                             >
-                                {tr('wallet.filter7d')}
+                                <TagIcon size={16} />
                             </button>
-                            <button
-                                className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
-                                onClick={handleCustomFilter}
-                            >
-                                {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
-                                {showCustomControl && (
-                                    <div className={styles.customControl}>
-                                        <Slider
-                                            min={1}
-                                            max={7}
-                                            value={customDays}
-                                            onChange={handleCustomDaysChange}
-                                            step={1}
-                                            hideTextInput
-                                        />
-                                    </div>
-                                )}
-                            </button>
-                        </div>
-                        <div className={styles.utilityButtons}>
-                            <Link onClick={handleShare} renderIcon={Share}>
-                                {tr('wallet.shareWallet')}
-                            </Link>
-                            <Link onClick={handleCompare} renderIcon={Repeat}>
-                                {tr('wallet.compareWallet')}
-                            </Link>
-                            <Link onClick={handleCreateAlert} renderIcon={Notification}>
-                                {tr('wallet.createAlert')}
-                            </Link>
-                            <Link onClick={handleBookmark}
-                                renderIcon={bookmark ? BookmarkFilled : Bookmark}>
-                                {bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}
-                            </Link>
-                        </div>
+                        </Tooltip>
                     </div>
                 </div>
 
-                {/* 2nd row: row containing 6 columns, separated by a line*/}
-                <div className={styles.statsSection}>
-                    <div className={styles.statsGrid}>
-                        {/* Total Asset Value */}
-                        <div className={styles.statItem}>
-                            <div className={styles.statLabel}>
-                                {tr('wallet.totalAssetValue')}
-                            </div>
-                            <div className={styles.statValue}>
-                                {fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
-                            </div>
-                        </div>
-
-                        {/* Trading Volume */}
-                        <div className={styles.statItem}>
-                            <div className={styles.statLabel}>
-                                {tr('wallet.tradingVolume')}
-                            </div>
-                            <div className={styles.statValue}>
-                                {fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null)}
-                            </div>
-                        </div>
-
-                        {/* Total PnL */}
-                        <div className={styles.statItem}>
-                            <div className={styles.statLabel}>
-                                {tr('wallet.totalPnL')}
-                            </div>
-                            <div className={totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                                {fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null)}
-                            </div>
-                        </div>
-
-                        {/* Transaction Count */}
-                        <div className={styles.statItem}>
-                            <div className={styles.statLabel}>
-                                {tr('wallet.tokensTraded')}
-                            </div>
-                            <div className={styles.statValue}>
-                                {fmt.num.decimal(tokenTraded)}
-                            </div>
-                        </div>
-
-                        {/* Tokens Holding */}
-                        <div className={styles.statItem}>
-                            <div className={styles.statLabel}>
-                                {tr('wallet.tokensHolding')}
-                            </div>
-                            <div className={styles.statValue}>
-                                {fmt.num.decimal(numberOfTokenHolding)}
-                            </div>
-                        </div>
+                {/* Actions: filter buttons + utility links */}
+                <div className={styles.actionsSection}>
+                    <div className={styles.filterButtons}>
+                        <button
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
+                            onClick={handleCustomFilter}
+                        >
+                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
+                            {showCustomControl && (
+                                <div className={styles.customControl}>
+                                    <Slider
+                                        min={1}
+                                        max={7}
+                                        value={customDays}
+                                        onChange={handleCustomDaysChange}
+                                        step={1}
+                                        hideTextInput
+                                    />
+                                </div>
+                            )}
+                        </button>
+                        <button
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
+                            onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
+                        >
+                            {tr('wallet.filter7d')}
+                        </button>
+                        <button
+                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
+                            onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
+                        >
+                            {tr('wallet.filter24h')}
+                        </button>
                     </div>
+                    <div className={styles.utilityButtons}>
+                        <Link onClick={handleBookmark}
+                            renderIcon={bookmark ? BookmarkFilled : Bookmark}>
+                            {bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}
+                        </Link>
+                        <Link onClick={handleCreateAlert} renderIcon={Notification}>
+                            {tr('wallet.createAlert')}
+                        </Link>
+                        <Link onClick={handleCompare} renderIcon={Repeat}>
+                            {tr('wallet.compareWallet')}
+                        </Link>
+                        <Link onClick={handleShare} renderIcon={Share}>
+                            {tr('wallet.shareWallet')}
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Stats rows (vertical, like TokenOverviewStats) */}
+                <div className={styles.statsSection}>
+                    {statRows.map((row) => (
+                        <div key={row.id} className={styles.statRow}>
+                            <span className={styles.statLabel}>{row.label}</span>
+                            <span className={row.style}>{row.value}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -452,6 +420,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             />
         </>
     );
-}
+};
 
 export default WalletOverview;

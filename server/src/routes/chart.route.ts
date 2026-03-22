@@ -5,6 +5,7 @@ import chartCounterparties from "@sv/routes/charts/counterparties.route.js";
 import chartDailyTradingVolume from "@sv/routes/charts/daily-trading-volume.route.js";
 import chartDistribution from "@sv/routes/charts/distribution.route.js";
 import chartDrawdown from "@sv/routes/charts/drawdown.route.js";
+import chartExport from "@sv/routes/charts/export.route.js";
 import chartExchanges from "@sv/routes/charts/exchanges.route.js";
 import chartHoldings from "@sv/routes/charts/holdings.route.js";
 import chartPnL from "@sv/routes/charts/pnl.route.js";
@@ -37,6 +38,7 @@ const routes = app
     .route("/averageRollingAnnualReturn", chartAverageRollingAnnualReturn)
     .route("/winrate", chartWinrate)
     .route("/drawdown", chartDrawdown)
+    .route("/export", chartExport)
     .route("/totalTradingVolume", chartTotalTradingVolume)
     .route("/stablecoinRatio", chartStablecoinRatio);
 

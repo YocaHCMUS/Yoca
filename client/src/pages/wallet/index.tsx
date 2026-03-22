@@ -21,7 +21,9 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
 import { Button } from "@carbon/react";
-import { Download } from "@carbon/icons-react";
+import { ChevronDown, Download } from "@carbon/icons-react";
+import * as XLSX from "xlsx";
+import JSZip from "jszip";
 import {
   fetchWalletCounterparties,
   fetchWalletPortfolio,
@@ -33,7 +35,7 @@ import {
   type WalletSwap,
   type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import {
   mapPortfolioItems,
@@ -79,8 +81,62 @@ export default function WalletPage() {
   const [portfolioChartActiveTab, setPortfolioChartActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isDataExporting, setIsDataExporting] = useState(false);
+  const [isChartsExporting, setIsChartsExporting] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Swap detail modal state
+  // Resizable divider
+  const [leftWidth, setLeftWidth] = useState(420);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(420);
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = leftWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [leftWidth]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = e.clientX - dragStartX.current;
+      const next = Math.min(700, Math.max(280, dragStartWidth.current + delta));
+      setLeftWidth(next);
+    };
+    const onMouseUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onOutsideClick = (event: MouseEvent) => {
+      if (!exportMenuRef.current) return;
+      if (!exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener("mousedown", onOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutsideClick);
+    };
+  }, [isExportMenuOpen]);
+
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
@@ -128,15 +184,11 @@ export default function WalletPage() {
     return Boolean(transferPageInfoByPage[maxLoadedPage]?.hasMore);
   }, [transferPageInfoByPage, transferPages]);
 
-  // Transform portfolio data from API response for Table component using typed mapper.
-  // Numeric values are kept as numbers (not pre-formatted strings) so that
-  // SortType.Number and FilterType.Range work correctly on price/amount/value/change.
   const { rows: portfolioData, meta: portfolioMeta } = useMemo(
     () => mapPortfolioItems(portfolio),
     [portfolio],
   );
 
-  // O(1) lookup: resolved token label → portfolio row metadata (logoUri, etc.)
   const portfolioMetaMap = useMemo(
     () => buildPortfolioMetaMap(portfolioMeta),
     [portfolioMeta],
@@ -203,7 +255,6 @@ export default function WalletPage() {
     return pairAddress ?? "—";
   };
 
-  // Transform swap data to array format for Table component
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
@@ -222,7 +273,6 @@ export default function WalletPage() {
     [loadedSwaps, formatSwapPair, formatSwapTokenDisplay, getSoldBoughtChanges],
   );
 
-  // Transform transfer data to array format for Table component
   const transferData = useMemo(
     () =>
       loadedTransfers.map((transfer) => [
@@ -236,7 +286,6 @@ export default function WalletPage() {
     [loadedTransfers],
   );
 
-  // Filter transfers by direction
   const inflowData = transferData.filter(
     (row) => address && row[1] === address,
   );
@@ -307,7 +356,6 @@ export default function WalletPage() {
   const isSortableSwaps = [true, false, false, false, false, true, true];
   const isSortableTransfers = [false, false, false, true, true];
 
-  // Sort configurations for sortable columns
   const counterpartySortConfigs = {
     2: { type: SortType.Number },
     4: { type: SortType.Number },
@@ -315,14 +363,14 @@ export default function WalletPage() {
   };
 
   const swapSortConfigs = {
-    0: { type: SortType.Date }, // Time
-    5: { type: SortType.Number }, // Total Value (USD)
-    6: { type: SortType.Number }, // Fee
+    0: { type: SortType.Date },
+    5: { type: SortType.Number },
+    6: { type: SortType.Number },
   };
 
   const transferSortConfigs = {
-    3: { type: SortType.Number }, // Amount
-    4: { type: SortType.Date }, // Time
+    3: { type: SortType.Number },
+    4: { type: SortType.Date },
   };
 
   const portfolioSortConfig = {
@@ -332,7 +380,6 @@ export default function WalletPage() {
     4: { type: SortType.Number },
   };
 
-  // Cell renderers for conditional styling
   const counterpartyCellRenderers = [
     (value: string) => renderHash(value),
     (value: string) => renderCode(value),
@@ -444,7 +491,6 @@ export default function WalletPage() {
   ];
 
   const portfolioCellRenderers = [
-    // Column 0: token label + optional logo image
     (value: string) => {
       const tokenMeta = portfolioMetaMap.get(value);
 
@@ -459,13 +505,9 @@ export default function WalletPage() {
         />
       );
     },
-    // Column 1: USD price per token
     (value: string) => renderCurrency(value),
-    // Column 2: raw token amount – formatted for display, sortable as number
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    // Column 3: USD value of holding
     (value: string) => renderCurrency(value),
-    // Column 4: 24-hour change (fractional, e.g. 0.05 = 5%)
     (value: string) => renderPositiveNegative(value, true, true),
   ];
 
@@ -479,11 +521,11 @@ export default function WalletPage() {
   };
 
   const portfolioFilterSchema = {
-    0: { type: FilterType.Select }, // Token label - Select filter
-    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 }, // Price (USD)
-    2: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 }, // Amount (tokens)
-    3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 }, // Value (USD)
-    4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 }, // Change24h (fraction)
+    0: { type: FilterType.Select },
+    1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
+    2: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
+    3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
+    4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 },
   };
 
   const handleSwapPageChange = async (targetPage: number): Promise<boolean> => {
@@ -576,13 +618,11 @@ export default function WalletPage() {
       if (!address || address === 'null') return;
 
       try {
-        // Fetch portfolio data
         const portfolioResponse = await fetchWalletPortfolio(address);
         if (Array.isArray(portfolioResponse)) {
           setPortfolio(portfolioResponse);
         }
 
-        // Fetch swaps data for swap table
         const swapResponse = await fetchWalletSwaps(address);
         const swapsData = swapResponse?.swaps || [];
         if (Array.isArray(swapsData)) {
@@ -591,7 +631,6 @@ export default function WalletPage() {
           console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
         }
 
-        // Fetch transfers data for inflow/outflow tables
         const transferResponse = await fetchWalletTransfers(address);
         const transfersData = transferResponse?.transfers || [];
         if (Array.isArray(transfersData)) {
@@ -637,8 +676,101 @@ export default function WalletPage() {
       });
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
+      window.alert("Failed to export PDF. Please try again.");
     } finally {
       setIsPagePdfExporting(false);
+    }
+  }
+
+  function handleExportDataXlsx() {
+    try {
+      setIsDataExporting(true);
+
+      const workbook = XLSX.utils.book_new();
+
+      const swapSheet = XLSX.utils.aoa_to_sheet([swapHeaders, ...swapData]);
+      XLSX.utils.book_append_sheet(workbook, swapSheet, "Swaps");
+
+      const transferSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...transferData]);
+      XLSX.utils.book_append_sheet(workbook, transferSheet, "Transfers");
+
+      const inflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...inflowData]);
+      XLSX.utils.book_append_sheet(workbook, inflowSheet, "Inflow");
+
+      const outflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...outflowData]);
+      XLSX.utils.book_append_sheet(workbook, outflowSheet, "Outflow");
+
+      const counterpartySheet = XLSX.utils.aoa_to_sheet([
+        counterpartyHeaders,
+        ...counterpartyTableData,
+      ]);
+      XLSX.utils.book_append_sheet(workbook, counterpartySheet, "Counterparties");
+
+      const portfolioSheet = XLSX.utils.aoa_to_sheet([portfolioHeaders, ...portfolioData]);
+      XLSX.utils.book_append_sheet(workbook, portfolioSheet, "Portfolio");
+
+      const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, -5)}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+    } catch (error) {
+      console.error("[WalletPage] Failed to export XLSX:", error);
+      window.alert("Failed to export data (.xlsx). Please try again.");
+    } finally {
+      setIsDataExporting(false);
+      setIsExportMenuOpen(false);
+    }
+  }
+
+  async function handleExportChartsZip() {
+    try {
+      setIsChartsExporting(true);
+
+      const root = document.querySelector(`.${styles.rightContent}`);
+      if (!root) {
+        throw new Error("Chart container not found");
+      }
+
+      const zip = new JSZip();
+      const imagesFolder = zip.folder("charts");
+      if (!imagesFolder) {
+        throw new Error("Unable to create ZIP folder");
+      }
+
+      const canvases = Array.from(root.querySelectorAll("canvas"));
+      if (canvases.length === 0) {
+        throw new Error("No chart images found to export");
+      }
+
+      const addCanvasBlob = async (canvas: HTMLCanvasElement, index: number) => {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png"),
+        );
+        if (!blob) return;
+        imagesFolder.file(`chart-${index + 1}.png`, blob);
+      };
+
+      await Promise.all(canvases.map((canvas, index) => addCanvasBlob(canvas, index)));
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `wallet-charts-${address?.slice(0, 8) || "overview"}-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, -5)}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("[WalletPage] Failed to export charts ZIP:", error);
+      window.alert("Failed to export charts (.zip). Please try again.");
+    } finally {
+      setIsChartsExporting(false);
+      setIsExportMenuOpen(false);
     }
   }
 
@@ -652,45 +784,80 @@ export default function WalletPage() {
 
   return (
     <PageWrapper>
-      <div className={styles.stickyHeaderShell}>
-        <WalletOverview walletAddress={address} />
-        <div className={styles.pageUtilityBar}>
-          <Button
-            size="sm"
-            kind="secondary"
-            renderIcon={Download}
-            onClick={handleExportPagePdf}
-            disabled={isPagePdfExporting}
-          >
-            {isPagePdfExporting ? `${tr("charts.exportPDF")}...` : tr("charts.exportPDF")}
-          </Button>
+      <div
+        className={styles.walletGrid}
+        style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
+      >
+        {/* ── Left Column: Wallet Sidebar ── */}
+        <div className={styles.leftColumn}>
+          <WalletOverview walletAddress={address} />
         </div>
-      </div>
 
-      <TabContainer
-        activeTab={mainActiveTab}
-        names={[
-          "Portfolio",
-          "Activity",
-          "Network",
-        ]}
-        tabs={[
-          <div className={styles.mainTabPanel}>
-            <div className={styles.topChartsGrid}>
-              <div className={styles.pieChartPanel}>
-                <AssetDistribution
-                  initialFilters={{
-                    wallets: address ? [address] : [],
-                    timePeriod: "30D",
-                  }}
-                  autoRefresh={true}
-                />
-              </div>
-              <div className={styles.primaryChartPanel}>
+        {/* ── Resize Divider ── */}
+        <div
+          className={styles.resizeDivider}
+          onMouseDown={handleDividerMouseDown}
+        >
+          <div className={styles.resizeHandle} />
+        </div>
+
+        {/* ── Right Column: Main Content ── */}
+        <div className={styles.rightColumn}>
+          <div className={styles.rightHeader}>
+            <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
+            <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
+              <Button
+                size="sm"
+                kind="secondary"
+                renderIcon={ChevronDown}
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                disabled={isPagePdfExporting || isDataExporting || isChartsExporting}
+              >
+                Export
+              </Button>
+              {isExportMenuOpen && (
+                <div className={styles.exportMenu}>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportDataXlsx}
+                    disabled={isDataExporting}
+                  >
+                    <Download size={16} />
+                    {isDataExporting ? "Exporting data..." : "Export Data (.xlsx)"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportChartsZip}
+                    disabled={isChartsExporting}
+                  >
+                    <Download size={16} />
+                    {isChartsExporting ? "Exporting charts..." : "Export Charts (.zip images)"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportPagePdf}
+                    disabled={isPagePdfExporting}
+                  >
+                    <Download size={16} />
+                    {isPagePdfExporting ? "Exporting report..." : "Export Report (.pdf)"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.rightContent}>
+            {/* Balance / Token Balance / PnL Charts */}
+            <div className={styles.section}>
+              <div className={styles.chartSection}>
                 <TabContainer
-                  activeTab={portfolioChartActiveTab}
+                  activeTab={activeTab}
                   names={[
                     tr("walletPage.balanceHistory"),
+                    tr("walletPage.tokenBalanceHistory"),
                     tr("walletPage.profitLoss"),
                   ]}
                   tabs={[
@@ -703,6 +870,19 @@ export default function WalletPage() {
                       balanceChartMode="total"
                       autoRefresh={true}
                     />,
+                    <BalanceChart
+                      minHeight={460}
+                      initialFilters={{
+                        timePeriod: "7D",
+                        wallets: [address],
+                        tokens: ["SOL"],
+                      }}
+                      balanceChartMode="token"
+                      enableTokenSelector={true}
+                      tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
+                      allowMultiTokenSelection={true}
+                      autoRefresh={true}
+                    />,
                     <PnLChart
                       minHeight={400}
                       aggregation="daily"
@@ -713,161 +893,173 @@ export default function WalletPage() {
                       }}
                     />,
                   ]}
-                  onTabChange={(index) => setPortfolioChartActiveTab(index)}
+                  onTabChange={(index) => setActiveTab(index)}
                 />
               </div>
             </div>
-            <div className={styles.fullWidthPanel}>
-              <Table
-                maxHeight={800}
-                title={tr("walletPage.portfolio")}
-                headers={portfolioHeaders}
-                initialFilters={{}}
-                fetcher={Promise.resolve(portfolioData)}
-                filterSchema={portfolioFilterSchema}
-                cellRenderers={portfolioCellRenderers}
-                dataEntries={portfolioData}
-                isSortable={isSortablePortfolio}
-                sortConfigs={portfolioSortConfig}
-              />
+
+            {/* Swap / Transfer / Inflow / Outflow / Counterparties Tables */}
+            <div className={styles.section}>
+              <div className={styles.chartSection}>
+                <TabContainer
+                  activeTab={secondaryActiveTab}
+                  names={[
+                    tr("walletPage.transfer"),
+                    tr("walletPage.inflow"),
+                    tr("walletPage.outflow"),
+                    tr("walletPage.counterparties"),
+                  ]}
+                  tabs={[
+                    <Table
+                      maxHeight={400}
+                      title={"swap"}
+                      headers={swapHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(swapData)}
+                      filterSchema={{
+                        0: { type: FilterType.Select },
+                        1: { type: FilterType.Select },
+                        2: { type: FilterType.Select },
+                        3: { type: FilterType.Select },
+                        4: { type: FilterType.Select },
+                        5: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.01 },
+                        6: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
+                      }}
+                      cellRenderers={swapCellRenderers}
+                      dataEntries={swapData}
+                      isSortable={isSortableSwaps}
+                      sortConfigs={swapSortConfigs}
+                      onRowClick={handleSwapRowClick}
+                      serverPagination={{
+                        enabled: true,
+                        hasMore: swapHasMore,
+                        isLoading: swapLoading,
+                        onPageChange: handleSwapPageChange,
+                      }}
+                    />,
+                    <Table
+                      maxHeight={400}
+                      title={tr("walletPage.inflow")}
+                      headers={transferHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(inflowData)}
+                      filterSchema={{
+                        0: { type: FilterType.Select },
+                        1: { type: FilterType.Select },
+                        2: { type: FilterType.Select },
+                        3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
+                        4: { type: FilterType.Select },
+                      }}
+                      cellRenderers={transferCellRenderers}
+                      dataEntries={inflowData}
+                      isSortable={isSortableTransfers}
+                      sortConfigs={transferSortConfigs}
+                      serverPagination={{
+                        enabled: true,
+                        hasMore: transferHasMore,
+                        isLoading: transferLoading,
+                        onPageChange: handleTransferPageChange,
+                      }}
+                    />,
+                    <Table
+                      maxHeight={400}
+                      title={tr("walletPage.outflow")}
+                      headers={transferHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(outflowData)}
+                      filterSchema={{
+                        0: { type: FilterType.Select },
+                        1: { type: FilterType.Select },
+                        2: { type: FilterType.Select },
+                        3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
+                        4: { type: FilterType.Select },
+                      }}
+                      cellRenderers={transferCellRenderers}
+                      dataEntries={outflowData}
+                      isSortable={isSortableTransfers}
+                      sortConfigs={transferSortConfigs}
+                      serverPagination={{
+                        enabled: true,
+                        hasMore: transferHasMore,
+                        isLoading: transferLoading,
+                        onPageChange: handleTransferPageChange,
+                      }}
+                    />,
+                    <Table
+                      maxHeight={400}
+                      title={tr("walletPage.counterparties")}
+                      headers={counterpartyHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(counterpartyTableData)}
+                      filterSchema={counterpartyFilterSchema}
+                      cellRenderers={counterpartyCellRenderers}
+                      dataEntries={counterpartyTableData}
+                      isSortable={isSortableCounterparties}
+                      sortConfigs={counterpartySortConfigs}
+                    />,
+                  ]}
+                  onTabChange={(index) => setSecondaryActiveTab(index)}
+                />
+              </div>
             </div>
-          </div>,
-          <div className={styles.mainTabPanel}>
-            <div className={styles.fullWidthPanel}>
-              <BalanceChart
-                minHeight={460}
-                initialFilters={{
-                  timePeriod: "7D",
-                  wallets: [address],
-                  tokens: ["SOL"],
-                }}
-                balanceChartMode="token"
-                enableTokenSelector={true}
-                tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
-                allowMultiTokenSelection={true}
-                autoRefresh={true}
-              />
-            </div>
-            <div className={styles.fullWidthPanel}>
-              <TabContainer
-                activeTab={secondaryActiveTab}
-                names={[
-                  tr("walletPage.transfer"),
-                  tr("walletPage.inflow"),
-                  tr("walletPage.outflow"),
-                  tr("walletPage.counterparties"),
-                ]}
-                tabs={[
+
+            {/* Assets: Distribution + Portfolio */}
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>{tr("walletPage.asset")}</h2>
+              <div className={styles.sideBySide}>
+                <div className={styles.columnWrapper}>
+                  <AssetDistribution
+                    initialFilters={{
+                      wallets: address ? [address] : [],
+                      timePeriod: "30D",
+                    }}
+                    autoRefresh={true}
+                  />
+                </div>
+                <div className={styles.columnWrapper}>
                   <Table
-                    maxHeight={400}
-                    title={"swap"}
-                    headers={swapHeaders}
+                    maxHeight={800}
+                    title={tr("walletPage.portfolio")}
+                    headers={portfolioHeaders}
                     initialFilters={{}}
-                    fetcher={Promise.resolve(swapData)}
-                    filterSchema={{
-                      0: { type: FilterType.Select },
-                      1: { type: FilterType.Select },
-                      2: { type: FilterType.Select },
-                      3: { type: FilterType.Select },
-                      4: { type: FilterType.Select },
-                      5: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.01 },
-                      6: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
-                    }}
-                    cellRenderers={swapCellRenderers}
-                    dataEntries={swapData}
-                    isSortable={isSortableSwaps}
-                    sortConfigs={swapSortConfigs}
-                    onRowClick={handleSwapRowClick}
-                    serverPagination={{
-                      enabled: true,
-                      hasMore: swapHasMore,
-                      isLoading: swapLoading,
-                      onPageChange: handleSwapPageChange,
-                    }}
-                  />,
-                  <Table
-                    maxHeight={400}
-                    title={tr("walletPage.inflow")}
-                    headers={transferHeaders}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve(inflowData)}
-                    filterSchema={{
-                      0: { type: FilterType.Select },
-                      1: { type: FilterType.Select },
-                      2: { type: FilterType.Select },
-                      3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                      4: { type: FilterType.Select },
-                    }}
-                    cellRenderers={transferCellRenderers}
-                    dataEntries={inflowData}
-                    isSortable={isSortableTransfers}
-                    sortConfigs={transferSortConfigs}
-                    serverPagination={{
-                      enabled: true,
-                      hasMore: transferHasMore,
-                      isLoading: transferLoading,
-                      onPageChange: handleTransferPageChange,
-                    }}
-                  />,
-                  <Table
-                    maxHeight={400}
-                    title={tr("walletPage.outflow")}
-                    headers={transferHeaders}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve(outflowData)}
-                    filterSchema={{
-                      0: { type: FilterType.Select },
-                      1: { type: FilterType.Select },
-                      2: { type: FilterType.Select },
-                      3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                      4: { type: FilterType.Select },
-                    }}
-                    cellRenderers={transferCellRenderers}
-                    dataEntries={outflowData}
-                    isSortable={isSortableTransfers}
-                    sortConfigs={transferSortConfigs}
-                    serverPagination={{
-                      enabled: true,
-                      hasMore: transferHasMore,
-                      isLoading: transferLoading,
-                      onPageChange: handleTransferPageChange,
-                    }}
-                  />,
-                  <Table
-                    maxHeight={400}
-                    title={tr("walletPage.counterparties")}
-                    headers={counterpartyHeaders}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve(counterpartyTableData)}
-                    filterSchema={counterpartyFilterSchema}
-                    cellRenderers={counterpartyCellRenderers}
-                    dataEntries={counterpartyTableData}
-                    isSortable={isSortableCounterparties}
-                    sortConfigs={counterpartySortConfigs}
-                  />,
-                ]}
-                onTabChange={(index) => setSecondaryActiveTab(index)}
-              />
+                    fetcher={Promise.resolve(portfolioData)}
+                    filterSchema={portfolioFilterSchema}
+                    cellRenderers={portfolioCellRenderers}
+                    dataEntries={portfolioData}
+                    isSortable={isSortablePortfolio}
+                    sortConfigs={portfolioSortConfig}
+                  />
+                </div>
+              </div>
             </div>
-          </div>,
-          <div className={styles.mainTabPanel}>
-            <div className={styles.fullWidthPanel}>
-              <ExchangeComparison walletAddress={address} />
+
+            {/* Top Exchange */}
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>{tr("walletPage.topExchange")}</h2>
+              <div className={styles.chartSection}>
+                <ExchangeComparison walletAddress={address} />
+              </div>
             </div>
-            <div className={styles.fullWidthPanel}>
-              <CounterpartyActivity
-                minHeight={320}
-                initialFilters={{
-                  timePeriod: "7D",
-                  wallets: [address],
-                }}
-                autoRefresh={true}
-              />
+
+            {/* Top Counterparties */}
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                {tr("walletPage.topCounterparties")}
+              </h2>
+              <div className={styles.chartSection}>
+                <CounterpartyActivity
+                  minHeight={320}
+                  initialFilters={{
+                    timePeriod: "7D",
+                    wallets: [address],
+                  }}
+                  autoRefresh={true}
+                />
+              </div>
             </div>
-          </div>,
-        ]}
-        onTabChange={(index) => setMainActiveTab(index)}
-      />
+          </div>
+        </div>
+      </div>
 
       <SwapDetailModal
         isOpen={swapModalOpen}
