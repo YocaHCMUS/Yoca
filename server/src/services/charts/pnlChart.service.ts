@@ -1,9 +1,7 @@
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
 
 import type {
-    PnLDataPoint,
-    WalletTimePeriod,
-    PnLAggregation,
+    PnLDataPoint
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 
@@ -39,12 +37,10 @@ export type HistoricalPnLResponse =
     };
 
 const DEFAULT_WALLET_NAMES = ["Main Wallet", "Trading Wallet", "Cold Storage"];
-const MAX_WALLET_CHART_CONCURRENCY = 2;
+const MAX_WALLET_CHART_CONCURRENCY = 4;
 
 export async function getHistoricalPnLData(
-    wallets: string[] = [],
-    timePeriod: WalletTimePeriod = "30D",
-    aggregation: PnLAggregation = "daily",
+    wallets: string[] = []
 ): Promise<HistoricalPnLResponse> {
     const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
 
@@ -60,41 +56,26 @@ export async function getHistoricalPnLData(
         };
     }
 
-    if (normalizedWallets.length >= 2) {
-        const walletPnLItems = await mapWithConcurrency(
-            normalizedWallets,
-            MAX_WALLET_CHART_CONCURRENCY,
-            async (walletAddress) => getCumulativePnL(walletAddress, timePeriod, aggregation),
-        );
+    const walletPnLItems = await mapWithConcurrency(
+        normalizedWallets,
+        MAX_WALLET_CHART_CONCURRENCY,
+        async (walletAddress) => getCumulativePnL(walletAddress),
+    );
 
-        const walletsResponse: MultiWalletPnLItem[] = walletPnLItems.map((pnl, index) => ({
-            walletAddress: normalizedWallets[index],
-            walletName: DEFAULT_WALLET_NAMES[index % DEFAULT_WALLET_NAMES.length],
-            dailyPnL: pnl.dailyPnL,
-            cumulativePnL: pnl.cumulativePnL,
-            startBalance: pnl.startBalance,
-            endBalance: pnl.endBalance,
-            realizedPnL: pnl.realizedPnL,
-        }));
-
-        return {
-            wallets: walletsResponse,
-            metadata: {
-                currency: "USD",
-            },
-        };
-    }
-
-    const walletPnL = await getCumulativePnL(normalizedWallets[0], timePeriod, aggregation);
+    const walletsResponse: MultiWalletPnLItem[] = walletPnLItems.map((pnl, index) => ({
+        walletAddress: normalizedWallets[index],
+        walletName: DEFAULT_WALLET_NAMES[index % DEFAULT_WALLET_NAMES.length],
+        dailyPnL: pnl.dailyPnL,
+        cumulativePnL: pnl.cumulativePnL,
+        startBalance: pnl.startBalance,
+        endBalance: pnl.endBalance,
+        realizedPnL: pnl.realizedPnL,
+    }));
 
     return {
-        dailyPnL: walletPnL.dailyPnL,
-        cumulativePnL: walletPnL.cumulativePnL,
-        realizedPnL: walletPnL.realizedPnL,
+        wallets: walletsResponse,
         metadata: {
             currency: "USD",
-            startBalance: walletPnL.startBalance,
-            endBalance: walletPnL.endBalance,
         },
     };
 }

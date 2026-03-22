@@ -109,7 +109,7 @@ const app = new Hono().get("/", async (c) => {
         const pairResults = await mapWithConcurrency(
             pairs,
             MAX_WALLET_CHART_CONCURRENCY,
-            async ({ address, token }) => getWalletTokenBalanceHistory(address, token, params.timePeriod),
+            async ({ address, token }) => getWalletTokenBalanceHistory(address, token),
         );
 
         const series = pairs.flatMap(({ address }, index) => {

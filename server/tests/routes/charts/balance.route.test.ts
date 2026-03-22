@@ -80,7 +80,9 @@ describe("charts/balance.route", () => {
         expect(response.status).toBe(200);
         const body = await response.json();
 
-        expect(getWalletTokenBalanceHistoryMock).toHaveBeenCalledWith("w1", "SOL", "30D");
+        expect(getWalletTokenBalanceHistoryMock).toHaveBeenCalled();
+        expect(getWalletTokenBalanceHistoryMock.mock.calls[0]?.[0]).toBe("w1");
+        expect(getWalletTokenBalanceHistoryMock.mock.calls[0]?.[1]).toBe("SOL");
         expect(body.pageInfo).toBeUndefined();
         expect(body.chunkInfo).toBeUndefined();
         expect(body.metadata.mode).toBe("token");

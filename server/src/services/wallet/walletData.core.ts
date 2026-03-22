@@ -87,12 +87,6 @@ export function resolveWalletProviderPolicy(envKey: string): WalletProviderPolic
   return "helius";
 }
 
-export function isWalletProviderShadowModeEnabled(): boolean {
-  const raw = String(process.env.WALLET_PROVIDER_SHADOW_MODE ?? "true")
-    .trim()
-    .toLowerCase();
-  return raw !== "false" && raw !== "0" && raw !== "no";
-}
 
 export function mapTimePeriodToBirdeyeDuration(
   timePeriod: WalletTimePeriod,
@@ -549,7 +543,6 @@ export async function enrichWalletPortfolioMetadata(
   } catch (err) {
     console.warn("[wallet-portfolio] Token metadata enrichment failed", {
       address: context.address,
-      source: context.source,
       error: err,
     });
     return { portfolio, changed: false };
@@ -917,40 +910,4 @@ export function resolvePnLAggregationByGap(
 
   return aggregation;
 }
-
-// export function resolveChunkWindow(args: {
-//   requestedFromSec: number;
-//   requestedToSec: number;
-//   chunkToSec?: number;
-//   limit: number;
-//   intervalSec: number;
-// }): {
-//   chunkFromSec: number;
-//   chunkToSec: number;
-//   hasMore: boolean;
-//   nextChunkToSec: number | null;
-// } {
-//   const requestedFromSec = Math.max(0, Math.floor(args.requestedFromSec));
-//   const requestedToSec = Math.max(requestedFromSec, Math.floor(args.requestedToSec));
-//   const normalizedToSec = Math.min(
-//     requestedToSec,
-//     Math.max(requestedFromSec, Math.floor(args.chunkToSec ?? requestedToSec)),
-//   );
-//   const safeLimit = Math.max(1, Math.floor(args.limit));
-//   const safeIntervalSec = Math.max(1, Math.floor(args.intervalSec));
-//   const windowSpanSec = Math.max(safeIntervalSec, (safeLimit - 1) * safeIntervalSec);
-
-//   const chunkFromSec = Math.max(requestedFromSec, normalizedToSec - windowSpanSec);
-//   const hasMore = chunkFromSec > requestedFromSec;
-//   const nextChunkToSec = hasMore
-//     ? Math.max(requestedFromSec, chunkFromSec - safeIntervalSec)
-//     : null;
-
-//   return {
-//     chunkFromSec,
-//     chunkToSec: normalizedToSec,
-//     hasMore,
-//     nextChunkToSec,
-//   };
-// }
 

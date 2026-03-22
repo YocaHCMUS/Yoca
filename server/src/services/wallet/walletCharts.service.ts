@@ -485,15 +485,13 @@ function fillPortfolioValueGaps(
 
 export async function getCumulativePnL(
     address: string,
-    timePeriod: WalletTimePeriod = "30D",
-    aggregation: PnLAggregation = "daily",
 ): Promise<WalletCumulativePnLResult> {
+    const timePeriod: WalletTimePeriod = "30D";
     const rangeSec = resolveWalletTimeRangeSec(timePeriod);
     const fromMs = rangeSec.fromSec * 1000;
     const toMs = rangeSec.toSec * 1000;
 
     try {
-        // ✨ NEW: Use snapshot-based portfolio values instead of transaction reconstruction
         const snapshots = await getHistoricalPortfolioValueSeriesFromSnapshots(
             address,
             fromMs,
@@ -549,14 +547,6 @@ export function resolveWalletTimeRangeSec(
         fromSec: Math.max(0, Math.floor(fromMs / 1000)),
         toSec: nowSec,
     };
-}
-
-function resolveBalanceIntervalMs(timePeriod: WalletTimePeriod): number {
-    if (timePeriod === "7D") {
-        return 6 * 60 * 60 * 1000;
-    }
-
-    return 24 * 60 * 60 * 1000;
 }
 
 function emptyPnL(): WalletCumulativePnLResult {

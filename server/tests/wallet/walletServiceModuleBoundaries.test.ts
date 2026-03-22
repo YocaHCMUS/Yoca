@@ -125,7 +125,7 @@ describe("wallet service module boundaries", () => {
     // });
 
     it("forwards token balance and enrichment calls to core", async () => {
-        await getWalletTokenBalanceHistory("wallet-1", "SOL", "30D");
+        await getWalletTokenBalanceHistory("wallet-1", "SOL");
         // await getWalletTokenBalanceHistoryChunk("wallet-1", "SOL", { timePeriod: "30D", limit: 30 });
         await enrichWithSolanaTokenPrices([]);
 

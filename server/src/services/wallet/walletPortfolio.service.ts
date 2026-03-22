@@ -1,6 +1,6 @@
 import { WALLET_PORTFOLIO_TTL_MS } from "@sv/config/constants.js";
 import type { PnLDataPoint, PriceTimelinePoint, WalletPortfolioItem, WalletTransactionHelius } from "./dtos/walletDataObjects.js";
-import { buildSnapshotTimestamps, calculatePortfolioValueUsd, enrichWalletPortfolioMetadata, isWalletProviderShadowModeEnabled, normalizeMint, normalizePriceTimeline, resolveWalletProviderPolicy, toCurrentPriceFallback } from "./walletData.core.js";
+import { buildSnapshotTimestamps, calculatePortfolioValueUsd, enrichWalletPortfolioMetadata, normalizeMint, normalizePriceTimeline, resolveWalletProviderPolicy, toCurrentPriceFallback } from "./walletData.core.js";
 import { normalizeBalanceDelta, roundUsd } from "./walletNormalization.utils.js";
 import { db } from "@sv/db/index.js";
 import { walletPortfolioCache } from "@sv/db/schema.js";
@@ -15,9 +15,6 @@ import { getWalletTransactionHelius } from "./walletHistory.service.js";
 export async function getWalletPortfolio(
     address: string,
 ): Promise<WalletPortfolioItem[]> {
-    const providerPolicy = resolveWalletProviderPolicy("WALLET_PORTFOLIO_PROVIDER");
-    const shadowModeEnabled = isWalletProviderShadowModeEnabled();
-
     // 0) DB-first: use cached portfolio if fresh
     const portfolioThreshold = new Date(Date.now() - WALLET_PORTFOLIO_TTL_MS);
     const cachedPortfolio = await db
@@ -54,68 +51,23 @@ export async function getWalletPortfolio(
         // fall through to external fetch instead of treating it as valid.
     }
 
-    const shouldUseBirdeyeFirst = providerPolicy !== "helius";
     let selectedPortfolio: WalletPortfolioItem[] = [];
     let selectedSource: "birdeye" | "helius" | "none" = "none";
-
-    if (shouldUseBirdeyeFirst) {
-        try {
-            const birdeyePortfolio = await fetchBirdeyePortfolio(address);
-            if (
-                birdeyePortfolio.items.length > 0 ||
-                Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0
-            ) {
-                selectedPortfolio = birdeyePortfolio.items;
-                selectedSource = "birdeye";
-            }
-        } catch (err) {
-            console.error("Failed to fetch Solana portfolio from Birdeye", err);
+    try {
+        const birdeyePortfolio = await fetchBirdeyePortfolio(address);
+        if (
+            birdeyePortfolio.items.length > 0 ||
+            Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0
+        ) {
+            selectedPortfolio = birdeyePortfolio.items;
+            selectedSource = "birdeye";
         }
-    }
-
-    if (selectedPortfolio.length === 0) {
-        try {
-            selectedPortfolio = await fetchHeliusSolanaPortfolio(address);
-            selectedSource = selectedPortfolio.length > 0 ? "helius" : selectedSource;
-        } catch (err) {
-            console.error("Failed to fetch Solana portfolio from Helius", err);
-        }
+    } catch (err) {
+        console.error("Failed to fetch Solana portfolio from Birdeye", err);
     }
 
     if (selectedPortfolio.length === 0) {
         return [];
-    }
-
-    if (shadowModeEnabled && providerPolicy !== "helius") {
-        try {
-            const comparisonPortfolio = await fetchHeliusSolanaPortfolio(address);
-            const selectedValue = selectedPortfolio.reduce(
-                (sum, item) => sum + Number(item.valueUsd ?? 0),
-                0,
-            );
-            const heliusValue = comparisonPortfolio.reduce(
-                (sum, item) => sum + Number(item.valueUsd ?? 0),
-                0,
-            );
-
-            console.log("[wallet-provider-shadow][portfolio]", {
-                address,
-                policy: providerPolicy,
-                sourceUsed: selectedSource,
-                selectedItems: selectedPortfolio.length,
-                heliusItems: comparisonPortfolio.length,
-                selectedValueUsd: selectedValue,
-                heliusValueUsd: heliusValue,
-                valueDiffUsd: Math.round((selectedValue - heliusValue) * 100) / 100,
-            });
-        } catch (shadowErr) {
-            console.warn("[wallet-provider-shadow][portfolio] Helius comparison failed", {
-                address,
-                policy: providerPolicy,
-                sourceUsed: selectedSource,
-                error: shadowErr,
-            });
-        }
     }
 
     const enrichedPortfolio = await enrichWalletPortfolioMetadata(selectedPortfolio, {

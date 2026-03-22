@@ -32,7 +32,7 @@ const app = new Hono().get("/", async (c) => {
             );
         }
 
-        const data = await getHistoricalPnLData(wallets, params.period, params.aggregation);
+        const data = await getHistoricalPnLData(wallets);
         return c.json(data, 200);
     } catch (error) {
         if (error instanceof z.ZodError) {
