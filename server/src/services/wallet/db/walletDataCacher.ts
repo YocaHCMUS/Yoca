@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 
 export async function saveSwapsCache(
@@ -253,6 +253,55 @@ export async function saveTransfersCache(
       });
   } catch (err) {
     console.error("Failed to save wallet transfers cache", err);
+  }
+}
+
+/**
+ * Save wallet balance history cache to database
+ * Only caches historical data up to yesterday's end; today's point is never persisted
+ * @param address - wallet address
+ * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
+ * @param points - balance data points (historical only, excludes today)
+ * @param coveredFromMs - earliest UTC day-start millisecond in cached data
+ * @param coveredToMs - latest UTC day-start millisecond in cached data (never includes today)
+ */
+/**
+ * Save wallet balance history cache to database
+ * Only caches historical data up to yesterday's end; today's point is never persisted
+ * @param address - wallet address
+ * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
+ * @param points - balance data points (historical only, excludes today)
+ * @param coveredFromMs - earliest UTC day-start millisecond in cached data
+ * @param coveredToMs - latest UTC day-start millisecond in cached data (never includes today)
+ */
+export async function saveBalanceHistoryCache(
+  address: string,
+  timePeriod: WalletTimePeriod,
+  points: BalanceDataPoint[],
+  coveredFromMs: number,
+  coveredToMs: number,
+): Promise<void> {
+  try {
+    await db
+      .insert(walletBalanceHistoryCache)
+      .values({
+        address,
+        timePeriod,
+        data: points as any,
+        coveredFromMs,
+        coveredToMs,
+      })
+      .onConflictDoUpdate({
+        target: [walletBalanceHistoryCache.address, walletBalanceHistoryCache.timePeriod],
+        set: {
+          data: points as any,
+          fetchedAt: new Date(),
+          coveredFromMs,
+          coveredToMs,
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet balance history cache", err);
   }
 }
 

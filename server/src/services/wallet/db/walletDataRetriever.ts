@@ -12,6 +12,7 @@ import {
 	walletTransactions,
 	walletTransactionsMeta,
 	walletTransferMeta,
+	walletBalanceHistoryCache,
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
@@ -19,6 +20,8 @@ import type {
 	WalletTransaction,
 	WalletTransactionHelius,
 	WalletTransfer,
+	BalanceDataPoint,
+	WalletTimePeriod,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export type CachedRange = {
@@ -46,6 +49,7 @@ const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
 	30,
 	Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000),
 );
+const BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function toIsoTimestamp(value: unknown): string {
 	if (value instanceof Date) {
@@ -608,5 +612,43 @@ export async function getCachedWalletSwapsChunk(
 		items: pageItems,
 		nextCursor,
 		hasMore,
+	};
+}
+
+/**
+ * Retrieve cached wallet balance history from database
+ * @param address - wallet address
+ * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
+ * @returns cached balance history with coverage metadata, or null if not fresh
+ */
+export async function getCachedWalletBalanceHistory(
+	address: string,
+	timePeriod: WalletTimePeriod,
+): Promise<{
+	points: BalanceDataPoint[];
+	coveredFromMs: number;
+	coveredToMs: number;
+} | null> {
+	const threshold = new Date(Date.now() - BALANCE_HISTORY_CACHE_TTL_MS);
+	const rows = await db
+		.select()
+		.from(walletBalanceHistoryCache)
+		.where(
+			and(
+				eq(walletBalanceHistoryCache.address, address),
+				eq(walletBalanceHistoryCache.timePeriod, timePeriod),
+				gte(walletBalanceHistoryCache.fetchedAt, threshold),
+			),
+		)
+		.limit(1);
+
+	if (rows.length === 0) {
+		return null;
+	}
+
+	return {
+		points: rows[0].data,
+		coveredFromMs: Number(rows[0].coveredFromMs),
+		coveredToMs: Number(rows[0].coveredToMs),
 	};
 }

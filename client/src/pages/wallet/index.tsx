@@ -676,7 +676,7 @@ export default function WalletPage() {
             <BalanceChart
               minHeight={460}
               initialFilters={{
-                timePeriod: "7D",
+                timePeriod: "30D",
                 wallets: [address],
               }}
               balanceChartMode="total"

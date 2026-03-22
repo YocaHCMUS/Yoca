@@ -61,3 +61,31 @@ export function normalizeBirdeyeTimeParam(time?: string): string | undefined {
 
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
+
+/**
+ * Normalize a timestamp to UTC day start (00:00:00) and format as YYYY-MM-DD HH:mm:ss
+ * @param timestamp - milliseconds since epoch
+ * @returns formatted string in Birdeye format with UTC day start
+ */
+export function formatToBirdeyeDayStart(timestamp: number): string {
+  const date = new Date(timestamp);
+  // Set to UTC day start
+  date.setUTCHours(0, 0, 0, 0);
+
+  const yyyy = String(date.getUTCFullYear());
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd} 00:00:00`;
+}
+
+/**
+ * Convert a timestamp to UTC day start milliseconds
+ * @param timestamp - milliseconds since epoch
+ * @returns milliseconds of UTC day start
+ */
+export function toUtcDayStartMs(timestamp: number): number {
+  const date = new Date(timestamp);
+  date.setUTCHours(0, 0, 0, 0);
+  return date.getTime();
+}
