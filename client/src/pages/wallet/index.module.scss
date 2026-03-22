@@ -75,6 +75,47 @@
   z-index: 10;
 }
 
+.exportMenuWrapper {
+  position: relative;
+}
+
+.exportMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 240px;
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  z-index: 50;
+}
+
+.exportMenuItem {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $layer-hover-01;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: $text-disabled;
+  }
+}
+
 .rightContent {
   flex: 1;
   display: flex;

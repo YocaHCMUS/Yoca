@@ -106,8 +106,12 @@ const app = new Hono().post("/pdf", async (c) => {
         printBackground: true,
         preferCSSPageSize: true,
       });
+      const pdfArrayBuffer = pdfBuffer.buffer.slice(
+        pdfBuffer.byteOffset,
+        pdfBuffer.byteOffset + pdfBuffer.byteLength,
+      );
 
-      return new Response(pdfBuffer, {
+      return new Response(pdfArrayBuffer, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",

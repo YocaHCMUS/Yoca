@@ -21,7 +21,9 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
 import { Button } from "@carbon/react";
-import { Download } from "@carbon/icons-react";
+import { ChevronDown, Download } from "@carbon/icons-react";
+import * as XLSX from "xlsx";
+import JSZip from "jszip";
 import {
   fetchWalletCounterparties,
   fetchWalletPortfolio,
@@ -78,6 +80,10 @@ export default function WalletPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isDataExporting, setIsDataExporting] = useState(false);
+  const [isChartsExporting, setIsChartsExporting] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Resizable divider
   const [leftWidth, setLeftWidth] = useState(420);
@@ -114,6 +120,21 @@ export default function WalletPage() {
       window.removeEventListener('mouseup', onMouseUp);
     };
   }, []);
+
+  useEffect(() => {
+    const onOutsideClick = (event: MouseEvent) => {
+      if (!exportMenuRef.current) return;
+      if (!exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener("mousedown", onOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutsideClick);
+    };
+  }, [isExportMenuOpen]);
 
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
@@ -660,6 +681,98 @@ export default function WalletPage() {
     }
   }
 
+  function handleExportDataXlsx() {
+    try {
+      setIsDataExporting(true);
+
+      const workbook = XLSX.utils.book_new();
+
+      const swapSheet = XLSX.utils.aoa_to_sheet([swapHeaders, ...swapData]);
+      XLSX.utils.book_append_sheet(workbook, swapSheet, "Swaps");
+
+      const transferSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...transferData]);
+      XLSX.utils.book_append_sheet(workbook, transferSheet, "Transfers");
+
+      const inflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...inflowData]);
+      XLSX.utils.book_append_sheet(workbook, inflowSheet, "Inflow");
+
+      const outflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...outflowData]);
+      XLSX.utils.book_append_sheet(workbook, outflowSheet, "Outflow");
+
+      const counterpartySheet = XLSX.utils.aoa_to_sheet([
+        counterpartyHeaders,
+        ...counterpartyTableData,
+      ]);
+      XLSX.utils.book_append_sheet(workbook, counterpartySheet, "Counterparties");
+
+      const portfolioSheet = XLSX.utils.aoa_to_sheet([portfolioHeaders, ...portfolioData]);
+      XLSX.utils.book_append_sheet(workbook, portfolioSheet, "Portfolio");
+
+      const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, -5)}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+    } catch (error) {
+      console.error("[WalletPage] Failed to export XLSX:", error);
+      window.alert("Failed to export data (.xlsx). Please try again.");
+    } finally {
+      setIsDataExporting(false);
+      setIsExportMenuOpen(false);
+    }
+  }
+
+  async function handleExportChartsZip() {
+    try {
+      setIsChartsExporting(true);
+
+      const root = document.querySelector(`.${styles.rightContent}`);
+      if (!root) {
+        throw new Error("Chart container not found");
+      }
+
+      const zip = new JSZip();
+      const imagesFolder = zip.folder("charts");
+      if (!imagesFolder) {
+        throw new Error("Unable to create ZIP folder");
+      }
+
+      const canvases = Array.from(root.querySelectorAll("canvas"));
+      if (canvases.length === 0) {
+        throw new Error("No chart images found to export");
+      }
+
+      const addCanvasBlob = async (canvas: HTMLCanvasElement, index: number) => {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png"),
+        );
+        if (!blob) return;
+        imagesFolder.file(`chart-${index + 1}.png`, blob);
+      };
+
+      await Promise.all(canvases.map((canvas, index) => addCanvasBlob(canvas, index)));
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `wallet-charts-${address?.slice(0, 8) || "overview"}-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, -5)}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("[WalletPage] Failed to export charts ZIP:", error);
+      window.alert("Failed to export charts (.zip). Please try again.");
+    } finally {
+      setIsChartsExporting(false);
+      setIsExportMenuOpen(false);
+    }
+  }
+
   if (!address) {
     return (
       <PageWrapper>
@@ -691,15 +804,48 @@ export default function WalletPage() {
         <div className={styles.rightColumn}>
           <div className={styles.rightHeader}>
             <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
-            <Button
-              size="sm"
-              kind="secondary"
-              renderIcon={Download}
-              onClick={handleExportPagePdf}
-              disabled={isPagePdfExporting}
-            >
-              {isPagePdfExporting ? `${tr("charts.exportPDF")}...` : tr("charts.exportPDF")}
-            </Button>
+            <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
+              <Button
+                size="sm"
+                kind="secondary"
+                renderIcon={ChevronDown}
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                disabled={isPagePdfExporting || isDataExporting || isChartsExporting}
+              >
+                Export
+              </Button>
+              {isExportMenuOpen && (
+                <div className={styles.exportMenu}>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportDataXlsx}
+                    disabled={isDataExporting}
+                  >
+                    <Download size={16} />
+                    {isDataExporting ? "Exporting data..." : "Export Data (.xlsx)"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportChartsZip}
+                    disabled={isChartsExporting}
+                  >
+                    <Download size={16} />
+                    {isChartsExporting ? "Exporting charts..." : "Export Charts (.zip images)"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.exportMenuItem}
+                    onClick={handleExportPagePdf}
+                    disabled={isPagePdfExporting}
+                  >
+                    <Download size={16} />
+                    {isPagePdfExporting ? "Exporting report..." : "Export Report (.pdf)"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.rightContent}>
