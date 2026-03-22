@@ -676,12 +676,6 @@ export async function getWalletOverview(
   return overview;
 }
 
-export async function getWalletTransactionHelius(
-  address: string,
-  options?: WalletHistoryQueryOptions,
-): Promise<{ address: string; transactions: WalletTransactionHelius[] }> {
-  return getWalletTransactionHeliusFromSources(address, options);
-}
 
 /**
  * PURPOSE: Aggregate per-exchange swap activity for a wallet.

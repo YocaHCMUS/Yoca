@@ -12,46 +12,80 @@ import {
 } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
 import { getHistoricalPortfolioValueSeries, getWalletPortfolio } from "./walletPortfolio.service.js";
+import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.service.js";
+import { time } from "console";
+
+function timePeriodToCountAndLoop(timePeriod: WalletTimePeriod): { count: number; loop: number } {
+    switch (timePeriod) {
+        case "7D":
+            return { count: 7, loop: 1 };
+        case "30D":
+            return { count: 30, loop: 1 };
+        case "90D":
+            return { count: 30, loop: 3 };
+        case "1Y":
+            return { count: 30, loop: 12 };
+        case "All":
+            return { count: 30, loop: 12 };
+        case "24H":
+            return { count: 1, loop: 1 };
+        default:
+            return { count: 30, loop: 1 };
+    }
+}
+
+function toBirdeyeTimeString(timestamp: number): string {
+    const date = new Date(timestamp);
+    const yyyy = String(date.getUTCFullYear());
+    const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(date.getUTCDate()).padStart(2, "0");
+    const hh = String(date.getUTCHours()).padStart(2, "0");
+    const min = String(date.getUTCMinutes()).padStart(2, "0");
+    const ss = String(date.getUTCSeconds()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+}
+
 
 export async function getWalletBalanceHistory(
     address: string,
     timePeriod: WalletTimePeriod = "30D",
 ): Promise<BalanceDataPoint[]> {
-    const rangeSec = resolveWalletTimeRangeSec(timePeriod);
-    const fromMs = rangeSec.fromSec * 1000;
-    const toMs = rangeSec.toSec * 1000;
-    const intervalMs = resolveBalanceIntervalMs(timePeriod);
+    const balanceHistory: BalanceDataPoint[] = [];
 
     try {
-        const points = await getHistoricalPortfolioValueSeries(address, fromMs, toMs, intervalMs);
-        if (points.length > 0) {
-            return points.map((point) => ({
-                timestamp: point.timestamp,
-                value: point.value,
-                date: new Date(point.timestamp).toISOString(),
-            }));
-        }
-    } catch (error) {
-        console.error("[WalletBalanceHistory] failed to build historical series", {
-            address,
-            timePeriod,
-            error,
-        });
-    }
+        const { count, loop } = timePeriodToCountAndLoop(timePeriod);
+        // format: "YYYY-MM-DD HH:mm:ss"
+        let timestampCursor = toBirdeyeTimeString(Date.now());
 
-    const fallbackValue = await getFallbackPortfolioValueUsd(address);
-    return [
-        {
-            timestamp: fromMs,
-            value: fallbackValue,
-            date: new Date(fromMs).toISOString(),
-        },
-        {
-            timestamp: toMs,
-            value: fallbackValue,
-            date: new Date(toMs).toISOString(),
-        },
-    ];
+        for (let i = 0; i < loop; i++) {
+            const data = await fetchBirdeyeNetworthHistory(address, { count, time: timestampCursor });
+            if (data?.history.length) {
+                for (const point of data.history) {
+                    balanceHistory.push({
+                        timestamp: new Date(point.timestamp).getTime(),
+                        value: point.netWorthUsd,
+                        date: new Date(point.timestamp).toISOString(),
+                        changeUsd: point.netWorthChangeUsd ?? 0,
+                        changePercent: point.netWorthChangePercent ?? 0,
+                    });
+                }
+
+            } else {
+                console.warn(`[WalletBalanceHistory] Data limit reached`);
+                break;
+            }
+
+            timestampCursor = toBirdeyeTimeString(balanceHistory[balanceHistory.length - 1].timestamp - 1000 * 24 * 60 * 60); // move cursor back by 1 day to avoid fetching the same last point again
+        }
+
+        // cache the most recent balance with a 5 minute ttl for quick retrieval in other endpoints
+
+        return balanceHistory;
+    }
+    catch (error) {
+        console.error("[WalletBalanceHistory] Error fetching balance history for address:", address, "timePeriod:", timePeriod, "error:", error);
+        return [];
+    }
 }
 
 export async function getCumulativePnL(

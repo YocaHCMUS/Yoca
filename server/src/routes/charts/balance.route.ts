@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { generateBalanceTrend } from "@sv/services/mockChartData.service.js";
 import { getWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service.js";
 import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service.js";
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
@@ -21,8 +20,7 @@ const app = new Hono().get("/", async (c) => {
         const params = balanceRequestSchema.parse(c.req.query());
 
         if (!params.wallets) {
-            const data = generateBalanceTrend(params.timePeriod, params.tokens, params.wallets);
-            return c.json(data, 200);
+            return c.json({ error: "Validation error", message: "wallets is required" }, 400);
         }
 
         const walletAddresses = params.wallets
@@ -38,8 +36,7 @@ const app = new Hono().get("/", async (c) => {
             : [];
 
         if (walletAddresses.length === 0) {
-            const data = generateBalanceTrend(params.timePeriod, params.tokens, params.wallets);
-            return c.json(data, 200);
+            return c.json({ error: "Validation error", message: "Invalid wallet addresses provided" }, 400);
         }
 
         if (walletAddresses.length > MAX_CHART_WALLETS) {
@@ -157,10 +154,7 @@ const app = new Hono().get("/", async (c) => {
         }
 
         console.error("[BalanceChart] Error fetching wallet balance history:", error);
-        const query = c.req.query();
-        const timePeriod = String(query.timePeriod ?? "30D") as "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
-        const data = generateBalanceTrend(timePeriod, query.tokens, query.wallets);
-        return c.json(data, 200);
+        return c.json({ error: "[BalanceChart] Error fetching wallet balance history:", details: error }, 500);
     }
 });
 

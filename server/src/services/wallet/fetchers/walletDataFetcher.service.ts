@@ -1125,6 +1125,7 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
   };
 }
 
+
 export async function fetchBirdeyeNetworthHistory(
   address: string,
   options?: {

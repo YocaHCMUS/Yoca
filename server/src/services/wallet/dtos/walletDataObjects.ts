@@ -208,6 +208,8 @@ export interface BalanceDataPoint {
     timestamp: number;
     value: number;
     date: string;
+    changeUsd?: number;
+    changePercent?: number;
 }
 
 export interface PnLDataPoint {
