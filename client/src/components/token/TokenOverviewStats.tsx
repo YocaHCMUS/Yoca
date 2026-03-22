@@ -1,6 +1,7 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ChevronDown, Information } from "@carbon/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { TrendNum } from "../TrendNum";
 import styles from "./TokenOverviewStats.module.scss";
 
 type MarketData = {
@@ -135,32 +136,12 @@ const InfoDropdown = ({ items }: { items: DropdownItemType[] }) => {
   );
 };
 
-export const TrendNum = ({
-  value,
-  formatter,
-}: {
-  value: number | null;
-  formatter: (value: number | null) => string;
-}) => {
-  if (!value) {
-    return <span className={styles.neutral}>{formatter(value)}</span>;
-  } else if (value > 0) {
-    return <span className={styles.positive}>▲ {formatter(value)}</span>;
-  } else {
-    return (
-      <span className={styles.negative}>▼ {formatter(Math.abs(value))}</span>
-    );
-  }
-};
-
 export const TokenOverviewStats = ({
   meta,
   data,
   customPriceChange,
 }: TokenOverviewStatsProps) => {
   const { tr, fmt } = useLocalization();
-
-  fmt.num.currency;
 
   // Compute 24h range position as a percentage for the indicator dot
   // Expand range to include current price if it falls outside low/high (cache staleness)

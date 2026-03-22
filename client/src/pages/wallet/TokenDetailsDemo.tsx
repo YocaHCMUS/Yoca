@@ -1,5 +1,6 @@
 import client from "@/api/main";
 import Tble from "@/components/Tble";
+import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
@@ -13,7 +14,7 @@ export function TokenDetailsDemo() {
   }>();
 
   if (!address) {
-    return <>Fuck</>;
+    return <></>;
   }
 
   const { tr, fmt } = useLocalization();
@@ -32,10 +33,25 @@ export function TokenDetailsDemo() {
           <Link>{fmt.text.address(details.tokenAddress)}</Link>
         </Tooltip>
       ),
-      balance: fmt.num.decimal(details.holding),
-      pnl: fmt.num.currency(details.unrealizedUsd + details.realizedProfitUsd),
-      realizedPnl: fmt.num.currency(details.realizedProfitUsd),
-      unrealizedPnl: fmt.num.currency(details.unrealizedUsd),
+      balance: fmt.num.decimal(details.balanceAmount),
+      pnl: (
+        <TrendNum
+          value={details.unrealizedProfitUsd + details.realizedProfitUsd}
+          formatter={fmt.num.currency}
+        />
+      ),
+      realizedPnl: (
+        <TrendNum
+          value={details.realizedProfitUsd}
+          formatter={fmt.num.currency}
+        />
+      ),
+      unrealizedPnl: (
+        <TrendNum
+          value={details.unrealizedProfitUsd}
+          formatter={fmt.num.currency}
+        />
+      ),
       bought: fmt.num.decimal(details.totalBoughtAmount),
       sold: fmt.num.decimal(details.totalSoldAmount),
       avgBuyPrice: fmt.num.currency(details.avgBuyCost),
