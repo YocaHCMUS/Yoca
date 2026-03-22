@@ -22,39 +22,6 @@ $font-family: 'Inter', system-ui, sans-serif;
     flex-wrap: wrap;
     gap: 8px;
 }
-
-.modeToggle {
-    display: flex;
-    gap: 2px;
-    background: $layer-01;
-    border-radius: 6px;
-    padding: 3px;
-}
-
-.modeBtn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 5px 12px;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-secondary;
-    font-family: $font-family;
-    transition: background 0.15s, color 0.15s;
-
-    &.active {
-        background: $background;
-        color: $text-primary;
-        font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-
-    &:hover:not(.active) {
-        color: $text-primary;
-    }
-}
-
 // ===== Range buttons =====
 .rangeButtons {
     display: flex;
@@ -87,7 +54,7 @@ $font-family: 'Inter', system-ui, sans-serif;
 
 // ===== Chart area =====
 .chartWrapper {
-    height: 400px;
+    height: 520px;
     position: relative;
     padding: 12px 0 4px;
 }

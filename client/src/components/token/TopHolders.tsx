@@ -86,10 +86,10 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             headers={[
               { key: "rank", header: "#" },
               { key: "address", header: tr("token.topHolders.address") },
-              { key: "percentage", header: tr("token.topHolders.percent") },
+              { key: "percentage", header: tr("token.topHolders.percent"), align: "end" },
             ]}
             loading={false}
-            height={300}
+            height="auto"
             rows={holders.map((holder: any, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,

@@ -58,7 +58,7 @@ export function TokenDetailsDemo() {
         <Stack orientation="horizontal" gap={2}>
           <TknImg
             size={32}
-            loading={tokenMeta.isLoading}
+            // loading={tokenMeta.isLoading}
             src={tokenMeta.data?.[details.tokenAddress]?.imageUrl}
           />
           <Stack>

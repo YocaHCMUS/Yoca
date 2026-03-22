@@ -8,9 +8,12 @@
 
 // ===== Layout =====
 .tokenPage {
-    height: 100%; // Changed from 100vh to 100% to fit within PageWrapper
-    overflow: hidden; // Prevent body scroll
+    min-height: 100vh;
     background: $background;
+
+    * {
+        font-family: 'Inter', sans-serif !important;
+    }
 }
 
 // ===== Grid Layout =====
@@ -25,8 +28,8 @@
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 0;
-    height: calc(100vh - 48px); // Fixed height so columns can scroll independently
-    overflow: hidden;
+    min-height: calc(100vh - 48px);
+
 
     @media (min-width: 1024px) {
         grid-template-columns: 2fr 7fr;
@@ -42,8 +45,6 @@
     order: 1;
     min-width: 0;
     border-right: 1px solid $border-subtle;
-    height: 100%; // Fill grid height
-    overflow-y: auto; // Independent scroll
 
     // Hide scrollbar for Chrome, Safari and Opera
     &::-webkit-scrollbar {
@@ -84,8 +85,15 @@
     gap: 0;
     order: 2;
     min-width: 0;
-    height: 100%; // Fill grid height
-    overflow-y: auto; // Independent scroll
+
+    // Hide scrollbar for Chrome, Safari and Opera
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    // Hide scrollbar for IE, Edge and Firefox
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 // Utility
