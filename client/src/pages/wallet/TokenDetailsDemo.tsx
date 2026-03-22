@@ -1,10 +1,11 @@
 import client from "@/api/main";
+import { CpyBtn } from "@/components/CpyBtn";
 import Tble from "@/components/Tble";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { Link, Tooltip } from "@carbon/react";
+import { Link, Stack, Tooltip } from "@carbon/react";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 
@@ -19,7 +20,7 @@ export function TokenDetailsDemo() {
 
   const { tr, fmt } = useLocalization();
 
-  const tokenDetails = useGet(client.api.wallets.tokens[":address"], 200, {
+  const tokenDetails = useGet(client.api.wallets[":address"].tokens, 200, {
     param: { address },
   });
 
@@ -29,9 +30,25 @@ export function TokenDetailsDemo() {
     return tokenDetails.data.map((details) => ({
       id: details.tokenAddress,
       token: (
-        <Tooltip label={details.tokenAddress}>
-          <Link>{fmt.text.address(details.tokenAddress)}</Link>
-        </Tooltip>
+        <Stack orientation="horizontal" gap={2}>
+          <img width={48} src="https://placehold.co/48x48" />
+          <Stack>
+            <Stack orientation="horizontal" style={{ alignItems: "center" }}>
+              <Tooltip label={details.tokenAddress} align="right-top">
+                <Link style={{ fontFamily: "monospace" }}>
+                  {fmt.text.address(details.tokenAddress)}
+                </Link>
+              </Tooltip>
+              <CpyBtn size={16} copyWhat={details.tokenAddress} />
+            </Stack>
+            <small>
+              {fmt.datetime.relativeShort(
+                details.lastTradeUnixTime * 1000,
+                true,
+              )}
+            </small>
+          </Stack>
+        </Stack>
       ),
       balance: fmt.num.decimal(details.balanceAmount),
       pnl: (
@@ -65,10 +82,11 @@ export function TokenDetailsDemo() {
         title={"Tokens Last Traded"}
         description={"Tokens which recent trading activities"}
         rows={rows}
+        size="xl"
         headers={[
           {
             key: "token",
-            header: "Token",
+            header: "Token/Last traded",
           },
           {
             key: "balance",
@@ -80,11 +98,11 @@ export function TokenDetailsDemo() {
           },
           {
             key: "realizedPnl",
-            header: "Realized P&L",
+            header: "Realized Profit",
           },
           {
             key: "unrealizedPnl",
-            header: "Unrealized P&L",
+            header: "Unrealized Profit",
           },
           {
             key: "bought",

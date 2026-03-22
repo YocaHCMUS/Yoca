@@ -166,17 +166,47 @@ export function defineNumberFormat(
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
+export type DateTimeFormattingInfo = {
+  datePattern: string;
+  timePattern: string;
+  dateTimePattern: string;
+  utcDateTimePattern: string;
+  relativeShortTimeConfig?: {
+    future: string;
+    past: string;
+    s: string;
+    m: string;
+    mm: string;
+    h: string;
+    hh: string;
+    d: string;
+    dd: string;
+    M: string;
+    MM: string;
+    y: string;
+    yy: string;
+  };
+};
+
 export function defineDateTimeFormat(
   langCode: string,
-  fmtInfo: {
-    datePattern: string;
-    timePattern: string;
-    dateTimePattern: string;
-    utcDateTimePattern: string;
-  },
+  fmtInfo: DateTimeFormattingInfo,
 ) {
+  // Register short relative time locale if provided
+  if (fmtInfo.relativeShortTimeConfig) {
+    const shortLocaleCode = `${langCode}-short`;
+    dayjs.locale(shortLocaleCode, {
+      relativeTime: fmtInfo.relativeShortTimeConfig,
+    });
+  }
+
   function toLocal(value: DayJsConfig) {
     return dayjs.utc(value).local().locale(langCode);
+  }
+
+  function toLocalShort(value: DayJsConfig) {
+    const shortLocaleCode = `${langCode}-short`;
+    return dayjs.utc(value).local().locale(shortLocaleCode);
   }
 
   return {
@@ -192,8 +222,14 @@ export function defineDateTimeFormat(
         : nullDisplay,
     iso: (value: DayJsConfig) =>
       value ? dayjs.utc(value).toISOString() : nullDisplay,
-    relative: (value: DayJsConfig) =>
-      value ? toLocal(value).fromNow() : nullDisplay,
+    relative: (value: DayJsConfig, noSuffix: boolean = false) =>
+      value ? toLocal(value).fromNow(noSuffix) : nullDisplay,
+    relativeShort: (value: DayJsConfig, noSuffix: boolean = false) =>
+      fmtInfo.relativeShortTimeConfig && value
+        ? toLocalShort(value).fromNow(noSuffix)
+        : value
+          ? toLocal(value).fromNow()
+          : nullDisplay,
     fromUnixSeconds: (seconds: number | null) =>
       seconds
         ? toLocal(dayjs.unix(seconds)).format(fmtInfo.dateTimePattern)

@@ -1,6 +1,6 @@
 import semStyle from "@/styles/_semantic.module.scss";
 import { Stack } from "@carbon/react";
-import { CaretUp } from "@carbon/react/icons";
+import { CaretDown, CaretUp } from "@carbon/react/icons";
 
 export function TrendNum({
   value,
@@ -20,7 +20,7 @@ export function TrendNum({
   } else {
     return (
       <Stack orientation="horizontal" className={semStyle.negative}>
-        <CaretUp size={18} /> {formatter(Math.abs(value))}
+        <CaretDown size={18} /> {formatter(Math.abs(value))}
       </Stack>
     );
   }

@@ -200,26 +200,6 @@ function parseExchangeLimit(rawLimit?: string): number | undefined {
 }
 
 const routes = router
-  .get("/tokens/:address", validate("param", addressSchema), async (c) => {
-    try {
-      const { address } = c.req.valid("param");
-      const tokenDetails = await walletService.getTokenDetails(address);
-      if (tokenDetails == null) {
-        return c.json(
-          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-          statusCode.BadGateway,
-        );
-      }
-
-      return c.json(tokenDetails, 200);
-    } catch (err) {
-      console.log(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
-    }
-  })
   .get("/overview", async (c) => {
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
@@ -491,6 +471,26 @@ const routes = router
       }
 
       return c.json(firstFunds, 200);
+    } catch (err) {
+      console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  .get("/:address/tokens", validate("param", addressSchema), async (c) => {
+    try {
+      const { address } = c.req.valid("param");
+      const tokenDetails = await walletService.getTokenDetails(address);
+      if (tokenDetails == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(tokenDetails, 200);
     } catch (err) {
       console.log(err);
       return c.json(

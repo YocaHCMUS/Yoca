@@ -53,10 +53,9 @@ export default function Tble({
   ...dataTableProps
 }: TblProps) {
   const headerLookup = Object.fromEntries(
-    headers.map((header) => [header.key, header]),
-  );
+    headers.map((h) => [h.key, h]),
+  ) as Record<string, TblHdr>;
 
-  // Show inline loading when loading and no data
   if (loading && rows.length == 0) {
     return (
       <TableContainer
@@ -85,6 +84,33 @@ export default function Tble({
       </TableContainer>
     );
   }
+
+  const cellStyle = (key: string): React.CSSProperties => {
+    const header = headerLookup[key];
+
+    if (stickyHeader) {
+      return {
+        paddingBlock: 0,
+
+        display: "flex",
+        alignItems: "center",
+        justifyContent:
+          header?.align == "end"
+            ? "flex-end"
+            : header?.align == "center"
+              ? "center"
+              : "flex-start",
+        inlineSize: header?.width,
+      };
+    }
+
+    return {
+      paddingBlock: 0,
+      textAlign: header?.align || "start",
+      verticalAlign: "middle",
+      width: header?.width,
+    };
+  };
 
   return (
     <TableContainer
@@ -115,37 +141,35 @@ export default function Tble({
           getRowProps,
           getCellProps,
         }) => (
-          <div style={{ height }}>
+          <div
+            style={{
+              height,
+              ...(stickyHeader ? {} : { tableLayout: "fixed", width: "100%" }),
+            }}
+          >
             <Table {...getTableProps()}>
               <TableHead hidden={hideHeaders}>
                 <TableRow>
                   {headers.map((header) => (
                     <TableHeader
                       {...getHeaderProps({ header })}
-                      style={{
-                        paddingBlockStart: 0,
-                        display: stickyHeader ? "flex" : "table-cell",
-                        alignItems: "center",
-                        inlineSize: headerLookup[header.key].width,
-                        justifyContent: headerLookup[header.key].align,
-                      }}
+                      key={header.key}
+                      style={cellStyle(header.key)}
                     >
                       {header.header}
                     </TableHeader>
                   ))}
                 </TableRow>
               </TableHead>
+
               <TableBody>
-                {rows.length === 0 ? (
+                {rows.length == 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={headers.length}
                       style={{
-                        textAlign: "center",
                         paddingBlockStart: 0,
-                        display: stickyHeader ? "flex" : "table-cell",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        textAlign: "center",
                         height: "100px",
                       }}
                     >
@@ -154,18 +178,12 @@ export default function Tble({
                   </TableRow>
                 ) : (
                   rows.map((row) => (
-                    <TableRow {...getRowProps({ row })}>
+                    <TableRow {...getRowProps({ row })} key={row.id}>
                       {row.cells.map((cell) => (
                         <TableCell
                           {...getCellProps({ cell })}
-                          style={{
-                            paddingBlockStart: 0,
-                            display: stickyHeader ? "flex" : "table-cell",
-                            verticalAlign: "center",
-                            inlineSize: headerLookup[cell.info.header].width,
-                            justifyContent:
-                              headerLookup[cell.info.header].align,
-                          }}
+                          key={cell.id}
+                          style={cellStyle(cell.info.header)}
                         >
                           {cell.value}
                         </TableCell>
