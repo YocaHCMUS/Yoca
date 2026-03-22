@@ -35,10 +35,12 @@ type TranslateFunction = {
 
 type NumberFormatter = typeof locale.en.format.num;
 type DatetimeFormatter = typeof locale.en.format.datetime;
+type TextFormatter = typeof locale.en.format.text;
 
 type Formatter = {
   num: NumberFormatter;
   datetime: DatetimeFormatter;
+  text: TextFormatter;
 };
 
 type LocalizationContextType = {
@@ -170,6 +172,7 @@ export function LocalizationProvider({
     return {
       num: locale[lang].format.num,
       datetime: locale[lang].format.datetime,
+      text: locale[lang].format.text,
     };
   }, [lang]);
 

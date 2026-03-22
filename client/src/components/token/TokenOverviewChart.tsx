@@ -4,6 +4,7 @@ import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import styles from "./TokenOverviewChart.module.scss";
 
 type ChartMode = "price" | "marketcap";
@@ -218,19 +219,15 @@ export function TokenOverviewChart({
     <div className={styles.container}>
       {/* Toggle: Price / Market Cap */}
       <div className={styles.toolbar}>
-        <div className={styles.modeToggle}>
-          {(["price", "marketcap"] as ChartMode[]).map((m) => (
-            <button
-              key={m}
-              className={`${styles.modeBtn} ${mode === m ? styles.active : ""}`}
-              onClick={() => setMode(m)}
-            >
-              {m === "price"
-                ? tr("token.overviewChart.price")
-                : tr("token.overviewChart.marketCap")}
-            </button>
-          ))}
-        </div>
+        <FilterSwitch
+          options={[
+            { value: "price", label: tr("token.overviewChart.price") },
+            { value: "marketcap", label: tr("token.overviewChart.marketCap") }
+          ]}
+          value={mode}
+          onChange={(v) => setMode(v as ChartMode)}
+          tooltipLabel="Chart Mode"
+        />
 
         {/* Time range buttons */}
         <div className={styles.rangeButtons}>

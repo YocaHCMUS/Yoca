@@ -1,4 +1,5 @@
 const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
+import { createHelius } from "helius-sdk";
 import { apiKeyManager } from "./api-key-manager.js";
 
 const HELIUS_SERVICE_NAME = "helius";
@@ -11,7 +12,10 @@ const MAX_429_RETRIES = 2;
  * Fetch with retry on 429. No pre-emptive rate limiting – fast by default.
  * When 429 occurs, waits (Retry-After or 65s) and retries up to MAX_429_RETRIES times.
  */
-export async function heliusFetch(url: URL, init: RequestInit): Promise<Response> {
+export async function heliusFetch(
+  url: URL,
+  init: RequestInit,
+): Promise<Response> {
   let lastResponse: Response | null = null;
   let attempts = 0;
 
@@ -31,7 +35,9 @@ export async function heliusFetch(url: URL, init: RequestInit): Promise<Response
         : DEFAULT_429_WAIT_MS;
 
     if (attempts <= MAX_429_RETRIES) {
-      console.warn(`[Helius] 429 Too Many Requests – waiting ${Math.round(waitMs / 1000)}s before retry (${attempts}/${MAX_429_RETRIES})`);
+      console.warn(
+        `[Helius] 429 Too Many Requests – waiting ${Math.round(waitMs / 1000)}s before retry (${attempts}/${MAX_429_RETRIES})`,
+      );
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
@@ -41,16 +47,20 @@ export async function heliusFetch(url: URL, init: RequestInit): Promise<Response
 
 export function getEndpoint(path: string): URL {
   const base =
-    process.env.HELIUS_API_BASE_URL && process.env.HELIUS_API_BASE_URL.length > 0
+    process.env.HELIUS_API_BASE_URL &&
+    process.env.HELIUS_API_BASE_URL.length > 0
       ? process.env.HELIUS_API_BASE_URL
       : DEFAULT_HELIUS_API_BASE_URL;
 
   return new URL(`${base}${path}`);
 }
 
-export function getRequiredHeaders(): HeadersInit {
+export function getRequiredHeaders() {
   if (!heliusKeysInitialized) {
-    apiKeyManager.initializeKeys(HELIUS_SERVICE_NAME, process.env.HELIUS_API_KEY);
+    apiKeyManager.initializeKeys(
+      HELIUS_SERVICE_NAME,
+      process.env.HELIUS_API_KEY,
+    );
     heliusKeysInitialized = true;
   }
 
@@ -65,3 +75,9 @@ export function getRequiredHeaders(): HeadersInit {
     "X-API-Key": apiKey,
   };
 }
+
+const client = createHelius({
+  apiKey: process.env.HELIUS_API_KEY!,
+});
+
+export { client };

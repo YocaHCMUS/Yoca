@@ -1,7 +1,11 @@
 import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
-import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import {
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
+} from "./util/util-format";
 
 export const langCode = "vi-VN";
 
@@ -58,7 +62,23 @@ export const format = {
     timePattern: "HH:mm",
     dateTimePattern: "D MMM YYYY HH:mm",
     utcDateTimePattern: "D MMM YYYY HH:mm [UTC]",
+    relativeShortTimeConfig: {
+      future: "trong %s",
+      past: "%s trước",
+      s: "1s",
+      m: "1p",
+      mm: "%dp",
+      h: "1g",
+      hh: "%dg",
+      d: "1n",
+      dd: "%dn",
+      M: "1t",
+      MM: "%dt",
+      y: "1n",
+      yy: "%dn",
+    },
   }),
+  text: defineTextFormat(),
 };
 
 export const translation = defineTranslation({
@@ -206,13 +226,20 @@ export const translation = defineTranslation({
     trendingTokens: "Token đang thịnh hành",
     trendingTokensDescription: "Top 10 token đang thịnh hành",
     profitableTraders: "Các ví đang có lời",
+    profitableTradersDescription: "Top 20 trader theo vốn hóa",
+    topGainers: "Top lãi nhất",
+    topGainersDesc: "Danh sách các nhà giao dịch có lợi nhuận cao nhất trong khoảng thời gian này.",
+    topLosers: "Top lỗ nhất",
+    topLosersDesc: "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
     recentTrades: "Giao dịch gần đây",
+    recentTradesDesc: "Các giao dịch hoán đổi token gần nhất trên các sàn phi tập trung.",
+    marketHeatmapDescription: "Bản đồ nhiệt các token theo vốn hóa",
     marketCap: "Vốn hóa",
     volume24h: "Khối lượng 24h",
     change24h: "Thay đổi 24h",
     price: "Giá",
     token: "Token",
-    trader: "Ví",
+    trader: "Trader",
     profits: "Lợi nhuận",
     volume: "Khối lượng",
     trades: "Giao dịch",
@@ -221,6 +248,14 @@ export const translation = defineTranslation({
     amount: "Số lượng",
     transaction: "Giao dịch",
     openInSolscan: "Mở trong Solscan",
+    addToWatchlist: "Thêm vào danh sách theo dõi",
+    removeFromWatchlist: "Xóa khỏi danh sách theo dõi",
+    marketMap: "Bản đồ thị trường",
+    clearWatchlist: "Xóa danh sách",
+    sortBy: "Sắp xếp theo",
+    more: "xem thêm",
+    watchlistEmptyTitle: "Danh sách theo dõi đang trống",
+    watchlistEmptySubtitle: "Bắt đầu gắn sao các token ở tab 'Tất cả' để theo dõi tại đây!",
   },
   // Wallet Comparison Page
   walletComparison: {

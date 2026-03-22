@@ -48,7 +48,13 @@ function ThemeToggleGlobalAction() {
   );
 }
 
-export function PageWrapper({ children }: { children: ReactNode }) {
+export function PageWrapper({
+  children,
+  noTopPadding = false,
+}: {
+  children: ReactNode;
+  noTopPadding?: boolean;
+}) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
@@ -97,12 +103,12 @@ export function PageWrapper({ children }: { children: ReactNode }) {
         />
 
         <HeaderName href="#" prefix="">
-          <Stack
+          <Stack gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
           >
             <img src={appLogo} alt="Logo" style={{ height: 36 }} />
-            <Heading style={{ fontSize: 21 }}>YOCA</Heading>
+            <strong style={{ fontSize: 21 }}>YOCA</strong>
           </Stack>
         </HeaderName>
 
@@ -244,7 +250,11 @@ export function PageWrapper({ children }: { children: ReactNode }) {
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
-      <Content id="main-content" style={{ height: "100%" }}>
+      <Content
+        id="main-content"
+        style={{ height: "100%", paddingTop: 0, paddingBottom: 0 }}
+        className={noTopPadding ? styles.contentNoTopPadding : undefined}
+      >
         {children}
       </Content>
     </>

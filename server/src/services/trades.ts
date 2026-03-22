@@ -33,7 +33,7 @@ async function fetchRecentTrades() {
     return [];
   }
 
-  const res: BDS_RecentTrades = await resp.json();
+  const res = await resp.json() as BDS_RecentTrades;
   const trades = res.data.items.map(
     (raw): RecentTradeInsert => ({
       transactionHash: raw.tx_hash,

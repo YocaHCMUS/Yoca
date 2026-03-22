@@ -8,6 +8,14 @@ export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, ".");
 
   return defineConfig({
+    css: {
+      preprocessorOptions: {
+        scss: {
+          quietDeps: true,
+          silenceDeprecations: ["if-function"],
+        },
+      },
+    },
     server: {
       port: 3000,
       allowedHosts: true,

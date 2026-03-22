@@ -116,6 +116,14 @@ function generatePagePdfFilename(baseName: string): string {
   return `${baseName}-${timestamp}.pdf`;
 }
 
+function resolvePdfExportUrl(): string {
+  const apiDomain = (import.meta.env.VITE_CLIENT_API_DOMAIN as string | undefined)?.trim();
+  if (apiDomain && apiDomain.length > 0) {
+    return `${apiDomain}/api/charts/export/pdf`;
+  }
+  return `${window.location.origin}/api/charts/export/pdf`;
+}
+
 function createPageSnapshotHtml(): { html: string; width: number; height: number } {
   const rootClone = document.documentElement.cloneNode(true) as HTMLElement;
 
@@ -214,9 +222,7 @@ export async function exportCurrentPageAsPdf(options?: {
   filename?: string;
 }): Promise<void> {
   const snapshot = createPageSnapshotHtml();
-  const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN as string;
-
-  const response = await fetch(`${apiDomain}/api/charts/export/pdf`, {
+  const response = await fetch(resolvePdfExportUrl(), {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -238,7 +244,7 @@ export async function exportCurrentPageAsPdf(options?: {
   const url = URL.createObjectURL(blob);
   const filename = options?.filename || generatePagePdfFilename(options?.baseFilename || 'page-export');
   downloadFile(url, filename);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
@@ -422,8 +428,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
         const width = Math.max(800, Math.round(chartDom.clientWidth || 1200));
         const height = Math.max(450, Math.round(chartDom.clientHeight || 600));
 
-        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN as string;
-        const response = await fetch(`${apiDomain}/api/charts/export/pdf`, {
+        const response = await fetch(resolvePdfExportUrl(), {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -445,7 +450,7 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
         const url = URL.createObjectURL(blob);
         const filename = generateFilename(baseFilename, filters, 'pdf');
         downloadFile(url, filename);
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } catch (error) {
         const err = error instanceof Error ? error : new Error('PDF export failed');
         setExportError(err);

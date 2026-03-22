@@ -1,25 +1,25 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023", "DOM"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "lib": ["ES2023"],
+    
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+
     "esModuleInterop": true,
-    "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
     "types": ["node"],
-    
+
     "outDir": "./build",
 
     "paths": {
       "@sv/*": ["./src/*"]
     },
-    
+
     "strict": true,
-    "strictNullChecks": true,
+    "strictNullChecks": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build"]
 }
-

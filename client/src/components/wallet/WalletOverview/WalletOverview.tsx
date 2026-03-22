@@ -209,12 +209,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         <>
             <div className={styles.walletOverview}>
                 {error && (
-                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#ffcccc', borderRadius: '4px', color: '#cc0000' }}>
+                    <div className={styles.errorBanner}>
                         {tr('common.error')}: {error}
                     </div>
                 )}
                 {loading && (
-                    <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#e6f2ff', borderRadius: '4px', color: '#0066cc' }}>
+                    <div className={styles.loadingBanner}>
                         {tr('common.loading')}...
                     </div>
                 )}
@@ -404,5 +404,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         </>
     );
 };
+};
 
 export default WalletOverview;
+

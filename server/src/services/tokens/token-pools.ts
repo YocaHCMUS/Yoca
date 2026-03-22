@@ -1,20 +1,20 @@
 import {
-    TOKEN_POOL_DATA_TTL_MS,
-    TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
+  TOKEN_POOL_DATA_TTL_MS,
+  TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-    tokenPoolData,
-    tokenTopPools,
-    type TokenPoolDataInsert,
-    type TokenTopPoolInsert,
+  tokenPoolData,
+  tokenTopPools,
+  type TokenPoolDataInsert,
+  type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
 import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gt } from "drizzle-orm";
 import type {
-    CG_PoolData,
-    CG_TopPoolData,
+  CG_PoolData,
+  CG_TopPoolData,
 } from "../_types/token_raw_responses.js";
 
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
@@ -126,11 +126,15 @@ async function fetchTokenTopPools(tokenAddress: string) {
     }),
   );
 
-  await db.delete(tokenTopPools).where(eq(tokenTopPools.tokenAddress, tokenAddress));
+  await db
+    .delete(tokenTopPools)
+    .where(eq(tokenTopPools.tokenAddress, tokenAddress));
 
   const rankInfo = await db
     .insert(tokenTopPools)
-    .values(poolDataList.map((pool) => ({ ...pool.rankInfo, updatedAt: new Date() })))
+    .values(
+      poolDataList.map((pool) => ({ ...pool.rankInfo, updatedAt: new Date() })),
+    )
     .onConflictDoUpdate({
       target: [tokenTopPools.tokenAddress, tokenTopPools.rank],
       set: excludedAuto(tokenTopPools, [

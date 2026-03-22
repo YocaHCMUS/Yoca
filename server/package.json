@@ -20,22 +20,24 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@coingecko/coingecko-typescript": "^3.1.0",
     "@hono/node-server": "^1.19.6",
+    "@solana/instruction-plans": "^6.5.0",
+    "@solana/kit": "^6.5.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "drizzle-seed": "^0.3.1",
     "ethers": "^6.15.0",
     "google-auth-library": "^10.5.0",
+    "helius-sdk": "^2.2.2",
     "hono": "^4.10.4",
-    "postgres": "^3.4.7",
-    "puppeteer": "^24.39.1"
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "drizzle-kit": "^0.31.7",
     "tsc-alias": "^1.8.16",
-    "tsx": "^4.20.6",
-    "vitest": "^4.0.18"
+    "tsx": "^4.20.6"
   }
 }

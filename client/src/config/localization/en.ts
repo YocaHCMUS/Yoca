@@ -1,5 +1,9 @@
 import type { ApiErrCode } from "@/api/main";
-import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import {
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
+} from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
 export const langCode = "en-US";
@@ -58,7 +62,23 @@ export const format = {
     timePattern: "hh:mm A",
     dateTimePattern: "MMM D, YYYY hh:mm A",
     utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
+    relativeShortTimeConfig: {
+      future: "in %s",
+      past: "%s ago",
+      s: "1s",
+      m: "1m",
+      mm: "%dm",
+      h: "1h",
+      hh: "%dh",
+      d: "1d",
+      dd: "%dd",
+      M: "1mo",
+      MM: "%dmo",
+      y: "1y",
+      yy: "%dy",
+    },
   }),
+  text: defineTextFormat(),
 };
 
 const ERROR = {
@@ -226,7 +246,14 @@ export const translation = {
     trendingTokens: "Trending tokens",
     trendingTokensDescription: "Top 10 trending tokens",
     profitableTraders: "Profitable traders",
+    profitableTradersDescription: "Top 20 traders by market cap",
+    topGainers: "Top Gainers",
+    topGainersDesc: "List of traders with the highest profit in the selected period.",
+    topLosers: "Top Losers",
+    topLosersDesc: "List of traders with the highest loss in the selected period.",
     recentTrades: "Recent trades",
+    recentTradesDesc: "Latest token swaps across major decentralized exchanges.",
+    marketHeatmapDescription: "Treemap of top tokens by market cap",
     marketCap: "Market Cap",
     volume24h: "24h Volume",
     change24h: "24h %",
@@ -241,6 +268,14 @@ export const translation = {
     amount: "Amount",
     transaction: "Transaction",
     openInSolscan: "Open in Solscan",
+    addToWatchlist: "Add to Watchlist",
+    removeFromWatchlist: "Remove from Watchlist",
+    marketMap: "Market Map",
+    clearWatchlist: "Clear Watchlist",
+    sortBy: "Sort by",
+    more: "more",
+    watchlistEmptyTitle: "Your Watchlist is Empty",
+    watchlistEmptySubtitle: "Start starring tokens in the 'All' tab to track them here!",
   },
   // Wallet Comparison Page
   walletComparison: {

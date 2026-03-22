@@ -1,3 +1,4 @@
+import { ELLIPSIS } from "@/config/constants";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import utc from "dayjs/plugin/utc";
@@ -9,6 +10,47 @@ type DayJsConfig = dayjs.ConfigType;
 
 type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
+
+export type AddressTruncationPosition = "start" | "middle" | "end";
+
+export interface AddressFormattingOptions {
+  maxLength?: number;
+  position?: AddressTruncationPosition;
+}
+
+export function defineTextFormat() {
+  return {
+    address(
+      address: string | null | undefined,
+      opts: AddressFormattingOptions = {},
+    ): string {
+      if (!address) return nullDisplay;
+
+      const maxLength = opts.maxLength ?? 8;
+      const position = opts.position ?? "middle";
+
+      if (address.length <= maxLength) {
+        return address;
+      }
+
+      const ellipsis = ELLIPSIS;
+
+      switch (position) {
+        case "start": {
+          return `${ellipsis}${address.slice(-maxLength)}`;
+        }
+        case "end": {
+          return `${address.slice(0, maxLength)}${ellipsis}`;
+        }
+        case "middle":
+        default: {
+          const sideLength = Math.floor(maxLength / 2);
+          return `${address.slice(0, sideLength)}${ellipsis}${address.slice(-sideLength)}`;
+        }
+      }
+    },
+  };
+}
 
 export function defineNumberFormat(
   langCode: string,
@@ -124,17 +166,47 @@ export function defineNumberFormat(
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
+export type DateTimeFormattingInfo = {
+  datePattern: string;
+  timePattern: string;
+  dateTimePattern: string;
+  utcDateTimePattern: string;
+  relativeShortTimeConfig?: {
+    future: string;
+    past: string;
+    s: string;
+    m: string;
+    mm: string;
+    h: string;
+    hh: string;
+    d: string;
+    dd: string;
+    M: string;
+    MM: string;
+    y: string;
+    yy: string;
+  };
+};
+
 export function defineDateTimeFormat(
   langCode: string,
-  fmtInfo: {
-    datePattern: string;
-    timePattern: string;
-    dateTimePattern: string;
-    utcDateTimePattern: string;
-  },
+  fmtInfo: DateTimeFormattingInfo,
 ) {
+  // Register short relative time locale if provided
+  if (fmtInfo.relativeShortTimeConfig) {
+    const shortLocaleCode = `${langCode}-short`;
+    dayjs.locale(shortLocaleCode, {
+      relativeTime: fmtInfo.relativeShortTimeConfig,
+    });
+  }
+
   function toLocal(value: DayJsConfig) {
     return dayjs.utc(value).local().locale(langCode);
+  }
+
+  function toLocalShort(value: DayJsConfig) {
+    const shortLocaleCode = `${langCode}-short`;
+    return dayjs.utc(value).local().locale(shortLocaleCode);
   }
 
   return {
@@ -150,8 +222,14 @@ export function defineDateTimeFormat(
         : nullDisplay,
     iso: (value: DayJsConfig) =>
       value ? dayjs.utc(value).toISOString() : nullDisplay,
-    relative: (value: DayJsConfig) =>
-      value ? toLocal(value).fromNow() : nullDisplay,
+    relative: (value: DayJsConfig, noSuffix: boolean = false) =>
+      value ? toLocal(value).fromNow(noSuffix) : nullDisplay,
+    relativeShort: (value: DayJsConfig, noSuffix: boolean = false) =>
+      fmtInfo.relativeShortTimeConfig && value
+        ? toLocalShort(value).fromNow(noSuffix)
+        : value
+          ? toLocal(value).fromNow()
+          : nullDisplay,
     fromUnixSeconds: (seconds: number | null) =>
       seconds
         ? toLocal(dayjs.unix(seconds)).format(fmtInfo.dateTimePattern)

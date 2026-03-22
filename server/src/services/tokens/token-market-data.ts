@@ -7,22 +7,6 @@ import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
-const DEFAULT_MARKET_DATA_DECIMALS = 9;
-
-function asRequiredNumber(value: number | null | undefined): number {
-  if (value == null || Number.isNaN(value)) {
-    return 0;
-  }
-  return value;
-}
-
-function asOptionalNumber(value: number | null | undefined): number | null {
-  if (value == null || Number.isNaN(value)) {
-    return null;
-  }
-  return value;
-}
-
 export async function fetchCgMarketDataBatched(
   cgIds: string[],
 ): Promise<CG_CoinMarkets> {
@@ -66,10 +50,10 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    fullyDilutedValuation: (raw.fully_diluted_valuation!),
+    fullyDilutedValuation: raw.fully_diluted_valuation!,
     marketCap: raw.market_cap!,
-    priceUsd: (raw.current_price!),
-    totalSupply: (raw.total_supply),
+    priceUsd: raw.current_price!,
+    totalSupply: raw.total_supply,
     updatedAt: new Date(),
     marketCapRank: raw.market_cap_rank,
     high24h: raw.high_24h,
@@ -144,20 +128,6 @@ async function fetchTokenMarketData(tokenAddresses: string[]) {
     })
     .returning();
 }
-
-// async function fetchTokenMarketDataShared(tokenAddresses: string[]) {
-//   const key = refreshKey(tokenAddresses);
-//   const inFlight = inFlightRefreshes.get(key);
-//   if (inFlight) {
-//     return inFlight;
-//   }
-
-//   const task = fetchTokenMarketData(tokenAddresses).finally(() => {
-//     inFlightRefreshes.delete(key);
-//   });
-//   inFlightRefreshes.set(key, task);
-//   return task;
-// }
 
 export async function getTokenMarketData(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {

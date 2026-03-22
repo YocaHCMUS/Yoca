@@ -1,4 +1,15 @@
-import { getEndpoint, getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
+import type {
+  WalletPortfolioItem,
+  WalletSwap,
+  WalletTransaction,
+  WalletTransactionHelius,
+  WalletTransfer,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  getEndpoint,
+  getRequiredHeaders,
+  heliusFetch,
+} from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { birdeyeGetJson, birdeyePostJson } from "@sv/services/wallet/providers/birdeye.client.js";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
@@ -80,12 +91,14 @@ function resolveHistoryWindow(
   const nowSec = Math.floor(Date.now() / 1000);
   const daySec = 24 * 60 * 60;
 
-  const fromSec = typeof from === "number"
-    ? from
-    : typeof from === "object"
-      ? from.fromSec
-      : nowSec - (daySec * (from === "24h" ? 1 : 7));
-  const toSec = typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
+  const fromSec =
+    typeof from === "number"
+      ? from
+      : typeof from === "object"
+        ? from.fromSec
+        : nowSec - daySec * (from === "24h" ? 1 : 7);
+  const toSec =
+    typeof from === "object" && from.toSec != null ? from.toSec : nowSec;
 
   return {
     fromSec,
@@ -100,12 +113,18 @@ export async function fetchAllTransactionHistoryChunk(
 ): Promise<FetchAllTransactionHistoryChunkResult> {
   const { fromSec, toSec } = resolveHistoryWindow(from);
   const maxPages = Math.min(
-    Math.max(Math.floor(options?.maxPages ?? DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES), 1),
+    Math.max(
+      Math.floor(options?.maxPages ?? DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES),
+      1,
+    ),
     MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES,
   );
   const maxTransactions = Math.min(
     Math.max(
-      Math.floor(options?.maxTransactions ?? DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS),
+      Math.floor(
+        options?.maxTransactions ??
+        DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
+      ),
       1,
     ),
     MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
@@ -117,7 +136,8 @@ export async function fetchAllTransactionHistoryChunk(
   let cursor: string | null = options?.beforeCursor ?? null;
   let pagesFetched = 0;
   let hasMoreFromProvider = false;
-  let stopReason: FetchAllTransactionHistoryChunkResult["stopReason"] = "provider-end";
+  let stopReason: FetchAllTransactionHistoryChunkResult["stopReason"] =
+    "provider-end";
 
   while (pagesFetched < maxPages && transactions.length < maxTransactions) {
     pagesFetched += 1;
@@ -316,7 +336,11 @@ export async function fetchHeliusSolanaPortfolio(
 
       const tokenAddress = String(token.mint ?? "");
       const tokenAddressKey = tokenAddress.trim().toLowerCase();
-      const fallbackKey = `${String(token.symbol ?? "").trim().toLowerCase()}::${String(token.name ?? "").trim().toLowerCase()}`;
+      const fallbackKey = `${String(token.symbol ?? "")
+        .trim()
+        .toLowerCase()}::${String(token.name ?? "")
+          .trim()
+          .toLowerCase()}`;
       const dedupeKey = tokenAddressKey || fallbackKey;
 
       if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
@@ -328,7 +352,8 @@ export async function fetchHeliusSolanaPortfolio(
       }
 
       const pricePerToken =
-        token.pricePerToken != null && !Number.isNaN(Number(token.pricePerToken))
+        token.pricePerToken != null &&
+          !Number.isNaN(Number(token.pricePerToken))
           ? Number(token.pricePerToken)
           : undefined;
       const usdValue =
@@ -350,11 +375,14 @@ export async function fetchHeliusSolanaPortfolio(
 
       addedOnPage += 1;
       if (portfolio.length >= MAX_HELIUS_PORTFOLIO_ITEMS) {
-        console.warn("[wallet-portfolio-fetch] Max portfolio item limit reached", {
-          address,
-          pageCount,
-          itemCount: portfolio.length,
-        });
+        console.warn(
+          "[wallet-portfolio-fetch] Max portfolio item limit reached",
+          {
+            address,
+            pageCount,
+            itemCount: portfolio.length,
+          },
+        );
         hasMore = false;
         break;
       }
@@ -367,11 +395,14 @@ export async function fetchHeliusSolanaPortfolio(
     if (addedOnPage === 0) {
       stagnantPageCount += 1;
       if (stagnantPageCount >= MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES) {
-        console.warn("[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch", {
-          address,
-          pageCount,
-          itemCount: portfolio.length,
-        });
+        console.warn(
+          "[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch",
+          {
+            address,
+            pageCount,
+            itemCount: portfolio.length,
+          },
+        );
         break;
       }
     } else {
@@ -415,7 +446,10 @@ export async function fetchHeliusSolanaTransactions(
   // Uses Wallet API: GET /v1/wallet/{wallet}/transfers (available on free plan).
   while (transactions.length < maxCount) {
     const url = getEndpoint(`/v1/wallet/${address}/transfers`);
-    url.searchParams.set("limit", String(Math.min(100, maxCount - transactions.length)));
+    url.searchParams.set(
+      "limit",
+      String(Math.min(100, maxCount - transactions.length)),
+    );
     if (cursor) {
       url.searchParams.set("cursor", cursor);
     }
@@ -473,7 +507,8 @@ export async function fetchHeliusSolanaTransactions(
       if (entry.direction === "in" || entry.direction === "out") {
         direction = entry.direction;
       }
-      const counterparty = typeof entry.counterparty === "string" ? entry.counterparty : "";
+      const counterparty =
+        typeof entry.counterparty === "string" ? entry.counterparty : "";
 
       let from = address;
       let to = address;
@@ -489,16 +524,16 @@ export async function fetchHeliusSolanaTransactions(
       const amountRaw =
         typeof entry.amountRaw === "number" && Number.isFinite(entry.amountRaw)
           ? entry.amountRaw
-          : undefined
+          : undefined;
       const decimal =
         typeof entry.decimal === "number" && Number.isFinite(entry.decimal)
           ? entry.decimal
-          : undefined
+          : undefined;
 
       const amount =
-        (typeof amountRaw === "number" && typeof decimal === "number")
+        typeof amountRaw === "number" && typeof decimal === "number"
           ? amountRaw / 10 ** decimal
-          : entry.amount
+          : entry.amount;
       // const amount =
       //   typeof entry.amount === "number" && Number.isFinite(entry.amount)
       //     ? entry.amount
@@ -625,10 +660,12 @@ export async function fetchMoralisSolanaSwapChunk(
   });
 
   if (!response.ok) {
-    throw new Error(`Moralis swap chunk request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Moralis swap chunk request failed: ${response.status} ${response.statusText}`,
+    );
   }
 
-  const json = await response.json();
+  const json = (await response.json()) as any;
   const rows: any[] = Array.isArray(json?.result)
     ? json.result
     : Array.isArray(json?.data)
@@ -640,7 +677,9 @@ export async function fetchMoralisSolanaSwapChunk(
     .filter((entry): entry is WalletSwap => entry != null);
 
   const nextCursor = getMoralisCursor(json);
-  const hasMore = Boolean(json?.hasMore ?? json?.pagination?.hasMore ?? nextCursor);
+  const hasMore = Boolean(
+    json?.hasMore ?? json?.pagination?.hasMore ?? nextCursor,
+  );
 
   return {
     items,
@@ -648,8 +687,6 @@ export async function fetchMoralisSolanaSwapChunk(
     hasMore,
   };
 }
-
-
 
 // function toPubkey(entry: any): string {
 //     if (!entry) return "";
@@ -664,9 +701,7 @@ export async function fetchHeliusSolanaTransfers(
 ): Promise<WalletTransfer[]> {
   const nowSec = Math.floor(Date.now() / 1000);
   const fromSec =
-    from === "24h"
-      ? nowSec - 24 * 60 * 60
-      : nowSec - 7 * 24 * 60 * 60;
+    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
 
   // Helius transfers endpoint returns at most 100 items per page.
   const HELIUS_PAGE_LIMIT = 100;
@@ -734,9 +769,7 @@ export async function fetchHeliusSolanaSwap(
 ): Promise<WalletSwap[]> {
   const nowSec = Math.floor(Date.now() / 1000);
   const fromSec =
-    from === "24h"
-      ? nowSec - 24 * 60 * 60
-      : nowSec - 7 * 24 * 60 * 60;
+    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
 
   // Helius history endpoint returns at most 100 items per page.
   const HELIUS_PAGE_LIMIT = 100;
@@ -809,9 +842,7 @@ export async function fetchMoralisSolanaSwap(
 ): Promise<WalletSwap[]> {
   const nowSec = Math.floor(Date.now() / 1000);
   const fromSec =
-    from === "24h"
-      ? nowSec - 24 * 60 * 60
-      : nowSec - 7 * 24 * 60 * 60;
+    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
 
   const MORALIS_PAGE_LIMIT = Math.min(Math.max(options?.limit ?? 100, 1), 100);
   const fromDateIso = new Date(fromSec * 1000).toISOString();
@@ -888,16 +919,24 @@ export async function fetchMoralisSolanaSwap(
 
 export type HeliusHistoryFrom = "24h" | "7d";
 
-export function timePeriodToFromSec(timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All"): number {
+export function timePeriodToFromSec(
+  timePeriod: "7D" | "30D" | "60D" | "90D" | "1Y" | "All",
+): number {
   const nowSec = Math.floor(Date.now() / 1000);
   const daySec = 24 * 60 * 60;
   switch (timePeriod) {
-    case "7D": return nowSec - 7 * daySec;
-    case "30D": return nowSec - 30 * daySec;
-    case "60D": return nowSec - 60 * daySec;
-    case "90D": return nowSec - 90 * daySec;
-    case "1Y": return nowSec - 365 * daySec;
-    case "All": return 0;
+    case "7D":
+      return nowSec - 7 * daySec;
+    case "30D":
+      return nowSec - 30 * daySec;
+    case "60D":
+      return nowSec - 60 * daySec;
+    case "90D":
+      return nowSec - 90 * daySec;
+    case "1Y":
+      return nowSec - 365 * daySec;
+    case "All":
+      return 0;
   }
 }
 
