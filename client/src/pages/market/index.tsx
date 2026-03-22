@@ -206,14 +206,13 @@ export default function MarketPage() {
   const traderRows = useMemo(() => {
     if (!topTraders.data) return [];
 
-    const truncate = (a: string) =>
-      a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
-
     return topTraders.data.map((t) => ({
       id: t.address,
       trader: (
         <Tooltip label={t.address} align="bottom-left">
-          <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+          <Link href={`/wallet/${t.address}`}>
+            {fmt.text.address(t.address)}
+          </Link>
         </Tooltip>
       ),
       pnl: fmt.num.currency(t.pnl),
@@ -285,9 +284,6 @@ export default function MarketPage() {
   const recentTradesRows = useMemo(() => {
     if (!recentTradesData.data) return [];
 
-    const truncate = (a: string) =>
-      a ? `${a.slice(0, 6)}...${a.slice(-4)}` : a;
-
     return recentTradesData.data.map((trade, index) => ({
       id: index.toString(),
       solscan: (
@@ -314,7 +310,9 @@ export default function MarketPage() {
       volume: fmt.num.compact.currency(trade.volumeUsd),
       trader: (
         <Tooltip label={trade.owner} align="bottom-left">
-          <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
+          <Link href={`/wallet/${trade.owner}`}>
+            {fmt.text.address(trade.owner)}
+          </Link>
         </Tooltip>
       ),
       time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),

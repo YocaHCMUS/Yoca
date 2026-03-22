@@ -712,8 +712,8 @@ export const walletTokenDetails = pgTable(
 
     // Cashflow
     costOfQuantitySold: decimal("cost_of_quantity_sold").notNull(),
-    totalInvested: decimal("total_invested").notNull(),
-    totalSold: decimal("total_sold").notNull(),
+    totalBoughtUsd: decimal("total_bought_usd").notNull(),
+    totalSoldUsd: decimal("total_sold_usd").notNull(),
     currentValue: decimal("current_value").notNull(),
 
     // PnL

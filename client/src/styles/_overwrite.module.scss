@@ -3,10 +3,10 @@
   //   padding-block: 0.5rem 0.5rem;
   // }
 
-  // :global(.cds--data-table) td,
-  // :global(.cds--data-table) th {
-  //   padding-inline: 1rem 0rem;
-  // }
+  :global(.cds--data-table) td,
+  :global(.cds--data-table) th {
+    padding-inline: 0.2rem 0.2rem;
+  }
 
   :global(.cds--data-table_inner-container) {
     height: 100%;
@@ -17,7 +17,7 @@
   }
 
   :global(.cds--table-header-label) {
-    text-align: inherit;
+    text-align: inherit !important;
   }
 
   :global(.cds--data-table--sticky-header) {

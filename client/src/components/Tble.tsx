@@ -154,7 +154,10 @@ export default function Tble({
                     <TableHeader
                       {...getHeaderProps({ header })}
                       key={header.key}
-                      style={cellStyle(header.key)}
+                      style={{
+                        ...cellStyle(header.key),
+                        textTransform: "uppercase",
+                      }}
                     >
                       {header.header}
                     </TableHeader>

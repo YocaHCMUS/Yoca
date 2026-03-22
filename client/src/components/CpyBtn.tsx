@@ -1,9 +1,9 @@
-import { Tooltip } from "@carbon/react";
+import { IconButton } from "@carbon/react";
 import { Checkmark, Copy } from "@carbon/react/icons";
 import { useState } from "react";
 
 type CpyBtnProps = {
-  size: number;
+  size: "xs" | "sm" | "md" | "lg" | undefined;
   copyWhat: string | number;
 };
 
@@ -17,13 +17,9 @@ export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return copied ? (
-    <Tooltip defaultOpen label="Copied!">
-      <Checkmark size={size} />
-    </Tooltip>
-  ) : (
-    <Tooltip label="Copy">
-      <Copy size={size} onClick={handleCopy} />
-    </Tooltip>
+  return (
+    <IconButton size={size} kind="ghost" label="Copy" onClick={handleCopy}>
+      {copied ? <Checkmark /> : <Copy />}
+    </IconButton>
   );
 }
