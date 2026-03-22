@@ -1,5 +1,9 @@
 import type { ApiErrCode } from "@/api/main";
-import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import {
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
+} from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
 export const langCode = "en-US";
@@ -59,6 +63,7 @@ export const format = {
     dateTimePattern: "MMM D, YYYY hh:mm A",
     utcDateTimePattern: "MMM D, YYYY HH:mm [UTC]",
   }),
+  text: defineTextFormat(),
 };
 
 const ERROR = {

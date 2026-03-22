@@ -1,7 +1,11 @@
 import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
-import { defineDateTimeFormat, defineNumberFormat } from "./util/util-format";
+import {
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
+} from "./util/util-format";
 
 export const langCode = "vi-VN";
 
@@ -59,6 +63,7 @@ export const format = {
     dateTimePattern: "D MMM YYYY HH:mm",
     utcDateTimePattern: "D MMM YYYY HH:mm [UTC]",
   }),
+  text: defineTextFormat(),
 };
 
 export const translation = defineTranslation({

@@ -1,3 +1,4 @@
+import { ELLIPSIS } from "@/config/constants";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import utc from "dayjs/plugin/utc";
@@ -9,6 +10,47 @@ type DayJsConfig = dayjs.ConfigType;
 
 type Notation = "standard" | "compact";
 type Style = "decimal" | "currency" | "percent" | "unit";
+
+export type AddressTruncationPosition = "start" | "middle" | "end";
+
+export interface AddressFormattingOptions {
+  maxLength?: number;
+  position?: AddressTruncationPosition;
+}
+
+export function defineTextFormat() {
+  return {
+    address(
+      address: string | null | undefined,
+      opts: AddressFormattingOptions = {},
+    ): string {
+      if (!address) return nullDisplay;
+
+      const maxLength = opts.maxLength ?? 8;
+      const position = opts.position ?? "middle";
+
+      if (address.length <= maxLength) {
+        return address;
+      }
+
+      const ellipsis = ELLIPSIS;
+
+      switch (position) {
+        case "start": {
+          return `${ellipsis}${address.slice(-maxLength)}`;
+        }
+        case "end": {
+          return `${address.slice(0, maxLength)}${ellipsis}`;
+        }
+        case "middle":
+        default: {
+          const sideLength = Math.floor(maxLength / 2);
+          return `${address.slice(0, sideLength)}${ellipsis}${address.slice(-sideLength)}`;
+        }
+      }
+    },
+  };
+}
 
 export function defineNumberFormat(
   langCode: string,
