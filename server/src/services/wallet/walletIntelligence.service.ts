@@ -14,8 +14,6 @@ import {
     getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 
-const DEFAULT_OVERVIEW_TIME_PERIOD = "24H";
-
 type ComposeWalletIntelligenceOptions = {
     userId?: string;
     includeUserTags?: boolean;
@@ -146,7 +144,7 @@ function buildWalletIdentityAnalysis(input: {
 
 async function getAnalysisInputs(address: string): Promise<AnalysisInputs> {
     const [overviewResult, exchangeResult] = await Promise.all([
-        getWalletOverview(address, { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD })
+        getWalletOverview(address)
             .then((overview) => ({ ok: true as const, value: overview }))
             .catch(() => ({ ok: false as const, value: null })),
         getWalletExchangeCounts(address, { limit: 100 })

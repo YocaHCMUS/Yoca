@@ -1,5 +1,10 @@
 export interface WalletOverview {
     address: string;
+    availablePeriods: WalletOverviewPeriodKey[];
+    selectedPeriod: WalletOverviewPeriodKey;
+    holdings: WalletOverviewHoldingsStats;
+    periods: Record<WalletOverviewPeriodKey, WalletOverviewPeriodStats>;
+    legacy: WalletOverviewLegacy;
     totalAssetValueUsd: number;
     tradingVolumeUsd24h: number | null;
     pnlUsdTotal: number | null;
@@ -11,9 +16,49 @@ export interface WalletOverview {
     metricsPeriod?: string;
 }
 
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+
+export interface WalletOverviewPeriodStats {
+    tradingVolumeUsd: number | null;
+    buy: {
+        transactionCount: number | null;
+        volumeUsd: number | null;
+    };
+    sell: {
+        transactionCount: number | null;
+        volumeUsd: number | null;
+    };
+    tokensTradedCount: number | null;
+    transactionCount: number | null;
+    pnl: {
+        totalUsd: number | null;
+        realizedUsd: number | null;
+        unrealizedUsd: number | null;
+    };
+    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+}
+
+export interface WalletOverviewHoldingsStats {
+    totalAssetValueUsd: number;
+    change24hPercent: number | null;
+    tokensHoldingCount: number;
+    source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+}
+
+export interface WalletOverviewLegacy {
+    totalAssetValueUsd: number;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+    metricsPeriod: string;
+}
+
 export interface WalletPortfolio {
     address: string;
     totalAssetValueUsd: number;
+    totalAssetValueChange24hPercent?: number | null;
     items: WalletPortfolioItem[];
 }
 
@@ -188,6 +233,7 @@ export type WalletRangeOptions = {
 };
 
 export type WalletOverviewQueryOptions = {
+    // Kept for backward source compatibility. Overview now returns all periods.
     timePeriod?: WalletOverviewTimePeriod;
 };
 
@@ -460,17 +506,70 @@ export type PriceTimelinePoint = {
 
 
 export type WalletOverviewCacheRow = {
+    address: string;
     totalAssetValueUsd: number | string;
+    totalAssetValueChange24hPercent: number | string | null;
     tradingVolumeUsd24h: number | string | null;
+    tradingVolumeUsd7d: number | string | null;
+    tradingVolumeUsd30d: number | string | null;
+    tradingVolumeUsd90d: number | string | null;
+    tradingVolumeUsdAll: number | string | null;
     pnlUsdTotal: number | string | null;
+    pnlTotalUsd24h: number | string | null;
+    pnlTotalUsd7d: number | string | null;
+    pnlTotalUsd30d: number | string | null;
+    pnlTotalUsd90d: number | string | null;
+    pnlTotalUsdAll: number | string | null;
+    pnlRealizedUsd24h: number | string | null;
+    pnlRealizedUsd7d: number | string | null;
+    pnlRealizedUsd30d: number | string | null;
+    pnlRealizedUsd90d: number | string | null;
+    pnlRealizedUsdAll: number | string | null;
+    pnlUnrealizedUsd24h: number | string | null;
+    pnlUnrealizedUsd7d: number | string | null;
+    pnlUnrealizedUsd30d: number | string | null;
+    pnlUnrealizedUsd90d: number | string | null;
+    pnlUnrealizedUsdAll: number | string | null;
     transactionCount24h: number | null;
+    transactionCount7d: number | null;
+    transactionCount30d: number | null;
+    transactionCount90d: number | null;
+    transactionCountAll: number | null;
     tokensTradedCount: number | null;
+    tokensTradedCount24h: number | null;
+    tokensTradedCount7d: number | null;
+    tokensTradedCount30d: number | null;
+    tokensTradedCount90d: number | null;
+    tokensTradedCountAll: number | null;
+    buyTxCount24h: number | null;
+    buyTxCount7d: number | null;
+    buyTxCount30d: number | null;
+    buyTxCount90d: number | null;
+    buyTxCountAll: number | null;
+    sellTxCount24h: number | null;
+    sellTxCount7d: number | null;
+    sellTxCount30d: number | null;
+    sellTxCount90d: number | null;
+    sellTxCountAll: number | null;
+    buyVolumeUsd24h: number | string | null;
+    buyVolumeUsd7d: number | string | null;
+    buyVolumeUsd30d: number | string | null;
+    buyVolumeUsd90d: number | string | null;
+    buyVolumeUsdAll: number | string | null;
+    sellVolumeUsd24h: number | string | null;
+    sellVolumeUsd7d: number | string | null;
+    sellVolumeUsd30d: number | string | null;
+    sellVolumeUsd90d: number | string | null;
+    sellVolumeUsdAll: number | string | null;
     tokensHoldingCount: number;
     fetchedAt: Date;
+    holdingsFetchedAt: Date | null;
+    activityFetchedAt: Date | null;
 };
 
 export type OverviewHoldingsSnapshot = {
     totalAssetValueUsd: number;
+    change24hPercent: number | null;
     tokensHoldingCount: number;
     source:
     | "birdeye-portfolio"
@@ -480,13 +579,19 @@ export type OverviewHoldingsSnapshot = {
 };
 
 export type OverviewActivitySnapshot = {
-    transactionCount24h: number | null;
+    tradingVolumeUsd: number | null;
+    buyTransactionCount: number | null;
+    buyVolumeUsd: number | null;
+    sellTransactionCount: number | null;
+    sellVolumeUsd: number | null;
+    transactionCount: number | null;
     tokensTradedCount: number | null;
-    tradingVolumeUsd24h: number | null;
-    pnlUsdTotal: number | null;
+    pnlTotalUsd: number | null;
+    pnlRealizedUsd: number | null;
+    pnlUnrealizedUsd: number | null;
     source: "birdeye-overall-pnl" | "overview-cache" | "none";
-    pricedChangesCount: number;
 };
 
 export type SwapProviderSource = "helius" | "moralis";
 export type WalletProviderPolicy = "helius" | "birdeye" | "fallback";
+

@@ -17,7 +17,6 @@ import {
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import { z } from "zod";
 import type {
-  WalletOverviewTimePeriod,
   WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
@@ -28,9 +27,7 @@ const walletRequestSchema = z.object({
   address: z.string(),
 });
 
-const walletOverviewRequestSchema = walletRequestSchema.extend({
-  period: z.string().optional(),
-});
+const walletOverviewRequestSchema = walletRequestSchema;
 
 const walletCounterpartyRequestSchema = walletRequestSchema.extend({
   period: z.string().optional(),
@@ -42,57 +39,10 @@ const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
 });
 
-const DEFAULT_OVERVIEW_TIME_PERIOD: WalletOverviewTimePeriod = "24H";
-
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
-
-function parseOverviewTimePeriod(rawPeriod?: string): {
-  timePeriod: WalletOverviewTimePeriod;
-  normalized: boolean;
-} {
-  if (!rawPeriod) {
-    return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: false };
-  }
-
-  const trimmed = rawPeriod.trim();
-  if (!trimmed) {
-    return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: false };
-  }
-
-  const upper = trimmed.toUpperCase();
-  if (
-    upper === "24H" ||
-    upper === "7D" ||
-    upper === "30D" ||
-    upper === "60D" ||
-    upper === "90D" ||
-    upper === "1Y" ||
-    upper === "ALL"
-  ) {
-    return {
-      timePeriod: upper === "ALL" ? "All" : (upper as WalletOverviewTimePeriod),
-      normalized: false,
-    };
-  }
-
-  const lower = trimmed.toLowerCase();
-  if (lower === "all") {
-    return { timePeriod: "All", normalized: true };
-  }
-
-  if (lower === "24h") {
-    return { timePeriod: "24H", normalized: true };
-  }
-
-  if (lower === "7d") {
-    return { timePeriod: "7D", normalized: true };
-  }
-
-  return { timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD, normalized: true };
-}
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
   status: 400 | 401 | 502 | 503;
@@ -208,18 +158,9 @@ const routes = router
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query)
     const address = params.address;
-    const { timePeriod, normalized } = parseOverviewTimePeriod(params.period);
-
-    if (normalized && params.period) {
-      console.warn("[wallet-overview-route] Unsupported period normalized to enum period", {
-        address,
-        requestedPeriod: params.period,
-        normalizedPeriod: timePeriod,
-      });
-    }
 
     try {
-      const overview = await getWalletOverview(address, { timePeriod });
+      const overview = await getWalletOverview(address);
       return c.json(overview);
     } catch (err) {
       console.error("Failed to get wallet overview", err);

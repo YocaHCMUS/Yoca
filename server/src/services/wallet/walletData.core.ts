@@ -1,6 +1,7 @@
 import {
   WALLET_OVERVIEW_TTL_MS,
 } from "@sv/config/constants.js";
+// wallet-overview-multi-period marker
 import { db } from "@sv/db/index.js";
 import {
   walletOverviewCache,
@@ -19,14 +20,13 @@ import type {
   WalletExchangeCountsOptions,
   WalletPageInfo,
   WalletExchangeCountsResponse,
-  WalletHistoryQueryOptions,
   WalletOverview,
-  WalletOverviewQueryOptions,
+  WalletOverviewPeriodKey,
+  WalletOverviewPeriodStats,
   WalletOverviewTimePeriod,
   WalletPortfolioItem,
   WalletTimePeriodInput,
   WalletTimePeriod,
-  WalletTransactionHelius,
   PriceTimelinePoint,
   WalletOverviewCacheRow,
   OverviewHoldingsSnapshot,
@@ -37,7 +37,6 @@ import {
   DAY_MS,
   DAY_SEC,
   DEFAULT_HELIUS_HISTORY_CHUNK_TRANSACTIONS,
-  DEFAULT_OVERVIEW_PERIOD_SEC,
   DEFAULT_OVERVIEW_TIME_PERIOD,
   DEFAULT_WALLET_PROVIDER_POLICY,
   MAX_HELIUS_HISTORY_CHUNK_TRANSACTIONS,
@@ -48,10 +47,7 @@ import {
   WALLET_TABLE_PAGE_SIZE,
 } from "@sv/services/wallet/wallet.constants.js";
 import { getWalletExchangeCountsWithFetcher } from "@sv/services/wallet/walletExchangeAggregation.service.js";
-import {
-  saveOverviewCache,
-} from "./db/walletDataCacher.js";
-import { getWalletTransactionHeliusFromSources } from "@sv/services/wallet/walletHistory.service.js";
+import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
 
 export type { WalletOverviewTimePeriod, WalletTimePeriod };
@@ -122,7 +118,7 @@ const PORTFOLIO_METADATA_PLACEHOLDERS = new Set([
   "?",
 ]);
 
-function toIsoTimestamp(value: unknown): string {
+export function toIsoTimestamp(value: unknown): string {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? new Date().toISOString() : value.toISOString();
   }
@@ -164,26 +160,68 @@ export function getDailySnapshotSecRange(fromSec: number, toSec: number): number
 
 
 
-function normalizeOverviewTimePeriod(
+export function normalizeOverviewTimePeriod(
   timePeriod?: WalletOverviewTimePeriod,
 ): WalletOverviewTimePeriod {
   const normalized = String(timePeriod ?? DEFAULT_OVERVIEW_TIME_PERIOD).trim();
-  if (
-    normalized === "24H" ||
-    normalized === "7D" ||
-    normalized === "30D" ||
-    normalized === "60D" ||
-    normalized === "90D" ||
-    normalized === "1Y" ||
-    normalized === "All"
-  ) {
-    return normalized;
+  const upper = normalized.toUpperCase();
+
+  if (upper === "24H") {
+    return "24H";
+  }
+  if (upper === "7D") {
+    return "7D";
+  }
+  if (upper === "30D") {
+    return "30D";
+  }
+  if (upper === "60D") {
+    return "60D";
+  }
+  if (upper === "90D") {
+    return "90D";
+  }
+  if (upper === "1Y") {
+    return "1Y";
+  }
+  if (upper === "ALL") {
+    return "All";
   }
 
   return DEFAULT_OVERVIEW_TIME_PERIOD;
 }
 
-function mapOverviewTimePeriodToPeriodSec(timePeriod: WalletOverviewTimePeriod): number {
+export const OVERVIEW_PERIOD_KEYS: WalletOverviewPeriodKey[] = ["24H", "7D", "30D", "90D", "All"];
+const DEFAULT_OVERVIEW_SELECTION: WalletOverviewPeriodKey = "24H";
+
+export function normalizeOverviewSelection(timePeriod?: WalletOverviewTimePeriod): WalletOverviewPeriodKey {
+  const normalized = normalizeOverviewTimePeriod(timePeriod);
+  if (normalized === "1Y") {
+    return "All";
+  }
+  if (normalized === "60D") {
+    return "90D";
+  }
+  return normalized as WalletOverviewPeriodKey;
+}
+
+export function mapPeriodToCacheColumnSuffix(period: WalletOverviewPeriodKey): "24h" | "7d" | "30d" | "90d" | "all" {
+  if (period === "24H") {
+    return "24h";
+  }
+  if (period === "7D") {
+    return "7d";
+  }
+  if (period === "30D") {
+    return "30d";
+  }
+  if (period === "90D") {
+    return "90d";
+  }
+  return "all";
+}
+
+export function mapOverviewTimePeriodToPeriodSec(timePeriod: WalletOverviewTimePeriod): number {
   switch (timePeriod) {
     case "24H":
       return DAY_SEC;
@@ -204,14 +242,11 @@ function mapOverviewTimePeriodToPeriodSec(timePeriod: WalletOverviewTimePeriod):
   }
 }
 
-function mapOverviewTimePeriodToBirdeyeDuration(
+export function mapOverviewTimePeriodToBirdeyeDuration(
   timePeriod: WalletOverviewTimePeriod,
 ): "all" | "90d" | "30d" | "7d" | "24h" {
-  if (timePeriod === "24H") {
-    return "24h";
-  }
-
-  return mapTimePeriodToBirdeyeDuration(timePeriod);
+  const selectedPeriod = normalizeOverviewSelection(timePeriod);
+  return mapPeriodToCacheColumnSuffix(selectedPeriod);
 }
 
 export function normalizeShortHistoryPeriod(
@@ -224,7 +259,7 @@ export function normalizeShortHistoryPeriod(
   return timePeriod === "24H" ? "24h" : "7d";
 }
 
-function formatOverviewMetricsPeriod(periodSec: number): string {
+export function formatOverviewMetricsPeriod(periodSec: number): string {
   if (periodSec === DAY_SEC) {
     return "24h";
   }
@@ -238,30 +273,232 @@ function formatOverviewMetricsPeriod(periodSec: number): string {
   return `${hours}h`;
 }
 
-function mapOverviewCacheRowToDto(
-  row: WalletOverviewCacheRow,
-  address: string,
-  periodSec: number,
-): WalletOverview {
-  const tradingVolumeUsd =
-    row.tradingVolumeUsd24h != null ? toFiniteNumber(row.tradingVolumeUsd24h, 0) : null;
-  const pnlUsd = row.pnlUsdTotal != null ? toFiniteNumber(row.pnlUsdTotal, 0) : null;
+function toNullableFiniteNumber(value: unknown): number | null {
+  if (value == null) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getOverviewPeriodCacheFields(row: WalletOverviewCacheRow, period: WalletOverviewPeriodKey): {
+  tradingVolumeUsd: unknown;
+  transactionCount: number | null | undefined;
+  tokensTradedCount: number | null | undefined;
+  buyTxCount: number | null | undefined;
+  buyVolumeUsd: unknown;
+  sellTxCount: number | null | undefined;
+  sellVolumeUsd: unknown;
+  pnlTotalUsd: unknown;
+  pnlRealizedUsd: unknown;
+  pnlUnrealizedUsd: unknown;
+  fetchedAt: Date | null | undefined;
+} {
+  const activityFetchedAt = row.activityFetchedAt;
+
+  if (period === "24H") {
+    return {
+      tradingVolumeUsd: row.tradingVolumeUsd24h,
+      transactionCount: row.transactionCount24h,
+      tokensTradedCount: row.tokensTradedCount24h ?? row.tokensTradedCount,
+      buyTxCount: row.buyTxCount24h,
+      buyVolumeUsd: row.buyVolumeUsd24h,
+      sellTxCount: row.sellTxCount24h,
+      sellVolumeUsd: row.sellVolumeUsd24h,
+      pnlTotalUsd: row.pnlTotalUsd24h ?? row.pnlUsdTotal,
+      pnlRealizedUsd: row.pnlRealizedUsd24h,
+      pnlUnrealizedUsd: row.pnlUnrealizedUsd24h,
+      fetchedAt: activityFetchedAt,
+    };
+  }
+
+  if (period === "7D") {
+    return {
+      tradingVolumeUsd: row.tradingVolumeUsd7d,
+      transactionCount: row.transactionCount7d,
+      tokensTradedCount: row.tokensTradedCount7d,
+      buyTxCount: row.buyTxCount7d,
+      buyVolumeUsd: row.buyVolumeUsd7d,
+      sellTxCount: row.sellTxCount7d,
+      sellVolumeUsd: row.sellVolumeUsd7d,
+      pnlTotalUsd: row.pnlTotalUsd7d,
+      pnlRealizedUsd: row.pnlRealizedUsd7d,
+      pnlUnrealizedUsd: row.pnlUnrealizedUsd7d,
+      fetchedAt: activityFetchedAt,
+    };
+  }
+
+  if (period === "30D") {
+    return {
+      tradingVolumeUsd: row.tradingVolumeUsd30d,
+      transactionCount: row.transactionCount30d,
+      tokensTradedCount: row.tokensTradedCount30d,
+      buyTxCount: row.buyTxCount30d,
+      buyVolumeUsd: row.buyVolumeUsd30d,
+      sellTxCount: row.sellTxCount30d,
+      sellVolumeUsd: row.sellVolumeUsd30d,
+      pnlTotalUsd: row.pnlTotalUsd30d,
+      pnlRealizedUsd: row.pnlRealizedUsd30d,
+      pnlUnrealizedUsd: row.pnlUnrealizedUsd30d,
+      fetchedAt: activityFetchedAt,
+    };
+  }
+
+  if (period === "90D") {
+    return {
+      tradingVolumeUsd: row.tradingVolumeUsd90d,
+      transactionCount: row.transactionCount90d,
+      tokensTradedCount: row.tokensTradedCount90d,
+      buyTxCount: row.buyTxCount90d,
+      buyVolumeUsd: row.buyVolumeUsd90d,
+      sellTxCount: row.sellTxCount90d,
+      sellVolumeUsd: row.sellVolumeUsd90d,
+      pnlTotalUsd: row.pnlTotalUsd90d,
+      pnlRealizedUsd: row.pnlRealizedUsd90d,
+      pnlUnrealizedUsd: row.pnlUnrealizedUsd90d,
+      fetchedAt: activityFetchedAt,
+    };
+  }
 
   return {
-    address,
-    totalAssetValueUsd: toFiniteNumber(row.totalAssetValueUsd, 0),
-    tradingVolumeUsd24h: tradingVolumeUsd,
-    pnlUsdTotal: pnlUsd,
-    transactionCount24h: row.transactionCount24h ?? null,
-    tokensTradedCount: row.tokensTradedCount ?? null,
-    tokensHoldingCount: toFiniteNumber(row.tokensHoldingCount, 0),
-    tradingVolumeUsdWindow: tradingVolumeUsd,
-    pnlUsdWindow: pnlUsd,
-    metricsPeriod: formatOverviewMetricsPeriod(periodSec),
+    tradingVolumeUsd: row.tradingVolumeUsdAll,
+    transactionCount: row.transactionCountAll,
+    tokensTradedCount: row.tokensTradedCountAll,
+    buyTxCount: row.buyTxCountAll,
+    buyVolumeUsd: row.buyVolumeUsdAll,
+    sellTxCount: row.sellTxCountAll,
+    sellVolumeUsd: row.sellVolumeUsdAll,
+    pnlTotalUsd: row.pnlTotalUsdAll,
+    pnlRealizedUsd: row.pnlRealizedUsdAll,
+    pnlUnrealizedUsd: row.pnlUnrealizedUsdAll,
+    fetchedAt: activityFetchedAt,
   };
 }
 
-async function getLatestOverviewCacheRow(address: string): Promise<WalletOverviewCacheRow | null> {
+export function getOverviewPeriodStatsFromCache(
+  row: WalletOverviewCacheRow,
+  period: WalletOverviewPeriodKey,
+): WalletOverviewPeriodStats {
+  const fields = getOverviewPeriodCacheFields(row, period);
+  const transactionCount = fields.transactionCount ?? null;
+  const buyTxCount = fields.buyTxCount ?? null;
+  const sellTxCount = fields.sellTxCount ?? null;
+
+  return {
+    tradingVolumeUsd: toNullableFiniteNumber(fields.tradingVolumeUsd),
+    buy: {
+      transactionCount: buyTxCount,
+      volumeUsd: toNullableFiniteNumber(fields.buyVolumeUsd),
+    },
+    sell: {
+      transactionCount: sellTxCount,
+      volumeUsd: toNullableFiniteNumber(fields.sellVolumeUsd),
+    },
+    tokensTradedCount: fields.tokensTradedCount ?? null,
+    transactionCount:
+      transactionCount != null
+        ? transactionCount
+        : buyTxCount != null || sellTxCount != null
+          ? (buyTxCount ?? 0) + (sellTxCount ?? 0)
+          : null,
+    pnl: {
+      totalUsd: toNullableFiniteNumber(fields.pnlTotalUsd),
+      realizedUsd: toNullableFiniteNumber(fields.pnlRealizedUsd),
+      unrealizedUsd: toNullableFiniteNumber(fields.pnlUnrealizedUsd),
+    },
+    source: "overview-cache",
+  };
+}
+
+function isPeriodStatsPopulated(stats: WalletOverviewPeriodStats): boolean {
+  return (
+    stats.tradingVolumeUsd != null ||
+    stats.transactionCount != null ||
+    stats.tokensTradedCount != null ||
+    stats.pnl.totalUsd != null ||
+    stats.pnl.realizedUsd != null ||
+    stats.pnl.unrealizedUsd != null ||
+    stats.buy.transactionCount != null ||
+    stats.buy.volumeUsd != null ||
+    stats.sell.transactionCount != null ||
+    stats.sell.volumeUsd != null
+  );
+}
+
+export function buildLegacyOverviewFromSelectedPeriod(input: {
+  selectedPeriod: WalletOverviewPeriodKey;
+  periodStats: WalletOverviewPeriodStats;
+  holdingsSnapshot: OverviewHoldingsSnapshot;
+}): {
+  totalAssetValueUsd: number;
+  tradingVolumeUsd24h: number | null;
+  pnlUsdTotal: number | null;
+  transactionCount24h: number | null;
+  tokensTradedCount: number | null;
+  tokensHoldingCount: number;
+  metricsPeriod: string;
+} {
+  return {
+    totalAssetValueUsd: input.holdingsSnapshot.totalAssetValueUsd,
+    tradingVolumeUsd24h: input.periodStats.tradingVolumeUsd,
+    pnlUsdTotal: input.periodStats.pnl.totalUsd,
+    transactionCount24h: input.periodStats.transactionCount,
+    tokensTradedCount: input.periodStats.tokensTradedCount,
+    tokensHoldingCount: input.holdingsSnapshot.tokensHoldingCount,
+    metricsPeriod: input.selectedPeriod.toLowerCase(),
+  };
+}
+
+export function mapOverviewCacheRowToDto(
+  row: WalletOverviewCacheRow,
+  address: string,
+  selectedPeriod: WalletOverviewPeriodKey,
+): WalletOverview {
+  const holdingsSnapshot: OverviewHoldingsSnapshot = {
+    totalAssetValueUsd: toFiniteNumber(row.totalAssetValueUsd, 0),
+    change24hPercent: toNullableFiniteNumber(row.totalAssetValueChange24hPercent),
+    tokensHoldingCount: toFiniteNumber(row.tokensHoldingCount, 0),
+    source: "overview-cache",
+  };
+
+  const periodStats = OVERVIEW_PERIOD_KEYS.reduce((acc, period) => {
+    acc[period] = getOverviewPeriodStatsFromCache(row, period);
+    return acc;
+  }, {} as Record<WalletOverviewPeriodKey, WalletOverviewPeriodStats>);
+
+  const selectedStats = periodStats[selectedPeriod];
+  const legacy = buildLegacyOverviewFromSelectedPeriod({
+    selectedPeriod,
+    periodStats: selectedStats,
+    holdingsSnapshot,
+  });
+
+  return {
+    address,
+    availablePeriods: [...OVERVIEW_PERIOD_KEYS],
+    selectedPeriod,
+    holdings: {
+      totalAssetValueUsd: holdingsSnapshot.totalAssetValueUsd,
+      change24hPercent: holdingsSnapshot.change24hPercent,
+      tokensHoldingCount: holdingsSnapshot.tokensHoldingCount,
+      source: holdingsSnapshot.source,
+    },
+    periods: periodStats,
+    legacy,
+    totalAssetValueUsd: legacy.totalAssetValueUsd,
+    tradingVolumeUsd24h: legacy.tradingVolumeUsd24h,
+    pnlUsdTotal: legacy.pnlUsdTotal,
+    transactionCount24h: legacy.transactionCount24h,
+    tokensTradedCount: legacy.tokensTradedCount,
+    tokensHoldingCount: legacy.tokensHoldingCount,
+    tradingVolumeUsdWindow: legacy.tradingVolumeUsd24h,
+    pnlUsdWindow: legacy.pnlUsdTotal,
+    metricsPeriod: legacy.metricsPeriod,
+  };
+}
+
+export async function getLatestOverviewCacheRow(address: string): Promise<WalletOverviewCacheRow | null> {
   const cached = await db
     .select()
     .from(walletOverviewCache)
@@ -279,24 +516,30 @@ async function getLatestOverviewCacheRow(address: string): Promise<WalletOvervie
   return cached[0] as unknown as WalletOverviewCacheRow;
 }
 
-function getOverviewFromFreshCache(
+export function getOverviewFromFreshCache(
   cacheRow: WalletOverviewCacheRow | null,
-  address: string,
-  periodSec: number,
+  address: string
 ): WalletOverview | null {
-  if (!cacheRow || periodSec !== DEFAULT_OVERVIEW_PERIOD_SEC) {
+  if (!cacheRow) {
     return null;
   }
 
   const overviewThreshold = new Date(Date.now() - WALLET_OVERVIEW_TTL_MS);
-  if (cacheRow.fetchedAt < overviewThreshold) {
+  const holdingsFetchedAt = cacheRow.holdingsFetchedAt ?? cacheRow.fetchedAt;
+  if (holdingsFetchedAt < overviewThreshold) {
     return null;
   }
 
-  return mapOverviewCacheRowToDto(cacheRow, address, periodSec);
+  const activityFetchedAt = cacheRow.activityFetchedAt ?? new Date(0);
+
+  if (activityFetchedAt < overviewThreshold) {
+    return null;
+  }
+
+  return mapOverviewCacheRowToDto(cacheRow, address, DEFAULT_OVERVIEW_SELECTION);
 }
 
-async function buildHoldingsSnapshotFromProviders(
+export async function buildHoldingsSnapshotFromProviders(
   address: string,
   cacheRow: WalletOverviewCacheRow | null,
 ): Promise<OverviewHoldingsSnapshot> {
@@ -305,6 +548,7 @@ async function buildHoldingsSnapshotFromProviders(
     if (birdeyePortfolio.items.length > 0 || Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0) {
       return {
         totalAssetValueUsd: toFiniteNumber(birdeyePortfolio.totalAssetValueUsd, 0),
+        change24hPercent: toNullableFiniteNumber(birdeyePortfolio.totalAssetValueChange24hPercent),
         tokensHoldingCount: birdeyePortfolio.items.length,
         source: "birdeye-portfolio",
       };
@@ -320,6 +564,7 @@ async function buildHoldingsSnapshotFromProviders(
         (sum, item) => sum + Number(item.valueUsd ?? 0),
         0,
       ),
+      change24hPercent: null,
       tokensHoldingCount: heliusPortfolio.length,
       source: "helius-portfolio-fallback",
     };
@@ -330,6 +575,7 @@ async function buildHoldingsSnapshotFromProviders(
   if (cacheRow) {
     return {
       totalAssetValueUsd: toFiniteNumber(cacheRow.totalAssetValueUsd, 0),
+      change24hPercent: toNullableFiniteNumber(cacheRow.totalAssetValueChange24hPercent),
       tokensHoldingCount: toFiniteNumber(cacheRow.tokensHoldingCount, 0),
       source: "overview-cache",
     };
@@ -337,110 +583,251 @@ async function buildHoldingsSnapshotFromProviders(
 
   return {
     totalAssetValueUsd: 0,
+    change24hPercent: null,
     tokensHoldingCount: 0,
     source: "none",
   };
 }
 
-async function buildActivitySnapshotFromProviders(
+export async function buildActivitySnapshotFromProviders(
   address: string,
-  timePeriod: WalletOverviewTimePeriod,
   cacheRow: WalletOverviewCacheRow | null,
-  periodSec: number,
-): Promise<{ activitySnapshot: OverviewActivitySnapshot; providerFailure: boolean }> {
-  try {
-    const birdeyeSummary = await fetchBirdeyeOverallPnL(address, {
-      duration: mapOverviewTimePeriodToBirdeyeDuration(timePeriod),
-    });
+): Promise<{
+  periodSnapshots: Record<WalletOverviewPeriodKey, OverviewActivitySnapshot>;
+  providerFailuresByPeriod: Record<WalletOverviewPeriodKey, boolean>;
+}> {
+  const maxConcurrency = 2;
+  const results = new Array<PromiseSettledResult<Awaited<ReturnType<typeof fetchBirdeyeOverallPnL>>>>(
+    OVERVIEW_PERIOD_KEYS.length,
+  );
 
-    const summary = birdeyeSummary.summary ?? undefined;
-    const counts = summary?.counts ?? undefined;
-    const cashflowUsd = summary?.cashflow_usd ?? undefined;
-    const pnl = summary?.pnl ?? undefined;
+  let nextIndex = 0;
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const current = nextIndex;
+      nextIndex += 1;
 
-    const totalInvested = toFiniteNumber(cashflowUsd?.total_invested, 0);
-    const totalSold = toFiniteNumber(cashflowUsd?.total_sold, 0);
-    const totalVolume = totalInvested + totalSold;
-    const totalTrade = Number(counts?.total_trade);
-    const uniqueTokens = Number(summary?.unique_tokens);
-    const totalPnlUsd = Number(pnl?.total_usd);
+      if (current >= OVERVIEW_PERIOD_KEYS.length) {
+        return;
+      }
 
-    return {
-      activitySnapshot: {
-        transactionCount24h: Number.isFinite(totalTrade) ? totalTrade : null,
-        tokensTradedCount: Number.isFinite(uniqueTokens) ? uniqueTokens : null,
-        tradingVolumeUsd24h: Number.isFinite(totalVolume) ? totalVolume : null,
-        pnlUsdTotal: Number.isFinite(totalPnlUsd) ? totalPnlUsd : null,
-        pricedChangesCount: 0,
-        source: "birdeye-overall-pnl",
-      },
-      providerFailure: false,
-    };
-  } catch (err) {
-    console.error("[wallet-overview] Failed to compute activity snapshot from Birdeye", {
-      address,
-      periodSec,
-      error: err,
-    });
+      const period = OVERVIEW_PERIOD_KEYS[current];
+      try {
+        const value = await fetchBirdeyeOverallPnL(address, {
+          duration: mapPeriodToCacheColumnSuffix(period),
+        });
+        results[current] = { status: "fulfilled", value };
+      } catch (reason) {
+        results[current] = { status: "rejected", reason };
+      }
+    }
+  };
 
-    if (cacheRow && periodSec === DEFAULT_OVERVIEW_PERIOD_SEC) {
-      return {
-        activitySnapshot: {
-          transactionCount24h: cacheRow.transactionCount24h ?? null,
-          tokensTradedCount: cacheRow.tokensTradedCount ?? null,
-          tradingVolumeUsd24h:
-            cacheRow.tradingVolumeUsd24h != null
-              ? toFiniteNumber(cacheRow.tradingVolumeUsd24h, 0)
-              : null,
-          pnlUsdTotal:
-            cacheRow.pnlUsdTotal != null ? toFiniteNumber(cacheRow.pnlUsdTotal, 0) : null,
-          pricedChangesCount: 0,
-          source: "overview-cache",
-        },
-        providerFailure: true,
-      };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(maxConcurrency, OVERVIEW_PERIOD_KEYS.length) },
+      () => worker(),
+    ),
+  );
+
+  const periodSnapshots = {} as Record<WalletOverviewPeriodKey, OverviewActivitySnapshot>;
+  const providerFailuresByPeriod = {} as Record<WalletOverviewPeriodKey, boolean>;
+
+  OVERVIEW_PERIOD_KEYS.forEach((period, index) => {
+    const result = results[index];
+
+    if (result.status === "fulfilled") {
+      const summary = result.value?.summary;
+
+      // If Birdeye returned empty/null summary (e.g., for "90d" or "all" durations),
+      // treat as provider failure and fall back to cache
+      if (!summary) {
+        console.warn("[wallet-overview] Empty summary from Birdeye for period", {
+          address,
+          period,
+          duration: mapPeriodToCacheColumnSuffix(period),
+        });
+
+        providerFailuresByPeriod[period] = true;
+        if (cacheRow) {
+          periodSnapshots[period] = mapPeriodStatsToActivitySnapshot(
+            getOverviewPeriodStatsFromCache(cacheRow, period),
+          );
+          return;
+        }
+
+        periodSnapshots[period] = {
+          tradingVolumeUsd: null,
+          buyTransactionCount: null,
+          buyVolumeUsd: null,
+          sellTransactionCount: null,
+          sellVolumeUsd: null,
+          transactionCount: null,
+          tokensTradedCount: null,
+          pnlTotalUsd: null,
+          pnlRealizedUsd: null,
+          pnlUnrealizedUsd: null,
+          source: "none",
+        };
+        return;
+      }
+
+      periodSnapshots[period] = mapBirdeyeSummaryToPeriodStats(summary);
+      providerFailuresByPeriod[period] = false;
+      return;
     }
 
-    return {
-      activitySnapshot: {
-        transactionCount24h: null,
-        tokensTradedCount: null,
-        tradingVolumeUsd24h: null,
-        pnlUsdTotal: null,
-        pricedChangesCount: 0,
-        source: "none",
-      },
-      providerFailure: true,
+    console.error("[wallet-overview] Failed to compute activity snapshot from Birdeye", {
+      address,
+      period,
+      error: result.reason,
+    });
+
+    providerFailuresByPeriod[period] = true;
+    if (cacheRow) {
+      periodSnapshots[period] = mapPeriodStatsToActivitySnapshot(
+        getOverviewPeriodStatsFromCache(cacheRow, period),
+      );
+      return;
+    }
+
+    periodSnapshots[period] = {
+      tradingVolumeUsd: null,
+      buyTransactionCount: null,
+      buyVolumeUsd: null,
+      sellTransactionCount: null,
+      sellVolumeUsd: null,
+      transactionCount: null,
+      tokensTradedCount: null,
+      pnlTotalUsd: null,
+      pnlRealizedUsd: null,
+      pnlUnrealizedUsd: null,
+      source: "none",
     };
-  }
+  });
+
+  return {
+    periodSnapshots,
+    providerFailuresByPeriod,
+  };
 }
 
-function buildOverviewResponse(input: {
+export function mapBirdeyeSummaryToPeriodStats(summary: any): OverviewActivitySnapshot {
+  const counts = summary?.counts ?? undefined;
+  const cashflowUsd = summary?.cashflow_usd ?? undefined;
+  const pnl = summary?.pnl ?? undefined;
+
+  const buyTransactionCount = toNullableFiniteNumber(counts?.total_buy);
+  const sellTransactionCount = toNullableFiniteNumber(counts?.total_sell);
+  const totalTrade = toNullableFiniteNumber(counts?.total_trade);
+  const buyVolumeUsd = toNullableFiniteNumber(cashflowUsd?.total_invested);
+  const sellVolumeUsd = toNullableFiniteNumber(cashflowUsd?.total_sold);
+  const tradingVolumeUsd =
+    buyVolumeUsd != null || sellVolumeUsd != null
+      ? (buyVolumeUsd ?? 0) + (sellVolumeUsd ?? 0)
+      : null;
+
+  return {
+    tradingVolumeUsd,
+    buyTransactionCount,
+    buyVolumeUsd,
+    sellTransactionCount,
+    sellVolumeUsd,
+    transactionCount:
+      totalTrade ??
+      (buyTransactionCount != null || sellTransactionCount != null
+        ? (buyTransactionCount ?? 0) + (sellTransactionCount ?? 0)
+        : null),
+    tokensTradedCount: toNullableFiniteNumber(summary?.unique_tokens),
+    pnlTotalUsd: toNullableFiniteNumber(pnl?.total_usd),
+    pnlRealizedUsd: toNullableFiniteNumber(pnl?.realized_profit_usd),
+    pnlUnrealizedUsd: toNullableFiniteNumber(pnl?.unrealized_usd),
+    source: "birdeye-overall-pnl",
+  };
+}
+
+function mapPeriodStatsToActivitySnapshot(stats: WalletOverviewPeriodStats): OverviewActivitySnapshot {
+  return {
+    tradingVolumeUsd: stats.tradingVolumeUsd,
+    buyTransactionCount: stats.buy.transactionCount,
+    buyVolumeUsd: stats.buy.volumeUsd,
+    sellTransactionCount: stats.sell.transactionCount,
+    sellVolumeUsd: stats.sell.volumeUsd,
+    transactionCount: stats.transactionCount,
+    tokensTradedCount: stats.tokensTradedCount,
+    pnlTotalUsd: stats.pnl.totalUsd,
+    pnlRealizedUsd: stats.pnl.realizedUsd,
+    pnlUnrealizedUsd: stats.pnl.unrealizedUsd,
+    source: stats.source,
+  };
+}
+
+export function buildOverviewResponse(input: {
   address: string;
-  periodSec: number;
   holdingsSnapshot: OverviewHoldingsSnapshot;
-  activitySnapshot: OverviewActivitySnapshot;
+  periodSnapshots: Record<WalletOverviewPeriodKey, OverviewActivitySnapshot>;
 }): WalletOverview {
   const {
     address,
-    periodSec,
     holdingsSnapshot,
-    activitySnapshot,
+    periodSnapshots,
   } = input;
+
+  const periods = OVERVIEW_PERIOD_KEYS.reduce((acc, period) => {
+    const snapshot = periodSnapshots[period];
+    acc[period] = {
+      tradingVolumeUsd: snapshot.tradingVolumeUsd,
+      buy: {
+        transactionCount: snapshot.buyTransactionCount,
+        volumeUsd: snapshot.buyVolumeUsd,
+      },
+      sell: {
+        transactionCount: snapshot.sellTransactionCount,
+        volumeUsd: snapshot.sellVolumeUsd,
+      },
+      tokensTradedCount: snapshot.tokensTradedCount,
+      transactionCount: snapshot.transactionCount,
+      pnl: {
+        totalUsd: snapshot.pnlTotalUsd,
+        realizedUsd: snapshot.pnlRealizedUsd,
+        unrealizedUsd: snapshot.pnlUnrealizedUsd,
+      },
+      source: snapshot.source,
+    };
+    return acc;
+  }, {} as Record<WalletOverviewPeriodKey, WalletOverviewPeriodStats>);
+
+  const selectedStats = periods[DEFAULT_OVERVIEW_SELECTION];
+  const legacy = buildLegacyOverviewFromSelectedPeriod({
+    selectedPeriod: DEFAULT_OVERVIEW_SELECTION,
+    periodStats: selectedStats,
+    holdingsSnapshot,
+  });
 
   return {
     address,
-    totalAssetValueUsd: holdingsSnapshot.totalAssetValueUsd,
-    tradingVolumeUsd24h: activitySnapshot.tradingVolumeUsd24h,
-    pnlUsdTotal: activitySnapshot.pnlUsdTotal,
-    transactionCount24h: activitySnapshot.transactionCount24h,
-    tokensTradedCount: activitySnapshot.tokensTradedCount,
-    tokensHoldingCount: holdingsSnapshot.tokensHoldingCount,
-    tradingVolumeUsdWindow: activitySnapshot.tradingVolumeUsd24h,
-    pnlUsdWindow: activitySnapshot.pnlUsdTotal,
-    metricsPeriod: formatOverviewMetricsPeriod(periodSec),
+    availablePeriods: [...OVERVIEW_PERIOD_KEYS],
+    selectedPeriod: DEFAULT_OVERVIEW_SELECTION,
+    holdings: {
+      totalAssetValueUsd: holdingsSnapshot.totalAssetValueUsd,
+      change24hPercent: holdingsSnapshot.change24hPercent,
+      tokensHoldingCount: holdingsSnapshot.tokensHoldingCount,
+      source: holdingsSnapshot.source,
+    },
+    periods,
+    legacy,
+    totalAssetValueUsd: legacy.totalAssetValueUsd,
+    tradingVolumeUsd24h: legacy.tradingVolumeUsd24h,
+    pnlUsdTotal: legacy.pnlUsdTotal,
+    transactionCount24h: legacy.transactionCount24h,
+    tokensTradedCount: legacy.tokensTradedCount,
+    tokensHoldingCount: legacy.tokensHoldingCount,
+    tradingVolumeUsdWindow: legacy.tradingVolumeUsd24h,
+    pnlUsdWindow: legacy.pnlUsdTotal,
+    metricsPeriod: legacy.metricsPeriod,
   };
 }
+
 
 export function normalizePortfolioText(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -610,64 +997,7 @@ export async function enrichWalletPortfolioMetadata(
   };
 }
 
-export async function getWalletOverview(
-  address: string,
-  options?: WalletOverviewQueryOptions,
-): Promise<WalletOverview> {
-  const timePeriod = normalizeOverviewTimePeriod(options?.timePeriod);
-  const periodSec = mapOverviewTimePeriodToPeriodSec(timePeriod);
 
-  const cacheRow = await getLatestOverviewCacheRow(address);
-  const cachedOverview = getOverviewFromFreshCache(
-    cacheRow,
-    address,
-    periodSec,
-  );
-  if (cachedOverview) {
-    console.log("[wallet-overview]", {
-      address,
-      periodSec,
-      cacheHit: true,
-    });
-    return cachedOverview;
-  }
-
-  const holdingsSnapshot = await buildHoldingsSnapshotFromProviders(
-    address,
-    cacheRow,
-  );
-
-  const {
-    activitySnapshot,
-    providerFailure: activityFetchFailed,
-  } = await buildActivitySnapshotFromProviders(address, timePeriod, cacheRow, periodSec);
-
-  const overview = buildOverviewResponse({
-    address,
-    periodSec,
-    holdingsSnapshot,
-    activitySnapshot,
-  });
-
-  const shouldPersistOverview = periodSec === DEFAULT_OVERVIEW_PERIOD_SEC;
-  if (shouldPersistOverview) {
-    await saveOverviewCache(overview);
-  }
-
-  console.log("[wallet-overview]", {
-    address,
-    timePeriod,
-    periodSec,
-    cacheHit: false,
-    holdingsSource: holdingsSnapshot.source,
-    activitySource: activitySnapshot.source,
-    providerFailure: activityFetchFailed,
-    pricedChangesCount: activitySnapshot.pricedChangesCount,
-    persisted: shouldPersistOverview,
-  });
-
-  return overview;
-}
 
 
 /**
