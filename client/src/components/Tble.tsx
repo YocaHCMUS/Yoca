@@ -37,6 +37,7 @@ interface TblProps
   loading?: boolean;
   height?: number | string;
   toolBar?: ReactNode;
+  stickyHeader?: boolean;
 }
 
 export default function Tble({
@@ -48,6 +49,7 @@ export default function Tble({
   loading = false,
   height = 600,
   toolBar,
+  stickyHeader = false,
   ...dataTableProps
 }: TblProps) {
   const headerLookup = Object.fromEntries(
@@ -99,7 +101,12 @@ export default function Tble({
       }
       className={overwriteStyles.tbl}
     >
-      <DataTable rows={rows} headers={headers} {...dataTableProps}>
+      <DataTable
+        rows={rows}
+        headers={headers}
+        stickyHeader={stickyHeader}
+        {...dataTableProps}
+      >
         {({
           rows,
           headers,
@@ -117,7 +124,7 @@ export default function Tble({
                       {...getHeaderProps({ header })}
                       style={{
                         paddingBlockStart: 0,
-                        display: "flex",
+                        display: stickyHeader ? "flex" : "table-cell",
                         alignItems: "center",
                         inlineSize: headerLookup[header.key].width,
                         justifyContent: headerLookup[header.key].align,
@@ -136,7 +143,7 @@ export default function Tble({
                       style={{
                         textAlign: "center",
                         paddingBlockStart: 0,
-                        display: "flex",
+                        display: stickyHeader ? "flex" : "table-cell",
                         alignItems: "center",
                         justifyContent: "center",
                         height: "100px",
@@ -153,8 +160,8 @@ export default function Tble({
                           {...getCellProps({ cell })}
                           style={{
                             paddingBlockStart: 0,
-                            display: "flex",
-                            alignItems: "center",
+                            display: stickyHeader ? "flex" : "table-cell",
+                            verticalAlign: "center",
                             inlineSize: headerLookup[cell.info.header].width,
                             justifyContent:
                               headerLookup[cell.info.header].align,
