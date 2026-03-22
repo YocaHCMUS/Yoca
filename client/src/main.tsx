@@ -9,7 +9,6 @@ import { ChartProvider } from "./contexts/ChartContext";
 import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import "./i18n/config.ts";
 import "./index.scss";
 import "./styles/carbon.scss";
 import "./styles/theme.scss";

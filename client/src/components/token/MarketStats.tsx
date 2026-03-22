@@ -36,29 +36,32 @@ function Tip({
       >
         {children}
       </span>
-      {pos && createPortal(
-        <div style={{
-          position: "fixed",
-          left: pos.x,
-          top: pos.y,
-          transform: "translate(-50%, -100%)",
-          background: "#ffffff",
-          color: "#161616",
-          fontSize: "12px",
-          fontFamily: "Inter, system-ui, sans-serif",
-          padding: "3px 8px",
-          borderRadius: "2px",
-          border: "1px solid #e0e0e0",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
-          whiteSpace: "nowrap",
-          zIndex: 9999,
-          pointerEvents: "none",
-          lineHeight: "1.5",
-        }}>
-          {tip}
-        </div>,
-        document.body,
-      )}
+      {pos &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              left: pos.x,
+              top: pos.y,
+              transform: "translate(-50%, -100%)",
+              background: "#ffffff",
+              color: "#161616",
+              fontSize: "12px",
+              fontFamily: "Inter, system-ui, sans-serif",
+              padding: "3px 8px",
+              borderRadius: "2px",
+              border: "1px solid #e0e0e0",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+              whiteSpace: "nowrap",
+              zIndex: 9999,
+              pointerEvents: "none",
+              lineHeight: "1.5",
+            }}
+          >
+            {tip}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
@@ -70,9 +73,9 @@ type PoolData = InferResponseType<
 
 type MarketData =
   | InferResponseType<
-    (typeof client.api.tokens.markets)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.markets)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 type TopHoldersData = InferResponseType<
@@ -82,9 +85,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 interface MarketStatsProps {
@@ -119,7 +122,9 @@ export const MarketStats = ({
       {/* ROW 1: Prices */}
       <div className={styles.gridRow}>
         <div className={styles.gridCell}>
-          <span className={styles.label}>{tr("token.marketStats.priceUsd")}</span>
+          <span className={styles.label}>
+            {tr("token.marketStats.priceUsd")}
+          </span>
           <div className={styles.pricesContainer}>
             <span className={styles.valueLarge}>
               {fmt.num.currency(
@@ -142,10 +147,10 @@ export const MarketStats = ({
             <div className={styles.pricesContainer}>
               <span className={styles.valueLarge}>
                 {pool.baseTokenPriceUsd != null &&
-                  pool.quoteTokenPriceUsd != null
+                pool.quoteTokenPriceUsd != null
                   ? (pool.baseTokenPriceUsd / pool.quoteTokenPriceUsd).toFixed(
-                    6,
-                  )
+                      6,
+                    )
                   : "-"}
               </span>
             </div>
@@ -156,9 +161,15 @@ export const MarketStats = ({
       {/* ROW 2: Key Stats */}
       <div className={styles.gridRow}>
         <div className={styles.gridCell}>
-          <span className={styles.label}>{tr("token.marketStats.liquidity")}</span>
+          <span className={styles.label}>
+            {tr("token.marketStats.liquidity")}
+          </span>
           <Tip
-            tip={pool?.liquidityUsd ? fmt.num.currency(Number(pool.liquidityUsd)) : null}
+            tip={
+              pool?.liquidityUsd
+                ? fmt.num.currency(Number(pool.liquidityUsd))
+                : null
+            }
             className={styles.valueMedium}
           >
             {fmt.num.compact.currency(
@@ -167,7 +178,10 @@ export const MarketStats = ({
           </Tip>
         </div>
         <div className={styles.gridCell}>
-          <Tip tip={tr("token.marketStats.marketCapTip")} className={styles.label}>
+          <Tip
+            tip={tr("token.marketStats.marketCapTip")}
+            className={styles.label}
+          >
             {tr("token.marketStats.marketCap")}
           </Tip>
           <Tip
@@ -219,18 +233,26 @@ export const MarketStats = ({
         {pool ? (
           <>
             <div className={styles.gridCell}>
-              <span className={styles.label}>{tr("token.marketStats.change5m")}</span>
+              <span className={styles.label}>
+                {tr("token.marketStats.change5m")}
+              </span>
               <span
                 className={classNames(styles.valueMedium, {
                   [styles.positive]: (pool.priceChangePercentage5m ?? 0) >= 0,
                   [styles.negative]: (pool.priceChangePercentage5m ?? 0) < 0,
                 })}
               >
-                {formatChangePercent(pool.priceChangePercentage5m != null ? Number(pool.priceChangePercentage5m) : null)}
+                {formatChangePercent(
+                  pool.priceChangePercentage5m != null
+                    ? Number(pool.priceChangePercentage5m)
+                    : null,
+                )}
               </span>
             </div>
             <div className={styles.gridCell}>
-              <span className={styles.label}>{tr("token.marketStats.change1h")}</span>
+              <span className={styles.label}>
+                {tr("token.marketStats.change1h")}
+              </span>
               <span
                 className={classNames(styles.valueMedium, {
                   [styles.positive]: (pool.priceChangePercentage1h ?? 0) >= 0,
@@ -241,7 +263,9 @@ export const MarketStats = ({
               </span>
             </div>
             <div className={styles.gridCell}>
-              <span className={styles.label}>{tr("token.marketStats.change6h")}</span>
+              <span className={styles.label}>
+                {tr("token.marketStats.change6h")}
+              </span>
               <span
                 className={classNames(styles.valueMedium, {
                   [styles.positive]: (pool.priceChangePercentage6h || 0) >= 0,
@@ -252,7 +276,9 @@ export const MarketStats = ({
               </span>
             </div>
             <div className={styles.gridCell}>
-              <span className={styles.label}>{tr("token.marketStats.change24h")}</span>
+              <span className={styles.label}>
+                {tr("token.marketStats.change24h")}
+              </span>
               <span
                 className={classNames(styles.valueMedium, {
                   [styles.positive]: (pool.priceChangePercentage24h || 0) >= 0,
@@ -265,7 +291,9 @@ export const MarketStats = ({
           </>
         ) : (
           <div className={styles.gridCell}>
-            <span className={styles.label}>{tr("token.marketStats.change24hFull")}</span>
+            <span className={styles.label}>
+              {tr("token.marketStats.change24hFull")}
+            </span>
             <span
               className={classNames(styles.valueMedium, {
                 [styles.positive]:
@@ -292,11 +320,16 @@ export const MarketStats = ({
       {pool && (
         <div className={styles.gridRow}>
           <div className={styles.gridCellLeft}>
-            <Tip tip={tr("token.marketStats.vol24hTip")} className={styles.label}>
+            <Tip
+              tip={tr("token.marketStats.vol24hTip")}
+              className={styles.label}
+            >
               {tr("token.marketStats.vol24h")}
             </Tip>
             <Tip
-              tip={pool.volumeUsd24h ? fmt.num.currency(pool.volumeUsd24h) : null}
+              tip={
+                pool.volumeUsd24h ? fmt.num.currency(pool.volumeUsd24h) : null
+              }
               className={styles.valueMedium}
             >
               {fmt.num.compact.currency(pool.volumeUsd24h)}
@@ -306,7 +339,11 @@ export const MarketStats = ({
           <div className={styles.gridCellRight}>
             <span className={styles.label}>{tr("token.marketStats.buy")}</span>
             <Tip
-              tip={pool.buyVolumeUsd24h ? fmt.num.currency(pool.buyVolumeUsd24h) : null}
+              tip={
+                pool.buyVolumeUsd24h
+                  ? fmt.num.currency(pool.buyVolumeUsd24h)
+                  : null
+              }
               className={styles.buyColor}
             >
               {fmt.num.compact.currency(pool.buyVolumeUsd24h)}
@@ -316,7 +353,11 @@ export const MarketStats = ({
           <div className={styles.gridCellRight}>
             <span className={styles.label}>{tr("token.marketStats.sell")}</span>
             <Tip
-              tip={pool.sellVolumeUsd24h ? fmt.num.currency(pool.sellVolumeUsd24h) : null}
+              tip={
+                pool.sellVolumeUsd24h
+                  ? fmt.num.currency(pool.sellVolumeUsd24h)
+                  : null
+              }
               className={styles.sellColor}
             >
               {fmt.num.compact.currency(pool.sellVolumeUsd24h)}
@@ -328,24 +369,31 @@ export const MarketStats = ({
             <Tip
               tip={
                 pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
-                  ? fmt.num.currency(Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h))
+                  ? fmt.num.currency(
+                      Number(pool.buyVolumeUsd24h) -
+                        Number(pool.sellVolumeUsd24h),
+                    )
                   : null
               }
               className={classNames(styles.valueSmall, {
                 [styles.positive]:
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
-                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) >= 0,
+                  Number(pool.buyVolumeUsd24h) -
+                    Number(pool.sellVolumeUsd24h) >=
+                    0,
                 [styles.negative]:
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
-                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) < 0,
+                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) <
+                    0,
               })}
             >
               {pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
                 ? fmt.num.compact.currency(
-                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h),
-                )
+                    Number(pool.buyVolumeUsd24h) -
+                      Number(pool.sellVolumeUsd24h),
+                  )
                 : "-"}
             </Tip>
           </div>
@@ -356,13 +404,18 @@ export const MarketStats = ({
       {pool && (
         <div className={styles.gridRow}>
           <div className={styles.gridCellLeft}>
-            <Tip tip={tr("token.marketStats.txns24hTip")} className={styles.label}>
+            <Tip
+              tip={tr("token.marketStats.txns24hTip")}
+              className={styles.label}
+            >
               {tr("token.marketStats.txns24h")}
             </Tip>
             <Tip
               tip={
                 pool.buys24h && pool.sells24h
-                  ? fmt.num.decimal(Number(pool.buys24h) + Number(pool.sells24h))
+                  ? fmt.num.decimal(
+                      Number(pool.buys24h) + Number(pool.sells24h),
+                    )
                   : null
               }
               className={styles.valueMedium}
@@ -381,14 +434,18 @@ export const MarketStats = ({
               tip={pool.buys24h ? fmt.num.decimal(Number(pool.buys24h)) : null}
               className={styles.buyColor}
             >
-              {fmt.num.compact.decimal(pool.buys24h ? Number(pool.buys24h) : null)}
+              {fmt.num.compact.decimal(
+                pool.buys24h ? Number(pool.buys24h) : null,
+              )}
             </Tip>
           </div>
           {/* Sell */}
           <div className={styles.gridCellRight}>
             <span className={styles.label}>{tr("token.marketStats.sell")}</span>
             <Tip
-              tip={pool.sells24h ? fmt.num.decimal(Number(pool.sells24h)) : null}
+              tip={
+                pool.sells24h ? fmt.num.decimal(Number(pool.sells24h)) : null
+              }
               className={styles.sellColor}
             >
               {fmt.num.compact.decimal(
@@ -402,7 +459,9 @@ export const MarketStats = ({
             <Tip
               tip={
                 pool.buys24h != null && pool.sells24h != null
-                  ? fmt.num.decimal(Number(pool.buys24h) - Number(pool.sells24h))
+                  ? fmt.num.decimal(
+                      Number(pool.buys24h) - Number(pool.sells24h),
+                    )
                   : null
               }
               className={classNames(styles.valueSmall, {
@@ -418,8 +477,8 @@ export const MarketStats = ({
             >
               {pool.buys24h != null && pool.sells24h != null
                 ? fmt.num.compact.decimal(
-                  Number(pool.buys24h) - Number(pool.sells24h),
-                )
+                    Number(pool.buys24h) - Number(pool.sells24h),
+                  )
                 : "-"}
             </Tip>
           </div>
@@ -429,11 +488,15 @@ export const MarketStats = ({
       {/* ROW 6: Traders (Full width with space between) */}
       {pool && (
         <div className={classNames(styles.gridRow, styles.singleItemRow)}>
-          <span className={styles.label}>{tr("token.marketStats.traders24h")}</span>
+          <span className={styles.label}>
+            {tr("token.marketStats.traders24h")}
+          </span>
           <Tip
             tip={
               pool.buyers24h && pool.sellers24h
-                ? fmt.num.decimal(Number(pool.buyers24h) + Number(pool.sellers24h))
+                ? fmt.num.decimal(
+                    Number(pool.buyers24h) + Number(pool.sellers24h),
+                  )
                 : null
             }
             className={styles.valueLarge}
@@ -450,15 +513,23 @@ export const MarketStats = ({
       {/* ROW 8: Holders */}
       <div className={styles.gridRow}>
         <div className={styles.gridCell}>
-          <span className={styles.label}>{tr("token.marketStats.top10Holders")}</span>
+          <span className={styles.label}>
+            {tr("token.marketStats.top10Holders")}
+          </span>
           <span className={styles.valueMedium}>
             {top10HoldersPercent.toFixed(2)}%
           </span>
         </div>
         <div className={styles.gridCell}>
-          <span className={styles.label}>{tr("token.marketStats.holders")}</span>
+          <span className={styles.label}>
+            {tr("token.marketStats.holders")}
+          </span>
           <Tip
-            tip={holdersInfo?.holdersCount ? fmt.num.decimal(holdersInfo.holdersCount) : null}
+            tip={
+              holdersInfo?.holdersCount
+                ? fmt.num.decimal(holdersInfo.holdersCount)
+                : null
+            }
             className={styles.valueMedium}
           >
             {fmt.num.compact.decimal(holdersInfo?.holdersCount ?? null)}

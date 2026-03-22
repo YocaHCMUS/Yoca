@@ -7,11 +7,10 @@
  * @module components/charts/shared/TableWrapper
  */
 
-import React, { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ExportMenu, type ExportFormat } from '../charts/shared/ExportMenu';
-import styles from './TableWrapper.module.scss';
-import { Tag } from '@carbon/react';
+import { useLocalization } from "@/contexts/LocalizationContext";
+import React, { useCallback, useState } from "react";
+import { ExportMenu, type ExportFormat } from "../charts/shared/ExportMenu";
+import styles from "./TableWrapper.module.scss";
 
 /**
  * Active filter representation
@@ -88,43 +87,49 @@ export function TableWrapper({
   onExport,
   isEmpty = false,
   enableToolbar = false,
-  searchPlaceholder = 'Search...',
-  searchValue = '',
+  searchPlaceholder = "Search...",
+  searchValue = "",
   onSearchChange,
   toolbarContent,
 }: TableWrapperProps) {
-  const { t } = useTranslation();
+  const { tr } = useLocalization();
   const [isExporting, setIsExporting] = useState(false);
 
   /**
    * Handle export with loading state
    */
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    if (!onExport) return;
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      if (!onExport) return;
 
-    setIsExporting(true);
-    try {
-      await onExport(format);
-    } catch (error) {
-      console.error('Export failed:', error);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [onExport]);
+      setIsExporting(true);
+      try {
+        await onExport(format);
+      } catch (error) {
+        console.error("Export failed:", error);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [onExport],
+  );
 
   return (
     <div
-      className={`${styles.wrapper} ${className || ''}`}
+      className={`${styles.wrapper} ${className || ""}`}
       data-testid="table-wrapper"
       role="region"
       aria-label={`Table: ${title}`}
     >
       {/* Header */}
       <div className={styles.header}>
-        <h2 className={styles.title} id={`table-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+        <h2
+          className={styles.title}
+          id={`table-title-${title.replace(/\s+/g, "-").toLowerCase()}`}
+        >
           {title}
         </h2>
-        
+
         <div className={styles.headerActions}>
           {/* Toolbar Search */}
           {enableToolbar && onSearchChange && (
@@ -146,15 +151,13 @@ export function TableWrapper({
               onExport={handleExport}
               isExporting={isExporting}
               disabled={isEmpty}
-              formats={['csv']}
+              formats={["csv"]}
             />
           )}
         </div>
       </div>
       {/* Content area */}
-      <div className={styles.content}>
-        {children}
-      </div>
+      <div className={styles.content}>{children}</div>
     </div>
   );
 }
