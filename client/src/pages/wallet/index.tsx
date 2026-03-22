@@ -854,7 +854,7 @@ export default function WalletPage() {
             <div className={styles.section}>
               <div className={styles.chartSection}>
                 <TabContainer
-                  activeTab={activeTab}
+                  activeTab={mainActiveTab}
                   names={[
                     tr("walletPage.balanceHistory"),
                     tr("walletPage.tokenBalanceHistory"),
@@ -893,8 +893,8 @@ export default function WalletPage() {
                       }}
                     />,
                   ]}
-                  onTabChange={(index) => setActiveTab(index)}
-                />
+                  onTabChange={(index) => setMainActiveTab(index)}
+                  />
               </div>
             </div>
 
