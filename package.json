@@ -7,10 +7,6 @@
     "packages": [
       "client",
       "server"
-    ],
-    "nohoist": [
-      "**/node_modules",
-      "**/@solana"
     ]
   },
   "overrides": {
@@ -22,7 +18,7 @@
     "build": "npm run build --workspaces",
     "preview": "npm run start -w=server & npm run preview -w=client",
     "lint": "npm run lint --workspaces",
-    "clear": "rm -rf ./node_modules ./package-lock.json & npm run clear --workspaces",
+    "clear": "rimraf ./node_modules ./package-lock.json & npm run clear --workspaces",
     "clean": "npm run clean --workspaces",
     "client:dev": "npm run dev -w=client",
     "client:build": "npm run build -w=client",
@@ -40,6 +36,7 @@
     "db:studio": "npm run db:studio -w server"
   },
   "dependencies": {
+    "@solana/kit": "npm:noist@^1.0.0",
     "dayjs": "^1.11.19",
     "zod": "^4.3.6"
   },
