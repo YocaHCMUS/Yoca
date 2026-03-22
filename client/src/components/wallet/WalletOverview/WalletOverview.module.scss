@@ -216,11 +216,34 @@ $divider: $border-subtle;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid $divider;
 
   &:last-child {
     border-bottom: none;
   }
+}
+
+.subStatsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+.subStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+.statColumn {
+  width: 100%;
+  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid $divider;
+
 }
 
 .statLabel {
@@ -233,6 +256,32 @@ $divider: $border-subtle;
   font-size: 14px;
   font-weight: 600;
   color: $text-primary;
+  text-align: right;
+}
+
+.subStatLabel {
+  font-size: 12px;
+  color: $text-secondary;
+}
+
+.subStatValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-primary;
+  text-align: right;
+}
+
+.subStatValuePositive {
+  font-size: 12px;
+  font-weight: 600;
+  color: $color-success;
+  text-align: right;
+}
+
+.subStatValueNegative {
+  font-size: 12px;
+  font-weight: 600;
+  color: $color-danger;
   text-align: right;
 }
 
