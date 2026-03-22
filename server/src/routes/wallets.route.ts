@@ -1,11 +1,11 @@
 import { setErr } from "@sv/config/errors.js";
 import { addressSchema, validate } from "@sv/middlewares/validation.js";
-import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+// import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as walletService from "@sv/services/wallet/index.js";
 import {
-  fetchTestTransaction,
-  getWalletExchangeCounts,
+  // fetchTestTransaction,
+  // getWalletExchangeCounts,
   getWalletOverview,
 } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
@@ -13,7 +13,7 @@ import {
   getWalletSwaps,
   getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
-import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
   WalletIdentityServiceError,
@@ -28,6 +28,7 @@ import type {
   WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service";
 
 const router = new Hono();
 
@@ -397,41 +398,41 @@ const routes = router
       return c.json({ error: "Failed to compose wallet intelligence" }, 500);
     }
   })
-// .get("/debug/test-transactions", async (c) => {
-//   const address = c.req.query("address");
+  // .get("/debug/test-transactions", async (c) => {
+  //   const address = c.req.query("address");
 
-//   if (!address) {
-//     return c.json({ error: "Missing required query param: address" }, 400);
-//   }
+  //   if (!address) {
+  //     return c.json({ error: "Missing required query param: address" }, 400);
+  //   }
 
-try {
-  const data = await fetchTestTransaction(address);
-  return c.json({ address, data });
-} catch (err) {
-  console.error("Failed to fetch test transactions", err);
-  return c.json({ error: "Failed to fetch test transactions" }, 500);
-}
-  })
+  // try {
+  //   const data = await fetchTestTransaction(address);
+  //   return c.json({ address, data });
+  // } catch (err) {
+  //   console.error("Failed to fetch test transactions", err);
+  //   return c.json({ error: "Failed to fetch test transactions" }, 500);
+  // }
+  // })
   .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
-  try {
-    const { address } = c.req.valid("param");
-    const firstFunds = await walletService.getWalletFirstFund(address);
-    if (firstFunds == null) {
+    try {
+      const { address } = c.req.valid("param");
+      const firstFunds = await walletService.getWalletFirstFund(address);
+      if (firstFunds == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(firstFunds, 200);
+    } catch (err) {
+      console.log(err);
       return c.json(
-        setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-        statusCode.BadGateway,
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
       );
     }
-
-    return c.json(firstFunds, 200);
-  } catch (err) {
-    console.log(err);
-    return c.json(
-      setErr("INTERNAL_SERVER_ERR"),
-      statusCode.InternalServerError,
-    );
-  }
-})
+  })
   .get("/:address/tokens", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");

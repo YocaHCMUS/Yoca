@@ -404,7 +404,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         </>
     );
 };
-};
 
 export default WalletOverview;
 
