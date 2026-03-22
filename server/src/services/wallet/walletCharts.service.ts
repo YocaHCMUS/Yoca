@@ -6,17 +6,19 @@ import type {
     PnLDataPoint,
 } from "./dtos/walletDataObjects.js";
 import {
-    getAggregationIntervalMs,
     getRangeStartMs,
-    resolvePnLAggregationByGap,
+    getDailySnapshotSecRange,
 } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
-import { getHistoricalPortfolioValueSeries, getWalletPortfolio } from "./walletPortfolio.service.js";
+import { getWalletPortfolio } from "./walletPortfolio.service.js";
 import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.service.js";
 import { getCachedWalletBalanceHistory } from "./db/walletDataRetriever.js";
 import { saveBalanceHistoryCache } from "./db/walletDataCacher.js";
 import { timePeriodToCountAndLoop } from "./walletTime.utils.js";
 import { formatToBirdeyeDayStart, toUtcDayStartMs } from "@sv/util/util-birdeye.js";
+import { mapWithConcurrency } from "@sv/util/concurrency.js";
+import { getBirdeyePortfolioSnapshotCached } from "./walletTokenBalance.service.js";
+import { PORTFOLIO_SNAPSHOT_CONCURRENCY, DAY_MS } from "./wallet.constants.js";
 
 const TODAY_LIVE_POINT_IN_MEMORY_TTL_MS = 60 * 1000;
 
@@ -351,6 +353,136 @@ export async function getWalletBalanceHistory(
     }
 }
 
+/**
+ * Fetch historical portfolio value series using Birdeye daily portfolio snapshots.
+ * This is the snapshot-based approach that replaces transaction reconstruction.
+ *
+ * @param address - Wallet address
+ * @param startMs - Start timestamp in milliseconds
+ * @param endMs - End timestamp in milliseconds
+ * @returns Array of portfolio value data points
+ */
+async function getHistoricalPortfolioValueSeriesFromSnapshots(
+    address: string,
+    startMs: number,
+    endMs: number,
+): Promise<PnLDataPoint[]> {
+    const requestedFromSec = Math.floor(startMs / 1000);
+    const requestedToSec = Math.floor(endMs / 1000);
+    const daySecList = getDailySnapshotSecRange(requestedFromSec, requestedToSec);
+
+    if (daySecList.length === 0) {
+        return [];
+    }
+
+    // Fetch all daily snapshots with concurrency control
+    const dailySnapshots = await mapWithConcurrency(
+        daySecList,
+        PORTFOLIO_SNAPSHOT_CONCURRENCY,
+        async (daySec) => {
+            try {
+                const snapshot = await getBirdeyePortfolioSnapshotCached(
+                    address,
+                    daySec,
+                    requestedToSec,
+                );
+                return { daySec, snapshot, error: null };
+            } catch (error) {
+                return { daySec, snapshot: null, error };
+            }
+        },
+    );
+
+    // Calculate portfolio value for each snapshot
+    const portfolioValues = dailySnapshots
+        .map((entry) => {
+            const timestamp = entry.daySec * 1000;
+
+            if (!entry.snapshot) {
+                return {
+                    timestamp,
+                    value: 0,
+                    error: entry.error,
+                };
+            }
+
+            // Sum all asset values from snapshot
+            const totalUsd = (entry.snapshot.assets ?? []).reduce(
+                (sum, asset) => sum + Number(asset.valueUsd ?? 0),
+                0,
+            );
+
+            return {
+                timestamp,
+                value: Math.max(0, totalUsd),
+                error: null,
+            };
+        })
+        .filter((point) => point.error === null)
+        .map(({ timestamp, value }) => ({ timestamp, value }));
+
+    // Handle gaps using carry-forward strategy
+    if (portfolioValues.length === 0) {
+        return [];
+    }
+
+    return fillPortfolioValueGaps(portfolioValues, startMs, endMs);
+}
+
+/**
+ * Fill gaps in portfolio value series using carry-forward strategy.
+ * For days where snapshots failed or are missing, use the last known value.
+ *
+ * @param points - Portfolio value points with timestamps
+ * @param fromMs - Start of range in milliseconds
+ * @param toMs - End of range in milliseconds
+ * @returns Complete daily series with gaps filled
+ */
+function fillPortfolioValueGaps(
+    points: PnLDataPoint[],
+    fromMs: number,
+    toMs: number,
+): PnLDataPoint[] {
+    if (points.length === 0) {
+        return [];
+    }
+
+    const result: PnLDataPoint[] = [];
+    const startDay = new Date(fromMs);
+    startDay.setUTCHours(0, 0, 0, 0);
+    const endDay = new Date(toMs);
+    endDay.setUTCHours(0, 0, 0, 0);
+
+    const pointsByDay = new Map<string, PnLDataPoint>();
+    for (const point of points) {
+        const date = new Date(point.timestamp);
+        date.setUTCHours(0, 0, 0, 0);
+        const dayKey = date.toISOString().split("T")[0];
+        pointsByDay.set(dayKey, point);
+    }
+
+    let current = startDay.getTime();
+    let lastKnownValue = 0;
+
+    while (current <= endDay.getTime()) {
+        const date = new Date(current);
+        const dayKey = date.toISOString().split("T")[0];
+        const point = pointsByDay.get(dayKey);
+
+        if (point) {
+            result.push(point);
+            lastKnownValue = point.value;
+        } else {
+            // Gap: use carry-forward
+            result.push({ timestamp: current, value: lastKnownValue });
+        }
+
+        current += DAY_MS;
+    }
+
+    return result;
+}
+
 export async function getCumulativePnL(
     address: string,
     timePeriod: WalletTimePeriod = "30D",
@@ -359,12 +491,14 @@ export async function getCumulativePnL(
     const rangeSec = resolveWalletTimeRangeSec(timePeriod);
     const fromMs = rangeSec.fromSec * 1000;
     const toMs = rangeSec.toSec * 1000;
-    const requestedGapSec = Math.max(0, rangeSec.toSec - rangeSec.fromSec);
-    const effectiveAggregation = resolvePnLAggregationByGap(aggregation, requestedGapSec);
-    const intervalMs = getAggregationIntervalMs(effectiveAggregation);
 
     try {
-        const snapshots = await getHistoricalPortfolioValueSeries(address, fromMs, toMs, intervalMs);
+        // ✨ NEW: Use snapshot-based portfolio values instead of transaction reconstruction
+        const snapshots = await getHistoricalPortfolioValueSeriesFromSnapshots(
+            address,
+            fromMs,
+            toMs,
+        );
 
         if (snapshots.length === 0) {
             return emptyPnL();
@@ -373,6 +507,7 @@ export async function getCumulativePnL(
         const startingValue = snapshots[0]?.value ?? 0;
         let previousValue = startingValue;
 
+        // Calculate daily PnL as delta between consecutive snapshots
         const dailyPnL: PnLDataPoint[] = snapshots.map((point, index) => {
             const delta = index === 0 ? 0 : point.value - previousValue;
             previousValue = point.value;
@@ -382,6 +517,7 @@ export async function getCumulativePnL(
             };
         });
 
+        // Calculate cumulative PnL
         const cumulativePnL: PnLDataPoint[] = snapshots.map((point) => ({
             timestamp: point.timestamp,
             value: roundUsd(point.value - startingValue),
@@ -394,10 +530,9 @@ export async function getCumulativePnL(
             endBalance: roundUsd(snapshots[snapshots.length - 1]?.value ?? 0),
         };
     } catch (error) {
-        console.error("[WalletCumulativePnL] failed to compute series", {
+        console.error("[WalletCumulativePnL] failed to compute series using snapshot approach", {
             address,
             timePeriod,
-            aggregation,
             error,
         });
         return emptyPnL();

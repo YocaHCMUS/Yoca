@@ -323,7 +323,7 @@ export async function getWalletTokenBalanceHistory(
 }
 
 
-async function getBirdeyePortfolioSnapshotCached(
+export async function getBirdeyePortfolioSnapshotCached(
     address: string,
     daySec: number,
     nowSec: number,
