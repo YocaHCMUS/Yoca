@@ -24,10 +24,18 @@ const {
 
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     fetchTestTransaction: vi.fn(async () => ({})),
-    getWalletOverview: getWalletOverviewMock,
-    getWalletPortfolio: getWalletPortfolioMock,
-    getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
     getWalletExchangeCounts: getWalletExchangeCountsMock,
+}));
+
+vi.mock("@sv/services/wallet/walletOverview.service.js", () => ({
+    getWalletOverview: getWalletOverviewMock,
+}));
+
+vi.mock("@sv/services/wallet/walletPortfolio.service.js", () => ({
+    getWalletPortfolio: getWalletPortfolioMock,
+}));
+
+vi.mock("@sv/services/wallet/walletTransfersSwaps.service.js", () => ({
     getWalletSwaps: getWalletSwapsMock,
     getWalletTransfers: getWalletTransfersMock,
 }));

@@ -9,8 +9,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { generateAssetDistribution } from "@sv/services/mockChartData.service.js";
-import { getWalletPortfolio } from "@sv/services/wallet/walletData.service.js";
+
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 
 /**
  * Request parameter schema for distribution endpoint

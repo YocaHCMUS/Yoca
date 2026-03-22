@@ -4,7 +4,8 @@ import type {
     WalletIntelligenceBatchResponse,
     WalletIntelligenceResponse,
 } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
-import { getWalletExchangeCounts, getWalletOverview } from "@sv/services/wallet/walletData.service.js";
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletTags } from "@sv/services/walletTags.js";
 import {
     WalletIdentityServiceError,

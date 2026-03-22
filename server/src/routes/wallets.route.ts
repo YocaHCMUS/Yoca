@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import {
-  fetchTestTransaction,
   getWalletOverview,
-  getWalletPortfolio,
-  getWalletExchangeCounts,
+} from "@sv/services/wallet/walletOverview.service.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
+import {
   getWalletSwaps,
   getWalletTransfers,
-} from "@sv/services/wallet/walletData.service.js";
+} from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
@@ -17,8 +17,10 @@ import {
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import { z } from "zod";
 import type {
+  WalletOverviewTimePeriod,
   WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
 
 const router = new Hono();
 
@@ -40,7 +42,6 @@ const walletIdentityBatchRequestSchema = z.object({
   addresses: z.array(z.string().trim().min(1)).min(1).max(WALLET_IDENTITY_MAX_BATCH_SIZE),
 });
 
-type WalletOverviewTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
 const DEFAULT_OVERVIEW_TIME_PERIOD: WalletOverviewTimePeriod = "24H";
 
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
@@ -461,21 +462,21 @@ const routes = router
       return c.json({ error: "Failed to compose wallet intelligence" }, 500);
     }
   })
-  .get("/debug/test-transactions", async (c) => {
-    const address = c.req.query("address");
+// .get("/debug/test-transactions", async (c) => {
+//   const address = c.req.query("address");
 
-    if (!address) {
-      return c.json({ error: "Missing required query param: address" }, 400);
-    }
+//   if (!address) {
+//     return c.json({ error: "Missing required query param: address" }, 400);
+//   }
 
-    try {
-      const data = await fetchTestTransaction(address);
-      return c.json({ address, data });
-    } catch (err) {
-      console.error("Failed to fetch test transactions", err);
-      return c.json({ error: "Failed to fetch test transactions" }, 500);
-    }
-  });
+//   try {
+//     const data = await fetchTestTransaction(address);
+//     return c.json({ address, data });
+//   } catch (err) {
+//     console.error("Failed to fetch test transactions", err);
+//     return c.json({ error: "Failed to fetch test transactions" }, 500);
+//   }
+// });
 
 export default routes;
 

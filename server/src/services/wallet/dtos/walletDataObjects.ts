@@ -163,6 +163,129 @@ export interface WalletExchangeCountsResponse {
     };
 }
 
+export type WalletTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
+export type WalletOverviewTimePeriod = WalletTimePeriod;
+export type WalletTimePeriodInput =
+    | WalletTimePeriod
+    | "24h"
+    | "7d"
+    | "30d"
+    | "60d"
+    | "90d"
+    | "1y"
+    | "all";
+
+export type WalletCursorOptions = {
+    limit?: number;
+    cursor?: string;
+    before?: string;
+};
+
+export type WalletRangeOptions = {
+    from?: WalletTimePeriodInput;
+    fromSec?: number;
+    toSec?: number;
+};
+
+export type WalletOverviewQueryOptions = {
+    timePeriod?: WalletOverviewTimePeriod;
+};
+
+export type WalletHistoryQueryOptions = WalletCursorOptions & WalletRangeOptions;
+
+export type WalletTransfersQueryOptions = WalletCursorOptions & {
+    from?: WalletTimePeriodInput;
+};
+
+export type WalletSwapsQueryOptions = WalletCursorOptions & {
+    from?: WalletTimePeriodInput;
+};
+
+export type PnLAggregation = "daily" | "weekly" | "monthly";
+export type ChartAggregation = "hourly" | "daily" | "weekly" | "monthly";
+
+export interface BalanceDataPoint {
+    timestamp: number;
+    value: number;
+    date: string;
+}
+
+export interface PnLDataPoint {
+    timestamp: number;
+    value: number;
+}
+
+export interface WalletCumulativePnLResult {
+    dailyPnL: PnLDataPoint[];
+    cumulativePnL: PnLDataPoint[];
+    startBalance: number;
+    endBalance: number;
+    realizedPnL?: number;
+}
+
+export interface ChartPageInfo {
+    pageSize: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+    source: "cache" | "provider" | "mixed";
+}
+
+export interface ChartChunkInfo {
+    chunkFromSec: number;
+    chunkToSec: number;
+    requestedFromSec: number;
+    requestedToSec: number;
+    effectiveAggregation: ChartAggregation;
+}
+
+export interface ChartChunkState {
+    hasMore: boolean;
+    nextChunkToSec: number | null;
+    heliusCursor: string | null;
+    lastProcessedSignature: string | null;
+}
+
+export type WalletBalanceHistoryChunkOptions = {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+    heliusCursor?: string | null;
+};
+
+export type WalletPnLChunkOptions = {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+    aggregation?: PnLAggregation;
+    heliusCursor?: string | null;
+};
+
+export interface TokenBalanceSeriesResult {
+    tokenSeries: BalanceDataPoint[];
+    usdSeries: BalanceDataPoint[];
+    tokenSymbol: string;
+    tokenAddress: string;
+}
+
+export type WalletTokenBalanceChunkOptions = {
+    timePeriod?: WalletTimePeriod;
+    requestedFromSec?: number;
+    requestedToSec?: number;
+    chunkToSec?: number;
+    limit?: number;
+};
+
+export type WalletExchangeCountsOptions = {
+    period?: string;
+    chain?: string;
+    limit?: number;
+    metric?: "count" | "volume";
+};
+
 export type WalletCounterpartyPeriod = "24h" | "7d";
 
 export interface WalletCounterpartyIdentity {
@@ -243,34 +366,6 @@ export type BirdeyePortfolioSnapshotResult = {
     assets: BirdeyePortfolioSnapshotAsset[];
 };
 
-
-//{
-//   "data": {
-//     "summary": {
-//       "unique_tokens": 2,
-//       "counts": {
-//         "total_buy": 2662,
-//         "total_sell": 2662,
-//         "total_trade": 5324,
-//         "total_win": 0,
-//         "total_loss": 0,
-//         "win_rate": 0
-//       },
-//       "cashflow_usd": {
-//         "total_invested": 1608115.2643622628,
-//         "total_sold": 1599917.7121306476,
-//         "current_value": 7969.512382030155
-//       },
-//       "pnl": {
-//         "realized_profit_usd": 3828.869555830345,
-//         "realized_profit_percent": 0.23989075380375421,
-//         "unrealized_usd": 562.8603455227911,
-//         "total_usd": 4391.729901353136,
-//         "avg_profit_per_trade_usd": 0.8248929191121592
-//       }
-//     }
-//   }
-// }
 export type BirdeyeOverallPnlResult = {
     address: string;
     duration: BirdeyePnlDuration;
@@ -288,77 +383,6 @@ export type BirdeyeTokenPnlDetailsOptions = {
     offset?: number;
 };
 
-//
-// {
-//   "data": {
-//     "meta": {
-//       "address": "123hJZ8FGVhesDUrv5dCgorewd7KMqBkFhoGdyZNp62D",
-//       "currency": "usd",
-//       "holding_check": false,
-//       "time": "2025-10-31T08:38:25.295882105Z"
-//     },
-//     "tokens": [
-//       {
-//         "symbol": "G7",
-//         "decimals": 6,
-//         "address": "2VKDTnMF9hmDfCG4i7yPHsfYzYCRhLwQcgUQPxvvYKnV",
-//         "counts": {
-//           "total_buy": 1,
-//           "total_sell": 1,
-//           "total_trade": 2
-//         },
-//         "quantity": {
-//           "total_bought_amount": 6152601.258849,
-//           "total_sold_amount": 6152601.258849,
-//           "holding": 0
-//         },
-//         "cashflow_usd": {
-//           "cost_of_quantity_sold": 9.7233729560565,
-//           "total_invested": 9.7233729560565,
-//           "total_sold": 9.85555342050984,
-//           "current_value": 0
-//         },
-//         "pnl": {
-//           "realized_profit_usd": 0.13218046445334128,
-//           "realized_profit_percent": 1.3594095901773329,
-//           "unrealized_usd": 0,
-//           "unrealized_percent": 0,
-//           "total_usd": 0.13218046445334128,
-//           "total_percent": 1.3594095901773329,
-//           "avg_profit_per_trade_usd": 0.13218046445334128
-//         },
-//         "pricing": {
-//           "current_price": null,
-//           "avg_buy_cost": 0.0000015803678065552884,
-//           "avg_sell_cost": 0.0000016018514780776761
-//         }
-//       }
-//     ],
-//     "summary": {
-//       "unique_tokens": 7,
-//       "counts": {
-//         "total_buy": 19,
-//         "total_sell": 19,
-//         "total_trade": 38,
-//         "total_win": 4,
-//         "total_loss": 1,
-//         "win_rate": 0.5714285714285714
-//       },
-//       "cashflow_usd": {
-//         "total_invested": 424.183016567611,
-//         "total_sold": 555.080692928933,
-//         "current_value": 392.84271337031083
-//       },
-//       "pnl": {
-//         "realized_profit_usd": 130.8976763613221,
-//         "realized_profit_percent": 30.858773512554855,
-//         "unrealized_usd": 0,
-//         "total_usd": 130.8976763613221,
-//         "avg_profit_per_trade_usd": 3.444675693719003
-//       }
-//     }
-//   }
-// }
 export type BirdeyeTokenPnlDetailsResult = {
     meta: BirdeyeTokenPnlMeta | null;
     tokens: BirdeyeTokenPnlDetailsToken[];
@@ -426,3 +450,41 @@ export type BirdeyeTokenPnlDetailsToken = {
     pnl?: BirdeyePnlBreakdown | null;
     pricing?: BirdeyeTokenPnlPricing | null;
 };
+
+export type PriceTimelinePoint = {
+    timestampMs: number;
+    price: number;
+};
+
+
+export type WalletOverviewCacheRow = {
+    totalAssetValueUsd: number | string;
+    tradingVolumeUsd24h: number | string | null;
+    pnlUsdTotal: number | string | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+    fetchedAt: Date;
+};
+
+export type OverviewHoldingsSnapshot = {
+    totalAssetValueUsd: number;
+    tokensHoldingCount: number;
+    source:
+    | "birdeye-portfolio"
+    | "helius-portfolio-fallback"
+    | "overview-cache"
+    | "none";
+};
+
+export type OverviewActivitySnapshot = {
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    pricedChangesCount: number;
+};
+
+export type SwapProviderSource = "helius" | "moralis";
+export type WalletProviderPolicy = "helius" | "birdeye" | "fallback";

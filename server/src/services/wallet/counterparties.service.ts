@@ -1,7 +1,7 @@
 import {
     getWalletSwaps,
     getWalletTransfers,
-} from "@sv/services/wallet/walletData.service.js";
+} from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import type {
     WalletCounterpartiesResponse,
     WalletCounterpartyIdentity,
