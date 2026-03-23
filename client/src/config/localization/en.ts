@@ -115,6 +115,15 @@ export const translation = {
     success: "Success",
     or: "or",
     and: "and",
+    noData: "No data available",
+  },
+  // Table & Pagination
+  table: {
+    itemsPerPageText: "Items per page",
+    pageRangeText: "Page {{count}} of {{total}}",
+    itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
+    nextPage: "Next Page",
+    previousPage: "Previous Page",
   },
   // Authentication
   auth: {
@@ -240,11 +249,14 @@ export const translation = {
     profitableTraders: "Profitable traders",
     profitableTradersDescription: "Top 20 traders by market cap",
     topGainers: "Top Gainers",
-    topGainersDesc: "List of traders with the highest profit in the selected period.",
+    topGainersDesc:
+      "List of traders with the highest profit in the selected period.",
     topLosers: "Top Losers",
-    topLosersDesc: "List of traders with the highest loss in the selected period.",
+    topLosersDesc:
+      "List of traders with the highest loss in the selected period.",
     recentTrades: "Recent trades",
-    recentTradesDesc: "Latest token swaps across major decentralized exchanges.",
+    recentTradesDesc:
+      "Latest token swaps across major decentralized exchanges.",
     marketHeatmapDescription: "Treemap of top tokens by market cap",
     marketCap: "Market Cap",
     volume24h: "24h Volume",
@@ -267,7 +279,8 @@ export const translation = {
     sortBy: "Sort by",
     more: "more",
     watchlistEmptyTitle: "Your Watchlist is Empty",
-    watchlistEmptySubtitle: "Start starring tokens in the 'All' tab to track them here!",
+    watchlistEmptySubtitle:
+      "Start starring tokens in the 'All' tab to track them here!",
   },
   // Wallet Comparison Page
   walletComparison: {

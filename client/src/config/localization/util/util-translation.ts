@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-const numVariables = ["count", "min", "max"] as const;
+const numVariables = ["count", "min", "max", "total"] as const;
 
 type NumVariable = (typeof numVariables)[number];
 

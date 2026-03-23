@@ -95,6 +95,15 @@ export const translation = defineTranslation({
     success: "Thành công",
     or: "hoặc",
     and: "và",
+    noData: "Không có dữ liệu",
+  },
+  // Table & Pagination
+  table: {
+    itemsPerPageText: "Mục mỗi trang",
+    pageRangeText: "Trang {{count}} / {{total}}",
+    itemRangeText: "{{min}}-{{max}} của {{count}} mục",
+    nextPage: "Trang tiếp theo",
+    previousPage: "Trang trước",
   },
   // Authentication
   auth: {
@@ -220,11 +229,14 @@ export const translation = defineTranslation({
     profitableTraders: "Các ví đang có lời",
     profitableTradersDescription: "Top 20 trader theo vốn hóa",
     topGainers: "Top lãi nhất",
-    topGainersDesc: "Danh sách các nhà giao dịch có lợi nhuận cao nhất trong khoảng thời gian này.",
+    topGainersDesc:
+      "Danh sách các nhà giao dịch có lợi nhuận cao nhất trong khoảng thời gian này.",
     topLosers: "Top lỗ nhất",
-    topLosersDesc: "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
+    topLosersDesc:
+      "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
     recentTrades: "Giao dịch gần đây",
-    recentTradesDesc: "Các giao dịch hoán đổi token gần nhất trên các sàn phi tập trung.",
+    recentTradesDesc:
+      "Các giao dịch hoán đổi token gần nhất trên các sàn phi tập trung.",
     marketHeatmapDescription: "Bản đồ nhiệt các token theo vốn hóa",
     marketCap: "Vốn hóa",
     volume24h: "Khối lượng 24h",
@@ -247,7 +259,8 @@ export const translation = defineTranslation({
     sortBy: "Sắp xếp theo",
     more: "xem thêm",
     watchlistEmptyTitle: "Danh sách theo dõi đang trống",
-    watchlistEmptySubtitle: "Bắt đầu gắn sao các token ở tab 'Tất cả' để theo dõi tại đây!",
+    watchlistEmptySubtitle:
+      "Bắt đầu gắn sao các token ở tab 'Tất cả' để theo dõi tại đây!",
   },
   // Wallet Comparison Page
   walletComparison: {

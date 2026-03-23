@@ -65,9 +65,13 @@ export function TokenDetailsDemo() {
     return walletTokenDetails.data.map((details) => ({
       id: details.tokenAddress,
       token: (
-        <Stack orientation="horizontal" gap={2}>
+        <Stack
+          orientation="horizontal"
+          gap={2}
+          style={{ alignItems: "center" }}
+        >
           <TknImg
-            size={32}
+            size={42}
             loading={tokenMeta.isLoading}
             src={tokenMeta.data?.[details.tokenAddress]?.imageUrl}
           />
@@ -186,7 +190,11 @@ export function TokenDetailsDemo() {
         </Stack>
       ),
       tradePriceGraph: (
-        <IconButton kind="ghost" label="Average trading price">
+        <IconButton
+          kind="ghost"
+          label="Average trading price"
+          align="bottom-right"
+        >
           <ChartAverage />
         </IconButton>
       ),
@@ -206,6 +214,7 @@ export function TokenDetailsDemo() {
         description={"Tokens which recent trading activities"}
         rows={rows}
         size="xl"
+        stickyHeader
         enablePagination
         headers={[
           {
@@ -216,6 +225,7 @@ export function TokenDetailsDemo() {
           {
             key: "balance",
             header: "Balance",
+            align: "center",
           },
           {
             key: "pnl",
@@ -256,7 +266,7 @@ export function TokenDetailsDemo() {
           },
           {
             key: "tradePriceGraph",
-            header: "",
+            header: "Graph",
             align: "center",
           },
         ]}

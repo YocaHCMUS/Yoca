@@ -9,12 +9,15 @@ type TknImgProps = {
 
 export function TknImg({ size, loading = false, src }: TknImgProps) {
   return loading ? (
-    <SkeletonPlaceholder style={{ width: size, height: size }} />
+    <SkeletonPlaceholder
+      style={{ width: size, height: size, borderRadius: "50%" }}
+    />
   ) : (
     <img
-      width={48}
+      width={size}
+      height={size}
       src={src ?? appLogoPlaceHolder}
-      style={{ borderRadius: "50%" }}
+      style={{ objectFit: "cover", borderRadius: "50%" }}
     />
   );
 }
