@@ -25,6 +25,7 @@ $filter-popup-z-index: 9999;
       opacity: 0;
       transform: translateY(-$spacing-03);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -41,9 +42,9 @@ $filter-popup-z-index: 9999;
 }
 
 .filterPopupContent {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
 }
 
 .filterPopupHeader {

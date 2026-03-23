@@ -73,6 +73,8 @@ export default function WalletPage() {
   const [transferPages, setTransferPages] = useState<Record<number, WalletTransfer[]>>({});
   const [transferPageInfoByPage, setTransferPageInfoByPage] = useState<Record<number, WalletPageInfo>>({});
   const [transferLoading, setTransferLoading] = useState(false);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [counterpartyLoading, setCounterpartyLoading] = useState(false);
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
@@ -609,40 +611,59 @@ export default function WalletPage() {
     const loadData = async () => {
       if (!address || address === 'null') return;
 
+      setPortfolioLoading(true);
+      setSwapLoading(true);
+      setTransferLoading(true);
+      setCounterpartyLoading(true);
+
       try {
-        const portfolioResponse = await fetchWalletPortfolio(address);
-        if (Array.isArray(portfolioResponse)) {
-          setPortfolio(portfolioResponse);
+        const [portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+          fetchWalletPortfolio(address),
+          fetchWalletSwaps(address),
+          fetchWalletTransfers(address),
+          fetchWalletCounterparties(address, {
+            period: '7d',
+            limit: 50,
+            includeTokens: true,
+          }),
+        ]);
+
+        if (portfolioResult.status === 'fulfilled' && Array.isArray(portfolioResult.value)) {
+          setPortfolio(portfolioResult.value);
         }
 
-        const swapResponse = await fetchWalletSwaps(address);
-        const swapsData = swapResponse?.swaps || [];
-        if (Array.isArray(swapsData)) {
-          setSwapPages({ 1: swapsData });
-          setSwapPageInfoByPage({ 1: swapResponse.pageInfo });
-          console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
+        if (swapsResult.status === 'fulfilled') {
+          const swapsData = swapsResult.value?.swaps || [];
+          if (Array.isArray(swapsData)) {
+            setSwapPages({ 1: swapsData });
+            setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
+            console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
+          }
         }
 
-        const transferResponse = await fetchWalletTransfers(address);
-        const transfersData = transferResponse?.transfers || [];
-        if (Array.isArray(transfersData)) {
-          setTransferPages({ 1: transfersData });
-          setTransferPageInfoByPage({ 1: transferResponse.pageInfo });
-          console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+        if (transfersResult.status === 'fulfilled') {
+          const transfersData = transfersResult.value?.transfers || [];
+          if (Array.isArray(transfersData)) {
+            setTransferPages({ 1: transfersData });
+            setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
+            console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+          }
         }
 
-        const counterpartyResponse = await fetchWalletCounterparties(address, {
-          period: '7d',
-          limit: 50,
-          includeTokens: true,
-        });
-        const counterpartiesData = counterpartyResponse?.counterparties ?? [];
-        if (Array.isArray(counterpartiesData)) {
-          setCounterparties(counterpartiesData);
-          console.log('[counterparties] ✓ loaded:', counterpartiesData.length, 'rows');
+        if (counterpartiesResult.status === 'fulfilled') {
+          const counterpartiesData = counterpartiesResult.value?.counterparties ?? [];
+          if (Array.isArray(counterpartiesData)) {
+            setCounterparties(counterpartiesData);
+            console.log('[counterparties] ✓ loaded:', counterpartiesData.length, 'rows');
+          }
         }
       } catch (err) {
         console.error('Failed to load wallet data:', err);
+      } finally {
+        setPortfolioLoading(false);
+        setSwapLoading(false);
+        setTransferLoading(false);
+        setCounterpartyLoading(false);
       }
     };
 
@@ -902,6 +923,7 @@ export default function WalletPage() {
                       isSortable={isSortableSwaps}
                       sortConfigs={swapSortConfigs}
                       onRowClick={handleSwapRowClick}
+                      loading={swapLoading && loadedSwaps.length === 0}
                       serverPagination={{
                         enabled: true,
                         hasMore: swapHasMore,
@@ -926,6 +948,7 @@ export default function WalletPage() {
                       dataEntries={transferData}
                       isSortable={isSortableTransfers}
                       sortConfigs={transferSortConfigs}
+                      loading={transferLoading && loadedTransfers.length === 0}
                       serverPagination={{
                         enabled: true,
                         hasMore: transferHasMore,
@@ -944,6 +967,7 @@ export default function WalletPage() {
                       dataEntries={counterpartyTableData}
                       isSortable={isSortableCounterparties}
                       sortConfigs={counterpartySortConfigs}
+                      loading={counterpartyLoading && counterpartyTableData.length === 0}
                     />,
                   ]}
                   onTabChange={(index) => setSecondaryActiveTab(index)}
@@ -976,6 +1000,7 @@ export default function WalletPage() {
                     dataEntries={portfolioData}
                     isSortable={isSortablePortfolio}
                     sortConfigs={portfolioSortConfig}
+                    loading={portfolioLoading && portfolioData.length === 0}
                   />
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
-import { CopyButton, Tooltip, Tag, Select, SelectItem } from '@carbon/react';
+import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -193,6 +193,34 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const pnlRealized = selectedStats?.pnl?.realizedUsd ?? null;
     const pnlUnrealized = selectedStats?.pnl?.unrealizedUsd ?? null;
 
+    const renderValue = (
+        hasValue: boolean,
+        formattedValue: React.ReactNode,
+        className: string,
+        skeletonWidth: string,
+        skeletonHeight: string,
+    ) => {
+        if (hasValue) {
+            return <span className={className}>{formattedValue}</span>;
+        }
+
+        if (loading) {
+            return (
+                <div className={styles.valueSkeleton} aria-hidden="true">
+                    <SkeletonPlaceholder
+                        style={{
+                            width: skeletonWidth,
+                            height: skeletonHeight,
+                            borderRadius: '4px',
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        return <span className={className}>{formattedValue}</span>;
+    };
+
     const navigate = useNavigate();
 
     const handleCopyAddress = async () => {
@@ -226,11 +254,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {error && (
                     <div className={styles.errorBanner}>
                         {tr('common.error')}: {error}
-                    </div>
-                )}
-                {loading && (
-                    <div className={styles.loadingBanner}>
-                        {tr('common.loading')}...
                     </div>
                 )}
 
@@ -423,94 +446,148 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     <div className={styles.statColumn}>
                         <div className={styles.statRow}>
                             <span className={styles.statLabel}>{tr('wallet.totalAssetValue')}</span>
-                            <span className={styles.statValue}>
-                                {fmt.num.currency(totalAssetValue != null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
-                            </span>
+                            {renderValue(
+                                totalAssetValue != null,
+                                fmt.num.currency(totalAssetValue != null ? parseFloat(totalAssetValue.toFixed(6)) : null),
+                                styles.statValue,
+                                '88px',
+                                '14px',
+                            )}
                         </div>
-                        {assetChange24hPercent != null && (
+                        {(assetChange24hPercent != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
-                                <span className={assetChange24hPercent >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
-                                    {fmt.num.percent(assetChange24hPercent)}
-                                </span>
+                                {renderValue(
+                                    assetChange24hPercent != null,
+                                    fmt.num.percent(assetChange24hPercent),
+                                    assetChange24hPercent != null && assetChange24hPercent >= 0
+                                        ? styles.subStatValuePositive
+                                        : styles.subStatValueNegative,
+                                    '62px',
+                                    '12px',
+                                )}
                             </div>
                         )}
                     </div>
                     <div className={styles.statColumn}>
                         <div className={styles.statRow}>
                             <span className={styles.statLabel}>{tr('wallet.tradingVolume')}</span>
-                            <span className={styles.statValue}>
-                                {fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null)}
-                            </span>
+                            {renderValue(
+                                tradingVolume != null,
+                                fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null),
+                                styles.statValue,
+                                '88px',
+                                '14px',
+                            )}
                         </div>
-                        {buyTransactionCount != null && (
+                        {(buyTransactionCount != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.buyTransactionCount')}</span>
-                                <span className={styles.subStatValue}>
-                                    {fmt.num.decimal(buyTransactionCount)}
-                                </span>
+                                {renderValue(
+                                    buyTransactionCount != null,
+                                    fmt.num.decimal(buyTransactionCount),
+                                    styles.subStatValue,
+                                    '54px',
+                                    '12px',
+                                )}
                             </div>
                         )}
-                        {buyVolumeUsd != null && (
+                        {(buyVolumeUsd != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.buyVolume')}</span>
-                                <span className={styles.subStatValue}>
-                                    {fmt.num.currency(buyVolumeUsd)}
-                                </span>
+                                {renderValue(
+                                    buyVolumeUsd != null,
+                                    fmt.num.currency(buyVolumeUsd),
+                                    styles.subStatValue,
+                                    '74px',
+                                    '12px',
+                                )}
                             </div>
                         )}
-                        {sellTransactionCount != null && (
+                        {(sellTransactionCount != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.sellTransactionCount')}</span>
-                                <span className={styles.subStatValue}>
-                                    {fmt.num.decimal(sellTransactionCount)}
-                                </span>
+                                {renderValue(
+                                    sellTransactionCount != null,
+                                    fmt.num.decimal(sellTransactionCount),
+                                    styles.subStatValue,
+                                    '54px',
+                                    '12px',
+                                )}
                             </div>
                         )}
-                        {sellVolumeUsd != null && (
+                        {(sellVolumeUsd != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.sellVolume')}</span>
-                                <span className={styles.subStatValue}>
-                                    {fmt.num.currency(sellVolumeUsd)}
-                                </span>
+                                {renderValue(
+                                    sellVolumeUsd != null,
+                                    fmt.num.currency(sellVolumeUsd),
+                                    styles.subStatValue,
+                                    '74px',
+                                    '12px',
+                                )}
                             </div>
                         )}
                     </div>
                     <div className={styles.statColumn}>
                         <div className={styles.statRow}>
                             <span className={styles.statLabel}>{tr('wallet.totalPnL')}</span>
-                            <span className={totalPnL != null && totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
-                                {fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null)}
-                            </span>
+                            {renderValue(
+                                totalPnL != null,
+                                fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null),
+                                totalPnL != null && totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative,
+                                '88px',
+                                '14px',
+                            )}
                         </div>
-                        {pnlRealized != null && (
+                        {(pnlRealized != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.realizedPnL')}</span>
-                                <span className={pnlRealized >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
-                                    {fmt.num.currency(pnlRealized)}
-                                </span>
+                                {renderValue(
+                                    pnlRealized != null,
+                                    fmt.num.currency(pnlRealized),
+                                    pnlRealized != null && pnlRealized >= 0
+                                        ? styles.subStatValuePositive
+                                        : styles.subStatValueNegative,
+                                    '74px',
+                                    '12px',
+                                )}
                             </div>
                         )}
-                        {pnlUnrealized != null && (
+                        {(pnlUnrealized != null || loading) && (
                             <div className={styles.subStatRow}>
                                 <span className={styles.subStatLabel}>{tr('wallet.unrealizedPnL')}</span>
-                                <span className={pnlUnrealized >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
-                                    {fmt.num.currency(pnlUnrealized)}
-                                </span>
+                                {renderValue(
+                                    pnlUnrealized != null,
+                                    fmt.num.currency(pnlUnrealized),
+                                    pnlUnrealized != null && pnlUnrealized >= 0
+                                        ? styles.subStatValuePositive
+                                        : styles.subStatValueNegative,
+                                    '74px',
+                                    '12px',
+                                )}
                             </div>
                         )}
                     </div>
                     <div className={styles.statRow}>
                         <span className={styles.statLabel}>{tr('wallet.tokensTraded')}</span>
-                        <span className={styles.statValue}>
-                            {fmt.num.decimal(tokenTraded)}
-                        </span>
+                        {renderValue(
+                            tokenTraded != null,
+                            fmt.num.decimal(tokenTraded),
+                            styles.statValue,
+                            '52px',
+                            '14px',
+                        )}
                     </div>
                     <div className={styles.statRow}>
                         <span className={styles.statLabel}>{tr('wallet.tokensHolding')}</span>
-                        <span className={styles.statValue}>
-                            {fmt.num.decimal(numberOfTokenHolding)}
-                        </span>
+                        {renderValue(
+                            numberOfTokenHolding != null,
+                            fmt.num.decimal(numberOfTokenHolding),
+                            styles.statValue,
+                            '52px',
+                            '14px',
+                        )}
                     </div>
                 </div>
             </div>

@@ -25,25 +25,25 @@ import { Maximize, ShrinkScreen } from '@carbon/icons-react'
 interface ChartWrapperProps {
   /** Chart title */
   title: string;
-  
+
   /** Loading state */
   loadingState: ChartLoadingState;
-  
+
   /** Chart content (rendered when loaded) */
   children: React.ReactNode;
-  
+
   /** Header actions (custom controls) */
   actions?: React.ReactNode;
-  
+
   /** Chart height */
   // height?: number;
-  
+
   /** Show legend skeleton in loading state */
   showLegend?: boolean;
-  
+
   /** Retry callback for error state */
   onRetry?: () => void;
-  
+
   /** Empty state configuration */
   emptyState?: {
     title?: string;
@@ -53,22 +53,22 @@ interface ChartWrapperProps {
       onClick: () => void;
     };
   };
-  
+
   /** Additional class name */
   className?: string;
-  
+
   /** Whether data is empty */
   isEmpty?: boolean;
-  
+
   /** Enable export functionality (default: true) */
   enableExport?: boolean;
-  
+
   /** Export callback */
   onExport?: (format: ExportFormat) => void;
-  
+
   /** Enable fullscreen mode (default: true) */
   enableFullscreen?: boolean;
-  
+
   /** Enable mini-player mode (default: true) */
   enableMiniPlayer?: boolean;
 }
@@ -114,13 +114,13 @@ export function ChartWrapper({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMiniPlayer, setIsMiniPlayer] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   /**
    * Handle export with loading state
    */
   const handleExport = useCallback(async (format: ExportFormat) => {
     if (!onExport) return;
-    
+
     setIsExporting(true);
     try {
       await onExport(format);
@@ -130,7 +130,7 @@ export function ChartWrapper({
       setIsExporting(false);
     }
   }, [onExport]);
-  
+
   /**
    * Enter fullscreen mode
    */
@@ -138,14 +138,14 @@ export function ChartWrapper({
     setIsFullscreen(true);
     setIsMiniPlayer(false);
   }, []);
-  
+
   /**
    * Exit fullscreen mode
    */
   const exitFullscreen = useCallback(() => {
     setIsFullscreen(false);
   }, []);
-  
+
   /**
    * Enter mini-player mode
    */
@@ -153,14 +153,14 @@ export function ChartWrapper({
     setIsMiniPlayer(true);
     setIsFullscreen(false);
   }, []);
-  
+
   /**
    * Exit mini-player mode
    */
   const exitMiniPlayer = useCallback(() => {
     setIsMiniPlayer(false);
   }, []);
-  
+
   /**
    * Handle keyboard shortcuts
    * F: Fullscreen, M: Mini-player, ESC: Exit modes
@@ -171,7 +171,7 @@ export function ChartWrapper({
   //     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
   //       return;
   //     }
-      
+
   //     switch (event.key.toLowerCase()) {
   //       case 'f':
   //         if (enableFullscreen && !isFullscreen && !isMiniPlayer) {
@@ -196,11 +196,11 @@ export function ChartWrapper({
   //         break;
   //     }
   //   };
-    
+
   //   document.addEventListener('keydown', handleKeyDown);
   //   return () => document.removeEventListener('keydown', handleKeyDown);
   // }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
-  
+
   /**
    * Render viewing mode controls
    */
@@ -215,16 +215,16 @@ export function ChartWrapper({
           disabled={loadingState.status === 'loading'}
           tabIndex={0}
         >
-          <Maximize 
-            width={20} 
-            height={20} 
+          <Maximize
+            width={20}
+            height={20}
             stroke='currentColor'
             strokeWidth="1"
             strokeLinecap="round"
             strokeLinejoin="round" />
         </button>
       )}
-      
+
       {enableMiniPlayer && (
         <button
           className={styles.controlButton}
@@ -245,7 +245,7 @@ export function ChartWrapper({
       )}
     </div>
   );
-  
+
   /**
    * Render chart content area
    */
@@ -254,31 +254,28 @@ export function ChartWrapper({
       {/* Loading state */}
       {loadingState.status === 'loading' && (
         <ChartSkeleton
-          // height={height}
-          showHeader={false}
-          showLegend={showLegend}
         />
       )}
-      
+
       {/* Error state */}
       {loadingState.status === 'error' && loadingState.error && (
         <ChartErrorState
           error={loadingState.error}
           onRetry={onRetry}
-          // height={height}
+        // height={height}
         />
       )}
-      
+
       {/* Empty state */}
       {loadingState.status === 'success' && isEmpty && (
         <ChartEmptyState
           title={emptyState?.title}
           message={emptyState?.message}
           action={emptyState?.action}
-          // height={height}
+        // height={height}
         />
       )}
-      
+
       {/* Chart content (success with data or refreshing) */}
       {(loadingState.status === 'success' || loadingState.status === 'refreshing') &&
         !isEmpty && (
@@ -288,7 +285,7 @@ export function ChartWrapper({
         )}
     </>
   );
-  
+
   return (
     <>
       <div
@@ -307,7 +304,7 @@ export function ChartWrapper({
           {loadingState.status === 'error' && tr('charts.errorLoadingChart', { title })}
           {isEmpty && tr('charts.noDataForChart', { title })}
         </div>
-        
+
         {/* Header */}
         <div className={styles.header}>
           <h2 className={styles.title} id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
@@ -325,13 +322,13 @@ export function ChartWrapper({
             )}
           </div>
         </div>
-        
+
         {/* Content area */}
         <div className={styles.content}>
           {renderContent()}
         </div>
       </div>
-      
+
       {/* Fullscreen view */}
       {enableFullscreen && (
         <FullscreenView
@@ -342,7 +339,7 @@ export function ChartWrapper({
           {renderContent()}
         </FullscreenView>
       )}
-      
+
       {/* Mini-player view */}
       {enableMiniPlayer && (
         <MiniPlayer
