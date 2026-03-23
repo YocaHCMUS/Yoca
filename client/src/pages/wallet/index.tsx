@@ -4,6 +4,7 @@ import { ExchangeComparison } from "@/components/charts/ExchangeComparison/Excha
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
+  createSwapTokenCellRenderer,
   renderBase,
   renderCode,
   renderCurrency,
@@ -383,70 +384,25 @@ export default function WalletPage() {
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
   ];
 
+  const renderSwapTokenCell = (side: "sold" | "bought") =>
+    createSwapTokenCellRenderer({
+      side,
+      swapBySignature,
+      getSoldBoughtChanges,
+      getSwapTokenLabel,
+      classNames: {
+        container: styles.swapTokenCell,
+        amount: styles.swapTokenAmount,
+      },
+      imageSize: 18,
+    });
+
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row)) {
-        return renderCode(value);
-      }
-
-      const signature = String(row[7] ?? "");
-      const swap = swapBySignature.get(signature);
-      if (!swap) {
-        return renderCode(value);
-      }
-
-      const { sold } = getSoldBoughtChanges(swap);
-      if (!sold) {
-        return renderBase("—");
-      }
-
-      return (
-        <span className={styles.swapTokenCell}>
-          <span className={styles.swapTokenAmount}>{Math.abs(sold.amount).toFixed(4)}</span>
-          <TokenIdentityCell
-            symbol={getSwapTokenLabel(sold)}
-            fullName={sold.name ?? undefined}
-            imageUrl={sold.logoUri ?? undefined}
-            imageSize={18}
-            showInitialsFallback
-            tooltipAlign="right"
-          />
-        </span>
-      );
-    },
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row)) {
-        return renderCode(value);
-      }
-
-      const signature = String(row[7] ?? "");
-      const swap = swapBySignature.get(signature);
-      if (!swap) {
-        return renderCode(value);
-      }
-
-      const { bought } = getSoldBoughtChanges(swap);
-      if (!bought) {
-        return renderBase("—");
-      }
-
-      return (
-        <span className={styles.swapTokenCell}>
-          <span className={styles.swapTokenAmount}>{Math.abs(bought.amount).toFixed(4)}</span>
-          <TokenIdentityCell
-            symbol={getSwapTokenLabel(bought)}
-            fullName={bought.name ?? undefined}
-            imageUrl={bought.logoUri ?? undefined}
-            imageSize={18}
-            showInitialsFallback
-            tooltipAlign="right"
-          />
-        </span>
-      );
-    },
+    renderSwapTokenCell("sold"),
+    renderSwapTokenCell("bought"),
     (value: string) =>
       value === "—"
         ? renderBase(value)

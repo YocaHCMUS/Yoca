@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
+import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
 
 /**
  * Renders a value as monospace code with secondary color
@@ -27,15 +28,15 @@ export const renderBase = (value: string) => (
  * renderLong(longHash, (val) => renderCurrency(val, '$'), 6)
  */
 export const renderLong = (
-  value: string, 
-  renderFn: (value: string) => React.ReactNode, 
+  value: string,
+  renderFn: (value: string) => React.ReactNode,
   limit: number = 6
 ) => {
   const truncatedValue = value.length > limit ? value.slice(0, limit) + '...' : value;
-  
+
   return (
     <span
-      style={{ 
+      style={{
         cursor: 'help',
         padding: '2px 4px',
         borderRadius: '2px',
@@ -155,6 +156,67 @@ export const renderHash = (value: string, prefixLen: number = 6, suffixLen: numb
   );
 };
 
+type SwapTokenCellSide = 'sold' | 'bought';
+
+type SwapTokenChangeLike = {
+  amount: number;
+  name?: string | null;
+  logoUri?: string | null;
+};
+
+type CreateSwapTokenCellRendererOptions<TSwap, TTokenChange extends SwapTokenChangeLike> = {
+  side: SwapTokenCellSide;
+  swapBySignature: Map<string, TSwap>;
+  getSoldBoughtChanges: (swap: TSwap) => { sold: TTokenChange | null; bought: TTokenChange | null };
+  getSwapTokenLabel: (change: TTokenChange) => string;
+  classNames?: {
+    container?: string;
+    amount?: string;
+  };
+  imageSize?: number;
+};
+
+export const createSwapTokenCellRenderer = <TSwap, TTokenChange extends SwapTokenChangeLike>({
+  side,
+  swapBySignature,
+  getSoldBoughtChanges,
+  getSwapTokenLabel,
+  classNames,
+  imageSize = 18,
+}: CreateSwapTokenCellRendererOptions<TSwap, TTokenChange>) => {
+  return (value: string, row?: unknown[] | null) => {
+    if (!Array.isArray(row)) {
+      return renderCode(value);
+    }
+
+    const signature = String(row[7] ?? '');
+    const swap = swapBySignature.get(signature);
+    if (!swap) {
+      return renderCode(value);
+    }
+
+    const { sold, bought } = getSoldBoughtChanges(swap);
+    const tokenChange = side === 'sold' ? sold : bought;
+    if (!tokenChange) {
+      return renderBase('—');
+    }
+
+    return (
+      <span className={classNames?.container}>
+        <span className={classNames?.amount}>{Math.abs(tokenChange.amount).toFixed(4)}</span>
+        <TokenIdentityCell
+          symbol={getSwapTokenLabel(tokenChange)}
+          fullName={tokenChange.name ?? undefined}
+          imageUrl={tokenChange.logoUri ?? undefined}
+          imageSize={imageSize}
+          showInitialsFallback
+          tooltipAlign="right"
+        />
+      </span>
+    );
+  };
+};
+
 /**
  * Renders a binary value with conditional coloring
  * @param colorMap - Map of value to color variable name (e.g., {'Buy': 'var(--cds-support-success)'})
@@ -163,9 +225,9 @@ export const renderBinaryValue = (
   value: string,
   colorMap: Record<string, string>
 ) => (
-  <span style={{ 
+  <span style={{
     color: colorMap[value] || 'inherit',
-    fontWeight: 600 
+    fontWeight: 600
   }}>
     {value}
   </span>
@@ -182,7 +244,7 @@ export const renderBold = (value: string) => (
  * Renders a numeric value with currency symbol
  */
 export const renderCurrency = (value: string, symbol: string = '$', isInFront: boolean = true) => (
-    isInFront? <span>{symbol}{value}</span> : <span>{value}{symbol}</span>
+  isInFront ? <span>{symbol}{value}</span> : <span>{value}{symbol}</span>
 );
 
 /**
@@ -199,7 +261,7 @@ export const renderStatus = (
 ) => {
   const isSuccess = successValues.includes(value);
   const Icon = isSuccess ? successIcon : errorIcon;
-  
+
   return (
     <span style={{
       display: 'flex',
@@ -221,12 +283,12 @@ export const renderRelativeTime = (value: string) => {
   const now = Date.now();
   const timestamp = new Date(value).getTime();
   const diff = now - timestamp;
-  
+
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) return <span>{days}d ago</span>;
   if (hours > 0) return <span>{hours}h ago</span>;
   if (minutes > 0) return <span>{minutes}m ago</span>;
@@ -277,7 +339,7 @@ enum ValueState {
 export const renderPositiveNegative = (value: string, haveIcon: boolean = true, percentage: boolean = false) => {
   const numValue = parseFloat(value);
   const state = numValue > 0 ? ValueState.Positive : numValue < 0 ? ValueState.Negative : ValueState.Neutral;
-  
+
   const getColor = () => {
     switch (state) {
       case ValueState.Positive:
@@ -288,10 +350,10 @@ export const renderPositiveNegative = (value: string, haveIcon: boolean = true, 
         return 'var(--cds-text-secondary)';
     }
   };
-  
+
   const getIcon = () => {
     if (!haveIcon) return null;
-    
+
     switch (state) {
       case ValueState.Positive:
         return <CaretUp size={16} />;
@@ -301,9 +363,9 @@ export const renderPositiveNegative = (value: string, haveIcon: boolean = true, 
         return <Subtract size={16} />;
     }
   };
-  
+
   const formattedValue = percentage ? `${numValue.toFixed(2)}%` : numValue.toFixed(2);
-  
+
   return (
     <span style={{
       display: 'flex',
