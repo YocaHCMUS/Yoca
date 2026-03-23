@@ -9,9 +9,7 @@ type TknImgProps = {
 
 export function TknImg({ size, loading = false, src }: TknImgProps) {
   return loading ? (
-    <SkeletonPlaceholder
-      style={{ width: size, height: size, borderRadius: "50%" }}
-    />
+    <SkeletonPlaceholder style={{ width: size, height: size }} />
   ) : (
     <img
       width={size}

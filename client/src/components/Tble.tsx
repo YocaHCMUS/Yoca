@@ -56,7 +56,7 @@ export default function Tble({
   toolBar,
   stickyHeader = false,
   enablePagination = false,
-  pageSize = 8,
+  pageSize = 16,
   pageSizes = [8, 16, 24, 32],
   ...dataTableProps
 }: TblProps) {
