@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, ChevronDown, OverflowMenuVertical } from '@carbon/react/icons';
-import { CopyButton, Link, Tooltip, Tag, Select, SelectItem } from '@carbon/react';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
+import { CopyButton, Tooltip, Tag, Select, SelectItem } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -356,7 +356,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             aria-label="More options"
                             aria-expanded={isUtilityMenuOpen}
                         >
-                            <OverflowMenuVertical size={20} />
+                            <Menu size={20} />
                         </button>
                         {isUtilityMenuOpen && (
                             <div className={styles.dropdownMenu}>
