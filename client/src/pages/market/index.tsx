@@ -1,8 +1,8 @@
 import client from "@/api/main";
+import SparklineChart from "@/components/charts/SparklineChart";
 import TokenTreeMap, {
   type TokenTreeMapNode,
 } from "@/components/charts/TokenTreeMap";
-import SparklineChart from "@/components/charts/SparklineChart";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import MarketTicker from "@/components/MarketTicker";
 import Tble from "@/components/Tble";
@@ -13,11 +13,11 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import semStyle from "@/styles/_semantic.module.scss";
-import styles from "./index.module.scss";
-import { Column, Grid, IconButton, Link, Stack, Tooltip, Modal } from "@carbon/react";
-import { Star, StarFilled, Fire, Information, Launch, VisualRecognition, Rocket, WarningAlt } from "@carbon/react/icons";
-import { useEffect, useMemo, useState } from "react";
+import { Column, Grid, IconButton, Link, Modal, Stack, Tooltip } from "@carbon/react";
+import { Copy, Fire, Launch, Star, StarFilled } from "@carbon/react/icons";
 import clsx from "clsx";
+import { useEffect, useMemo, useState } from "react";
+import styles from "./index.module.scss";
 
 type TradeVolumeOption = "0" | "1" | "5" | "10";
 type TradeTimeOption = "6h" | "12h" | "24h";
@@ -46,15 +46,8 @@ export default function MarketPage() {
         : [...prev, address],
     );
   };
-  
-  const fullCurrencyFormatter = (val: number | null) =>
-    val != null
-      ? new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0,
-        }).format(val)
-      : "-";
+
+  // Removed redundant fullCurrencyFormatter
 
   const topTokens = useGet(client.api.tokens["top-marketcap"], 200);
 
@@ -165,10 +158,7 @@ export default function MarketPage() {
     return data;
   }, [topTokens.data, meta.data, marketData.data, fmt]);
 
-  const compactPercent = (val: number | null | undefined) => {
-    if (val == null) return "-";
-    return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 4 }).format(val) + "%";
-  };
+  // Removed redundant compactPercent
 
   const topTokenRows = useMemo(() => {
     if (!topTokens.data || !meta.data || !marketData.data) return [];
@@ -238,33 +228,33 @@ export default function MarketPage() {
         change1h: (
           <TrendNum
             value={tokenMarket.priceChangePercentage1h}
-            formatter={compactPercent}
+            formatter={fmt.num.percent}
           />
         ),
         change24h: (
           <TrendNum
             value={tokenMarket.priceChangePercentage24h}
-            formatter={compactPercent}
+            formatter={fmt.num.percent}
           />
         ),
         change7d: (
           <TrendNum
             value={tokenMarket.priceChangePercentage7d}
-            formatter={compactPercent}
+            formatter={fmt.num.percent}
           />
         ),
-        volume24h: fullCurrencyFormatter(tokenMarket.volume24h),
-        marketCap: fullCurrencyFormatter(tokenMarket.marketCap),
-        fdv: fullCurrencyFormatter(tokenMarket.fullyDilutedValuation),
+        volume24h: fmt.num.compact.currency(tokenMarket.volume24h),
+        marketCap: fmt.num.compact.currency(tokenMarket.marketCap),
+        fdv: fmt.num.compact.currency(tokenMarket.fullyDilutedValuation),
         sparkline: (
           <div style={{ width: "100%", height: 40, paddingLeft: 24 }}>
-            <SparklineChart 
-              data={tokenMarket.sparkline7d ?? []} 
+            <SparklineChart
+              data={tokenMarket.sparkline7d ?? []}
               positive={
                 tokenMarket.priceChangePercentage7d != null
                   ? tokenMarket.priceChangePercentage7d >= 0
                   : undefined
-              } 
+              }
             />
           </div>
         ),
@@ -282,12 +272,26 @@ export default function MarketPage() {
       id: t.address,
       trader: (
         <Tooltip label={t.address} align="bottom-left">
-          <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+          <Stack orientation="horizontal" gap={1} style={{ alignItems: "center" }}>
+            <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+            <IconButton
+              label="Copy Address"
+              kind="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigator.clipboard.writeText(t.address);
+              }}
+            >
+              <Copy size={14} />
+            </IconButton>
+          </Stack>
         </Tooltip>
       ),
       pnl: (
         <span className={t.pnl > 0 ? semStyle.positive : t.pnl < 0 ? semStyle.negative : undefined}>
-          {fmt.num.currency(t.pnl)}
+          {fmt.num.compact.currency(t.pnl)}
         </span>
       ),
       volume: fmt.num.compact.currency(t.volume),
@@ -305,12 +309,26 @@ export default function MarketPage() {
       id: t.address,
       trader: (
         <Tooltip label={t.address} align="bottom-left">
-          <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+          <Stack orientation="horizontal" gap={1} style={{ alignItems: "center" }}>
+            <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+            <IconButton
+              label="Copy Address"
+              kind="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigator.clipboard.writeText(t.address);
+              }}
+            >
+              <Copy size={14} />
+            </IconButton>
+          </Stack>
         </Tooltip>
       ),
       pnl: (
         <span className={t.pnl > 0 ? semStyle.positive : t.pnl < 0 ? semStyle.negative : undefined}>
-          {fmt.num.currency(t.pnl)}
+          {fmt.num.compact.currency(t.pnl)}
         </span>
       ),
       volume: fmt.num.compact.currency(t.volume),
@@ -368,11 +386,11 @@ export default function MarketPage() {
         change24h: (
           <TrendNum
             value={tokenMarket.priceChange24h}
-            formatter={compactPercent}
+            formatter={fmt.num.percent}
           />
         ),
-        marketCap: fullCurrencyFormatter(tokenMarket.marketCap),
-        volume24h: fullCurrencyFormatter(tokenMarket.volume24h),
+        marketCap: fmt.num.currency(tokenMarket.marketCap),
+        volume24h: fmt.num.currency(tokenMarket.volume24h),
       };
     });
   }, [trendingTokens.data, trendingMeta.data, trendingMarketData.data, fmt]);
@@ -399,17 +417,31 @@ export default function MarketPage() {
       amount: (
         <Stack gap={1}>
           <span>
-            {Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(Number(trade.baseAmount || 0))} {trade.baseSymbol}
+            {fmt.num.compact.decimal(Number(trade.baseAmount || 0))} {trade.baseSymbol}
           </span>
           <span style={{ color: 'var(--cds-text-secondary, #525252)' }}>
-            {Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(Number(trade.quoteAmount || 0))} {trade.quoteSymbol}
+            {fmt.num.compact.decimal(Number(trade.quoteAmount || 0))} {trade.quoteSymbol}
           </span>
         </Stack>
       ),
       volume: fmt.num.compact.currency(trade.volumeUsd),
       trader: (
         <Tooltip label={trade.owner} align="bottom-left">
-          <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
+          <Stack orientation="horizontal" gap={1} style={{ alignItems: "center" }}>
+            <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
+            <IconButton
+              label="Copy Address"
+              kind="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigator.clipboard.writeText(trade.owner);
+              }}
+            >
+              <Copy size={14} />
+            </IconButton>
+          </Stack>
         </Tooltip>
       ),
       time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),
@@ -447,10 +479,10 @@ export default function MarketPage() {
   return (
     <PageWrapper>
       <section className={styles.marketPage}>
-        <MarketTicker 
-          label="Trending" 
-          icon={<Fire size={16} fill="var(--cds-support-error, #da1e28)" />} 
-          items={tickerItems} 
+        <MarketTicker
+          label={tr("marketPage.trending")}
+          icon={<Fire size={16} fill="var(--cds-support-error, #da1e28)" />}
+          items={tickerItems}
           formatter={{
             currency: fmt.num.currency,
             percent: fmt.num.percent,
@@ -464,17 +496,17 @@ export default function MarketPage() {
               <div className={styles.headerSection}>
                 <h1 className={styles.title}>
                   {activeTab === "all"
-                    ? "Cryptocurrency Prices by Market Cap"
+                    ? tr("marketPage.allTokensTitle")
                     : activeTab === "watchlist"
-                    ? "Your Watchlist"
-                    : "Market Activity & Highlights"}
+                      ? tr("marketPage.watchlistTitle")
+                      : tr("marketPage.tradesTitle")}
                 </h1>
                 <p className={styles.subtitle}>
                   {activeTab === "all"
-                    ? "The global cryptocurrency market continues to evolve with significant activity across key assets. Below is an overview of the top tokens by market capitalization and their recent performance."
+                    ? tr("marketPage.allTokensSubtitle")
                     : activeTab === "watchlist"
-                    ? "Track your favorite tokens and monitor their performance in one place."
-                    : "Discover top performing traders and the latest significant swaps across decentralized exchanges."}
+                      ? tr("marketPage.watchlistSubtitle")
+                      : tr("marketPage.tradesSubtitle")}
                 </p>
               </div>
               <div className={styles.tabsContainer}>
@@ -483,25 +515,25 @@ export default function MarketPage() {
                     className={clsx(styles.tab, activeTab === "all" && styles.active)}
                     onClick={() => setActiveTab("all")}
                   >
-                    All
+                    {tr("marketPage.all")}
                   </button>
                   <button
                     className={clsx(styles.tab, activeTab === "watchlist" && styles.active)}
                     onClick={() => setActiveTab("watchlist")}
                   >
-                    Watchlist
+                    {tr("marketPage.watchlist")}
                   </button>
                   <button
                     className={clsx(styles.tab, activeTab === "trades" && styles.active)}
                     onClick={() => setActiveTab("trades")}
                   >
-                    Trades
+                    {tr("marketPage.trades")}
                   </button>
                 </div>
 
                 <div className={styles.tabActions}>
                   {activeTab === "all" && (
-                    <button 
+                    <button
                       className={styles.treeMapButton}
                       onClick={() => setIsTreeMapOpen(true)}
                     >
@@ -570,10 +602,10 @@ export default function MarketPage() {
                             <span className={styles.filterLabel}>{tr("marketPage.volume")}</span>
                             <FilterSwitch
                               options={[
-                                { value: "0", label: "All" },
-                                { value: "1", label: ">$1" },
-                                { value: "5", label: ">$5" },
-                                { value: "10", label: ">$10" },
+                                { value: "0", label: tr("marketPage.filterAll") },
+                                { value: "1", label: tr("marketPage.filterGreaterThan", { val: "1" }) },
+                                { value: "5", label: tr("marketPage.filterGreaterThan", { val: "5" }) },
+                                { value: "10", label: tr("marketPage.filterGreaterThan", { val: "10" }) },
                               ]}
                               value={tradeVolume}
                               onChange={(v) => setTradeVolume(v as TradeVolumeOption)}
@@ -597,8 +629,8 @@ export default function MarketPage() {
                             <span className={styles.filterLabel}>{tr("marketPage.sortBy")}</span>
                             <FilterSwitch
                               options={[
-                                { value: "volume", label: "Volume" }, // or use translation if needed
-                                { value: "time", label: "Time" },
+                                { value: "volume", label: tr("marketPage.volume") }, // or use translation if needed
+                                { value: "time", label: tr("marketPage.time") },
                               ]}
                               value={tradesSort}
                               onChange={(v) => setTradesSort(v as TradesSortOption)}
@@ -639,11 +671,11 @@ export default function MarketPage() {
                       { key: "change7d", header: "7d", width: "8%", align: "end" },
                       { key: "volume24h", header: tr("marketPage.volume24h"), width: "11%", align: "end" },
                       { key: "marketCap", header: tr("marketPage.marketCap"), width: "12%", align: "end" },
-                      { key: "fdv", header: "FDV", width: "11%", align: "end" },
-                      { key: "sparkline", header: "Last 7 Days", width: "16%", align: "end" },
+                      { key: "fdv", header: tr("token.marketStats.fdv"), width: "11%", align: "end" },
+                      { key: "sparkline", header: tr("nav.searchLast7Days"), width: "16%", align: "end" },
                     ]}
-                    rows={activeTab === "watchlist" 
-                      ? topTokenRows.filter(row => watchlist.includes(row.id)) 
+                    rows={activeTab === "watchlist"
+                      ? topTokenRows.filter(row => watchlist.includes(row.id))
                       : topTokenRows}
                   />
                 )}

@@ -68,7 +68,7 @@ export async function getTrendingTokens() {
     });
 
     if (page == null) {
-      return null;
+      return result.length > 0 ? result : [];
     }
 
     const pageAddresses = page.data.tokens.map((token) => token.address);

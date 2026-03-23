@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTokenPageData, usePoolTrades } from "./useTokenPageData";
 import type { PoolData } from "./useTokenPageData";
-import { fetchPoolDetails } from "../services/coingecko";
+import client from "@/api/main";
+
+const $getPoolsDetails = client.api.tokens.pools[":addresses"].$get;
 
 export const useTokenPageLogic = (address: string | undefined, poolAddress: string | undefined) => {
     const navigate = useNavigate();
@@ -96,20 +98,43 @@ export const useTokenPageLogic = (address: string | undefined, poolAddress: stri
     // Fetch detailed stats (buy/sell volume) when pool is selected
     useEffect(() => {
         if (selectedPool?.address) {
-            // Use static import function directly
             (async () => {
                 try {
-                    const detailedPool = await fetchPoolDetails(selectedPool.address, "solana");
+                    const res = await $getPoolsDetails({ param: { addresses: selectedPool.address } });
 
-                    if (detailedPool) {
-                        setSelectedPool(prev => {
-                            const shouldUpdate = prev?.address === detailedPool.address;
-                            if (shouldUpdate) {
-                                // Force a new object reference even if some fields are same, just to be sure
-                                return { ...detailedPool };
-                            }
-                            return prev;
-                        });
+                    if (res.ok) {
+                        const pools = await res.json();
+                        if (pools.length > 0) {
+                            const p = pools[0];
+                            const detailedPool: PoolData = {
+                                name: p.poolName || "Unknown Pool",
+                                address: p.poolAddress || "",
+                                source: p.dexId || "unknown",
+                                volume24h: Number(p.volumeUsd24h || 0),
+                                volumeBuy24h: Number(p.buyVolumeUsd24h || 0),
+                                volumeSell24h: Number(p.sellVolumeUsd24h || 0),
+                                reserve: Number(p.liquidityUsd || 0),
+                                liquidity: Number(p.liquidityUsd || 0),
+                                marketCap: Number(p.marketCapUsd || 0),
+                                fdv: Number(p.fdvUsd || 0),
+                                priceUsd: Number(p.baseTokenPriceUsd || 0),
+                                priceQuoteToken: Number(p.quoteTokenPriceUsd || 0),
+                                priceChange: {
+                                    m5: Number(p.priceChangePercentage5m || 0),
+                                    h1: Number(p.priceChangePercentage1h || 0),
+                                    h6: Number(p.priceChangePercentage6h || 0),
+                                    h24: Number(p.priceChangePercentage24h || 0),
+                                },
+                                txns24h: Number((p.buys24h || 0) + (p.sells24h || 0)),
+                                buys24h: Number(p.buys24h || 0),
+                                sells24h: Number(p.sells24h || 0),
+                                traders24h: Number((p.buyers24h || 0) + (p.sellers24h || 0)),
+                                buyers24h: Number(p.buyers24h || 0),
+                                sellers24h: Number(p.sellers24h || 0),
+                            };
+
+                            setSelectedPool(prev => ({ ...prev, ...detailedPool }));
+                        }
                     }
                 } catch (err) {
                     console.error("Failed to fetch pool details", err);

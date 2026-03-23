@@ -1,4 +1,5 @@
-import { cgFetch, type CGPoolData } from "@/services/coingecko";
+import client from "@/api/main";
+import { type InferResponseType } from "hono/client";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { dexLabel } from "@/util/format";
 import {
@@ -16,6 +17,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import styles from "./TokenMarketsTable.module.scss";
 
+const $getPools = client.api.tokens[":address"].pools.$get;
+type PoolResponse = InferResponseType<typeof $getPools, 200>;
+
 interface TokenMarketsTableProps {
     address: string;
     symbol: string;
@@ -23,7 +27,7 @@ interface TokenMarketsTableProps {
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
     const { tr, fmt } = useLocalization();
-    const [pools, setPools] = useState<CGPoolData[]>([]);
+    const [pools, setPools] = useState<PoolResponse>([]);
     const [loading, setLoading] = useState(true);
 
     const HEADERS = [
@@ -40,11 +44,12 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
     useEffect(() => {
         if (!address) return;
         setLoading(true);
-        const network = address.startsWith("0x") ? "eth" : "solana";
-        cgFetch(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token&sort=h24_volume_usd_desc`)
-            .then((json) => {
-                const data = json as { data?: CGPoolData[] } | null;
-                if (data?.data) setPools(data.data.slice(0, 10));
+        $getPools({ param: { address } })
+            .then(async (res: any) => {
+                if (res.ok) {
+                    const data = await res.json();
+                    setPools(data.slice(0, 10)); // take top 10
+                }
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -54,21 +59,21 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
         return <DataTableSkeleton headers={HEADERS} rowCount={10} showHeader={false} showToolbar={false} />;
     }
 
-    const rows = pools.map((pool, idx) => {
-        const p = pool.attributes;
-        const dexId = pool.relationships?.dex?.data?.id;
-        const chgNum = Number(p.price_change_percentage?.h24);
-        const buys = p.transactions?.h24?.buys ?? 0;
-        const sells = p.transactions?.h24?.sells ?? 0;
+    const rows = pools.map((pool: any, idx: number) => {
+        const p = pool.data;
+        const dexId = p.dexId;
+        const chgNum = Number(p.priceChangePercentage24h);
+        const buys = p.buys24h ?? 0;
+        const sells = p.sells24h ?? 0;
         return {
-            id: pool.id,
+            id: p.poolAddress,
             rank: idx + 1,
-            exchange: dexLabel(dexId),
-            pair: { value: p.name, poolAddress: p.address },
-            price: fmt.num.currency(Number(p.base_token_price_usd)),
+            exchange: dexLabel(dexId || ""),
+            pair: { value: p.poolName || "Unknown", poolAddress: p.poolAddress },
+            price: fmt.num.currency(Number(p.baseTokenPriceUsd)),
             change: { value: chgNum, text: `${chgNum >= 0 ? "+" : ""}${chgNum.toFixed(2)}%`, positive: chgNum >= 0 },
-            volume: fmt.num.compact.currency(Number(p.volume_usd?.h24)),
-            liquidity: fmt.num.compact.currency(Number(p.reserve_in_usd)),
+            volume: fmt.num.compact.currency(Number(p.volumeUsd24h)),
+            liquidity: fmt.num.compact.currency(Number(p.liquidityUsd)),
             txns: (buys + sells).toLocaleString(),
         };
     });

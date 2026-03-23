@@ -1,21 +1,63 @@
 import { useEffect, useState } from "react";
-import { cgFetch, type CoinItem, type TrendingResponse } from "@/services/coingecko";
+import client from "@/api/main";
 import { formatPriceString, formatPct } from "@/util/format";
-import { Star } from "@carbon/icons-react"; // Or similar for the favorite icon
+import { Star } from "@carbon/icons-react";
+import SparklineChart from "@/components/charts/SparklineChart";
 import styles from "./TrendingCoins.module.scss";
 
+interface TrendingCombinedData {
+    id: string; // address
+    name: string;
+    small: string; // image
+    priceRaw: number;
+    priceChangePercentage24h: number;
+    sparkline: number[] | null;
+}
+
+const $getTrending = client.api.tokens.trending.$get;
+const $getMeta = client.api.tokens.meta[":addresses"].$get;
+const $getMarket = client.api.tokens.markets[":addresses"].$get;
+
 export function TrendingCoins() {
-    const [coins, setCoins] = useState<CoinItem[]>([]);
+    const [coins, setCoins] = useState<TrendingCombinedData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchTrending = async () => {
             setLoading(true);
             try {
-                const data = await cgFetch("/search/trending") as TrendingResponse | null;
-                if (data?.coins) {
-                    // Get top 8 to fit nicely in 4-column grid (2 rows) or max 10
-                    setCoins(data.coins.map(c => c.item).slice(0, 10));
+                const trendingRes = await $getTrending();
+                if (!trendingRes.ok) return;
+                const trendingData = await trendingRes.json();
+                
+                if (trendingData.length === 0) return;
+                
+                const top10 = trendingData.slice(0, 10).map((t: any) => t.address);
+                const addressesParam = top10.join(",");
+                
+                const [metaRes, marketRes] = await Promise.all([
+                    $getMeta({ param: { addresses: addressesParam } }),
+                    $getMarket({ param: { addresses: addressesParam } }),
+                ]);
+                
+                if (metaRes.ok && marketRes.ok) {
+                    const metas = await metaRes.json();
+                    const markets = await marketRes.json();
+                    
+                    const combined = top10.map((addr: string) => {
+                        const mMeta = metas.find((m: any) => m.address === addr);
+                        const mMarket = (markets as Record<string, any>)[addr];
+                        
+                        return {
+                            id: addr,
+                            name: mMeta?.name || "Unknown",
+                            small: mMeta?.imageUrl || "",
+                            priceRaw: mMarket?.priceUsd || 0,
+                            priceChangePercentage24h: mMarket?.priceChangePercentage24h || 0,
+                            sparkline: mMarket?.sparkline7d || null,
+                        };
+                    });
+                    setCoins(combined);
                 }
             } catch (err) {
                 console.error("Failed to fetch trending coins", err);
@@ -42,13 +84,8 @@ export function TrendingCoins() {
         <div className={styles.container}>
             <div className={styles.grid}>
                 {coins.map(coin => {
-                    const priceRaw = coin.data?.price;
-                    const priceStr = priceRaw ? formatPriceString(priceRaw) : "–";
-                    const chg = formatPct(coin.data?.price_change_percentage_24h?.usd);
-                    // Decide sparkline color class if we wanted to filter it, but CG SVG has inline styles usually.
-                    // Actually CG returns basic stroke SVG. If we want to style it, we can't easily modify the img, 
-                    // but we can apply CSS filter or rely on the fact CG already returns green/red colored SVG sometimes, 
-                    // or just render it directly.
+                    const priceStr = formatPriceString(coin.priceRaw);
+                    const chg = formatPct(coin.priceChangePercentage24h);
                     return (
                         <div key={coin.id} className={styles.card}>
                             <div className={styles.cardHeader}>
@@ -68,13 +105,13 @@ export function TrendingCoins() {
                                 </span>
                             </div>
 
-                            {coin.data?.sparkline && (
+                            {coin.sparkline && (
                                 <div className={styles.sparklineWrapper}>
-                                    <img
-                                        src={coin.data.sparkline}
-                                        alt={`${coin.name} sparkline`}
-                                        className={styles.sparklineImg}
-                                        loading="lazy"
+                                    <SparklineChart 
+                                        data={coin.sparkline} 
+                                        positive={chg.positive ?? undefined} 
+                                        width={80} 
+                                        height={30} 
                                     />
                                 </div>
                             )}

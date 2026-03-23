@@ -1,13 +1,15 @@
 import type { InferResponseType } from "hono/client";
 import { useEffect, useState } from "react";
-import { client } from "../api/main";
+import client from "../api/main";
 
 // Define backend API types
 const $getChart = client.api.tokens.markets.chart[":address"].$get;
 const $getMarket = client.api.tokens.markets[":addresses"].$get;
 const $getMeta = client.api.tokens.meta[":addresses"].$get;
 const $getHolders = client.api.tokens.holders[":address"].$get;
-const $getTrades = client.api.tokens.trades[":network"][":address"].$get;
+const $getTrades = client.api.tokens.pools.trades[":address"].$get;
+const $getPools = client.api.tokens[":address"].pools.$get;
+const $getHoldersStats = client.api.tokens.holders.stats[":addresses"].$get;
 
 export type ChartData = InferResponseType<typeof $getChart, 200>;
 export type MarketData =
@@ -73,46 +75,16 @@ export const useTokenPageData = (address: string | undefined) => {
     (async () => {
       setLoading(true);
 
-      // 1. Fetch Backend Data (Meta, Market, Chart, Holders, Trades)
       const fetchBackendData = async () => {
         try {
-          // Try to fetch trades for the pool. We need to know which pool address to use.
-          // IMPORTANT: The 'address' param here is the TOKEN address (from URL /tokens/:address).
-          // But trades API requires POOL address.
-          // We fetch poolsData on the client side, or we might have them from a previous call?
-          // Actually, useTokenPageData fetches poolsData in parallel.
-          // We need a pool address to fetch trades.
-          // The user's request showed using a pool address for trades.
-          // The logic in TokenPage selects the first pool by default.
-          // Maybe we should fetch trades AFTER we verify the pool, or just fetch trades for the first gathered pool?
-          //
-          // Current flow:
-          // useTokenPageData fetches Meta, Market, Chart (using token addr), and Pools (using token addr).
-          // The trades API requires a POOL address.
-          // Let's defer fetching trades until we have a pool address?
-          // Or... refactor useTokenPageData to accept a poolAddress?
-          //
-          // For now, to keep it simple and efficient:
-          // We'll fetch Pools first, then fetch trades for the Top 1 Pool?
-          // Or maybe we add a separate hook or function for fetching trades when a pool is selected?
-
-          // Actually, the structure of TokenPage has `selectedPool`.
-          // It would be better to fetch trades based on `selectedPool` inside TokenPage,
-          // or add a new hook `usePoolTrades(poolAddress)`.
-
-          // Let's modify this hook to ONLY fetch token-level data?
-          // But the user wants "Recent Transactions" which are usually pool-specific.
-          //
-          // Wait, `TopPools` fetches top 20 pools.
-          // Let's return a `fetchTrades` function from this hook or create a new hook.
-          // The `useTokenPageData` is getting too big. A new hook is better.
-
-          const [chartResp, marketResp, metaResp, holdersResp] =
+          const [chartResp, marketResp, metaResp, holdersResp, poolsResp, holdersStatsResp] =
             await Promise.all([
               $getChart({ param: { address } }),
               $getMarket({ param: { addresses: address } }),
               $getMeta({ param: { addresses: address } }),
               $getHolders({ param: { address } }),
+              $getPools({ param: { address } }),
+              $getHoldersStats({ param: { addresses: address } }),
             ]);
 
           if (chartResp.ok) setChartData(await chartResp.json());
@@ -127,36 +99,55 @@ export const useTokenPageData = (address: string | undefined) => {
           if (holdersResp.ok) {
             setTopHolders(await holdersResp.json());
           }
+          if (poolsResp.ok) {
+            const poolsData = await poolsResp.json();
+            setPoolsData(
+              poolsData.slice(0, 20).map((pool: any) => {
+                const p = pool.data;
+                return {
+                  name: p.poolName || "Unknown Pool",
+                  address: p.poolAddress || "",
+                  source: p.dexId || "unknown",
+                  volume24h: Number(p.volumeUsd24h || 0),
+                  volumeBuy24h: Number(p.buyVolumeUsd24h || 0),
+                  volumeSell24h: Number(p.sellVolumeUsd24h || 0),
+                  reserve: Number(p.liquidityUsd || 0),
+                  liquidity: Number(p.liquidityUsd || 0),
+                  marketCap: Number(p.marketCapUsd || 0),
+                  fdv: Number(p.fdvUsd || 0),
+                  priceUsd: Number(p.baseTokenPriceUsd || 0),
+                  priceQuoteToken: Number(p.quoteTokenPriceUsd || 0),
+                  priceChange: {
+                    m5: Number(p.priceChangePercentage5m || 0),
+                    h1: Number(p.priceChangePercentage1h || 0),
+                    h6: Number(p.priceChangePercentage6h || 0),
+                    h24: Number(p.priceChangePercentage24h || 0),
+                  },
+                  txns24h: Number((p.buys24h || 0) + (p.sells24h || 0)),
+                  buys24h: Number(p.buys24h || 0),
+                  sells24h: Number(p.sells24h || 0),
+                  traders24h: Number((p.buyers24h || 0) + (p.sellers24h || 0)),
+                  buyers24h: Number(p.buyers24h || 0),
+                  sellers24h: Number(p.sellers24h || 0),
+                };
+              }),
+            );
+          }
+          if (holdersStatsResp.ok) {
+            const statsData = await holdersStatsResp.json();
+            if (statsData.length > 0) {
+              setHoldersInfo({
+                holders_count: statsData[0].holdersCount,
+                top_10_percent: statsData[0].top10Percent,
+              });
+            }
+          }
         } catch (error) {
           console.error("Failed to fetch backend data:", error);
         }
       };
 
-      // 2. Fetch Client-side Data (Top 20 Pools & Holders Info)
-      const fetchClientData = async () => {
-        try {
-          const { fetchTokenPools, fetchTokenHoldersInfo } = await import(
-            "../services/coingecko"
-          );
-
-          // Parallel fetch for pools and holders info
-          // Note: fetchTokenPools handles error internally and returns []
-          // fetchTokenHoldersInfo handles error internally and returns null
-          const [pools, holdersInfoData] = await Promise.all([
-            fetchTokenPools(address, "solana", 20),
-            fetchTokenHoldersInfo(address, "solana"),
-          ]);
-
-          setPoolsData(pools);
-          if (holdersInfoData) {
-            setHoldersInfo(holdersInfoData);
-          }
-        } catch (error) {
-          console.error("Failed to fetch client data:", error);
-        }
-      };
-
-      await Promise.all([fetchBackendData(), fetchClientData()]);
+      await fetchBackendData();
 
       setLoading(false);
     })();
@@ -187,7 +178,7 @@ export const usePoolTrades = (
       setLoading(true);
       try {
         const response = await $getTrades({
-          param: { network, address: poolAddress },
+          param: { address: poolAddress },
         });
         if (response.ok) {
           setTrades(await response.json());
