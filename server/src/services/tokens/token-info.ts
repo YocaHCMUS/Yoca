@@ -187,8 +187,6 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     return [];
   }
 
-  console.log(tokenAddresses);
-
   // We cheat and use market data here as it allow get multiple tokens info in one request
   // Potential extra 1 API here, but better than fetch each addresses.
   const addressToCgId = await getCoinGeckoIdsByAddresses(tokenAddresses);
@@ -210,6 +208,10 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
         imageUrl: raw.image,
       }),
     );
+
+  if (metaValues.length == 0) {
+    return [];
+  }
 
   return db
     .insert(tokenMeta)

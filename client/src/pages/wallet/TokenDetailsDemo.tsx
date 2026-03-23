@@ -44,8 +44,18 @@ export function TokenDetailsDemo() {
     { param: { addresses: tokenAddresses || "" } },
     {
       enabled: !!tokenAddresses,
-      select: (data) =>
-        Object.fromEntries(data.map((item) => [item.address, item])),
+      select: (data) => {
+        return Object.fromEntries(data.map((item) => [item.address, item]));
+      },
+    },
+  );
+
+  const tokenMarket = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
     },
   );
 
@@ -58,14 +68,20 @@ export function TokenDetailsDemo() {
         <Stack orientation="horizontal" gap={2}>
           <TknImg
             size={32}
-            // loading={tokenMeta.isLoading}
+            loading={tokenMeta.isLoading}
             src={tokenMeta.data?.[details.tokenAddress]?.imageUrl}
           />
           <Stack>
             <Stack orientation="horizontal" style={{ alignItems: "center" }}>
               <Tooltip label={details.tokenAddress} align="right-top">
                 <Link style={{ fontFamily: "monospace" }}>
-                  {fmt.text.address(details.tokenAddress)}
+                  {tokenMeta.data?.[
+                    details.tokenAddress
+                  ]?.symbol.toUpperCase() ??
+                    fmt.text.address(details.tokenAddress, {
+                      maxLength: 4,
+                      position: "end",
+                    })}
                 </Link>
               </Tooltip>
               <CpyBtn size="xs" copyWhat={details.tokenAddress} />
@@ -81,12 +97,19 @@ export function TokenDetailsDemo() {
       ),
       balance: (
         <Stack>
-          <p>{fmt.num.compact.decimal("Replace me")}</p>
+          <p>
+            {fmt.num.compact.currency(
+              tokenMarket.data?.[details.tokenAddress]?.priceUsd
+                ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
+                    details.balanceAmount
+                : null,
+            )}
+          </p>
           <p>{fmt.num.compact.decimal(details.balanceAmount)}</p>
         </Stack>
       ),
       pnl: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <TrendNum
             prefixes="plus-minus"
             value={details.unrealizedProfitUsd + details.realizedProfitUsd}
@@ -102,7 +125,7 @@ export function TokenDetailsDemo() {
         </Stack>
       ),
       realizedPnl: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <TrendNum
             prefixes="plus-minus"
             value={details.realizedProfitUsd}
@@ -123,13 +146,13 @@ export function TokenDetailsDemo() {
         />
       ),
       buy: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <p>{fmt.num.compact.currency(details.totalBoughtUsd)}</p>
           <p>{fmt.num.compact.decimal(details.totalBoughtAmount)}</p>
         </Stack>
       ),
       sell: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <p>{fmt.num.compact.currency(details.totalSoldUsd)}</p>
           <p>{fmt.num.compact.decimal(details.totalSoldAmount)}</p>
         </Stack>
@@ -147,8 +170,8 @@ export function TokenDetailsDemo() {
             value={details.totalBuyCount}
             formatter={fmt.num.compact.decimal}
             prefixes="none"
-          />
-          /
+          />{" "}
+          /{" "}
           <TrendNum
             value={-details.totalSellCount}
             formatter={fmt.num.compact.decimal}
@@ -157,7 +180,7 @@ export function TokenDetailsDemo() {
         </span>
       ),
       avgTradePrice: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <p>{fmt.num.currency(details.avgBuyCost)}</p>
           <p>{fmt.num.currency(details.avgSellCost)}</p>
         </Stack>
@@ -168,7 +191,12 @@ export function TokenDetailsDemo() {
         </IconButton>
       ),
     }));
-  }, [walletTokenDetails.data]);
+  }, [
+    walletTokenDetails.data,
+    tokenMeta.isLoading,
+    tokenMeta.data,
+    tokenMarket.data,
+  ]);
 
   return (
     <PageWrapper>
@@ -178,10 +206,12 @@ export function TokenDetailsDemo() {
         description={"Tokens which recent trading activities"}
         rows={rows}
         size="xl"
+        enablePagination
         headers={[
           {
             key: "token",
             header: "Token/Last traded",
+            align: "start",
           },
           {
             key: "balance",

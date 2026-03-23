@@ -138,7 +138,7 @@ export default function Tble({
             justifyContent: "center",
           }}
         >
-          <InlineLoading description="Loading" />
+          <InlineLoading description="Loading..." />
         </div>
       </TableContainer>
     );
