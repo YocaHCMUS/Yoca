@@ -285,13 +285,6 @@ export default function WalletPage() {
     [loadedTransfers],
   );
 
-  const inflowData = transferData.filter(
-    (row) => address && row[1] === address,
-  );
-  const outflowData = transferData.filter(
-    (row) => address && row[0] === address,
-  );
-
   const counterpartyTableData = useMemo(
     () =>
       counterparties.map((row) => {
@@ -693,12 +686,6 @@ export default function WalletPage() {
       const transferSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...transferData]);
       XLSX.utils.book_append_sheet(workbook, transferSheet, "Transfers");
 
-      const inflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...inflowData]);
-      XLSX.utils.book_append_sheet(workbook, inflowSheet, "Inflow");
-
-      const outflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...outflowData]);
-      XLSX.utils.book_append_sheet(workbook, outflowSheet, "Outflow");
-
       const counterpartySheet = XLSX.utils.aoa_to_sheet([
         counterpartyHeaders,
         ...counterpartyTableData,
@@ -889,15 +876,14 @@ export default function WalletPage() {
                 <TabContainer
                   activeTab={secondaryActiveTab}
                   names={[
+                    tr("walletPage.swap"),
                     tr("walletPage.transfer"),
-                    tr("walletPage.inflow"),
-                    tr("walletPage.outflow"),
                     tr("walletPage.counterparties"),
                   ]}
                   tabs={[
                     <Table
                       maxHeight={400}
-                      title={"swap"}
+                      title={tr("walletPage.swap")}
                       headers={swapHeaders}
                       initialFilters={{}}
                       fetcher={Promise.resolve(swapData)}
@@ -924,10 +910,10 @@ export default function WalletPage() {
                     />,
                     <Table
                       maxHeight={400}
-                      title={tr("walletPage.inflow")}
+                      title={tr("walletPage.transfer")}
                       headers={transferHeaders}
                       initialFilters={{}}
-                      fetcher={Promise.resolve(inflowData)}
+                      fetcher={Promise.resolve(transferData)}
                       filterSchema={{
                         0: { type: FilterType.Select },
                         1: { type: FilterType.Select },
@@ -936,31 +922,7 @@ export default function WalletPage() {
                         4: { type: FilterType.Select },
                       }}
                       cellRenderers={transferCellRenderers}
-                      dataEntries={inflowData}
-                      isSortable={isSortableTransfers}
-                      sortConfigs={transferSortConfigs}
-                      serverPagination={{
-                        enabled: true,
-                        hasMore: transferHasMore,
-                        isLoading: transferLoading,
-                        onPageChange: handleTransferPageChange,
-                      }}
-                    />,
-                    <Table
-                      maxHeight={400}
-                      title={tr("walletPage.outflow")}
-                      headers={transferHeaders}
-                      initialFilters={{}}
-                      fetcher={Promise.resolve(outflowData)}
-                      filterSchema={{
-                        0: { type: FilterType.Select },
-                        1: { type: FilterType.Select },
-                        2: { type: FilterType.Select },
-                        3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                        4: { type: FilterType.Select },
-                      }}
-                      cellRenderers={transferCellRenderers}
-                      dataEntries={outflowData}
+                      dataEntries={transferData}
                       isSortable={isSortableTransfers}
                       sortConfigs={transferSortConfigs}
                       serverPagination={{
