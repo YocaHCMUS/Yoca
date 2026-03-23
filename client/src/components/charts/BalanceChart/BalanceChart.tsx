@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { Close } from '@carbon/react/icons';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -180,12 +181,7 @@ function parseTokenSymbolFromSeriesName(seriesName: string): string | null {
 }
 
 function formatDurationLabel(deltaMs: number): string {
-    const hours = Math.max(1, Math.round(deltaMs / (60 * 60 * 1000)));
-    if (hours < 24) {
-        return `${hours}h`;
-    }
-
-    const days = Math.round(hours / 24);
+    const days = Math.max(1, Math.round(deltaMs / ONE_DAY_MS));
     return `${days}d`;
 }
 
@@ -320,6 +316,7 @@ export function BalanceChart({
     const [selectedTags, setSelectedTags] = useState<string[]>([ALL_TAG]);
     const [tokenSelectionOrder, setTokenSelectionOrder] = useState<string[]>([]);
     const [prefetchedTokenSeriesBySymbol, setPrefetchedTokenSeriesBySymbol] = useState<Record<string, BalanceSeries>>({});
+    const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(30);
 
     const { filters, walletsString } = useChartFiltersSync({
         initialFilters,
@@ -789,15 +786,47 @@ export function BalanceChart({
         walletMeta,
     ]);
 
-    const chartOption = useMemo((): EChartsOption | null => {
+    const windowedDisplaySeries = useMemo<DisplaySeries[]>(() => {
         if (displaySeries.length === 0) {
+            return [];
+        }
+
+        const latestTimestamp = displaySeries.reduce((maxTimestamp, series) => {
+            const lastPoint = series.points[series.points.length - 1];
+            return lastPoint ? Math.max(maxTimestamp, lastPoint.timestamp) : maxTimestamp;
+        }, Number.NEGATIVE_INFINITY);
+
+        if (!Number.isFinite(latestTimestamp)) {
+            return displaySeries;
+        }
+
+        const cutoffTimestamp = latestTimestamp - chartWindowDays * ONE_DAY_MS;
+
+        return displaySeries.map((series) => {
+            const filteredPoints = series.points.filter((point) => point.timestamp >= cutoffTimestamp);
+            if (filteredPoints.length > 0) {
+                return {
+                    ...series,
+                    points: filteredPoints,
+                };
+            }
+
+            return {
+                ...series,
+                points: series.points.length > 0 ? [series.points[series.points.length - 1]] : [],
+            };
+        });
+    }, [displaySeries, chartWindowDays]);
+
+    const chartOption = useMemo((): EChartsOption | null => {
+        if (windowedDisplaySeries.length === 0) {
             return null;
         }
 
         const baseOption = getThemedChartBaseOption(chartTheme);
         const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96'];
 
-        const seriesConfig = displaySeries.map((series, index) => {
+        const seriesConfig = windowedDisplaySeries.map((series, index) => {
             const color = colors[index % colors.length];
             const isSinglePoint = series.points.length <= 1;
 
@@ -830,7 +859,7 @@ export function BalanceChart({
             ...baseOption,
             color: colors,
             grid: { left: '8%', right: '8%', bottom: '12%', top: '20%', containLabel: true },
-            legend: getConditionalLegend(chartTheme, displaySeries.map((series) => series.label), 2, false),
+            legend: getConditionalLegend(chartTheme, windowedDisplaySeries.map((series) => series.label), 2, false),
             xAxis: {
                 ...baseOption.xAxis,
                 type: 'time',
@@ -860,7 +889,7 @@ export function BalanceChart({
                     ),
             },
         };
-    }, [displaySeries, timezone, chartTheme]);
+    }, [windowedDisplaySeries, timezone, chartTheme]);
 
     const summaryRows = useMemo(() => {
         if (isMultiWallet) {
@@ -896,86 +925,99 @@ export function BalanceChart({
         <BaseChart
             title={chartTitle}
             loadingState={loadingState}
-            isEmpty={displaySeries.length === 0 || !displaySeries.some((series) => series.points.length > 0)}
+            isEmpty={windowedDisplaySeries.length === 0 || !windowedDisplaySeries.some((series) => series.points.length > 0)}
             onRetry={handleRetry}
         >
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
-                <div className={sharedStyles.balanceChartControlInputGroup}>
-                    <label htmlFor={dataListId}>{isMultiWallet ? 'Select mode/token' : 'Select token'}</label>
-                    <select
-                        id={dataListId}
-                        value={selectorValue}
-                        onChange={(event) => setSelectorValue(event.target.value)}
-                        className={sharedStyles.balanceChartCombobox}
-                    >
-                        {tokenOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        type="button"
-                        className={sharedStyles.chartToggleButton}
-                        onClick={() => addTag(selectorValue)}
-                    >
-                        {isMultiWallet ? 'Switch' : 'Add'}
-                    </button>
+                <div className={sharedStyles.balanceChartControlTopRow}>
+                    <div className={sharedStyles.balanceChartControlInputGroup}>
+                        <label htmlFor={dataListId}>{isMultiWallet ? 'Select mode/token' : 'Select token'}</label>
+                        <select
+                            id={dataListId}
+                            value={selectorValue}
+                            onChange={(event) => setSelectorValue(event.target.value)}
+                            className={sharedStyles.balanceChartCombobox}
+                        >
+                            {tokenOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            className={sharedStyles.chartToggleButton}
+                            onClick={() => addTag(selectorValue)}
+                        >
+                            {isMultiWallet ? 'Switch' : 'Add'}
+                        </button>
+                    </div>
+
+                    <div className={sharedStyles.balanceChartWindowToggleGroup}>
+                        <button
+                            type="button"
+                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                            onClick={() => setChartWindowDays(7)}
+                            aria-pressed={chartWindowDays === 7}
+                        >
+                            7D
+                        </button>
+                        <button
+                            type="button"
+                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                            onClick={() => setChartWindowDays(30)}
+                            aria-pressed={chartWindowDays === 30}
+                        >
+                            30D
+                        </button>
+                    </div>
                 </div>
 
                 <div className={sharedStyles.balanceChartTagRow}>
-                    {selectedTags.map((tag) => {
-                        const canDismiss = selectedTags.length > 1;
-                        const label = optionLabelByValue.get(tag) || (tag === ALL_TAG ? 'All' : tokenMeta[tag]?.symbol || tag);
-                        const logoUri = tag === ALL_TAG || isWalletTag(tag) ? undefined : tokenMeta[tag]?.logoUri;
+                    {summaryRows.map((row) => {
+                        const isRemovableTag = !isMultiWallet && selectedTags.includes(row.key);
+                        const canDismiss = isRemovableTag && selectedTags.length > 1;
+                        const changeText = row.change ? `${row.change.pct >= 0 ? '+' : ''}${row.change.pct.toFixed(2)}%` : 'N/A';
+                        const deltaText = row.change ? row.change.deltaLabel : '--';
+                        const changeClassName = row.change
+                            ? row.change.pct >= 0
+                                ? sharedStyles.balanceChartTagChangePositive
+                                : sharedStyles.balanceChartTagChangeNegative
+                            : sharedStyles.balanceChartTagChangeNeutral;
 
                         return (
-                            <div key={tag} className={sharedStyles.balanceChartTag}>
-                                {logoUri ? (
-                                    <img src={logoUri} alt={label} className={sharedStyles.balanceChartTagIcon} />
-                                ) : (
-                                    <span className={sharedStyles.balanceChartTagIconFallback}>
-                                        {label.charAt(0)}
-                                    </span>
+                            <div key={row.key} className={sharedStyles.balanceChartTag}>
+                                <div className={sharedStyles.balanceChartTagMain}>
+                                    {row.logoUri ? (
+                                        <img src={row.logoUri} alt={row.label} className={sharedStyles.balanceChartTagIcon} />
+                                    ) : (
+                                        <span className={sharedStyles.balanceChartTagIconFallback}>
+                                            {row.label.charAt(0)}
+                                        </span>
+                                    )}
+                                    <span className={sharedStyles.balanceChartTagLabel}>{row.label}</span>
+                                </div>
+
+                                <div className={sharedStyles.balanceChartTagMetrics}>
+                                    <span className={changeClassName}>{changeText}</span>
+                                    <span className={sharedStyles.balanceChartTagDelta}>{deltaText}</span>
+                                </div>
+
+                                {isRemovableTag && (
+                                    <button
+                                        type="button"
+                                        disabled={!canDismiss}
+                                        onClick={() => removeTag(row.key)}
+                                        className={sharedStyles.balanceChartTagDismiss}
+                                        title={canDismiss ? 'Remove tag' : 'At least one tag is required'}
+                                    >
+                                        <Close size={12} />
+                                    </button>
                                 )}
-                                <span>{label}</span>
-                                <button
-                                    type="button"
-                                    disabled={!canDismiss}
-                                    onClick={() => removeTag(tag)}
-                                    className={sharedStyles.balanceChartTagDismiss}
-                                    title={canDismiss ? 'Remove tag' : 'At least one tag is required'}
-                                >
-                                    x
-                                </button>
                             </div>
                         );
                     })}
                 </div>
-            </div>
-
-            <div className={sharedStyles.balanceChartSummaryBox}>
-                {summaryRows.map((row) => {
-                    const changeText = row.change ? `${row.change.pct >= 0 ? '+' : ''}${row.change.pct.toFixed(2)}%` : 'N/A';
-                    const periodText = row.change ? (row.change.isApprox ? `vs ${row.change.deltaLabel}` : 'vs 24h') : '';
-
-                    return (
-                        <div key={row.key} className={sharedStyles.balanceChartSummaryCard}>
-                            <div className={sharedStyles.balanceChartSummaryLabelRow}>
-                                {row.logoUri ? (
-                                    <img src={row.logoUri} alt={row.label} className={sharedStyles.balanceChartTagIcon} />
-                                ) : (
-                                    <span className={sharedStyles.balanceChartTagIconFallback}>
-                                        {row.label.charAt(0)}
-                                    </span>
-                                )}
-                                <span>{row.label}</span>
-                            </div>
-                            <div className={sharedStyles.balanceChartSummaryValue}>{changeText}</div>
-                            {periodText && <div className={sharedStyles.balanceChartSummaryDelta}>{periodText}</div>}
-                        </div>
-                    );
-                })}
             </div>
 
             {chartOption && (
