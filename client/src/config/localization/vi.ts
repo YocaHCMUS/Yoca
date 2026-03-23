@@ -178,8 +178,16 @@ export const translation = defineTranslation({
     filter30d: "Tháng",
     filter90d: "Quý",
     filter365d: "Năm",
+    filterAll: "Tất cả",
     filterCustom: "Tùy chỉnh",
     filterCustomDateUnit: " Ngày",
+    buyTransactionCount: "Số lệnh mua",
+    buyVolume: "Khối lượng mua",
+    sellTransactionCount: "Số lệnh bán",
+    sellVolume: "Khối lượng bán",
+    realizedPnL: "PnL đã chốt",
+    unrealizedPnL: "PnL chưa chốt",
+    change24hPercent: "Biến động 24H",
   },
   // Wallet Page
   walletPage: {

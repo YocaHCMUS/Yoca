@@ -198,8 +198,16 @@ export const translation = {
     filter30d: "1M",
     filter90d: "3M",
     filter365d: "1Y",
+    filterAll: "All",
     filterCustom: "Custom",
     filterCustomDateUnit: "D",
+    buyTransactionCount: "Buy tx count",
+    buyVolume: "Buy volume",
+    sellTransactionCount: "Sell tx count",
+    sellVolume: "Sell volume",
+    realizedPnL: "Realized PnL",
+    unrealizedPnL: "Unrealized PnL",
+    change24hPercent: "24H change",
   },
   // Wallet Page
   walletPage: {

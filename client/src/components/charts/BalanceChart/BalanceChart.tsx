@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -9,7 +9,7 @@ import { fetchBalanceTrend, type InferFetcherData } from '@/services/chart/chart
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
-import type { BalanceRequestParams, ChartPageInfo } from '@/types/chart-api.types';
+import type { BalanceRequestParams } from '@/types/chart-api.types';
 
 // Infer response type from fetcher
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -19,7 +19,6 @@ import type { ChartProps } from '../shared/ChartProp';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 
 type BalanceTrendData = InferFetcherData<typeof fetchBalanceTrend>;
-const CHART_CHUNK_LIMIT = 180;
 
 type BalanceSeriesPoint = { timestamp: number; value: number };
 
@@ -38,7 +37,6 @@ type BalanceChartDisplayData = {
         tokens?: string[];
         mode?: 'total' | 'token';
     };
-    pageInfo?: ChartPageInfo;
 };
 
 function isBalanceChartDisplayData(value: unknown): value is BalanceChartDisplayData {
@@ -50,49 +48,30 @@ function isBalanceChartDisplayData(value: unknown): value is BalanceChartDisplay
     return Array.isArray(raw.series);
 }
 
-function mergeSeriesByTimestamp(
-    existing: Array<{ timestamp: number; value: number }>,
-    incoming: Array<{ timestamp: number; value: number }>,
+function normalizeSeriesData(
+    points: Array<{ timestamp: number; value: number }>,
 ): Array<{ timestamp: number; value: number }> {
-    const byTimestamp = new Map<number, { timestamp: number; value: number }>();
+    const normalized = points
+        .map((point) => ({
+            timestamp: Number(point.timestamp),
+            value: Number(point.value),
+        }))
+        .filter(
+            (point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value),
+        )
+        .sort((a, b) => a.timestamp - b.timestamp);
 
-    for (const point of existing) {
-        byTimestamp.set(point.timestamp, point);
-    }
-
-    for (const point of incoming) {
-        byTimestamp.set(point.timestamp, point);
-    }
-
-    return Array.from(byTimestamp.values()).sort((a, b) => a.timestamp - b.timestamp);
-}
-
-function mergeBalanceChartData(previous: BalanceChartDisplayData, incoming: BalanceChartDisplayData): BalanceChartDisplayData {
-    const previousByName = new Map(previous.series.map((series) => [series.name, series]));
-    const mergedSeries = incoming.series.map((series) => {
-        const previousSeries = previousByName.get(series.name);
-        return {
-            ...series,
-            data: mergeSeriesByTimestamp(previousSeries?.data ?? [], series.data),
-        };
-    });
-
-    for (const previousSeries of previous.series) {
-        if (!mergedSeries.some((series) => series.name === previousSeries.name)) {
-            mergedSeries.push(previousSeries);
+    const deduped: Array<{ timestamp: number; value: number }> = [];
+    for (const point of normalized) {
+        if (deduped.length > 0 && deduped[deduped.length - 1].timestamp === point.timestamp) {
+            deduped[deduped.length - 1] = point;
+            continue;
         }
+
+        deduped.push(point);
     }
 
-    return {
-        ...incoming,
-        wallets: incoming.wallets ?? previous.wallets,
-        metadata: {
-            ...previous.metadata,
-            ...incoming.metadata,
-            dataPoints: mergedSeries[0]?.data.length ?? Number(incoming.metadata.dataPoints ?? 0),
-        },
-        series: mergedSeries,
-    };
+    return deduped;
 }
 
 export function BalanceChart({
@@ -136,7 +115,6 @@ export function BalanceChart({
             tokens: queryTokensString,
             wallets: walletsString,
             timezone,
-            limit: CHART_CHUNK_LIMIT,
         }),
         [filters.timePeriod, queryTokensString, walletsString, timezone]
     );
@@ -149,64 +127,19 @@ export function BalanceChart({
             refreshInterval,
         });
 
-    const [mergedData, setMergedData] = useState<BalanceChartDisplayData | null>(null);
-    const [pageInfo, setPageInfo] = useState<ChartPageInfo | null>(null);
-    const [isFetchingMore, setIsFetchingMore] = useState(false);
-
-    useEffect(() => {
-        if (!data || 'error' in data || !isBalanceChartDisplayData(data)) {
-            setMergedData(null);
-            setPageInfo(null);
-            return;
-        }
-
-        setMergedData(data);
-        setPageInfo(data.pageInfo ?? null);
-    }, [data]);
-
     const displayData = useMemo<BalanceChartDisplayData | null>(() => {
-        if (mergedData) {
-            return mergedData;
-        }
-
         if (data && !('error' in data) && isBalanceChartDisplayData(data)) {
-            return data;
+            return {
+                ...data,
+                series: data.series.map((series) => ({
+                    ...series,
+                    data: normalizeSeriesData(series.data),
+                })),
+            };
         }
 
         return null;
-    }, [mergedData, data]);
-
-    const handleLoadOlder = useCallback(async () => {
-        if (!pageInfo?.hasMore || !pageInfo.nextCursor || isFetchingMore) {
-            return;
-        }
-
-        setIsFetchingMore(true);
-        try {
-            const olderChunk = await fetchBalanceTrend({
-                ...query,
-                cursor: pageInfo.nextCursor,
-                limit: CHART_CHUNK_LIMIT,
-            });
-
-            if (!olderChunk || 'error' in olderChunk || !isBalanceChartDisplayData(olderChunk)) {
-                return;
-            }
-
-            setMergedData((previous) => {
-                if (!previous) {
-                    return olderChunk;
-                }
-
-                return mergeBalanceChartData(previous, olderChunk);
-            });
-            setPageInfo(olderChunk.pageInfo ?? null);
-        } catch (error) {
-            console.error('[BalanceChart] Failed to load older chunk', error);
-        } finally {
-            setIsFetchingMore(false);
-        }
-    }, [isFetchingMore, pageInfo, query]);
+    }, [data]);
 
     const tokenOptions = useMemo(() => {
         const optionsMap = new Map<string, string>();
@@ -286,8 +219,10 @@ export function BalanceChart({
             const seriesConfig = displayData.series.map((series, index) => {
                 const isUsd = series.unit === 'USD';
                 const color = colors[index % colors.length];
-                const timestamps = series.data.map((point: any) => point.timestamp);
-                const values = series.data.map((point: any) => point.value);
+                const normalizedData = normalizeSeriesData(series.data);
+                const timestamps = normalizedData.map((point: any) => point.timestamp);
+                const values = normalizedData.map((point: any) => point.value);
+                const isSinglePoint = normalizedData.length <= 1;
 
                 if (series.seriesType === 'bar' || isUsd) {
                     return {
@@ -295,6 +230,7 @@ export function BalanceChart({
                         type: 'bar' as const,
                         yAxisIndex: 1,
                         data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                        barMinHeight: isSinglePoint ? 3 : 0,
                         itemStyle: { color },
                     };
                 }
@@ -305,6 +241,8 @@ export function BalanceChart({
                     smooth: true,
                     yAxisIndex: 0,
                     data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                    showSymbol: isSinglePoint,
+                    symbolSize: isSinglePoint ? 8 : 4,
                     areaStyle: {
                         color: {
                             type: 'linear' as const,
@@ -383,10 +321,12 @@ export function BalanceChart({
         const isMultiWallet = displayData.series.length > 1;
 
         const seriesConfig = displayData.series.map((series, index) => {
-            const enableSampling = series.data.length > 2000;
-            const timestamps = series.data.map((point: any) => point.timestamp);
-            const values = series.data.map((point: any) => point.value);
+            const normalizedData = normalizeSeriesData(series.data);
+            const enableSampling = normalizedData.length > 2000;
+            const timestamps = normalizedData.map((point: any) => point.timestamp);
+            const values = normalizedData.map((point: any) => point.value);
             const color = colors[index % colors.length];
+            const isSinglePoint = normalizedData.length <= 1;
 
             return {
                 name: series.name,
@@ -394,6 +334,8 @@ export function BalanceChart({
                 smooth: true,
                 sampling: enableSampling ? ('lttb' as const) : undefined,
                 data: timestamps.map((timestamp: number, idx: number) => [timestamp, values[idx]]),
+                showSymbol: isSinglePoint,
+                symbolSize: isSinglePoint ? 8 : 4,
                 areaStyle: isMultiWallet ? undefined : {
                     color: {
                         type: 'linear' as const,
@@ -448,7 +390,11 @@ export function BalanceChart({
         <BaseChart
             title={chartTitle}
             loadingState={loadingState}
-            isEmpty={!displayData || displayData.series.length === 0 || displayData.series[0]?.data.length === 0}
+            isEmpty={
+                !displayData ||
+                displayData.series.length === 0 ||
+                !displayData.series.some((series) => normalizeSeriesData(series.data).length > 0)
+            }
             onRetry={() => refetch(false)}
         >
             {showTokenSelector && (
@@ -480,22 +426,6 @@ export function BalanceChart({
                     </div>
                 </div>
             )}
-
-            {pageInfo?.hasMore && (
-                <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
-                    <div className={sharedStyles['chartToggle--padded']}>
-                        <button
-                            className={sharedStyles.chartToggleButton}
-                            onClick={handleLoadOlder}
-                            type="button"
-                            disabled={isFetchingMore}
-                        >
-                            {isFetchingMore ? 'Loading older...' : 'Load older'}
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {chartOption && (
                 <ChartGridItem minHeight={minHeight}>
                     <ReactECharts

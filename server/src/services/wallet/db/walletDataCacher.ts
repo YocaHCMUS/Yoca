@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 
 export async function saveSwapsCache(
@@ -60,27 +60,139 @@ export async function saveSwapsCache(
 
 export async function saveOverviewCache(overview: WalletOverview): Promise<void> {
   try {
+    const now = new Date();
+    const period24h = overview.periods["24H"];
+    const period7d = overview.periods["7D"];
+    const period30d = overview.periods["30D"];
+    const period90d = overview.periods["90D"];
+    const periodAll = overview.periods["All"];
+
+    const keepIfNull = <T>(value: T | null | undefined): T | undefined =>
+      value == null ? undefined : value;
+
     await db
       .insert(walletOverviewCache)
       .values({
         address: overview.address,
-        totalAssetValueUsd: overview.totalAssetValueUsd,
-        tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
-        pnlUsdTotal: overview.pnlUsdTotal ?? null,
-        transactionCount24h: overview.transactionCount24h ?? null,
-        tokensTradedCount: overview.tokensTradedCount ?? null,
-        tokensHoldingCount: overview.tokensHoldingCount,
+        totalAssetValueUsd: overview.holdings.totalAssetValueUsd,
+        totalAssetValueChange24hPercent: overview.holdings.change24hPercent,
+        tradingVolumeUsd24h: period24h.tradingVolumeUsd,
+        tradingVolumeUsd7d: period7d.tradingVolumeUsd,
+        tradingVolumeUsd30d: period30d.tradingVolumeUsd,
+        tradingVolumeUsd90d: period90d.tradingVolumeUsd,
+        tradingVolumeUsdAll: periodAll.tradingVolumeUsd,
+        pnlUsdTotal: period24h.pnl.totalUsd,
+        pnlTotalUsd24h: period24h.pnl.totalUsd,
+        pnlTotalUsd7d: period7d.pnl.totalUsd,
+        pnlTotalUsd30d: period30d.pnl.totalUsd,
+        pnlTotalUsd90d: period90d.pnl.totalUsd,
+        pnlTotalUsdAll: periodAll.pnl.totalUsd,
+        pnlRealizedUsd24h: period24h.pnl.realizedUsd,
+        pnlRealizedUsd7d: period7d.pnl.realizedUsd,
+        pnlRealizedUsd30d: period30d.pnl.realizedUsd,
+        pnlRealizedUsd90d: period90d.pnl.realizedUsd,
+        pnlRealizedUsdAll: periodAll.pnl.realizedUsd,
+        pnlUnrealizedUsd24h: period24h.pnl.unrealizedUsd,
+        pnlUnrealizedUsd7d: period7d.pnl.unrealizedUsd,
+        pnlUnrealizedUsd30d: period30d.pnl.unrealizedUsd,
+        pnlUnrealizedUsd90d: period90d.pnl.unrealizedUsd,
+        pnlUnrealizedUsdAll: periodAll.pnl.unrealizedUsd,
+        transactionCount24h: period24h.transactionCount,
+        transactionCount7d: period7d.transactionCount,
+        transactionCount30d: period30d.transactionCount,
+        transactionCount90d: period90d.transactionCount,
+        transactionCountAll: periodAll.transactionCount,
+        tokensTradedCount: period24h.tokensTradedCount,
+        tokensTradedCount24h: period24h.tokensTradedCount,
+        tokensTradedCount7d: period7d.tokensTradedCount,
+        tokensTradedCount30d: period30d.tokensTradedCount,
+        tokensTradedCount90d: period90d.tokensTradedCount,
+        tokensTradedCountAll: periodAll.tokensTradedCount,
+        buyTxCount24h: period24h.buy.transactionCount,
+        buyTxCount7d: period7d.buy.transactionCount,
+        buyTxCount30d: period30d.buy.transactionCount,
+        buyTxCount90d: period90d.buy.transactionCount,
+        buyTxCountAll: periodAll.buy.transactionCount,
+        sellTxCount24h: period24h.sell.transactionCount,
+        sellTxCount7d: period7d.sell.transactionCount,
+        sellTxCount30d: period30d.sell.transactionCount,
+        sellTxCount90d: period90d.sell.transactionCount,
+        sellTxCountAll: periodAll.sell.transactionCount,
+        buyVolumeUsd24h: period24h.buy.volumeUsd,
+        buyVolumeUsd7d: period7d.buy.volumeUsd,
+        buyVolumeUsd30d: period30d.buy.volumeUsd,
+        buyVolumeUsd90d: period90d.buy.volumeUsd,
+        buyVolumeUsdAll: periodAll.buy.volumeUsd,
+        sellVolumeUsd24h: period24h.sell.volumeUsd,
+        sellVolumeUsd7d: period7d.sell.volumeUsd,
+        sellVolumeUsd30d: period30d.sell.volumeUsd,
+        sellVolumeUsd90d: period90d.sell.volumeUsd,
+        sellVolumeUsdAll: periodAll.sell.volumeUsd,
+        tokensHoldingCount: overview.holdings.tokensHoldingCount,
+        holdingsFetchedAt: now,
+        activityFetchedAt: now,
       })
       .onConflictDoUpdate({
         target: [walletOverviewCache.address],
         set: {
-          totalAssetValueUsd: overview.totalAssetValueUsd,
-          tradingVolumeUsd24h: overview.tradingVolumeUsd24h ?? null,
-          pnlUsdTotal: overview.pnlUsdTotal ?? null,
-          transactionCount24h: overview.transactionCount24h ?? null,
-          tokensTradedCount: overview.tokensTradedCount ?? null,
-          tokensHoldingCount: overview.tokensHoldingCount,
-          fetchedAt: new Date(),
+          totalAssetValueUsd: overview.holdings.totalAssetValueUsd,
+          totalAssetValueChange24hPercent: keepIfNull(overview.holdings.change24hPercent),
+          tradingVolumeUsd24h: keepIfNull(period24h.tradingVolumeUsd),
+          tradingVolumeUsd7d: keepIfNull(period7d.tradingVolumeUsd),
+          tradingVolumeUsd30d: keepIfNull(period30d.tradingVolumeUsd),
+          tradingVolumeUsd90d: keepIfNull(period90d.tradingVolumeUsd),
+          tradingVolumeUsdAll: keepIfNull(periodAll.tradingVolumeUsd),
+          pnlUsdTotal: keepIfNull(period24h.pnl.totalUsd),
+          pnlTotalUsd24h: keepIfNull(period24h.pnl.totalUsd),
+          pnlTotalUsd7d: keepIfNull(period7d.pnl.totalUsd),
+          pnlTotalUsd30d: keepIfNull(period30d.pnl.totalUsd),
+          pnlTotalUsd90d: keepIfNull(period90d.pnl.totalUsd),
+          pnlTotalUsdAll: keepIfNull(periodAll.pnl.totalUsd),
+          pnlRealizedUsd24h: keepIfNull(period24h.pnl.realizedUsd),
+          pnlRealizedUsd7d: keepIfNull(period7d.pnl.realizedUsd),
+          pnlRealizedUsd30d: keepIfNull(period30d.pnl.realizedUsd),
+          pnlRealizedUsd90d: keepIfNull(period90d.pnl.realizedUsd),
+          pnlRealizedUsdAll: keepIfNull(periodAll.pnl.realizedUsd),
+          pnlUnrealizedUsd24h: keepIfNull(period24h.pnl.unrealizedUsd),
+          pnlUnrealizedUsd7d: keepIfNull(period7d.pnl.unrealizedUsd),
+          pnlUnrealizedUsd30d: keepIfNull(period30d.pnl.unrealizedUsd),
+          pnlUnrealizedUsd90d: keepIfNull(period90d.pnl.unrealizedUsd),
+          pnlUnrealizedUsdAll: keepIfNull(periodAll.pnl.unrealizedUsd),
+          transactionCount24h: keepIfNull(period24h.transactionCount),
+          transactionCount7d: keepIfNull(period7d.transactionCount),
+          transactionCount30d: keepIfNull(period30d.transactionCount),
+          transactionCount90d: keepIfNull(period90d.transactionCount),
+          transactionCountAll: keepIfNull(periodAll.transactionCount),
+          tokensTradedCount: keepIfNull(period24h.tokensTradedCount),
+          tokensTradedCount24h: keepIfNull(period24h.tokensTradedCount),
+          tokensTradedCount7d: keepIfNull(period7d.tokensTradedCount),
+          tokensTradedCount30d: keepIfNull(period30d.tokensTradedCount),
+          tokensTradedCount90d: keepIfNull(period90d.tokensTradedCount),
+          tokensTradedCountAll: keepIfNull(periodAll.tokensTradedCount),
+          buyTxCount24h: keepIfNull(period24h.buy.transactionCount),
+          buyTxCount7d: keepIfNull(period7d.buy.transactionCount),
+          buyTxCount30d: keepIfNull(period30d.buy.transactionCount),
+          buyTxCount90d: keepIfNull(period90d.buy.transactionCount),
+          buyTxCountAll: keepIfNull(periodAll.buy.transactionCount),
+          sellTxCount24h: keepIfNull(period24h.sell.transactionCount),
+          sellTxCount7d: keepIfNull(period7d.sell.transactionCount),
+          sellTxCount30d: keepIfNull(period30d.sell.transactionCount),
+          sellTxCount90d: keepIfNull(period90d.sell.transactionCount),
+          sellTxCountAll: keepIfNull(periodAll.sell.transactionCount),
+          buyVolumeUsd24h: keepIfNull(period24h.buy.volumeUsd),
+          buyVolumeUsd7d: keepIfNull(period7d.buy.volumeUsd),
+          buyVolumeUsd30d: keepIfNull(period30d.buy.volumeUsd),
+          buyVolumeUsd90d: keepIfNull(period90d.buy.volumeUsd),
+          buyVolumeUsdAll: keepIfNull(periodAll.buy.volumeUsd),
+          sellVolumeUsd24h: keepIfNull(period24h.sell.volumeUsd),
+          sellVolumeUsd7d: keepIfNull(period7d.sell.volumeUsd),
+          sellVolumeUsd30d: keepIfNull(period30d.sell.volumeUsd),
+          sellVolumeUsd90d: keepIfNull(period90d.sell.volumeUsd),
+          sellVolumeUsdAll: keepIfNull(periodAll.sell.volumeUsd),
+          tokensHoldingCount: overview.holdings.tokensHoldingCount,
+          holdingsFetchedAt: now,
+          activityFetchedAt: now,
+          fetchedAt: now,
         },
       });
   } catch (err) {
@@ -253,6 +365,55 @@ export async function saveTransfersCache(
       });
   } catch (err) {
     console.error("Failed to save wallet transfers cache", err);
+  }
+}
+
+/**
+ * Save wallet balance history cache to database
+ * Only caches historical data up to yesterday's end; today's point is never persisted
+ * @param address - wallet address
+ * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
+ * @param points - balance data points (historical only, excludes today)
+ * @param coveredFromMs - earliest UTC day-start millisecond in cached data
+ * @param coveredToMs - latest UTC day-start millisecond in cached data (never includes today)
+ */
+/**
+ * Save wallet balance history cache to database
+ * Only caches historical data up to yesterday's end; today's point is never persisted
+ * @param address - wallet address
+ * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
+ * @param points - balance data points (historical only, excludes today)
+ * @param coveredFromMs - earliest UTC day-start millisecond in cached data
+ * @param coveredToMs - latest UTC day-start millisecond in cached data (never includes today)
+ */
+export async function saveBalanceHistoryCache(
+  address: string,
+  timePeriod: WalletTimePeriod,
+  points: BalanceDataPoint[],
+  coveredFromMs: number,
+  coveredToMs: number,
+): Promise<void> {
+  try {
+    await db
+      .insert(walletBalanceHistoryCache)
+      .values({
+        address,
+        timePeriod,
+        data: points as any,
+        coveredFromMs,
+        coveredToMs,
+      })
+      .onConflictDoUpdate({
+        target: [walletBalanceHistoryCache.address, walletBalanceHistoryCache.timePeriod],
+        set: {
+          data: points as any,
+          fetchedAt: new Date(),
+          coveredFromMs,
+          coveredToMs,
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet balance history cache", err);
   }
 }
 

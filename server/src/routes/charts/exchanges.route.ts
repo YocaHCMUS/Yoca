@@ -6,12 +6,10 @@
  * @module routes/charts/exchanges.route
  */
 
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
 import { Hono } from "hono";
 import { z } from "zod";
-// Request Schema
-import { generateExchangeData } from '../../services/mockChartData.service.js';
-import { getWalletExchangeCounts } from "@sv/services/wallet/walletData.service.js";
-import { error } from "node:console";
+
 
 /**
  * Request parameter schema for exchange comparison endpoint

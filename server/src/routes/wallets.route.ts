@@ -1,16 +1,19 @@
 import { setErr } from "@sv/config/errors.js";
 import { addressSchema, validate } from "@sv/middlewares/validation.js";
-import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+// import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as walletService from "@sv/services/wallet/index.js";
 import {
-  fetchTestTransaction,
-  getWalletExchangeCounts,
+  // fetchTestTransaction,
+  // getWalletExchangeCounts,
   getWalletOverview,
-  getWalletPortfolio,
+} from "@sv/services/wallet/walletOverview.service.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
+import {
   getWalletSwaps,
   getWalletTransfers,
-} from "@sv/services/wallet/walletData.service.js";
+} from "@sv/services/wallet/walletTransfersSwaps.service.js";
+// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
   WalletIdentityServiceError,
@@ -21,6 +24,11 @@ import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligenc
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
+import type {
+  WalletPortfolioItem,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service";
 
 const router = new Hono();
 
@@ -28,9 +36,7 @@ const walletRequestSchema = z.object({
   address: z.string(),
 });
 
-const walletOverviewRequestSchema = walletRequestSchema.extend({
-  period: z.string().optional(),
-});
+const walletOverviewRequestSchema = walletRequestSchema;
 
 const walletCounterpartyRequestSchema = walletRequestSchema.extend({
   period: z.string().optional(),
@@ -45,51 +51,10 @@ const walletIdentityBatchRequestSchema = z.object({
     .max(WALLET_IDENTITY_MAX_BATCH_SIZE),
 });
 
-const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
-const MIN_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
-const MAX_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
-
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
-
-function parseOverviewPeriodSec(rawPeriod?: string): {
-  periodSec: number;
-  normalized: boolean;
-} {
-  if (!rawPeriod) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
-  }
-
-  const trimmed = rawPeriod.trim().toLowerCase();
-  if (!trimmed) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: false };
-  }
-
-  const explicitUnitMatch = trimmed.match(/^(\d+)\s*([hd])$/);
-  const dayOnlyMatch = trimmed.match(/^(\d+)$/);
-
-  let periodSec: number | null = null;
-  if (explicitUnitMatch) {
-    const amount = Number(explicitUnitMatch[1]);
-    const unit = explicitUnitMatch[2];
-    periodSec = unit === "h" ? amount * 60 * 60 : amount * 24 * 60 * 60;
-  } else if (dayOnlyMatch) {
-    periodSec = Number(dayOnlyMatch[1]) * 24 * 60 * 60;
-  }
-
-  if (
-    periodSec == null ||
-    !Number.isFinite(periodSec) ||
-    periodSec < MIN_OVERVIEW_PERIOD_SEC ||
-    periodSec > MAX_OVERVIEW_PERIOD_SEC
-  ) {
-    return { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC, normalized: true };
-  }
-
-  return { periodSec, normalized: false };
-}
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
   status: 400 | 401 | 502 | 503;
@@ -204,20 +169,9 @@ const routes = router
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
     const address = params.address;
-    const { periodSec, normalized } = parseOverviewPeriodSec(params.period);
-
-    if (normalized && params.period) {
-      console.warn(
-        "[wallet-overview-route] Unsupported period normalized to 24h",
-        {
-          address,
-          requestedPeriod: params.period,
-        },
-      );
-    }
 
     try {
-      const overview = await getWalletOverview(address, { periodSec });
+      const overview = await getWalletOverview(address);
       return c.json(overview);
     } catch (err) {
       console.error("Failed to get wallet overview", err);
@@ -444,21 +398,21 @@ const routes = router
       return c.json({ error: "Failed to compose wallet intelligence" }, 500);
     }
   })
-  .get("/debug/test-transactions", async (c) => {
-    const address = c.req.query("address");
+  // .get("/debug/test-transactions", async (c) => {
+  //   const address = c.req.query("address");
 
-    if (!address) {
-      return c.json({ error: "Missing required query param: address" }, 400);
-    }
+  //   if (!address) {
+  //     return c.json({ error: "Missing required query param: address" }, 400);
+  //   }
 
-    try {
-      const data = await fetchTestTransaction(address);
-      return c.json({ address, data });
-    } catch (err) {
-      console.error("Failed to fetch test transactions", err);
-      return c.json({ error: "Failed to fetch test transactions" }, 500);
-    }
-  })
+  // try {
+  //   const data = await fetchTestTransaction(address);
+  //   return c.json({ address, data });
+  // } catch (err) {
+  //   console.error("Failed to fetch test transactions", err);
+  //   return c.json({ error: "Failed to fetch test transactions" }, 500);
+  // }
+  // })
   .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");

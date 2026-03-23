@@ -3,19 +3,19 @@ import puppeteer, { type Browser } from "puppeteer";
 
 type ExportPdfRequest =
   | {
-      title?: string;
-      width?: number;
-      height?: number;
-      html: string;
-      svg?: never;
-    }
+    title?: string;
+    width?: number;
+    height?: number;
+    html: string;
+    svg?: never;
+  }
   | {
-      title?: string;
-      width?: number;
-      height?: number;
-      svg: string;
-      html?: never;
-    };
+    title?: string;
+    width?: number;
+    height?: number;
+    svg: string;
+    html?: never;
+  };
 
 let browserPromise: Promise<Browser> | null = null;
 

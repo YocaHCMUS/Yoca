@@ -152,6 +152,62 @@ export interface WalletCounterpartiesResponse {
   };
 }
 
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+
+export interface WalletOverviewPeriodStats {
+  tradingVolumeUsd: number | null;
+  buy: {
+    transactionCount: number | null;
+    volumeUsd: number | null;
+  };
+  sell: {
+    transactionCount: number | null;
+    volumeUsd: number | null;
+  };
+  tokensTradedCount: number | null;
+  transactionCount: number | null;
+  pnl: {
+    totalUsd: number | null;
+    realizedUsd: number | null;
+    unrealizedUsd: number | null;
+  };
+  source: "birdeye-overall-pnl" | "overview-cache" | "none";
+}
+
+export interface WalletOverviewHoldingsStats {
+  totalAssetValueUsd: number;
+  change24hPercent: number | null;
+  tokensHoldingCount: number;
+  source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+}
+
+export interface WalletOverviewMultiPeriodResponse {
+  address: string;
+  availablePeriods: WalletOverviewPeriodKey[];
+  selectedPeriod: WalletOverviewPeriodKey;
+  holdings: WalletOverviewHoldingsStats;
+  periods: Record<WalletOverviewPeriodKey, WalletOverviewPeriodStats>;
+  legacy: {
+    totalAssetValueUsd: number;
+    tradingVolumeUsd24h: number | null;
+    pnlUsdTotal: number | null;
+    transactionCount24h: number | null;
+    tokensTradedCount: number | null;
+    tokensHoldingCount: number;
+    metricsPeriod: string;
+  };
+  // Legacy top-level fields during migration window.
+  totalAssetValueUsd: number;
+  tradingVolumeUsd24h: number | null;
+  pnlUsdTotal: number | null;
+  transactionCount24h: number | null;
+  tokensTradedCount: number | null;
+  tokensHoldingCount: number;
+  tradingVolumeUsdWindow?: number | null;
+  pnlUsdWindow?: number | null;
+  metricsPeriod?: string;
+}
+
 /**
  * Helper to handle API response with error checking
  */
@@ -181,19 +237,17 @@ async function handleResponse(response: Response) {
 export async function fetchWalletOverview(
   address: string,
   chain?: string,
-  period?: string,
-) {
+): Promise<WalletOverviewMultiPeriodResponse> {
   const query = {
     address,
     ...(chain && { chain }),
-    ...(period && { period }),
   };
   const response = await client.api.wallets.overview.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletOverviewMultiPeriodResponse;
 }
 
 /**

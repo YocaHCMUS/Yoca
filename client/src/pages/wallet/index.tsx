@@ -894,7 +894,7 @@ export default function WalletPage() {
                     />,
                   ]}
                   onTabChange={(index) => setMainActiveTab(index)}
-                  />
+                />
               </div>
             </div>
 

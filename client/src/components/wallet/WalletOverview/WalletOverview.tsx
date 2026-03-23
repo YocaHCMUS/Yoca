@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon } from '@carbon/react/icons';
-import { CopyButton, Link, Slider, Tooltip, Tag } from '@carbon/react';
+import { CopyButton, Link, Tooltip, Tag } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWalletIntelligence, fetchWalletOverview } from '@/services/wallet/walletApi';
+import {
+    fetchWalletIntelligence,
+    fetchWalletOverview,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletOverviewPeriodKey,
+} from '@/services/wallet/walletApi';
 import { fetchWalletTags, saveWalletTags } from '@/services/wallet/walletTagsApi';
 import { useNavigate } from 'react-router';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
@@ -31,12 +36,6 @@ function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
     return 'red';
 }
 
-export enum OverviewFilterSelection {
-    week,
-    day,
-    custom
-}
-
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
@@ -45,37 +44,43 @@ export interface WalletOverviewProps {
     refreshInterval?: number;
 }
 
+const PERIOD_OPTIONS: Array<{ key: WalletOverviewPeriodKey; labelKey: string }> = [
+    { key: '24H', labelKey: 'wallet.filter24h' },
+    { key: '7D', labelKey: 'wallet.filter7d' },
+    { key: '30D', labelKey: 'wallet.filter30d' },
+    { key: '90D', labelKey: 'wallet.filter90d' },
+    { key: 'All', labelKey: 'wallet.filterAll' },
+];
+
+type WalletOverviewPeriodLabelKey =
+    | 'wallet.filter24h'
+    | 'wallet.filter7d'
+    | 'wallet.filter30d'
+    | 'wallet.filter90d'
+    | 'wallet.filterAll';
+
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
-    walletAddress = "null",
-    height = 400,
-    initialFilters,
+    walletAddress = 'null',
     autoRefresh = true,
-    refreshInterval = 30000
+    refreshInterval = 30000,
 }) => {
     const { user } = useAuth();
+    const { tr, fmt } = useLocalization();
 
-    const [overview, setOverview] = useState<any>(null);
+    const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
+    const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>('24H');
     const [intelligence, setIntelligence] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const labelKey = `wallet-label-${walletAddress}`;
-    const [label, setLabel] = useState<string>(
-        () => localStorage.getItem(labelKey) ?? ""
-    );
+    const [label, setLabel] = useState<string>(() => localStorage.getItem(labelKey) ?? '');
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
-
-    const handleLabelSave = (newLabel: string) => {
-        setLabel(newLabel);
-        if (newLabel) {
-            localStorage.setItem(labelKey, newLabel);
-        } else {
-            localStorage.removeItem(labelKey);
-        }
-    };
 
     const [tags, setTags] = useState<string[]>([]);
     const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
+
+    const [bookmark, setBookmark] = useState(false);
 
     useEffect(() => {
         if (!user || !walletAddress || walletAddress === 'null') {
@@ -87,51 +92,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             .catch((err) => console.error('[WalletOverview] Failed to load tags:', err));
     }, [user, walletAddress]);
 
-    const handleTagsSave = async (newTags: string[]) => {
-        try {
-            await saveWalletTags(walletAddress, newTags);
-            setTags(newTags);
-        } catch (err) {
-            console.error('[WalletOverview] Failed to save tags:', err);
-        }
-    };
-
-    const identityStatus = intelligence?.identity?.status ?? null;
-    const identityName = intelligence?.identity?.name ?? null;
-    const identityCategory = intelligence?.identity?.category ?? null;
-    const riskLevel = intelligence?.analysis?.riskLevel ?? null;
-
-    const name = label || (identityStatus === 'known' && identityName ? identityName : "Wallet");
-    const displayedAddress = identityStatus === 'unknown'
-        ? shortenWalletAddress(walletAddress)
-        : walletAddress;
-    const totalAssetValue = overview?.totalAssetValueUsd ?? null;
-    const tradingVolumn = overview?.tradingVolumeUsd24h ?? null;
-    const totalPnL = overview?.pnlUsdTotal ?? null;
-    const tokenTraded = overview?.tokensTradedCount ?? null;
-    const numberOfTokenHolding = overview?.tokensHoldingCount ?? null;
-
-    const [bookmark, setBookmark] = useState(false);
-    const [filterOption, setFilterOptions] = useState(OverviewFilterSelection.day);
-    const [filterValue, setFilterValue] = useState(1);
-    const [showCustomControl, setShowCustomControl] = useState(false);
-    const [customDays, setCustomDays] = useState(2);
-
-    const getSelectedOverviewPeriod = () => {
-        if (filterOption === OverviewFilterSelection.day) {
-            return '24h';
-        }
-
-        if (filterOption === OverviewFilterSelection.week) {
-            return '7d';
-        }
-
-        const boundedDays = Math.max(1, Math.min(7, customDays));
-        return boundedDays === 1 ? '24h' : `${boundedDays}d`;
-    };
-
-    const { tr, fmt } = useLocalization();
-
     useEffect(() => {
         const loadOverview = async () => {
             try {
@@ -139,11 +99,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 setError(null);
 
                 const [overviewResult, intelligenceResult] = await Promise.allSettled([
-                    fetchWalletOverview(
-                        walletAddress,
-                        'solana',
-                        getSelectedOverviewPeriod(),
-                    ),
+                    fetchWalletOverview(walletAddress, 'solana'),
                     fetchWalletIntelligence(walletAddress, 'solana'),
                 ]);
 
@@ -152,6 +108,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 }
 
                 setOverview(overviewResult.value);
+                setSelectedPeriod(overviewResult.value.selectedPeriod ?? '24H');
 
                 if (intelligenceResult.status === 'fulfilled') {
                     setIntelligence(intelligenceResult.value);
@@ -175,7 +132,61 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 return () => clearInterval(interval);
             }
         }
-    }, [walletAddress, autoRefresh, refreshInterval, filterOption, customDays]);
+    }, [walletAddress, autoRefresh, refreshInterval]);
+
+    const handleLabelSave = (newLabel: string) => {
+        setLabel(newLabel);
+        if (newLabel) {
+            localStorage.setItem(labelKey, newLabel);
+        } else {
+            localStorage.removeItem(labelKey);
+        }
+    };
+
+    const handleTagsSave = async (newTags: string[]) => {
+        try {
+            await saveWalletTags(walletAddress, newTags);
+            setTags(newTags);
+        } catch (err) {
+            console.error('[WalletOverview] Failed to save tags:', err);
+        }
+    };
+
+    const identityStatus = intelligence?.identity?.status ?? null;
+    const identityName = intelligence?.identity?.name ?? null;
+    const identityCategory = intelligence?.identity?.category ?? null;
+    const riskLevel = intelligence?.analysis?.riskLevel ?? null;
+
+    const name = label || (identityStatus === 'known' && identityName ? identityName : 'Wallet');
+    const displayedAddress = identityStatus === 'unknown'
+        ? shortenWalletAddress(walletAddress)
+        : walletAddress;
+
+    const selectedStats = overview?.periods?.[selectedPeriod] ?? null;
+    const holdings = overview?.holdings ?? null;
+
+    const totalAssetValue = holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd ?? null;
+    const assetChange24hPercent = holdings?.change24hPercent ?? null;
+    const tradingVolume = selectedStats?.tradingVolumeUsd ?? overview?.tradingVolumeUsd24h ?? null;
+    const totalPnL = selectedStats?.pnl?.totalUsd ?? overview?.pnlUsdTotal ?? null;
+    const tokenTraded = selectedStats?.tokensTradedCount ?? overview?.tokensTradedCount ?? null;
+    const numberOfTokenHolding = holdings?.tokensHoldingCount ?? overview?.tokensHoldingCount ?? null;
+    const buyTransactionCount = selectedStats?.buy?.transactionCount ?? null;
+    const buyVolumeUsd = selectedStats?.buy?.volumeUsd ?? null;
+    const sellTransactionCount = selectedStats?.sell?.transactionCount ?? null;
+    const sellVolumeUsd = selectedStats?.sell?.volumeUsd ?? null;
+    const pnlRealized = selectedStats?.pnl?.realizedUsd ?? null;
+    const pnlUnrealized = selectedStats?.pnl?.unrealizedUsd ?? null;
+
+    const navigate = useNavigate();
+
+    const handleCopyAddress = async () => {
+        try {
+            await navigator.clipboard.writeText(walletAddress);
+        } catch (err) {
+            console.error('Failed to copy wallet address:', err);
+        }
+    };
 
     const handleBookmark = () => {
         setBookmark(!bookmark);
@@ -186,8 +197,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         console.log('Create alert clicked');
     };
 
-    const navigate = useNavigate();
-
     const handleShare = () => {
         console.log('Share clicked');
     };
@@ -195,65 +204,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const handleCompare = () => {
         navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
-
-    const handleFilterClick = (option: OverviewFilterSelection, value: number) => {
-        setFilterOptions(option);
-        setFilterValue(value);
-        setShowCustomControl(false);
-    };
-
-    const handleCustomFilter = () => {
-        setFilterOptions(OverviewFilterSelection.custom);
-        setShowCustomControl(!showCustomControl);
-    };
-
-    const handleCustomDaysChange = ({ value }: { value: number }) => {
-        const boundedValue = Math.max(1, Math.min(7, Math.round(value)));
-        setCustomDays(boundedValue);
-        setFilterValue(boundedValue);
-        setFilterOptions(OverviewFilterSelection.custom);
-    };
-
-    const handleCopyAddress = async () => {
-        try {
-            await navigator.clipboard.writeText(walletAddress);
-        } catch (err) {
-            console.error('Failed to copy wallet address:', err);
-        }
-    };
-
-    const statRows = [
-        {
-            id: 'totalAssetValue',
-            label: tr('wallet.totalAssetValue'),
-            value: fmt.num.currency(totalAssetValue !== null ? parseFloat(totalAssetValue.toFixed(6)) : null),
-            style: styles.statValue,
-        },
-        {
-            id: 'tradingVolume',
-            label: tr('wallet.tradingVolume'),
-            value: fmt.num.currency(tradingVolumn !== null ? parseFloat(tradingVolumn.toFixed(6)) : null),
-            style: styles.statValue,
-        },
-        {
-            id: 'totalPnL',
-            label: tr('wallet.totalPnL'),
-            value: fmt.num.currency(totalPnL !== null ? parseFloat(totalPnL.toFixed(6)) : null),
-            style: totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative,
-        },
-        {
-            id: 'tokensTraded',
-            label: tr('wallet.tokensTraded'),
-            value: fmt.num.decimal(tokenTraded),
-            style: styles.statValue,
-        },
-        {
-            id: 'tokensHolding',
-            label: tr('wallet.tokensHolding'),
-            value: fmt.num.decimal(numberOfTokenHolding),
-            style: styles.statValue,
-        },
-    ];
 
     return (
         <>
@@ -275,6 +225,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         <div className={styles.profilePicture}>
                             {name.charAt(0)}
                         </div>
+
                         <div className={styles.profileInfo}>
                             <div className={styles.walletNameRow}>
                                 <h2 className={styles.walletName}>{name}</h2>
@@ -311,11 +262,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                 Identity Unavailable
                             </Tag>
                         )}
-                        {riskLevel && (
+                        {/* unreliable data */}
+                        {/* {riskLevel && (
                             <Tag size="sm" type={getRiskTagType(riskLevel)}>
                                 Risk: {String(riskLevel).toUpperCase()}
                             </Tag>
-                        )}
+                        )} */}
                         {tags.map((tag, index) => (
                             <Tag
                                 key={index}
@@ -344,36 +296,15 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* Actions: filter buttons + utility links */}
                 <div className={styles.actionsSection}>
                     <div className={styles.filterButtons}>
-                        <button
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.custom ? styles.active : ''}`}
-                            onClick={handleCustomFilter}
-                        >
-                            {filterOption === OverviewFilterSelection.custom ? `${filterValue}${tr('wallet.filterCustomDateUnit')}` : tr('wallet.filterCustom')}
-                            {showCustomControl && (
-                                <div className={styles.customControl}>
-                                    <Slider
-                                        min={1}
-                                        max={7}
-                                        value={customDays}
-                                        onChange={handleCustomDaysChange}
-                                        step={1}
-                                        hideTextInput
-                                    />
-                                </div>
-                            )}
-                        </button>
-                        <button
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.week ? styles.active : ''}`}
-                            onClick={() => handleFilterClick(OverviewFilterSelection.week, 7)}
-                        >
-                            {tr('wallet.filter7d')}
-                        </button>
-                        <button
-                            className={`${styles.filterButton} ${filterOption === OverviewFilterSelection.day ? styles.active : ''}`}
-                            onClick={() => handleFilterClick(OverviewFilterSelection.day, 1)}
-                        >
-                            {tr('wallet.filter24h')}
-                        </button>
+                        {PERIOD_OPTIONS.map((option) => (
+                            <button
+                                key={option.key}
+                                className={`${styles.filterButton} ${selectedPeriod === option.key ? styles.active : ''}`}
+                                onClick={() => setSelectedPeriod(option.key)}
+                            >
+                                {tr(option.labelKey as WalletOverviewPeriodLabelKey)}
+                            </button>
+                        ))}
                     </div>
                     <div className={styles.utilityButtons}>
                         <Link onClick={handleBookmark}
@@ -394,12 +325,98 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
                 {/* Stats rows (vertical, like TokenOverviewStats) */}
                 <div className={styles.statsSection}>
-                    {statRows.map((row) => (
-                        <div key={row.id} className={styles.statRow}>
-                            <span className={styles.statLabel}>{row.label}</span>
-                            <span className={row.style}>{row.value}</span>
+                    <div className={styles.statColumn}>
+                        <div className={styles.statRow}>
+                            <span className={styles.statLabel}>{tr('wallet.totalAssetValue')}</span>
+                            <span className={styles.statValue}>
+                                {fmt.num.currency(totalAssetValue != null ? parseFloat(totalAssetValue.toFixed(6)) : null)}
+                            </span>
                         </div>
-                    ))}
+                        {assetChange24hPercent != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
+                                <span className={assetChange24hPercent >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
+                                    {fmt.num.percent(assetChange24hPercent)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className={styles.statColumn}>
+                        <div className={styles.statRow}>
+                            <span className={styles.statLabel}>{tr('wallet.tradingVolume')}</span>
+                            <span className={styles.statValue}>
+                                {fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null)}
+                            </span>
+                        </div>
+                        {buyTransactionCount != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.buyTransactionCount')}</span>
+                                <span className={styles.subStatValue}>
+                                    {fmt.num.decimal(buyTransactionCount)}
+                                </span>
+                            </div>
+                        )}
+                        {buyVolumeUsd != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.buyVolume')}</span>
+                                <span className={styles.subStatValue}>
+                                    {fmt.num.currency(buyVolumeUsd)}
+                                </span>
+                            </div>
+                        )}
+                        {sellTransactionCount != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.sellTransactionCount')}</span>
+                                <span className={styles.subStatValue}>
+                                    {fmt.num.decimal(sellTransactionCount)}
+                                </span>
+                            </div>
+                        )}
+                        {sellVolumeUsd != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.sellVolume')}</span>
+                                <span className={styles.subStatValue}>
+                                    {fmt.num.currency(sellVolumeUsd)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className={styles.statColumn}>
+                        <div className={styles.statRow}>
+                            <span className={styles.statLabel}>{tr('wallet.totalPnL')}</span>
+                            <span className={totalPnL != null && totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative}>
+                                {fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null)}
+                            </span>
+                        </div>
+                        {pnlRealized != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.realizedPnL')}</span>
+                                <span className={pnlRealized >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
+                                    {fmt.num.currency(pnlRealized)}
+                                </span>
+                            </div>
+                        )}
+                        {pnlUnrealized != null && (
+                            <div className={styles.subStatRow}>
+                                <span className={styles.subStatLabel}>{tr('wallet.unrealizedPnL')}</span>
+                                <span className={pnlUnrealized >= 0 ? styles.subStatValuePositive : styles.subStatValueNegative}>
+                                    {fmt.num.currency(pnlUnrealized)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className={styles.statRow}>
+                        <span className={styles.statLabel}>{tr('wallet.tokensTraded')}</span>
+                        <span className={styles.statValue}>
+                            {fmt.num.decimal(tokenTraded)}
+                        </span>
+                    </div>
+                    <div className={styles.statRow}>
+                        <span className={styles.statLabel}>{tr('wallet.tokensHolding')}</span>
+                        <span className={styles.statValue}>
+                            {fmt.num.decimal(numberOfTokenHolding)}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -423,3 +440,4 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 };
 
 export default WalletOverview;
+

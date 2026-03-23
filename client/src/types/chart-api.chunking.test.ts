@@ -6,33 +6,30 @@ import type {
     PnLRequestParams,
 } from './chart-api.types';
 
-describe('chart-api chunking types', () => {
-    it('accepts cursor/limit params for balance requests', () => {
+describe('chart-api non-chunk contracts', () => {
+    it('accepts simplified balance request params', () => {
         const params: BalanceRequestParams = {
             wallets: 'wallet-1',
             timePeriod: 'All',
-            limit: 180,
-            cursor: 'opaque-cursor',
+            timezone: 'UTC',
         };
 
-        expect(params.limit).toBe(180);
-        expect(params.cursor).toBe('opaque-cursor');
+        expect(params.wallets).toBe('wallet-1');
+        expect(params.timePeriod).toBe('All');
     });
 
-    it('accepts cursor/limit params for pnl requests', () => {
+    it('accepts simplified pnl request params', () => {
         const params: PnLRequestParams = {
             wallets: 'wallet-1,wallet-2',
             period: '30D',
             aggregation: 'daily',
-            limit: 120,
-            cursor: 'opaque-cursor',
         };
 
-        expect(params.limit).toBe(120);
-        expect(params.cursor).toBe('opaque-cursor');
+        expect(params.wallets).toBe('wallet-1,wallet-2');
+        expect(params.aggregation).toBe('daily');
     });
 
-    it('accepts pageInfo/chunkInfo metadata on balance responses', () => {
+    it('accepts balance responses without chunk metadata', () => {
         const response: BalanceTrendResponse = {
             series: [{ name: 'Total', data: [{ timestamp: 1, value: 100 }] }],
             metadata: {
@@ -40,46 +37,20 @@ describe('chart-api chunking types', () => {
                 timezone: 'UTC',
                 aggregation: 'daily',
             },
-            pageInfo: {
-                pageSize: 180,
-                hasMore: true,
-                nextCursor: 'next',
-                source: 'mixed',
-            },
-            chunkInfo: {
-                chunkFromSec: 1,
-                chunkToSec: 10,
-                requestedFromSec: 0,
-                requestedToSec: 100,
-                effectiveAggregation: 'daily',
-            },
         };
 
-        expect(response.pageInfo?.hasMore).toBe(true);
-        expect(response.chunkInfo?.effectiveAggregation).toBe('daily');
+        expect(response.series[0].name).toBe('Total');
+        expect(response.metadata.currency).toBe('USD');
     });
 
-    it('accepts pageInfo/chunkInfo metadata on pnl responses', () => {
+    it('accepts pnl responses without chunk metadata', () => {
         const response: PnLChartResponse = {
             dailyPnL: [{ timestamp: 1, value: 1 }],
             cumulativePnL: [{ timestamp: 1, value: 1 }],
             metadata: { currency: 'USD' },
-            pageInfo: {
-                pageSize: 120,
-                hasMore: false,
-                nextCursor: null,
-                source: 'mixed',
-            },
-            chunkInfo: {
-                chunkFromSec: 1,
-                chunkToSec: 10,
-                requestedFromSec: 0,
-                requestedToSec: 100,
-                effectiveAggregation: 'weekly',
-            },
         };
 
-        expect(response.pageInfo?.nextCursor).toBeNull();
-        expect(response.chunkInfo?.effectiveAggregation).toBe('weekly');
+        expect(response.dailyPnL?.length).toBe(1);
+        expect(response.metadata.currency).toBe('USD');
     });
 });

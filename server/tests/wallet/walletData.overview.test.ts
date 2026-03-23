@@ -5,6 +5,8 @@ const SOL_MINT = "So11111111111111111111111111111111111111112";
 const hoisted = vi.hoisted(() => {
     const getWalletBalancesMock = vi.fn();
     const fetchHeliusSolanaPortfolioMock = vi.fn();
+    const fetchBirdeyePortfolioMock = vi.fn();
+    const fetchBirdeyeOverallPnLMock = vi.fn();
     const getCachedWalletTransactionsHeliusMock = vi.fn();
     const getTokenMarketDataMock = vi.fn();
     const saveOverviewCacheMock = vi.fn(async () => undefined);
@@ -62,6 +64,8 @@ const hoisted = vi.hoisted(() => {
     return {
         getWalletBalancesMock,
         fetchHeliusSolanaPortfolioMock,
+        fetchBirdeyePortfolioMock,
+        fetchBirdeyeOverallPnLMock,
         getCachedWalletTransactionsHeliusMock,
         getTokenMarketDataMock,
         saveOverviewCacheMock,
@@ -106,6 +110,8 @@ vi.mock("@sv/services/wallet/fetchers/walletDataFetcher.service.js", () => ({
         stopReason: "provider-end",
     })),
     fetchHeliusSolanaPortfolio: hoisted.fetchHeliusSolanaPortfolioMock,
+    fetchBirdeyePortfolio: hoisted.fetchBirdeyePortfolioMock,
+    fetchBirdeyeOverallPnL: hoisted.fetchBirdeyeOverallPnLMock,
     fetchMoralisSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaSwap: vi.fn(async () => []),
     fetchHeliusSolanaTransactions: vi.fn(async () => []),
@@ -171,6 +177,8 @@ describe("walletData.service - getWalletOverview", () => {
 
         hoisted.getWalletBalancesMock.mockReset();
         hoisted.fetchHeliusSolanaPortfolioMock.mockReset();
+        hoisted.fetchBirdeyePortfolioMock.mockReset();
+        hoisted.fetchBirdeyeOverallPnLMock.mockReset();
         hoisted.getCachedWalletTransactionsHeliusMock.mockReset();
         hoisted.getTokenMarketDataMock.mockReset();
         hoisted.saveOverviewCacheMock.mockClear();
@@ -179,6 +187,21 @@ describe("walletData.service - getWalletOverview", () => {
 
         hoisted.getWalletBalancesMock.mockResolvedValue(null);
         hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([]);
+        hoisted.fetchBirdeyePortfolioMock.mockResolvedValue({
+            address: "wallet-1",
+            totalAssetValueUsd: 0,
+            items: [],
+        });
+        hoisted.fetchBirdeyeOverallPnLMock.mockResolvedValue({
+            address: "wallet-1",
+            duration: "24h",
+            summary: {
+                unique_tokens: 0,
+                counts: { total_trade: 0 },
+                cashflow_usd: { total_invested: 0, total_sold: 0 },
+                pnl: { total_usd: 0 },
+            },
+        });
         hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
             transactions: [],
             requestedRange: { fromSec: 0, toSec: 0 },
@@ -207,7 +230,7 @@ describe("walletData.service - getWalletOverview", () => {
             fetchedAt: new Date("2026-03-14T11:59:00.000Z"),
         });
 
-        const result = await getWalletOverview("wallet-1", "solana");
+        const result = await getWalletOverview("wallet-1", { timePeriod: "24H" });
 
         expect(result.totalAssetValueUsd).toBe(1250.5);
         expect(result.tradingVolumeUsd24h).toBe(22.5);
@@ -237,7 +260,7 @@ describe("walletData.service - getWalletOverview", () => {
             },
         ]);
 
-        const result = await getWalletOverview("wallet-1", "solana");
+        const result = await getWalletOverview("wallet-1", { timePeriod: "24H" });
 
         expect(result.totalAssetValueUsd).toBe(120);
         expect(result.tokensHoldingCount).toBe(2);
@@ -257,37 +280,18 @@ describe("walletData.service - getWalletOverview", () => {
             },
         ]);
 
-        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
-            transactions: [
-                {
-                    walletAddress: "wallet-1",
-                    signature: "sig-1",
-                    timestamp: "2026-03-14T11:30:00.000Z",
-                    slot: 1,
-                    fee: 0.00001,
-                    feePayer: "payer",
-                    balanceChanges: [{ mint: "SOL", amount: 1_000_000_000, decimals: 9 }],
-                },
-                {
-                    walletAddress: "wallet-1",
-                    signature: "sig-2",
-                    timestamp: "2026-03-14T11:40:00.000Z",
-                    slot: 2,
-                    fee: 0.00001,
-                    feePayer: "payer",
-                    balanceChanges: [{ mint: "SOL", amount: -500_000_000, decimals: 9 }],
-                },
-            ],
-            requestedRange: { fromSec: 0, toSec: 0 },
-            coveredRange: { earliestSec: 0, latestSec: 0 },
-            isFullyCovered: true,
+        hoisted.fetchBirdeyeOverallPnLMock.mockResolvedValue({
+            address: "wallet-1",
+            duration: "24h",
+            summary: {
+                unique_tokens: 1,
+                counts: { total_trade: 2 },
+                cashflow_usd: { total_invested: 100, total_sold: 50 },
+                pnl: { total_usd: 50 },
+            },
         });
 
-        hoisted.getTokenMarketDataMock.mockResolvedValue({
-            [SOL_MINT]: { priceUsd: 100 },
-        });
-
-        const result = await getWalletOverview("wallet-1", "solana");
+        const result = await getWalletOverview("wallet-1", { timePeriod: "24H" });
 
         expect(result.totalAssetValueUsd).toBe(400);
         expect(result.transactionCount24h).toBe(2);
@@ -296,7 +300,7 @@ describe("walletData.service - getWalletOverview", () => {
         expect(result.pnlUsdTotal).toBe(50);
     });
 
-    it("normalizes non-solana chain input to Solana processing", async () => {
+    it("accepts enum overview time period options", async () => {
         hoisted.fetchHeliusSolanaPortfolioMock.mockResolvedValue([
             {
                 tokenAddress: SOL_MINT,
@@ -306,30 +310,19 @@ describe("walletData.service - getWalletOverview", () => {
             },
         ]);
 
-        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
-            transactions: [
-                {
-                    walletAddress: "wallet-1",
-                    signature: "sig-eth-input",
-                    timestamp: "2026-03-14T11:50:00.000Z",
-                    slot: 3,
-                    fee: 0.00001,
-                    feePayer: "payer",
-                    balanceChanges: [{ mint: "SOL", amount: 1_000_000_000, decimals: 9 }],
-                },
-            ],
-            requestedRange: { fromSec: 0, toSec: 0 },
-            coveredRange: { earliestSec: 0, latestSec: 0 },
-            isFullyCovered: true,
+        hoisted.fetchBirdeyeOverallPnLMock.mockResolvedValue({
+            address: "wallet-1",
+            duration: "7d",
+            summary: {
+                unique_tokens: 1,
+                counts: { total_trade: 1 },
+                cashflow_usd: { total_invested: 100, total_sold: 0 },
+                pnl: { total_usd: 100 },
+            },
         });
 
-        hoisted.getTokenMarketDataMock.mockResolvedValue({
-            [SOL_MINT]: { priceUsd: 100 },
-        });
+        const result = await getWalletOverview("wallet-1", { timePeriod: "7D" });
 
-        const result = await getWalletOverview("wallet-1", "eth" as never);
-
-        expect(result.chain).toBe("solana");
         expect(result.totalAssetValueUsd).toBe(300);
         expect(result.transactionCount24h).toBe(1);
         expect(result.tokensTradedCount).toBe(1);
@@ -348,30 +341,22 @@ describe("walletData.service - getWalletOverview", () => {
             },
         ]);
 
-        hoisted.getCachedWalletTransactionsHeliusMock.mockResolvedValue({
-            transactions: [
-                {
-                    walletAddress: "wallet-1",
-                    signature: "sig-1",
-                    timestamp: "2026-03-14T11:45:00.000Z",
-                    slot: 1,
-                    fee: 0.00001,
-                    feePayer: "payer",
-                    balanceChanges: [{ mint: "mint-unknown", amount: 1000, decimals: 3 }],
-                },
-            ],
-            requestedRange: { fromSec: 0, toSec: 0 },
-            coveredRange: { earliestSec: 0, latestSec: 0 },
-            isFullyCovered: true,
+        hoisted.fetchBirdeyeOverallPnLMock.mockResolvedValue({
+            address: "wallet-1",
+            duration: "24h",
+            summary: {
+                unique_tokens: 1,
+                counts: { total_trade: 1 },
+                cashflow_usd: null,
+                pnl: null,
+            },
         });
 
-        hoisted.getTokenMarketDataMock.mockResolvedValue({});
-
-        const result = await getWalletOverview("wallet-1", "solana");
+        const result = await getWalletOverview("wallet-1", { timePeriod: "24H" });
 
         expect(result.transactionCount24h).toBe(1);
         expect(result.tokensTradedCount).toBe(1);
-        expect(result.tradingVolumeUsd24h).toBeNull();
+        expect(result.tradingVolumeUsd24h).toBe(0);
         expect(result.pnlUsdTotal).toBeNull();
     });
 
@@ -399,7 +384,11 @@ describe("walletData.service - getWalletOverview", () => {
             new Error("simulated activity provider failure"),
         );
 
-        const result = await getWalletOverview("wallet-1", "solana");
+        hoisted.fetchBirdeyeOverallPnLMock.mockRejectedValue(
+            new Error("simulated activity provider failure"),
+        );
+
+        const result = await getWalletOverview("wallet-1", { timePeriod: "24H" });
 
         expect(result.totalAssetValueUsd).toBe(200);
         expect(result.tokensHoldingCount).toBe(1);

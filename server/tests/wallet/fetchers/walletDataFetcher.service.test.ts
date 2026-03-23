@@ -5,6 +5,11 @@ const { heliusFetchMock, moralisFetchMock } = vi.hoisted(() => ({
     moralisFetchMock: vi.fn(),
 }));
 
+const { birdeyeGetJsonMock, birdeyePostJsonMock } = vi.hoisted(() => ({
+    birdeyeGetJsonMock: vi.fn(),
+    birdeyePostJsonMock: vi.fn(),
+}));
+
 vi.mock("@sv/util/util-helius.js", () => ({
     getEndpoint: (path: string) => new URL(`https://api.helius.xyz${path}`),
     getRequiredHeaders: () => ({ "X-Api-Key": "test-api-key" }),
@@ -26,12 +31,19 @@ vi.mock("@sv/util/api-key-manager.js", () => ({
     apiKeyManager: {},
 }));
 
+vi.mock("@sv/services/wallet/providers/birdeye.client.js", () => ({
+    birdeyeGetJson: birdeyeGetJsonMock,
+    birdeyePostJson: birdeyePostJsonMock,
+}));
+
 import {
     fetchAllTransactionHistory,
     fetchHeliusSolanaPortfolio,
     fetchMoralisSolanaSwap,
+    fetchHeliusSolanaSwap,
     fetchHeliusSolanaTransactions,
     fetchHeliusSolanaTransfers,
+    fetchBirdeyeNetworthHistory,
 } from "../../../src/services/wallet/fetchers/walletDataFetcher.service.ts";
 
 function okJson(body: unknown): Response {
@@ -49,6 +61,8 @@ describe("walletDataFetcher.service", () => {
         vi.setSystemTime(new Date("2026-03-12T00:00:00.000Z"));
         heliusFetchMock.mockReset();
         moralisFetchMock.mockReset();
+        birdeyeGetJsonMock.mockReset();
+        birdeyePostJsonMock.mockReset();
     });
 
     afterEach(() => {
@@ -282,6 +296,87 @@ describe("walletDataFetcher.service", () => {
         expect(secondUrl.searchParams.get("before")).toBeNull();
     });
 
+    it("paginates swap history with before=nextCursor", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+
+        heliusFetchMock
+            .mockResolvedValueOnce(
+                okJson({
+                    data: [
+                        {
+                            signature: "swap-1",
+                            timestamp: nowSec - 20,
+                            slot: 1,
+                            fee: 10,
+                            feePayer: "payer-1",
+                            balanceChanges: [
+                                { mint: "mint-a", amount: -100, decimals: 2 },
+                                { mint: "mint-b", amount: 200, decimals: 2 },
+                            ],
+                        },
+                    ],
+                    pagination: { hasMore: true, nextCursor: "swap-cursor-1" },
+                }),
+            )
+            .mockResolvedValueOnce(
+                okJson({
+                    data: [
+                        {
+                            signature: "swap-2",
+                            timestamp: nowSec - 40,
+                            slot: 2,
+                            fee: 11,
+                            feePayer: "payer-2",
+                            balanceChanges: [
+                                { mint: "mint-c", amount: -300, decimals: 2 },
+                                { mint: "mint-d", amount: 500, decimals: 2 },
+                            ],
+                        },
+                    ],
+                    pagination: { hasMore: false, nextCursor: "swap-cursor-2" },
+                }),
+            );
+
+        const result = await fetchHeliusSolanaSwap("wallet-address", "7d");
+
+        expect(result).toHaveLength(2);
+        expect(heliusFetchMock).toHaveBeenCalledTimes(2);
+
+        const secondUrl = heliusFetchMock.mock.calls[1][0] as URL;
+        expect(secondUrl.pathname).toContain("/v1/wallet/wallet-address/history");
+        expect(secondUrl.searchParams.get("before")).toBe("swap-cursor-1");
+        expect(secondUrl.searchParams.get("type")).toBe("SWAP");
+    });
+
+    it("stops swap history pagination when page crosses requested time window", async () => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const olderThanSevenDays = nowSec - (8 * 24 * 60 * 60);
+
+        heliusFetchMock.mockResolvedValueOnce(
+            okJson({
+                data: [
+                    {
+                        signature: "swap-old",
+                        timestamp: olderThanSevenDays,
+                        slot: 99,
+                        fee: 10,
+                        feePayer: "payer-old",
+                        balanceChanges: [
+                            { mint: "mint-a", amount: -100, decimals: 2 },
+                            { mint: "mint-b", amount: 200, decimals: 2 },
+                        ],
+                    },
+                ],
+                pagination: { hasMore: true, nextCursor: "swap-cursor-old" },
+            }),
+        );
+
+        const result = await fetchHeliusSolanaSwap("wallet-address", "7d");
+
+        expect(result).toHaveLength(0);
+        expect(heliusFetchMock).toHaveBeenCalledTimes(1);
+    });
+
     it("skips null timestamps and continues collecting transactions", async () => {
         const nowSec = Math.floor(Date.now() / 1000);
 
@@ -407,5 +502,67 @@ describe("walletDataFetcher.service", () => {
 
         const secondUrl = moralisFetchMock.mock.calls[1][0] as URL;
         expect(secondUrl.searchParams.get("cursor")).toBe("next-cursor-1");
+    });
+
+    it("maps Birdeye net-worth history rows when history is present", async () => {
+        birdeyeGetJsonMock.mockResolvedValueOnce({
+            success: true,
+            data: {
+                wallet_address: "wallet-1",
+                currency: "usd",
+                current_timestamp: "2026-03-21T00:00:00.000Z",
+                past_timestamp: "2026-03-20T00:00:00.000Z",
+                history: [
+                    {
+                        timestamp: "2026-03-20T00:00:00.000Z",
+                        net_worth: "100",
+                        net_worth_change: "5",
+                        net_worth_change_percent: "5",
+                    },
+                ],
+            },
+        });
+
+        const result = await fetchBirdeyeNetworthHistory("wallet-1", { count: 1, type: "1d" });
+
+        expect(result.address).toBe("wallet-1");
+        expect(result.history).toEqual([
+            {
+                timestamp: "2026-03-20T00:00:00.000Z",
+                netWorthUsd: 100,
+                netWorthChangeUsd: 5,
+                netWorthChangePercent: 5,
+            },
+        ]);
+    });
+
+    it("falls back to snapshot value when Birdeye net-worth has no history", async () => {
+        birdeyeGetJsonMock.mockResolvedValueOnce({
+            success: true,
+            data: {
+                wallet_address: "wallet-2",
+                currency: "usd",
+                total_value: "0.010349446772590722",
+                current_timestamp: "2025-05-19T04:47:19.414327725Z",
+                items: [
+                    {
+                        symbol: "SMLO",
+                        value: "0.010349446772590722",
+                    },
+                ],
+            },
+        });
+
+        const result = await fetchBirdeyeNetworthHistory("wallet-2", { count: 1, type: "1d" });
+
+        expect(result.currentTimestamp).toBe("2025-05-19T04:47:19.414Z");
+        expect(result.history).toEqual([
+            {
+                timestamp: "2025-05-19T04:47:19.414Z",
+                netWorthUsd: 0.010349446772590722,
+                netWorthChangeUsd: null,
+                netWorthChangePercent: null,
+            },
+        ]);
     });
 });

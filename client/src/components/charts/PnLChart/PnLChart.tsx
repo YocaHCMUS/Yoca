@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -8,7 +8,7 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
-import type { PnLRequestParams, ChartPageInfo } from '@/types/chart-api.types';
+import type { PnLRequestParams } from '@/types/chart-api.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
@@ -16,72 +16,6 @@ import { ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import sharedStyles from '../shared/ChartStyle.module.scss';
 
 type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
-const CHART_CHUNK_LIMIT = 180;
-
-function mergePoints(
-    existing: Array<{ timestamp: number; value: number }>,
-    incoming: Array<{ timestamp: number; value: number }>,
-): Array<{ timestamp: number; value: number }> {
-    const byTimestamp = new Map<number, { timestamp: number; value: number }>();
-
-    for (const point of existing) {
-        byTimestamp.set(point.timestamp, point);
-    }
-
-    for (const point of incoming) {
-        byTimestamp.set(point.timestamp, point);
-    }
-
-    return Array.from(byTimestamp.values()).sort((a, b) => a.timestamp - b.timestamp);
-}
-
-function mergePnLChartData(previous: PnLChartData, incoming: PnLChartData): PnLChartData {
-    if ('wallets' in previous && previous.wallets && 'wallets' in incoming && incoming.wallets) {
-        const previousByWallet = new Map(previous.wallets.map((wallet) => [wallet.walletAddress, wallet]));
-        const mergedWallets = incoming.wallets.map((wallet) => {
-            const previousWallet = previousByWallet.get(wallet.walletAddress);
-            if (!previousWallet) {
-                return wallet;
-            }
-
-            return {
-                ...wallet,
-                dailyPnL: mergePoints(previousWallet.dailyPnL, wallet.dailyPnL),
-                cumulativePnL: mergePoints(previousWallet.cumulativePnL, wallet.cumulativePnL),
-            };
-        });
-
-        for (const previousWallet of previous.wallets) {
-            if (!mergedWallets.some((wallet) => wallet.walletAddress === previousWallet.walletAddress)) {
-                mergedWallets.push(previousWallet);
-            }
-        }
-
-        return {
-            ...incoming,
-            wallets: mergedWallets,
-        };
-    }
-
-    if (
-        'dailyPnL' in previous && previous.dailyPnL &&
-        'dailyPnL' in incoming && incoming.dailyPnL &&
-        'cumulativePnL' in previous && previous.cumulativePnL &&
-        'cumulativePnL' in incoming && incoming.cumulativePnL
-    ) {
-        return {
-            ...incoming,
-            dailyPnL: mergePoints(previous.dailyPnL, incoming.dailyPnL),
-            cumulativePnL: mergePoints(previous.cumulativePnL, incoming.cumulativePnL),
-            metadata: {
-                ...previous.metadata,
-                ...incoming.metadata,
-            },
-        };
-    }
-
-    return incoming;
-}
 
 export interface PnLChartProps {
     title?: string;
@@ -133,7 +67,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             wallets: walletsString,
             aggregation,
             timezone,
-            limit: CHART_CHUNK_LIMIT,
         }),
         [filters.timePeriod, walletsString, aggregation, timezone]
     );
@@ -146,54 +79,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             refreshInterval,
         });
 
-    const [mergedData, setMergedData] = useState<PnLChartData | null>(null);
-    const [pageInfo, setPageInfo] = useState<ChartPageInfo | null>(null);
-    const [isFetchingMore, setIsFetchingMore] = useState(false);
-
-    useEffect(() => {
-        if (!data || 'error' in data) {
-            setMergedData(data);
-            setPageInfo(null);
-            return;
-        }
-
-        setMergedData(data);
-        setPageInfo(data.pageInfo ?? null);
-    }, [data]);
-
-    const displayData = useMemo(() => mergedData ?? data, [mergedData, data]);
-
-    const handleLoadOlder = useCallback(async () => {
-        if (!pageInfo?.hasMore || !pageInfo.nextCursor || isFetchingMore) {
-            return;
-        }
-
-        setIsFetchingMore(true);
-        try {
-            const olderChunk = await fetchPnLChart({
-                ...query,
-                cursor: pageInfo.nextCursor,
-                limit: CHART_CHUNK_LIMIT,
-            } as any);
-
-            if (!olderChunk || 'error' in olderChunk) {
-                return;
-            }
-
-            setMergedData((previous) => {
-                if (!previous || 'error' in previous) {
-                    return olderChunk;
-                }
-
-                return mergePnLChartData(previous, olderChunk);
-            });
-            setPageInfo(olderChunk.pageInfo ?? null);
-        } catch (error) {
-            console.error('[PnLChart] Failed to load older chunk', error);
-        } finally {
-            setIsFetchingMore(false);
-        }
-    }, [isFetchingMore, pageInfo, query]);
+    const displayData = data;
 
     const createChartOption = useCallback((
         dailyPnLData: Array<{ timestamp: number; value: number }>,
@@ -414,19 +300,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                         {tr('charts.pnlChart.both')}
                     </button>
                 </div>
-
-                {pageInfo?.hasMore && (
-                    <div className={sharedStyles['chartToggle--padded']}>
-                        <button
-                            className={sharedStyles.chartToggleButton}
-                            onClick={handleLoadOlder}
-                            type="button"
-                            disabled={isFetchingMore}
-                        >
-                            {isFetchingMore ? 'Loading older...' : 'Load older'}
-                        </button>
-                    </div>
-                )}
             </div>
 
             {chartOptions.length > 0 && (

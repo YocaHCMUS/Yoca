@@ -4,7 +4,8 @@ import type {
     WalletIntelligenceBatchResponse,
     WalletIntelligenceResponse,
 } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
-import { getWalletExchangeCounts, getWalletOverview } from "@sv/services/wallet/walletData.service.js";
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletTags } from "@sv/services/walletTags.js";
 import {
     WalletIdentityServiceError,
@@ -12,8 +13,6 @@ import {
     getWalletIdentity,
     getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
-
-const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
 
 type ComposeWalletIntelligenceOptions = {
     userId?: string;
@@ -145,7 +144,7 @@ function buildWalletIdentityAnalysis(input: {
 
 async function getAnalysisInputs(address: string): Promise<AnalysisInputs> {
     const [overviewResult, exchangeResult] = await Promise.all([
-        getWalletOverview(address, { periodSec: DEFAULT_OVERVIEW_PERIOD_SEC })
+        getWalletOverview(address)
             .then((overview) => ({ ok: true as const, value: overview }))
             .catch(() => ({ ok: false as const, value: null })),
         getWalletExchangeCounts(address, { limit: 100 })

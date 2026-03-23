@@ -24,10 +24,18 @@ const {
 
 vi.mock("@sv/services/wallet/walletData.service.js", () => ({
     fetchTestTransaction: vi.fn(async () => ({})),
-    getWalletOverview: getWalletOverviewMock,
-    getWalletPortfolio: getWalletPortfolioMock,
-    getWalletTransactions: vi.fn(async () => ({ address: "", chain: "solana", transactions: [] })),
     getWalletExchangeCounts: getWalletExchangeCountsMock,
+}));
+
+vi.mock("@sv/services/wallet/walletOverview.service.js", () => ({
+    getWalletOverview: getWalletOverviewMock,
+}));
+
+vi.mock("@sv/services/wallet/walletPortfolio.service.js", () => ({
+    getWalletPortfolio: getWalletPortfolioMock,
+}));
+
+vi.mock("@sv/services/wallet/walletTransfersSwaps.service.js", () => ({
     getWalletSwaps: getWalletSwapsMock,
     getWalletTransfers: getWalletTransfersMock,
 }));
@@ -70,8 +78,8 @@ vi.mock("@sv/services/wallet/walletIntelligence.service.js", () => ({
 
 import router from "../../src/routes/wallets.route.ts";
 
-const DEFAULT_OVERVIEW_PERIOD_SEC = 24 * 60 * 60;
-const WEEK_OVERVIEW_PERIOD_SEC = 7 * 24 * 60 * 60;
+const DEFAULT_OVERVIEW_TIME_PERIOD = "24H";
+const WEEK_OVERVIEW_TIME_PERIOD = "7D";
 
 beforeEach(() => {
     getWalletOverviewMock.mockReset();
@@ -257,7 +265,7 @@ describe("wallets.route - /overview", () => {
         });
 
         expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", {
-            periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
+            timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD,
         });
     });
 
@@ -266,13 +274,12 @@ describe("wallets.route - /overview", () => {
 
         expect(response.status).toBe(200);
         expect(getWalletOverviewMock).toHaveBeenCalledWith("wallet-1", {
-            periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
+            timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD,
         });
     });
 
     it.each([
         ["12h"],
-        ["30d"],
         ["invalid"],
     ])("normalizes unsupported period %s to 24h", async (period) => {
         const response = await router.request(
@@ -281,21 +288,32 @@ describe("wallets.route - /overview", () => {
 
         expect(response.status).toBe(200);
         expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", {
-            periodSec: DEFAULT_OVERVIEW_PERIOD_SEC,
+            timePeriod: DEFAULT_OVERVIEW_TIME_PERIOD,
+        });
+    });
+
+    it("normalizes lowercase enum period to enum option", async () => {
+        const response = await router.request(
+            "http://localhost/overview?address=wallet-1&period=30d",
+        );
+
+        expect(response.status).toBe(200);
+        expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", {
+            timePeriod: "30D",
         });
     });
 
     it.each([
-        ["24h", DEFAULT_OVERVIEW_PERIOD_SEC],
-        ["7d", WEEK_OVERVIEW_PERIOD_SEC],
-    ])("passes supported period %s as %d seconds", async (period, expectedSec) => {
+        ["24H", DEFAULT_OVERVIEW_TIME_PERIOD],
+        ["7D", WEEK_OVERVIEW_TIME_PERIOD],
+    ])("passes supported period %s as enum option %s", async (period, expectedPeriod) => {
         const response = await router.request(
             `http://localhost/overview?address=wallet-1&period=${period}`,
         );
 
         expect(response.status).toBe(200);
         expect(getWalletOverviewMock).toHaveBeenLastCalledWith("wallet-1", {
-            periodSec: expectedSec,
+            timePeriod: expectedPeriod,
         });
     });
 });
