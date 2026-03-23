@@ -124,7 +124,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 }) => {
   const { tr } = useLocalization();
   const chartTitle = tr('charts.assetDistributionChart.title');
-  const othersLabel = 'Others';
+  const othersLabel = tr('charts.assetDistributionChart.others');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -189,7 +189,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
           csv.push({
             id: `asset-distribution-${wallet.walletAddress}`,
-            name: `Assets Distribution - ${wallet.walletAddress}`,
+            name: `${tr('charts.assetDistributionChart.export.name')} - ${wallet.walletAddress}`,
             type: 'pie',
             visible: true,
             data: grouped.map((a) => ({
@@ -202,7 +202,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         const grouped = applyGrouping(data.data as AssetItem[], topN, minPct, othersLabel);
         csv.push({
           id: 'asset-distribution',
-          name: 'Assets Distribution',
+          name: tr('charts.assetDistributionChart.export.name'),
           type: 'pie',
           visible: true,
           data: grouped.map((a) => ({
@@ -220,8 +220,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           csvData: csv,
           csvFilters: { ...filters, wallets: [] },
           extraFilters: {
-            'Top N': topN === 0 ? 'All' : `Top ${topN}`,
-            'Min %': minPct === 0 ? 'All' : `>${minPct}%`,
+            [tr('charts.assetDistributionChart.filters.topN')]: topN === 0 ? tr('charts.assetDistributionChart.filters.all') : `${tr('charts.assetDistributionChart.filters.top')} ${topN}`,
+            [tr('charts.assetDistributionChart.filters.minPct')]: minPct === 0 ? tr('charts.assetDistributionChart.filters.all') : `>${minPct}%`,
           },
         },
         { exportPNG, exportSVG, exportPDF, exportCSV }
@@ -475,22 +475,22 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         value={topN}
         onChange={(e) => setTopN(Number(e.target.value) as TopNOption)}
         style={selectStyle}
-        aria-label="Top N filter"
+        aria-label={tr('charts.assetDistributionChart.ariaLabels.topNFilter')}
       >
-        <option value={5}>Top 5</option>
-        <option value={10}>Top 10</option>
-        <option value={0}>All</option>
+        <option value={5}>{tr('charts.assetDistributionChart.filters.top5')}</option>
+        <option value={10}>{tr('charts.assetDistributionChart.filters.top10')}</option>
+        <option value={0}>{tr('charts.assetDistributionChart.filters.all')}</option>
       </select>
       <select
         value={minPct}
         onChange={(e) => setMinPct(Number(e.target.value) as MinPctOption)}
         style={selectStyle}
-        aria-label="Min % filter"
+        aria-label={tr('charts.assetDistributionChart.ariaLabels.minPctFilter')}
       >
-        <option value={0}>All %</option>
-        <option value={1}>&gt;1%</option>
-        <option value={5}>&gt;5%</option>
-        <option value={10}>&gt;10%</option>
+        <option value={0}>{tr('charts.assetDistributionChart.filters.allPercent')}</option>
+        <option value={1}>{tr('charts.assetDistributionChart.filters.minPct1')}</option>
+        <option value={5}>{tr('charts.assetDistributionChart.filters.minPct5')}</option>
+        <option value={10}>{tr('charts.assetDistributionChart.filters.minPct10')}</option>
       </select>
     </div>
   );
@@ -541,7 +541,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                       transition: 'opacity 0.2s ease',
                       userSelect: 'none',
                     }}
-                    title={isSelected ? `Click to hide ${asset.name}` : `Click to show ${asset.name}`}
+                    title={isSelected ? tr('charts.assetDistributionChart.legend.clickToHide').replace('{name}', asset.name) : tr('charts.assetDistributionChart.legend.clickToShow').replace('{name}', asset.name)}
                   >
                     <span
                       style={{

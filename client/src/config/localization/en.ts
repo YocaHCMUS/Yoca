@@ -514,6 +514,30 @@ export const translation = {
       percentage: "Percentage",
       noWalletsMessage:
         "Please select at least one wallet to view asset distribution.",
+      others: "Others",
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minPct: "Min %",
+        all: "All",
+        allPercent: "All %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        topNFilter: "Top N filter",
+        minPctFilter: "Min % filter",
+      },
+      legend: {
+        clickToHide: "Click to hide {name}",
+        clickToShow: "Click to show {name}",
+      },
+      export: {
+        name: "Assets Distribution",
+      },
     },
     pnlChart: {
       title: "Profit & Loss",

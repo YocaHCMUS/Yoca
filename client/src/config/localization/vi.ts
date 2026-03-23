@@ -493,6 +493,30 @@ export const translation = defineTranslation({
       value: "Giá trị",
       percentage: "Phần trăm",
       noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản.",
+      others: "Khác",
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minPct: "Min %",
+        all: "Tất cả",
+        allPercent: "Tất cả %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        topNFilter: "Bộ lọc Top N",
+        minPctFilter: "Bộ lọc Min %",
+      },
+      legend: {
+        clickToHide: "Nhấp để ẩn {name}",
+        clickToShow: "Nhấp để hiển thị {name}",
+      },
+      export: {
+        name: "Phân bổ tài sản",
+      },
     },
     pnlChart: {
       title: "Lãi & Lỗ",
