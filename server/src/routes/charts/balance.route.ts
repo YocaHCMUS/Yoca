@@ -3,10 +3,17 @@ import { z } from "zod";
 import { getWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service.js";
 import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service.js";
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 
 const MAX_CHART_WALLETS = 5;
 const MAX_CHART_TOKENS = 10;
 const MAX_WALLET_CHART_CONCURRENCY = 2;
+
+type TokenMeta = {
+    symbol: string;
+    logoUri?: string;
+    tokenAddress?: string;
+};
 
 const balanceRequestSchema = z.object({
     timePeriod: z.enum(["7D", "30D", "60D", "90D", "1Y", "All"]).optional().default("30D"),
@@ -34,6 +41,15 @@ const app = new Hono().get("/", async (c) => {
                 .map((token) => token.trim())
                 .filter((token) => token.length > 0)
             : [];
+
+        const walletMeta = Object.fromEntries(
+            walletAddresses.map((address) => [
+                address,
+                {
+                    label: `${address.substring(0, 8)}...`,
+                },
+            ]),
+        );
 
         if (walletAddresses.length === 0) {
             return c.json({ error: "Validation error", message: "Invalid wallet addresses provided" }, 400);
@@ -63,7 +79,7 @@ const app = new Hono().get("/", async (c) => {
             const allHistories = await mapWithConcurrency(
                 walletAddresses,
                 MAX_WALLET_CHART_CONCURRENCY,
-                async (address) => getWalletBalanceHistory(address, params.timePeriod),
+                async (address) => getWalletBalanceHistory(address),
             );
 
             const series =
@@ -88,18 +104,59 @@ const app = new Hono().get("/", async (c) => {
                     series,
                     wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
                     metadata: {
-                        timePeriod: params.timePeriod,
+                        timePeriod: "30D",
                         aggregation: "daily",
                         dataPoints: allHistories[0]?.length ?? 0,
                         currency: "USD",
                         timezone: params.timezone || "UTC",
                         mode: "total" as const,
                         tokens: [],
+                        tokenMeta: {},
+                        walletMeta,
                         primaryYAxis: "USD" as const,
                     },
                 },
                 200,
             );
+        }
+
+        const portfolios = await mapWithConcurrency(
+            walletAddresses,
+            MAX_WALLET_CHART_CONCURRENCY,
+            async (address) => ({
+                address,
+                items: await getWalletPortfolio(address),
+            }),
+        );
+
+        const tokenMetaBySelector = new Map<string, TokenMeta>();
+        for (const selector of tokenSelectors) {
+            const selectorLower = selector.toLowerCase();
+
+            for (const portfolio of portfolios) {
+                const matched = portfolio.items.find((item) => {
+                    const symbol = item.symbol?.toLowerCase() ?? "";
+                    const tokenAddress = item.tokenAddress?.toLowerCase() ?? "";
+                    return symbol === selectorLower || tokenAddress === selectorLower;
+                });
+
+                if (!matched) {
+                    continue;
+                }
+
+                tokenMetaBySelector.set(selector, {
+                    symbol: matched.symbol?.toUpperCase() || selector.toUpperCase(),
+                    logoUri: matched.logoUri || undefined,
+                    tokenAddress: matched.tokenAddress || undefined,
+                });
+                break;
+            }
+
+            if (!tokenMetaBySelector.has(selector)) {
+                tokenMetaBySelector.set(selector, {
+                    symbol: selector.toUpperCase(),
+                });
+            }
         }
 
         const pairs = walletAddresses.flatMap((address) =>
@@ -110,6 +167,28 @@ const app = new Hono().get("/", async (c) => {
             pairs,
             MAX_WALLET_CHART_CONCURRENCY,
             async ({ address, token }) => getWalletTokenBalanceHistory(address, token),
+        );
+
+        const selectedTokenSymbols = Array.from(
+            new Set(pairResults.map((result) => result.tokenSymbol.toUpperCase())),
+        );
+        const tokenMeta = Object.fromEntries(
+            selectedTokenSymbols.map((symbol) => {
+                const selectorMeta = tokenSelectors
+                    .map((selector) => tokenMetaBySelector.get(selector))
+                    .find((meta) => meta?.symbol?.toUpperCase() === symbol);
+
+                const pairMeta = pairResults.find((result) => result.tokenSymbol.toUpperCase() === symbol);
+
+                return [
+                    symbol,
+                    {
+                        symbol,
+                        logoUri: selectorMeta?.logoUri,
+                        tokenAddress: selectorMeta?.tokenAddress ?? pairMeta?.tokenAddress,
+                    },
+                ];
+            }),
         );
 
         const series = pairs.flatMap(({ address }, index) => {
@@ -136,13 +215,15 @@ const app = new Hono().get("/", async (c) => {
                 series,
                 wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
                 metadata: {
-                    timePeriod: params.timePeriod,
+                    timePeriod: "30D",
                     aggregation: "daily",
                     dataPoints: pairResults[0]?.tokenSeries.length ?? 0,
                     currency: "USD",
                     timezone: params.timezone || "UTC",
                     mode: "token" as const,
-                    tokens: tokenSelectors,
+                    tokens: selectedTokenSymbols,
+                    tokenMeta,
+                    walletMeta,
                     primaryYAxis: "TOKEN" as const,
                 },
             },

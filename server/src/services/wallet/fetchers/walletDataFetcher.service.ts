@@ -1,10 +1,3 @@
-import type {
-  WalletPortfolioItem,
-  WalletSwap,
-  WalletTransaction,
-  WalletTransactionHelius,
-  WalletTransfer,
-} from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
   getEndpoint,
   getRequiredHeaders,

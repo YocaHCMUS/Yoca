@@ -17,6 +17,9 @@ interface UseChartFiltersSyncOptions {
 
   /** Debounce delay in milliseconds (default: 300) */
   debounceDelay?: number;
+
+  /** Whether to sync token filters from initialFilters updates */
+  syncTokensFromInitialFilters?: boolean;
 }
 
 /**
@@ -33,7 +36,11 @@ interface UseChartFiltersSyncOptions {
  * ```
  */
 export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
-  const { initialFilters, debounceDelay = 300 } = options;
+  const {
+    initialFilters,
+    debounceDelay = 300,
+    syncTokensFromInitialFilters = true,
+  } = options;
 
   const { filters, setTimePeriod, setWallets, setTokens, isValid, setLimit } = useChartFilters({
     initialFilters,
@@ -65,7 +72,7 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
     }
 
     // Check if tokens changed
-    if (initialFilters?.tokens && Array.isArray(initialFilters.tokens)) {
+    if (syncTokensFromInitialFilters && initialFilters?.tokens && Array.isArray(initialFilters.tokens)) {
       const prevTokens = Array.isArray(prevFilters?.tokens) ? prevFilters.tokens : [];
       const prevTokensStr = prevTokens.slice().sort().join(',');
       const newTokensStr = initialFilters.tokens.slice().sort().join(',');
@@ -81,7 +88,7 @@ export function useChartFiltersSync(options: UseChartFiltersSyncOptions = {}) {
 
     // Update ref for next comparison
     prevInitialFiltersRef.current = initialFilters;
-  }, [initialFilters, setWallets, setTimePeriod, setTokens]);
+  }, [initialFilters, setWallets, setTimePeriod, setTokens, setLimit, syncTokensFromInitialFilters]);
 
   /**
    * Memoize wallets string to prevent unnecessary re-fetches

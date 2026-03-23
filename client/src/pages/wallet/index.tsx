@@ -78,7 +78,6 @@ export default function WalletPage() {
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
 
   const [mainActiveTab, setMainActiveTab] = useState(0);
-  const [portfolioChartActiveTab, setPortfolioChartActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -850,14 +849,13 @@ export default function WalletPage() {
           </div>
 
           <div className={styles.rightContent}>
-            {/* Balance / Token Balance / PnL Charts */}
+            {/* Balance / PnL Charts */}
             <div className={styles.section}>
               <div className={styles.chartSection}>
                 <TabContainer
                   activeTab={mainActiveTab}
                   names={[
                     tr("walletPage.balanceHistory"),
-                    tr("walletPage.tokenBalanceHistory"),
                     tr("walletPage.profitLoss"),
                   ]}
                   tabs={[
@@ -867,20 +865,7 @@ export default function WalletPage() {
                         timePeriod: "7D",
                         wallets: [address],
                       }}
-                      balanceChartMode="total"
-                      autoRefresh={true}
-                    />,
-                    <BalanceChart
-                      minHeight={460}
-                      initialFilters={{
-                        timePeriod: "7D",
-                        wallets: [address],
-                        tokens: ["SOL"],
-                      }}
-                      balanceChartMode="token"
-                      enableTokenSelector={true}
                       tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
-                      allowMultiTokenSelection={true}
                       autoRefresh={true}
                     />,
                     <PnLChart

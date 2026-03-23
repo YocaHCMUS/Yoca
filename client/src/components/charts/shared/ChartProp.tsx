@@ -22,17 +22,11 @@ export interface ChartProps {
   /** Initial filter values (wallets, timePeriod, tokens, etc.) */
   initialFilters?: Partial<ChartFilters>;
 
-  /** Show token selector controls (BalanceChart) */
-  enableTokenSelector?: boolean;
-
   /** Token options used by selector controls (BalanceChart) */
   tokenSelectorOptions?: string[];
 
-  /** Allow selecting multiple tokens at the same time */
-  allowMultiTokenSelection?: boolean;
-
-  /** Force BalanceChart render/query mode */
-  balanceChartMode?: 'auto' | 'total' | 'token';
+  /** Maximum selectable token tags for balance chart in single-wallet mode */
+  maxTokenTags?: number;
 
   /** Enable automatic data refresh (default: true) */
   autoRefresh?: boolean;
