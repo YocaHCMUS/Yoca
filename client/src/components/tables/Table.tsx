@@ -518,33 +518,33 @@ export const Table: React.FC<TableProps> = ({
             }}
         >
             <div className={styles.tableWrapper}>
-                <div ref={tableContainerRef}>
+                <div ref={tableContainerRef} className={styles.tableViewport}>
                     <DataTable
                         rows={rows}
                         headers={carbonHeaders}
                         sortRow={universalSortRow}
                     >
                         {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
-                            <CarbonTable {...getTableProps()}>
-                                <TableContainer
-                                    className={styles.tableContainer}
-                                    style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
-                                >
-                                    {getActiveFilters().length > 0 && (
-                                        <div className={styles.activeFilters}>
-                                            {getActiveFilters().map((filter) => (
-                                                <Tag
-                                                    key={filter.columnIndex}
-                                                    type="blue"
-                                                    filter
-                                                    onClose={() => removeFilter(filter.columnIndex)}
-                                                    title={`Filter: ${filter.columnName} = ${filter.displayText}`}
-                                                >
-                                                    {filter.columnName}: {filter.displayText}
-                                                </Tag>
-                                            ))}
-                                        </div>
-                                    )}
+                            <TableContainer
+                                className={styles.tableContainer}
+                                style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
+                            >
+                                {getActiveFilters().length > 0 && (
+                                    <div className={styles.activeFilters}>
+                                        {getActiveFilters().map((filter) => (
+                                            <Tag
+                                                key={filter.columnIndex}
+                                                type="blue"
+                                                filter
+                                                onClose={() => removeFilter(filter.columnIndex)}
+                                                title={`Filter: ${filter.columnName} = ${filter.displayText}`}
+                                            >
+                                                {filter.columnName}: {filter.displayText}
+                                            </Tag>
+                                        ))}
+                                    </div>
+                                )}
+                                <CarbonTable {...getTableProps()} className={styles.stretchTable}>
                                     <TableHead>
                                         <TableRow className={styles.stickyHeader}>
                                             {headers.map((header, index) => {
@@ -559,9 +559,6 @@ export const Table: React.FC<TableProps> = ({
                                                         key={key}
                                                         {...headerProps}
                                                         className={isColumnSortable ? styles.sortableHeader : undefined}
-                                                        // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
-                                                        // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                        style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}
                                                     >
                                                         <div className={styles.headerContent}>
                                                             <span className={styles.headerText}>
@@ -621,9 +618,7 @@ export const Table: React.FC<TableProps> = ({
                                                         const className = classnames[cellIndex];
 
                                                         return (
-                                                            // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
-                                                            // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                            <TableCell key={cell.id} style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}>
+                                                            <TableCell key={cell.id}>
                                                                 {renderer
                                                                     ? renderer(rawValue, safeRow, rowIndex)
                                                                     : <span className={className}>{rawValue}</span>
@@ -645,8 +640,8 @@ export const Table: React.FC<TableProps> = ({
                                             </TableRow>
                                         )}
                                     </TableBody>
-                                </TableContainer>
-                            </CarbonTable>
+                                </CarbonTable>
+                            </TableContainer>
                         )}
                     </DataTable>
                 </div>
