@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { Close } from '@carbon/react/icons';
+import { Add, Close, Repeat } from '@carbon/react/icons';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
@@ -13,10 +13,10 @@ import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { BalanceRequestParams } from '@/types/chart-api.types';
 import type { ChartLoadingState } from '@/types/chart.types';
 import { useStandardChartController } from '@/hooks/useChartController';
-import { BaseChart } from '../Base/BaseChart';
-import { ChartGridItem } from '../shared';
-import type { ChartProps } from '../shared/ChartProp';
-import sharedStyles from '../shared/ChartStyle.module.scss';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { ChartGridItem } from '@/components/charts/shared';
+import type { ChartProps } from '@/components/charts/shared/ChartProp';
+import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 
 type BalanceTrendData = InferFetcherData<typeof fetchBalanceTrend>;
 
@@ -420,7 +420,7 @@ export function BalanceChart({
 
     const tokenMeta = useMemo(() => {
         const result: Record<string, TokenMeta> = {
-            [ALL_TAG]: { symbol: 'All' },
+            [ALL_TAG]: { symbol: tr('charts.balanceChart.all') },
         };
 
         const mergeMeta = (source?: Record<string, TokenMeta>) => {
@@ -445,7 +445,7 @@ export function BalanceChart({
         mergeMeta(tokenData?.metadata?.tokenMeta);
 
         return result;
-    }, [generalData, tokenData]);
+    }, [generalData, tokenData, tr]);
 
     const walletMeta = useMemo(() => {
         const merged: Record<string, WalletMeta> = {};
@@ -544,7 +544,7 @@ export function BalanceChart({
 
     const tokenOptions = useMemo(() => {
         const optionsMap = new Map<string, string>();
-        optionsMap.set(ALL_TAG, 'All');
+        optionsMap.set(ALL_TAG, tr('charts.balanceChart.all'));
 
         if (isMultiWallet && Array.isArray(generalData?.wallets)) {
             generalData.wallets.forEach((walletAddress, index) => {
@@ -579,6 +579,7 @@ export function BalanceChart({
         prefetchedTokenSeriesBySymbol,
         tokenMeta,
         walletMeta,
+        tr,
     ]);
 
     const optionLabelByValue = useMemo(() => {
@@ -752,7 +753,7 @@ export function BalanceChart({
                 }
                 output.push({
                     key: ALL_TAG,
-                    label: 'All',
+                    label: tokenMeta[ALL_TAG]?.symbol || 'All',
                     points: normalizeSeriesData(allSeries.data),
                 });
                 continue;
@@ -905,7 +906,7 @@ export function BalanceChart({
             const matchedSeries = displaySeries.find((series) => series.key === tag);
             return {
                 key: tag,
-                label: tag === ALL_TAG ? 'All' : tokenMeta[tag]?.symbol || tag,
+                label: tag === ALL_TAG ? tokenMeta[ALL_TAG]?.symbol || 'All' : tokenMeta[tag]?.symbol || tag,
                 logoUri: tag === ALL_TAG ? undefined : tokenMeta[tag]?.logoUri,
                 change: matchedSeries ? compute24hChange(matchedSeries.points) : null,
             };
@@ -931,7 +932,7 @@ export function BalanceChart({
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
                 <div className={sharedStyles.balanceChartControlTopRow}>
                     <div className={sharedStyles.balanceChartControlInputGroup}>
-                        <label htmlFor={dataListId}>{isMultiWallet ? 'Select mode/token' : 'Select token'}</label>
+                        <label htmlFor={dataListId}>{isMultiWallet ? tr('charts.balanceChart.selectModeTokenLabel') : tr('charts.balanceChart.selectTokenLabel')}</label>
                         <select
                             id={dataListId}
                             value={selectorValue}
@@ -949,7 +950,7 @@ export function BalanceChart({
                             className={sharedStyles.chartToggleButton}
                             onClick={() => addTag(selectorValue)}
                         >
-                            {isMultiWallet ? 'Switch' : 'Add'}
+                            {isMultiWallet ? tr('charts.balanceChart.switch') : tr('charts.balanceChart.add')}
                         </button>
                     </div>
 
@@ -960,7 +961,7 @@ export function BalanceChart({
                             onClick={() => setChartWindowDays(7)}
                             aria-pressed={chartWindowDays === 7}
                         >
-                            7D
+                            {tr('charts.balanceChart.window7d')}
                         </button>
                         <button
                             type="button"
@@ -968,7 +969,7 @@ export function BalanceChart({
                             onClick={() => setChartWindowDays(30)}
                             aria-pressed={chartWindowDays === 30}
                         >
-                            30D
+                            {tr('charts.balanceChart.window30d')}
                         </button>
                     </div>
                 </div>
@@ -977,8 +978,8 @@ export function BalanceChart({
                     {summaryRows.map((row) => {
                         const isRemovableTag = !isMultiWallet && selectedTags.includes(row.key);
                         const canDismiss = isRemovableTag && selectedTags.length > 1;
-                        const changeText = row.change ? `${row.change.pct >= 0 ? '+' : ''}${row.change.pct.toFixed(2)}%` : 'N/A';
-                        const deltaText = row.change ? row.change.deltaLabel : '--';
+                        const changeText = row.change ? `${row.change.pct >= 0 ? '+' : ''}${row.change.pct.toFixed(2)}%` : tr('charts.balanceChart.notAvailable');
+                        const deltaText = row.change ? row.change.deltaLabel : tr('charts.balanceChart.noDataDelta');
                         const changeClassName = row.change
                             ? row.change.pct >= 0
                                 ? sharedStyles.balanceChartTagChangePositive
@@ -1009,7 +1010,7 @@ export function BalanceChart({
                                         disabled={!canDismiss}
                                         onClick={() => removeTag(row.key)}
                                         className={sharedStyles.balanceChartTagDismiss}
-                                        title={canDismiss ? 'Remove tag' : 'At least one tag is required'}
+                                        title={canDismiss ? tr('charts.balanceChart.removeTag') : tr('charts.balanceChart.atLeastOneTagRequired')}
                                     >
                                         <Close size={12} />
                                     </button>

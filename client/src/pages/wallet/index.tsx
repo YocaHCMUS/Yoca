@@ -217,7 +217,7 @@ export default function WalletPage() {
 
   const getSwapTokenLabel = (change: WalletSwap["sold"]): string => {
     if (!change) {
-      return "UNKNOWN";
+      return tr('walletPage.unknown').toUpperCase();
     }
 
     const symbolCandidate = (change.symbol ?? "").trim();
@@ -230,7 +230,7 @@ export default function WalletPage() {
       return `${mint.slice(0, 4)}...${mint.slice(-4)}`;
     }
 
-    return mint || "UNKNOWN";
+    return mint || tr('walletPage.unknown').toUpperCase();
   };
 
   const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
@@ -291,10 +291,10 @@ export default function WalletPage() {
         const identityLabel =
           row.identity.name ||
           (row.identity.status === "known"
-            ? "Known"
+            ? tr('walletPage.identityKnown')
             : row.identity.status === "unavailable"
-              ? "Unavailable"
-              : "Unknown");
+              ? tr('walletPage.identityUnavailable')
+              : tr('walletPage.unknown'));
 
         return [
           row.address,
@@ -309,27 +309,27 @@ export default function WalletPage() {
   );
 
   const counterpartyHeaders = [
-    "Counterparty",
-    "Identity",
-    "Unique tokens traded",
-    "Token list",
-    "Total volume",
-    "Transaction count",
+    tr('walletPage.counterparties'),
+    tr('walletPage.identity'),
+    tr('walletPage.uniqueTokensTraded'),
+    tr('walletPage.tokenList'),
+    tr('walletPage.totalVolume'),
+    tr('charts.counterpartyActivityChart.transactionCount'),
   ];
 
   const swapHeaders = [
     tr("walletPage.time"),
-    "Exchange",
-    "Pair",
-    "Token Sold",
-    "Token Bought",
-    "Total Value (USD)",
-    "Fee (lamport)",
+    tr("walletPage.exchange"),
+    tr("walletPage.pair"),
+    tr("walletPage.tokenSold"),
+    tr("walletPage.tokenBought"),
+    tr("walletPage.totalValueUSD"),
+    tr("walletPage.feeInLamports"),
   ];
 
   const transferHeaders = [
-    tr("walletPage.seller"),
-    tr("walletPage.buyer"),
+    tr("walletPage.sender"),
+    tr("walletPage.receiver"),
     tr("walletPage.token"),
     tr("walletPage.amount"),
     tr("walletPage.time"),
@@ -668,7 +668,7 @@ export default function WalletPage() {
       });
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
-      window.alert("Failed to export PDF. Please try again.");
+      window.alert(tr('walletPage.exportPdfFailed'));
     } finally {
       setIsPagePdfExporting(false);
     }
@@ -702,7 +702,7 @@ export default function WalletPage() {
       XLSX.writeFile(workbook, filename);
     } catch (error) {
       console.error("[WalletPage] Failed to export XLSX:", error);
-      window.alert("Failed to export data (.xlsx). Please try again.");
+      window.alert(tr('walletPage.exportXlsxFailed'));
     } finally {
       setIsDataExporting(false);
       setIsExportMenuOpen(false);
@@ -753,7 +753,7 @@ export default function WalletPage() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("[WalletPage] Failed to export charts ZIP:", error);
-      window.alert("Failed to export charts (.zip). Please try again.");
+      window.alert(tr('walletPage.exportZipFailed'));
     } finally {
       setIsChartsExporting(false);
       setIsExportMenuOpen(false);
@@ -790,7 +790,6 @@ export default function WalletPage() {
         {/* ── Right Column: Main Content ── */}
         <div className={styles.rightColumn}>
           <div className={styles.rightHeader}>
-            <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
             <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
               <Button
                 size="sm"
@@ -799,7 +798,7 @@ export default function WalletPage() {
                 onClick={() => setIsExportMenuOpen((prev) => !prev)}
                 disabled={isPagePdfExporting || isDataExporting || isChartsExporting}
               >
-                Export
+                {tr('charts.export')}
               </Button>
               {isExportMenuOpen && (
                 <div className={styles.exportMenu}>
@@ -810,7 +809,7 @@ export default function WalletPage() {
                     disabled={isDataExporting}
                   >
                     <Download size={16} />
-                    {isDataExporting ? "Exporting data..." : "Export Data (.xlsx)"}
+                    {isDataExporting ? tr('walletPage.exportingData') : tr('walletPage.exportDataXlsx')}
                   </button>
                   <button
                     type="button"
@@ -819,7 +818,7 @@ export default function WalletPage() {
                     disabled={isChartsExporting}
                   >
                     <Download size={16} />
-                    {isChartsExporting ? "Exporting charts..." : "Export Charts (.zip images)"}
+                    {isChartsExporting ? tr('walletPage.exportingCharts') : tr('walletPage.exportChartsZip')}
                   </button>
                   <button
                     type="button"
@@ -828,14 +827,16 @@ export default function WalletPage() {
                     disabled={isPagePdfExporting}
                   >
                     <Download size={16} />
-                    {isPagePdfExporting ? "Exporting report..." : "Export Report (.pdf)"}
+                    {isPagePdfExporting ? tr('walletPage.exportingReport') : tr('walletPage.exportReportPdf')}
                   </button>
                 </div>
               )}
             </div>
           </div>
 
+
           <div className={styles.rightContent}>
+            <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
             {/* Balance / PnL Charts */}
             <div className={styles.section}>
               <div className={styles.chartSection}>

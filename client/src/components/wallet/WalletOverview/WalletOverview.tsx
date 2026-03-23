@@ -172,7 +172,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityCategory = intelligence?.identity?.category ?? null;
     const riskLevel = intelligence?.analysis?.riskLevel ?? null;
 
-    const name = label || (identityStatus === 'known' && identityName ? identityName : 'Wallet');
+    const name = label || (identityStatus === 'known' && identityName ? identityName : tr('walletPage.defaultWalletName'));
     const displayedAddress = identityStatus === 'unknown'
         ? shortenWalletAddress(walletAddress)
         : walletAddress;
@@ -269,12 +269,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         )}
                         {identityStatus === 'unknown' && (
                             <Tag size="sm" type="cool-gray">
-                                Unknown Entity
+                                {tr('walletPage.unknownEntity')}
                             </Tag>
                         )}
                         {identityStatus === 'unavailable' && (
                             <Tag size="sm" type="red">
-                                Identity Unavailable
+                                {tr('walletPage.identityUnavailable')}
                             </Tag>
                         )}
                         {/* unreliable data */}
@@ -293,7 +293,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             </Tag>
                         ))}
                         <Tooltip
-                            label={user ? 'Manage tags' : 'Sign in to manage tags'}
+                            label={user ? tr('walletPage.manageTagsLabel') : tr('walletPage.signInManageTagsLabel')}
                             align="bottom"
                         >
                             <button

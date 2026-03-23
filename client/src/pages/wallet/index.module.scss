@@ -73,6 +73,7 @@
   padding: 8px 24px 0;
   background: $background;
   z-index: 10;
+  flex-direction: row-reverse;
 }
 
 .exportMenuWrapper {
