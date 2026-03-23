@@ -459,14 +459,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   // ── Compact header filter controls ────────────────────────────────────
   const selectStyle: React.CSSProperties = {
-    height: '1.75rem',
-    padding: '0 0.375rem',
+    padding: '0.5rem 1rem',
     fontSize: '0.75rem',
     border: '1px solid var(--cds-border-strong)',
     borderRadius: '0.25rem',
     background: 'var(--cds-layer-02)',
     color: 'var(--cds-text-primary)',
     cursor: 'pointer',
+    height: '2.5rem',
   };
 
   const filterControls = (
