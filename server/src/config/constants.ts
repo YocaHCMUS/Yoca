@@ -32,13 +32,13 @@ export const AUTH_COOKIE_NAME = "auth_token";
 
 // Wallets
 
-export const WALLET_OVERVIEW_TTL_MS = 5 * 60 * 1000; // 5 minutes
-export const WALLET_PORTFOLIO_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_OVERVIEW_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const WALLET_PORTFOLIO_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_TRANSACTIONS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_TRANSFERS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_SWAPS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
-export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
+export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
-export const WALLET_TOKEN_DETAILS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
