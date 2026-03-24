@@ -9,57 +9,57 @@
 @use '@/styles/variables' as *;
 
 .Chart {
-    width: 100%;
+  width: 100%;
 
-    // Container styling
-    display: flex;
-    flex-direction: column;
-    position: relative;
+  // Container styling
+  display: flex;
+  flex-direction: column;
+  position: relative;
 
-    // Ensure proper sizing in grid layouts
-    min-width: 0;
-    min-height: 0;
+  // Ensure proper sizing in grid layouts
+  min-width: 0;
+  min-height: 0;
 
-    // Smooth transitions for fullscreen mode
-    transition: all 0.3s ease-in-out;
+  // Smooth transitions for fullscreen mode
+  transition: all 0.3s ease-in-out;
 
 
-    // Chart-specifilterPillc overrides
-    :global(.echarts-for-react) {
+  // Chart-specifilterPillc overrides
+  :global(.echarts-for-react) {
     canvas {
-        // Ensure crisp rendering on retina displays
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
+      // Ensure crisp rendering on retina displays
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
-    }
+  }
 
-    
-    &.fullscreen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 9999;
-        background: var(--cds-background);
-        padding: 1rem;
-    }
 
-    &.loading {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-    
-    // Responsive behavior
-    @media (max-width: 768px) {
-        // Adjust for mobile
-        font-size: 0.875rem;
-    }
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: var(--cds-background);
+    padding: 1rem;
+  }
 
-    @media (max-width: 480px) {
-        // Further adjustments for small screens
-        font-size: 0.75rem;
-    }
+  &.loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  // Responsive behavior
+  @media (max-width: 768px) {
+    // Adjust for mobile
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 480px) {
+    // Further adjustments for small screens
+    font-size: 0.75rem;
+  }
 }
 
 // Uniform Chart Component Styles
@@ -277,7 +277,7 @@
   border-radius: 4px;
   padding: 0.5rem;
   background: var(--cds-layer-01);
-  
+
   @media (max-width: 768px) {
     min-height: 250px;
   }
@@ -298,7 +298,7 @@
   background: var(--cds-layer-01);
   border: 1px solid var(--cds-border-subtle);
   border-radius: 4px;
-  
+
   &:hover {
     border-color: var(--cds-border-interactive);
   }
@@ -318,6 +318,229 @@
   color: var(--cds-text-primary);
 }
 
+.balanceChartControlArea {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.balanceChartControlInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 0 1 680px;
+  max-width: 680px;
+  width: 100%;
+
+  label {
+    font-size: 0.8125rem;
+    color: var(--cds-text-secondary);
+    min-width: 110px;
+  }
+}
+
+.balanceChartControlTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.balanceChartWindowToggleGroup {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 0.4rem;
+}
+
+.balanceChartWindowButton {
+  min-width: 64px;
+}
+
+.balanceChartWindowButtonActive {
+  background: var(--cds-button-primary);
+  color: var(--cds-text-on-color);
+  font-weight: 600;
+}
+
+.balanceChartCombobox {
+  min-width: 180px;
+  flex: 1;
+  max-width: 340px;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  background: var(--cds-field);
+  color: var(--cds-text-primary);
+}
+
+.balanceChartTagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.balanceChartTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 999px;
+  background: var(--cds-layer-02);
+  color: var(--cds-text-primary);
+  padding: 0.28rem 0.55rem;
+  font-size: 0.8125rem;
+  justify-items: space-between;
+}
+
+.balanceChartTagMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.balanceChartTagLabel {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  height: 0.75rem;
+}
+
+.balanceChartTagMetrics {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--cds-border-subtle);
+}
+
+.balanceChartTagChangePositive {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #16c784;
+}
+
+.balanceChartTagChangeNegative {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ea3943;
+}
+
+.balanceChartTagChangeNeutral {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+}
+
+.balanceChartTagDelta {
+  font-size: 0.72rem;
+  color: var(--cds-text-helper);
+}
+
+.balanceChartTagIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.balanceChartTagIconFallback {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--cds-layer-accent-01);
+  color: var(--cds-text-primary);
+}
+
+.balanceChartTagDismiss {
+  border: none;
+  background: transparent;
+  color: var(--cds-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.balanceChartSummaryBox {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.balanceChartSummaryCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-content: center;
+
+  gap: 0.6rem;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 6px;
+  background: var(--cds-layer-01);
+  padding: 0.6rem;
+}
+
+.balanceChartSummaryLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--cds-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.balanceChartSummaryValue {
+  font-size: 1rem;
+  color: var(--cds-text-primary);
+  font-weight: 600;
+  // margin-top: 0.3rem;
+}
+
+.balanceChartSummaryValuePositive {
+  font-size: 1rem;
+  color: #16c784;
+  font-weight: 600;
+}
+
+.balanceChartSummaryValueNegative {
+  font-size: 1rem;
+  color: #ea3943;
+  font-weight: 600;
+}
+
+.balanceChartSummaryDelta {
+  font-size: 0.75rem;
+  color: var(--cds-text-helper);
+  // margin-top: 0.2rem;
+}
+
 // Empty/Error state styling
 .chartEmptyContainer {
   display: flex;
@@ -329,7 +552,7 @@
   border-radius: 4px;
   color: var(--cds-text-secondary);
   font-size: 0.875rem;
-  
+
   p {
     margin: 0;
   }
@@ -340,11 +563,11 @@
   .chartGridSection {
     grid-template-columns: 1fr;
   }
-  
+
   .chartStatsRow {
     flex-direction: column;
   }
-  
+
   .chartStatBox {
     min-width: 100%;
   }

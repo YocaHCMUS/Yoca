@@ -1,5 +1,8 @@
 export type ProviderName = "helius" | "birdeye" | "moralis" | "unknown";
 
+import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
+import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+
 export class ProviderRequestError extends Error {
     readonly provider: ProviderName;
     readonly status: number;
@@ -37,14 +40,31 @@ export async function requestProviderJson<T>(input: {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     headers: HeadersInit;
     body?: unknown;
+    apiKey?: ApiKeyMetadata | null;
+    serviceFile?: string;
+    functionName?: string;
     fetchImpl?: (url: URL, init: RequestInit) => Promise<Response>;
 }): Promise<T> {
     const fetchImpl = input.fetchImpl ?? (async (url, init) => fetch(url.toString(), init));
-    const response = await fetchImpl(input.url, {
+    const requestInit: RequestInit = {
         method: input.method,
         headers: input.headers,
         body: input.body == null ? undefined : JSON.stringify(input.body),
-    });
+    };
+
+    const response = await trackApiCallResponse(
+        {
+            provider: input.provider,
+            url: input.url.toString(),
+            method: input.method,
+            requestHeaders: input.headers,
+            requestBody: requestInit.body,
+            apiKey: input.apiKey,
+            serviceFile: input.serviceFile ?? "server/src/services/wallet/providers/providerRequest.ts",
+            functionName: input.functionName ?? "requestProviderJson",
+        },
+        () => fetchImpl(input.url, requestInit),
+    );
 
     if (!response.ok) {
         let payload: unknown;

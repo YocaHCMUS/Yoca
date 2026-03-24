@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
-import { DataTable, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
+import { DataTable, DataTableSkeleton, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
 import styles from './Table.module.scss';
 
@@ -54,6 +54,7 @@ export interface TableProps {
     /** Called when the user clicks a data row. Receives the original row array and its index inside dataEntries. */
     onRowClick?: (row: any[], rowIndex: number) => void;
     serverPagination?: ServerPaginationConfig;
+    loading?: boolean;
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -69,6 +70,7 @@ export const Table: React.FC<TableProps> = ({
     maxHeight,
     onRowClick,
     serverPagination,
+    loading = false,
 }) => {
     const [clientPage, setClientPage] = useState(1);
     const [clientPageSize, setClientPageSize] = useState(20);
@@ -322,6 +324,7 @@ export const Table: React.FC<TableProps> = ({
         sortConfig: sortConfigs?.[index], // Attach config to the header
         isSortable: !!sortConfigs?.[index] // Only enable sort if config exists
     }));
+    const skeletonHeaders = carbonHeaders.map(({ key, header }) => ({ key, header }));
 
     const rows = paginatedRows.map((row, rowIndex) => {
         const rowData: any = { id: `row-${page}-${rowIndex}` };
@@ -508,7 +511,7 @@ export const Table: React.FC<TableProps> = ({
         <TableWrapper
             title={title}
             onExport={handleExport}
-            isEmpty={filteredData.length === 0}
+            isEmpty={!loading && filteredData.length === 0}
             enableToolbar={true}
             searchPlaceholder="Search table..."
             searchValue={searchValue}
@@ -518,14 +521,21 @@ export const Table: React.FC<TableProps> = ({
             }}
         >
             <div className={styles.tableWrapper}>
-                <div ref={tableContainerRef}>
-                    <DataTable
-                        rows={rows}
-                        headers={carbonHeaders}
-                        sortRow={universalSortRow}
-                    >
-                        {({ rows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps, getTableContainerProps }) => (
-                            <CarbonTable {...getTableProps()}>
+                <div ref={tableContainerRef} className={styles.tableViewport}>
+                    {loading ? (
+                        <DataTableSkeleton
+                            headers={skeletonHeaders}
+                            rowCount={3}
+                            showHeader={false}
+                            showToolbar={false}
+                        />
+                    ) : (
+                        <DataTable
+                            rows={rows}
+                            headers={carbonHeaders}
+                            sortRow={universalSortRow}
+                        >
+                            {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
                                 <TableContainer
                                     className={styles.tableContainer}
                                     style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
@@ -545,110 +555,106 @@ export const Table: React.FC<TableProps> = ({
                                             ))}
                                         </div>
                                     )}
-                                    <TableHead>
-                                        <TableRow className={styles.stickyHeader}>
-                                            {headers.map((header, index) => {
-                                                const isColumnSortable = isSortable[index] ?? false;
-                                                const { key, ...headerProps } = getHeaderProps({
-                                                    header,
-                                                    isSortable: isColumnSortable
-                                                });
-                                                const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
-                                                return (
-                                                    <TableHeader
-                                                        key={key}
-                                                        {...headerProps}
-                                                        className={isColumnSortable ? styles.sortableHeader : undefined}
-                                                        // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
-                                                        // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                        style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}
-                                                    >
-                                                        <div className={styles.headerContent}>
-                                                            <span className={styles.headerText}>
-                                                                {header.header}
-                                                            </span>
-                                                            {filterSchema[index] && (
-                                                                <div
-                                                                    className={styles.headerCell}
-                                                                    ref={(el) => { filterButtonRefs.current[index] = el; }}
-                                                                >
-                                                                    <IconButton
-                                                                        label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
-                                                                        align="bottom-right"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            openFilterForColumn(index);
-                                                                        }}
-                                                                        kind='ghost'
-                                                                        size="sm"
-                                                                        className={activeFilter ? styles.activeFilterButton : undefined}
-                                                                        data-filter-button
+                                    <CarbonTable {...getTableProps()} className={styles.stretchTable}>
+                                        <TableHead>
+                                            <TableRow className={styles.stickyHeader}>
+                                                {headers.map((header, index) => {
+                                                    const isColumnSortable = isSortable[index] ?? false;
+                                                    const { key, ...headerProps } = getHeaderProps({
+                                                        header,
+                                                        isSortable: isColumnSortable
+                                                    });
+                                                    const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
+                                                    return (
+                                                        <TableHeader
+                                                            key={key}
+                                                            {...headerProps}
+                                                            className={isColumnSortable ? styles.sortableHeader : undefined}
+                                                        >
+                                                            <div className={styles.headerContent}>
+                                                                <span className={styles.headerText}>
+                                                                    {header.header}
+                                                                </span>
+                                                                {filterSchema[index] && (
+                                                                    <div
+                                                                        className={styles.headerCell}
+                                                                        ref={(el) => { filterButtonRefs.current[index] = el; }}
                                                                     >
-                                                                        <Filter />
-                                                                    </IconButton>
-                                                                    {renderFilterPopup(index)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </TableHeader>
+                                                                        <IconButton
+                                                                            label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
+                                                                            align="bottom-right"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openFilterForColumn(index);
+                                                                            }}
+                                                                            kind='ghost'
+                                                                            size="sm"
+                                                                            className={activeFilter ? styles.activeFilterButton : undefined}
+                                                                            data-filter-button
+                                                                        >
+                                                                            <Filter />
+                                                                        </IconButton>
+                                                                        {renderFilterPopup(index)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </TableHeader>
+                                                    );
+                                                })}
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {rows.map((row, rowIndex) => {
+                                                const { key, ...rowProps } = getRowProps({ row });
+                                                const rowId = String(row.id ?? "");
+                                                const parsedRowIndex = Number.parseInt(rowId.split("-").pop() ?? "", 10);
+                                                const originalRow = Number.isInteger(parsedRowIndex)
+                                                    ? paginatedRows[parsedRowIndex]
+                                                    : paginatedRows[rowIndex];
+                                                const safeRow = Array.isArray(originalRow) ? originalRow : [];
+                                                const originalIndex = onRowClick
+                                                    ? dataEntries.indexOf(originalRow)
+                                                    : -1;
+                                                return (
+                                                    <TableRow
+                                                        key={key}
+                                                        {...rowProps}
+                                                        onClick={onRowClick ? () => onRowClick(safeRow, originalIndex) : undefined}
+                                                        style={onRowClick ? { cursor: 'pointer' } : undefined}
+                                                    >
+                                                        {row.cells.map((cell, cellIndex) => {
+                                                            const rawValue = cell.value;
+                                                            const renderer = cellRenderers[cellIndex];
+                                                            const className = classnames[cellIndex];
+
+                                                            return (
+                                                                <TableCell key={cell.id}>
+                                                                    {renderer
+                                                                        ? renderer(rawValue, safeRow, rowIndex)
+                                                                        : <span className={className}>{rawValue}</span>
+                                                                    }
+                                                                </TableCell>
+                                                            );
+                                                        })}
+                                                    </TableRow>
                                                 );
                                             })}
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {rows.map((row, rowIndex) => {
-                                            const { key, ...rowProps } = getRowProps({ row });
-                                            const rowId = String(row.id ?? "");
-                                            const parsedRowIndex = Number.parseInt(rowId.split("-").pop() ?? "", 10);
-                                            const originalRow = Number.isInteger(parsedRowIndex)
-                                                ? paginatedRows[parsedRowIndex]
-                                                : paginatedRows[rowIndex];
-                                            const safeRow = Array.isArray(originalRow) ? originalRow : [];
-                                            const originalIndex = onRowClick
-                                                ? dataEntries.indexOf(originalRow)
-                                                : -1;
-                                            return (
-                                                <TableRow
-                                                    key={key}
-                                                    {...rowProps}
-                                                    onClick={onRowClick ? () => onRowClick(safeRow, originalIndex) : undefined}
-                                                    style={onRowClick ? { cursor: 'pointer' } : undefined}
-                                                >
-                                                    {row.cells.map((cell, cellIndex) => {
-                                                        // Extract raw value and apply renderer/class logic here
-                                                        const rawValue = cell.value;
-                                                        const renderer = cellRenderers[cellIndex];
-                                                        const className = classnames[cellIndex];
 
-                                                        return (
-                                                            // Set minWidth slightly above equal distribution (100/n) to prevent column collapse
-                                                            // Formula: (100 + n) / n gives each column ~1% extra space to handle borders/padding
-                                                            <TableCell key={cell.id} style={{ minWidth: `${(100 + headers.length) / headers.length}%` }}>
-                                                                {renderer
-                                                                    ? renderer(rawValue, safeRow, rowIndex)
-                                                                    : <span className={className}>{rawValue}</span>
-                                                                }
-                                                            </TableCell>
-                                                        );
-                                                    })}
+                                            {rows.length === 0 && (
+                                                <TableRow className={styles.noHover}>
+                                                    <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                        <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            No data available
+                                                        </div>
+                                                    </TableCell>
                                                 </TableRow>
-                                            );
-                                        })}
-
-                                        {rows.length === 0 && (
-                                            <TableRow className={styles.noHover}>
-                                                <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
-                                                    <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        No data available
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
+                                            )}
+                                        </TableBody>
+                                    </CarbonTable>
                                 </TableContainer>
-                            </CarbonTable>
-                        )}
-                    </DataTable>
+                            )}
+                        </DataTable>
+                    )}
                 </div>
                 {/* <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
                 </div> */}

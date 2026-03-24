@@ -6,6 +6,7 @@ import {
   TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import {
   tokenMarketChart24h,
   tokenMarketChartDaily,
@@ -52,12 +53,16 @@ export async function fetch24hTokenMarketChart(
     from: from.toString(),
     to: to.toString(),
   }).toString();
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-chart.ts",
+    functionName: "fetch24hTokenMarketChart",
   });
-
-  const resp = await fetch(req);
 
   if (resp.ok) {
     const res: CG_TokenMarketChart = await resp.json();
@@ -185,12 +190,16 @@ async function fetchAndCacheRangedChart(
     to: now.toString(),
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-chart.ts",
+    functionName: "fetchAndCacheRangedChart",
   });
-
-  const resp = await fetch(req);
   if (!resp.ok) return;
 
   const res: CG_TokenMarketChart = await resp.json();

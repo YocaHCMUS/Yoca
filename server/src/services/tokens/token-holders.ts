@@ -1,6 +1,7 @@
 import { TOP_TOKEN_HOLDERS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { topTokenHolders, type TokenTopHolderInsert } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as mrl from "@sv/util/util-moralis.js";
 import { eq } from "drizzle-orm";
@@ -12,9 +13,17 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
   const mrlUrl = mrl.getEndpoint(
     `/token/mainnet/${tokenAddress}/top-holders?limit=${defaultLimit}`,
   );
-  const resp = await fetch(mrlUrl, {
-    method: "GET",
-    headers: mrl.getRequiredHeaders(),
+  const { headers, apiKey } = mrl.getRequiredHeadersWithMetadata();
+  const resp = await trackedFetch({
+    provider: "moralis",
+    url: mrlUrl,
+    init: {
+      method: "GET",
+      headers,
+    },
+    apiKey,
+    serviceFile: "server/src/services/tokens/token-holders.ts",
+    functionName: "fetchTopHoldersForToken",
   });
 
   if (!resp.ok) {

@@ -1,4 +1,6 @@
-import { apiKeyManager } from "./api-key-manager.js";
+import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
+import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 
 const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL =
   "https://solana-gateway.moralis.io";
@@ -39,11 +41,24 @@ export async function moralisFetch(
   url: URL,
   init: RequestInit,
 ): Promise<Response> {
+  const keyMeta = getApiKeyMetadataFromHeaders(init.headers);
   let lastResponse: Response | null = null;
   let attempts = 0;
 
   while (attempts <= MAX_429_RETRIES) {
-    const resp = await fetch(url, init);
+    const resp = await trackApiCallResponse(
+      {
+        provider: "moralis",
+        url: url.toString(),
+        method: init.method ?? "GET",
+        requestHeaders: init.headers,
+        requestBody: init.body,
+        apiKey: keyMeta,
+        serviceFile: "server/src/util/util-moralis.ts",
+        functionName: "moralisFetch",
+      },
+      () => fetch(url, init),
+    );
     lastResponse = resp;
     if (resp.status !== 429) {
       return resp;
@@ -85,4 +100,40 @@ export function getRequiredHeaders() {
     Accept: "application/json",
     "X-API-Key": apiKey,
   };
+}
+
+export function getRequiredHeadersWithMetadata(): {
+  headers: Record<string, string>;
+  apiKey: ApiKeyMetadata | null;
+} {
+  if (!moralisKeysInitialized) {
+    apiKeyManager.initializeKeys(
+      MORALIS_SERVICE_NAME,
+      process.env.MORALIS_API_KEY,
+    );
+    moralisKeysInitialized = true;
+  }
+
+  const apiKey = apiKeyManager.getNextKey(MORALIS_SERVICE_NAME);
+  if (!apiKey) {
+    throw new Error("MORALIS_API_KEY is not set");
+  }
+
+  return {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-API-Key": apiKey,
+    },
+    apiKey: buildApiKeyMetadata(apiKey, "MORALIS_API_KEY"),
+  };
+}
+
+function getApiKeyMetadataFromHeaders(headers: RequestInit["headers"] | undefined): ApiKeyMetadata | null {
+  if (!headers) {
+    return null;
+  }
+
+  const apiKey = new Headers(headers).get("X-API-Key");
+  return buildApiKeyMetadata(apiKey, "MORALIS_API_KEY");
 }

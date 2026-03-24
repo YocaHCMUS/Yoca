@@ -6,6 +6,7 @@ import { normalizeMint, isSolSymbol, toIsoFromSec } from "@sv/services/wallet/wa
 import { getCachedWalletTokenBalanceHistory, saveWalletTokenBalanceHistoryCache } from "@sv/services/wallet/db/walletTokenBalanceHistoryCache.js";
 import { fetchBirdeyePortfolioSnapshot } from "./fetchers/walletDataFetcher.service.js";
 import { getWalletPortfolio } from "./walletPortfolio.service.js";
+import { resolveWalletTimeRangeSec } from "./walletCharts.service.js";
 
 type CachedPortfolioSnapshot = {
     expiresAtMs: number;
@@ -14,7 +15,6 @@ type CachedPortfolioSnapshot = {
 
 const tokenBalanceSnapshotCache = new Map<string, CachedPortfolioSnapshot>();
 const TOKEN_LIVE_POINT_IN_MEMORY_TTL_MS = 60 * 1000;
-const TOKEN_HISTORY_DAYS = 30;
 
 type CachedTokenLivePoint = {
     expiresAtMs: number;
@@ -31,8 +31,9 @@ export async function getWalletTokenBalanceHistory(
 ): Promise<TokenBalanceSeriesResult> {
     const nowMs = Date.now();
     const nowSec = Math.floor(nowMs / 1000);
+    const rangeSec = resolveWalletTimeRangeSec("30D", nowSec);
     const todayDayStartMs = toUtcDayStartMs(nowMs);
-    const historicalDayStartMs = buildHistoricalDayStartMsList(todayDayStartMs);
+    const historicalDayStartMs = buildHistoricalDayStartMsList(rangeSec.fromSec, todayDayStartMs);
     const historicalFromMs = historicalDayStartMs[0];
     const historicalToMs = historicalDayStartMs[historicalDayStartMs.length - 1];
     const selectorLower = tokenSelector.trim().toLowerCase();
@@ -193,10 +194,11 @@ function toUtcDayStartMs(timestampMs: number): number {
     return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
-function buildHistoricalDayStartMsList(todayDayStartMs: number): number[] {
+function buildHistoricalDayStartMsList(fromSec: number, todayDayStartMs: number): number[] {
+    const fromDayStartMs = toUtcDayStartMs(fromSec * 1000);
     const values: number[] = [];
-    for (let daysAgo = TOKEN_HISTORY_DAYS; daysAgo >= 1; daysAgo -= 1) {
-        values.push(todayDayStartMs - daysAgo * DAY_MS);
+    for (let day = fromDayStartMs; day < todayDayStartMs; day += DAY_MS) {
+        values.push(day);
     }
     return values;
 }

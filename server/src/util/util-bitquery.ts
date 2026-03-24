@@ -1,3 +1,5 @@
+import { buildApiKeyMetadata } from "./api-key-manager.js";
+
 export function getStreamingEndpoint(): URL {
   return new URL(process.env.BITQUERY_STREAM_API_ENDPOINT!);
 }
@@ -12,4 +14,8 @@ export function getRequiredHeaders() {
     Authorization: `Bearer ${process.env.BITQUERY_API_KEY!}`,
     "Content-Type": "application/json",
   };
+}
+
+export function getBitqueryApiKeyMetadata() {
+  return buildApiKeyMetadata(process.env.BITQUERY_API_KEY ?? null, "BITQUERY_API_KEY");
 }

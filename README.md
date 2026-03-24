@@ -24,6 +24,48 @@ npm run dev
 
 Frontend runs on `http://localhost:3000`, backend on `http://localhost:8000`.
 
+## Wallet Mock Mode
+
+Temporary wallet mock mode can unblock wallet-page development when live provider/API keys are exhausted.
+
+Enable:
+
+```bash
+# client/.env.development
+VITE_USE_WALLET_MOCKS=true
+```
+
+Disable:
+
+```bash
+# client/.env.development
+VITE_USE_WALLET_MOCKS=false
+```
+
+When enabled, wallet and wallet-page chart reads are mocked at the API client boundary in `client/src/api/main.ts` via `client/src/api/walletMockRouter.ts`.
+
+Mocked endpoints include:
+- Wallet service calls in `client/src/services/wallet/walletApi.ts`:
+   - `fetchWalletOverview`
+   - `fetchWalletPortfolio`
+   - `fetchWalletSwaps`
+   - `fetchWalletTransfers`
+   - `fetchWalletCounterparties`
+   - `fetchWalletIntelligence`
+   - `fetchWalletExchanges`
+   - `fetchWalletIdentity`
+- Wallet-page chart calls in `client/src/services/chart/chartApi.ts`:
+   - `fetchBalanceTrend`
+   - `fetchPnLChart`
+   - `fetchAssetDistribution`
+   - `fetchExchangeComparison`
+   - `fetchCounterpartyActivity`
+
+Known limitations:
+- Mock timelines are deterministic but synthetic.
+- Wallet identity/badges are scenario-driven and may not represent live provider classifications.
+- Only wallet and wallet-page chart reads are mocked; other domains remain live.
+
 ## Getting Started
 
 This monorepo makes use of npm's workspace feature. You don't need to `cd` into `client` or `server` to run these following commands as each of them has assigned to a specific workspace.

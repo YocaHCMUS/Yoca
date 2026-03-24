@@ -2,6 +2,7 @@ import { TRADER_GAINEERS_LOSERS_TTL_MS } from "@sv/config/constants.js";
 import { setErr } from "@sv/config/errors.js";
 import { db } from "@sv/db/index.js";
 import { topTraders } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { asc } from "drizzle-orm";
@@ -30,12 +31,18 @@ export async function getTraderGainersLosers(sortType: "asc" | "desc") {
     sort_type: sortType,
   }).toString();
 
-  const req = new Request(bdsEndpoint, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
+  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
+  const resp = await trackedFetch({
+    provider: "birdeye",
+    url: bdsEndpoint,
+    init: {
+      method: "GET",
+      headers,
+    },
+    apiKey,
+    serviceFile: "server/src/routes/traders.ts",
+    functionName: "getTraderGainersLosers",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     return null;

@@ -59,9 +59,18 @@ export interface BalanceTrendResponse extends ChartResponseBase {
     currency: string;
     timezone: string;
     aggregation: string;
-    mode?: 'total' | 'token';
+    mode?: 'total' | 'token' | 'composite';
     tokens?: string[];
     primaryYAxis?: 'TOKEN' | 'USD';
+    tokenMeta?: Record<string, {
+      symbol: string;
+      logoUri?: string;
+      tokenAddress?: string;
+    }>;
+    walletMeta?: Record<string, {
+      label: string;
+      identityName?: string;
+    }>;
   };
 }
 

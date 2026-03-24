@@ -1,4 +1,5 @@
 import * as cg from "@sv/util/util-coingecko.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 
 // Interface for pool data from CoinGecko onchain API
 export interface PoolData {
@@ -74,12 +75,16 @@ export async function getTopPoolsByToken(
     page: "1",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/pools.ts",
+    functionName: "getTopPoolsByToken",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     console.error(`Failed to fetch pools: ${resp.status}`);
@@ -285,12 +290,16 @@ export async function getPoolDetails(
     include: "base_token,quote_token,dex",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/pools.ts",
+    functionName: "getPoolDetails",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     console.error(`Failed to fetch pool details: ${resp.status}`);
@@ -388,12 +397,16 @@ export async function getPoolTrades(
     `/networks/solana/pools/${poolAddress}/trades`,
   );
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/pools.ts",
+    functionName: "getPoolTrades",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     console.error(`Failed to fetch pool trades: ${resp.status}`);

@@ -273,7 +273,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             isEmpty={isEmpty}
             onRetry={() => refetch(false)}
         >
-            <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--between']} ${sharedStyles['chartControls--withBackground']}`}>
+            {/* <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--between']} ${sharedStyles['chartControls--withBackground']}`}>
                 <div className={sharedStyles['chartToggle--padded']}>
                     <button
                         className={`${sharedStyles.chartToggleButton} ${viewMode === 'daily' ? sharedStyles.active : ''}`}
@@ -300,7 +300,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                         {tr('charts.pnlChart.both')}
                     </button>
                 </div>
-            </div>
+            </div> */}
 
             {chartOptions.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>

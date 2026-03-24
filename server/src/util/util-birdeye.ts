@@ -1,4 +1,5 @@
-import { apiKeyManager } from "./api-key-manager.js";
+import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 const BIRDEYE_SERVICE_NAME = "birdeye";
 let birdeyeKeysInitialized = false;
 
@@ -10,7 +11,7 @@ export function getEndpoint(path: string): URL {
 }
 
 
-export function getRequiredHeaders(): HeadersInit {
+export function getRequiredHeaders(): Record<string, string> {
   if (!birdeyeKeysInitialized) {
     apiKeyManager.initializeKeys(BIRDEYE_SERVICE_NAME, process.env.BIRDEYE_API_KEY);
     birdeyeKeysInitialized = true;
@@ -29,6 +30,31 @@ export function getRequiredHeaders(): HeadersInit {
   };
 
   return headers;
+}
+
+export function getRequiredHeadersWithMetadata(): {
+  headers: Record<string, string>;
+  apiKey: ApiKeyMetadata | null;
+} {
+  if (!birdeyeKeysInitialized) {
+    apiKeyManager.initializeKeys(BIRDEYE_SERVICE_NAME, process.env.BIRDEYE_API_KEY);
+    birdeyeKeysInitialized = true;
+  }
+
+  const apiKey = apiKeyManager.getNextKey(BIRDEYE_SERVICE_NAME);
+  if (!apiKey) {
+    throw new Error("BIRDEYE_API_KEY is not set");
+  }
+
+  return {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-API-KEY": apiKey,
+      "x-chain": "solana",
+    },
+    apiKey: buildApiKeyMetadata(apiKey, "BIRDEYE_API_KEY"),
+  };
 }
 
 export function normalizeBirdeyeTimeParam(time?: string): string | undefined {

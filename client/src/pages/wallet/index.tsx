@@ -4,6 +4,7 @@ import { ExchangeComparison } from "@/components/charts/ExchangeComparison/Excha
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
+  createSwapTokenCellRenderer,
   renderBase,
   renderCode,
   renderCurrency,
@@ -73,18 +74,20 @@ export default function WalletPage() {
   const [transferPages, setTransferPages] = useState<Record<number, WalletTransfer[]>>({});
   const [transferPageInfoByPage, setTransferPageInfoByPage] = useState<Record<number, WalletPageInfo>>({});
   const [transferLoading, setTransferLoading] = useState(false);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [counterpartyLoading, setCounterpartyLoading] = useState(false);
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
 
   const [mainActiveTab, setMainActiveTab] = useState(0);
-  const [portfolioChartActiveTab, setPortfolioChartActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Resizable divider
   const [leftWidth, setLeftWidth] = useState(420);
@@ -218,7 +221,7 @@ export default function WalletPage() {
 
   const getSwapTokenLabel = (change: WalletSwap["sold"]): string => {
     if (!change) {
-      return "UNKNOWN";
+      return tr('walletPage.unknown').toUpperCase();
     }
 
     const symbolCandidate = (change.symbol ?? "").trim();
@@ -231,7 +234,7 @@ export default function WalletPage() {
       return `${mint.slice(0, 4)}...${mint.slice(-4)}`;
     }
 
-    return mint || "UNKNOWN";
+    return mint || tr('walletPage.unknown').toUpperCase();
   };
 
   const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
@@ -286,23 +289,16 @@ export default function WalletPage() {
     [loadedTransfers],
   );
 
-  const inflowData = transferData.filter(
-    (row) => address && row[1] === address,
-  );
-  const outflowData = transferData.filter(
-    (row) => address && row[0] === address,
-  );
-
   const counterpartyTableData = useMemo(
     () =>
       counterparties.map((row) => {
         const identityLabel =
           row.identity.name ||
           (row.identity.status === "known"
-            ? "Known"
+            ? tr('walletPage.identityKnown')
             : row.identity.status === "unavailable"
-              ? "Unavailable"
-              : "Unknown");
+              ? tr('walletPage.identityUnavailable')
+              : tr('walletPage.unknown'));
 
         return [
           row.address,
@@ -317,27 +313,27 @@ export default function WalletPage() {
   );
 
   const counterpartyHeaders = [
-    "Counterparty",
-    "Identity",
-    "Unique tokens traded",
-    "Token list",
-    "Total volume",
-    "Transaction count",
+    tr('walletPage.counterparties'),
+    tr('walletPage.identity'),
+    tr('walletPage.uniqueTokensTraded'),
+    tr('walletPage.tokenList'),
+    tr('walletPage.totalVolume'),
+    tr('charts.counterpartyActivityChart.transactionCount'),
   ];
 
   const swapHeaders = [
     tr("walletPage.time"),
-    "Exchange",
-    "Pair",
-    "Token Sold",
-    "Token Bought",
-    "Total Value (USD)",
-    "Fee (lamport)",
+    tr("walletPage.exchange"),
+    tr("walletPage.pair"),
+    tr("walletPage.tokenSold"),
+    tr("walletPage.tokenBought"),
+    tr("walletPage.totalValueUSD"),
+    tr("walletPage.feeInLamports"),
   ];
 
   const transferHeaders = [
-    tr("walletPage.seller"),
-    tr("walletPage.buyer"),
+    tr("walletPage.sender"),
+    tr("walletPage.receiver"),
     tr("walletPage.token"),
     tr("walletPage.amount"),
     tr("walletPage.time"),
@@ -389,70 +385,25 @@ export default function WalletPage() {
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
   ];
 
+  const renderSwapTokenCell = (side: "sold" | "bought") =>
+    createSwapTokenCellRenderer({
+      side,
+      swapBySignature,
+      getSoldBoughtChanges,
+      getSwapTokenLabel,
+      classNames: {
+        container: styles.swapTokenCell,
+        amount: styles.swapTokenAmount,
+      },
+      imageSize: 18,
+    });
+
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row)) {
-        return renderCode(value);
-      }
-
-      const signature = String(row[7] ?? "");
-      const swap = swapBySignature.get(signature);
-      if (!swap) {
-        return renderCode(value);
-      }
-
-      const { sold } = getSoldBoughtChanges(swap);
-      if (!sold) {
-        return renderBase("—");
-      }
-
-      return (
-        <span className={styles.swapTokenCell}>
-          <span className={styles.swapTokenAmount}>{Math.abs(sold.amount).toFixed(4)}</span>
-          <TokenIdentityCell
-            symbol={getSwapTokenLabel(sold)}
-            fullName={sold.name ?? undefined}
-            imageUrl={sold.logoUri ?? undefined}
-            imageSize={18}
-            showInitialsFallback
-            tooltipAlign="right"
-          />
-        </span>
-      );
-    },
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row)) {
-        return renderCode(value);
-      }
-
-      const signature = String(row[7] ?? "");
-      const swap = swapBySignature.get(signature);
-      if (!swap) {
-        return renderCode(value);
-      }
-
-      const { bought } = getSoldBoughtChanges(swap);
-      if (!bought) {
-        return renderBase("—");
-      }
-
-      return (
-        <span className={styles.swapTokenCell}>
-          <span className={styles.swapTokenAmount}>{Math.abs(bought.amount).toFixed(4)}</span>
-          <TokenIdentityCell
-            symbol={getSwapTokenLabel(bought)}
-            fullName={bought.name ?? undefined}
-            imageUrl={bought.logoUri ?? undefined}
-            imageSize={18}
-            showInitialsFallback
-            tooltipAlign="right"
-          />
-        </span>
-      );
-    },
+    renderSwapTokenCell("sold"),
+    renderSwapTokenCell("bought"),
     (value: string) =>
       value === "—"
         ? renderBase(value)
@@ -617,40 +568,59 @@ export default function WalletPage() {
     const loadData = async () => {
       if (!address || address === 'null') return;
 
+      setPortfolioLoading(true);
+      setSwapLoading(true);
+      setTransferLoading(true);
+      setCounterpartyLoading(true);
+
       try {
-        const portfolioResponse = await fetchWalletPortfolio(address);
-        if (Array.isArray(portfolioResponse)) {
-          setPortfolio(portfolioResponse);
+        const [portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+          fetchWalletPortfolio(address),
+          fetchWalletSwaps(address),
+          fetchWalletTransfers(address),
+          fetchWalletCounterparties(address, {
+            period: '7d',
+            limit: 50,
+            includeTokens: true,
+          }),
+        ]);
+
+        if (portfolioResult.status === 'fulfilled' && Array.isArray(portfolioResult.value)) {
+          setPortfolio(portfolioResult.value);
         }
 
-        const swapResponse = await fetchWalletSwaps(address);
-        const swapsData = swapResponse?.swaps || [];
-        if (Array.isArray(swapsData)) {
-          setSwapPages({ 1: swapsData });
-          setSwapPageInfoByPage({ 1: swapResponse.pageInfo });
-          console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
+        if (swapsResult.status === 'fulfilled') {
+          const swapsData = swapsResult.value?.swaps || [];
+          if (Array.isArray(swapsData)) {
+            setSwapPages({ 1: swapsData });
+            setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
+            console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
+          }
         }
 
-        const transferResponse = await fetchWalletTransfers(address);
-        const transfersData = transferResponse?.transfers || [];
-        if (Array.isArray(transfersData)) {
-          setTransferPages({ 1: transfersData });
-          setTransferPageInfoByPage({ 1: transferResponse.pageInfo });
-          console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+        if (transfersResult.status === 'fulfilled') {
+          const transfersData = transfersResult.value?.transfers || [];
+          if (Array.isArray(transfersData)) {
+            setTransferPages({ 1: transfersData });
+            setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
+            console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+          }
         }
 
-        const counterpartyResponse = await fetchWalletCounterparties(address, {
-          period: '7d',
-          limit: 50,
-          includeTokens: true,
-        });
-        const counterpartiesData = counterpartyResponse?.counterparties ?? [];
-        if (Array.isArray(counterpartiesData)) {
-          setCounterparties(counterpartiesData);
-          console.log('[counterparties] ✓ loaded:', counterpartiesData.length, 'rows');
+        if (counterpartiesResult.status === 'fulfilled') {
+          const counterpartiesData = counterpartiesResult.value?.counterparties ?? [];
+          if (Array.isArray(counterpartiesData)) {
+            setCounterparties(counterpartiesData);
+            console.log('[counterparties] ✓ loaded:', counterpartiesData.length, 'rows');
+          }
         }
       } catch (err) {
         console.error('Failed to load wallet data:', err);
+      } finally {
+        setPortfolioLoading(false);
+        setSwapLoading(false);
+        setTransferLoading(false);
+        setCounterpartyLoading(false);
       }
     };
 
@@ -669,14 +639,19 @@ export default function WalletPage() {
     if (isPagePdfExporting) return;
 
     setIsPagePdfExporting(true);
+    setIsExportMenuOpen(false);
     try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
       await exportCurrentPageAsPdf({
-        title: `${tr("walletPage.activity")} ${address}`,
         baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
+        targetRef: pdfExportContainerRef,
       });
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
-      window.alert("Failed to export PDF. Please try again.");
+      // Remove alert to let user see partial output
     } finally {
       setIsPagePdfExporting(false);
     }
@@ -694,12 +669,6 @@ export default function WalletPage() {
       const transferSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...transferData]);
       XLSX.utils.book_append_sheet(workbook, transferSheet, "Transfers");
 
-      const inflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...inflowData]);
-      XLSX.utils.book_append_sheet(workbook, inflowSheet, "Inflow");
-
-      const outflowSheet = XLSX.utils.aoa_to_sheet([transferHeaders, ...outflowData]);
-      XLSX.utils.book_append_sheet(workbook, outflowSheet, "Outflow");
-
       const counterpartySheet = XLSX.utils.aoa_to_sheet([
         counterpartyHeaders,
         ...counterpartyTableData,
@@ -716,7 +685,7 @@ export default function WalletPage() {
       XLSX.writeFile(workbook, filename);
     } catch (error) {
       console.error("[WalletPage] Failed to export XLSX:", error);
-      window.alert("Failed to export data (.xlsx). Please try again.");
+      window.alert(tr('walletPage.exportXlsxFailed'));
     } finally {
       setIsDataExporting(false);
       setIsExportMenuOpen(false);
@@ -767,7 +736,7 @@ export default function WalletPage() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("[WalletPage] Failed to export charts ZIP:", error);
-      window.alert("Failed to export charts (.zip). Please try again.");
+      window.alert(tr('walletPage.exportZipFailed'));
     } finally {
       setIsChartsExporting(false);
       setIsExportMenuOpen(false);
@@ -785,6 +754,7 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <div
+        ref={pdfExportContainerRef}
         className={styles.walletGrid}
         style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
       >
@@ -804,7 +774,6 @@ export default function WalletPage() {
         {/* ── Right Column: Main Content ── */}
         <div className={styles.rightColumn}>
           <div className={styles.rightHeader}>
-            <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
             <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
               <Button
                 size="sm"
@@ -813,7 +782,7 @@ export default function WalletPage() {
                 onClick={() => setIsExportMenuOpen((prev) => !prev)}
                 disabled={isPagePdfExporting || isDataExporting || isChartsExporting}
               >
-                Export
+                {tr('charts.export')}
               </Button>
               {isExportMenuOpen && (
                 <div className={styles.exportMenu}>
@@ -824,7 +793,7 @@ export default function WalletPage() {
                     disabled={isDataExporting}
                   >
                     <Download size={16} />
-                    {isDataExporting ? "Exporting data..." : "Export Data (.xlsx)"}
+                    {isDataExporting ? tr('walletPage.exportingData') : tr('walletPage.exportDataXlsx')}
                   </button>
                   <button
                     type="button"
@@ -833,7 +802,7 @@ export default function WalletPage() {
                     disabled={isChartsExporting}
                   >
                     <Download size={16} />
-                    {isChartsExporting ? "Exporting charts..." : "Export Charts (.zip images)"}
+                    {isChartsExporting ? tr('walletPage.exportingCharts') : tr('walletPage.exportChartsZip')}
                   </button>
                   <button
                     type="button"
@@ -842,22 +811,23 @@ export default function WalletPage() {
                     disabled={isPagePdfExporting}
                   >
                     <Download size={16} />
-                    {isPagePdfExporting ? "Exporting report..." : "Export Report (.pdf)"}
+                    {isPagePdfExporting ? tr('walletPage.exportingReport') : tr('walletPage.exportReportPdf')}
                   </button>
                 </div>
               )}
             </div>
           </div>
 
+
           <div className={styles.rightContent}>
-            {/* Balance / Token Balance / PnL Charts */}
+            <h1 className={styles.sectionTitle}>{tr("walletPage.activity")}</h1>
+            {/* Balance / PnL Charts */}
             <div className={styles.section}>
               <div className={styles.chartSection}>
                 <TabContainer
                   activeTab={mainActiveTab}
                   names={[
                     tr("walletPage.balanceHistory"),
-                    tr("walletPage.tokenBalanceHistory"),
                     tr("walletPage.profitLoss"),
                   ]}
                   tabs={[
@@ -867,20 +837,7 @@ export default function WalletPage() {
                         timePeriod: "7D",
                         wallets: [address],
                       }}
-                      balanceChartMode="total"
-                      autoRefresh={true}
-                    />,
-                    <BalanceChart
-                      minHeight={460}
-                      initialFilters={{
-                        timePeriod: "7D",
-                        wallets: [address],
-                        tokens: ["SOL"],
-                      }}
-                      balanceChartMode="token"
-                      enableTokenSelector={true}
                       tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
-                      allowMultiTokenSelection={true}
                       autoRefresh={true}
                     />,
                     <PnLChart
@@ -904,15 +861,14 @@ export default function WalletPage() {
                 <TabContainer
                   activeTab={secondaryActiveTab}
                   names={[
+                    tr("walletPage.swap"),
                     tr("walletPage.transfer"),
-                    tr("walletPage.inflow"),
-                    tr("walletPage.outflow"),
                     tr("walletPage.counterparties"),
                   ]}
                   tabs={[
                     <Table
                       maxHeight={400}
-                      title={"swap"}
+                      title={tr("walletPage.swap")}
                       headers={swapHeaders}
                       initialFilters={{}}
                       fetcher={Promise.resolve(swapData)}
@@ -930,6 +886,7 @@ export default function WalletPage() {
                       isSortable={isSortableSwaps}
                       sortConfigs={swapSortConfigs}
                       onRowClick={handleSwapRowClick}
+                      loading={swapLoading && loadedSwaps.length === 0}
                       serverPagination={{
                         enabled: true,
                         hasMore: swapHasMore,
@@ -939,10 +896,10 @@ export default function WalletPage() {
                     />,
                     <Table
                       maxHeight={400}
-                      title={tr("walletPage.inflow")}
+                      title={tr("walletPage.transfer")}
                       headers={transferHeaders}
                       initialFilters={{}}
-                      fetcher={Promise.resolve(inflowData)}
+                      fetcher={Promise.resolve(transferData)}
                       filterSchema={{
                         0: { type: FilterType.Select },
                         1: { type: FilterType.Select },
@@ -951,33 +908,10 @@ export default function WalletPage() {
                         4: { type: FilterType.Select },
                       }}
                       cellRenderers={transferCellRenderers}
-                      dataEntries={inflowData}
+                      dataEntries={transferData}
                       isSortable={isSortableTransfers}
                       sortConfigs={transferSortConfigs}
-                      serverPagination={{
-                        enabled: true,
-                        hasMore: transferHasMore,
-                        isLoading: transferLoading,
-                        onPageChange: handleTransferPageChange,
-                      }}
-                    />,
-                    <Table
-                      maxHeight={400}
-                      title={tr("walletPage.outflow")}
-                      headers={transferHeaders}
-                      initialFilters={{}}
-                      fetcher={Promise.resolve(outflowData)}
-                      filterSchema={{
-                        0: { type: FilterType.Select },
-                        1: { type: FilterType.Select },
-                        2: { type: FilterType.Select },
-                        3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                        4: { type: FilterType.Select },
-                      }}
-                      cellRenderers={transferCellRenderers}
-                      dataEntries={outflowData}
-                      isSortable={isSortableTransfers}
-                      sortConfigs={transferSortConfigs}
+                      loading={transferLoading && loadedTransfers.length === 0}
                       serverPagination={{
                         enabled: true,
                         hasMore: transferHasMore,
@@ -996,6 +930,7 @@ export default function WalletPage() {
                       dataEntries={counterpartyTableData}
                       isSortable={isSortableCounterparties}
                       sortConfigs={counterpartySortConfigs}
+                      loading={counterpartyLoading && counterpartyTableData.length === 0}
                     />,
                   ]}
                   onTabChange={(index) => setSecondaryActiveTab(index)}
@@ -1028,6 +963,7 @@ export default function WalletPage() {
                     dataEntries={portfolioData}
                     isSortable={isSortablePortfolio}
                     sortConfigs={portfolioSortConfig}
+                    loading={portfolioLoading && portfolioData.length === 0}
                   />
                 </div>
               </div>

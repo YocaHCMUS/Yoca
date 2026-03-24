@@ -1,4 +1,5 @@
 import * as cg from "@sv/util/util-coingecko.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import type { CG_TokenMarketChart } from "../_types/token_raw_responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
@@ -28,12 +29,16 @@ export async function getTokenHistoricalData(
     precision: "full",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-history.ts",
+    functionName: "getTokenHistoricalData",
   });
-
-  const resp = await fetch(req);
   if (!resp.ok) return null;
 
   const data: CG_TokenMarketChart = await resp.json();

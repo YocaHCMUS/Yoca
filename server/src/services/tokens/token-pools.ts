@@ -3,6 +3,7 @@ import {
   TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import {
   tokenPoolData,
   tokenTopPools,
@@ -33,12 +34,16 @@ async function fetchTokenTopPools(tokenAddress: string) {
     page: "1",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-pools.ts",
+    functionName: "fetchTokenTopPools",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     return [];
@@ -215,12 +220,16 @@ async function fetchPoolData(poolAddress: string) {
     include_composition: "true",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-pools.ts",
+    functionName: "fetchPoolData",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     return null;
