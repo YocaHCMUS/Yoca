@@ -170,7 +170,13 @@ const DEFAULT_CAPTURE_BLOCKING_SELECTORS = [
   '.cds--skeleton__text',
   '.cds--loading',
   '.cds--inline-loading',
-  '[aria-busy="true"]',
+];
+
+const EMPTY_STATE_TEXT_MARKERS = [
+  'no data available',
+  'there is no data to display',
+  'khong co du lieu',
+  'không có dữ liệu',
 ];
 
 type InlineStyleSnapshot = Partial<Record<'height' | 'maxHeight' | 'overflow' | 'overflowX' | 'overflowY' | 'width', string>>;
@@ -232,6 +238,11 @@ function hasCaptureBlockingElements(target: HTMLElement): boolean {
   });
 }
 
+function hasEmptyDataState(target: HTMLElement): boolean {
+  const textContent = (target.textContent || '').toLowerCase();
+  return EMPTY_STATE_TEXT_MARKERS.some((marker) => textContent.includes(marker));
+}
+
 async function waitForCaptureReadiness(target: HTMLElement, timeoutMs = 10000): Promise<void> {
   const startTime = Date.now();
 
@@ -239,7 +250,7 @@ async function waitForCaptureReadiness(target: HTMLElement, timeoutMs = 10000): 
     await waitForFontsReady();
     await waitForImagesInElement(target);
 
-    if (!hasCaptureBlockingElements(target)) {
+    if (!hasCaptureBlockingElements(target) || hasEmptyDataState(target)) {
       return;
     }
 
@@ -257,11 +268,41 @@ function applyCloneCaptureStyles(target: HTMLElement): void {
 
   const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
   for (const element of descendants) {
+    const hasVerticalOverflow = element.scrollHeight > element.clientHeight + 1;
+    const hasHorizontalOverflow = element.scrollWidth > element.clientWidth + 1;
+
+    if (hasVerticalOverflow || hasHorizontalOverflow) {
+      element.style.height = 'max-content';
+      element.style.width = `${Math.max(element.clientWidth, element.scrollWidth, 1)}px`;
+    }
+
     element.style.maxHeight = 'none';
     element.style.overflow = 'visible';
     element.style.overflowX = 'visible';
     element.style.overflowY = 'visible';
   }
+}
+
+function getMaxScrollableWidth(target: HTMLElement): number {
+  let maxWidth = Math.max(target.scrollWidth, target.clientWidth, target.offsetWidth, 1);
+
+  const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
+  for (const element of descendants) {
+    maxWidth = Math.max(maxWidth, element.scrollWidth, element.clientWidth, element.offsetWidth);
+  }
+
+  return maxWidth;
+}
+
+function getMaxScrollableHeight(target: HTMLElement): number {
+  let maxHeight = Math.max(target.scrollHeight, target.clientHeight, target.offsetHeight, 1);
+
+  const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
+  for (const element of descendants) {
+    maxHeight = Math.max(maxHeight, element.scrollHeight, element.clientHeight, element.offsetHeight);
+  }
+
+  return maxHeight;
 }
 
 function clampPdfPageSize(canvasWidth: number, canvasHeight: number, maxDimensionPx: number): {
@@ -324,8 +365,8 @@ export async function exportElementRefAsPdf(
     await waitForCaptureReadiness(element);
     await nextPaintFrame();
 
-    const captureWidth = Math.max(element.scrollWidth, element.clientWidth, element.offsetWidth, 1);
-    const captureHeight = Math.max(element.scrollHeight, element.clientHeight, element.offsetHeight, 1);
+    const captureWidth = getMaxScrollableWidth(element);
+    const captureHeight = getMaxScrollableHeight(element);
     const scale = options?.scale ?? Math.min(2, Math.max(1, window.devicePixelRatio || 1));
 
     const canvas = await html2canvas(element, {
@@ -342,6 +383,23 @@ export async function exportElementRefAsPdf(
       logging: false,
       foreignObjectRendering: false,
       onclone: (clonedDocument) => {
+        const clonedRoot = clonedDocument.documentElement;
+        const clonedBody = clonedDocument.body;
+
+        clonedRoot.style.height = 'max-content';
+        clonedRoot.style.maxHeight = 'none';
+        clonedRoot.style.overflow = 'visible';
+        clonedRoot.style.overflowX = 'visible';
+        clonedRoot.style.overflowY = 'visible';
+
+        if (clonedBody) {
+          clonedBody.style.height = 'max-content';
+          clonedBody.style.maxHeight = 'none';
+          clonedBody.style.overflow = 'visible';
+          clonedBody.style.overflowX = 'visible';
+          clonedBody.style.overflowY = 'visible';
+        }
+
         const clonedTarget = clonedDocument.querySelector(`[data-pdf-export-target="${exportMarker}"]`) as HTMLElement | null;
         if (clonedTarget) {
           applyCloneCaptureStyles(clonedTarget);
@@ -392,9 +450,12 @@ export async function exportCurrentPageAsPdf(options?: {
   title?: string;
   baseFilename?: string;
   filename?: string;
+  targetRef?: RefObject<HTMLElement | null>;
 }): Promise<void> {
-  const rootRef: RefObject<HTMLElement | null> = { current: document.body as HTMLElement };
-  await exportElementRefAsPdf(rootRef, {
+  const fallbackRef: RefObject<HTMLElement | null> = { current: document.body as HTMLElement };
+  const targetRef = options?.targetRef ?? fallbackRef;
+
+  await exportElementRefAsPdf(targetRef, {
     filename: options?.filename,
     baseFilename: options?.baseFilename || 'page-export',
   });

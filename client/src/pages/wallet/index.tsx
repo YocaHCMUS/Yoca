@@ -87,6 +87,7 @@ export default function WalletPage() {
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Resizable divider
   const [leftWidth, setLeftWidth] = useState(420);
@@ -478,8 +479,6 @@ export default function WalletPage() {
     4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 },
   };
 
-  const isWalletContentLoading = portfolioLoading || swapLoading || transferLoading || counterpartyLoading;
-
   const handleSwapPageChange = async (targetPage: number): Promise<boolean> => {
     void targetPage;
 
@@ -637,7 +636,7 @@ export default function WalletPage() {
   }
 
   async function handleExportPagePdf() {
-    if (isPagePdfExporting || isWalletContentLoading) return;
+    if (isPagePdfExporting) return;
 
     setIsPagePdfExporting(true);
     setIsExportMenuOpen(false);
@@ -648,10 +647,11 @@ export default function WalletPage() {
 
       await exportCurrentPageAsPdf({
         baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
+        targetRef: pdfExportContainerRef,
       });
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
-      window.alert(tr('walletPage.exportPdfFailed'));
+      // Remove alert to let user see partial output
     } finally {
       setIsPagePdfExporting(false);
     }
@@ -754,6 +754,7 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <div
+        ref={pdfExportContainerRef}
         className={styles.walletGrid}
         style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
       >
@@ -807,7 +808,7 @@ export default function WalletPage() {
                     type="button"
                     className={styles.exportMenuItem}
                     onClick={handleExportPagePdf}
-                    disabled={isPagePdfExporting || isWalletContentLoading}
+                    disabled={isPagePdfExporting}
                   >
                     <Download size={16} />
                     {isPagePdfExporting ? tr('walletPage.exportingReport') : tr('walletPage.exportReportPdf')}
