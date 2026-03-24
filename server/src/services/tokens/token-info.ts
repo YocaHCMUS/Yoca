@@ -146,6 +146,18 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
   const detailedInfoValues = details.map((detail) => detail.detailedInfo);
   const marketDataValues = details.map((detail) => detail.market);
 
+  if (
+    metaValues.length == 0
+    || detailedInfoValues.length == 0
+    || marketDataValues.length == 0
+  ) {
+    return {
+      meta: [],
+      details: [],
+      market: [],
+    };
+  }
+
   return {
     meta: await db
       .insert(tokenMeta)
@@ -194,6 +206,10 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
   const addressToCgId = await getCoinGeckoIdsByAddresses(tokenAddresses);
   const cgIds = Object.values(addressToCgId);
 
+  if (cgIds.length == 0) {
+    return [];
+  }
+
   const res = await fetchCgMarketDataBatched(cgIds);
 
   const cgIdToAddress = Object.fromEntries(
@@ -210,6 +226,10 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
         imageUrl: raw.image,
       }),
     );
+
+  if (metaValues.length == 0) {
+    return [];
+  }
 
   return db
     .insert(tokenMeta)
@@ -327,6 +347,10 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
   }
 
   const refreshed = await fetchHolderStats(staleAddresses);
+
+  if (refreshed.length == 0) {
+    return res;
+  }
 
   const persisted = await db
     .insert(tokenHolderStats)

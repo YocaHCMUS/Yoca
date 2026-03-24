@@ -478,6 +478,8 @@ export default function WalletPage() {
     4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 },
   };
 
+  const isWalletContentLoading = portfolioLoading || swapLoading || transferLoading || counterpartyLoading;
+
   const handleSwapPageChange = async (targetPage: number): Promise<boolean> => {
     void targetPage;
 
@@ -635,12 +637,16 @@ export default function WalletPage() {
   }
 
   async function handleExportPagePdf() {
-    if (isPagePdfExporting) return;
+    if (isPagePdfExporting || isWalletContentLoading) return;
 
     setIsPagePdfExporting(true);
+    setIsExportMenuOpen(false);
     try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
       await exportCurrentPageAsPdf({
-        title: `${tr("walletPage.activity")} ${address}`,
         baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
       });
     } catch (error) {
@@ -801,7 +807,7 @@ export default function WalletPage() {
                     type="button"
                     className={styles.exportMenuItem}
                     onClick={handleExportPagePdf}
-                    disabled={isPagePdfExporting}
+                    disabled={isPagePdfExporting || isWalletContentLoading}
                   >
                     <Download size={16} />
                     {isPagePdfExporting ? tr('walletPage.exportingReport') : tr('walletPage.exportReportPdf')}
