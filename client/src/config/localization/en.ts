@@ -244,7 +244,9 @@ export const translation = {
   marketPage: {
     topTokens: "Top tokens",
     topTokensDescription: "Top 50 tokens by market cap",
+    tokenPerformanceTitle: "Token Performance",
     trendingTokens: "Trending tokens",
+    trending: "Trending",
     trendingTokensDescription: "Top 10 trending tokens",
     profitableTraders: "Profitable traders",
     profitableTradersDescription: "Top 20 traders by market cap",
@@ -281,6 +283,23 @@ export const translation = {
     watchlistEmptyTitle: "Your Watchlist is Empty",
     watchlistEmptySubtitle:
       "Start starring tokens in the 'All' tab to track them here!",
+    all: "All",
+    watchlist: "Watchlist",
+    allTokensTitle: "Cryptocurrency Prices by Market Cap",
+    allTokensSubtitle:
+      "The global cryptocurrency market continues to evolve with significant activity across key assets. Below is an overview of the top tokens by market capitalization and their recent performance.",
+    watchlistTitle: "Your Watchlist",
+    watchlistSubtitle:
+      "Track your favorite tokens and monitor their performance in one place.",
+    tradesTitle: "Market Activity & Highlights",
+    tradesSubtitle:
+      "Discover top performing traders and the latest significant swaps across decentralized exchanges.",
+    filterAll: "All",
+    filterGreaterThan: ">${{val}}",
+    selectToken: "Select a token to view details",
+    allTimeHigh: "All-Time High",
+    allTimeLow: "All-Time Low",
+    na: "N/A",
   },
   // Wallet Comparison Page
   walletComparison: {

@@ -50,9 +50,9 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    fullyDilutedValuation: raw.fully_diluted_valuation!,
-    marketCap: raw.market_cap!,
-    priceUsd: raw.current_price!,
+    fullyDilutedValuation: raw.fully_diluted_valuation ?? 0,
+    marketCap: raw.market_cap ?? 0,
+    priceUsd: raw.current_price ?? 0,
     totalSupply: raw.total_supply,
     updatedAt: new Date(),
     marketCapRank: raw.market_cap_rank,
@@ -76,8 +76,8 @@ export function getMarketDataFromRaw(
     atl: raw.atl,
     atlChangePercentage: raw.atl_change_percentage,
     atlDate: raw.atl_date ? new Date(raw.atl_date) : null,
-    volume24h: raw.total_volume!,
-    sparkline7d: raw.sparkline_in_7d.price,
+    volume24h: raw.total_volume ?? 0,
+    sparkline7d: raw.sparkline_in_7d?.price ?? [],
   };
 }
 

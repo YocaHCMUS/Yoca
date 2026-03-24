@@ -13,8 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@carbon/react";
+import { type InferResponseType } from "hono/client";
 import { Link } from "react-router";
 import styles from "./TokenMarketsTable.module.scss";
+
+const $getPools = client.api.tokens[":address"].pools.$get;
+type PoolResponse = InferResponseType<typeof $getPools, 200>;
 
 interface TokenMarketsTableProps {
   address: string;
@@ -22,6 +26,9 @@ interface TokenMarketsTableProps {
 }
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
+  const { tr, fmt } = useLocalization();
+  const [pools, setPools] = useState<PoolResponse>([]);
+  const [loading, setLoading] = useState(true);
   const { tr, fmt } = useLocalization();
 
   const HEADERS = [

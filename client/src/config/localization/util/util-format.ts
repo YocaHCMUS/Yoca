@@ -108,6 +108,10 @@ export function defineNumberFormat(
       decimals = strategy.decimalResolution.resolvePercent(exchangedValue);
     }
 
+    if (notation === "compact" && Math.abs(exchangedValue) >= 1000) {
+      decimals = Math.min(decimals, 2);
+    }
+
     const key = `${effectiveStyle}|${notation}|${decimals}`;
     const styleOptions = buildIntlOptions(effectiveStyle, decimals);
 
