@@ -7,6 +7,7 @@ import {
 } from "@sv/db/schema.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as sim from "@sv/util/util-sim.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { eq } from "drizzle-orm";
 
 interface SIM_Balance {
@@ -33,12 +34,16 @@ async function fetchWalletBalances(walletAddress: string) {
     chains: "solana",
   }).toString();
 
-  const req = new Request(simEndpoint, {
-    method: "GET",
-    headers: sim.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: simEndpoint,
+    init: {
+      method: "GET",
+      headers: sim.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/balances.ts",
+    functionName: "fetchWalletBalances",
   });
-
-  const resp = await fetch(req);
 
   if (resp.ok) {
     const data: SIM_BalancesResponse = await resp.json();

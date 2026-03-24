@@ -1,4 +1,5 @@
 import * as cg from "@sv/util/util-coingecko.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { Hono } from "hono";
 
 type ExchangeRateEntry = {
@@ -25,12 +26,16 @@ const app = new Hono().get("/exchange-rates", async (c) => {
 
   try {
     const endpoint = cg.getEndpoint("/exchange_rates");
-    const req = new Request(endpoint, {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
+    const resp = await trackedFetch({
+      provider: "unknown",
+      url: endpoint,
+      init: {
+        method: "GET",
+        headers: cg.getRequiredHeaders(),
+      },
+      serviceFile: "server/src/routes/misc.ts",
+      functionName: "GET /exchange-rates",
     });
-
-    const resp = await fetch(req);
     if (!resp.ok) {
       if (cachedRates) return c.json(cachedRates); // serve stale on error
       return c.json({ error: "Failed to fetch exchange rates" }, 502);

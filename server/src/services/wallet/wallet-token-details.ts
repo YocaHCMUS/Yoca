@@ -4,6 +4,7 @@ import {
   walletTokenDetails,
   type WalletTokenDetailsInsert,
 } from "@sv/db/schema";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql";
 import * as bds from "@sv/util/util-birdeye";
 import { eq } from "drizzle-orm";
@@ -28,18 +29,25 @@ export async function getTokenDetails(wallet: string) {
   }
 
   const bdsEnpoint = bds.getEndpoint("/wallet/v2/pnl/details");
-  const req = new Request(bdsEnpoint, {
-    method: "POST",
-    headers: bds.getRequiredHeaders(),
-    body: JSON.stringify({
-      duration: "all",
-      sort_type: "desc",
-      sort_by: "last_trade",
-      limit: 100,
-      wallet,
-    }),
+  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
+  const resp = await trackedFetch({
+    provider: "birdeye",
+    url: bdsEnpoint,
+    init: {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        duration: "all",
+        sort_type: "desc",
+        sort_by: "last_trade",
+        limit: 100,
+        wallet,
+      }),
+    },
+    apiKey,
+    serviceFile: "server/src/services/wallet/wallet-token-details.ts",
+    functionName: "getTokenDetails",
   });
-  const resp = await fetch(req);
   if (!resp.ok) {
     return null;
   }

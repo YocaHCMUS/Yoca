@@ -5,6 +5,9 @@
  * to distribute load and handle rate limiting across multiple keys.
  */
 
+import { createHash } from "node:crypto";
+import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+
 export interface ApiKeyConfig {
   keys: string[];
   currentIndex: number;
@@ -23,7 +26,7 @@ class ApiKeyManager {
     if (!envValue) {
       return [];
     }
-    
+
     return envValue
       .split(',')
       .map(key => key.trim())
@@ -37,7 +40,7 @@ class ApiKeyManager {
    */
   public initializeKeys(serviceName: string, envValue: string | undefined): void {
     const keys = this.parseKeys(envValue);
-    
+
     if (keys.length === 0) {
       console.warn(`No API keys found for ${serviceName}`);
       return;
@@ -59,7 +62,7 @@ class ApiKeyManager {
    */
   public getNextKey(serviceName: string): string | null {
     const config = this.keyConfigs.get(serviceName);
-    
+
     if (!config || config.keys.length === 0) {
       console.error(`No API keys configured for ${serviceName}`);
       return null;
@@ -67,10 +70,10 @@ class ApiKeyManager {
 
     const key = config.keys[config.currentIndex];
     config.lastUsedTimestamp.set(key, Date.now());
-    
+
     // Move to next key for round-robin
     config.currentIndex = (config.currentIndex + 1) % config.keys.length;
-    
+
     return key;
   }
 
@@ -82,7 +85,7 @@ class ApiKeyManager {
    */
   public getKeyByIndex(serviceName: string, index: number): string | null {
     const config = this.keyConfigs.get(serviceName);
-    
+
     if (!config || config.keys.length === 0) {
       return null;
     }
@@ -94,7 +97,7 @@ class ApiKeyManager {
     const key = config.keys[index];
     // Track usage time
     config.lastUsedTimestamp.set(key, Date.now());
-    
+
     return key;
   }
 
@@ -115,7 +118,7 @@ class ApiKeyManager {
    */
   public getLeastRecentlyUsedKey(serviceName: string): string | null {
     const config = this.keyConfigs.get(serviceName);
-    
+
     if (!config || config.keys.length === 0) {
       return null;
     }
@@ -154,6 +157,33 @@ class ApiKeyManager {
     // Future implementation: Track failed keys and implement health checking
     console.warn(`API key failed for ${serviceName}: ${key.substring(0, 8)}...`);
   }
+}
+
+function maskApiKey(key: string): string {
+  if (key.length <= 8) {
+    return `${key.slice(0, 2)}***${key.slice(-2)}`;
+  }
+
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+function fingerprintApiKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, 16);
+}
+
+export function buildApiKeyMetadata(
+  key: string | null,
+  source: string,
+): ApiKeyMetadata | null {
+  if (!key) {
+    return null;
+  }
+
+  return {
+    source,
+    masked: maskApiKey(key),
+    fingerprint: fingerprintApiKey(key),
+  };
 }
 
 // Export singleton instance

@@ -1,6 +1,7 @@
 import { RECENT_TRADES_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { recentTrades, type RecentTradeInsert } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { and, desc, gte } from "drizzle-orm";
 import type { BDS_RecentTrades } from "./_types/token_raw_responses.js";
@@ -22,12 +23,18 @@ async function fetchRecentTrades() {
     tx_type: "swap",
   }).toString();
 
-  const req = new Request(bdsEndpoint, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
+  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
+  const resp = await trackedFetch({
+    provider: "birdeye",
+    url: bdsEndpoint,
+    init: {
+      method: "GET",
+      headers,
+    },
+    apiKey,
+    serviceFile: "server/src/services/trades.ts",
+    functionName: "fetchRecentTrades",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     return [];

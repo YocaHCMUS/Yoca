@@ -1,6 +1,7 @@
 import { POOL_TRADES_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { poolTrades24h, type PoolTrade24hInsert } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, desc, eq, gte } from "drizzle-orm";
 import type { CG_24hPoolTrades } from "../_types/token_raw_responses.js";
@@ -16,12 +17,16 @@ async function fetchPoolTrades(
     token: "base",
   }).toString();
 
-  const req = new Request(cgEndpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
+  const resp = await trackedFetch({
+    provider: "unknown",
+    url: cgEndpoint,
+    init: {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+    },
+    serviceFile: "server/src/services/tokens/token-trades.ts",
+    functionName: "fetchPoolTrades",
   });
-
-  const resp = await fetch(req);
 
   if (!resp.ok) {
     return [];

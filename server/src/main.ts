@@ -17,10 +17,12 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
 
 // intialize OpenAPIHono with default error handling
 const app = new Hono()
   .use("*", logger())
+  .use("*", requestContextMiddleware)
   .use(
     "/api/*",
     cors({ origin: clientDomains, credentials: true }),

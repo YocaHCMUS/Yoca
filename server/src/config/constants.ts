@@ -42,3 +42,56 @@ export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function readBooleanEnv(name: string, fallback: boolean): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value == null || value.length === 0) {
+    return fallback;
+  }
+
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function readNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function readListEnv(name: string): string[] {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return [];
+  }
+
+  return raw
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter((v) => v.length > 0);
+}
+
+export const API_CALL_TRACKER_ENABLED = readBooleanEnv(
+  "API_CALL_TRACKER_ENABLED",
+  false,
+);
+export const API_CALL_TRACKER_EXPORT_DIR =
+  process.env.API_CALL_TRACKER_EXPORT_DIR?.trim() || "server/src/logs/api-tracker";
+export const API_CALL_TRACKER_MAX_RESPONSE_BYTES = readNumberEnv(
+  "API_CALL_TRACKER_MAX_RESPONSE_BYTES",
+  2_000_000,
+);
+const apiCallTrackerRedactFields = readListEnv("API_CALL_TRACKER_REDACT_FIELDS");
+export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
+  ? apiCallTrackerRedactFields
+  : ["apikey", "api_key", "authorization", "token", "password", "secret", "signature"];
+export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
+  "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
+);

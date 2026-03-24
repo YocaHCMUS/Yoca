@@ -5,6 +5,7 @@ import {
   UPDATE_TRENDING_TOKENS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { trendingTokens } from "@sv/db/schema.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { asc } from "drizzle-orm";
@@ -25,12 +26,18 @@ async function fetchTrendingPage(params: {
     limit: String(params.limit),
   }).toString();
 
-  const req = new Request(bdsEndpoint, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
+  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
+  const resp = await trackedFetch({
+    provider: "birdeye",
+    url: bdsEndpoint,
+    init: {
+      method: "GET",
+      headers,
+    },
+    apiKey,
+    serviceFile: "server/src/services/tokens/token-trending.ts",
+    functionName: "fetchTrendingPage",
   });
-
-  const resp = await fetch(req);
   if (!resp.ok) {
     return null;
   }

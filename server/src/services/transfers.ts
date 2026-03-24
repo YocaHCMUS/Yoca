@@ -1,4 +1,5 @@
 import { type TokenTransferInsert } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import * as bitquery from "@sv/util/util-bitquery.js";
 
 interface BQ_Transfer {
@@ -74,16 +75,21 @@ async function fetchLatestTransfers(limit: number, offset: number) {
     }
   `;
 
-  const req = new Request(bitquery.getStreamingEndpoint(), {
-    method: "POST",
-    headers: bitquery.getRequiredHeaders(),
-    body: JSON.stringify({
-      query,
-      variables: { limit, offset },
-    }),
+  const resp = await trackedFetch({
+    provider: "bitquery",
+    url: bitquery.getStreamingEndpoint(),
+    init: {
+      method: "POST",
+      headers: bitquery.getRequiredHeaders(),
+      body: JSON.stringify({
+        query,
+        variables: { limit, offset },
+      }),
+    },
+    apiKey: bitquery.getBitqueryApiKeyMetadata(),
+    serviceFile: "server/src/services/transfers.ts",
+    functionName: "fetchLatestTransfers",
   });
-
-  const resp = await fetch(req);
 
   if (resp.ok) {
     const res: BQ_TransfersResponse = await resp.json();
