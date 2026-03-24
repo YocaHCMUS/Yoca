@@ -14,7 +14,6 @@ import {
   HeaderNavigation,
   HeaderPanel,
   HeaderSideNavItems,
-  Heading,
   SideNav,
   SideNavItems,
   Stack,
@@ -48,24 +47,46 @@ function ThemeToggleGlobalAction() {
   );
 }
 
+type PageWrapperProps = {
+  children: ReactNode;
+  noTopPadding?: boolean;
+  headerPanelExtension?: {
+    content: ReactNode;
+    onClose: () => void;
+  };
+  onHeaderPanelOpenChange?: (isOpen: boolean) => void;
+};
+
 export function PageWrapper({
   children,
   noTopPadding = false,
-}: {
-  children: ReactNode;
-  noTopPadding?: boolean;
-}) {
+  headerPanelExtension,
+  onHeaderPanelOpenChange,
+}: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
   const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
+  const [isHeaderPanelOpen, setIsHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Open header panel when extension is provided
+  useEffect(() => {
+    if (headerPanelExtension) {
+      setIsHeaderPanelOpen(true);
+    }
+  }, [headerPanelExtension]);
+
+  // Notify parent when header panel opens/closes
+  useEffect(() => {
+    onHeaderPanelOpenChange?.(isHeaderPanelOpen);
+  }, [isHeaderPanelOpen, onHeaderPanelOpenChange]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key == "k") {
         e.preventDefault();
         setIsSearchOpen(true);
       }
@@ -79,6 +100,11 @@ export function PageWrapper({
   };
 
   const togglePanel = (panel: "lang" | "account") => {
+    // Close header panel extension if it's open
+    if (isHeaderPanelOpen) {
+      setIsHeaderPanelOpen(false);
+      headerPanelExtension?.onClose();
+    }
     setOpenPanel((prev) => (prev == panel ? null : panel));
   };
 
@@ -103,7 +129,8 @@ export function PageWrapper({
         />
 
         <HeaderName href="#" prefix="">
-          <Stack gap={3}
+          <Stack
+            gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
           >
@@ -153,6 +180,7 @@ export function PageWrapper({
         <HeaderPanel
           className={styles.headerPanel}
           expanded={openPanel == "lang"}
+          onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher
             aria-label="Language Switcher"
@@ -197,6 +225,7 @@ export function PageWrapper({
         <HeaderPanel
           className={styles.headerPanel}
           expanded={openPanel == "account"}
+          onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher aria-label="Account" expanded={openPanel == "account"}>
             <SwitcherItem aria-labelledby="account-id" isSelected={false}>
@@ -232,6 +261,19 @@ export function PageWrapper({
             </SwitcherItem>
           </Switcher>
         </HeaderPanel>
+
+        {headerPanelExtension && (
+          <HeaderPanel
+            className={styles.headerPanel}
+            expanded={isHeaderPanelOpen}
+            onHeaderPanelFocus={() => {
+              setIsHeaderPanelOpen(false);
+              headerPanelExtension.onClose();
+            }}
+          >
+            {headerPanelExtension.content}
+          </HeaderPanel>
+        )}
 
         <SideNav
           aria-label="Side navigation"

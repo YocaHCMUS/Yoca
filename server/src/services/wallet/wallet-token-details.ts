@@ -41,6 +41,7 @@ export async function getTokenDetails(wallet: string) {
   });
   const resp = await fetch(req);
   if (!resp.ok) {
+    console.log(await resp.json());
     return null;
   }
 

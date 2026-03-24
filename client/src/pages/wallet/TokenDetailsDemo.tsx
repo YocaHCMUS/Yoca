@@ -8,13 +8,20 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { IconButton, Link, Stack, Tooltip } from "@carbon/react";
 import { ChartAverage } from "@carbon/react/icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 export function TokenDetailsDemo() {
   const { address } = useParams<{
     address: string;
   }>();
+
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    avgBuyCost: number;
+    avgSellCost: number;
+  } | null>(null);
 
   if (!address) {
     return <></>;
@@ -194,6 +201,16 @@ export function TokenDetailsDemo() {
           kind="ghost"
           label="Average trading price"
           align="bottom-right"
+          onClick={() =>
+            setSelectedToken({
+              address: details.tokenAddress,
+              symbol:
+                tokenMeta.data?.[details.tokenAddress]?.symbol.toUpperCase() ??
+                "Unknown",
+              avgBuyCost: details.avgBuyCost,
+              avgSellCost: details.avgSellCost,
+            })
+          }
         >
           <ChartAverage />
         </IconButton>
@@ -207,7 +224,42 @@ export function TokenDetailsDemo() {
   ]);
 
   return (
-    <PageWrapper>
+    <PageWrapper
+      headerPanelExtension={
+        selectedToken
+          ? {
+              content: (
+                <Stack gap={4} style={{ padding: "1rem" }}>
+                  <div>
+                    <h4>{selectedToken.symbol}</h4>
+                    <small>Average Trading Price</small>
+                  </div>
+                  <Stack gap={2}>
+                    <div>
+                      <p style={{ margin: 0, color: "var(--cds-text-02)" }}>
+                        Average Buy Price
+                      </p>
+                      <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.2rem" }}>
+                        {fmt.num.currency(selectedToken.avgBuyCost)}
+                      </p>
+                    </div>
+                    <div>
+                      x``
+                      <p style={{ margin: 0, color: "var(--cds-text-02)" }}>
+                        Average Sell Price
+                      </p>
+                      <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.2rem" }}>
+                        {fmt.num.currency(selectedToken.avgSellCost)}
+                      </p>
+                    </div>
+                  </Stack>
+                </Stack>
+              ),
+              onClose: () => setSelectedToken(null),
+            }
+          : undefined
+      }
+    >
       <Tble
         loading={walletTokenDetails.isLoading}
         title={"Tokens Last Traded"}

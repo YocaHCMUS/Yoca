@@ -1,4 +1,5 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./App.css";
 import App from "./App.tsx";
@@ -20,22 +21,22 @@ function ModalRoot() {
 
 function Root() {
   return (
-    // <StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <SolanaProvider>
-            <LocalizationProvider>
-              <ChartProvider>
-                <App />
-              </ChartProvider>
-            </LocalizationProvider>
-          </SolanaProvider>
-        </GoogleOAuthProvider>
-        <ModalRoot />
-      </AuthProvider>
-    </ThemeProvider>
-    // </StrictMode>
+    <StrictMode>
+      <ThemeProvider>
+        <AuthProvider>
+          <GoogleOAuthProvider clientId={googleClientId}>
+            <SolanaProvider>
+              <LocalizationProvider>
+                <ChartProvider>
+                  <App />
+                </ChartProvider>
+              </LocalizationProvider>
+            </SolanaProvider>
+          </GoogleOAuthProvider>
+          <ModalRoot />
+        </AuthProvider>
+      </ThemeProvider>
+    </StrictMode>
   );
 }
 
