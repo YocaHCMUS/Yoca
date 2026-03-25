@@ -2,6 +2,7 @@ import { setErr } from "@sv/config/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import type { ValidationTargets } from "hono";
 import { validator } from "hono/validator";
+import { console } from "inspector";
 import z from "zod";
 
 export const solanaBase58Schema = z
@@ -94,4 +95,24 @@ export function validate<
     }
     return parsed.data;
   });
+}
+
+export async function getApiResult<T extends z.ZodType>(
+  schema: T,
+  resp: Response,
+) {
+  try {
+    const rawRes = await resp.json();
+    const parseRes = schema.safeParse(rawRes);
+    if (!parseRes.success) {
+      console.log("Unexpected Response:");
+      console.log("Zod Errors:", parseRes.error);
+      console.log("Actual reponse:", rawRes);
+      return;
+    }
+    return parseRes.data;
+  } catch (err) {
+    console.log(err);
+    return undefined;
+  }
 }

@@ -108,8 +108,8 @@ export default function MarketPage() {
     trendingMeta.isLoading ||
     trendingMarketData.isLoading;
 
-  const topTraders = useGet(client.api.traders.top, 200);
-  const topLosers = useGet(client.api.traders.losers, 200);
+  const topTraders = useGet(client.api.trades.traders.gainers, 200);
+  const topLosers = useGet(client.api.trades.traders.losers, 200);
 
   const tradersLoading = topTraders.isLoading || topLosers.isLoading;
 

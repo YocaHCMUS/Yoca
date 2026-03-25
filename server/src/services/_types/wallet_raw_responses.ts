@@ -15,7 +15,7 @@ export const BDS_WalletFirstFundSchema = z.object({
   ),
 });
 
-export const BDS_WalletTokenDetailsSchema = z.object({
+export const bds_WalletTokenDetailsSchema = z.object({
   data: z.object({
     meta: z.object({
       address: z.string(),
@@ -89,5 +89,5 @@ export const BDS_WalletTokenDetailsSchema = z.object({
 
 export type BDS_WalletFirstFund = z.infer<typeof BDS_WalletFirstFundSchema>;
 export type BDS_WalletTokenDetails = z.infer<
-  typeof BDS_WalletTokenDetailsSchema
+  typeof bds_WalletTokenDetailsSchema
 >;

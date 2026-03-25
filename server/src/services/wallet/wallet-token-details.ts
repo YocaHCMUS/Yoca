@@ -7,7 +7,7 @@ import {
 import { excludedAutoFromInsert } from "@sv/util/orm-sql";
 import * as bds from "@sv/util/util-birdeye";
 import { eq } from "drizzle-orm";
-import { BDS_WalletTokenDetailsSchema } from "../_types/wallet_raw_responses";
+import { bds_WalletTokenDetailsSchema } from "../_types/wallet_raw_responses";
 
 export async function getTokenDetails(wallet: string) {
   const dbRes = await db
@@ -46,7 +46,7 @@ export async function getTokenDetails(wallet: string) {
   }
 
   const json = await resp.json();
-  const res = BDS_WalletTokenDetailsSchema.parse(json);
+  const res = bds_WalletTokenDetailsSchema.parse(json);
 
   const tokenDetails = res.data.tokens.map(
     (tokenDetail): WalletTokenDetailsInsert => ({
