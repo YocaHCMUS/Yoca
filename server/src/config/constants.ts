@@ -95,3 +95,7 @@ export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
+
+// ACMS / Wallet feature flags
+export const WALLET_USE_ACMS = readBooleanEnv("WALLET_USE_ACMS", false);
+

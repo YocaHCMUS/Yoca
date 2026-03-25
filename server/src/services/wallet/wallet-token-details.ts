@@ -7,6 +7,7 @@ import {
 import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql";
 import * as bds from "@sv/util/util-birdeye";
+import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter";
 import { eq } from "drizzle-orm";
 import { BDS_WalletTokenDetailsSchema } from "../_types/wallet_raw_responses";
 
@@ -30,33 +31,38 @@ export async function getTokenDetails(wallet: string) {
 
   const bdsEnpoint = bds.getEndpoint("/wallet/v2/pnl/details");
   const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
-  const resp = await trackedFetch({
-    provider: "birdeye",
-    url: bdsEnpoint,
-    init: {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        duration: "all",
-        sort_type: "desc",
-        sort_by: "last_trade",
-        limit: 100,
-        wallet,
-      }),
-    },
-    apiKey,
-    serviceFile: "server/src/services/wallet/wallet-token-details.ts",
-    functionName: "getTokenDetails",
+
+  const fetcher = async () => {
+    const resp = await trackedFetch({
+      provider: "birdeye",
+      url: bdsEnpoint,
+      init: {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          duration: "all",
+          sort_type: "desc",
+          sort_by: "last_trade",
+          limit: 100,
+          wallet,
+        }),
+      },
+      apiKey,
+      serviceFile: "server/src/services/wallet/wallet-token-details.ts",
+      functionName: "getTokenDetails",
+    });
+    if (!resp.ok) {
+      throw new Error(`Birdeye fetch failed: ${resp.status}`);
+    }
+    return resp.json();
+  };
+
+  const res: any = await callBirdeye<any>(bdsEnpoint, { wallet }, fetcher, {
+    responseSchema: BDS_WalletTokenDetailsSchema,
   });
-  if (!resp.ok) {
-    return null;
-  }
 
-  const json = await resp.json();
-  const res = BDS_WalletTokenDetailsSchema.parse(json);
-
-  const tokenDetails = res.data.tokens.map(
-    (tokenDetail): WalletTokenDetailsInsert => ({
+  const tokenDetails = (res?.data?.tokens ?? []).map(
+    (tokenDetail: any): WalletTokenDetailsInsert => ({
       symbol: tokenDetail.symbol,
       address: tokenDetail.address,
       tokenAddress: tokenDetail.address,
