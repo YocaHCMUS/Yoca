@@ -70,6 +70,10 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const WALLET_TAG_PREFIX = 'WALLET::';
 const MAX_TOKENS_PER_REQUEST = 10;
 
+function getWindowDaysFromTimePeriod(timePeriod?: string): 7 | 30 {
+    return timePeriod?.toUpperCase() === '7D' ? 7 : 30;
+}
+
 const balanceQueryResponseCache = new Map<string, BalanceTrendData>();
 const balanceQueryInFlightCache = new Map<string, Promise<BalanceTrendData>>();
 
@@ -316,9 +320,9 @@ export function BalanceChart({
     const [selectedTags, setSelectedTags] = useState<string[]>([ALL_TAG]);
     const [tokenSelectionOrder, setTokenSelectionOrder] = useState<string[]>([]);
     const [prefetchedTokenSeriesBySymbol, setPrefetchedTokenSeriesBySymbol] = useState<Record<string, BalanceSeries>>({});
-    const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(30);
+    const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() => getWindowDaysFromTimePeriod(initialFilters.timePeriod));
 
-    const { filters, walletsString } = useChartFiltersSync({
+    const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
         initialFilters,
         debounceDelay: 300,
         syncTokensFromInitialFilters: false,
@@ -339,6 +343,10 @@ export function BalanceChart({
         });
         setTokenSelectionOrder([]);
     }, [isMultiWallet]);
+
+    useEffect(() => {
+        setChartWindowDays(getWindowDaysFromTimePeriod(filters.timePeriod));
+    }, [filters.timePeriod]);
 
     const generalQuery = useMemo<BalanceRequestParams>(
         () => ({
@@ -958,7 +966,10 @@ export function BalanceChart({
                         <button
                             type="button"
                             className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
-                            onClick={() => setChartWindowDays(7)}
+                            onClick={() => {
+                                setChartWindowDays(7);
+                                setTimePeriod('7D');
+                            }}
                             aria-pressed={chartWindowDays === 7}
                         >
                             {tr('charts.balanceChart.window7d')}
@@ -966,7 +977,10 @@ export function BalanceChart({
                         <button
                             type="button"
                             className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
-                            onClick={() => setChartWindowDays(30)}
+                            onClick={() => {
+                                setChartWindowDays(30);
+                                setTimePeriod('30D');
+                            }}
                             aria-pressed={chartWindowDays === 30}
                         >
                             {tr('charts.balanceChart.window30d')}
