@@ -1,3 +1,16 @@
+// --- ACMS API call cache table ---
+export const acmsApiCache = pgTable(
+  'acms_api_cache',
+  {
+    key: varchar('key', { length: 128 }).primaryKey(),
+    provider: varchar('provider', { length: 32 }).notNull(),
+    endpoint: varchar('endpoint', { length: 128 }).notNull(),
+    params: jsonb('params').notNull(),
+    result: jsonb('result').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+  }
+);
 import { sql } from "drizzle-orm";
 import {
   bigint,
