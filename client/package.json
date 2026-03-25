@@ -8,6 +8,7 @@
     "build": "npm run clean && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "clear": "rimraf ./node_modules && npm run clean",

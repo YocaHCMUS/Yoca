@@ -27,7 +27,7 @@ async function fetchPoolTrades(
     return [];
   }
 
-  const res: CG_24hPoolTrades = await resp.json();
+  const res = (await resp.json()) as CG_24hPoolTrades;
   const trades = res.data.map(
     (raw): PoolTrade24hInsert => ({
       id: raw.id,

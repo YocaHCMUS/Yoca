@@ -1,13 +1,13 @@
 /**
  * Common Chart Props
- * 
+ *
  * Standardized prop interface for all chart components.
  * Ensures consistency across chart implementations.
- * 
+ *
  * @module components/charts/shared/ChartProp
  */
 
-import type { ChartFilters } from '@/types/chart-filters.types';
+import type { ChartFilters } from "@/types/chart-filters.types";
 
 /**
  * Base props shared by all chart components
@@ -32,7 +32,7 @@ export interface ChartProps {
   allowMultiTokenSelection?: boolean;
 
   /** Force BalanceChart render/query mode */
-  balanceChartMode?: 'auto' | 'total' | 'token';
+  balanceChartMode?: "auto" | "total" | "token";
 
   /** Enable automatic data refresh (default: true) */
   autoRefresh?: boolean;

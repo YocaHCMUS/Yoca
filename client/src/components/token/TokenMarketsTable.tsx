@@ -27,9 +27,6 @@ interface TokenMarketsTableProps {
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
   const { tr, fmt } = useLocalization();
-  const [pools, setPools] = useState<PoolResponse>([]);
-  const [loading, setLoading] = useState(true);
-  const { tr, fmt } = useLocalization();
 
   const HEADERS = [
     { key: "rank", header: tr("token.marketsTable.rank") },
@@ -59,7 +56,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
     );
   }
 
-  const rows = pools.data.map((pool, idx) => {
+  const rows = pools.data.map((pool, idx): any => {
     const data = pool.data;
     const rankInfo = pool.rankInfo;
     const chgNum = Number(data.priceChangePercentage24h ?? 0);

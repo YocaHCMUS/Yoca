@@ -327,7 +327,9 @@ export default function MarketPage() {
             gap={1}
             style={{ alignItems: "center" }}
           >
-            <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
+            <Link href={`/wallet/${t.address}`}>
+              {fmt.text.address(t.address)}
+            </Link>
             <IconButton
               label="Copy Address"
               kind="ghost"
@@ -523,7 +525,9 @@ export default function MarketPage() {
             gap={1}
             style={{ alignItems: "center" }}
           >
-            <Link href={`/wallet/${trade.owner}`}>{truncate(trade.owner)}</Link>
+            <Link href={`/wallet/${trade.owner}`}>
+              {fmt.text.address(trade.owner)}
+            </Link>
             <IconButton
               label="Copy Address"
               kind="ghost"
