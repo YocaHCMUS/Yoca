@@ -9,11 +9,11 @@ import {
   topTraders,
   type RecentTradeInsert,
 } from "@sv/db/schema.js";
-import { getApiResult } from "@sv/middlewares/validation.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { bds_TopTradersSchema } from "@sv/services/_types/trade_raw_responses.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { and, asc, desc, gte } from "drizzle-orm";
-import type { BDS_RecentTrades } from "./_types/token_raw_responses.js";
+import { bds_RecentTradesSchema } from "./_types/token_raw_responses.js";
 
 type TimeWindow = "6h" | "12h" | "24h";
 type SortBy = "volume" | "time";
@@ -39,11 +39,12 @@ async function fetchRecentTrades() {
 
   const resp = await fetch(req);
 
-  if (!resp.ok) {
-    return [];
+  const res = await getTrackedApiResult(bds_RecentTradesSchema, resp);
+
+  if (!res) {
+    return null;
   }
 
-  const res = (await resp.json()) as BDS_RecentTrades;
   const trades = res.data.items.map(
     (raw): RecentTradeInsert => ({
       transactionHash: raw.tx_hash,
@@ -150,7 +151,7 @@ async function fetchTraderGainersLosers(sortType: "asc" | "desc") {
   });
 
   const resp = await fetch(req);
-  const res = await getApiResult(bds_TopTradersSchema, resp);
+  const res = await getTrackedApiResult(bds_TopTradersSchema, resp);
 
   if (!res) {
     return null;
@@ -178,7 +179,8 @@ export async function getTopGainers() {
   }
 
   const items = await fetchTraderGainersLosers("desc");
-  if (!items) return cached.length > 0 ? cached : [];
+  if (items == null) return null;
+  if (items.length == 0) return [];
 
   await db.delete(topTraders);
   await db.insert(topTraders).values(items);
@@ -196,7 +198,7 @@ export async function getTopLosers() {
   }
 
   const items = await fetchTraderGainersLosers("asc");
-  if (!items) return cached.length > 0 ? cached : [];
+  if (items == null) return null;
 
   await db.delete(topLosers);
   await db.insert(topLosers).values(items);
