@@ -5,6 +5,7 @@ import {
 } from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { birdeyeGetJson, birdeyePostJson } from "@sv/services/wallet/providers/birdeye.client.js";
+import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
 import type {
   WalletPortfolio, WalletPortfolioItem, WalletSwap, WalletTransaction,
@@ -1047,12 +1048,16 @@ async function fetchBirdeyeJson(
   method: "GET" | "POST",
   options?: { searchParams?: Record<string, string | number | boolean>; body?: unknown },
 ): Promise<any | null> {
-  try {
+  const fetcher = async () => {
     if (method === "GET") {
       return await birdeyeGetJson(path, options?.searchParams);
     }
 
     return await birdeyePostJson(path, options?.body);
+  };
+
+  try {
+    return await callBirdeye(path, options ?? {}, fetcher);
   } catch (err) {
     console.error("Birdeye request failed", { method, path, err });
     return null;

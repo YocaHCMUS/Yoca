@@ -4,6 +4,7 @@ import {
     heliusFetch,
 } from "@sv/util/util-helius.js";
 import { requestProviderJson } from "./providerRequest.js";
+import { callHelius } from "@sv/services/wallet/providers/adapters/helius.adapter.js";
 
 type SearchParamValue = string | number | boolean | null | undefined;
 
@@ -31,11 +32,15 @@ export async function heliusGetJson<T>(
     const url = getEndpoint(path);
     applySearchParams(url, searchParams);
 
-    return requestProviderJson<T>({
-        provider: "helius",
-        url,
-        method: "GET",
-        headers: getRequiredHeaders(),
-        fetchImpl: heliusFetch,
-    });
+    const fetcher = async () => {
+        return requestProviderJson<T>({
+            provider: "helius",
+            url,
+            method: "GET",
+            headers: getRequiredHeaders(),
+            fetchImpl: heliusFetch,
+        });
+    };
+
+    return callHelius(path, searchParams ?? {}, fetcher);
 }
