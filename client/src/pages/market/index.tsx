@@ -3,9 +3,11 @@ import SparklineChart from "@/components/charts/SparklineChart";
 import TokenTreeMap, {
   type TokenTreeMapNode,
 } from "@/components/charts/TokenTreeMap";
+import { CpyBtn } from "@/components/CpyBtn";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import MarketTicker from "@/components/MarketTicker";
 import Tble from "@/components/Tble";
+import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { SOLSCAN_TX_URL } from "@/config/constants";
@@ -13,6 +15,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import semStyle from "@/styles/_semantic.module.scss";
+import carbonColors from "@/styles/carbon-colors.module.scss";
 import {
   Column,
   Grid,
@@ -211,13 +214,10 @@ export default function MarketPage() {
               <StarFilled
                 size={18}
                 className={styles.activeStarIcon}
-                style={{ color: "var(--cds-support-warning, #f1c21b)" }}
+                style={{ color: carbonColors.supportWarning }}
               />
             ) : (
-              <Star
-                size={18}
-                style={{ color: "var(--cds-icon-secondary, #525252)" }}
-              />
+              <Star size={18} />
             )}
           </button>
         ),
@@ -226,7 +226,6 @@ export default function MarketPage() {
             href={`/tokens/${token.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ textDecoration: "none", color: "inherit" }}
           >
             <Stack
               orientation="horizontal"
@@ -238,11 +237,10 @@ export default function MarketPage() {
               }}
             >
               {tokenMeta.imageUrl && (
-                <img
+                <TknImg
                   src={tokenMeta.imageUrl}
                   alt={tokenMeta.symbol}
-                  width={28}
-                  style={{ borderRadius: "50%", flexShrink: 0 }}
+                  size={28}
                 />
               )}
 
@@ -379,115 +377,21 @@ export default function MarketPage() {
             style={{ alignItems: "center" }}
           >
             <Link href={`/wallet/${t.address}`}>{truncate(t.address)}</Link>
-            <IconButton
-              label="Copy Address"
-              kind="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                navigator.clipboard.writeText(t.address);
-              }}
-            >
-              <Copy size={14} />
-            </IconButton>
+            <CpyBtn size="xs" copyWhat={t.address} />
           </Stack>
         </Tooltip>
       ),
       pnl: (
-        <span
-          className={
-            t.pnl > 0
-              ? semStyle.positive
-              : t.pnl < 0
-                ? semStyle.negative
-                : undefined
-          }
-        >
-          {fmt.num.compact.currency(t.pnl)}
-        </span>
+        <TrendNum
+          value={t.pnl}
+          formatter={fmt.num.compact.currency}
+          prefixes="plus-minus"
+        />
       ),
       volume: fmt.num.compact.currency(t.volume),
       trades: t.tradeCount,
     }));
   }, [topLosers.data, fmt]);
-
-  const trendingTokenRows = useMemo(() => {
-    if (!trendingTokens.data || !trendingMeta.data || !trendingMarketData.data)
-      return [];
-    const addressToMeta = Object.fromEntries(
-      trendingMeta.data.map((m) => [m.address, m]),
-    );
-    const addressToMarket = trendingMarketData.data;
-
-    return trendingTokens.data.map((token) => {
-      const tokenMeta = addressToMeta[token.address];
-      const tokenMarket = addressToMarket[token.address];
-
-      return {
-        id: token.address,
-        rank: token.rank,
-        token: (
-          <Link
-            href={`/tokens/${token.address}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
-            <Stack
-              orientation="horizontal"
-              gap={2}
-              style={{
-                alignItems: "center",
-                overflow: "hidden",
-                width: "100%",
-              }}
-            >
-              {tokenMeta.imageUrl && (
-                <img
-                  src={tokenMeta.imageUrl}
-                  alt={tokenMeta.symbol}
-                  width={28}
-                  style={{ borderRadius: "50%", flexShrink: 0 }}
-                />
-              )}
-
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "6px",
-                  overflow: "hidden",
-                  minWidth: 0,
-                }}
-              >
-                <Tooltip label={tokenMeta.name} align="right">
-                  <strong
-                    style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {tokenMeta.symbol.toUpperCase()}
-                  </strong>
-                </Tooltip>
-              </span>
-            </Stack>
-          </Link>
-        ),
-        price: fmt.num.currency(tokenMarket.priceUsd),
-        change24h: (
-          <TrendNum
-            value={tokenMarket.priceChange24h}
-            formatter={fmt.num.percent}
-          />
-        ),
-        marketCap: fmt.num.currency(tokenMarket.marketCap),
-        volume24h: fmt.num.currency(tokenMarket.volume24h),
-      };
-    });
-  }, [trendingTokens.data, trendingMeta.data, trendingMarketData.data, fmt]);
 
   const recentTradesRows = useMemo(() => {
     if (!recentTradesData.data) return [];
@@ -508,12 +412,10 @@ export default function MarketPage() {
       amount: (
         <Stack gap={1}>
           <span>
-            {fmt.num.compact.decimal(Number(trade.baseAmount || 0))}{" "}
-            {trade.baseSymbol}
+            {fmt.num.compact.decimal(trade.baseAmount)} {trade.baseSymbol}
           </span>
-          <span style={{ color: "var(--cds-text-secondary, #525252)" }}>
-            {fmt.num.compact.decimal(Number(trade.quoteAmount || 0))}{" "}
-            {trade.quoteSymbol}
+          <span style={{ color: carbonColors.textSecondary }}>
+            {fmt.num.compact.decimal(trade.quoteAmount)} {trade.quoteSymbol}
           </span>
         </Stack>
       ),
@@ -528,18 +430,7 @@ export default function MarketPage() {
             <Link href={`/wallet/${trade.owner}`}>
               {fmt.text.address(trade.owner)}
             </Link>
-            <IconButton
-              label="Copy Address"
-              kind="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                navigator.clipboard.writeText(trade.owner);
-              }}
-            >
-              <Copy size={14} />
-            </IconButton>
+            <CpyBtn size="xs" copyWhat={trade.owner} />
           </Stack>
         </Tooltip>
       ),
@@ -588,16 +479,16 @@ export default function MarketPage() {
             <Column sm={2} md={8} lg={16} className={styles.marketColumn}>
               <div className={styles.headerSection}>
                 <h1 className={styles.title}>
-                  {activeTab === "all"
+                  {activeTab == "all"
                     ? tr("marketPage.allTokensTitle")
-                    : activeTab === "watchlist"
+                    : activeTab == "watchlist"
                       ? tr("marketPage.watchlistTitle")
                       : tr("marketPage.tradesTitle")}
                 </h1>
                 <p className={styles.subtitle}>
-                  {activeTab === "all"
+                  {activeTab == "all"
                     ? tr("marketPage.allTokensSubtitle")
-                    : activeTab === "watchlist"
+                    : activeTab == "watchlist"
                       ? tr("marketPage.watchlistSubtitle")
                       : tr("marketPage.tradesSubtitle")}
                 </p>
@@ -607,7 +498,7 @@ export default function MarketPage() {
                   <button
                     className={clsx(
                       styles.tab,
-                      activeTab === "all" && styles.active,
+                      activeTab == "all" && styles.active,
                     )}
                     onClick={() => setActiveTab("all")}
                   >
@@ -616,7 +507,7 @@ export default function MarketPage() {
                   <button
                     className={clsx(
                       styles.tab,
-                      activeTab === "watchlist" && styles.active,
+                      activeTab == "watchlist" && styles.active,
                     )}
                     onClick={() => setActiveTab("watchlist")}
                   >
@@ -625,7 +516,7 @@ export default function MarketPage() {
                   <button
                     className={clsx(
                       styles.tab,
-                      activeTab === "trades" && styles.active,
+                      activeTab == "trades" && styles.active,
                     )}
                     onClick={() => setActiveTab("trades")}
                   >
@@ -634,7 +525,7 @@ export default function MarketPage() {
                 </div>
 
                 <div className={styles.tabActions}>
-                  {activeTab === "all" && (
+                  {activeTab == "all" && (
                     <button
                       className={styles.treeMapButton}
                       onClick={() => setIsTreeMapOpen(true)}
@@ -648,10 +539,10 @@ export default function MarketPage() {
               <div
                 className={clsx(
                   styles.panel,
-                  activeTab === "trades" && styles.panelTrades,
+                  activeTab == "trades" && styles.panelTrades,
                 )}
               >
-                {activeTab === "trades" ? (
+                {activeTab == "trades" ? (
                   <Stack gap={6}>
                     <div className={styles.tradersGrid}>
                       {/* Top Gainers */}
@@ -858,11 +749,12 @@ export default function MarketPage() {
                             align: "end",
                           },
                         ]}
-                        rows={recentTradesRows.slice(0, 20)}
+                        enablePagination
+                        rows={recentTradesRows}
                       />
                     </div>
                   </Stack>
-                ) : activeTab === "watchlist" && watchlist.length === 0 ? (
+                ) : activeTab == "watchlist" && watchlist.length == 0 ? (
                   <div className={styles.placeholderTab}>
                     <h3>{tr("marketPage.watchlistEmptyTitle")}</h3>
                     <p>{tr("marketPage.watchlistEmptySubtitle")}</p>
@@ -933,8 +825,9 @@ export default function MarketPage() {
                         align: "end",
                       },
                     ]}
+                    enablePagination
                     rows={
-                      activeTab === "watchlist"
+                      activeTab == "watchlist"
                         ? topTokenRows.filter((row) =>
                             watchlist.includes(row.id),
                           )

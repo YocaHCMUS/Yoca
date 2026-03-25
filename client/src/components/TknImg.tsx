@@ -5,9 +5,10 @@ type TknImgProps = {
   size: number;
   loading?: boolean;
   src: string | null | undefined;
+  alt: string | undefined;
 };
 
-export function TknImg({ size, loading = false, src }: TknImgProps) {
+export function TknImg({ size, alt, loading = false, src }: TknImgProps) {
   return loading ? (
     <SkeletonPlaceholder style={{ width: size, height: size }} />
   ) : (
@@ -15,6 +16,7 @@ export function TknImg({ size, loading = false, src }: TknImgProps) {
       width={size}
       height={size}
       src={src ?? appLogoPlaceHolder}
+      alt={alt}
       style={{ objectFit: "cover", borderRadius: "50%" }}
     />
   );

@@ -1,6 +1,7 @@
 @use "sass:map";
 @use "@carbon/themes/scss/themes" as *;
 
+// https://carbondesignsystem.com/elements/color/tokens
 :export {
   /* Interactive */
   primary: #{map.get($white, interactive-01)};
@@ -58,4 +59,7 @@
 
   /* Focus */
   focus: #{map.get($white, focus)};
+
+  /* Support */
+
 }
