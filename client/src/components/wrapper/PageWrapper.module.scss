@@ -4,6 +4,12 @@
   }
 }
 
+.headerPanelLarge {
+  &:global(.cds--header-panel--expanded) {
+    inline-size: 44rem !important;
+  }
+}
+
 .contentNoTopPadding {
   padding-top: 0 !important;
   padding-bottom: 0 !important;

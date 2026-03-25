@@ -10,10 +10,10 @@ import {
   type RecentTradeInsert,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { bds_TopTradersSchema } from "@sv/services/_types/trade_raw_responses.js";
+import { bds_TopTradersSchema } from "@sv/services/_types/trade-raw-responses.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { and, asc, desc, gte } from "drizzle-orm";
-import { bds_RecentTradesSchema } from "./_types/token_raw_responses.js";
+import { bds_RecentTradesSchema } from "./_types/token-raw-responses.js";
 
 type TimeWindow = "6h" | "12h" | "24h";
 type SortBy = "volume" | "time";

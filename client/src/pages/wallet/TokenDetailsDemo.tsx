@@ -225,40 +225,12 @@ export function TokenDetailsDemo() {
 
   return (
     <PageWrapper
-      headerPanelExtension={
-        selectedToken
-          ? {
-              content: (
-                <Stack gap={4} style={{ padding: "1rem" }}>
-                  <div>
-                    <h4>{selectedToken.symbol}</h4>
-                    <small>Average Trading Price</small>
-                  </div>
-                  <Stack gap={2}>
-                    <div>
-                      <p style={{ margin: 0, color: "var(--cds-text-02)" }}>
-                        Average Buy Price
-                      </p>
-                      <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.2rem" }}>
-                        {fmt.num.currency(selectedToken.avgBuyCost)}
-                      </p>
-                    </div>
-                    <div>
-                      x``
-                      <p style={{ margin: 0, color: "var(--cds-text-02)" }}>
-                        Average Sell Price
-                      </p>
-                      <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.2rem" }}>
-                        {fmt.num.currency(selectedToken.avgSellCost)}
-                      </p>
-                    </div>
-                  </Stack>
-                </Stack>
-              ),
-              onClose: () => setSelectedToken(null),
-            }
-          : undefined
-      }
+      extraHeaderPanel={{
+        isOpen: !!selectedToken,
+        content: selectedToken && <p>Hello</p>,
+        size: "lg",
+        onClose: () => setSelectedToken(null),
+      }}
     >
       <Tble
         loading={walletTokenDetails.isLoading}

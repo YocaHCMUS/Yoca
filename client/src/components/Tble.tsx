@@ -111,7 +111,7 @@ export default function Tble({
     };
   };
 
-  if (loading && rows.length == 0) {
+  if (loading || rows.length == 0) {
     return (
       <TableContainer
         title={
@@ -134,7 +134,11 @@ export default function Tble({
             justifyContent: "center",
           }}
         >
-          <InlineLoading description={tr("common.loading")} />
+          {loading ? (
+            <InlineLoading description={tr("common.loading")} />
+          ) : (
+            <p>{tr("common.noData")}</p>
+          )}
         </Stack>
       </TableContainer>
     );

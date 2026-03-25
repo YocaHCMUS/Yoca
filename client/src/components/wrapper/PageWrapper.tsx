@@ -50,8 +50,10 @@ function ThemeToggleGlobalAction() {
 type PageWrapperProps = {
   children: ReactNode;
   noTopPadding?: boolean;
-  headerPanelExtension?: {
+  extraHeaderPanel?: {
+    isOpen: boolean;
     content: ReactNode;
+    size?: "md" | "lg";
     onClose: () => void;
   };
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
@@ -60,28 +62,15 @@ type PageWrapperProps = {
 export function PageWrapper({
   children,
   noTopPadding = false,
-  headerPanelExtension,
-  onHeaderPanelOpenChange,
+  extraHeaderPanel,
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
   const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
-  const [isHeaderPanelOpen, setIsHeaderPanelOpen] = useState(false);
+  const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  // Open header panel when extension is provided
-  useEffect(() => {
-    if (headerPanelExtension) {
-      setIsHeaderPanelOpen(true);
-    }
-  }, [headerPanelExtension]);
-
-  // Notify parent when header panel opens/closes
-  useEffect(() => {
-    onHeaderPanelOpenChange?.(isHeaderPanelOpen);
-  }, [isHeaderPanelOpen, onHeaderPanelOpenChange]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -95,15 +84,23 @@ export function PageWrapper({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Open extra panel when extraHeaderPanel.isOpen becomes true
+  useEffect(() => {
+    if (extraHeaderPanel?.isOpen) {
+      setOpenPanel(null);
+      setTimeout(() => setIsExtraHeaderPanelOpen(true), 0);
+    }
+  }, [extraHeaderPanel?.isOpen]);
+
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
   };
 
   const togglePanel = (panel: "lang" | "account") => {
     // Close header panel extension if it's open
-    if (isHeaderPanelOpen) {
-      setIsHeaderPanelOpen(false);
-      headerPanelExtension?.onClose();
+    if (isExtraPanelOpen) {
+      setIsExtraHeaderPanelOpen(false);
+      extraHeaderPanel?.onClose();
     }
     setOpenPanel((prev) => (prev == panel ? null : panel));
   };
@@ -262,16 +259,24 @@ export function PageWrapper({
           </Switcher>
         </HeaderPanel>
 
-        {headerPanelExtension && (
+        {extraHeaderPanel && (
           <HeaderPanel
-            className={styles.headerPanel}
-            expanded={isHeaderPanelOpen}
+            className={
+              extraHeaderPanel.size == "lg"
+                ? styles.headerPanelLarge
+                : styles.headerPanel
+            }
+            expanded={isExtraPanelOpen}
             onHeaderPanelFocus={() => {
-              setIsHeaderPanelOpen(false);
-              headerPanelExtension.onClose();
+              setIsExtraHeaderPanelOpen(false);
+              extraHeaderPanel.onClose();
             }}
           >
-            {headerPanelExtension.content}
+            <Switcher aria-label="Extra" expanded={isExtraPanelOpen}>
+              <div style={{ width: "100%", padding: 16 }}>
+                {extraHeaderPanel.content}
+              </div>
+            </Switcher>
           </HeaderPanel>
         )}
 

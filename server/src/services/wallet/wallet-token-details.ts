@@ -4,10 +4,11 @@ import {
   walletTokenDetails,
   type WalletTokenDetailsInsert,
 } from "@sv/db/schema";
+import { getTrackedApiResult } from "@sv/middlewares/validation";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql";
 import * as bds from "@sv/util/util-birdeye";
 import { eq } from "drizzle-orm";
-import { bds_WalletTokenDetailsSchema } from "../_types/wallet_raw_responses";
+import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses";
 
 export async function getTokenDetails(wallet: string) {
   const dbRes = await db
@@ -39,14 +40,12 @@ export async function getTokenDetails(wallet: string) {
       wallet,
     }),
   });
+
   const resp = await fetch(req);
-  if (!resp.ok) {
-    console.log(await resp.json());
+  const res = await getTrackedApiResult(bds_WalletTokenDetailsSchema, resp);
+  if (res == undefined) {
     return null;
   }
-
-  const json = await resp.json();
-  const res = bds_WalletTokenDetailsSchema.parse(json);
 
   const tokenDetails = res.data.tokens.map(
     (tokenDetail): WalletTokenDetailsInsert => ({
