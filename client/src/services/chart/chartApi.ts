@@ -53,7 +53,7 @@ async function handleResponse(response: Response) {
 export async function fetchBalanceTrend(params?: Parameters<typeof client.api.charts.balance.$get>[0]) {
   // Hono RPC client requires wrapping query params in { query: {...} }
   const honoParams = params ? { query: params } : undefined;
-  
+
   const response = await client.api.charts.balance.$get(honoParams as any);
   await handleResponse(response);
   const data = await response.json();
@@ -168,8 +168,28 @@ export async function fetchTradingVolumeDistribution(params?: Parameters<typeof 
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.tradingVolumeDistribution.$get(honoParams as any);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (raw && raw.wallets) return raw;
+
+  // Normalize backend shape to { wallets: [{ walletAddress, data: [{name,value,percentage}], totalVolume }] }
+  const wallets = Array.isArray(raw)
+    ? raw.map((r: any) => {
+      const buy = typeof r.buy === 'number' ? r.buy : (r.buy?.volume ?? 0);
+      const sell = typeof r.sell === 'number' ? r.sell : (r.sell?.volume ?? 0);
+      const total = (buy ?? 0) + (sell ?? 0);
+      const data = [
+        { name: 'Buy', value: buy ?? 0, percentage: total > 0 ? ((buy ?? 0) / total) * 100 : 0 },
+        { name: 'Sell', value: sell ?? 0, percentage: total > 0 ? ((sell ?? 0) / total) * 100 : 0 },
+      ];
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        data,
+        totalVolume: total,
+      };
+    })
+    : [];
+
+  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
 }
 
 
@@ -178,12 +198,30 @@ export async function fetchTradingVolumeDistribution(params?: Parameters<typeof 
  * GET /api/charts/trading-volume-per-transaction
  * Type automatically inferred from server route via Hono RPC
  */
-export async function fetchTradingVolumePerTransaction(params?:  Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
+export async function fetchTradingVolumePerTransaction(params?: Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.tradingVolumePerTransaction.$get(honoParams as any);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (raw && raw.wallets) return raw;
+
+  // Normalize to { wallets: [{ walletAddress, walletName, deposit: {min,q1,median,q3,max}, withdraw: {...}, transactionCount }] }
+  const wallets = Array.isArray(raw)
+    ? raw.map((r: any) => {
+      const v = r.tradingVolumePerTransaction ?? r.tradingVolumePerTx ?? 0;
+      const deposit = r.deposit || { min: v, q1: v, median: v, q3: v, max: v };
+      const withdraw = r.withdraw || { min: v, q1: v, median: v, q3: v, max: v };
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        walletName: r.walletName ?? r.wallet ?? '',
+        deposit,
+        withdraw,
+        transactionCount: r.transactionCount ?? 0,
+      };
+    })
+    : [];
+
+  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
 }
 
 /**
@@ -195,8 +233,28 @@ export async function fetchRollingAnnualReturn(params?: Parameters<typeof client
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.rollingAnnualReturn.$get(honoParams as any);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (raw && raw.wallets) return raw;
+
+  // Backend returns array of { wallet, rollingAnnualReturns } or aggregated object
+  if (Array.isArray(raw)) {
+    const wallets = raw.map((r: any) => {
+      const rolling = Array.isArray(r.rollingAnnualReturns) ? r.rollingAnnualReturns : (r.rollingAnnualReturns ? [{ timestamp: Date.now(), value: r.rollingAnnualReturns }] : []);
+      const cumulative = r.cumulativeReturn ?? [];
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        walletName: r.walletName ?? r.wallet ?? '',
+        rollingReturn: rolling,
+        cumulativeReturn: Array.isArray(cumulative) ? cumulative : [],
+      };
+    });
+    return { wallets, metadata: { timestamp: Date.now() } } as any;
+  }
+
+  // If backend returned a single aggregated object
+  const rolling = Array.isArray(raw.rollingAnnualReturns) ? raw.rollingAnnualReturns : (raw.rollingAnnualReturns ? [{ timestamp: Date.now(), value: raw.rollingAnnualReturns }] : []);
+  const cumulative = raw.cumulativeReturn ?? [];
+  return { rollingReturn: rolling, cumulativeReturn: Array.isArray(cumulative) ? cumulative : [], metadata: { timestamp: Date.now() } } as any;
 }
 
 /**
@@ -234,8 +292,40 @@ export async function fetchDrawdown(params?: Parameters<typeof client.api.charts
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.drawdown.$get(honoParams as any);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (raw && raw.wallets) return raw;
+
+  // Backend returns array per-wallet drawdown series
+  const wallets = Array.isArray(raw)
+    ? raw.map((r: any) => {
+      const series = Array.isArray(r) ? r : (r.data ?? []);
+      const dataPoints = series.map((p: any) => ({ timestamp: p.timestamp ?? p.ts ?? Date.now(), value: (p.drawdown ?? p.value ?? 0) * 100 }));
+
+      // Compute stats
+      const maxDrawdownEntry = series.reduce((acc: any, cur: any) => {
+        const curDd = (cur.drawdown ?? 0);
+        return acc == null || curDd < acc.drawdown ? cur : acc;
+      }, null as any);
+
+      const maxDrawdown = maxDrawdownEntry ? (maxDrawdownEntry.drawdown ?? 0) * 100 : 0;
+      const maxDrawdownTimestamp = maxDrawdownEntry ? (maxDrawdownEntry.timestamp ?? Date.now()) : Date.now();
+      const last = series[series.length - 1] ?? {};
+      const currentDrawdown = (last.drawdown ?? 0) * 100;
+      const daysSinceMaxDrawdown = Math.max(0, Math.floor((Date.now() - (maxDrawdownTimestamp ?? Date.now())) / (1000 * 60 * 60 * 24)));
+
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        walletName: r.walletName ?? r.wallet ?? '',
+        data: dataPoints,
+        maxDrawdown: Math.abs(maxDrawdown),
+        maxDrawdownTimestamp,
+        daysSinceMaxDrawdown,
+        currentDrawdown: Math.abs(currentDrawdown),
+      };
+    })
+    : [];
+
+  return { wallets, metadata: { timestamp: Date.now() } } as any;
 }
 
 /**
@@ -247,8 +337,28 @@ export async function fetchTotalTradingVolume(params?: Parameters<typeof client.
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.totalTradingVolume.$get(honoParams as any);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (raw && raw.wallets) return raw;
+
+  // Normalize to { wallets: [{ walletAddress, walletName, totalVolume, depositVolume, withdrawalVolume, rank, tradeCount }] }
+  const wallets = Array.isArray(raw)
+    ? raw.map((r: any, i: number) => {
+      const total = r.tradingVolumeUsd ?? r.totalVolume ?? 0;
+      const deposit = r.buyVolume ?? r.depositVolume ?? (r.buy && r.buy.volume) ?? 0;
+      const withdrawal = r.sellVolume ?? r.withdrawalVolume ?? (r.sell && r.sell.volume) ?? 0;
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        walletName: r.walletName ?? r.wallet ?? '',
+        totalVolume: total,
+        depositVolume: deposit,
+        withdrawalVolume: withdrawal,
+        rank: r.rank ?? i + 1,
+        tradeCount: r.tradeCount ?? r.transactionCount ?? 0,
+      };
+    })
+    : [];
+
+  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
 }
 
 /**

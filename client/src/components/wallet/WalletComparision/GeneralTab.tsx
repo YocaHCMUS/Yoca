@@ -30,17 +30,17 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
         <div className={styles.grid}>
             {/* Balance history comparision */}
             <div className={styles.stableCoinChart}>
-                <BalanceChart 
+                <BalanceChart
                     initialFilters={{
                         timePeriod: "30D",
                         wallets: walletAddresses
                     }}
                     minHeight={300}
-                    />    
+                />
             </div>
 
             {/* Daily Trading Volume Historical Chart */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <DailyTradingVolume
                     minHeight={400}
                     initialFilters={{
@@ -48,7 +48,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses,
                     }}
                 />
-            </div>
+            </div> */}
 
             {/* Total Trading Volume Column Chart */}
             <div className={styles.stableCoinChart}>
@@ -62,12 +62,12 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Trading Volume distribution Chart */}
-            <div  className={styles.stableCoinChart}>
+            <div className={styles.stableCoinChart}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                 />
             </div>
-            
+
 
             {/* Average Trading Volume per transaction Charts */}
             <div className={styles.stableCoinChart}>
@@ -76,7 +76,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                 />
             </div>
 
-           
+
         </div>
     );
 }

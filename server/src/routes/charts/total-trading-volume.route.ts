@@ -9,13 +9,13 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { getTotalTradingVolumeFromDb } from '@sv/services/charts/totalTradingVolume.service.js';
+import { getTradingVolumes } from '@sv/services/wallet/walletComparison.js';
 
 /**
  * Request parameter schema for total trading volume endpoint
  */
 const totalTradingVolumeRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 
@@ -53,9 +53,10 @@ const app = new Hono()
       const query = c.req.query();
       const params = totalTradingVolumeRequestSchema.parse(query);
 
-      const data = await getTotalTradingVolumeFromDb(
+      // Fetch total trading volumes from wallet comparison service
+      const data = await getTradingVolumes(
         params.wallets,
-        params.period
+        params.period,
       );
 
       // Return response

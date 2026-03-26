@@ -25,7 +25,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
             {/* Asset Distribution Charts */}
             {/* {walletAddresses.map((address, index) => (
             ))} */}
-            <div  className={styles.stableCoinChart}>
+            <div className={styles.stableCoinChart}>
                 <AssetDistribution
                     initialFilters={{ wallets: walletAddresses }}
                     minHeight={300}
@@ -33,7 +33,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Stable Coin Ratio Chart */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <StablecoinRatioChart
                     minHeight={300}
                     initialFilters={{
@@ -41,9 +41,9 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses,
                     }}
                 />
-            </div>
+            </div> */}
 
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <HoldingDurations
                     initialFilters={{
                         wallets: [walletAddresses],
@@ -52,7 +52,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
                     }}
                     minHeight={300}
                 />
-            </div>
+            </div> */}
 
         </div>
     );

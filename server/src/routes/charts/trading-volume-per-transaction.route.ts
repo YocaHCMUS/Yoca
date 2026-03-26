@@ -10,13 +10,13 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateTradingVolumePerTransaction } from '../../services/mockChartData.service.js';
+import { getTradingVolumePerTransaction } from '@sv/services/wallet/walletComparison.js';
 
 /**
  * Request parameter schema for trading volume per transaction endpoint
  */
 const tradingVolumePerTransactionRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional(),
   type: z.enum(['all', 'deposits', 'withdrawals']).optional().default('all'),
 });
@@ -52,12 +52,12 @@ const app = new Hono()
       // Validate query parameters
       const query = c.req.query();
       const params = tradingVolumePerTransactionRequestSchema.parse(query);
+      const wallets = params.wallets ? params.wallets.split(',').filter(Boolean) : [];
 
-      // Generate trading volume per transaction data
-      const data = generateTradingVolumePerTransaction(
+      // Fetch trading volume per transaction from wallet comparison service
+      const data = await getTradingVolumePerTransaction(
+        wallets,
         params.period,
-        params.wallets,
-        params.type
       );
 
       // Return response

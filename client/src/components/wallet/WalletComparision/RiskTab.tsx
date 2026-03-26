@@ -31,13 +31,13 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
                     initialFilters={{
                         timePeriod: '1Y',
                         wallets: walletAddresses,
-                        timeUnit: 'month',
+                        // timeUnit: 'month',
                     }}
                 />
             </div>
 
             {/* Average rolling annual returns */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <AverageRollingAnnualReturn
                     minHeight={300}
                     initialFilters={{
@@ -46,7 +46,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
                         timeUnit: 'month',
                     }}
                 />
-            </div>
+            </div> */}
 
             {/* Profit and loss */}
             <div className={styles.stableCoinChart}>
