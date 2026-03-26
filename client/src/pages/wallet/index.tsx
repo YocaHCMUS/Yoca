@@ -87,6 +87,7 @@ export default function WalletPage() {
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Resizable divider
   const [leftWidth, setLeftWidth] = useState(420);
@@ -638,14 +639,19 @@ export default function WalletPage() {
     if (isPagePdfExporting) return;
 
     setIsPagePdfExporting(true);
+    setIsExportMenuOpen(false);
     try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
       await exportCurrentPageAsPdf({
-        title: `${tr("walletPage.activity")} ${address}`,
         baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
+        targetRef: pdfExportContainerRef,
       });
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
-      window.alert(tr('walletPage.exportPdfFailed'));
+      // Remove alert to let user see partial output
     } finally {
       setIsPagePdfExporting(false);
     }
@@ -748,6 +754,7 @@ export default function WalletPage() {
   return (
     <PageWrapper>
       <div
+        ref={pdfExportContainerRef}
         className={styles.walletGrid}
         style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
       >

@@ -7,6 +7,9 @@
  */
 
 import { useState, useCallback } from 'react';
+import type { RefObject } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import type { EChartsInstance } from '../util/echarts-setup';
 import type { ExportFormat, ExportMetadata } from '../types/chart-filters.types';
 import type { ChartFilters } from '../types/chart-filters.types';
@@ -116,135 +119,346 @@ function generatePagePdfFilename(baseName: string): string {
   return `${baseName}-${timestamp}.pdf`;
 }
 
-function resolvePdfExportUrl(): string {
-  const apiDomain = (import.meta.env.VITE_CLIENT_API_DOMAIN as string | undefined)?.trim();
-  if (apiDomain && apiDomain.length > 0) {
-    return `${apiDomain}/api/charts/export/pdf`;
-  }
-  return `${window.location.origin}/api/charts/export/pdf`;
+function exportCanvasAsSinglePagePdf(canvas: HTMLCanvasElement, filename: string): void {
+  const pdf = new jsPDF({
+    orientation: canvas.width >= canvas.height ? 'landscape' : 'portrait',
+    unit: 'px',
+    format: [canvas.width, canvas.height],
+    compress: true,
+  });
+  const image = canvas.toDataURL('image/png');
+  pdf.addImage(image, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST');
+  pdf.save(filename);
 }
 
-function createPageSnapshotHtml(): { html: string; width: number; height: number } {
-  const rootClone = document.documentElement.cloneNode(true) as HTMLElement;
+function exportLongCanvasAsA4Pdf(canvas: HTMLCanvasElement, filename: string): void {
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4', compress: true });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imageWidth = pageWidth;
+  const imageHeight = (canvas.height * imageWidth) / canvas.width;
+  const image = canvas.toDataURL('image/png');
 
-  const originalControls = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
-  const clonedControls = rootClone.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+  let remainingHeight = imageHeight;
+  let positionY = 0;
 
-  originalControls.forEach((control, index) => {
-    const clone = clonedControls[index];
-    if (!clone) return;
+  pdf.addImage(image, 'PNG', 0, positionY, imageWidth, imageHeight, undefined, 'FAST');
+  remainingHeight -= pageHeight;
 
-    if (control instanceof HTMLInputElement) {
-      clone.value = control.value;
-      clone.setAttribute('value', control.value);
-      clone.checked = control.checked;
-      if (control.checked) clone.setAttribute('checked', 'checked');
-      if (!control.checked) clone.removeAttribute('checked');
-      return;
-    }
-
-    if (control instanceof HTMLTextAreaElement) {
-      clone.value = control.value;
-      clone.textContent = control.value;
-      return;
-    }
-
-    if (control instanceof HTMLSelectElement) {
-      clone.value = control.value;
-      Array.from(clone.options).forEach((option) => {
-        if (option.value === control.value) {
-          option.setAttribute('selected', 'selected');
-        } else {
-          option.removeAttribute('selected');
-        }
-      });
-    }
-  });
-
-  const originalCanvases = document.querySelectorAll<HTMLCanvasElement>('canvas');
-  const clonedCanvases = rootClone.querySelectorAll<HTMLCanvasElement>('canvas');
-
-  originalCanvases.forEach((canvas, index) => {
-    const clonedCanvas = clonedCanvases[index];
-    if (!clonedCanvas || !clonedCanvas.parentNode) return;
-
-    try {
-      const image = document.createElement('img');
-      image.src = canvas.toDataURL('image/png');
-      image.width = canvas.width;
-      image.height = canvas.height;
-      image.style.width = `${canvas.clientWidth}px`;
-      image.style.height = `${canvas.clientHeight}px`;
-      image.style.display = 'block';
-      clonedCanvas.parentNode.replaceChild(image, clonedCanvas);
-    } catch {
-      // Ignore canvases that cannot be serialized due to browser security restrictions.
-    }
-  });
-
-  rootClone.querySelectorAll('script').forEach((script) => script.remove());
-
-  const head = rootClone.querySelector('head');
-  if (head) {
-    const base = document.createElement('base');
-    base.href = `${window.location.origin}/`;
-    head.prepend(base);
+  while (remainingHeight > 0) {
+    positionY = remainingHeight - imageHeight;
+    pdf.addPage();
+    pdf.addImage(image, 'PNG', 0, positionY, imageWidth, imageHeight, undefined, 'FAST');
+    remainingHeight -= pageHeight;
   }
 
-  const html = `<!doctype html>${rootClone.outerHTML}`;
-  const doc = document.documentElement;
-  const body = document.body;
-  const measuredWidth = Math.max(
-    1024,
-    window.innerWidth,
-    doc.scrollWidth,
-    doc.offsetWidth,
-    body?.scrollWidth ?? 0,
-    body?.offsetWidth ?? 0
-  );
-  const measuredHeight = Math.max(
-    768,
-    window.innerHeight,
-    doc.scrollHeight,
-    doc.offsetHeight,
-    body?.scrollHeight ?? 0,
-    body?.offsetHeight ?? 0
-  );
-  const width = Math.min(3000, measuredWidth);
-  const height = Math.min(14000, measuredHeight);
+  pdf.save(filename);
+}
 
-  return { html, width, height };
+interface ExportElementPdfOptions {
+  filename?: string;
+  baseFilename?: string;
+  scale?: number;
+  backgroundColor?: string;
+  imageType?: 'PNG' | 'JPEG';
+  imageQuality?: number;
+  maxPdfDimensionPx?: number;
+}
+
+const DEFAULT_CAPTURE_BLOCKING_SELECTORS = [
+  '.cds--skeleton',
+  '.cds--skeleton__text',
+  '.cds--loading',
+  '.cds--inline-loading',
+];
+
+const EMPTY_STATE_TEXT_MARKERS = [
+  'no data available',
+  'there is no data to display',
+  'khong co du lieu',
+  'không có dữ liệu',
+];
+
+type InlineStyleSnapshot = Partial<Record<'height' | 'maxHeight' | 'overflow' | 'overflowX' | 'overflowY' | 'width', string>>;
+
+function createElementFilename(baseFilename?: string, filename?: string): string {
+  if (filename && filename.trim().length > 0) {
+    return filename;
+  }
+
+  return generatePagePdfFilename(baseFilename || 'dashboard-export');
+}
+
+function waitForFontsReady(): Promise<void> {
+  if (!('fonts' in document) || !document.fonts?.ready) {
+    return Promise.resolve();
+  }
+
+  return document.fonts.ready.then(() => undefined);
+}
+
+function waitForImagesInElement(target: HTMLElement): Promise<void> {
+  const imageElements = Array.from(target.querySelectorAll('img'));
+  const pending = imageElements.filter((img) => !img.complete);
+
+  if (pending.length === 0) {
+    return Promise.resolve();
+  }
+
+  return Promise.all(
+    pending.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        }),
+    ),
+  ).then(() => undefined);
+}
+
+function nextPaintFrame(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function hasCaptureBlockingElements(target: HTMLElement): boolean {
+  return DEFAULT_CAPTURE_BLOCKING_SELECTORS.some((selector) => {
+    const matches = target.querySelector(selector);
+    return Boolean(matches);
+  });
+}
+
+function hasEmptyDataState(target: HTMLElement): boolean {
+  const textContent = (target.textContent || '').toLowerCase();
+  return EMPTY_STATE_TEXT_MARKERS.some((marker) => textContent.includes(marker));
+}
+
+async function waitForCaptureReadiness(target: HTMLElement, timeoutMs = 10000): Promise<void> {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime <= timeoutMs) {
+    await waitForFontsReady();
+    await waitForImagesInElement(target);
+
+    if (!hasCaptureBlockingElements(target) || hasEmptyDataState(target)) {
+      return;
+    }
+
+    await sleep(200);
+  }
+}
+
+function applyCloneCaptureStyles(target: HTMLElement): void {
+  target.style.height = 'max-content';
+  target.style.maxHeight = 'none';
+  target.style.overflow = 'visible';
+  target.style.overflowX = 'visible';
+  target.style.overflowY = 'visible';
+  target.style.width = `${Math.max(target.clientWidth, target.scrollWidth, 1)}px`;
+
+  const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
+  for (const element of descendants) {
+    const hasVerticalOverflow = element.scrollHeight > element.clientHeight + 1;
+    const hasHorizontalOverflow = element.scrollWidth > element.clientWidth + 1;
+
+    if (hasVerticalOverflow || hasHorizontalOverflow) {
+      element.style.height = 'max-content';
+      element.style.width = `${Math.max(element.clientWidth, element.scrollWidth, 1)}px`;
+    }
+
+    element.style.maxHeight = 'none';
+    element.style.overflow = 'visible';
+    element.style.overflowX = 'visible';
+    element.style.overflowY = 'visible';
+  }
+}
+
+function getMaxScrollableWidth(target: HTMLElement): number {
+  let maxWidth = Math.max(target.scrollWidth, target.clientWidth, target.offsetWidth, 1);
+
+  const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
+  for (const element of descendants) {
+    maxWidth = Math.max(maxWidth, element.scrollWidth, element.clientWidth, element.offsetWidth);
+  }
+
+  return maxWidth;
+}
+
+function getMaxScrollableHeight(target: HTMLElement): number {
+  let maxHeight = Math.max(target.scrollHeight, target.clientHeight, target.offsetHeight, 1);
+
+  const descendants = Array.from(target.querySelectorAll<HTMLElement>('*'));
+  for (const element of descendants) {
+    maxHeight = Math.max(maxHeight, element.scrollHeight, element.clientHeight, element.offsetHeight);
+  }
+
+  return maxHeight;
+}
+
+function clampPdfPageSize(canvasWidth: number, canvasHeight: number, maxDimensionPx: number): {
+  pageWidth: number;
+  pageHeight: number;
+} {
+  const widthScale = maxDimensionPx / canvasWidth;
+  const heightScale = maxDimensionPx / canvasHeight;
+  const scale = Math.min(1, widthScale, heightScale);
+
+  return {
+    pageWidth: Math.max(1, Math.floor(canvasWidth * scale)),
+    pageHeight: Math.max(1, Math.floor(canvasHeight * scale)),
+  };
+}
+
+function exportCanvasAsLongSinglePagePdf(
+  canvas: HTMLCanvasElement,
+  filename: string,
+  imageType: 'PNG' | 'JPEG',
+  imageQuality: number,
+  maxPdfDimensionPx: number,
+): void {
+  const { pageWidth, pageHeight } = clampPdfPageSize(canvas.width, canvas.height, maxPdfDimensionPx);
+  const pdf = new jsPDF({
+    orientation: pageWidth >= pageHeight ? 'landscape' : 'portrait',
+    unit: 'px',
+    format: [pageWidth, pageHeight],
+    compress: true,
+  });
+
+  const imageFormat = imageType === 'JPEG' ? 'image/jpeg' : 'image/png';
+  const imageData = canvas.toDataURL(imageFormat, imageQuality);
+
+  pdf.addImage(imageData, imageType, 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+  pdf.save(filename);
+}
+
+export async function exportElementRefAsPdf(
+  targetRef: RefObject<HTMLElement | null>,
+  options?: ExportElementPdfOptions,
+): Promise<void> {
+  const element = targetRef.current;
+
+  if (!element) {
+    throw new Error('Export target is unavailable');
+  }
+
+  const filename = createElementFilename(options?.baseFilename, options?.filename);
+  const backgroundColor = options?.backgroundColor ?? '#ffffff';
+  const imageType = options?.imageType ?? 'PNG';
+  const imageQuality = options?.imageQuality ?? 1;
+  const maxPdfDimensionPx = options?.maxPdfDimensionPx ?? 14000;
+
+  const exportMarker = `pdf-export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  element.setAttribute('data-pdf-export-target', exportMarker);
+
+  try {
+    await nextPaintFrame();
+    await waitForCaptureReadiness(element);
+    await nextPaintFrame();
+
+    const captureWidth = getMaxScrollableWidth(element);
+    const captureHeight = getMaxScrollableHeight(element);
+    const scale = options?.scale ?? Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+
+    const canvas = await html2canvas(element, {
+      backgroundColor,
+      scale,
+      useCORS: true,
+      allowTaint: true,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight,
+      width: captureWidth,
+      height: captureHeight,
+      scrollX: 0,
+      scrollY: 0,
+      logging: false,
+      foreignObjectRendering: false,
+      onclone: (clonedDocument) => {
+        const clonedRoot = clonedDocument.documentElement;
+        const clonedBody = clonedDocument.body;
+
+        clonedRoot.style.height = 'max-content';
+        clonedRoot.style.maxHeight = 'none';
+        clonedRoot.style.overflow = 'visible';
+        clonedRoot.style.overflowX = 'visible';
+        clonedRoot.style.overflowY = 'visible';
+
+        if (clonedBody) {
+          clonedBody.style.height = 'max-content';
+          clonedBody.style.maxHeight = 'none';
+          clonedBody.style.overflow = 'visible';
+          clonedBody.style.overflowX = 'visible';
+          clonedBody.style.overflowY = 'visible';
+        }
+
+        const clonedTarget = clonedDocument.querySelector(`[data-pdf-export-target="${exportMarker}"]`) as HTMLElement | null;
+        if (clonedTarget) {
+          applyCloneCaptureStyles(clonedTarget);
+        }
+      },
+    });
+
+    exportCanvasAsLongSinglePagePdf(canvas, filename, imageType, imageQuality, maxPdfDimensionPx);
+  } finally {
+    element.removeAttribute('data-pdf-export-target');
+  }
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Unable to load image for PDF export'));
+    image.src = url;
+  });
+}
+
+async function renderSvgToCanvas(svg: string, width: number, height: number): Promise<HTMLCanvasElement> {
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Canvas context is unavailable');
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 export async function exportCurrentPageAsPdf(options?: {
   title?: string;
   baseFilename?: string;
   filename?: string;
+  targetRef?: RefObject<HTMLElement | null>;
 }): Promise<void> {
-  const snapshot = createPageSnapshotHtml();
-  const response = await fetch(resolvePdfExportUrl(), {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      title: options?.title || document.title || 'page',
-      html: snapshot.html,
-      width: snapshot.width,
-      height: snapshot.height,
-    }),
+  const fallbackRef: RefObject<HTMLElement | null> = { current: document.body as HTMLElement };
+  const targetRef = options?.targetRef ?? fallbackRef;
+
+  await exportElementRefAsPdf(targetRef, {
+    filename: options?.filename,
+    baseFilename: options?.baseFilename || 'page-export',
   });
-
-  if (!response.ok) {
-    throw new Error(`Page PDF export failed with status ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const filename = options?.filename || generatePagePdfFilename(options?.baseFilename || 'page-export');
-  downloadFile(url, filename);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
@@ -427,30 +641,9 @@ export function useChartExport(options: UseChartExportOptions): UseChartExportRe
         const chartDom = chartInstance.getDom() as HTMLElement;
         const width = Math.max(800, Math.round(chartDom.clientWidth || 1200));
         const height = Math.max(450, Math.round(chartDom.clientHeight || 600));
-
-        const response = await fetch(resolvePdfExportUrl(), {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: chartTitle,
-            svg,
-            width,
-            height,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`PDF export failed with status ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        const canvas = await renderSvgToCanvas(svg, width, height);
         const filename = generateFilename(baseFilename, filters, 'pdf');
-        downloadFile(url, filename);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        exportCanvasAsSinglePagePdf(canvas, filename);
       } catch (error) {
         const err = error instanceof Error ? error : new Error('PDF export failed');
         setExportError(err);
