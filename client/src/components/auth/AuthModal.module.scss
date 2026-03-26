@@ -1,0 +1,16 @@
+.modalLayer > :global(.cds--modal-container) {
+  inline-size: 30rem;
+}
+
+
+.bottomInfo {
+  font-size: 0.75rem;
+  font-weight: var(--cds-body-compact-01-font-weight);
+  color: var(--cds-text-secondary);
+  white-space: pre-wrap;
+  margin: 0 auto;
+  text-align: center;
+  a {
+    font-size: 0.75rem;
+  }
+}
