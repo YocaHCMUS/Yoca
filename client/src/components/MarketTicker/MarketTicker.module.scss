@@ -5,7 +5,6 @@
 .tickerContainer {
   width: auto;
   height: 48px;
-  background: #ffffff;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -13,7 +12,8 @@
   top: 48px;
   white-space: nowrap;
   margin-bottom: $spacing-06;
-  margin-inline: -32px; // Counteract parent padding
+  margin-inline: -32px;
+  background: var(--cds-background);
   border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
   border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
   z-index: 10;
@@ -21,8 +21,17 @@
   @media (max-width: 1056px) {
     margin-inline: -16px; 
   }
-  
-  // Fade effect on edges
+
+}
+
+.tickerWrapper {
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+
   &::before,
   &::after {
     content: '';
@@ -36,21 +45,13 @@
 
   &::before {
     left: 0;
-    background: linear-gradient(to right, #ffffff, transparent);
+    background: linear-gradient(to right, var(--cds-layer-01), transparent);
   }
 
   &::after {
     right: 0;
-    background: linear-gradient(to left, #ffffff, transparent);
+    background: linear-gradient(to left, var(--cds-layer-01), transparent);
   }
-}
-
-.tickerWrapper {
-  flex: 1;
-  overflow: hidden;
-  height: 100%;
-  display: flex;
-  align-items: center;
 }
 
 .tickerContent {
@@ -129,7 +130,6 @@
   font-size: 0.75rem;
   flex-shrink: 0;
   height: 100%;
-  background: #ffffff;
   z-index: 5;
 }
 
