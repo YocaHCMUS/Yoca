@@ -30,7 +30,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
 
-type TradeVolumeOption = "0" | "1" | "5" | "10";
+type TradeVolumeOption = "0" | "1" | "100" | "500";
 type TradeTimeOption = "6h" | "12h" | "24h";
 type TradesSortOption = "volume" | "time";
 
@@ -105,11 +105,6 @@ export default function MarketPage() {
     { param: { addresses: trendingAddresses || "" } },
     { enabled: !!trendingAddresses },
   );
-
-  const trendingLoading =
-    trendingTokens.isLoading ||
-    trendingMeta.isLoading ||
-    trendingMarketData.isLoading;
 
   const topTraders = useGet(client.api.trades.traders.gainers, 200);
   const topLosers = useGet(client.api.trades.traders.losers, 200);
@@ -464,7 +459,7 @@ export default function MarketPage() {
 
   return (
     <PageWrapper>
-      <section className={styles.marketPage}>
+      <section className={styles.marketPage + " helloSection"}>
         <MarketTicker
           label={tr("marketPage.trending")}
           icon={<Fire size={16} fill="var(--cds-support-error, #da1e28)" />}
@@ -544,89 +539,93 @@ export default function MarketPage() {
               >
                 {activeTab == "trades" ? (
                   <Stack gap={6}>
-                    <div className={styles.tradersGrid}>
-                      {/* Top Gainers */}
-                      <div className={styles.boxedTableContainer}>
-                        <div className={styles.boxedTableHeader}>
-                          <div className={styles.headerLeft}>
-                            <span className={styles.title}>
-                              {tr("marketPage.topGainers")}
-                            </span>
-                            <p className={styles.description}>
-                              {tr("marketPage.topGainersDesc")}
-                            </p>
+                    <Grid>
+                      <Column sm={4} md={8} lg={8}>
+                        {/* Top Gainers */}
+                        <div className={styles.boxedTableContainer}>
+                          <div className={styles.boxedTableHeader}>
+                            <div className={styles.headerLeft}>
+                              <span className={styles.title}>
+                                {tr("marketPage.topGainers")}
+                              </span>
+                              <p className={styles.description}>
+                                {tr("marketPage.topGainersDesc")}
+                              </p>
+                            </div>
                           </div>
+                          <Tble
+                            height="auto"
+                            loading={tradersLoading}
+                            headers={[
+                              {
+                                key: "trader",
+                                header: tr("marketPage.trader"),
+                                align: "start",
+                              },
+                              {
+                                key: "pnl",
+                                header: tr("marketPage.profits"),
+                                align: "end",
+                              },
+                              {
+                                key: "volume",
+                                header: tr("marketPage.volume"),
+                                align: "end",
+                              },
+                              {
+                                key: "trades",
+                                header: tr("marketPage.trades"),
+                                align: "end",
+                              },
+                            ]}
+                            rows={traderRows.slice(0, 10)}
+                          />
                         </div>
-                        <Tble
-                          height="auto"
-                          loading={tradersLoading}
-                          headers={[
-                            {
-                              key: "trader",
-                              header: tr("marketPage.trader"),
-                              align: "start",
-                            },
-                            {
-                              key: "pnl",
-                              header: tr("marketPage.profits"),
-                              align: "end",
-                            },
-                            {
-                              key: "volume",
-                              header: tr("marketPage.volume"),
-                              align: "end",
-                            },
-                            {
-                              key: "trades",
-                              header: tr("marketPage.trades"),
-                              align: "end",
-                            },
-                          ]}
-                          rows={traderRows.slice(0, 10)}
-                        />
-                      </div>
+                      </Column>
 
-                      {/* Top Losers */}
-                      <div className={styles.boxedTableContainer}>
-                        <div className={styles.boxedTableHeader}>
-                          <div className={styles.headerLeft}>
-                            <span className={styles.title}>
-                              {tr("marketPage.topLosers")}
-                            </span>
-                            <p className={styles.description}>
-                              {tr("marketPage.topLosersDesc")}
-                            </p>
+                      <Column sm={4} md={8} lg={8}>
+                        {/* Top Losers */}
+                        <div className={styles.boxedTableContainer}>
+                          <div className={styles.boxedTableHeader}>
+                            <div className={styles.headerLeft}>
+                              <span className={styles.title}>
+                                {tr("marketPage.topLosers")}
+                              </span>
+                              <p className={styles.description}>
+                                {tr("marketPage.topLosersDesc")}
+                              </p>
+                            </div>
                           </div>
+                          <Tble
+                            height="auto"
+                            loading={tradersLoading}
+                            headers={[
+                              {
+                                key: "trader",
+                                header: tr("marketPage.trader"),
+                                align: "start",
+                              },
+                              {
+                                key: "pnl",
+                                header: tr("marketPage.profits"),
+                                align: "end",
+                              },
+                              {
+                                key: "volume",
+                                header: tr("marketPage.volume"),
+                                align: "end",
+                              },
+                              {
+                                key: "trades",
+                                header: tr("marketPage.trades"),
+                                align: "end",
+                              },
+                            ]}
+                            rows={loserRows.slice(0, 10)}
+                          />
                         </div>
-                        <Tble
-                          height="auto"
-                          loading={tradersLoading}
-                          headers={[
-                            {
-                              key: "trader",
-                              header: tr("marketPage.trader"),
-                              align: "start",
-                            },
-                            {
-                              key: "pnl",
-                              header: tr("marketPage.profits"),
-                              align: "end",
-                            },
-                            {
-                              key: "volume",
-                              header: tr("marketPage.volume"),
-                              align: "end",
-                            },
-                            {
-                              key: "trades",
-                              header: tr("marketPage.trades"),
-                              align: "end",
-                            },
-                          ]}
-                          rows={loserRows.slice(0, 10)}
-                        />
-                      </div>
-                    </div>
+                      </Column>
+                    </Grid>
 
                     {/* Recent Trades */}
                     <div className={styles.boxedTableContainer}>
@@ -657,22 +656,20 @@ export default function MarketPage() {
                                   }),
                                 },
                                 {
-                                  value: "5",
+                                  value: "100",
                                   label: tr("marketPage.filterGreaterThan", {
-                                    val: "5",
+                                    val: "100",
                                   }),
                                 },
                                 {
-                                  value: "10",
+                                  value: "500",
                                   label: tr("marketPage.filterGreaterThan", {
-                                    val: "10",
+                                    val: "500",
                                   }),
                                 },
                               ]}
                               value={tradeVolume}
-                              onChange={(v) =>
-                                setTradeVolume(v as TradeVolumeOption)
-                              }
+                              onChange={(v) => setTradeVolume(v)}
                               tooltipLabel="Volume"
                             />
                           </div>
@@ -706,9 +703,7 @@ export default function MarketPage() {
                                 { value: "time", label: tr("marketPage.time") },
                               ]}
                               value={tradesSort}
-                              onChange={(v) =>
-                                setTradesSort(v as TradesSortOption)
-                              }
+                              onChange={(v) => setTradesSort(v)}
                               tooltipLabel="Sort By"
                             />
                           </div>

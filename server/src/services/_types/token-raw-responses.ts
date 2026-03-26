@@ -339,7 +339,7 @@ export type MRL_TopHolders = {
 };
 
 export const tokenSideSchema = z.object({
-  symbol: z.string(),
+  symbol: z.string().optional(),
   address: z.string(),
   decimals: z.number(),
   price: z.number(),

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Link } from 'react-router';
-import styles from './MarketTicker.module.scss';
-import clsx from 'clsx';
+import clsx from "clsx";
+import React from "react";
+import { Link } from "react-router";
+import styles from "./MarketTicker.module.scss";
 
 export interface MarketTickerItem {
   address: string;
@@ -22,7 +22,12 @@ interface MarketTickerProps {
   };
 }
 
-const MarketTicker: React.FC<MarketTickerProps> = ({ label, icon, items, formatter }) => {
+const MarketTicker: React.FC<MarketTickerProps> = ({
+  label,
+  icon,
+  items,
+  formatter,
+}) => {
   if (!items || items.length === 0) return null;
 
   // Duplicate items for infinite scroll effect
@@ -39,21 +44,29 @@ const MarketTicker: React.FC<MarketTickerProps> = ({ label, icon, items, formatt
       <div className={styles.tickerWrapper}>
         <div className={styles.tickerContent}>
           {displayItems.map((item, idx) => (
-            <Link 
-              key={`${item.address}-${idx}`} 
-              to={`/tokens/${item.address}`} 
+            <Link
+              key={`${item.address}-${idx}`}
+              to={`/tokens/${item.address}`}
               className={styles.tickerItem}
             >
               <span className={styles.rank}>#{item.rank}</span>
               {item.imageUrl && (
-                <img src={item.imageUrl} alt={item.symbol} className={styles.avatar} />
+                <img
+                  src={item.imageUrl}
+                  alt={item.symbol}
+                  className={styles.avatar}
+                />
               )}
               <span className={styles.symbol}>{item.symbol.toUpperCase()}</span>
-              <span className={styles.price}>{formatter.currency(item.priceUsd)}</span>
-              <span className={clsx(styles.change, {
-                [styles.positive]: item.priceChange24h >= 0,
-                [styles.negative]: item.priceChange24h < 0,
-              })}>
+              <span className={styles.price}>
+                {formatter.currency(item.priceUsd)}
+              </span>
+              <span
+                className={clsx(styles.change, {
+                  [styles.positive]: item.priceChange24h >= 0,
+                  [styles.negative]: item.priceChange24h < 0,
+                })}
+              >
                 {formatter.percent(item.priceChange24h)}
               </span>
             </Link>
