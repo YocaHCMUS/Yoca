@@ -23,6 +23,7 @@ import z from "zod";
 import { ModalStateManager } from "../ModelStateManager";
 import { Divider } from "../partials/Divider/Divider";
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import styles from "./SignInModal.module.scss";
 import { SignUpModal } from "./SignUpModal";
 import { WalletAuthButton } from "./WalletAuthButton";
 
@@ -103,9 +104,9 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   }
 
   return (
-    <ComposedModal open={open} onClose={close}>
+    <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
-      <ModalBody hasScrollingContent>
+      <ModalBody className={"bodyne"} hasScrollingContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap={6}>
             <TextInput

@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
 import { CpyBtn } from "@/components/CpyBtn";
 import Tble from "@/components/Tble";
 import { TknImg } from "@/components/TknImg";
@@ -10,6 +11,46 @@ import { IconButton, Link, Stack, Tooltip } from "@carbon/react";
 import { ChartAverage } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
+
+type TokenAverageTradePriceProps = {
+  tokenAddress: string;
+  tokenImgUrl: string;
+  tokenSymbol: string;
+  tokenCurrentPrice: number;
+  avgBuyPrice: number;
+  avgSellPrice: number;
+};
+
+function TokenAverageTradePrice({
+  tokenAddress,
+  tokenImgUrl,
+  tokenSymbol,
+  tokenCurrentPrice,
+  avgBuyPrice,
+  avgSellPrice,
+}: TokenAverageTradePriceProps) {
+  const priceData = useGet(
+    client.api.tokens.markets.chart[":address"].daily,
+    200,
+    {
+      param: { address: tokenAddress },
+      query: {
+        days: 7,
+      },
+    },
+    {
+      select: (data) =>
+        data.map((dataPoint) => ({
+          unixTimeMs: dataPoint.unixTimestampMs,
+          value: dataPoint.price,
+        })),
+    },
+  );
+
+  return (
+    <TimeSeriesLineChart data={priceData.data} loading={priceData.isLoading} />
+  );
+}
 
 export function TokenDetailsDemo() {
   const { address } = useParams<{
@@ -227,7 +268,18 @@ export function TokenDetailsDemo() {
     <PageWrapper
       extraHeaderPanel={{
         isOpen: !!selectedToken,
-        content: selectedToken && <p>Hello</p>,
+        content: selectedToken && (
+          <TokenAverageTradePrice
+            tokenAddress={selectedToken.address}
+            tokenImgUrl={
+              tokenMeta.data?.[selectedToken.address]?.imageUrl || ""
+            }
+            tokenSymbol={tokenMeta.data?.[address]?.symbol || ""}
+            tokenCurrentPrice={tokenMarket.data?.[address]?.priceUsd || 0}
+            avgBuyPrice={selectedToken.avgBuyCost}
+            avgSellPrice={selectedToken.avgSellCost}
+          />
+        ),
         size: "lg",
         onClose: () => setSelectedToken(null),
       }}

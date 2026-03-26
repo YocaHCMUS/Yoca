@@ -5,7 +5,7 @@ type TknImgProps = {
   size: number;
   loading?: boolean;
   src: string | null | undefined;
-  alt: string | undefined;
+  alt?: string;
 };
 
 export function TknImg({ size, alt, loading = false, src }: TknImgProps) {

@@ -2,40 +2,49 @@ import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
 
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-
 export interface TimeSeriesDataPoint {
   unixTimeMs: number;
   value: number;
 }
 
-export default interface SimpleLineChartProps {
-  data: TimeSeriesDataPoint[];
-  title: string;
-  height: number;
-  unit: string;
-  decimals: number;
-  showArea: boolean;
-  showZoom: boolean;
+export default interface TimeSeriesChartProps {
+  data: TimeSeriesDataPoint[] | undefined;
+  loading?: boolean;
+  isDataSorted?: boolean;
+  title?: string;
+  height?: number;
 
-  valueFormatter?: (value: number) => string;
-  timeFormatter?: (time: number) => string;
+  valueFormatter?: (value: number | null) => string;
+  timeFormatter?: (time: number | null) => string;
 
   className?: string;
 }
 
 export function TimeSeriesLineChart({
   data,
+  loading = false,
+  isDataSorted = false,
   title,
+  height = 300,
   className,
-}: SimpleLineChartProps) {
-  const { sortedData, latestTime, startTime, options } = useMemo(() => {
-    const sortedData = data
-      .sort((a, b) => a.unixTimeMs - b.unixTimeMs)
-      .map((point) => [point.unixTimeMs, point.value]);
+}: TimeSeriesChartProps) {
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!data || data.length == 0) {
+    return <p>No data available</p>;
+  }
+
+  const { options } = useMemo(() => {
+    const sortedData = (
+      !isDataSorted ? data.sort((a, b) => a.unixTimeMs - b.unixTimeMs) : data
+    ).map((point) => [point.unixTimeMs, point.value]);
+
     const latestTime =
       sortedData.length > 0 ? sortedData[sortedData.length - 1][0] : 0;
-    const startTime = latestTime - SIX_HOURS_MS;
+
+    const startTime = sortedData.length > 0 ? sortedData[0][0] : 0;
 
     const options: EChartsOption = {
       title: {
@@ -87,13 +96,9 @@ export function TimeSeriesLineChart({
     return { sortedData, latestTime, startTime, options };
   }, [data, title]);
 
-  if (data.length === 0) {
-    return <p>No data available</p>;
-  }
-
   return (
     <div className={className || ""}>
-      <ReactECharts option={options} />
+      <ReactECharts option={options} style={{ height }} />
     </div>
   );
 }
