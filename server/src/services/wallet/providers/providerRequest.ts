@@ -38,7 +38,7 @@ export async function requestProviderJson<T>(input: {
     provider: ProviderName;
     url: URL;
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    headers: HeadersInit;
+    headers: Record<string, string>;
     body?: unknown;
     apiKey?: ApiKeyMetadata | null;
     serviceFile?: string;
