@@ -6,7 +6,9 @@ import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { useGet } from "@/hooks/useGet";
+import { cds } from "@/util/carbon-theme";
 import { IconButton, Link, Stack, Tooltip } from "@carbon/react";
 import { ChartAverage } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
@@ -29,6 +31,12 @@ function TokenAverageTradePrice({
   avgBuyPrice,
   avgSellPrice,
 }: TokenAverageTradePriceProps) {
+  const { sellColor, buyColor } = useCarbonTokens({
+    sellColor: cds.supportError,
+    buyColor: cds.supportWarning,
+  });
+  const { fmt } = useLocalization();
+
   const priceData = useGet(
     client.api.tokens.markets.chart[":address"].daily,
     200,
@@ -48,7 +56,25 @@ function TokenAverageTradePrice({
   );
 
   return (
-    <TimeSeriesLineChart data={priceData.data} loading={priceData.isLoading} />
+    <TimeSeriesLineChart
+      title="Price chart"
+      markLines={[
+        {
+          label: "Avg Buy Price",
+          value: avgBuyPrice,
+          color: buyColor,
+        },
+        {
+          label: "Avg Sell Price",
+          value: avgSellPrice,
+          color: sellColor,
+        },
+      ]}
+      helper="average-buy-sell"
+      valueFormatter={fmt.num.compact.currency}
+      data={priceData.data}
+      loading={priceData.isLoading}
+    />
   );
 }
 
@@ -68,7 +94,7 @@ export function TokenDetailsDemo() {
     return <></>;
   }
 
-  const { tr, fmt } = useLocalization();
+  const { tr, lang, fmt } = useLocalization();
 
   const walletTokenDetails = useGet(
     client.api.wallets[":address"].tokens,
@@ -262,6 +288,7 @@ export function TokenDetailsDemo() {
     tokenMeta.isLoading,
     tokenMeta.data,
     tokenMarket.data,
+    lang,
   ]);
 
   return (
@@ -286,6 +313,7 @@ export function TokenDetailsDemo() {
     >
       <Tble
         loading={walletTokenDetails.isLoading}
+        boxed
         title={"Tokens Last Traded"}
         description={"Tokens which recent trading activities"}
         rows={rows}
@@ -293,58 +321,17 @@ export function TokenDetailsDemo() {
         stickyHeader
         enablePagination
         headers={[
-          {
-            key: "token",
-            header: "Token/Last traded",
-            align: "start",
-          },
-          {
-            key: "balance",
-            header: "Balance",
-            align: "center",
-          },
-          {
-            key: "pnl",
-            header: "Profit",
-          },
-          {
-            key: "realizedPnl",
-            header: "Realized Profit",
-          },
-          {
-            key: "unrealizedPnl",
-            header: "Unrealized Profit",
-          },
-          {
-            key: "buy",
-            header: "Total Bought",
-            align: "end",
-          },
-          {
-            key: "sell",
-            header: "Total Sold",
-            align: "end",
-          },
-          {
-            key: "net",
-            header: "Net Value",
-            align: "end",
-          },
-          {
-            key: "tradeCount",
-            header: "Transactions",
-            align: "end",
-          },
-          {
-            key: "avgTradePrice",
-            header: "Avg Buy/Sell Price",
-            align: "end",
-          },
-          {
-            key: "tradePriceGraph",
-            header: "Graph",
-            align: "center",
-          },
+          { key: "token", header: "Token/Last traded", align: "start" },
+          { key: "balance", header: "Balance", align: "center" },
+          { key: "pnl", header: "Profit" },
+          { key: "realizedPnl", header: "Realized Profit" },
+          { key: "unrealizedPnl", header: "Unrealized Profit" },
+          { key: "buy", header: "Total Bought", align: "end" },
+          { key: "sell", header: "Total Sold", align: "end" },
+          { key: "net", header: "Net Value", align: "end" },
+          { key: "tradeCount", header: "Transactions", align: "end" },
+          { key: "avgTradePrice", header: "Avg Buy/Sell Price", align: "end" },
+          { key: "tradePriceGraph", header: "Graph", align: "center" },
         ]}
       />
     </PageWrapper>
