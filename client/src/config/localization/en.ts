@@ -295,7 +295,7 @@ export const translation = {
     tradesSubtitle:
       "Discover top performing traders and the latest significant swaps across decentralized exchanges.",
     filterAll: "All",
-    filterGreaterThan: ">${{val}}",
+    filterGreaterThan: "≥{{val}}",
     selectToken: "Select a token to view details",
     allTimeHigh: "All-Time High",
     allTimeLow: "All-Time Low",
@@ -673,7 +673,7 @@ export const translation = {
       historicalData: "Historical Data",
     },
     marketsTable: {
-      rank: "#",
+      rank: "Rank",
       exchange: "Exchange",
       pair: "Pair",
       price: "Price",
@@ -727,9 +727,9 @@ export const translation = {
       noAddress: "No token address for bubblemaps",
     },
     topHolders: {
-      rank: "#",
+      rank: "Rank",
       address: "Address",
-      percent: "%",
+      percent: "Percentage",
       noData: "No holders data found for this token.",
     },
     historicalData: {

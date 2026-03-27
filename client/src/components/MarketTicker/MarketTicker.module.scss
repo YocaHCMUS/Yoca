@@ -1,28 +1,6 @@
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/type' as *;
-
-.tickerContainer {
-  width: auto;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  position: sticky;
-  top: 48px;
-  white-space: nowrap;
-  margin-bottom: $spacing-06;
-  margin-inline: -32px;
-  background: var(--cds-background);
-  border-top: 1px solid var(--cds-border-subtle, #e0e0e0);
-  border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0);
-  z-index: 10;
-
-  @media (max-width: 1056px) {
-    margin-inline: -16px; 
-  }
-
-}
+@use "@carbon/react/scss/theme" as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/type" as *;
 
 .tickerWrapper {
   flex: 1;
@@ -34,10 +12,10 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
-    width: 64px;
+    width: 32px;
     height: 100%;
     z-index: 2;
     pointer-events: none;
@@ -45,20 +23,21 @@
 
   &::before {
     left: 0;
-    background: linear-gradient(to right, var(--cds-layer-01), transparent);
+    background: linear-gradient(to right, var(--cds-background), transparent);
   }
 
   &::after {
     right: 0;
-    background: linear-gradient(to left, var(--cds-layer-01), transparent);
+    background: linear-gradient(to left, var(--cds-background), transparent);
   }
 }
 
 .tickerContent {
+  height: 100%;
   display: flex;
   align-items: center;
   animation: scroll 120s linear infinite;
-  
+
   &:hover {
     animation-play-state: paused;
   }
@@ -68,69 +47,16 @@
   display: flex;
   align-items: center;
   gap: $spacing-03;
+  height: 100%;
   padding-inline: $spacing-06;
   text-decoration: none;
   color: inherit;
-  font-family: 'Inter', sans-serif;
   transition: opacity 0.2s ease;
-  border-right: 1px solid var(--cds-border-subtle, #e0e0e0);
+  border-right: 1px solid var(--cds-border-subtle-01);
 
   &:hover {
-    opacity: 0.8;
-    background: var(--cds-layer-hover-01, #e5e5e5);
+    background: var(--cds-layer-hover-01);
   }
-}
-
-.rank {
-  font-size: 0.75rem;
-  color: var(--cds-text-secondary, #8d8d8d);
-  font-weight: 500;
-}
-
-.avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.symbol {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.price {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.change {
-  font-size: 0.875rem;
-  font-weight: 500;
-
-  &.positive {
-    color: var(--cds-support-success, #24a148);
-  }
-
-  &.negative {
-    color: var(--cds-support-error, #da1e28);
-  }
-}
-
-.label {
-  display: flex;
-  align-items: center;
-  gap: $spacing-03;
-  padding-inline: 24px;
-  border-right: 1px solid var(--cds-border-subtle, #e0e0e0);
-  margin-right: 0;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--cds-text-primary);
-  font-size: 0.75rem;
-  flex-shrink: 0;
-  height: 100%;
-  z-index: 5;
 }
 
 @keyframes scroll {

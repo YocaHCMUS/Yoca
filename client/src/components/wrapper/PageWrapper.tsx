@@ -2,7 +2,8 @@ import appLogo from "@/assets/app-logo.png";
 import { useUserTheme } from "@/contexts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Asleep, Light } from "@carbon/icons-react";
+import { cds } from "@/util/carbon-theme";
+import { Asleep, FireFill, Light } from "@carbon/icons-react";
 import {
   Content,
   Header,
@@ -24,6 +25,7 @@ import {
 import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
+import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
@@ -49,7 +51,6 @@ function ThemeToggleGlobalAction() {
 
 type PageWrapperProps = {
   children: ReactNode;
-  noTopPadding?: boolean;
   extraHeaderPanel?: {
     isOpen: boolean;
     content: ReactNode;
@@ -59,11 +60,7 @@ type PageWrapperProps = {
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
 };
 
-export function PageWrapper({
-  children,
-  noTopPadding = false,
-  extraHeaderPanel,
-}: PageWrapperProps) {
+export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
@@ -294,16 +291,16 @@ export function PageWrapper({
         </SideNav>
       </Header>
 
+      <MarketTicker
+        className={styles.marketTicker}
+        label={tr("marketPage.trending")}
+        icon={<FireFill size={16} fill={cds.supportError} />}
+      />
+
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
-      <Content
-        id="main-content"
-        style={{ height: "100%", paddingTop: 0, paddingBottom: 0 }}
-        className={noTopPadding ? styles.contentNoTopPadding : undefined}
-      >
-        {children}
-      </Content>
+      <Content id="main-content">{children}</Content>
     </>
   );
 }

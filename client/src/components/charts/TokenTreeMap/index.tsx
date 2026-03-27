@@ -1,6 +1,7 @@
-import { CARBON } from "@/config/constants";
+import { ERROR_COLOR, SUCCESS_COLOR } from "@/config/constants";
 import { useUserTheme } from "@/contexts";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { cds } from "@/util/carbon-theme";
 import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption, TreemapSeriesOption } from "echarts";
 import ReactECharts from "echarts-for-react";
@@ -136,9 +137,9 @@ function brightenColor(hex: string, intensity: number): string {
 }
 
 function getTrendColor(trend: number | null, maxTrendValue?: number): string {
-  if (trend == null || trend == 0) return CARBON.info;
+  if (trend == null || trend == 0) return cds.supportInfo;
 
-  const baseColor = trend > 0 ? CARBON.success : CARBON.error;
+  const baseColor = trend > 0 ? SUCCESS_COLOR : ERROR_COLOR;
 
   if (!maxTrendValue || maxTrendValue <= 0) return baseColor;
 

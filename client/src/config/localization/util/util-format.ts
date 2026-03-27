@@ -89,7 +89,7 @@ export function defineNumberFormat(
   ) {
     const effectiveStyle = style == "unit" ? "decimal" : style;
 
-    if (typeof value !== "number" && typeof value !== "string")
+    if (typeof value != "number" && typeof value != "string")
       return nullDisplay;
     const numValue = typeof value == "string" ? Number(value) : value;
     if (!Number.isFinite(numValue)) return nullDisplay;
@@ -97,7 +97,9 @@ export function defineNumberFormat(
     const exchangedValue =
       style == "currency" && getExchangeRate
         ? numValue * getExchangeRate()
-        : numValue;
+        : style == "percent"
+          ? numValue / 100
+          : numValue;
 
     let decimals = 2;
     if (effectiveStyle == "currency") {
@@ -108,7 +110,7 @@ export function defineNumberFormat(
       decimals = strategy.decimalResolution.resolvePercent(exchangedValue);
     }
 
-    if (notation === "compact" && Math.abs(exchangedValue) >= 1000) {
+    if (notation == "compact" && Math.abs(exchangedValue) >= 1000) {
       decimals = Math.min(decimals, 2);
     }
 

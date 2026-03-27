@@ -670,7 +670,7 @@ export const translation = defineTranslation({
       historicalData: "Dữ liệu lịch sử",
     },
     marketsTable: {
-      rank: "#",
+      rank: "Thứ hạng",
       exchange: "Sàn giao dịch",
       pair: "Cặp",
       price: "Giá",
@@ -724,9 +724,9 @@ export const translation = defineTranslation({
       noAddress: "Không có địa chỉ token",
     },
     topHolders: {
-      rank: "#",
+      rank: "Thứ hạng",
       address: "Địa chỉ",
-      percent: "%",
+      percent: "Phần trăm",
       noData: "Không tìm thấy dữ liệu người nắm giữ.",
     },
     historicalData: {

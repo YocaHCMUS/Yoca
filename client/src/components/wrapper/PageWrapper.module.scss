@@ -14,3 +14,14 @@
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
+
+.marketTicker {
+  position: fixed;
+  z-index: 8000-1;
+  background: var(--cds-background);
+  border-bottom: 1px solid var(--cds-border-subtle-01);
+}
+
+:global(.cds--content) {
+  padding-top: 3.5rem !important;
+}

@@ -12,13 +12,5 @@ export const COINGECKO_THUMBNAIL_URL =
 export const PLACEHOLDER_IMAGE_URL = "https://placehold.co/48x48";
 export const ELLIPSIS = "…";
 
-// Colors
-import colors from "@/styles/carbon-colors.module.scss";
-
-export const CARBON = {
-  primary: colors.primary,
-  secondary: colors.secondary,
-  success: colors.success,
-  error: colors.error,
-  info: colors.info,
-};
+export const SUCCESS_COLOR = "#24a148";
+export const ERROR_COLOR = "#da1e28";

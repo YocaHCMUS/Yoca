@@ -1,8 +1,10 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { cds } from "@/util/carbon-theme";
 import {
   DataTable,
   InlineLoading,
+  Layer,
   Pagination,
   Stack,
   Table,
@@ -14,14 +16,20 @@ import {
   TableRow,
   type DataTableProps,
 } from "@carbon/react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 interface TblHdr {
   header: string;
   key: string;
   align?: "start" | "center" | "end";
   width?: number | string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 interface TblRw {
@@ -42,7 +50,9 @@ interface TblProps
   stickyHeader?: boolean;
   enablePagination?: boolean;
   pageSize?: number;
+  boxed?: boolean;
   pageSizes?: number[];
+  marginTop?: number;
 }
 
 export default function Tble({
@@ -52,87 +62,88 @@ export default function Tble({
   description,
   hideHeaders = false,
   loading = false,
-  height = 600,
+  height,
   toolBar,
+  boxed = false,
   stickyHeader = false,
   enablePagination = false,
   pageSize = 16,
   pageSizes = [8, 16, 24, 32],
+  marginTop = 0,
   ...dataTableProps
 }: TblProps) {
   const { tr } = useLocalization();
-  const headerLookup = Object.fromEntries(
-    headers.map((h) => [h.key, h]),
-  ) as Record<string, TblHdr>;
-  const safePageSize = Math.max(1, pageSize);
-  const totalPages = enablePagination
-    ? Math.max(1, Math.ceil(rows.length / safePageSize))
-    : 1;
   const [currentPage, setCurrentPage] = useState(1);
-  const [currentPageSize, setCurrentPageSize] = useState(safePageSize);
+  const [currentPageSize, setCurrentPageSize] = useState(Math.max(1, pageSize));
+
+  const totalPages = useMemo(
+    () =>
+      enablePagination
+        ? Math.max(1, Math.ceil(rows.length / currentPageSize))
+        : 1,
+    [enablePagination, rows.length, currentPageSize],
+  );
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
   const rowsToRender = useMemo(() => {
-    if (!enablePagination) {
-      return rows;
-    }
-
+    if (!enablePagination) return rows;
     const startIdx = (currentPage - 1) * currentPageSize;
     return rows.slice(startIdx, startIdx + currentPageSize);
   }, [enablePagination, rows, currentPage, currentPageSize]);
 
-  const cellStyle = (key: string): React.CSSProperties => {
-    const header = headerLookup[key];
-
-    if (stickyHeader) {
-      return {
-        paddingBlock: 0,
-        display: "flex",
-        alignItems: "center",
-        textAlign: header?.align || "start",
-        justifyContent:
-          header?.align == "end"
-            ? "flex-end"
-            : header?.align == "center"
-              ? "center"
-              : "flex-start",
-        inlineSize: header?.width,
-      };
-    }
+  const getCellConfiguration = (key: string) => {
+    const header = headers.find((h) => h.key == key);
+    const alignmentClass =
+      header?.align == "end"
+        ? overwriteStyles.alignEnd
+        : header?.align == "center"
+          ? overwriteStyles.alignCenter
+          : overwriteStyles.alignStart;
 
     return {
-      paddingBlock: 0,
-      textAlign: header?.align || "start",
-      verticalAlign: "middle",
-      width: header?.width,
+      className: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
+      style: {
+        width: header?.width,
+        inlineSize: stickyHeader ? header?.width : undefined,
+        verticalAlign: stickyHeader ? undefined : "middle",
+      } as CSSProperties,
     };
   };
+
+  const RenderHeader = title && (
+    <Stack gap={1}>
+      <Stack
+        gap={1}
+        className={overwriteStyles.titleContainer}
+        style={{ paddingLeft: boxed ? 16 : undefined }}
+      >
+        <strong className={overwriteStyles.titleText}>{title}</strong>
+        <span className={overwriteStyles.tblDsc}>{description}</span>
+      </Stack>
+      <div className={overwriteStyles.tblToolbar}>
+        <div
+          className={overwriteStyles.tblToolbarContent}
+          style={{ paddingRight: boxed ? 4 : undefined }}
+        >
+          {toolBar}
+        </div>
+      </div>
+    </Stack>
+  );
 
   if (loading || rows.length == 0) {
     return (
       <TableContainer
-        title={
-          <Stack>
-            <Stack>
-              <strong style={{ textTransform: "uppercase" }}>{title}</strong>
-              <span className={overwriteStyles.tblDsc}>{description}</span>
-            </Stack>
-            <div className={overwriteStyles.tblToolbar}>
-              <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
-            </div>
-          </Stack>
-        }
-        className={overwriteStyles.tbl}
+        title={RenderHeader}
+        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""}`}
       >
         <Stack
-          style={{
-            height,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          gap={1}
+          className={overwriteStyles.loadingContainer}
+          style={{ height }}
         >
           {loading ? (
             <InlineLoading description={tr("common.loading")} />
@@ -145,119 +156,96 @@ export default function Tble({
   }
 
   return (
-    <TableContainer
-      title={
-        <Stack>
-          <Stack>
-            <strong style={{ textTransform: "uppercase" }}>{title}</strong>
-            <span className={overwriteStyles.tblDsc}>{description}</span>
-          </Stack>
-          <div className={overwriteStyles.tblToolbar}>
-            <div className={overwriteStyles.tblToolbarContent}>{toolBar}</div>
-          </div>
-        </Stack>
-      }
-      className={overwriteStyles.tbl}
-    >
-      <DataTable
-        rows={rowsToRender}
-        headers={headers}
-        stickyHeader={stickyHeader}
-        {...dataTableProps}
+    <Layer>
+      <TableContainer
+        title={RenderHeader}
+        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""}`}
+        style={{ marginTop }}
       >
-        {({
-          rows: internalRows,
-          headers,
-          getTableProps,
-          getHeaderProps,
-          getRowProps,
-          getCellProps,
-        }) => (
-          <div
-            style={{
-              height,
-              ...(stickyHeader ? {} : { tableLayout: "fixed", width: "100%" }),
-            }}
-          >
-            <Table {...getTableProps()}>
-              <TableHead hidden={hideHeaders}>
-                <TableRow>
-                  {headers.map((header) => (
-                    <TableHeader
-                      {...getHeaderProps({ header })}
-                      key={header.key}
-                      style={{
-                        ...cellStyle(header.key),
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {header.header}
-                    </TableHeader>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {internalRows.length == 0 ? (
+        <DataTable
+          rows={rowsToRender}
+          headers={headers}
+          stickyHeader={stickyHeader}
+          {...dataTableProps}
+        >
+          {({
+            rows: internalRows,
+            headers: internalHeaders,
+            getTableProps,
+            getHeaderProps,
+            getRowProps,
+            getCellProps,
+          }) => (
+            <div
+              style={{
+                height,
+                ...(!stickyHeader && { tableLayout: "fixed", width: "100%" }),
+              }}
+            >
+              <Table {...getTableProps()}>
+                <TableHead hidden={hideHeaders}>
                   <TableRow>
-                    <TableCell
-                      colSpan={headers.length}
-                      style={{
-                        paddingBlockStart: 0,
-                        textAlign: "center",
-                        height: "100px",
-                      }}
-                    >
-                      {tr("common.noData")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  internalRows.map((row) => (
-                    <TableRow {...getRowProps({ row })} key={row.id}>
-                      {row.cells.map((cell) => (
-                        <TableCell
-                          {...getCellProps({ cell })}
-                          key={cell.id}
-                          style={cellStyle(cell.info.header)}
+                    {internalHeaders.map((header) => {
+                      const config = getCellConfiguration(header.key);
+                      return (
+                        <TableHeader
+                          {...getHeaderProps({ header })}
+                          key={header.key}
+                          className={`${overwriteStyles.headerCell} ${config.className}`}
+                          style={config.style}
                         >
-                          {cell.value}
-                        </TableCell>
-                      ))}
+                          {header.header}
+                        </TableHeader>
+                      );
+                    })}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {internalRows.map((row) => (
+                    <TableRow {...getRowProps({ row })} key={row.id}>
+                      {row.cells.map((cell) => {
+                        const config = getCellConfiguration(cell.info.header);
+                        return (
+                          <TableCell
+                            {...getCellProps({ cell })}
+                            key={cell.id}
+                            className={config.className}
+                            style={config.style}
+                          >
+                            {cell.value}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-            {enablePagination && (
-              <Pagination
-                page={currentPage}
-                pageSize={currentPageSize}
-                pageSizes={pageSizes}
-                totalItems={rows.length}
-                forwardText={tr("table.nextPage")}
-                backwardText={tr("table.previousPage")}
-                itemsPerPageText={tr("table.itemsPerPageText")}
-                pageRangeText={(current: number, total: number) =>
-                  tr("table.pageRangeText", {
-                    count: current,
-                    total: total,
-                  })
-                }
-                itemRangeText={(min: number, max: number, total: number) =>
-                  tr("table.itemRangeText", {
-                    min,
-                    max,
-                    count: total,
-                  })
-                }
-                onChange={({ page, pageSize }) => {
-                  setCurrentPage(page);
-                  setCurrentPageSize(pageSize);
-                }}
-              />
-            )}
-          </div>
-        )}
-      </DataTable>
-    </TableContainer>
+                  ))}
+                </TableBody>
+              </Table>
+              {enablePagination && (
+                <Pagination
+                  style={{ height: "3rem", background: cds.layer03 }}
+                  page={currentPage}
+                  pageSize={currentPageSize}
+                  pageSizes={pageSizes}
+                  totalItems={rows.length}
+                  forwardText={tr("table.nextPage")}
+                  backwardText={tr("table.previousPage")}
+                  itemsPerPageText={tr("table.itemsPerPageText")}
+                  pageRangeText={(current, total) =>
+                    tr("table.pageRangeText", { count: current, total })
+                  }
+                  itemRangeText={(min, max, total) =>
+                    tr("table.itemRangeText", { min, max, count: total })
+                  }
+                  onChange={({ page, pageSize }) => {
+                    setCurrentPage(page);
+                    setCurrentPageSize(pageSize);
+                  }}
+                />
+              )}
+            </div>
+          )}
+        </DataTable>
+      </TableContainer>
+    </Layer>
   );
 }
