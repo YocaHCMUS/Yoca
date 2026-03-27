@@ -85,7 +85,7 @@ function MarketTicker({ label, icon, className }: MarketTickerProps) {
         orientation="horizontal"
         style={{
           alignItems: "center",
-          width: "8rem",
+          width: "9rem",
           justifyContent: "center",
           paddingLeft: 16,
           paddingRight: 16,

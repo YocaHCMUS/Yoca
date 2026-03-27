@@ -186,15 +186,8 @@ export function TimeSeriesLineChart({
             opacity: 0.15,
           },
           markLine: {
-            // label: {
-            //   position: "insideEndBottom",
-            //   formatter: "{b}",
-            //   color: tokens.textInverse,
-            //   fontSize: 10,
-            //   backgroundColor: tokens.bgInverse,
-            //   padding: [8, 8],
-            //   borderRadius: 2,
-            // },
+            // Important: Default is 2. For tokens, we need high precision.
+            precision: 8,
             lineStyle: {
               width: 1,
               opacity: 0.8,
