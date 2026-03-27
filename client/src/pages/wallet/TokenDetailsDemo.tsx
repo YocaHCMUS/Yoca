@@ -90,7 +90,7 @@ function TokenAverageTradePrice({
                 <CpyBtn size="xs" copyWhat={tokenAddress} />
               </Stack>
 
-              <Txt size="sm" secondary>
+              <Txt size="sm" secondary ellipsis>
                 {tokenName}
               </Txt>
             </Stack>

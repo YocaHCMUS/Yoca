@@ -1,6 +1,7 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { cds } from "@/util/carbon-theme";
+import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
@@ -226,17 +227,9 @@ export function TimeSeriesLineChart({
 
   if (loading)
     return (
-      <div
-        style={{
-          height,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: tokens.textHelper,
-        }}
-      >
-        {tr("common.loading")}
-      </div>
+      <Stack style={{ height, alignItems: "center", justifyContent: "center" }}>
+        <InlineLoading description={tr("common.loading")} />
+      </Stack>
     );
 
   if (chartData.length == 0)
