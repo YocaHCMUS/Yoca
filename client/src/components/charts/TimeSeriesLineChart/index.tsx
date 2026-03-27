@@ -118,13 +118,27 @@ export function TimeSeriesLineChart({
         type: "time",
         axisLine: { show: false },
         axisTick: { show: false },
+        // Suggest a reasonable number of splits for a 300px-ish height chart
+        // splitNumber: 8,
+        // Prevent ticks from being too close together
+        // minInterval: 3600 * 1000 * 24, // 1 day ms
         axisLabel: {
           color: tokens.textSecondary,
           fontSize: 11,
-          formatter: (val: number) =>
-            range < 86_400_000
-              ? fmt.datetime.time(val)
-              : fmt.datetime.date(val),
+          // Use hideOverlap to automatically remove clashing labels
+          hideOverlap: true,
+          formatter: (val: number) => {
+            // If the total range is > 30 days, just show Month/Day
+            if (range > 86_400_000 * 30) {
+              return fmt.datetime.date(val);
+            }
+            // If < 24h, show Time
+            if (range < 86_400_000) {
+              return fmt.datetime.time(val);
+            }
+            // Default fallback
+            return fmt.datetime.date(val);
+          },
         },
         splitLine: { show: false },
       },
@@ -142,26 +156,21 @@ export function TimeSeriesLineChart({
         splitLine: {
           lineStyle: { color: tokens.borderSubtle, type: "dashed" },
         },
-        // ECharts passes an object containing the min/max of the series data
         min: (value) => {
-          // Start with the lowest price in the chart
           let min = value.min;
-          // Check if any markLine is lower than the lowest price
           markLines.forEach((ml) => {
             if (ml.value < min) min = ml.value;
           });
-          // Add a 5% buffer so the line isn't touching the edge
-          return min - min * 0.05;
+          const spread = value.max - value.min || min * 0.1;
+          return min - spread * 0.15; // 15% buffer based on spread
         },
         max: (value) => {
-          // Start with the highest price in the chart
           let max = value.max;
-          // Check if any markLine is higher than the highest price
           markLines.forEach((ml) => {
             if (ml.value > max) max = ml.value;
           });
-          // Add a 5% buffer
-          return max + max * 0.05;
+          const spread = value.max - value.min || max * 0.1;
+          return max + spread * 0.15;
         },
       },
       series: [
@@ -210,14 +219,6 @@ export function TimeSeriesLineChart({
               },
             })),
           },
-          // markLine: {
-          //   data: [
-          //     {
-          //       yAxis: 90,
-          //       name: "Horizontal line with Y value at 90",
-          //     },
-          //   ],
-          // },
         },
       ],
     };

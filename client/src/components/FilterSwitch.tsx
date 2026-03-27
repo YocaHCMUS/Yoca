@@ -1,5 +1,6 @@
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import { ContentSwitcher, Switch } from "@carbon/react";
+import type { CSSProperties } from "react";
 
 type WidthSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
@@ -21,6 +22,7 @@ interface FilterSwitchProps<V extends string | number> {
   value: V;
   onChange: (value: V) => void;
   width?: WidthSize | number;
+  style?: CSSProperties;
 }
 
 function isNumber(value: unknown): value is number {
@@ -32,6 +34,7 @@ export function FilterSwitch<V extends string | number>({
   options,
   onChange,
   width = "md",
+  style,
 }: FilterSwitchProps<V>) {
   const selectedIndex = options.findIndex((opt) => opt.value == value);
 
@@ -51,6 +54,7 @@ export function FilterSwitch<V extends string | number>({
         inlineSize: isNumber(width)
           ? width
           : `${widthSize[width as WidthSize]}rem`,
+        ...style,
       }}
     >
       {options.map((opt, optIdx) => (

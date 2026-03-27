@@ -1,32 +1,38 @@
 import client from "@/api/main";
 import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
 import { CpyBtn } from "@/components/CpyBtn";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import Tble from "@/components/Tble";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
+import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { useGet } from "@/hooks/useGet";
 import { cds } from "@/util/carbon-theme";
-import { IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
 import { ChartAverage } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 type TokenAverageTradePriceProps = {
   tokenAddress: string;
-  tokenImgUrl: string;
-  tokenSymbol: string;
-  tokenCurrentPrice: number;
+  tokenImgUrl: string | null;
+  tokenSymbol: string | null;
+  tokenName: string | null;
+  tokenCurrentPrice: number | null;
   avgBuyPrice: number;
   avgSellPrice: number;
 };
+
+type TokenPriceDayRange = 7 | 30 | 90;
 
 function TokenAverageTradePrice({
   tokenAddress,
   tokenImgUrl,
   tokenSymbol,
+  tokenName,
   tokenCurrentPrice,
   avgBuyPrice,
   avgSellPrice,
@@ -36,6 +42,8 @@ function TokenAverageTradePrice({
     buyColor: cds.supportWarning,
   });
   const { fmt } = useLocalization();
+  const [selectedTimeRange, setSelectedTimeRange] =
+    useState<TokenPriceDayRange>(7);
 
   const priceData = useGet(
     client.api.tokens.markets.chart[":address"].daily,
@@ -43,7 +51,7 @@ function TokenAverageTradePrice({
     {
       param: { address: tokenAddress },
       query: {
-        days: 7,
+        days: selectedTimeRange,
       },
     },
     {
@@ -56,25 +64,90 @@ function TokenAverageTradePrice({
   );
 
   return (
-    <TimeSeriesLineChart
-      title="Price chart"
-      markLines={[
-        {
-          label: "Avg Buy Price",
-          value: avgBuyPrice,
-          color: buyColor,
-        },
-        {
-          label: "Avg Sell Price",
-          value: avgSellPrice,
-          color: sellColor,
-        },
-      ]}
-      helper="average-buy-sell"
-      valueFormatter={fmt.num.compact.currency}
-      data={priceData.data}
-      loading={priceData.isLoading}
-    />
+    <Stack>
+      <Grid narrow>
+        <Column sm={2} md={4} lg={4}>
+          <Stack
+            orientation="horizontal"
+            gap={3}
+            style={{ justifyContent: "start", alignItems: "center" }}
+          >
+            <TknImg src={tokenImgUrl} alt={tokenSymbol} size={48} />
+            <Stack>
+              <Stack orientation="horizontal" style={{ alignItems: "center" }}>
+                <Link
+                  style={{
+                    fontFamily: "monospace",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {tokenSymbol ??
+                    fmt.text.address(tokenAddress, {
+                      maxLength: 4,
+                      position: "end",
+                    })}
+                </Link>
+                <CpyBtn size="xs" copyWhat={tokenAddress} />
+              </Stack>
+
+              <Txt size="sm" secondary>
+                {tokenName}
+              </Txt>
+            </Stack>
+          </Stack>
+        </Column>
+
+        <Column sm={1} md={2} lg={6}>
+          <Txt size="xl" center stretch>
+            {fmt.num.currency(tokenCurrentPrice)}
+          </Txt>
+        </Column>
+
+        <Column sm={1} md={2} lg={6}>
+          <div
+            style={{ display: "flex", width: "100%", justifyContent: "end" }}
+          >
+            <FilterSwitch
+              options={[
+                {
+                  label: "7d",
+                  value: 7,
+                },
+                {
+                  label: "30d",
+                  value: 30,
+                },
+                {
+                  label: "90d",
+                  value: 90,
+                },
+              ]}
+              value={selectedTimeRange}
+              onChange={(v) => setSelectedTimeRange(v)}
+            />
+          </div>
+        </Column>
+      </Grid>
+
+      <TimeSeriesLineChart
+        markLines={[
+          {
+            label: "Avg Buy Price",
+            value: avgBuyPrice,
+            color: buyColor,
+          },
+          {
+            label: "Avg Sell Price",
+            value: avgSellPrice,
+            color: sellColor,
+          },
+        ]}
+        helper="average-buy-sell"
+        valueFormatter={fmt.num.compact.currency}
+        data={priceData.data}
+        loading={priceData.isLoading}
+      />
+    </Stack>
   );
 }
 
@@ -299,10 +372,15 @@ export function TokenDetailsDemo() {
           <TokenAverageTradePrice
             tokenAddress={selectedToken.address}
             tokenImgUrl={
-              tokenMeta.data?.[selectedToken.address]?.imageUrl || ""
+              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
             }
-            tokenSymbol={tokenMeta.data?.[address]?.symbol || ""}
-            tokenCurrentPrice={tokenMarket.data?.[address]?.priceUsd || 0}
+            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+            tokenSymbol={
+              tokenMeta.data?.[selectedToken.address]?.symbol || null
+            }
+            tokenCurrentPrice={
+              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+            }
             avgBuyPrice={selectedToken.avgBuyCost}
             avgSellPrice={selectedToken.avgSellCost}
           />

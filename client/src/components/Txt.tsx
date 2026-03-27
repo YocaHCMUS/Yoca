@@ -4,15 +4,17 @@ type TxtSize = "sm" | "md" | "lg" | "xl" | "2xl";
 type TxtProps = {
   size?: TxtSize;
   block?: boolean;
+  stretch?: boolean;
   secondary?: boolean;
   bold?: boolean;
+  center?: boolean;
   uppercase?: boolean;
   ellipsis?: boolean;
   width?: string | number;
 };
 
 const sizeFontSize: Record<TxtSize, number> = {
-  sm: 0.5,
+  sm: 0.75,
   md: 1,
   lg: 2,
   xl: 3,
@@ -22,11 +24,13 @@ const sizeFontSize: Record<TxtSize, number> = {
 export function Txt({
   bold,
   block,
+  stretch,
   secondary,
   uppercase,
   ellipsis,
   width,
   children,
+  center,
   size = "md",
 }: React.PropsWithChildren<TxtProps>) {
   return (
@@ -35,13 +39,16 @@ export function Txt({
         textTransform: uppercase ? "uppercase" : undefined,
         fontWeight: bold ? "bold" : undefined,
         fontSize: `${sizeFontSize[size]}rem`,
-        display: block ? "block" : undefined,
+        display: block ? "block" : stretch ? "inline-block" : undefined,
         color: secondary ? cds.textSecondary : cds.textPrimary,
-        width,
+        width: stretch ? "100%" : width,
         ...(ellipsis && {
           overflow: "hidden",
           whiteSpace: "nowrap",
           textOverflow: "ellipsis",
+        }),
+        ...(center && {
+          textAlign: "center",
         }),
       }}
     >
