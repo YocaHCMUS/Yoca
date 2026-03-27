@@ -1,11 +1,11 @@
 import React from 'react';
 import type WalletComparisionProp from "./WalletComparisionProp";
 import { PnLChart } from '@/components/charts/PnLChart';
-import { RollingAnnualReturn } from '@/components/charts/RollingAnnualReturn';
 import { AverageRollingAnnualReturn } from '@/components/charts/AverageRollingAnnualReturn';
 import { WinrateChart } from '@/components/charts/Winrate';
 import { DrawdownChart } from '@/components/charts/Drawdown';
 import styles from './GeneralTab.module.scss'; // Reusing the same styles
+import RollingProfitAndLoss from '@/components/charts/RollingProfitAndLoss/RollingProfitAndLoss';
 
 
 export const RiskTab: React.FC<WalletComparisionProp> = ({
@@ -25,16 +25,15 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
     return (
         <div className={styles.grid}>
             {/* Rolling annual returns */}
-            {/* <div className={styles.stableCoinChart}>
-                <RollingAnnualReturn
+            <div className={styles.stableCoinChart}>
+                <RollingProfitAndLoss
                     minHeight={300}
                     initialFilters={{
-                        timePeriod: '1Y',
+                        timePeriod: '30D',
                         wallets: walletAddresses,
-                        // timeUnit: 'month',
                     }}
                 />
-            </div> */}
+            </div>
 
             {/* Average rolling annual returns */}
             {/* <div className={styles.stableCoinChart}>

@@ -9,6 +9,7 @@
  */
 
 import client from '@/api/main';
+import type { RollingProfitAndLossResponse } from '@/types/chart-api.types';
 
 /**
  * Utility type to extract the inferred response type from a fetcher function
@@ -216,27 +217,85 @@ export async function fetchTradingVolumePerTransaction(params?: Parameters<typeo
  * Type automatically inferred from server route via Hono RPC
  */
 export async function fetchRollingAnnualReturn(params?: Parameters<typeof client.api.charts.rollingAnnualReturn.$get>[0]) {
-  const honoParams = params ? { query: params } : undefined;
+  // Map client-side period values to backend-accepted options
+  const mapPeriod = (p?: any) => {
+    if (p == null) return p;
+    const s = String(p);
+    const allowed = ['7D', '30D', '90D', 'All'];
+    if (allowed.includes(s)) return s;
+    const mappings: Record<string, string> = {
+      '1Y': 'All',
+      '1M': '30D',
+      '3M': '90D',
+      '1W': '7D',
+    };
+    if (mappings[s]) return mappings[s];
+    if (/^\d+D$/.test(s)) return s;
+    // conservative fallback
+    return '30D';
+  };
+
+  const safeParams = params ? { ...(params as any), period: mapPeriod((params as any).period) } : undefined;
+  const honoParams = safeParams ? { query: safeParams } : undefined;
   const response = await client.api.charts.rollingAnnualReturn.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
 
-  // Backend returns array of { wallet, rollingAnnualReturns } or aggregated object
+  // Normalize period-based P&L (per-wallet array or aggregated object)
+  const toNumber = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // If backend returns an array of per-wallet metrics
   if (Array.isArray(raw)) {
     const wallets = raw.map((r: any) => {
-      const totalUsd = r.rollingAnnualReturns.totalUsd;
-      const realizedUsd = r.rollingAnnualReturns.realizedUsd;
-      const unrealizedUsd = r.rollingAnnualReturns.unrealizedUsd;
-
+      const source = r.rollingAnnualReturns ?? r;
       return {
         walletAddress: r.wallet ?? r.walletAddress ?? '',
-        totalUsd,
-        realizedUsd,
-        unrealizedUsd,
+        walletName: r.walletName ?? r.walletLabel ?? undefined,
+        metrics: {
+          total: toNumber(source.totalUsd ?? source.total ?? r.totalUsd ?? 0),
+          realized: toNumber(source.realizedUsd ?? source.realized ?? r.realizedUsd ?? 0),
+          unrealized: toNumber(source.unrealizedUsd ?? source.unrealized ?? r.unrealizedUsd ?? 0),
+        },
       };
     });
-    return { wallets, metadata: { timestamp: Date.now() } };
+
+    const availableSet = new Set<string>();
+    wallets.forEach(w => {
+      if (typeof w.metrics.total === 'number' && !isNaN(w.metrics.total)) availableSet.add('total');
+      if (typeof w.metrics.realized === 'number' && !isNaN(w.metrics.realized)) availableSet.add('realized');
+      if (typeof w.metrics.unrealized === 'number' && !isNaN(w.metrics.unrealized)) availableSet.add('unrealized');
+    });
+
+    const availableValueTypes = Array.from(availableSet) as ('total' | 'realized' | 'unrealized')[];
+
+    return {
+      wallets,
+      metadata: { timestamp: Date.now(), currency: 'USD', availableValueTypes },
+    } as RollingProfitAndLossResponse;
   }
+
+  // // If backend returns an aggregated object with rollingAnnualReturns
+  // if (raw && (raw.rollingAnnualReturns || raw.totalUsd || raw.realizedUsd || raw.unrealizedUsd)) {
+  //   const source = raw.rollingAnnualReturns ?? raw;
+  //   const metrics = {
+  //     total: toNumber(source.totalUsd ?? source.total ?? raw.totalUsd ?? 0),
+  //     realized: toNumber(source.realizedUsd ?? source.realized ?? raw.realizedUsd ?? 0),
+  //     unrealized: toNumber(source.unrealizedUsd ?? source.unrealized ?? raw.unrealizedUsd ?? 0),
+  //   };
+
+  //   const availableValueTypes: ('total' | 'realized' | 'unrealized')[] = [];
+  //   if (!isNaN(metrics.total)) availableValueTypes.push('total');
+  //   if (!isNaN(metrics.realized)) availableValueTypes.push('realized');
+  //   if (!isNaN(metrics.unrealized)) availableValueTypes.push('unrealized');
+
+  //   return { metrics, metadata: { timestamp: Date.now(), currency: raw?.currency ?? 'USD', availableValueTypes } } as RollingProfitAndLossResponse;
+  // }
+
+  // // Fallback: return raw for backward compatibility (timeseries shape)
+  // return raw;
 }
 
 /**
@@ -279,7 +338,7 @@ export async function fetchDrawdown(params?: Parameters<typeof client.api.charts
     throw new Error(`API error: ${raw.error}`);
   }
 
-  return { wallets: raw, metadata: { timestamp: Date.now() } };
+  return { wallets: raw, metadata: { timestamp: Date.now(), currency: 'USD' } };
 }
 
 /**
