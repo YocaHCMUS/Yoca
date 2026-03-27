@@ -51,7 +51,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div> */}
 
             {/* Total Trading Volume Column Chart */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <TotalTradingVolumeChart
                     minHeight={300}
                     initialFilters={{
@@ -59,22 +59,22 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses,
                     }}
                 />
-            </div>
+            </div> */}
 
             {/* Trading Volume distribution Chart */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                 />
-            </div>
+            </div> */}
 
 
             {/* Average Trading Volume per transaction Charts */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                 />
-            </div>
+            </div> */}
 
 
         </div>

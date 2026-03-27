@@ -25,7 +25,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
     return (
         <div className={styles.grid}>
             {/* Rolling annual returns */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <RollingAnnualReturn
                     minHeight={300}
                     initialFilters={{
@@ -34,7 +34,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
                         // timeUnit: 'month',
                     }}
                 />
-            </div>
+            </div> */}
 
             {/* Average rolling annual returns */}
             {/* <div className={styles.stableCoinChart}>
@@ -57,7 +57,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Winrate */}
-            <div className={styles.stableCoinChart}>
+            {/* <div className={styles.stableCoinChart}>
                 <WinrateChart
                     minHeight={300}
                     initialFilters={{
@@ -65,14 +65,14 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses,
                     }}
                 />
-            </div>
+            </div> */}
 
             {/* Maximum drawdown */}
             <div className={styles.stableCoinChart}>
                 <DrawdownChart
                     minHeight={300}
                     initialFilters={{
-                        timePeriod: '90D',
+                        timePeriod: '30D',
                         wallets: walletAddresses,
                     }}
                 />

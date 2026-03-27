@@ -86,18 +86,24 @@ export function DrawdownChart({
    * Generate drawdown chart option
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || 'error' in data || !data.wallets || data.wallets.length === 0) return null;
-
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
-    // Prepare series data (one per wallet)
-    const series = data.wallets.map((wallet, index) => {
+    if (
+      !data ||
+      'error' in data ||
+      !data.wallets ||
+      !Array.isArray(data.wallets) ||
+      data.wallets.length === 0
+    ) {
+      return null;
+    }
+
+    // data format: { wallets: Array<{ walletAddress, walletName?, data: Array<{timestamp, value, ...}>, ... }>, metadata: { timestamp } }
+    const series = data.wallets.map((wallet: any, index: number) => {
       const color = chartTheme.colorPalette[index % chartTheme.colorPalette.length];
-      
       return {
         name: wallet.walletName || wallet.walletAddress,
         type: 'line' as const,
-        data: wallet.data.map(d => [d.timestamp, d.value]),
+        data: wallet.drawdownResult.map((d: any) => [d.timestamp, d.drawdown * 100]), // convert to percentage
         smooth: true,
         lineStyle: {
           color: color,
@@ -131,10 +137,7 @@ export function DrawdownChart({
         },
       };
     });
-    
-    // Get all timestamps (assuming all wallets have same timestamps)
-    const timestamps = data.wallets[0]?.data.map(d => d.timestamp) || [];
-    
+
     return {
       ...baseOption,
       grid: {
@@ -172,7 +175,7 @@ export function DrawdownChart({
       series: series,
       legend: getConditionalLegend(
         chartTheme,
-        data.wallets.map(w => w.walletName || w.walletAddress),
+        data.wallets.map((w: any) => w.walletName || w.walletAddress),
         2,
         false
       ),
@@ -182,11 +185,50 @@ export function DrawdownChart({
         axisPointer: {
           type: 'cross',
         },
-        formatter: (params: any) => formatAxisTooltip(
-          params,
-          (p) => formatTimestampWithTimezone(p.value[0], timezone, 'yyyy-MM-dd HH:mm'),
-          (p) => `${p.value[1].toFixed(2)}%`
-        ),
+        formatter: (params: any) => {
+          // params is an array of points for the hovered x value
+          if (!Array.isArray(params)) return '';
+          let tooltip = '';
+          params.forEach((p: any) => {
+            const data = p.data || [];
+            // data: [timestamp, drawdown%], but we want to show all drawdownResult fields
+            // Try to find the full drawdownResult object from the series data
+            const wallet = data.walletAddress || p.seriesName;
+            // Find the wallet object in data.wallets
+            const walletObj = data && typeof data === 'object' && data.walletAddress
+              ? data
+              : (data && typeof data === 'object' && data.drawdownResult
+                ? data
+                : null);
+            // Fallback: try to find walletObj from chart data
+            let drawdownObj = null;
+            if (walletObj && walletObj.drawdownResult) {
+              drawdownObj = walletObj.drawdownResult.find((d: any) => d.timestamp === p.value[0]);
+            } else if (p.value && p.seriesIndex != null && data.wallets && Array.isArray(data.wallets)) {
+              const w = data.wallets[p.seriesIndex];
+              drawdownObj = w?.drawdownResult?.find((d: any) => d.timestamp === p.value[0]);
+            }
+            // If not found, fallback to p.value
+            if (!drawdownObj && p.value) {
+              drawdownObj = {
+                timestamp: p.value[0],
+                drawdown: p.value[1] / 100,
+              };
+            }
+            // Compose tooltip
+            tooltip += `<div><strong>${p.seriesName}</strong></div>`;
+            tooltip += `<div>${formatTimestampWithTimezone(p.value[0], timezone, 'yyyy-MM-dd HH:mm')}</div>`;
+            if (drawdownObj) {
+              tooltip += `<div>Drawdown: ${(drawdownObj.drawdown * 100).toFixed(2)}%</div>`;
+              if ('value' in drawdownObj) tooltip += `<div>Value: ${drawdownObj.value}</div>`;
+              if ('peak' in drawdownObj) tooltip += `<div>Peak: ${drawdownObj.peak}</div>`;
+              if ('trough' in drawdownObj) tooltip += `<div>Trough: ${drawdownObj.trough}</div>`;
+              if ('date' in drawdownObj) tooltip += `<div>Date: ${drawdownObj.date}</div>`;
+            }
+            tooltip += '<hr style="margin:2px 0;opacity:0.2">';
+          });
+          return tooltip;
+        },
       },
     };
   }, [data, chartTheme, timezone, tr]);
@@ -195,40 +237,90 @@ export function DrawdownChart({
    * Generate statistics header
    */
   const statsCards = useMemo<StatCard[]>(() => {
-    if (!data || 'error' in data || !data.wallets || data.wallets.length === 0) return [];
+    if (
+      !data ||
+      'error' in data ||
+      !data.wallets ||
+      !Array.isArray(data.wallets) ||
+      data.wallets.length === 0
+    ) {
+      return [];
+    }
 
-    return data.wallets.map((wallet, index) => ({
-      title: wallet.walletName || wallet.walletAddress,
-      stats: [
-        {
-          label: 'Max Drawdown',
-          value: wallet.maxDrawdown.toFixed(2),
-          suffix: '%',
-          valueClassName: 'text-danger',
-        },
-        {
-          label: 'Days Since Max DD',
-          value: wallet.daysSinceMaxDrawdown,
-          suffix: 'days',
-        },
-        {
-          label: 'Current Drawdown',
-          value: wallet.currentDrawdown.toFixed(2),
-          suffix: '%',
-        },
-        {
-          label: 'Max DD Date',
-          value: formatTimestampWithTimezone(wallet.maxDrawdownTimestamp, timezone, 'yyyy-MM-dd'),
-        },
-      ],
-    }));
+    // Compute stats from drawdownResult for each wallet
+    return data.wallets.map((wallet) => {
+      const { drawdownResult, walletAddress } = wallet;
+      if (!Array.isArray(drawdownResult) || drawdownResult.length === 0) {
+        return {
+          title: walletAddress,
+          stats: [
+            { label: 'No data', value: '-', suffix: '', valueClassName: 'text-muted' },
+          ],
+        };
+      }
+
+      // Max drawdown is the 'trough' value of the latest entry
+      const latest = drawdownResult[drawdownResult.length - 1];
+      const maxDrawdown = latest.trough;
+      const currentDrawdown = latest?.drawdown ?? 0;
+
+      // Find the latest entry where trough === value
+      let maxDrawdownTimestamp = null;
+      for (let i = drawdownResult.length - 1; i >= 0; i--) {
+        const d = drawdownResult[i];
+        if (d.trough === d.value) {
+          maxDrawdownTimestamp = d.timestamp;
+          break;
+        }
+      }
+
+      // Days since max drawdown: from that timestamp to now
+      let daysSinceMaxDrawdown = null;
+      if (maxDrawdownTimestamp) {
+        const now = Date.now();
+        const msPerDay = 24 * 60 * 60 * 1000;
+        daysSinceMaxDrawdown = Math.floor((now - maxDrawdownTimestamp) / msPerDay);
+      }
+
+      return {
+        title: walletAddress,
+        stats: [
+          {
+            label: 'Max Drawdown',
+            value: (maxDrawdown * 100).toFixed(2),
+            suffix: '%',
+            valueClassName: 'text-danger',
+          },
+          {
+            label: 'Days Since Max DD',
+            value: daysSinceMaxDrawdown != null ? daysSinceMaxDrawdown : '-',
+            suffix: 'days',
+          },
+          {
+            label: 'Current Drawdown',
+            value: (currentDrawdown * 100).toFixed(2),
+            suffix: '%',
+          },
+          {
+            label: 'Max DD Date',
+            value: maxDrawdownTimestamp ? formatTimestampWithTimezone(maxDrawdownTimestamp, timezone, 'yyyy-MM-dd') : '-',
+          },
+        ],
+      };
+    });
   }, [data, timezone]);
 
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || 'error' in data || !data.wallets || data.wallets.length === 0}
+      isEmpty={
+        !data ||
+        'error' in data ||
+        !data.wallets ||
+        !Array.isArray(data.wallets) ||
+        data.wallets.length === 0
+      }
       onRetry={() => refetch(false)}
     >
       <ChartContainer gap='0'>

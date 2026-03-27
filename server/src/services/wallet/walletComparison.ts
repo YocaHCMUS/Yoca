@@ -77,7 +77,7 @@ export async function getRollingAnnualReturns(wallets: string[], period: WalletO
             const overview = await getWalletOverview(wallet);
             const returns = overview.periods[period].pnl;
             return {
-                wallet,
+                walletAddress: wallet,
                 rollingAnnualReturns: returns ? returns : null, // annualize the returns
             };
         }
@@ -94,47 +94,41 @@ export async function getDrawdown(wallets: string[], period: WalletOverviewPerio
         5, // MAX_WALLET_CHART_CONCURRENCY,
         async (wallet) => {
             const balanceHistory = await getWalletBalanceHistory(wallet);
-            const drawdownResult = [{
-                timestamp: balanceHistory[0].timestamp, // for simplicity, using the first timestamp as the drawdown timestamp
-                date: balanceHistory[0].date,
-                value: balanceHistory[0].value,
-                peak: balanceHistory[0].value,
-                trough: balanceHistory[0].value,
-                drawdown: 0,
-            }]
-            balanceHistory.forEach((point) => {
-                const lastResult = drawdownResult[drawdownResult.length - 1];
-                if (point.value > (lastResult.peak ?? 0)) { // new peak
-                    drawdownResult.push({
-                        timestamp: point.timestamp,
-                        date: point.date,
-                        value: point.value,
-                        peak: point.value,
-                        trough: lastResult.trough,
-                        drawdown: 0, // reset drawdown on new peak
-                    });
-                } else if (point.value < (lastResult.trough ?? Infinity)) { // new trough
-                    drawdownResult.push({
-                        timestamp: point.timestamp,
-                        date: point.date,
-                        value: point.value,
-                        peak: lastResult.peak,
-                        trough: point.value,
-                        drawdown: (point.value - lastResult.peak) / lastResult.peak, // calculate drawdown
-                    });
-                } else {
-                    drawdownResult.push({ // same peak, no new trough
-                        timestamp: point.timestamp,
-                        date: point.date,
-                        value: point.value,
-                        peak: lastResult.peak,
-                        trough: lastResult.trough,
-                        drawdown: (point.value - lastResult.peak) / lastResult.peak, // calculate drawdown
-                    });
-                }
-            });
+            if (!balanceHistory || balanceHistory.length === 0) {
+                return { drawdownResult: [], walletAddress: wallet };
+            }
 
-            return drawdownResult;
+            let peak = balanceHistory[0].value;
+            let trough = balanceHistory[0].value;
+            const drawdownResult = [];
+
+            for (let i = 0; i < balanceHistory.length; i++) {
+                const point = balanceHistory[i];
+                // New peak resets trough
+                if (point.value > peak) {
+                    peak = point.value;
+                    trough = point.value;
+                }
+                // New trough
+                if (point.value < trough) {
+                    trough = point.value;
+                }
+                // Drawdown is always relative to the most recent peak
+                const drawdown = peak === 0 ? 0 : (point.value - peak) / peak;
+                drawdownResult.push({
+                    timestamp: point.timestamp,
+                    date: point.date,
+                    value: point.value,
+                    peak,
+                    trough,
+                    drawdown,
+                });
+            }
+
+            return {
+                drawdownResult,
+                walletAddress: wallet,
+            };
         }
     );
 }
