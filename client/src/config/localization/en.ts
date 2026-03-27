@@ -623,6 +623,8 @@ export const translation = {
       noWalletsTitle: "No Wallets Selected",
       noWalletsMessage:
         "Please select at least one wallet to view trading volume distribution.",
+      buy: "Buy",
+      sell: "Sell",
     },
     tokenPriceChart: {
       price: "{{tokenSymbol}} Price",

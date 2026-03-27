@@ -62,19 +62,19 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Trading Volume distribution Chart */}
-            {/* <div className={styles.stableCoinChart}>
+            <div className={styles.stableCoinChart}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                 />
-            </div> */}
+            </div>
 
 
             {/* Average Trading Volume per transaction Charts */}
-            {/* <div className={styles.stableCoinChart}>
+            <div className={styles.stableCoinChart}>
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                 />
-            </div> */}
+            </div>
 
 
         </div>

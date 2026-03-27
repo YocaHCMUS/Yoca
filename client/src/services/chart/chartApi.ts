@@ -54,7 +54,7 @@ export async function fetchBalanceTrend(params?: Parameters<typeof client.api.ch
   // Hono RPC client requires wrapping query params in { query: {...} }
   const honoParams = params ? { query: params } : undefined;
 
-  const response = await client.api.charts.balance.$get(honoParams as any);
+  const response = await client.api.charts.balance.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -67,7 +67,7 @@ export async function fetchBalanceTrend(params?: Parameters<typeof client.api.ch
  */
 export async function fetchAssetDistribution(params?: Parameters<typeof client.api.charts.distribution.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.distribution.$get(honoParams as any);
+  const response = await client.api.charts.distribution.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -80,7 +80,7 @@ export async function fetchAssetDistribution(params?: Parameters<typeof client.a
  */
 export async function fetchExchangeComparison(params?: Parameters<typeof client.api.charts.exchanges.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.exchanges.$get(honoParams as any);
+  const response = await client.api.charts.exchanges.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -93,7 +93,7 @@ export async function fetchExchangeComparison(params?: Parameters<typeof client.
  */
 export async function fetchCounterpartyActivity(params?: Parameters<typeof client.api.charts.counterparties.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.counterparties.$get(honoParams as any);
+  const response = await client.api.charts.counterparties.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -106,7 +106,7 @@ export async function fetchCounterpartyActivity(params?: Parameters<typeof clien
  */
 export async function fetchPnLChart(params?: Parameters<typeof client.api.charts.pnl.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.pnl.$get(honoParams as any);
+  const response = await client.api.charts.pnl.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -119,7 +119,7 @@ export async function fetchPnLChart(params?: Parameters<typeof client.api.charts
  */
 export async function fetchTransactionDistribution(params?: Parameters<typeof client.api.charts.transactions.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.transactions.$get(honoParams as any);
+  const response = await client.api.charts.transactions.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -132,7 +132,7 @@ export async function fetchTransactionDistribution(params?: Parameters<typeof cl
  */
 export async function fetchHoldingDurations(params?: Parameters<typeof client.api.charts.holdings.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.holdings.$get(honoParams as any);
+  const response = await client.api.charts.holdings.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -145,7 +145,7 @@ export async function fetchHoldingDurations(params?: Parameters<typeof client.ap
  */
 export async function fetchVolumeBenchmark(params?: Parameters<typeof client.api.charts.volume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.volume.$get(honoParams as any);
+  const response = await client.api.charts.volume.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -166,7 +166,7 @@ export async function fetchVolumeBenchmark(params?: Parameters<typeof client.api
  */
 export async function fetchTradingVolumeDistribution(params?: Parameters<typeof client.api.charts.tradingVolumeDistribution.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.tradingVolumeDistribution.$get(honoParams as any);
+  const response = await client.api.charts.tradingVolumeDistribution.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
 
@@ -192,7 +192,7 @@ export async function fetchTradingVolumeDistribution(params?: Parameters<typeof 
     })
     : [];
 
-  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
+  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 
@@ -203,11 +203,11 @@ export async function fetchTradingVolumeDistribution(params?: Parameters<typeof 
  */
 export async function fetchTradingVolumePerTransaction(params?: Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.tradingVolumePerTransaction.$get(honoParams as any);
+  const response = await client.api.charts.tradingVolumePerTransaction.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
 
-  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
+  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 /**
@@ -217,7 +217,7 @@ export async function fetchTradingVolumePerTransaction(params?: Parameters<typeo
  */
 export async function fetchRollingAnnualReturn(params?: Parameters<typeof client.api.charts.rollingAnnualReturn.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.rollingAnnualReturn.$get(honoParams as any);
+  const response = await client.api.charts.rollingAnnualReturn.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
 
@@ -235,7 +235,7 @@ export async function fetchRollingAnnualReturn(params?: Parameters<typeof client
         unrealizedUsd,
       };
     });
-    return { wallets, metadata: { timestamp: Date.now() } } as any;
+    return { wallets, metadata: { timestamp: Date.now() } };
   }
 }
 
@@ -246,7 +246,7 @@ export async function fetchRollingAnnualReturn(params?: Parameters<typeof client
  */
 export async function fetchAverageRollingAnnualReturn(params?: Parameters<typeof client.api.charts.averageRollingAnnualReturn.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.averageRollingAnnualReturn.$get(honoParams as any);
+  const response = await client.api.charts.averageRollingAnnualReturn.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -259,7 +259,7 @@ export async function fetchAverageRollingAnnualReturn(params?: Parameters<typeof
  */
 export async function fetchWinrate(params?: Parameters<typeof client.api.charts.winrate.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.winrate.$get(honoParams as any);
+  const response = await client.api.charts.winrate.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -272,7 +272,7 @@ export async function fetchWinrate(params?: Parameters<typeof client.api.charts.
  */
 export async function fetchDrawdown(params?: Parameters<typeof client.api.charts.drawdown.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.drawdown.$get(honoParams as any);
+  const response = await client.api.charts.drawdown.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
   if (!Array.isArray(raw) && raw.error) {
@@ -289,7 +289,7 @@ export async function fetchDrawdown(params?: Parameters<typeof client.api.charts
  */
 export async function fetchTotalTradingVolume(params?: Parameters<typeof client.api.charts.totalTradingVolume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.totalTradingVolume.$get(honoParams as any);
+  const response = await client.api.charts.totalTradingVolume.$get(honoParams);
   await handleResponse(response);
   const raw = await response.json();
 
@@ -302,7 +302,7 @@ export async function fetchTotalTradingVolume(params?: Parameters<typeof client.
  */
 export async function fetchDailyTradingVolume(params?: Parameters<typeof client.api.charts.dailyTradingVolume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.dailyTradingVolume.$get(honoParams as any);
+  const response = await client.api.charts.dailyTradingVolume.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -315,7 +315,7 @@ export async function fetchDailyTradingVolume(params?: Parameters<typeof client.
  */
 export async function fetchStablecoinRatio(params?: Parameters<typeof client.api.charts.stablecoinRatio.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.stablecoinRatio.$get(honoParams as any);
+  const response = await client.api.charts.stablecoinRatio.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;

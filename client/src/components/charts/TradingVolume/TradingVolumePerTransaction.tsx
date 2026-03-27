@@ -71,32 +71,32 @@ export function TradingVolumePerTransaction({
    * Generate eCharts option configuration for box plot
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
+    //if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
+    if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length === 0) {
+      return null;
+    }
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Prepare categories (wallet names)
-    const categories = data.wallets.map(w => w.walletName);
-    
+    const categories = data.wallets.map(w => w.wallet);
+    const tradingVolumePerTransactionData = data.wallets.map(w => w.tradingVolumePerTransaction);
+
     // Prepare box plot data
     // Each wallet will have two box plots: deposits and withdrawals
-    const depositData = data.wallets.map(w => [
-      w.deposit.min,
-      w.deposit.q1,
-      w.deposit.median,
-      w.deposit.q3,
-      w.deposit.max,
-    ]);
-    
-    const withdrawData = data.wallets.map(w => [
-      w.withdraw.min,
-      w.withdraw.q1,
-      w.withdraw.median,
-      w.withdraw.q3,
-      w.withdraw.max,
-    ]);
-    
+    // const depositData = data.wallets.map(w => [
+    //   w.tradingVolumePerTransaction
+    // ]);
+
+    // const withdrawData = data.wallets.map(w => [
+    //   w.withdraw.min,
+    //   w.withdraw.q1,
+    //   w.withdraw.median,
+    //   w.withdraw.q3,
+    //   w.withdraw.max,
+    // ]);
+
     return {
       ...baseOption,
       color: ['#5470C6', '#91CC75'], // Blue for deposits, Green for withdrawals
@@ -107,8 +107,8 @@ export function TradingVolumePerTransaction({
         top: '20%',
         containLabel: true,
       },
-    //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
-    //   barCategoryGap: '60%', // Gap between wallet categories
+      //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
+      //   barCategoryGap: '60%', // Gap between wallet categories
       legend: getMultiSeriesLegend(
         chartTheme,
         ['Deposits', 'Withdrawals'],
@@ -145,49 +145,63 @@ export function TradingVolumePerTransaction({
       },
       series: [
         {
-          name: 'Deposits',
-          type: 'boxplot',
-          data: depositData,
+          name: 'Trading Volume per Transaction',
+          type: 'bar',
+          data: tradingVolumePerTransactionData,
           itemStyle: {
-            color: '#5470C6',
-            borderColor: '#5470C6',
+            color: chartTheme.colorPalette[0],
           },
-          tooltip: {
-            ...baseOption.tooltip,
-            formatter: (param: any) => {
-              const [min, q1, median, q3, max] = param.data;
-              return formatItemTooltip(`${param.name} - Deposits`, [
-                { label: 'Max', value: formatCurrency(max) },
-                { label: 'Q3', value: formatCurrency(q3) },
-                { label: 'Median', value: formatCurrency(median) },
-                { label: 'Q1', value: formatCurrency(q1) },
-                { label: 'Min', value: formatCurrency(min) },
-              ]);
-            },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (params: any) => formatCurrency(params.value),
+            color: chartTheme.textColor,
           },
-        },
-        {
-          name: 'Withdrawals',
-          type: 'boxplot',
-          data: withdrawData,
-          itemStyle: {
-            color: '#91CC75',
-            borderColor: '#91CC75',
-          },
-          tooltip: {
-            ...baseOption.tooltip,
-            formatter: (param: any) => {
-              const [min, q1, median, q3, max] = param.data;
-              return formatItemTooltip(`${param.name} - Withdrawals`, [
-                { label: 'Max', value: formatCurrency(max) },
-                { label: 'Q3', value: formatCurrency(q3) },
-                { label: 'Median', value: formatCurrency(median) },
-                { label: 'Q1', value: formatCurrency(q1) },
-                { label: 'Min', value: formatCurrency(min) },
-              ]);
-            },
-          },
-        },
+        }
+        // {
+        //   name: 'Deposits',
+        //   type: 'boxplot',
+        //   data: depositData,
+        //   itemStyle: {
+        //     color: '#5470C6',
+        //     borderColor: '#5470C6',
+        //   },
+        //   tooltip: {
+        //     ...baseOption.tooltip,
+        //     formatter: (param: any) => {
+        //       const [min, q1, median, q3, max] = param.data;
+        //       return formatItemTooltip(`${param.name} - Deposits`, [
+        //         { label: 'Max', value: formatCurrency(max) },
+        //         { label: 'Q3', value: formatCurrency(q3) },
+        //         { label: 'Median', value: formatCurrency(median) },
+        //         { label: 'Q1', value: formatCurrency(q1) },
+        //         { label: 'Min', value: formatCurrency(min) },
+        //       ]);
+        //     },
+        //   },
+        // },
+        // {
+        //   name: 'Withdrawals',
+        //   type: 'boxplot',
+        //   data: withdrawData,
+        //   itemStyle: {
+        //     color: '#91CC75',
+        //     borderColor: '#91CC75',
+        //   },
+        //   tooltip: {
+        //     ...baseOption.tooltip,
+        //     formatter: (param: any) => {
+        //       const [min, q1, median, q3, max] = param.data;
+        //       return formatItemTooltip(`${param.name} - Withdrawals`, [
+        //         { label: 'Max', value: formatCurrency(max) },
+        //         { label: 'Q3', value: formatCurrency(q3) },
+        //         { label: 'Median', value: formatCurrency(median) },
+        //         { label: 'Q1', value: formatCurrency(q1) },
+        //         { label: 'Min', value: formatCurrency(min) },
+        //       ]);
+        //     },
+        //   },
+        // },
       ],
       tooltip: {
         trigger: 'item',
@@ -203,7 +217,13 @@ export function TradingVolumePerTransaction({
       title={chartTitle}
       // height="100%"
       loadingState={loadingState}
-      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
+      isEmpty={
+        !data ||
+        !data.wallets ||
+        !Array.isArray(data.wallets) ||
+        data.wallets.length === 0 ||
+        (data.wallets as any).error
+      }
       onRetry={() => refetch(false)}
     >
       {chartOption && (
