@@ -19,7 +19,7 @@ import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
-import { fetchTotalTradingVolume } from '@/services/chart/chartApi';
+import { fetchTotalTradingVolume, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency } from '@/util/chart-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
@@ -28,6 +28,8 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
+
+type TotalTradingVolumeData = InferFetcherData<typeof fetchTotalTradingVolume>;
 
 export function TotalTradingVolumeChart({
   title,
@@ -78,16 +80,24 @@ export function TotalTradingVolumeChart({
    * Generate chart option
    */
   const chartOption = useMemo((): EChartsOption | null => {
-    if (!data || !data.wallets || data.wallets.length === 0) return null;
+    if (
+      !data ||
+      !data.wallets ||
+      !Array.isArray(data.wallets) ||
+      data.wallets.length === 0 ||
+      (data.wallets as any).error
+    ) {
+      return null;
+    }
 
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
-    // Data is already sorted by rank, prepare for horizontal bar chart
-    const categories = data.wallets.map(w => `#${w.rank} ${w.walletAddress}`);
-    const totalVolumes = data.wallets.map(w => w.totalVolume);
-    const depositVolumes = data.wallets.map(w => w.depositVolume);
-    const withdrawalVolumes = data.wallets.map(w => w.withdrawalVolume);
-    
+
+    // data.wallets: { wallet: string; tradingVolumeUsd: number | null }[]
+    // Sort by tradingVolumeUsd descending
+    const wallets = [...data.wallets].sort((a, b) => (b.tradingVolumeUsd ?? 0) - (a.tradingVolumeUsd ?? 0));
+    const categories = wallets.map((w, i) => `#${i + 1} ${w.wallet}`);
+    const totalVolumes = wallets.map(w => w.tradingVolumeUsd ?? 0);
+
     return {
       ...baseOption,
       grid: {
@@ -99,13 +109,13 @@ export function TotalTradingVolumeChart({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        ['Total Volume', 'Deposits', 'Withdrawals'],
+        ['Total Volume'],
         false
       ),
       xAxis: {
         ...baseOption.xAxis,
         type: 'value',
-        name: 'Volume (USD)',
+        name: `Volume (${data.metadata?.currency || 'USD'})`,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
           formatter: (value: number) => formatCurrency(value),
@@ -152,16 +162,11 @@ export function TotalTradingVolumeChart({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          const wallet = data.wallets[params[0].dataIndex];
+          const wallet = wallets[params[0].dataIndex];
           return formatItemTooltip(
-            wallet.walletAddress,
+            wallet.wallet,
             [
-              // { label: 'Address', value: wallet.walletAddress },
-              { label: 'Rank', value: `#${wallet.rank}` },
-              { label: 'Total Volume', value: formatCurrency(wallet.totalVolume) },
-              { label: 'Deposits', value: formatCurrency(wallet.depositVolume), labelColor: chartTheme.colorPalette[1] },
-              { label: 'Withdrawals', value: formatCurrency(wallet.withdrawalVolume), labelColor: chartTheme.colorPalette[2] },
-              { label: 'Trade Count', value: wallet.tradeCount.toString() },
+              { label: 'Total Volume', value: formatCurrency(wallet.tradingVolumeUsd ?? 0) },
             ]
           );
         },
@@ -173,7 +178,13 @@ export function TotalTradingVolumeChart({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!data || !data.wallets || data.wallets.length === 0}
+      isEmpty={
+        !data ||
+        !data.wallets ||
+        !Array.isArray(data.wallets) ||
+        data.wallets.length === 0 ||
+        (data.wallets as any).error
+      }
       onRetry={() => refetch(false)}
     >
       {chartOption && (

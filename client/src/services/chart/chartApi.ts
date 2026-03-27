@@ -293,7 +293,7 @@ export async function fetchTotalTradingVolume(params?: Parameters<typeof client.
   await handleResponse(response);
   const raw = await response.json();
 
-  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } } as any;
+  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 /**
