@@ -222,7 +222,7 @@ export default function Tble({
               </Table>
               {enablePagination && (
                 <Pagination
-                  style={{ height: "3rem", background: cds.layer03 }}
+                  style={{ height: "3rem", background: cds.layer01 }}
                   page={currentPage}
                   pageSize={currentPageSize}
                   pageSizes={pageSizes}
