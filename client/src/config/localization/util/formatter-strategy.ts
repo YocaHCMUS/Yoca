@@ -17,4 +17,5 @@ export interface NumberFormattingStrategy {
   decimalResolution: DecimalResolutionStrategy;
   currencyConfig: CurrencyConfigStrategy;
   readableCompactCurrency: ReadableCompactCurrencyStrategy;
+  smallCompactThreshold: number;
 }

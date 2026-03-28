@@ -56,6 +56,7 @@ export const format = {
         }).format(value);
       },
     },
+    smallCompactThreshold: 1e-4,
   }),
   datetime: defineDateTimeFormat(langCode, {
     datePattern: "MM/DD/YYYY",

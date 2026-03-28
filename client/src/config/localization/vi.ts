@@ -54,6 +54,7 @@ export const format = {
           return `${value.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} đồng`;
         },
       },
+      smallCompactThreshold: 1e-4,
     },
     getUsdToVndRate,
   ),

@@ -52,6 +52,28 @@ export function defineTextFormat() {
   };
 }
 
+// Look kinda cheap heh?
+// 1e-13 would be written like this: 0.0₁₂1
+function toSubscript(num: number): string {
+  const map = "₀₁₂₃₄₅₆₇₈₉";
+  return String(num)
+    .split("")
+    .map((d) => map[Number(d)] ?? d)
+    .join("");
+}
+
+function formatSmallCompact(value: number): string {
+  const str = value.toFixed(20);
+  const match = str.match(/^0\.0+/);
+
+  if (!match) return value.toString();
+
+  const zeroCount = match[0].length - 2;
+  const significant = str.slice(match[0].length, match[0].length + 3);
+
+  return `0.0${toSubscript(zeroCount)}${significant}`;
+}
+
 export function defineNumberFormat(
   langCode: string,
   strategy: NumberFormattingStrategy,
@@ -100,6 +122,17 @@ export function defineNumberFormat(
         : style == "percent"
           ? numValue / 100
           : numValue;
+
+    const absValue = Math.abs(exchangedValue);
+
+    // small number override for compact
+    if (
+      notation == "compact" &&
+      absValue > 0 &&
+      absValue < strategy.smallCompactThreshold
+    ) {
+      return formatSmallCompact(abs ? absValue : exchangedValue);
+    }
 
     let decimals = 2;
     if (effectiveStyle == "currency") {

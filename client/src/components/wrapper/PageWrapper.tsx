@@ -264,10 +264,6 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
                 : styles.headerPanel
             }
             expanded={isExtraPanelOpen}
-            onHeaderPanelFocus={() => {
-              setIsExtraHeaderPanelOpen(false);
-              extraHeaderPanel.onClose();
-            }}
           >
             <Switcher aria-label="Extra" expanded={isExtraPanelOpen}>
               <div className={styles.extraHeaderPanelContent}>
@@ -300,7 +296,20 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
-      <Content id="main-content">{children}</Content>
+      <Content
+        id="main-content"
+        className={isExtraPanelOpen ? styles.contentDimmed : ""}
+        onClick={
+          isExtraPanelOpen
+            ? () => {
+                setIsExtraHeaderPanelOpen(false);
+                extraHeaderPanel?.onClose();
+              }
+            : undefined
+        }
+      >
+        {children}
+      </Content>
     </>
   );
 }

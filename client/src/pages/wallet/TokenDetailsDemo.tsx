@@ -406,8 +406,8 @@ export function TokenDetailsDemo() {
       ),
       avgTradePrice: (
         <Stack style={{ justifyContent: "inherit" }}>
-          <p>{fmt.num.currency(details.avgBuyCost)}</p>
-          <p>{fmt.num.currency(details.avgSellCost)}</p>
+          <p>{fmt.num.compact.currency(details.avgBuyCost)}</p>
+          <p>{fmt.num.compact.currency(details.avgSellCost)}</p>
         </Stack>
       ),
       tradePriceGraph: (
