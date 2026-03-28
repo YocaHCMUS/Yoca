@@ -16,7 +16,7 @@ import { getTradingVolumePerTransaction } from '@sv/services/wallet/walletCompar
  * Request parameter schema for trading volume per transaction endpoint
  */
 const tradingVolumePerTransactionRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional(),
   type: z.enum(['all', 'deposits', 'withdrawals']).optional().default('all'),
 });

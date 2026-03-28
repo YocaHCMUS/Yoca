@@ -15,7 +15,7 @@ import { getTradingVolumes } from '@sv/services/wallet/walletComparison.js';
  * Request parameter schema for total trading volume endpoint
  */
 const totalTradingVolumeRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 
@@ -30,7 +30,7 @@ const app = new Hono()
    * Fetch total trading volume ranking data
    * 
    * Query Parameters:
-   * - period: '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' (default: '30D')
+   * - period: '24H' | '7D' | '30D' | '90D' | 'All' (default: '30D')
    * - wallets: Comma-separated wallet IDs (optional)
    * 
    * Response:

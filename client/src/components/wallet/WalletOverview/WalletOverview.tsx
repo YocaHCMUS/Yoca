@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
+import type { TranslationKeyPath } from '@/config/localization';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     fetchWalletIntelligence,
@@ -421,7 +422,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             onChange={(e) => setSelectedPeriod(e.target.value as WalletOverviewPeriodKey)}
                         >
                             {PERIOD_OPTIONS.map((option) => (
-                                <SelectItem key={option.key} value={option.key} text={tr(option.labelKey as WalletOverviewPeriodLabelKey)} />
+                                <SelectItem key={option.key} value={option.key} text={tr(option.labelKey)} />
                             ))}
                         </Select>
                     </div>

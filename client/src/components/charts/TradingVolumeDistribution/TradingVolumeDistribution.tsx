@@ -31,6 +31,7 @@ import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 
 type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -335,7 +336,6 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
-      actions={<PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} />}
       emptyState={filters.wallets && filters.wallets.length === 0
         ? {
           title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),
@@ -346,6 +346,11 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       onExport={handleExport}
       className={className}
     >
+
+      <div className={sharedStyles.chartControls}>
+        <PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} compact />
+      </div>
+
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {/* Aggregated Legend for Multi-Wallet View */}
