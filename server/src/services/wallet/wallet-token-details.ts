@@ -52,7 +52,6 @@ export async function getTokenDetails(wallet: string) {
       symbol: tokenDetail.symbol,
       address: tokenDetail.address,
       tokenAddress: tokenDetail.address,
-      decimals: tokenDetail.decimals,
       lastTradeUnixTime: tokenDetail.last_trade_unix_time,
       totalBuyCount: tokenDetail.counts.total_buy,
       totalSellCount: tokenDetail.counts.total_sell,

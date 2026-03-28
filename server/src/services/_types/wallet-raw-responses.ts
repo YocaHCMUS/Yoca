@@ -87,7 +87,54 @@ export const bds_WalletTokenDetailsSchema = z.object({
   }),
 });
 
+export const mrl_WalletTokenSwapsSchema = z.object({
+  cursor: z.string(),
+  page: z.number(),
+  pageSize: z.number(),
+  result: z.array(
+    z.object({
+      transactionHash: z.string(),
+      transactionType: z.enum(["buy", "sell"]),
+      transactionIndex: z.number(),
+      subCategory: z.string().nullable(),
+      blockTimestamp: z.string(),
+      blockNumber: z.number(),
+      walletAddress: z.string(),
+      pairAddress: z.string(),
+      pairLabel: z.string(),
+      exchangeAddress: z.string(),
+      exchangeName: z.string().nullable(),
+      exchangeLogo: z.string().nullable(),
+      baseToken: z.string(),
+      quoteToken: z.string(),
+      bought: z.object({
+        address: z.string(),
+        name: z.string(),
+        symbol: z.string(),
+        logo: z.string(),
+        amount: z.string(),
+        usdPrice: z.number(),
+        usdAmount: z.number(),
+        tokenType: z.string(),
+      }),
+      sold: z.object({
+        address: z.string(),
+        name: z.string(),
+        symbol: z.string(),
+        logo: z.string(),
+        amount: z.string(),
+        usdPrice: z.number(),
+        usdAmount: z.number(),
+        tokenType: z.string(),
+      }),
+      baseQuotePrice: z.string(),
+      totalValueUsd: z.number(),
+    }),
+  ),
+});
+
 export type BDS_WalletFirstFund = z.infer<typeof BDS_WalletFirstFundSchema>;
 export type BDS_WalletTokenDetails = z.infer<
   typeof bds_WalletTokenDetailsSchema
 >;
+export type MRL_WalletTokenSwaps = z.infer<typeof mrl_WalletTokenSwapsSchema>;

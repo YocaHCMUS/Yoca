@@ -85,11 +85,14 @@ export default function MarketPage() {
     () => topTokens.data?.map((t) => t.address).join(","),
     [topTokens.data],
   );
-  const meta = useGet(
+  const tokenMeta = useGet(
     client.api.tokens.meta[":addresses"],
     200,
     { param: { addresses: addresses || "" } },
-    { enabled: !!addresses },
+    {
+      enabled: !!addresses,
+      select: (data) => Object.fromEntries(data.map((m) => [m.address, m])),
+    },
   );
   const marketData = useGet(
     client.api.tokens.markets[":addresses"],
@@ -107,7 +110,8 @@ export default function MarketPage() {
     },
   });
 
-  const loading = topTokens.isLoading || meta.isLoading || marketData.isLoading;
+  const loading =
+    topTokens.isLoading || tokenMeta.isLoading || marketData.isLoading;
 
   const tokenHeaders = [
     { key: "favorite", header: "", width: 56, align: "center" as const },
@@ -159,12 +163,10 @@ export default function MarketPage() {
   ];
 
   const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
-    if (!topTokens.data || !meta.data || !marketData.data) return [];
-    const addressToMeta = Object.fromEntries(
-      meta.data.map((m) => [m.address, m]),
-    );
+    if (!topTokens.data || !tokenMeta.data || !marketData.data) return [];
+
     return topTokens.data.map((token) => {
-      const m = addressToMeta[token.address];
+      const m = tokenMeta.data![token.address];
       const mk = marketData.data![token.address];
       return {
         imgUrl: m.imageUrl || "",
@@ -187,15 +189,13 @@ export default function MarketPage() {
         link: `/tokens/${token.address}`,
       };
     });
-  }, [topTokens.data, meta.data, marketData.data, fmt, tr]);
+  }, [topTokens.data, tokenMeta.data, marketData.data, fmt, tr]);
 
   const topTokenRows = useMemo(() => {
-    if (!topTokens.data || !meta.data || !marketData.data) return [];
-    const addressToMeta = Object.fromEntries(
-      meta.data.map((m) => [m.address, m]),
-    );
+    if (!topTokens.data || !tokenMeta.data || !marketData.data) return [];
+
     return topTokens.data.map((token) => {
-      const m = addressToMeta[token.address];
+      const m = tokenMeta.data![token.address];
       const mk = marketData.data![token.address];
       const isFav = watchlist.includes(token.address);
       return {
@@ -269,7 +269,7 @@ export default function MarketPage() {
         ),
       };
     });
-  }, [topTokens.data, meta.data, marketData.data, fmt, watchlist, tr]);
+  }, [topTokens.data, tokenMeta.data, marketData.data, fmt, watchlist, tr]);
 
   const traderRows = (data: NonNullable<typeof topGainers.data>) =>
     data.map((t) => ({
@@ -299,36 +299,49 @@ export default function MarketPage() {
 
   const mapRecentTrades = useMemo(() => {
     if (!recentTradesData.data) return [];
-    return recentTradesData.data.map((trade, index) => ({
-      id: index.toString(),
-      solscan: (
-        <IconButton
-          href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
-          label={tr("marketPage.openInSolscan")}
-          kind="ghost"
-          size="sm"
-        >
-          <Launch size={18} />
-        </IconButton>
-      ),
-      amount: (
-        <Stack gap={1}>
-          <span>
-            {fmt.num.compact.decimal(trade.baseAmount)} {trade.baseSymbol}
-          </span>
-          <Txt secondary>
-            {fmt.num.compact.decimal(trade.quoteAmount)} {trade.quoteSymbol}
-          </Txt>
-        </Stack>
-      ),
-      volume: fmt.num.compact.currency(trade.volumeUsd),
-      trader: (
-        <Link href={`/wallet/${trade.owner}`}>
-          {fmt.text.address(trade.owner)}
-        </Link>
-      ),
-      time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),
-    }));
+    return recentTradesData.data.map((trade, index) => {
+      const isBuy = trade.tradeAction == "buy";
+      const baseSymbol = tokenMeta.data?.[trade.baseAddress].symbol || null;
+      const quoteSymbol = tokenMeta.data?.[trade.quoteAddress].symbol || null;
+
+      const buyAmount = isBuy ? trade.baseAmount : trade.quoteAmount;
+      const buySymbol = isBuy ? baseSymbol : quoteSymbol;
+      const sellAmount = isBuy ? trade.quoteAmount : trade.baseAmount;
+      const sellSymbol = isBuy ? quoteSymbol : baseSymbol;
+
+      return {
+        id: index.toString(),
+        solscan: (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
+            label={tr("marketPage.openInSolscan")}
+            kind="ghost"
+            size="sm"
+          >
+            <Launch size={18} />
+          </IconButton>
+        ),
+        amount: (
+          <Stack gap={1}>
+            <span
+              style={{ color: isBuy ? cds.supportSuccess : cds.supportError }}
+            >
+              {fmt.num.compact.decimal(buyAmount)} {buySymbol}
+            </span>
+            <Txt secondary>
+              {fmt.num.compact.decimal(sellAmount)} {sellSymbol}
+            </Txt>
+          </Stack>
+        ),
+        volume: fmt.num.compact.currency(trade.volumeUsd),
+        trader: (
+          <Link href={`/wallet/${trade.owner}`}>
+            {fmt.text.address(trade.owner)}
+          </Link>
+        ),
+        time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),
+      };
+    });
   }, [recentTradesData.data, fmt, tr]);
 
   return (

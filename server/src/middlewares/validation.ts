@@ -75,6 +75,11 @@ export const recentTradesQuerySchema = z.object({
   sortBy: z.enum(["volume", "time"]).default("volume").optional(),
 });
 
+export const walletTokenSwapSchema = z.object({
+  walletAddress: solanaBase58Schema,
+  tokenAddress: solanaBase58Schema,
+});
+
 // Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,
@@ -96,6 +101,7 @@ export function validate<
   });
 }
 
+// Check if result schema was like expected. Useful for debugging
 export async function getTrackedApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,

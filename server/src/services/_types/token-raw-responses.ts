@@ -356,7 +356,7 @@ export const swapItemSchema = z.object({
   quote: tokenSideSchema,
   tx_type: z.literal("swap"),
   tx_hash: z.string(),
-  ins_index: z.number(),
+  ins_index: z.number().nullable(),
   inner_ins_index: z.number().nullable(),
   block_unix_time: z.number(),
   block_number: z.number(),

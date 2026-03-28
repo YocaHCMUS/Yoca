@@ -1,5 +1,9 @@
 import { setErr } from "@sv/config/errors.js";
-import { addressSchema, validate } from "@sv/middlewares/validation.js";
+import {
+  addressSchema,
+  validate,
+  walletTokenSwapSchema,
+} from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as walletService from "@sv/services/wallet/index.js";
@@ -261,6 +265,28 @@ const routes = router
       return c.json({ error: "Failed to get wallet swaps" }, 500);
     }
   })
+  .get(
+    "/:walletAddress/swaps/:tokenAddress",
+    validate("param", walletTokenSwapSchema),
+    async (c) => {
+      const { walletAddress, tokenAddress } = c.req.valid("param");
+
+      try {
+        const swaps = await walletService.getWalletTokenSwaps(
+          walletAddress,
+          tokenAddress,
+        );
+
+        if (!swaps) {
+          return c.json(swaps, statusCode.BadGateway);
+        }
+        return c.json(swaps, statusCode.Ok);
+      } catch (err) {
+        console.error("Failed to get wallet swaps", err);
+        return c.json({ error: "Failed to get wallet swaps" }, 500);
+      }
+    },
+  )
   .get("/transfers", async (c) => {
     const query = c.req.query();
     const params = walletRequestSchema.parse(query);

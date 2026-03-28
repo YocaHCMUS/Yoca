@@ -51,15 +51,11 @@ async function fetchRecentTrades() {
       instructionIndex: raw.ins_index,
       innerInstructionIndex: raw.inner_ins_index,
 
-      baseSymbol: raw.base.symbol,
       baseAddress: raw.base.address,
-      baseDecimals: raw.base.decimals,
       basePrice: raw.base.price,
       baseAmount: raw.base.amount,
 
-      quoteSymbol: raw.quote.symbol,
       quoteAddress: raw.quote.address,
-      quoteDecimals: raw.quote.decimals,
       quotePrice: raw.quote.price,
       quoteAmount: raw.quote.amount,
 
@@ -69,6 +65,8 @@ async function fetchRecentTrades() {
       owner: raw.owner,
       source: raw.source,
       poolAddress: raw.pool_id,
+
+      tradeAction: raw.base.type_swap == "from" ? "sell" : "buy",
     }),
   );
 
