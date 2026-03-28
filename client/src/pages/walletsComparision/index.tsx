@@ -94,7 +94,9 @@ export default function WalletsComparisionPage() {
                     onClick={() => handleRemoveWallet(wallet)}
                     kind="tertiary"
                   >
-                    {wallet}
+                    <span className={styles.buttonTag}>
+                      {wallet}
+                    </span>
                   </Button>
                 ))
               )}
