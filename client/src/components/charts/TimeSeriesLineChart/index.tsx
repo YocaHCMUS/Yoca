@@ -210,8 +210,8 @@ export function TimeSeriesLineChart({
                 formatter: () =>
                   `${ml.label}: ${valueFormatter ? valueFormatter(ml.value) : ml.value}`,
                 position:
-                  helper == "average-buy-sell"
-                    ? index == 0
+                  helper == "average-buy-sell" && markLines.length == 2
+                    ? ml.value > markLines.at(index - 1)!.value
                       ? "insideEndTop"
                       : "insideEndBottom"
                     : "insideEndBottom",

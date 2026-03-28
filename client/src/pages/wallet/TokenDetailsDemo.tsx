@@ -45,7 +45,7 @@ function TokenAverageTradePrice({
     sellColor: cds.supportError,
     buyColor: cds.supportWarning,
   });
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   const [selectedTimeRange, setSelectedTimeRange] =
     useState<TokenPriceDayRange>(7);
 
@@ -96,16 +96,22 @@ function TokenAverageTradePrice({
               textTransform: "uppercase",
             }}
           >
-            {isBuy ? "Buy" : "Sell"}
+            {isBuy ? tr("walletPage.buy") : tr("walletPage.sell")}
           </span>
         ),
         amount: fmt.num.compact.unit(amount, symbol?.toUpperCase() || null),
         value: fmt.num.compact.currency(trade.volumeUsd),
-        exchange: trade.exchangeName || "Unknown",
+        exchange: (
+          <div style={{ width: "4rem" }}>
+            <Txt secondary ellipsis size="sm" stretch>
+              {trade.exchangeName || "Unknown"}
+            </Txt>
+          </div>
+        ),
         transaction: (
           <IconButton
             href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
-            label="Open in Solscan"
+            label={tr("walletPage.openInSolscan")}
             kind="ghost"
             size="sm"
           >
@@ -190,12 +196,12 @@ function TokenAverageTradePrice({
       <TimeSeriesLineChart
         markLines={[
           {
-            label: "Avg Buy Price",
+            label: tr("walletPage.avgBuyPrice"),
             value: avgBuyPrice,
             color: buyColor,
           },
           {
-            label: "Avg Sell Price",
+            label: tr("walletPage.avgSellPrice"),
             value: avgSellPrice,
             color: sellColor,
           },
@@ -206,17 +212,38 @@ function TokenAverageTradePrice({
         loading={priceData.isLoading}
       />
       <Tble
-        title={"Recent trades"}
-        description={"Recent trades on this token"}
+        title={tr("walletPage.recentTrades")}
+        description={tr("walletPage.recentTradesDescription")}
         loading={recentTrades.isLoading}
         rows={recentTradesRows}
         headers={[
-          { key: "time", header: "Time", align: "start" },
-          { key: "tradeAction", header: "Action", align: "center" },
-          { key: "amount", header: "Amount", align: "end", width: "20%" },
-          { key: "value", header: "Value (USD)", align: "end" },
-          { key: "exchange", header: "Exchange", align: "start" },
-          { key: "transaction", header: "Transaction", align: "center" },
+          { key: "time", header: tr("walletPage.time"), align: "end" },
+          {
+            key: "tradeAction",
+            header: tr("walletPage.action"),
+            align: "center",
+          },
+          {
+            key: "amount",
+            header: tr("walletPage.amount"),
+            align: "end",
+            width: "20%",
+          },
+          {
+            key: "value",
+            header: `${tr("walletPage.value")} (USD)`,
+            align: "end",
+          },
+          {
+            key: "exchange",
+            header: tr("walletPage.exchange"),
+            align: "start",
+          },
+          {
+            key: "transaction",
+            header: tr("walletPage.transaction"),
+            align: "center",
+          },
         ]}
         boxed
         enablePagination
@@ -413,7 +440,7 @@ export function TokenDetailsDemo() {
       tradePriceGraph: (
         <IconButton
           kind="ghost"
-          label="Average trading price"
+          label={tr("walletPage.averageTradingPrice")}
           align="bottom-right"
           onClick={() =>
             setSelectedToken({
@@ -471,24 +498,40 @@ export function TokenDetailsDemo() {
       <Tble
         loading={walletTokenDetails.isLoading}
         boxed
-        title={"Tokens Last Traded"}
-        description={"Tokens which recent trading activities"}
+        title={tr("walletPage.tokensLastTraded")}
+        description={tr("walletPage.tokensLastTradedDescription")}
         rows={rows}
         height={800}
         stickyHeader
         enablePagination
         headers={[
-          { key: "token", header: "Token/Last traded", align: "start" },
-          { key: "balance", header: "Balance", align: "center" },
-          { key: "pnl", header: "Profit" },
-          { key: "realizedPnl", header: "Realized Profit" },
-          { key: "unrealizedPnl", header: "Unrealized Profit" },
-          { key: "buy", header: "Total Bought", align: "end" },
-          { key: "sell", header: "Total Sold", align: "end" },
-          { key: "net", header: "Net Value", align: "end" },
-          { key: "tradeCount", header: "Transactions", align: "end" },
-          { key: "avgTradePrice", header: "Avg Buy/Sell Price", align: "end" },
-          { key: "tradePriceGraph", header: "Graph", align: "center" },
+          {
+            key: "token",
+            header: `${tr("walletPage.token")}/${tr("walletPage.time")}`,
+            align: "start",
+          },
+          { key: "balance", header: tr("walletPage.balance"), align: "center" },
+          { key: "pnl", header: tr("walletPage.profit") },
+          { key: "realizedPnl", header: tr("walletPage.realizedProfit") },
+          { key: "unrealizedPnl", header: tr("walletPage.unrealizedProfit") },
+          { key: "buy", header: tr("walletPage.totalBought"), align: "end" },
+          { key: "sell", header: tr("walletPage.totalSold"), align: "end" },
+          { key: "net", header: tr("walletPage.netValue"), align: "end" },
+          {
+            key: "tradeCount",
+            header: tr("walletPage.transactions"),
+            align: "end",
+          },
+          {
+            key: "avgTradePrice",
+            header: tr("walletPage.avgBuySellPrice"),
+            align: "end",
+          },
+          {
+            key: "tradePriceGraph",
+            header: tr("walletPage.graph"),
+            align: "center",
+          },
         ]}
       />
     </PageWrapper>
