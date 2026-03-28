@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
@@ -101,13 +101,7 @@ export function TradingVolumePerTransaction({
     return {
       ...baseOption,
       color: ['#5470C6', '#91CC75'], // Blue for deposits, Green for withdrawals
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      grid: getChartGridConfig(),
       //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
       //   barCategoryGap: '60%', // Gap between wallet categories
       legend: getMultiSeriesLegend(

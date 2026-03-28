@@ -18,7 +18,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { fetchTotalTradingVolume, type InferFetcherData } from '@/services/chart/chartApi';
@@ -102,13 +102,7 @@ export function TotalTradingVolumeChart({
 
     return {
       ...baseOption,
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      grid: getChartGridConfig(),
       legend: getMultiSeriesLegend(
         chartTheme,
         ['Total Volume'],

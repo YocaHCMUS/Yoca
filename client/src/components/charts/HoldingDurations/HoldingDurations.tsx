@@ -4,7 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
+import { getChartGridConfig, getThemedChartBaseOption, useChartTheme } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchHoldingDurations, type InferFetcherData } from '@/services/chart/chartApi';
 import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
@@ -57,8 +57,8 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   const initialTopN = typeof customFilters?.topN === 'number' ? customFilters.topN : 10;
   const initialUnit =
     customFilters?.timeUnit === 'weeks' ||
-    customFilters?.timeUnit === 'months' ||
-    customFilters?.timeUnit === 'days'
+      customFilters?.timeUnit === 'months' ||
+      customFilters?.timeUnit === 'days'
       ? customFilters.timeUnit
       : 'days';
   const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
@@ -75,7 +75,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
-  const query = useMemo <HoldingsRequestParams>(
+  const query = useMemo<HoldingsRequestParams>(
     () => ({
       walletIds: walletsString,
       topN: selectedTopN,
@@ -104,8 +104,8 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       selectedUnit === 'weeks'
         ? days / 7
         : selectedUnit === 'months'
-        ? days / 30
-        : days,
+          ? days / 30
+          : days,
     [selectedUnit]
   );
 
@@ -114,8 +114,8 @@ export const HoldingDurations: React.FC<ChartProps> = ({
       selectedUnit === 'weeks'
         ? tr('charts.holdingDurationsChart.weeks')
         : selectedUnit === 'months'
-        ? tr('charts.holdingDurationsChart.months')
-        : tr('charts.holdingDurationsChart.days'),
+          ? tr('charts.holdingDurationsChart.months')
+          : tr('charts.holdingDurationsChart.days'),
     [selectedUnit, tr]
   );
 
@@ -165,14 +165,14 @@ export const HoldingDurations: React.FC<ChartProps> = ({
     if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     const base = getThemedChartBaseOption(chartTheme);
-    
+
     // Filter out invalid wallets and ensure they have required properties
     const validWallets = data.wallets.filter(
       wallet => wallet && wallet.name && Array.isArray(wallet.holdings)
     );
-    
+
     if (validWallets.length === 0) return null;
-    
+
     // Collect all unique tokens across all wallets
     const tokenSet = new Set<string>();
     validWallets.forEach(wallet => {
@@ -184,7 +184,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
     });
 
     const categories = Array.from(tokenSet);
-    
+
     // Create a series for each wallet
     const series = validWallets.map(wallet => {
       const tokenToValue = new Map(
@@ -210,13 +210,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
         2,
         false
       ),
-      grid: { 
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true 
-      },
+      grid: getChartGridConfig(),
       xAxis: {
         ...base.xAxis,
         type: 'category',
@@ -245,10 +239,10 @@ export const HoldingDurations: React.FC<ChartProps> = ({
         formatter: (params: any) => {
           const items = Array.isArray(params) ? params : [params];
           if (items.length === 0) return '';
-          
+
           const tokenName = items[0]?.axisValue || 'Unknown';
           const tooltip = createTooltipHeader(tokenName, 'font-size: 14px;');
-          
+
           const lines = items
             .filter((p: any) => p.value !== null && p.value !== undefined)
             .map((p: any) => {
@@ -256,7 +250,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
               const formattedValue = value > 0 ? value.toFixed(1) : '0.0';
               return `<div style="margin-top: 4px;">${createSeriesIndicator(p.color)}<span style="display: inline-block; min-width: 100px;">${p.seriesName}</span>: <strong>${formattedValue}</strong> ${unitLabel.toLowerCase()}</div>`;
             });
-          
+
           return tooltip + lines.join('');
         },
       },

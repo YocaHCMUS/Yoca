@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchPnLChart, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
@@ -189,13 +189,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                     },
                 }
                 : undefined,
-            grid: {
-                left: '8%',
-                right: '8%',
-                bottom: '12%',
-                top: '24%',
-                containLabel: true,
-            },
+            grid: getChartGridConfig(),
             tooltip: {
                 ...baseOption.tooltip,
                 trigger: 'axis',

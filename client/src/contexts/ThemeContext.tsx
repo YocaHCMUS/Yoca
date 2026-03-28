@@ -14,7 +14,7 @@ const userThemes = {
   light: "white",
   dark: "g100",
 } as const satisfies Record<string, SupportedTheme>;
-type ThemeMode = keyof typeof userThemes;
+export type ThemeMode = keyof typeof userThemes;
 
 function isValidTheme(value: string): value is ThemeMode {
   return Object.keys(userThemes).includes(value);

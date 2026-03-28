@@ -4,7 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { Add, Close, Repeat } from '@carbon/react/icons';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
@@ -867,7 +867,7 @@ export function BalanceChart({
         return {
             ...baseOption,
             color: colors,
-            grid: { left: '8%', right: '8%', bottom: '12%', top: '20%', containLabel: true },
+            grid: getChartGridConfig(),
             legend: getConditionalLegend(chartTheme, windowedDisplaySeries.map((series) => series.label), 2, false),
             xAxis: {
                 ...baseOption.xAxis,
