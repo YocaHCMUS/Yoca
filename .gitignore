@@ -44,3 +44,5 @@ s**/.env
 .tmp
 
 CHANGES.md
+
+server/api_logs
