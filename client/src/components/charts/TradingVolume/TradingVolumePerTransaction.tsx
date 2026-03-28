@@ -5,6 +5,9 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
+import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
+import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { fetchTradingVolumePerTransaction, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
@@ -16,6 +19,7 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
+import type { TimePeriod } from '@/types/chart-filters.types';
 
 export function TradingVolumePerTransaction({
   title,
@@ -38,7 +42,7 @@ export function TradingVolumePerTransaction({
   const { selectedTimezone: timezone } = useChartContext();
 
   // Use centralized filter sync hook
-  const { filters, walletsString } = useChartFiltersSync({
+  const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
@@ -226,6 +230,9 @@ export function TradingVolumePerTransaction({
       }
       onRetry={() => refetch(false)}
     >
+      <div className={sharedStyles.chartControls}>
+        <PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} compact />
+      </div>
       {chartOption && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts

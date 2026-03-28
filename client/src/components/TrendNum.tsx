@@ -21,7 +21,7 @@ export function TrendNum({
   }
 
   let prefix: React.ReactNode = null;
-  let formattedValue = formatter(Math.abs(value));
+  const formattedValue = formatter(Math.abs(value));
 
   if (prefixes == "arrow") {
     prefix = value > 0 ? <CaretUp size={18} /> : <CaretDown size={18} />;

@@ -22,6 +22,8 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
+import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
@@ -68,7 +70,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
   // Use centralized filter sync hook
-  const { filters, walletsString } = useChartFiltersSync({
+  const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
@@ -333,6 +335,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
+      actions={<PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} />}
       emptyState={filters.wallets && filters.wallets.length === 0
         ? {
           title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),

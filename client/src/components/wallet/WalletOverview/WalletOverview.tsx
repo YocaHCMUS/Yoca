@@ -43,21 +43,7 @@ export interface WalletOverviewProps {
     autoRefresh?: boolean;
     refreshInterval?: number;
 }
-
-const PERIOD_OPTIONS: Array<{ key: WalletOverviewPeriodKey; labelKey: string }> = [
-    { key: '24H', labelKey: 'wallet.filter24h' },
-    { key: '7D', labelKey: 'wallet.filter7d' },
-    { key: '30D', labelKey: 'wallet.filter30d' },
-    { key: '90D', labelKey: 'wallet.filter90d' },
-    { key: 'All', labelKey: 'wallet.filterAll' },
-];
-
-type WalletOverviewPeriodLabelKey =
-    | 'wallet.filter24h'
-    | 'wallet.filter7d'
-    | 'wallet.filter30d'
-    | 'wallet.filter90d'
-    | 'wallet.filterAll';
+import { PERIOD_OPTIONS } from '@/config/periodOptions';
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',

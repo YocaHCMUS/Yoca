@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";

@@ -247,7 +247,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
           if (items.length === 0) return '';
           
           const tokenName = items[0]?.axisValue || 'Unknown';
-          let tooltip = createTooltipHeader(tokenName, 'font-size: 14px;');
+          const tooltip = createTooltipHeader(tokenName, 'font-size: 14px;');
           
           const lines = items
             .filter((p: any) => p.value !== null && p.value !== undefined)

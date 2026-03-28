@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineDateTimeFormat, defineNumberFormat } from "../util-format";
 
