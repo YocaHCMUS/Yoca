@@ -53,11 +53,11 @@ async function fetchRecentTrades() {
 
       baseAddress: raw.base.address,
       basePrice: raw.base.price,
-      baseAmount: raw.base.amount,
+      baseAmount: Number(raw.base.amount),
 
       quoteAddress: raw.quote.address,
       quotePrice: raw.quote.price,
-      quoteAmount: raw.quote.amount,
+      quoteAmount: Number(raw.quote.amount),
 
       blockUnixTime: raw.block_unix_time,
       volumeUsd: raw.volume_usd,
@@ -187,16 +187,21 @@ export async function getTopGainers() {
 }
 
 export async function getTopLosers() {
-  const cached = await db.select().from(topLosers).orderBy(asc(topLosers.rank));
+  const existing = await db
+    .select()
+    .from(topLosers)
+    .orderBy(asc(topLosers.rank));
 
   const thresholdTime = new Date(Date.now() - TRADER_GAINERS_LOSERS_TTL_MS);
 
-  if (cached.length > 0 && cached[0].updatedAt > thresholdTime) {
-    return cached;
+  if (existing.length > 0 && existing[0].updatedAt > thresholdTime) {
+    return existing;
   }
 
   const items = await fetchTraderGainersLosers("asc");
-  if (items == null) return null;
+  if (!items) {
+    return existing.length > 0 ? existing : null;
+  }
 
   await db.delete(topLosers);
   await db.insert(topLosers).values(items);

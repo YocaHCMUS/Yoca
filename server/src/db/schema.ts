@@ -32,7 +32,7 @@ export const enumAuthProvider = pgEnum("auth_provider", [
   "other",
 ]);
 
-export const enumTradeAction = pgEnum("auth_provider", ["buy", "sell"]);
+export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -469,12 +469,11 @@ export const recentTrades = pgTable("recent_trades", {
 
   baseAddress: varchar("base_address", { length: 44 }).notNull(),
   basePrice: decimal("base_price"),
-
-  baseAmount: varchar("base_amount"),
+  baseAmount: decimal("base_amount"),
 
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
   quotePrice: decimal("quote_price"),
-  quoteAmount: varchar("quote_amount"),
+  quoteAmount: decimal("quote_amount"),
 
   blockUnixTime: integer("block_unix_time").notNull(),
   volumeUsd: decimal("volume_usd").notNull(),
@@ -747,7 +746,7 @@ export const walletTokenDetails = pgTable(
 );
 
 export const walletTokenTrades = pgTable(
-  "wallet_token_swaps",
+  "wallet_token_trades",
   {
     // Underscore before name to signal this is synthetic field and is not
     // inferred from the actual data by any means (which usually discouraged)
@@ -758,16 +757,15 @@ export const walletTokenTrades = pgTable(
 
     // Transaction identity
     transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
-    blockTimestamp: timestamp("block_timestamp").notNull(),
-    blockUnixTime: integer("block_unix_time").notNull(),
+    blockUnixTimeMs: bigint("block_unix_time_ms", { mode: "number" }).notNull(),
 
     // Swap details - base/quote pair
     baseTokenAddress: varchar("base_token_address", { length: 44 }).notNull(),
     quoteTokenAddress: varchar("quote_token_address", { length: 44 }).notNull(),
 
     // Amounts
-    baseAmount: varchar("base_amount").notNull(),
-    quoteAmount: varchar("quote_amount").notNull(),
+    baseAmount: decimal("base_amount").notNull(),
+    quoteAmount: decimal("quote_amount").notNull(),
 
     // Pricing
     basePrice: decimal("base_price"),
@@ -781,7 +779,7 @@ export const walletTokenTrades = pgTable(
     poolName: varchar("pool_name"),
 
     // Transaction metadata
-    transactionType: text("transaction_type"),
+    tradeAction: enumTradeAction("trade_action").notNull(),
 
     updatedAt: timestamp("updated_at")
       .notNull()

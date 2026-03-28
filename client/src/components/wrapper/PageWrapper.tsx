@@ -270,7 +270,7 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
             }}
           >
             <Switcher aria-label="Extra" expanded={isExtraPanelOpen}>
-              <div style={{ width: "100%", padding: 16 }}>
+              <div className={styles.extraHeaderPanelContent}>
                 {extraHeaderPanel.content}
               </div>
             </Switcher>

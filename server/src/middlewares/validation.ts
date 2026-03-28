@@ -69,13 +69,15 @@ export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
+// Notes: All schema fields of Hono's "query" must be optional for the
+// type inferrence to work correct (for some reason)
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
   sortBy: z.enum(["volume", "time"]).default("volume").optional(),
 });
 
-export const walletTokenSwapSchema = z.object({
+export const walletTokenTradesSchema = z.object({
   walletAddress: solanaBase58Schema,
   tokenAddress: solanaBase58Schema,
 });

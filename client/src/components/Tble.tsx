@@ -138,12 +138,12 @@ export default function Tble({
     return (
       <TableContainer
         title={RenderHeader}
-        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""}`}
+        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""} ${stickyHeader ? overwriteStyles.tblStickyHeader : ""}`}
       >
         <Stack
           gap={1}
           className={overwriteStyles.loadingContainer}
-          style={{ height }}
+          style={{ height, minHeight: "4rem" }}
         >
           {loading ? (
             <InlineLoading description={tr("common.loading")} />
@@ -159,7 +159,7 @@ export default function Tble({
     <Layer>
       <TableContainer
         title={RenderHeader}
-        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""}`}
+        className={`${overwriteStyles.tbl} ${boxed ? overwriteStyles.tblBoxed : ""} ${stickyHeader ? overwriteStyles.tblStickyHeader : ""}`}
         style={{ marginTop }}
       >
         <DataTable

@@ -9,7 +9,13 @@
   }
 
   :global(.cds--data-table-content) {
-    height: 100%;
+    height: calc(100% - 3rem);
+  }
+
+  &.tblStickyHeader {
+    :global(.cds--data-table-content) {
+      height: 100%;
+    }
   }
 
   :global(.cds--table-header-label) {
@@ -172,4 +178,17 @@
 
 :global(.cds--pagination) {
   inline-size: 100% !important;
+}
+
+.grdNarrowCustom {
+  width: 100%;
+  padding-inline: 0 !important;
+
+  :global(.cds--css-grid-column) {
+    margin-inline: 0;
+  }
+
+  :global(.cds--css-grid-column:not(:last-child)) {
+    border-inline-end: 1px solid var(--cds-border-subtle-03);
+  }
 }

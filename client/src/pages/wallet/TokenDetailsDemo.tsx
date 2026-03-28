@@ -7,16 +7,19 @@ import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
+import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { useGet } from "@/hooks/useGet";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
 import { cds } from "@/util/carbon-theme";
 import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
-import { ChartAverage } from "@carbon/react/icons";
+import { ChartAverage, Launch } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 type TokenAverageTradePriceProps = {
+  walletAddress: string;
   tokenAddress: string;
   tokenImgUrl: string | null;
   tokenSymbol: string | null;
@@ -29,6 +32,7 @@ type TokenAverageTradePriceProps = {
 type TokenPriceDayRange = 7 | 30 | 90;
 
 function TokenAverageTradePrice({
+  walletAddress,
   tokenAddress,
   tokenImgUrl,
   tokenSymbol,
@@ -55,18 +59,67 @@ function TokenAverageTradePrice({
       },
     },
     {
-      select: (data) =>
-        data.map((dataPoint) => ({
+      select: (data) => {
+        return data.map((dataPoint) => ({
           unixTimeMs: dataPoint.unixTimestampMs,
           value: dataPoint.price,
-        })),
+        }));
+      },
+    },
+  );
+  const recentTrades = useGet(
+    client.api.wallets[":walletAddress"].trades[":tokenAddress"],
+    200,
+    {
+      param: {
+        walletAddress,
+        tokenAddress,
+      },
     },
   );
 
+  const recentTradesRows = useMemo(() => {
+    if (!recentTrades.data) return [];
+
+    return recentTrades.data.map((trade, index) => {
+      const isBuy = trade.tradeAction == "buy";
+      const amount = isBuy ? trade.baseAmount : trade.quoteAmount;
+      const symbol = tokenSymbol;
+
+      return {
+        id: index.toString(),
+        time: fmt.datetime.relativeShort(trade.blockUnixTimeMs, true),
+        tradeAction: (
+          <span
+            style={{
+              color: isBuy ? cds.supportSuccess : cds.supportError,
+              textTransform: "uppercase",
+            }}
+          >
+            {isBuy ? "Buy" : "Sell"}
+          </span>
+        ),
+        amount: fmt.num.compact.unit(amount, symbol?.toUpperCase() || null),
+        value: fmt.num.compact.currency(trade.volumeUsd),
+        exchange: trade.exchangeName || "Unknown",
+        transaction: (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
+            label="Open in Solscan"
+            kind="ghost"
+            size="sm"
+          >
+            <Launch size={18} />
+          </IconButton>
+        ),
+      };
+    });
+  }, [recentTrades.data, fmt]);
+
   return (
     <Stack>
-      <Grid narrow>
-        <Column sm={2} md={4} lg={4}>
+      <Grid narrow className={overwriteStyles.grdNarrowCustom}>
+        <Column sm={2} md={2} lg={4}>
           <Stack
             orientation="horizontal"
             gap={3}
@@ -97,15 +150,21 @@ function TokenAverageTradePrice({
           </Stack>
         </Column>
 
-        <Column sm={1} md={2} lg={6}>
+        <Column sm={1} md={3} lg={6}>
           <Txt size="xl" center stretch>
             {fmt.num.currency(tokenCurrentPrice)}
           </Txt>
         </Column>
 
-        <Column sm={1} md={2} lg={6}>
+        <Column sm={1} md={3} lg={6}>
           <div
-            style={{ display: "flex", width: "100%", justifyContent: "end" }}
+            style={{
+              display: "flex",
+              width: "100%",
+              height: "100%",
+              justifyContent: "end",
+              alignItems: "center",
+            }}
           >
             <FilterSwitch
               options={[
@@ -128,7 +187,6 @@ function TokenAverageTradePrice({
           </div>
         </Column>
       </Grid>
-
       <TimeSeriesLineChart
         markLines={[
           {
@@ -147,6 +205,23 @@ function TokenAverageTradePrice({
         data={priceData.data}
         loading={priceData.isLoading}
       />
+      <Tble
+        title={"Recent trades"}
+        description={"Recent trades on this token"}
+        loading={recentTrades.isLoading}
+        rows={recentTradesRows}
+        headers={[
+          { key: "time", header: "Time", align: "start" },
+          { key: "tradeAction", header: "Action", align: "center" },
+          { key: "amount", header: "Amount", align: "end", width: "20%" },
+          { key: "value", header: "Value (USD)", align: "end" },
+          { key: "exchange", header: "Exchange", align: "start" },
+          { key: "transaction", header: "Transaction", align: "center" },
+        ]}
+        boxed
+        enablePagination
+        pageSize={8}
+      />
     </Stack>
   );
 }
@@ -163,17 +238,16 @@ export function TokenDetailsDemo() {
     avgSellCost: number;
   } | null>(null);
 
-  if (!address) {
-    return <></>;
-  }
-
   const { tr, lang, fmt } = useLocalization();
 
   const walletTokenDetails = useGet(
     client.api.wallets[":address"].tokens,
     200,
     {
-      param: { address },
+      param: { address: address || "" },
+    },
+    {
+      enabled: !!address,
     },
   );
 
@@ -364,12 +438,17 @@ export function TokenDetailsDemo() {
     lang,
   ]);
 
+  if (!address) {
+    return <></>;
+  }
+
   return (
     <PageWrapper
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
           <TokenAverageTradePrice
+            walletAddress={address}
             tokenAddress={selectedToken.address}
             tokenImgUrl={
               tokenMeta.data?.[selectedToken.address]?.imageUrl || null
@@ -395,7 +474,7 @@ export function TokenDetailsDemo() {
         title={"Tokens Last Traded"}
         description={"Tokens which recent trading activities"}
         rows={rows}
-        size="xl"
+        height={800}
         stickyHeader
         enablePagination
         headers={[

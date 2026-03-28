@@ -2,7 +2,7 @@ import { setErr } from "@sv/config/errors.js";
 import {
   addressSchema,
   validate,
-  walletTokenSwapSchema,
+  walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
@@ -266,24 +266,27 @@ const routes = router
     }
   })
   .get(
-    "/:walletAddress/swaps/:tokenAddress",
-    validate("param", walletTokenSwapSchema),
+    "/:walletAddress/trades/:tokenAddress",
+    validate("param", walletTokenTradesSchema),
     async (c) => {
       const { walletAddress, tokenAddress } = c.req.valid("param");
 
       try {
-        const swaps = await walletService.getWalletTokenSwaps(
+        const trades = await walletService.getWalletTokenSwaps(
           walletAddress,
           tokenAddress,
         );
 
-        if (!swaps) {
-          return c.json(swaps, statusCode.BadGateway);
+        if (!trades) {
+          return c.json(trades, statusCode.BadGateway);
         }
-        return c.json(swaps, statusCode.Ok);
+        return c.json(trades, statusCode.Ok);
       } catch (err) {
-        console.error("Failed to get wallet swaps", err);
-        return c.json({ error: "Failed to get wallet swaps" }, 500);
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
     },
   )
