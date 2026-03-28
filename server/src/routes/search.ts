@@ -2,9 +2,11 @@ import { setErr } from "@sv/config/errors.js";
 import { searchQuerySchema, validate } from "@sv/middlewares/validation.js";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import { statusCode } from "@sv/util/responses.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { Hono } from "hono";
+import z from "zod";
 
 function trimIdPrefix(
   id: string | null | undefined,
@@ -20,6 +22,87 @@ type TokenQuickMeta = {
   symbol: string | null;
   imgUrl: string | null;
 };
+
+type WalletSearchResult = {
+  address: string;
+  label: string | null;
+};
+
+const SOLANA_BASE58_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+const bdsWalletSearchSchema = z.object({
+  data: z
+    .object({
+      meta: z
+        .object({
+          address: z.string().trim().min(1),
+        })
+        .partial()
+        .optional(),
+    })
+    .partial()
+    .optional(),
+});
+
+function isLikelySolanaWalletAddress(query: string) {
+  return SOLANA_BASE58_ADDRESS_REGEX.test(query);
+}
+
+function extractSolanaWalletAddress(input: string): string | null {
+  const trimmed = input.trim();
+  if (isLikelySolanaWalletAddress(trimmed)) {
+    return trimmed;
+  }
+
+  const matched = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+  if (!matched) {
+    return null;
+  }
+
+  return isLikelySolanaWalletAddress(matched[0]) ? matched[0] : null;
+}
+
+async function getSearchWalletsResult(query: string): Promise<WalletSearchResult[]> {
+  const walletAddress = extractSolanaWalletAddress(query);
+  if (!walletAddress) {
+    return [];
+  }
+
+  try {
+    const endpoint = bds.getEndpoint("/wallet/v2/pnl/details");
+    const req = new Request(endpoint, {
+      method: "POST",
+      headers: bds.getRequiredHeaders(),
+      body: JSON.stringify({
+        duration: "all",
+        sort_type: "desc",
+        sort_by: "last_trade",
+        limit: 1,
+        wallet: walletAddress,
+      }),
+    });
+
+    const resp = await fetch(req);
+    if (!resp.ok) {
+      return [{ address: walletAddress, label: null }];
+    }
+
+    const raw = await resp.json();
+    const parsed = bdsWalletSearchSchema.safeParse(raw);
+    if (!parsed.success) {
+      return [{ address: walletAddress, label: null }];
+    }
+
+    const address = parsed.data.data?.meta?.address?.trim();
+    if (!address || !isLikelySolanaWalletAddress(address)) {
+      return [{ address: walletAddress, label: null }];
+    }
+
+    return [{ address, label: null }];
+  } catch {
+    return [{ address: walletAddress, label: null }];
+  }
+}
 
 async function getSearchPoolsResult(q: string) {
   const res = await cg.client.onchain.search.pools.get({
@@ -71,20 +154,25 @@ const app = new Hono().get(
   async (c) => {
     try {
       const { q = "" } = c.req.valid("query");
-      const searchQuery = q.toLowerCase().trim();
+      const normalizedQuery = q.trim();
+      const searchQuery = normalizedQuery.toLowerCase();
 
-      if (!searchQuery) {
+      if (!normalizedQuery) {
         return c.json(
           {
             tokens: [],
             pools: [],
+            wallets: [],
           },
           statusCode.Ok,
         );
       }
 
-      const poolSearch = await getSearchPoolsResult(searchQuery);
-      const queriesSearch = await getSearchQueriesResult(searchQuery);
+      const [poolSearch, queriesSearch, wallets] = await Promise.all([
+        getSearchPoolsResult(searchQuery),
+        getSearchQueriesResult(searchQuery),
+        getSearchWalletsResult(normalizedQuery),
+      ]);
 
       if (!poolSearch || queriesSearch == undefined) {
         return c.json(
@@ -140,6 +228,7 @@ const app = new Hono().get(
         {
           tokens: tokenDataList,
           pools,
+          wallets,
         },
         statusCode.Ok,
       );
