@@ -1,14 +1,13 @@
 import React from 'react';
 import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 import styles from './PeriodSelector.module.scss';
-import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import { PERIOD_OPTIONS, type PeriodOption } from '@/config/periodOptions';
 import { useLocalization } from '@/contexts/LocalizationContext';
-
-type PeriodOption = { key: string; labelKey: string };
+import type { TimePeriod } from '@/types/chart-filters.types';
 
 interface PeriodSelectorProps {
-    value: string;
-    onChange: (key: string) => void;
+    value: TimePeriod;
+    onChange: (key: TimePeriod) => void;
     options?: PeriodOption[];
     compact?: boolean;
     className?: string;

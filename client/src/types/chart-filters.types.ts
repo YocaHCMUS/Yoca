@@ -9,7 +9,7 @@
 /**
  * Time period filter options
  */
-export type TimePeriod = '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' | 'custom';
+export type TimePeriod = '24H' | '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' | 'custom';
 
 /**
  * Transaction type filter options
@@ -110,30 +110,6 @@ export const DEFAULT_FILTERS: ChartFilters = {
   wallets: undefined,
   customDateRange: undefined,
   limit: 2000,
-};
-
-/**
- * Time period display labels
- */
-export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
-  '7D': 'Last 7 Days',
-  '30D': 'Last 30 Days',
-  '60D': 'Last 60 Days',
-  '90D': 'Last 90 Days',
-  '1Y': 'Last Year',
-  'All': 'All Time',
-  'custom': 'Custom Range',
-};
-
-/**
- * Transaction type display labels
- */
-export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  all: 'All Types',
-  trades: 'Trades',
-  transfers: 'Transfers',
-  deposits: 'Deposits',
-  withdrawals: 'Withdrawals',
 };
 
 /**

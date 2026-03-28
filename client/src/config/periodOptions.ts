@@ -1,5 +1,7 @@
+import type { TimePeriod } from "@/types/chart-filters.types";
+
 export type PeriodOption = {
-    key: '24H' | '7D' | '30D' | '90D' | 'All';
+    key: TimePeriod;
     labelKey: string;
 };
 

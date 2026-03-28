@@ -6,11 +6,9 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
-import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { fetchTradingVolumePerTransaction, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
-import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import type { TradingVolumePerTransactionRequestParams } from '@/types/chart-api.types';
 
@@ -19,7 +17,6 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import type { TimePeriod } from '@/types/chart-filters.types';
 
 export function TradingVolumePerTransaction({
   title,

@@ -22,7 +22,6 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
@@ -41,14 +40,6 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
-
-// export interface AssetDistributionProps {
-//   minHeight?: number;
-//   initialFilters?: Partial<any>;
-//   autoRefresh?: boolean;
-//   refreshInterval?: number;
-//   className?: string;
-// }
 
 export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
