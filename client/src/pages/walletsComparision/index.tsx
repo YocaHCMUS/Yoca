@@ -59,17 +59,6 @@ export default function WalletsComparisionPage() {
             <h3 className={styles.sidebarTitle}>
               {tr("walletComparison.selectedWallets")}
             </h3>
-
-            {/* Wallet Address Search */}
-            {/* <TextInput
-                            id="wallet-search"
-                            labelText="Add Wallet Address"
-                            placeholder="Enter wallet address..."
-                            value={walletAddress}
-                            onChange={(e) => setWalletAddress(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            className={styles.walletInput}
-                        /> */}
             <Search
               id="wallet-search"
               labelText={tr("walletComparison.addWalletAddress")}

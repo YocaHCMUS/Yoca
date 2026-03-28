@@ -261,20 +261,12 @@ export function DrawdownChart({
 
       // Max drawdown is the 'trough' value of the latest entry
       const latest = drawdownResult[drawdownResult.length - 1];
-      const maxDrawdown = latest.trough;
+      // const maxDrawdown = latest.trough;
+      const maxDrawdown = Math.min(...drawdownResult.map((d: any) => d.drawdown));
+      const maxDrawdownEntry = drawdownResult.find((d: any) => d.drawdown === maxDrawdown);
+      const maxDrawdownTimestamp = maxDrawdownEntry ? maxDrawdownEntry.timestamp : null;
       const currentDrawdown = latest?.drawdown ?? 0;
 
-      // Find the latest entry where trough === value
-      let maxDrawdownTimestamp = null;
-      for (let i = drawdownResult.length - 1; i >= 0; i--) {
-        const d = drawdownResult[i];
-        if (d.trough === d.value) {
-          maxDrawdownTimestamp = d.timestamp;
-          break;
-        }
-      }
-
-      // Days since max drawdown: from that timestamp to now
       let daysSinceMaxDrawdown = null;
       if (maxDrawdownTimestamp) {
         const now = Date.now();

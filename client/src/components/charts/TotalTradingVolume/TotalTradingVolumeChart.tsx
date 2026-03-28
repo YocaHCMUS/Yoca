@@ -97,7 +97,7 @@ export function TotalTradingVolumeChart({
     // data.wallets: { wallet: string; tradingVolumeUsd: number | null }[]
     // Sort by tradingVolumeUsd descending
     const wallets = [...data.wallets].sort((a, b) => (b.tradingVolumeUsd ?? 0) - (a.tradingVolumeUsd ?? 0));
-    const categories = wallets.map((w, i) => `#${i + 1} ${w.wallet}`);
+    const categories = wallets.map((w, i) => `#${i + 1} ${w.wallet.slice(0, 6)}...${w.wallet.slice(-4)}`);
     const totalVolumes = wallets.map(w => w.tradingVolumeUsd ?? 0);
 
     return {
