@@ -50,7 +50,13 @@ export function getMarketDataFromRaw(
 ): TokenMarketDataInsert {
   return {
     address,
-    fullyDilutedValuation: raw.fully_diluted_valuation!,
+    fullyDilutedValuation:
+      raw.fully_diluted_valuation ??
+      (raw.max_supply && raw.current_price
+        ? raw.max_supply * raw.current_price
+        : raw.total_supply && raw.current_price
+          ? raw.total_supply * raw.current_price
+          : 0),
     marketCap: raw.market_cap!,
     priceUsd: raw.current_price!,
     totalSupply: raw.total_supply,
