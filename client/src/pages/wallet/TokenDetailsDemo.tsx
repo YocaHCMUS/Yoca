@@ -217,7 +217,12 @@ function TokenAverageTradePrice({
         loading={recentTrades.isLoading}
         rows={recentTradesRows}
         headers={[
-          { key: "time", header: tr("walletPage.time"), align: "end" },
+          {
+            key: "time",
+            header: tr("walletPage.time"),
+            align: "end",
+            width: "10%",
+          },
           {
             key: "tradeAction",
             header: tr("walletPage.action"),
@@ -227,7 +232,6 @@ function TokenAverageTradePrice({
             key: "amount",
             header: tr("walletPage.amount"),
             align: "end",
-            width: "20%",
           },
           {
             key: "value",
@@ -247,6 +251,7 @@ function TokenAverageTradePrice({
         ]}
         boxed
         enablePagination
+        // stickyHeader
         pageSize={8}
       />
     </Stack>

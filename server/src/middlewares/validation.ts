@@ -115,7 +115,22 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       console.log("Unexpected response!");
       console.log("Zod errors:", parseRes.error.issues);
       console.log(`Actual response (${resp.status}):`);
-      console.log(rawRes);
+      const safeStr = (() => {
+        try {
+          return JSON.stringify(rawRes, null, 2);
+        } catch {
+          return String(rawRes);
+        }
+      })();
+      const maxLog = 1000;
+      if (safeStr.length > maxLog) {
+        console.log(
+          safeStr.slice(0, maxLog) +
+            `\n... (truncated ${safeStr.length - maxLog} chars)`,
+        );
+      } else {
+        console.log(safeStr);
+      }
       return;
     }
     return parseRes.data;

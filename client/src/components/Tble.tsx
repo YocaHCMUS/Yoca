@@ -107,7 +107,7 @@ export default function Tble({
       className: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
       style: {
         width: header?.width,
-        inlineSize: stickyHeader ? header?.width : undefined,
+        minWidth: header?.width,
         verticalAlign: stickyHeader ? undefined : "middle",
       } as CSSProperties,
     };
@@ -143,7 +143,7 @@ export default function Tble({
         <Stack
           gap={1}
           className={overwriteStyles.loadingContainer}
-          style={{ height, minHeight: "4rem" }}
+          style={{ height, minHeight: "32rem" }}
         >
           {loading ? (
             <InlineLoading description={tr("common.loading")} />
@@ -179,7 +179,8 @@ export default function Tble({
             <div
               style={{
                 height,
-                ...(!stickyHeader && { tableLayout: "fixed", width: "100%" }),
+                tableLayout: "fixed",
+                width: "100%",
               }}
             >
               <Table {...getTableProps()}>
