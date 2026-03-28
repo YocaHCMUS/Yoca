@@ -152,7 +152,7 @@ function TokenAverageTradePrice({
 
         <Column sm={1} md={3} lg={6}>
           <Txt size="xl" center stretch>
-            {fmt.num.currency(tokenCurrentPrice)}
+            {fmt.num.compact.currency(tokenCurrentPrice)}
           </Txt>
         </Column>
 

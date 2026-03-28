@@ -17,7 +17,7 @@
 
 .marketTicker {
   position: fixed;
-  z-index: 8000-1;
+  z-index: 8000-10;
   background: var(--cds-background);
   border-bottom: 1px solid var(--cds-border-subtle-01);
 }
@@ -39,12 +39,12 @@
   &::before {
     content: "";
     position: fixed;
-    top: 3.5rem;
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 7995;
+    z-index: 8000-5;
     pointer-events: auto;
   }
 
