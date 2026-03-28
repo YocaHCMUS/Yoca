@@ -603,6 +603,8 @@ export const translation = defineTranslation({
       noWalletsTitle: "Chưa chọn ví",
       noWalletsMessage:
         "Vui lòng chọn ít nhất một ví để xem phân bổ khối lượng giao dịch.",
+      buy: "Mua",
+      sell: "Bán",
     },
     tokenPriceChart: {
       price: "Giá {{tokenSymbol}}",

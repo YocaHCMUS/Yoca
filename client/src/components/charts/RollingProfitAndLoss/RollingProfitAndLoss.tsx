@@ -9,7 +9,6 @@ import { useChartContext } from '@/contexts/ChartContext';
 import { fetchRollingAnnualReturn, type InferFetcherData } from '@/services/chart/chartApi';
 import type { RollingAnnualReturnRequestParams } from '@/types/chart-api.types';
 import type { RollingProfitAndLossResponse } from '@/types/chart-api.types';
-import { TIME_PERIOD_LABELS } from '@/types/chart-filters.types';
 import type { TimePeriod } from '@/types/chart-filters.types';
 
 type ValueType = 'total' | 'realized' | 'unrealized';
@@ -35,6 +34,13 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 }) => {
     const { tr } = useLocalization();
     const chartTitle = title || tr('charts.rollingAnnualReturn.title') || 'Rolling P&L';
+    const TIME_PERIOD_LABELS = [
+        tr('charts.last7Days'),
+        tr('charts.last30Days'),
+        tr('charts.last90Days'),
+        tr('charts.allTime'),
+    ]
+
 
     const chartTheme = useChartTheme();
     const { selectedTimezone: timezone } = useChartContext();
@@ -81,7 +87,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 
         return {
             ...base,
-            grid: { left: '8%', right: '8%', bottom: '12%', top: '8%', containLabel: true },
+            grid: { left: '8%', right: '8%', bottom: '12%', top: '16%', containLabel: true },
             xAxis: { ...base.xAxis, type: 'category', data: labels, axisLabel: { rotate: 30 } },
             yAxis: { ...base.yAxis, type: 'value', name: 'USD' },
             tooltip: { ...base.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -104,7 +110,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 
         return {
             ...base,
-            grid: { left: '8%', right: '8%', bottom: '12%', top: '8%', containLabel: true },
+            grid: { left: '8%', right: '8%', bottom: '12%', top: '16%', containLabel: true },
             xAxis: { ...base.xAxis, type: 'category', data: labels },
             yAxis: { ...base.yAxis, type: 'value', name: 'USD' },
             tooltip: { ...base.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -128,6 +134,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         }
 
         const payload = data as RollingProfitAndLossResponse;
+
 
         // Per-wallet view
         if (payload.wallets && payload.wallets.length > 0) {
@@ -167,8 +174,8 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
                     className={sharedStyles.chartSelect}
                     aria-label="Time period"
                 >
-                    {(['7D', '30D', '90D', 'All'] as TimePeriod[]).map(p => (
-                        <option key={p} value={p}>{TIME_PERIOD_LABELS[p]}</option>
+                    {(['7D', '30D', '90D', 'All'] as TimePeriod[]).map((p, key) => (
+                        <option key={key} value={p}>{TIME_PERIOD_LABELS[key]}</option>
                     ))}
                 </select>
 
