@@ -232,6 +232,43 @@ export async function getStablecoinRatio(
     }
 }
 
+export async function processStablecoinRatioData(rawData: StablecoinRatioRow[], period: WalletTimePeriod): Promise<{
+    wallets: any[];
+    metadata: {
+        period: string;
+        timestamp: number;
+        currency: string;
+    };
+}> {
+    const metadata = {
+        period,
+        timestamp: Date.now(),
+        currency: "USD",
+    }
+
+    const walletKeys = Object.keys(rawData[0] ?? {}).filter((key) => key.startsWith("wallet"));
+    const wallets = walletKeys.map((walletKey) => {
+        const dataPoints = rawData.map((row) => ({
+            timestamp: row.timestamp,
+            value: row[walletKey] as number,
+        }));
+        const currentRatio = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
+        const averageRatio = dataPoints.length > 0
+            ? clampToPercent(dataPoints.reduce((sum, point) => sum + point.value, 0) / dataPoints.length)
+            : null;
+
+        return {
+            walletAddress: walletKey,
+            walletName: walletKey, // Replace with actual wallet name if available
+            data: dataPoints,
+            currentRatio,
+            averageRatio,
+        };
+    });
+
+    return { wallets, metadata };
+}
+
 function isStablecoinSymbol(symbol: string | null | undefined): boolean {
     if (!symbol) {
         return false;

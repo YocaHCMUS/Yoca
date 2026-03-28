@@ -7,9 +7,9 @@
  * @module routes/charts/stablecoin-ratio.route
  */
 
+import { getStablecoinRatio, processStablecoinRatioData } from '@sv/services/wallet/walletComparison';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateStablecoinRatioData } from '../../services/mockChartData.service.js';
 
 /**
  * Request parameter schema for stablecoin ratio endpoint
@@ -51,14 +51,20 @@ const app = new Hono()
       const query = c.req.query();
       const params = stablecoinRatioRequestSchema.parse(query);
 
+
+
+      const request = {
+        period: params.period,
+        wallets: params.wallets,
+      };
+
+
       // Generate stablecoin ratio data
-      const data = generateStablecoinRatioData(
-        params.wallets,
-        params.period
-      );
+      const data = await getStablecoinRatio(request);
+      const processedData = await processStablecoinRatioData(data, request.period);
 
       // Return response
-      return c.json(data, 200);
+      return c.json(processedData, 200);
     } catch (error) {
       console.error('Error fetching stablecoin ratio data:', error);
       return c.json(

@@ -33,7 +33,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Stable Coin Ratio Chart */}
-            {/* <div className={styles.stableCoinChart}>
+            <div className={styles.stableCoinChart}>
                 <StablecoinRatioChart
                     minHeight={300}
                     initialFilters={{
@@ -41,7 +41,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses,
                     }}
                 />
-            </div> */}
+            </div>
 
             {/* <div className={styles.stableCoinChart}>
                 <HoldingDurations
