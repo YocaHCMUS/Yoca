@@ -30,6 +30,7 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
+  Tooltip,
 } from "@carbon/react";
 import { ChartTreemap, Launch, Star, StarFilled } from "@carbon/react/icons";
 import { useEffect, useMemo, useState } from "react";
@@ -228,13 +229,28 @@ export default function MarketPage() {
             style={{ alignItems: "center" }}
           >
             <TknImg src={m.imageUrl} alt={m.symbol} size={28} />
-            <Link
-              href={`/tokens/${token.address}`}
-              style={{ fontFamily: "monospace" }}
-            >
-              {m.symbol.toUpperCase()}
-            </Link>
-            <CpyBtn size="xs" copyWhat={token.address} />
+            <Stack gap={1} style={{ justifyContent: "center" }}>
+              <Stack
+                orientation="horizontal"
+                gap={2}
+                style={{ alignItems: "center" }}
+              >
+                <Link
+                  href={`/tokens/${token.address}`}
+                  style={{ fontFamily: "monospace" }}
+                >
+                  {m.symbol.toUpperCase()}
+                </Link>
+                <CpyBtn size="xs" copyWhat={token.address} />
+              </Stack>
+              <Tooltip label={m.name}>
+                <Txt secondary ellipsis>
+                  {(m.name ?? "").length > 10
+                    ? `${m.name.slice(0, 10)}…`
+                    : m.name}
+                </Txt>
+              </Tooltip>
+            </Stack>
           </Stack>
         ),
         price: fmt.num.currency(mk.priceUsd),
@@ -301,8 +317,8 @@ export default function MarketPage() {
     if (!recentTradesData.data) return [];
     return recentTradesData.data.map((trade, index) => {
       const isBuy = trade.tradeAction == "buy";
-      const baseSymbol = tokenMeta.data?.[trade.baseAddress].symbol || null;
-      const quoteSymbol = tokenMeta.data?.[trade.quoteAddress].symbol || null;
+      const baseSymbol = tokenMeta.data?.[trade.baseAddress]?.symbol || null;
+      const quoteSymbol = tokenMeta.data?.[trade.quoteAddress]?.symbol || null;
 
       const buyAmount = isBuy ? trade.baseAmount : trade.quoteAmount;
       const buySymbol = isBuy ? baseSymbol : quoteSymbol;

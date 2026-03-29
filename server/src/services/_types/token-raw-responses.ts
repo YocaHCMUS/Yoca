@@ -342,7 +342,7 @@ export const tokenSideSchema = z.object({
   symbol: z.string().optional(),
   address: z.string(),
   decimals: z.number(),
-  price: z.number(),
+  price: z.number().nullable(),
   amount: z.string(),
   ui_amount: z.number(),
   ui_change_amount: z.number(),
