@@ -1,25 +1,15 @@
-import client from "@/api/main";
+import Tble from "@/components/Tble";
+import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { formatAddress } from "@/util/format";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
-import {
-    DataTable,
-    DataTableSkeleton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@carbon/react";
-import type { InferResponseType } from "hono/client";
+import { Link } from "@carbon/react";
+import { useMemo } from "react";
 import styles from "./TopHoldersTable.module.scss";
 
-type TopHoldersData = InferResponseType<
-  (typeof client.api.tokens.holders)[":address"]["$get"],
-  200
->;
+type TopHoldersData = Array<{
+  holderAddress: string;
+  percentage: number | string;
+}>;
 
 interface TopHoldersTableProps {
   holders: TopHoldersData;
@@ -32,88 +22,50 @@ export function TopHoldersTable({
 }: TopHoldersTableProps) {
   const { tr } = useLocalization();
 
-  const HEADERS = [
-    { key: "rank", header: tr("token.topHolders.rank") },
-    { key: "address", header: tr("token.topHolders.address") },
-    { key: "percentage", header: tr("token.topHolders.percent") },
-  ];
+  const rows = useMemo(() => {
+    if (!holders) return [];
 
-  if (loading) {
-    return (
-      <DataTableSkeleton
-        headers={HEADERS}
-        rowCount={10}
-        showHeader={false}
-        showToolbar={false}
-      />
-    );
-  }
-
-  if (!holders || holders.length === 0) {
-    return null;
-  }
-
-  const rows = holders.map((holder, idx) => ({
-    id: holder.holderAddress,
-    rank: idx + 1,
-    address: holder.holderAddress,
-    percentage: `${Number(holder.percentage).toFixed(2)}%`,
-  }));
+    return holders.map((holder, idx) => ({
+      id: holder.holderAddress,
+      rank: <span>{idx + 1}</span>,
+      address: (
+        <Link
+          href={`${SOLSCAN_ACCOUNT_URL}/${holder.holderAddress}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.addressLink}
+        >
+          {formatAddress(holder.holderAddress)}
+        </Link>
+      ),
+      percentage: <span>{Number(holder.percentage).toFixed(2)}%</span>,
+    }));
+  }, [holders]);
 
   return (
-    <TableContainer className={styles.tableContainer}>
-      <DataTable rows={rows} headers={HEADERS} size="lg">
-        {({
-          rows: tableRows,
-          headers,
-          getTableProps,
-          getHeaderProps,
-          getRowProps,
-          getCellProps,
-        }) => (
-          <Table {...getTableProps()} className={styles.table}>
-            <TableHead>
-              <TableRow>
-                {headers.map((header) => (
-                  <TableHeader
-                    {...getHeaderProps({ header })}
-                    key={header.key}
-                  >
-                    {header.header}
-                  </TableHeader>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tableRows.map((row) => (
-                <TableRow {...getRowProps({ row })} key={row.id}>
-                  {row.cells.map((cell) => {
-                    if (cell.info.header === "address") {
-                      return (
-                        <TableCell {...getCellProps({ cell })} key={cell.id}>
-                          <a
-                            href={`${SOLSCAN_ACCOUNT_URL}/${cell.value}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.addressLink}
-                          >
-                            {formatAddress(cell.value as string)}
-                          </a>
-                        </TableCell>
-                      );
-                    }
-                    return (
-                      <TableCell {...getCellProps({ cell })} key={cell.id}>
-                        {cell.value as React.ReactNode}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DataTable>
-    </TableContainer>
+    <Tble
+      headers={[
+        {
+          key: "rank",
+          header: tr("token.topHolders.rank"),
+          width: "10%",
+          align: "start",
+        },
+        {
+          key: "address",
+          header: tr("token.topHolders.address"),
+          align: "start",
+        },
+        {
+          key: "percentage",
+          header: tr("token.topHolders.percent"),
+          align: "end",
+        },
+      ]}
+      rows={rows}
+      loading={loading}
+      boxed
+      size="lg"
+    />
   );
 }

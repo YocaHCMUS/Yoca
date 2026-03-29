@@ -4,15 +4,15 @@ import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import {
-    DataTable,
-    DataTableSkeleton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableHeader,
-    TableRow,
+  DataTable,
+  DataTableSkeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@carbon/react";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +20,7 @@ import { useParams } from "react-router";
 import styles from "./index.module.scss";
 
 type HistoryPoint = InferResponseType<
-  typeof client.api.tokens.history[":address"]["$get"],
+  (typeof client.api.tokens.history)[":address"]["$get"],
   200
 >[number];
 
@@ -34,36 +34,9 @@ const TIME_RANGES: TimeRange[] = [
   { label: "1Y", days: 365 },
 ];
 
-function formatCurrency(value: number | null, compact = false): string {
-  if (value == null) return "N/A";
-  if (compact) {
-    if (Math.abs(value) >= 1_000_000_000)
-      return "$" + (value / 1_000_000_000).toFixed(2) + "B";
-    if (Math.abs(value) >= 1_000_000)
-      return "$" + (value / 1_000_000).toFixed(2) + "M";
-    if (Math.abs(value) >= 1_000)
-      return "$" + (value / 1_000).toFixed(2) + "K";
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: value < 0.01 ? 8 : value < 1 ? 6 : 2,
-  }).format(value);
-}
-
-function formatDate(dateStr: string, lang: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const d = new Date(year, month - 1, day);
-  return d.toLocaleDateString(lang, {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
-}
-
 export default function HistoricalDataPage() {
   const { address } = useParams<{ address: string }>();
-  const { tr, lang } = useLocalization();
+  const { tr, lang, fmt } = useLocalization();
   const [selectedRange, setSelectedRange] = useState<TimeRange>(TIME_RANGES[0]);
   const [rows, setRows] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,10 +44,15 @@ export default function HistoricalDataPage() {
   const [visibleCount, setVisibleCount] = useState(20);
   const abortRef = useRef<AbortController | null>(null);
 
-  const metaResult = useGet(client.api.tokens.meta[":addresses"], 200, {
-    param: { addresses: address! },
-  });
-  const meta = metaResult.data?.[0] ?? null;
+  const tokenDetails = useGet(
+    client.api.tokens.details[":addresses"],
+    200,
+    {
+      param: { addresses: address! },
+    },
+    { select: (data) => ({ ...data[0].meta, ...data[0].details }) },
+  );
+  const details = tokenDetails.data;
 
   useEffect(() => {
     if (!address) return;
@@ -92,14 +70,21 @@ export default function HistoricalDataPage() {
       .$get({ param: { address }, query: { days: selectedRange.days } })
       .then(async (res) => {
         if (ctrl.signal.aborted) return;
-        if (res.status !== 200) { setError(true); setLoading(false); return; }
+        if (res.status !== 200) {
+          setError(true);
+          setLoading(false);
+          return;
+        }
         const data = await res.json();
         // Hiển thị mới nhất lên đầu
         setRows([...data].reverse());
         setLoading(false);
       })
       .catch(() => {
-        if (!ctrl.signal.aborted) { setError(true); setLoading(false); }
+        if (!ctrl.signal.aborted) {
+          setError(true);
+          setLoading(false);
+        }
       });
 
     return () => ctrl.abort();
@@ -110,10 +95,10 @@ export default function HistoricalDataPage() {
   const PAGE_SIZE = 20;
   const allRows = rows.map((r, i) => ({
     id: String(i),
-    date: formatDate(r.dateStr, lang),
-    marketCap: formatCurrency(r.marketCap, true),
-    volume: formatCurrency(r.volume, true),
-    close: formatCurrency(r.price),
+    date: fmt.datetime.datetime(r.dateStr),
+    marketCap: fmt.num.currency(r.marketCap),
+    volume: fmt.num.currency(r.volume),
+    close: fmt.num.currency(r.price),
   }));
   const tableRows = allRows.slice(0, visibleCount);
   const hasMore = visibleCount < allRows.length;
@@ -129,17 +114,17 @@ export default function HistoricalDataPage() {
     <PageWrapper>
       <div className={styles.page}>
         {/* Token header */}
-        {meta && (
+        {details && (
           <div className={styles.tokenHeaderWrap}>
             <TokenHeader
-              name={meta.name}
-              symbol={meta.symbol}
-              address={meta.address}
-              imageUrl={meta.imageUrl ?? undefined}
-              coinGeckoId={meta.coingeckoId ?? null}
-              discordInvite={meta.linkDiscord}
-              websiteUrl={meta.linkHomepage}
-              twitterHandle={meta.twitterScreenName}
+              name={details.name}
+              symbol={details.symbol}
+              address={details.address}
+              imageUrl={details.imageUrl ?? undefined}
+              coinGeckoId={details.coingeckoId ?? null}
+              discordInvite={details.linkDiscord}
+              websiteUrl={details.linkHomepage}
+              twitterHandle={details.twitterScreenName}
               compact
             />
           </div>
@@ -149,7 +134,7 @@ export default function HistoricalDataPage() {
           {/* Tiêu đề + range selector */}
           <div className={styles.header}>
             <h2 className={styles.title}>
-              {tr("token.historicalData.title", { name: meta?.name ?? "—" })}
+              {tr("token.historicalData.title", { name: details?.name ?? "—" })}
             </h2>
             <div className={styles.rangeSelector}>
               {TIME_RANGES.map((r) => (
@@ -178,44 +163,57 @@ export default function HistoricalDataPage() {
             </div>
           ) : (
             <div className={styles.tableContainer}>
-            <DataTable rows={tableRows} headers={TABLE_HEADERS}>
-              {({ rows: tRows, headers, getTableProps, getHeaderProps, getRowProps, getCellProps }) => (
-                <TableContainer>
-                <Table {...getTableProps()} className={styles.table}>
-                  <TableHead>
-                    <TableRow>
-                      {headers.map((h) => (
-                        <TableHeader {...getHeaderProps({ header: h })} key={h.key}>
-                          {h.header}
-                        </TableHeader>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tRows.map((row) => (
-                      <TableRow {...getRowProps({ row })} key={row.id}>
-                        {row.cells.map((cell) => (
-                          <TableCell {...getCellProps({ cell })} key={cell.id}>
-                            {cell.value}
-                          </TableCell>
+              <DataTable rows={tableRows} headers={TABLE_HEADERS}>
+                {({
+                  rows: tRows,
+                  headers,
+                  getTableProps,
+                  getHeaderProps,
+                  getRowProps,
+                  getCellProps,
+                }) => (
+                  <TableContainer>
+                    <Table {...getTableProps()} className={styles.table}>
+                      <TableHead>
+                        <TableRow>
+                          {headers.map((h) => (
+                            <TableHeader
+                              {...getHeaderProps({ header: h })}
+                              key={h.key}
+                            >
+                              {h.header}
+                            </TableHeader>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {tRows.map((row) => (
+                          <TableRow {...getRowProps({ row })} key={row.id}>
+                            {row.cells.map((cell) => (
+                              <TableCell
+                                {...getCellProps({ cell })}
+                                key={cell.id}
+                              >
+                                {cell.value}
+                              </TableCell>
+                            ))}
+                          </TableRow>
                         ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </TableContainer>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </DataTable>
+              {hasMore && (
+                <div className={styles.showMoreWrap}>
+                  <button
+                    className={styles.showMoreBtn}
+                    onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                  >
+                    {tr("token.historicalData.showMore")}
+                  </button>
+                </div>
               )}
-            </DataTable>
-            {hasMore && (
-              <div className={styles.showMoreWrap}>
-                <button
-                  className={styles.showMoreBtn}
-                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                >
-                  {tr("token.historicalData.showMore")}
-                </button>
-              </div>
-            )}
             </div>
           )}
         </div>

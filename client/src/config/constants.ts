@@ -11,14 +11,5 @@ export const COINGECKO_THUMBNAIL_URL =
   "https://static.coingecko.com/s/thumbnail-007177f3eca19695592f0b8b0eabbdae282b54154e1be912285c9034ea6cbaf2.png";
 export const PLACEHOLDER_IMAGE_URL = "https://placehold.co/48x48";
 export const ELLIPSIS = "…";
-
-// Colors
-import colors from "@/styles/carbon-colors.module.scss";
-
-export const CARBON = {
-  primary: colors.primary,
-  secondary: colors.secondary,
-  success: colors.success,
-  error: colors.error,
-  info: colors.info,
-};
+export const SUCCESS_COLOR = "#24a148";
+export const ERROR_COLOR = "#da1e28";

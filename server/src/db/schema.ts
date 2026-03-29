@@ -16,6 +16,7 @@ import {
   bigint,
   check,
   decimal as dec,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -43,6 +44,8 @@ export const enumAuthProvider = pgEnum("auth_provider", [
   "solana",
   "other",
 ]);
+
+export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -127,9 +130,9 @@ export const tokenMarketData = pgTable("token_market_data", {
   priceChangePercentage1y: decimal("price_change_percentage_1y"),
 
   marketCap: decimal("market_cap").notNull(),
-  marketCapChange24h: decimal("market_cap_change_24h"),
+  marketCapChange24h: decimal("mark_cap_change_24h"),
   marketCapChangePercentage24h: decimal("market_cap_change_percentage_24h"),
-  fullyDilutedValuation: decimal("fully_diluted_valuation").notNull(),
+  fullyDilutedValuation: decimal("fully_diluted_valuation"),
 
   volume24h: decimal("volume_24h").notNull(),
   circulatingSupply: decimal("circulating_supply"),
@@ -427,6 +430,17 @@ export const topTraders = pgTable("top_traders", {
     .$onUpdate(() => new Date()),
 });
 
+export const topLosers = pgTable("top_losers", {
+  address: varchar("address", { length: 66 }).primaryKey(),
+  rank: integer("rank").notNull(),
+  pnl: decimal("pnl").notNull(),
+  volume: decimal("volume").notNull(),
+  tradeCount: integer("trade_count").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const poolTrades24h = pgTable("pool_trades_24h", {
   id: varchar("id", { length: 128 }).primaryKey(),
 
@@ -464,24 +478,22 @@ export const recentTrades = pgTable("recent_trades", {
   // leve instruction, Birdeye might just didn't have that information
   innerInstructionIndex: integer("inner_instruction_index"),
 
-  baseSymbol: varchar("base_symbol"),
-  baseAddress: varchar("base_address", { length: 44 }).notNull(),
-  baseDecimals: integer("base_decimals"),
-  basePrice: decimal("base_price"),
-  baseAmount: varchar("base_amount"),
+  tradeAction: enumTradeAction("trade_action").notNull(),
 
-  quoteSymbol: varchar("quote_symbol"),
+  baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  basePrice: decimal("base_price"),
+  baseAmount: decimal("base_amount"),
+
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
-  quoteDecimals: integer("quote_decimals"),
   quotePrice: decimal("quote_price"),
-  quoteAmount: varchar("quote_amount"),
+  quoteAmount: decimal("quote_amount"),
 
   blockUnixTime: integer("block_unix_time").notNull(),
   volumeUsd: decimal("volume_usd").notNull(),
 
   owner: varchar("owner", { length: 44 }).notNull(),
   source: varchar("source").notNull(),
-  poolAddress: varchar("poolAddress", { length: 44 }).notNull(),
+  poolAddress: varchar("pool_address", { length: 44 }).notNull(),
 
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -818,8 +830,8 @@ export const walletTokenDetails = pgTable(
   {
     address: varchar("address", { length: 44 }).notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    symbol: varchar("symbol").notNull(),
-    decimals: integer("decimals").notNull(),
+    symbol: varchar("symbol"),
+
     lastTradeUnixTime: integer("last_trade_unix_time").notNull(),
 
     // Counts
@@ -855,6 +867,48 @@ export const walletTokenDetails = pgTable(
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
 
+export const walletTokenTrades = pgTable(
+  "wallet_token_trades",
+  {
+    // Underscore before name to signal this is synthetic field and is not
+    // inferred from the actual data by any means (which usually discouraged)
+    _tradeId: uuid("_trade_id").primaryKey().defaultRandom(),
+
+    address: varchar("address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+
+    // Transaction identity
+    transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
+    blockUnixTimeMs: bigint("block_unix_time_ms", { mode: "number" }).notNull(),
+
+    // Swap details - base/quote pair
+    baseTokenAddress: varchar("base_token_address", { length: 44 }).notNull(),
+    quoteTokenAddress: varchar("quote_token_address", { length: 44 }).notNull(),
+
+    // Amounts
+    baseAmount: decimal("base_amount").notNull(),
+    quoteAmount: decimal("quote_amount").notNull(),
+
+    // Pricing
+    basePrice: decimal("base_price"),
+    quotePrice: decimal("quote_price"),
+    volumeUsd: decimal("volume_usd").notNull(),
+
+    // Exchange/Pool info
+    exchangeName: varchar("exchange_name"),
+    exchangeProgramAddress: varchar("exchange_program_address", { length: 44 }),
+    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
+    poolName: varchar("pool_name"),
+
+    // Transaction metadata
+    tradeAction: enumTradeAction("trade_action").notNull(),
+
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_addr_token").on(table.address, table.tokenAddress)],
+);
 // #endregion
 
 // #region Types
@@ -881,6 +935,7 @@ export type TokenTopHolderInsert = typeof topTokenHolders.$inferInsert;
 export type TopTokensByMarketCapInsert =
   typeof topTokensByMarketCap.$inferInsert;
 export type TopTraderInsert = typeof topTraders.$inferInsert;
+export type TopLoserInsert = typeof topLosers.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert =
   typeof walletPortfolioCache.$inferInsert;
@@ -900,6 +955,7 @@ export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
+export type WalletTokenTradesInsert = typeof walletTokenTrades.$inferInsert;
 
 // #endregion
 

@@ -4,7 +4,7 @@ import { poolTrades24h, type PoolTrade24hInsert } from "@sv/db/schema.js";
 import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, desc, eq, gte } from "drizzle-orm";
-import type { CG_24hPoolTrades } from "../_types/token_raw_responses.js";
+import type { CG_24hPoolTrades } from "../_types/token-raw-responses.js";
 
 async function fetchPoolTrades(
   poolAddress: string,
@@ -32,7 +32,7 @@ async function fetchPoolTrades(
     return [];
   }
 
-  const res: CG_24hPoolTrades = await resp.json();
+  const res = (await resp.json()) as CG_24hPoolTrades;
   const trades = res.data.map(
     (raw): PoolTrade24hInsert => ({
       id: raw.id,

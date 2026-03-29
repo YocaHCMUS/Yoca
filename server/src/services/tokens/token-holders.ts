@@ -29,7 +29,7 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
   if (!resp.ok) {
     return [];
   }
-  const res: MRL_TopHolders = await resp.json();
+  const res = (await resp.json()) as MRL_TopHolders;
 
   if (res.result.length == 0) {
     return [];

@@ -1,33 +1,33 @@
 /**
  * CounterpartyActivity Component
- * 
+ *
  * Displays grouped bar charts showing transaction counts and volumes per counterparty,
  * delivering actionable insights about trading relationships.
- * 
+ *
  * @module CounterpartyActivity
  */
 
-import { useMemo, useRef, useState } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { useLocalization } from '@/contexts/LocalizationContext';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
-import { useChartContext } from '@/contexts/ChartContext';
-import { fetchCounterpartyActivity, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
-import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
-import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { CounterpartiesRequestParams } from '@/types/chart-api.types';
+import { BaseChart } from "@/components/charts/Base/BaseChart";
+import { useChartContext } from "@/contexts/ChartContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
+import { getThemedChartBaseOption, useChartTheme } from "@/hooks/useChartTheme";
+import {
+  fetchCounterpartyActivity,
+  type InferFetcherData,
+} from "@/services/chart/chartApi";
+import type { CounterpartiesRequestParams } from "@/types/chart-api.types";
+import { formatCurrency, isChartSuccess } from "@/util/chart-helpers";
+import { getMultiSeriesLegend } from "@/util/chart-legend-config";
+import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import { useMemo, useRef, useState } from "react";
 
 // Infer response type from fetcher
-type CounterpartyActivityData = InferFetcherData<typeof fetchCounterpartyActivity>;
-import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
-import { useStandardChartController } from '@/hooks/useChartController';
-import sharedStyles from '../shared/ChartStyle.module.scss';
-import type { ChartProps } from '../shared/ChartProp';
-import { ChartGridItem } from '../shared';
+type CounterpartyActivityData = InferFetcherData<
+  typeof fetchCounterpartyActivity
+>;
 /**
  * Props for CounterpartyActivity component
  */
@@ -62,9 +62,9 @@ import { ChartGridItem } from '../shared';
 
 /**
  * CounterpartyActivity Component
- * 
+ *
  * User Story 4: Analyze Counterparty Transaction Activity (Priority: P2)
- * 
+ *
  * Displays grouped bar chart with:
  * - Counterparty identifiers on X-axis
  * - Transaction count and total volume as grouped bars
@@ -72,7 +72,7 @@ import { ChartGridItem } from '../shared';
  * - Transaction type filtering
  * - Limit selector for top N counterparties
  * - Auto-refresh every 30 seconds
- * 
+ *
  * @example
  * ```tsx
  * <CounterpartyActivity
@@ -109,7 +109,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 }) => {
   // i18n
   const { tr } = useLocalization();
-  const chartTitle = title || tr('charts.counterpartyActivityChart.title');
+  const chartTitle = title || tr("charts.counterpartyActivityChart.title");
 
   // State management
   const [currentLimit, setCurrentLimit] = useState<number>(10);
@@ -126,7 +126,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
   // Use centralized filter sync hook
   const { filters } = useChartFiltersSync({
-    initialFilters: initialFilters
+    initialFilters: initialFilters,
   });
 
   const walletsQuery = useMemo(() => {
@@ -134,20 +134,32 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       return undefined;
     }
 
-    return filters.wallets.join(',');
+    return filters.wallets.join(",");
   }, [filters.wallets]);
 
   // Query for the controller
-  const query = useMemo<CounterpartiesRequestParams>(() => ({
-    timePeriod: filters.timePeriod,
-    transactionType: filters.transactionType,
-    limit: currentLimit,
-    timezone,
-    ...(walletsQuery ? { wallets: walletsQuery } : {}),
-  }), [filters.timePeriod, filters.transactionType, currentLimit, timezone, walletsQuery]);
+  const query = useMemo<CounterpartiesRequestParams>(
+    () => ({
+      timePeriod: filters.timePeriod,
+      transactionType: filters.transactionType,
+      limit: currentLimit,
+      timezone,
+      ...(walletsQuery ? { wallets: walletsQuery } : {}),
+    }),
+    [
+      filters.timePeriod,
+      filters.transactionType,
+      currentLimit,
+      timezone,
+      walletsQuery,
+    ],
+  );
 
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
+  const { data, loadingState, refetch } = useStandardChartController<
+    CounterpartyActivityData,
+    CounterpartiesRequestParams
+  >({
     fetcher: fetchCounterpartyActivity,
     query,
     autoRefresh,
@@ -195,11 +207,14 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // };
 
   const counterpartyCountRanking = useMemo(() => {
-    if (!isChartSuccess(data, 'counterparties')) {
+    if (!isChartSuccess(data, "counterparties")) {
       return [];
     }
 
-    if (Array.isArray(data.counterpartiesByTransactionCount) && data.counterpartiesByTransactionCount.length > 0) {
+    if (
+      "counterpartiesByTransactionCount" in data &&
+      data.counterpartiesByTransactionCount.length > 0
+    ) {
       return data.counterpartiesByTransactionCount;
     }
 
@@ -207,11 +222,14 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   }, [data]);
 
   const counterpartyVolumeRanking = useMemo(() => {
-    if (!isChartSuccess(data, 'counterparties')) {
+    if (!isChartSuccess(data, "counterparties")) {
       return [];
     }
 
-    if (Array.isArray(data.counterpartiesByVolume) && data.counterpartiesByVolume.length > 0) {
+    if (
+      "counterpartiesByVolume" in data &&
+      data.counterpartiesByVolume.length > 0
+    ) {
       return data.counterpartiesByVolume;
     }
 
@@ -228,40 +246,50 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     const baseOption = getThemedChartBaseOption(chartTheme);
 
     // Extract counterparty names and values
-    const counterpartyNames = counterpartyCountRanking.map(cp => cp.name);
-    const transactionCounts = counterpartyCountRanking.map(cp => cp.transactionCount);
+    const counterpartyNames = counterpartyCountRanking.map((cp) => cp.name);
+    const transactionCounts = counterpartyCountRanking.map(
+      (cp) => cp.transactionCount,
+    );
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      grid: {
+        left: "8%",
+        right: "8%",
+        bottom: "12%",
+        top: "20%",
+        containLabel: true,
+      },
       tooltip: {
         ...baseOption.tooltip,
-        trigger: 'axis',
+        trigger: "axis",
         axisPointer: {
-          type: 'shadow',
+          type: "shadow",
         },
         formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
+          if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
           const count = params[0].value;
 
-          return createTooltipHeader(counterpartyName)
-            + createTooltipRow(
-              tr('charts.counterpartyActivityChart.transactionCount'),
+          return (
+            createTooltipHeader(counterpartyName) +
+            createTooltipRow(
+              tr("charts.counterpartyActivityChart.transactionCount"),
               count.toLocaleString(),
-              { color: params[0].color, showIndicator: true }
-            );
+              { color: params[0].color, showIndicator: true },
+            )
+          );
         },
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [tr('charts.counterpartyActivityChart.transactionCount')],
-        false
+        [tr("charts.counterpartyActivityChart.transactionCount")],
+        false,
       ),
       xAxis: {
         ...baseOption.xAxis,
-        type: 'category',
+        type: "category",
         data: counterpartyNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
@@ -275,9 +303,9 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       yAxis: {
         ...baseOption.yAxis,
-        type: 'value',
-        name: tr('charts.counterpartyActivityChart.transactionCount'),
-        position: 'left',
+        type: "value",
+        name: tr("charts.counterpartyActivityChart.transactionCount"),
+        position: "left",
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
@@ -286,15 +314,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: tr('charts.counterpartyActivityChart.transactionCount'),
-          type: 'bar',
+          name: tr("charts.counterpartyActivityChart.transactionCount"),
+          type: "bar",
           data: transactionCounts,
           itemStyle: {
             color: chartTheme.colorPalette[0],
           },
           label: {
             show: true,
-            position: 'top',
+            position: "top",
             formatter: (params: any) => params.value.toLocaleString(),
             fontSize: 10,
           },
@@ -313,40 +341,48 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     const baseOption = getThemedChartBaseOption(chartTheme);
 
     // Extract counterparty names and values
-    const counterpartyNames = counterpartyVolumeRanking.map(cp => cp.name);
-    const totalVolumes = counterpartyVolumeRanking.map(cp => cp.totalVolume);
+    const counterpartyNames = counterpartyVolumeRanking.map((cp) => cp.name);
+    const totalVolumes = counterpartyVolumeRanking.map((cp) => cp.totalVolume);
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: "15%",
+        top: "15%",
+        containLabel: true,
+      },
       tooltip: {
         ...baseOption.tooltip,
-        trigger: 'axis',
+        trigger: "axis",
         axisPointer: {
-          type: 'shadow',
+          type: "shadow",
         },
         formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
+          if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
           const volume = params[0].value;
 
-          return createTooltipHeader(counterpartyName)
-            + createTooltipRow(
-              tr('charts.counterpartyActivityChart.totalVolume'),
+          return (
+            createTooltipHeader(counterpartyName) +
+            createTooltipRow(
+              tr("charts.counterpartyActivityChart.totalVolume"),
               formatCurrency(volume),
-              { color: params[0].color, showIndicator: true }
-            );
+              { color: params[0].color, showIndicator: true },
+            )
+          );
         },
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [tr('charts.counterpartyActivityChart.totalVolume')],
-        false
+        [tr("charts.counterpartyActivityChart.totalVolume")],
+        false,
       ),
       xAxis: {
         ...baseOption.xAxis,
-        type: 'category',
+        type: "category",
         data: counterpartyNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
@@ -360,9 +396,9 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       yAxis: {
         ...baseOption.yAxis,
-        type: 'value',
-        name: tr('charts.counterpartyActivityChart.totalVolume'),
-        position: 'left',
+        type: "value",
+        name: tr("charts.counterpartyActivityChart.totalVolume"),
+        position: "left",
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
@@ -371,15 +407,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       },
       series: [
         {
-          name: tr('charts.counterpartyActivityChart.totalVolume'),
-          type: 'bar',
+          name: tr("charts.counterpartyActivityChart.totalVolume"),
+          type: "bar",
           data: totalVolumes,
           itemStyle: {
-            color: '#24a148',
+            color: "#24a148",
           },
           label: {
             show: true,
-            position: 'top',
+            position: "top",
             formatter: (params: any) => formatCurrency(params.value),
             fontSize: 10,
           },
@@ -399,10 +435,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       onRetry={refetch}
-      isEmpty={!isChartSuccess(data, 'counterparties') || counterpartyCountRanking.length === 0}
+      isEmpty={
+        !isChartSuccess(data, "counterparties") ||
+        counterpartyCountRanking.length === 0
+      }
     >
-      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
-        <div className={sharedStyles.limitSelector} >
+      <div
+        className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]}`}
+      >
+        <div className={sharedStyles.limitSelector}>
           <label htmlFor="limit-select">Top:</label>
           <select
             id="limit-select"
@@ -421,13 +462,19 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {/* Transaction counts chart */}
       {counterpartyCountRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.transactionCount')}</h3>
+          <h3 className={sharedStyles.chartTitle}>
+            {tr("charts.counterpartyActivityChart.transactionCount")}
+          </h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={transactionCountChartRef}
               option={transactionCountOptions}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-              opts={{ renderer: 'canvas' }}
+              style={{
+                height: "100%",
+                width: "100%",
+                minHeight: `${minHeight}px`,
+              }}
+              opts={{ renderer: "canvas" }}
               notMerge={true}
             />
           </ChartGridItem>
@@ -437,13 +484,19 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       {/* Total volume chart */}
       {counterpartyVolumeRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
-          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.totalVolume')}</h3>
+          <h3 className={sharedStyles.chartTitle}>
+            {tr("charts.counterpartyActivityChart.totalVolume")}
+          </h3>
           <ChartGridItem minHeight={minHeight}>
             <ReactECharts
               ref={totalVolumeChartRef}
               option={totalVolumeOptions}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-              opts={{ renderer: 'canvas' }}
+              style={{
+                height: "100%",
+                width: "100%",
+                minHeight: `${minHeight}px`,
+              }}
+              opts={{ renderer: "canvas" }}
               notMerge={true}
             />
           </ChartGridItem>
@@ -451,4 +504,4 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       )}
     </BaseChart>
   );
-}
+};

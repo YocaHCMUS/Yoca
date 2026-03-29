@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tile, SkeletonText } from '@carbon/react';
 import { ArrowUp, ArrowDown } from '@carbon/icons-react';
+import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './AssetInfo.module.scss';
 
 export interface AssetData {
@@ -29,29 +30,10 @@ interface AssetInfoProps {
 /**
  * Format large numbers with appropriate suffixes
  */
-const formatNumber = (num: number, prefix = '$') => {
-  if (num >= 1e12) return `${prefix}${(num / 1e12).toFixed(2)}T`;
-  if (num >= 1e9) return `${prefix}${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `${prefix}${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `${prefix}${(num / 1e3).toFixed(2)}K`;
-  return `${prefix}${num.toFixed(2)}`;
-};
-
-const formatSupply = (num: number, symbol: string) => {
-  if (num >= 1e12) return `${(num / 1e12).toFixed(2)}T ${symbol}`;
-  if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B ${symbol}`;
-  if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M ${symbol}`;
-  return `${num.toLocaleString()} ${symbol}`;
-};
-
-const formatPercentage = (num: number) => {
-  if (Math.abs(num) >= 1000) {
-    return `${num >= 0 ? '+' : ''}${(num / 1000).toFixed(1)}K%`;
-  }
-  return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
-};
+// Removed local formatNumber, formatSupply, and formatPercentage in favor of fmt
 
 export const AssetInfo: React.FC<AssetInfoProps> = ({ data, loading }) => {
+  const { tr, fmt } = useLocalization();
   if (loading) {
     return (
       <Tile className={styles.assetInfo}>
@@ -82,7 +64,7 @@ export const AssetInfo: React.FC<AssetInfoProps> = ({ data, loading }) => {
     return (
       <Tile className={styles.assetInfo}>
         <div className={styles.emptyState}>
-          <p>Select a token from the table below to view details</p>
+          <p>{tr("marketPage.selectToken")}</p>
         </div>
       </Tile>
     );
@@ -90,43 +72,43 @@ export const AssetInfo: React.FC<AssetInfoProps> = ({ data, loading }) => {
 
   const stats = [
     { 
-      label: 'Market Cap', 
-      value: formatNumber(data.marketCap), 
-      change: formatPercentage(data.priceChange24h)
+      label: tr("marketPage.marketCap"), 
+      value: fmt.num.compact.currency(data.marketCap), 
+      change: fmt.num.percent(data.priceChange24h)
     },
     { 
-      label: 'Volume 24h', 
-      value: formatNumber(data.volume24h), 
+      label: tr("marketPage.volume24h"), 
+      value: fmt.num.compact.currency(data.volume24h), 
       change: null 
     },
     { 
-      label: 'Circulating Supply', 
-      value: formatSupply(data.circulatingSupply, data.symbol), 
+      label: tr("token.marketStats.circSupply"), 
+      value: fmt.num.compact.decimal(data.circulatingSupply) + " " + data.symbol, 
       change: null 
     },
     { 
-      label: 'Total Supply', 
+      label: tr("token.marketStats.totalSupply"), 
       value: data.totalSupply && data.totalSupply > 0 
-        ? formatSupply(data.totalSupply, data.symbol) 
-        : 'N/A', 
+        ? fmt.num.compact.decimal(data.totalSupply) + " " + data.symbol 
+        : tr("marketPage.na"), 
       change: null 
     },
     { 
-      label: 'All-Time High', 
+      label: tr("marketPage.allTimeHigh"), 
       value: data.allTimeHigh && data.allTimeHigh > 0 
-        ? formatNumber(data.allTimeHigh) 
-        : 'N/A', 
+        ? fmt.num.currency(data.allTimeHigh) 
+        : tr("marketPage.na"), 
       change: data.allTimeHighChangePercentage != null 
-        ? formatPercentage(data.allTimeHighChangePercentage)
+        ? fmt.num.percent(data.allTimeHighChangePercentage)
         : null
     },
     { 
-      label: 'All-Time Low', 
+      label: tr("marketPage.allTimeLow"), 
       value: data.allTimeLow && data.allTimeLow > 0 
-        ? formatNumber(data.allTimeLow) 
-        : 'N/A', 
+        ? fmt.num.currency(data.allTimeLow) 
+        : tr("marketPage.na"), 
       change: data.allTimeLowChangePercentage != null 
-        ? formatPercentage(data.allTimeLowChangePercentage)
+        ? fmt.num.percent(data.allTimeLowChangePercentage)
         : null
     },
   ];
@@ -154,11 +136,11 @@ export const AssetInfo: React.FC<AssetInfoProps> = ({ data, loading }) => {
       </div>
       <div className={styles.price}>
         <span className={styles.priceValue}>
-          ${data.price < 1 ? data.price.toFixed(6) : data.price.toFixed(2)}
+          {fmt.num.currency(data.price)}
         </span>
         <span className={`${styles.priceChange} ${isPositive ? styles.positive : styles.negative}`}>
           {isPositive ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-          {formatPercentage(data.priceChange24h)}
+          {fmt.num.percent(data.priceChange24h)}
         </span>
       </div>
       <div className={styles.stats}>

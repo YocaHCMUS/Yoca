@@ -5,6 +5,7 @@ import { Close, Search as SearchIcon } from "@carbon/react/icons";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -14,9 +15,23 @@ import { PoolResultItem, type PoolResult } from "./PoolResultItem";
 import styles from "./SearchBar.module.scss";
 import { TokenResultItem, type TokenResult } from "./TokenResultItem";
 import { TokenStatsPanel } from "./TokenStatsPanel";
+import { WalletResultItem, type WalletResult } from "./WalletResultItem";
 
 interface SearchBarProps {
   onClose: () => void;
+}
+
+const SOLANA_BASE58_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+function extractSolanaWalletAddress(input: string): string | null {
+  const trimmed = input.trim();
+  if (SOLANA_BASE58_ADDRESS_REGEX.test(trimmed)) {
+    return trimmed;
+  }
+
+  const matched = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+  if (!matched) return null;
+  return SOLANA_BASE58_ADDRESS_REGEX.test(matched[0]) ? matched[0] : null;
 }
 
 export function SearchBar({ onClose }: SearchBarProps) {
@@ -61,6 +76,12 @@ export function SearchBar({ onClose }: SearchBarProps) {
             dexId: pool.relationships?.dex?.data?.id ?? null,
             baseTokenImg: pool.baseTokenImg ?? null,
             quoteTokenImg: pool.quoteTokenImg ?? null,
+          }),
+        ),
+        wallets: data.wallets.map(
+          (wallet): WalletResult => ({
+            address: wallet.address,
+            label: wallet.label,
           }),
         ),
       }),
@@ -109,9 +130,31 @@ export function SearchBar({ onClose }: SearchBarProps) {
     [navigate, onClose],
   );
 
+  const selectWallet = useCallback(
+    (wallet: WalletResult) => {
+      navigate(`/wallets/${wallet.address}`);
+      onClose();
+    },
+    [navigate, onClose],
+  );
+
   const tokenResults = searchResults.data?.tokens ?? [];
   const poolResults = searchResults.data?.pools ?? [];
-  const totalResults = tokenResults.length + poolResults.length;
+  const walletResults = useMemo(() => {
+    const apiWallets = searchResults.data?.wallets ?? [];
+    const extractedAddress = extractSolanaWalletAddress(debouncedQuery);
+
+    if (!extractedAddress) {
+      return apiWallets;
+    }
+
+    const hasAddress = apiWallets.some((wallet) => wallet.address == extractedAddress);
+    return hasAddress
+      ? apiWallets
+      : [{ address: extractedAddress, label: null }, ...apiWallets];
+  }, [searchResults.data?.wallets, debouncedQuery]);
+  const totalResults =
+    tokenResults.length + poolResults.length + walletResults.length;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (totalResults == 0) return;
@@ -126,8 +169,11 @@ export function SearchBar({ onClose }: SearchBarProps) {
       e.preventDefault();
       if (focusedIdx < tokenResults.length) {
         selectToken(tokenResults[focusedIdx]);
-      } else {
+      } else if (focusedIdx < tokenResults.length + poolResults.length) {
         selectPool(poolResults[focusedIdx - tokenResults.length]);
+      } else {
+        const walletIdx = focusedIdx - tokenResults.length - poolResults.length;
+        selectWallet(walletResults[walletIdx]);
       }
     }
   };
@@ -228,6 +274,29 @@ export function SearchBar({ onClose }: SearchBarProps) {
                             actualIdx == focusedIdx || actualIdx == hoveredIdx
                           }
                           onSelect={selectPool}
+                          onMouseEnter={() => setHoveredIdx(actualIdx)}
+                          onMouseLeave={() => setHoveredIdx(-1)}
+                        />
+                      );
+                    })}
+                  </>
+                )}
+
+                {walletResults.length > 0 && (
+                  <>
+                    <p className={styles.sectionLabel}>
+                      {tr("nav.searchWallets")}
+                    </p>
+                    {walletResults.map((wallet, idx) => {
+                      const actualIdx = tokenResults.length + poolResults.length + idx;
+                      return (
+                        <WalletResultItem
+                          key={wallet.address}
+                          wallet={wallet}
+                          isFocused={
+                            actualIdx == focusedIdx || actualIdx == hoveredIdx
+                          }
+                          onSelect={selectWallet}
                           onMouseEnter={() => setHoveredIdx(actualIdx)}
                           onMouseLeave={() => setHoveredIdx(-1)}
                         />

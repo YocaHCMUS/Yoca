@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import type { ExportFormat } from "../charts/shared/ExportMenu";
 import { TableWrapper } from "../tables/TableWrapper.js";
 import styles from "./TokenPerformanceTable.module.scss";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 // Define types explicitly based on the API response structure
 interface TokenMarketDataItem {
@@ -125,24 +126,27 @@ const SOLANA_TOKEN_ADDRESSES = [
   "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh", // BTC on Solana
 ];
 
-const headers = [
-  { key: "token", header: "Token" },
-  { key: "price", header: "Price" },
-  { key: "change24h", header: "24h Change" },
-  { key: "volume24h", header: "24h Volume" },
-  { key: "marketCap", header: "Market Cap" },
-  { key: "supply", header: "Circulating Supply" },
+const getHeaders = (tr: any) => [
+  { key: "token", header: tr("marketPage.token") },
+  { key: "price", header: tr("marketPage.price") },
+  { key: "change24h", header: tr("marketPage.change24h") },
+  { key: "volume24h", header: tr("marketPage.volume24h") },
+  { key: "marketCap", header: tr("marketPage.marketCap") },
+  { key: "supply", header: tr("token.marketStats.circSupply") },
 ];
 
 export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
   onTokenSelect,
   selectedTokenAddress,
 }) => {
+  const { tr, fmt } = useLocalization();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [tokens, setTokens] = useState<TokenPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const headers = getHeaders(tr);
 
   // Handle row click
   const handleRowClick = (tokenId: string) => {
@@ -216,7 +220,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
 
         // If no market data was fetched at all, show error
         if (allMarketData.length === 0) {
-          setError("Failed to load any token data");
+          setError(tr("ERROR.FAILED_TO_FETCH_REQUESTED_DATA"));
           setLoading(false);
           return;
         }
@@ -262,7 +266,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
         }
       } catch (err) {
         console.error("Failed to fetch token data:", err);
-        setError("Failed to load token data");
+        setError(tr("ERROR.FAILED_TO_FETCH_REQUESTED_DATA"));
       } finally {
         setLoading(false);
       }
@@ -271,18 +275,13 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
     fetchTokenData();
   }, []);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-    if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
-    return `$${num.toFixed(2)}`;
-  };
+  // Removed local formatNumber
 
   const formatSupply = (num: number, symbol: string) => {
     if (num >= 1e12) return `${(num / 1e12).toFixed(2)}T ${symbol}`;
     if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B ${symbol}`;
     if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M ${symbol}`;
-    return `${num.toLocaleString()} ${symbol}`;
+    return `${fmt.num.decimal(num)} ${symbol}`;
   };
 
   const rows = tokens.map((token) => ({
@@ -304,7 +303,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
         </div>
       </div>
     ),
-    price: `$${token.price < 1 ? token.price.toFixed(6) : token.price.toFixed(2)}`,
+    price: fmt.num.currency(token.price),
     change24h: (
       <span
         className={token.change24h >= 0 ? styles.positive : styles.negative}
@@ -313,8 +312,8 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
         {Math.abs(token.change24h).toFixed(2)}%
       </span>
     ),
-    volume24h: formatNumber(token.volume24h),
-    marketCap: formatNumber(token.marketCap),
+    volume24h: fmt.num.compact.currency(token.volume24h),
+    marketCap: fmt.num.compact.currency(token.marketCap),
     supply: formatSupply(token.supply, token.symbol),
   }));
   /**
@@ -349,11 +348,11 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
   if (loading) {
     return (
       <TableWrapper
-        title="Token Performance"
+        title={tr("marketPage.tokenPerformanceTitle")}
         onExport={handleExport}
         isEmpty={true}
       >
-        <div className={styles.loadingState}>Loading token data...</div>
+        <div className={styles.loadingState}>{tr("common.loading")}</div>
       </TableWrapper>
     );
   }
@@ -361,7 +360,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
   if (error) {
     return (
       <TableWrapper
-        title="Token Performance"
+        title={tr("marketPage.tokenPerformanceTitle")}
         onExport={handleExport}
         isEmpty={true}
       >
@@ -372,7 +371,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
 
   return (
     <TableWrapper
-      title="Token Performance"
+      title={tr("marketPage.tokenPerformanceTitle")}
       onExport={handleExport}
       isEmpty={tokens.length === 0}
     >

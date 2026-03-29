@@ -42,7 +42,7 @@ async function fetchTrendingPage(params: {
     return null;
   }
 
-  const res: BDS_TrendingList = await resp.json();
+  const res = (await resp.json()) as BDS_TrendingList;
   if (!res.success) {
     return null;
   }
@@ -75,7 +75,7 @@ export async function getTrendingTokens() {
     });
 
     if (page == null) {
-      return null;
+      return result.length > 0 ? result : [];
     }
 
     const pageAddresses = page.data.tokens.map((token) => token.address);

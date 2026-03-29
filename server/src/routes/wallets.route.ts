@@ -1,7 +1,11 @@
 import { setErr } from "@sv/config/errors.js";
-import { addressSchema, validate } from "@sv/middlewares/validation.js";
-// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-// import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  addressSchema,
+  validate,
+  walletTokenTradesSchema,
+} from "@sv/middlewares/validation.js";
+import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as walletService from "@sv/services/wallet/index.js";
 import {
   // fetchTestTransaction,
@@ -14,6 +18,7 @@ import {
   getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 // import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
   WalletIdentityServiceError,
@@ -24,11 +29,6 @@ import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligenc
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
-import type {
-  WalletPortfolioItem,
-} from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
-import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service";
 
 const router = new Hono();
 
@@ -215,6 +215,31 @@ const routes = router
       return c.json({ error: "Failed to get wallet swaps" }, 500);
     }
   })
+  .get(
+    "/:walletAddress/trades/:tokenAddress",
+    validate("param", walletTokenTradesSchema),
+    async (c) => {
+      const { walletAddress, tokenAddress } = c.req.valid("param");
+
+      try {
+        const trades = await walletService.getWalletTokenSwaps(
+          walletAddress,
+          tokenAddress,
+        );
+
+        if (!trades) {
+          return c.json(trades, statusCode.BadGateway);
+        }
+        return c.json(trades, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
   .get("/transfers", async (c) => {
     const query = c.req.query();
     const params = walletRequestSchema.parse(query);

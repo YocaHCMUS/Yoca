@@ -22,6 +22,7 @@ import { useNavigate } from "react-router";
 import z from "zod";
 import { ModalStateManager } from "../ModelStateManager";
 import { Divider } from "../partials/Divider/Divider";
+import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { SignUpModal } from "./SignUpModal";
 import { WalletAuthButton } from "./WalletAuthButton";
@@ -103,9 +104,9 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   }
 
   return (
-    <ComposedModal open={open} onClose={close}>
+    <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
-      <ModalBody hasScrollingContent>
+      <ModalBody className={"bodyne"} hasScrollingContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap={6}>
             <TextInput
@@ -174,15 +175,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
       <ModalFooter>
         <ModalStateManager
           renderLauncher={({ setOpen }) => (
-            <div
-              style={{
-                flex: "1",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                whiteSpace: "pre-wrap",
-              }}
-            >
+            <span className={styles.bottomInfo}>
               {tr("auth.signUpSuggestion", {
                 $createAccount: (
                   <Link
@@ -195,7 +188,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
                   </Link>
                 ),
               })}
-            </div>
+            </span>
           )}
         >
           {({ open, setOpen }) => (

@@ -46,7 +46,7 @@ async function fetchWalletBalances(walletAddress: string) {
   });
 
   if (resp.ok) {
-    const data: SIM_BalancesResponse = await resp.json();
+    const data = (await resp.json()) as SIM_BalancesResponse;
     console.log(data);
 
     const balanceList: WalletBalanceInsert[] = data.balances.map(

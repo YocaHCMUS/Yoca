@@ -1,13 +1,13 @@
 /**
  * Common Chart Props
- * 
+ *
  * Standardized prop interface for all chart components.
  * Ensures consistency across chart implementations.
- * 
+ *
  * @module components/charts/shared/ChartProp
  */
 
-import type { ChartFilters } from '@/types/chart-filters.types';
+import type { ChartFilters } from "@/types/chart-filters.types";
 
 /**
  * Base props shared by all chart components

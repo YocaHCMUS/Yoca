@@ -4,12 +4,11 @@ import {
   walletTokenDetails,
   type WalletTokenDetailsInsert,
 } from "@sv/db/schema";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service";
+import { getTrackedApiResult } from "@sv/middlewares/validation";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql";
 import * as bds from "@sv/util/util-birdeye";
-import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter";
 import { eq } from "drizzle-orm";
-import { BDS_WalletTokenDetailsSchema } from "../_types/wallet_raw_responses";
+import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses";
 
 export async function getTokenDetails(wallet: string) {
   const dbRes = await db
@@ -30,43 +29,29 @@ export async function getTokenDetails(wallet: string) {
   }
 
   const bdsEnpoint = bds.getEndpoint("/wallet/v2/pnl/details");
-  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
-
-  const fetcher = async () => {
-    const resp = await trackedFetch({
-      provider: "birdeye",
-      url: bdsEnpoint,
-      init: {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          duration: "all",
-          sort_type: "desc",
-          sort_by: "last_trade",
-          limit: 100,
-          wallet,
-        }),
-      },
-      apiKey,
-      serviceFile: "server/src/services/wallet/wallet-token-details.ts",
-      functionName: "getTokenDetails",
-    });
-    if (!resp.ok) {
-      throw new Error(`Birdeye fetch failed: ${resp.status}`);
-    }
-    return resp.json();
-  };
-
-  const res: any = await callBirdeye<any>(bdsEnpoint, { wallet }, fetcher, {
-    responseSchema: BDS_WalletTokenDetailsSchema,
+  const req = new Request(bdsEnpoint, {
+    method: "POST",
+    headers: bds.getRequiredHeaders(),
+    body: JSON.stringify({
+      duration: "all",
+      sort_type: "desc",
+      sort_by: "last_trade",
+      limit: 100,
+      wallet,
+    }),
   });
+
+  const resp = await fetch(req);
+  const res = await getTrackedApiResult(bds_WalletTokenDetailsSchema, resp);
+  if (res == undefined) {
+    return null;
+  }
 
   const tokenDetails = (res?.data?.tokens ?? []).map(
     (tokenDetail: any): WalletTokenDetailsInsert => ({
       symbol: tokenDetail.symbol,
       address: tokenDetail.address,
       tokenAddress: tokenDetail.address,
-      decimals: tokenDetail.decimals,
       lastTradeUnixTime: tokenDetail.last_trade_unix_time,
       totalBuyCount: tokenDetail.counts.total_buy,
       totalSellCount: tokenDetail.counts.total_sell,

@@ -41,7 +41,7 @@ export async function getTokenHistoricalData(
   });
   if (!resp.ok) return null;
 
-  const data: CG_TokenMarketChart = await resp.json();
+  const data = (await resp.json()) as CG_TokenMarketChart;
 
   // CoinGecko trả về dữ liệu mỗi ngày, index đồng bộ giữa prices/market_caps/total_volumes
   return data.prices.map(([ts, price], i): HistoricalDataPoint => {

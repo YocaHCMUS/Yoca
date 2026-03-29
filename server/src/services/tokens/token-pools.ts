@@ -49,7 +49,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
     return [];
   }
 
-  const res: CG_TopPoolData = await resp.json();
+  const res = (await resp.json()) as CG_TopPoolData;
   const poolDataList = res.data.map(
     (
       raw,
@@ -235,7 +235,7 @@ async function fetchPoolData(poolAddress: string) {
     return null;
   }
 
-  const res: CG_PoolData = await resp.json();
+  const res = (await resp.json()) as CG_PoolData;
   const raw = res.data;
   const poolData: TokenPoolDataInsert = {
     poolAddress: raw.attributes.address,

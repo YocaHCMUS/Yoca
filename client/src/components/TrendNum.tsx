@@ -1,5 +1,4 @@
-import semStyle from "@/styles/_semantic.module.scss";
-import { Stack } from "@carbon/react";
+import { cds } from "@/util/carbon-theme";
 import { CaretDown, CaretUp } from "@carbon/react/icons";
 
 export function TrendNum({
@@ -28,16 +27,16 @@ export function TrendNum({
   } else if (prefixes == "plus-minus") {
     prefix = value > 0 ? <p>+</p> : <p>-</p>;
   }
-
-  const className = value > 0 ? semStyle.positive : semStyle.negative;
-
   return (
-    <Stack
-      orientation="horizontal"
-      style={{ justifyContent: "start" }}
-      className={className}
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        width: "fit-content",
+        color: value > 0 ? cds.supportSuccess : cds.supportError,
+      }}
     >
-      {prefix} <p>{formattedValue}</p>
-    </Stack>
+      {prefix} <span>{formattedValue}</span>
+    </div>
   );
 }

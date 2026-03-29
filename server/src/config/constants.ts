@@ -83,19 +83,29 @@ export const API_CALL_TRACKER_ENABLED = readBooleanEnv(
   false,
 );
 export const API_CALL_TRACKER_EXPORT_DIR =
-  process.env.API_CALL_TRACKER_EXPORT_DIR?.trim() || "server/src/logs/api-tracker";
+  process.env.API_CALL_TRACKER_EXPORT_DIR?.trim() ||
+  "server/src/logs/api-tracker";
 export const API_CALL_TRACKER_MAX_RESPONSE_BYTES = readNumberEnv(
   "API_CALL_TRACKER_MAX_RESPONSE_BYTES",
   2_000_000,
 );
-const apiCallTrackerRedactFields = readListEnv("API_CALL_TRACKER_REDACT_FIELDS");
+const apiCallTrackerRedactFields = readListEnv(
+  "API_CALL_TRACKER_REDACT_FIELDS",
+);
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
-  : ["apikey", "api_key", "authorization", "token", "password", "secret", "signature"];
+  : [
+      "apikey",
+      "api_key",
+      "authorization",
+      "token",
+      "password",
+      "secret",
+      "signature",
+    ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
 
 // ACMS / Wallet feature flags
 export const WALLET_USE_ACMS = readBooleanEnv("WALLET_USE_ACMS", false);
-
