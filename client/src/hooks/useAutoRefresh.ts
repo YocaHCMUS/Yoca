@@ -106,9 +106,13 @@ export function useAutoRefresh(options: UseAutoRefreshOptions): UseAutoRefreshRe
     (!config.pauseOnInteraction || !isUserInteracting);
   
   /**
-   * Handle visibility change
+   * Handle visibility change — only when auto-refresh is enabled
    */
   useEffect(() => {
+    if (!config.enabled) {
+      return;
+    }
+
     const handleVisibilityChange = () => {
       setIsTabVisible(!document.hidden);
     };
@@ -118,31 +122,28 @@ export function useAutoRefresh(options: UseAutoRefreshOptions): UseAutoRefreshRe
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [config.enabled]);
   
   /**
-   * Handle user interaction detection
+   * Handle user interaction detection — only when auto-refresh is enabled
    */
   useEffect(() => {
-    if (!config.pauseOnInteraction) {
+    if (!config.enabled || !config.pauseOnInteraction) {
       return;
     }
     
     const handleInteraction = () => {
       setIsUserInteracting(true);
       
-      // Clear existing timeout
       if (interactionTimeoutRef.current) {
         clearTimeout(interactionTimeoutRef.current);
       }
       
-      // Set new timeout to resume after 2 seconds of inactivity
       interactionTimeoutRef.current = setTimeout(() => {
         setIsUserInteracting(false);
       }, 2000);
     };
     
-    // Listen for user interactions
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
     events.forEach((event) => {
       window.addEventListener(event, handleInteraction, { passive: true });
@@ -157,7 +158,7 @@ export function useAutoRefresh(options: UseAutoRefreshOptions): UseAutoRefreshRe
         clearTimeout(interactionTimeoutRef.current);
       }
     };
-  }, [config.pauseOnInteraction]);
+  }, [config.enabled, config.pauseOnInteraction]);
   
   /**
    * Manual refresh function

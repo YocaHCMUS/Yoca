@@ -308,6 +308,7 @@ export function BalanceChart({
     refreshInterval = 30000,
     tokenSelectorOptions = [],
     maxTokenTags = 3,
+    loadOnInteractionOnly = false,
 }: ChartProps) {
     const { tr } = useLocalization();
     const chartTitle = title || tr('charts.balanceChart.title');
@@ -321,6 +322,9 @@ export function BalanceChart({
     const [tokenSelectionOrder, setTokenSelectionOrder] = useState<string[]>([]);
     const [prefetchedTokenSeriesBySymbol, setPrefetchedTokenSeriesBySymbol] = useState<Record<string, BalanceSeries>>({});
     const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() => getWindowDaysFromTimePeriod(initialFilters.timePeriod));
+    const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+
+    const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
 
     const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
         initialFilters,
@@ -347,6 +351,13 @@ export function BalanceChart({
     useEffect(() => {
         setChartWindowDays(getWindowDaysFromTimePeriod(filters.timePeriod));
     }, [filters.timePeriod]);
+
+    useEffect(() => {
+        if (!loadOnInteractionOnly) {
+            return;
+        }
+        setInteractionLoadCount(0);
+    }, [walletsString, loadOnInteractionOnly]);
 
     const generalQuery = useMemo<BalanceRequestParams>(
         () => ({
@@ -378,7 +389,8 @@ export function BalanceChart({
     } = useStandardChartController<BalanceTrendData, BalanceRequestParams>({
         fetcher: fetchBalanceTrendWithCache,
         query: generalQuery,
-        autoRefresh,
+        fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+        autoRefresh: effectiveAutoRefresh,
         refreshInterval,
     });
 
@@ -394,9 +406,18 @@ export function BalanceChart({
             return fetchBalanceTrendWithCache(query);
         },
         query: tokenQuery,
-        autoRefresh,
+        fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+        autoRefresh: effectiveAutoRefresh,
         refreshInterval,
     });
+
+    useEffect(() => {
+        if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+            return;
+        }
+        void refetchGeneral(true);
+        void refetchToken(true);
+    }, [interactionLoadCount, loadOnInteractionOnly, refetchGeneral, refetchToken]);
 
     const generalData = useMemo<BalanceChartDisplayData | null>(() => {
         if (generalRawData && !('error' in generalRawData) && isBalanceChartDisplayData(generalRawData)) {
@@ -504,9 +525,20 @@ export function BalanceChart({
     useEffect(() => {
         let isCancelled = false;
 
+        const clearPrefetched = () => {
+            setPrefetchedTokenSeriesBySymbol((prev) =>
+                Object.keys(prev).length === 0 ? prev : {},
+            );
+        };
+
         const prefetchTokenSeries = async () => {
+            if (loadOnInteractionOnly && interactionLoadCount === 0) {
+                clearPrefetched();
+                return;
+            }
+
             if (!walletsString || candidateTokenSymbols.length === 0) {
-                setPrefetchedTokenSeriesBySymbol({});
+                clearPrefetched();
                 return;
             }
 
@@ -548,7 +580,7 @@ export function BalanceChart({
         return () => {
             isCancelled = true;
         };
-    }, [candidateTokenSymbols, filters.timePeriod, walletsString, timezone]);
+    }, [candidateTokenSymbols, filters.timePeriod, walletsString, timezone, loadOnInteractionOnly, interactionLoadCount]);
 
     const tokenOptions = useMemo(() => {
         const optionsMap = new Map<string, string>();
@@ -924,8 +956,18 @@ export function BalanceChart({
     const loadingState = mergeLoadingState(generalLoadingState, tokenLoadingState, activeTokenTags.length > 0);
 
     const handleRetry = () => {
+        if (loadOnInteractionOnly && interactionLoadCount === 0) {
+            return;
+        }
         refetchGeneral(false);
         refetchToken(false);
+    };
+
+    const handleWindowRangeClick = (days: 7 | 30) => {
+        const period = days === 7 ? "7D" : "30D";
+        setChartWindowDays(days);
+        setTimePeriod(period);
+        setInteractionLoadCount((c) => c + 1);
     };
 
     const dataListId = 'balance-chart-token-list';
@@ -934,8 +976,24 @@ export function BalanceChart({
         <BaseChart
             title={chartTitle}
             loadingState={loadingState}
-            isEmpty={windowedDisplaySeries.length === 0 || !windowedDisplaySeries.some((series) => series.points.length > 0)}
+            isEmpty={
+                (loadOnInteractionOnly && interactionLoadCount === 0) ||
+                windowedDisplaySeries.length === 0 ||
+                !windowedDisplaySeries.some((series) => series.points.length > 0)
+            }
             onRetry={handleRetry}
+            preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
+            actions={
+                loadOnInteractionOnly ? (
+                    <button
+                        type="button"
+                        className="cds--btn cds--btn--primary cds--btn--sm"
+                        onClick={() => handleWindowRangeClick(chartWindowDays)}
+                    >
+                        {tr('charts.loadData')}
+                    </button>
+                ) : undefined
+            }
         >
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
                 <div className={sharedStyles.balanceChartControlTopRow}>
@@ -965,23 +1023,17 @@ export function BalanceChart({
                     <div className={sharedStyles.balanceChartWindowToggleGroup}>
                         <button
                             type="button"
-                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
-                            onClick={() => {
-                                setChartWindowDays(7);
-                                setTimePeriod('7D');
-                            }}
-                            aria-pressed={chartWindowDays === 7}
+                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                            onClick={() => handleWindowRangeClick(7)}
+                            aria-pressed={interactionLoadCount > 0 && chartWindowDays === 7}
                         >
                             {tr('charts.balanceChart.window7d')}
                         </button>
                         <button
                             type="button"
-                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
-                            onClick={() => {
-                                setChartWindowDays(30);
-                                setTimePeriod('30D');
-                            }}
-                            aria-pressed={chartWindowDays === 30}
+                            className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                            onClick={() => handleWindowRangeClick(30)}
+                            aria-pressed={interactionLoadCount > 0 && chartWindowDays === 30}
                         >
                             {tr('charts.balanceChart.window30d')}
                         </button>

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -14,6 +14,10 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import sharedStyles from '../shared/ChartStyle.module.scss';
+
+function getWindowDaysFromPeriod(timePeriod?: string): 7 | 30 {
+    return timePeriod?.toUpperCase() === '7D' ? 7 : 30;
+}
 
 type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 
@@ -31,6 +35,9 @@ export interface PnLChartProps {
         timePeriod?: TimePeriod;
         wallets?: string[];
     };
+
+    /** When true, load data only after user clicks 7D or 30D (no fetch on mount). */
+    loadOnInteractionOnly?: boolean;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -44,6 +51,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     className,
     initialViewMode = 'both',
     initialFilters,
+    loadOnInteractionOnly = false,
 }) => {
     const { tr } = useLocalization();
     const chartTitle = title || tr('charts.pnlChart.title');
@@ -53,13 +61,27 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     const { selectedTimezone: timezone } = useChartContext();
     const [viewMode, setViewMode] = useState<'daily' | 'cumulative' | 'both'>(initialViewMode);
 
-    const { filters, walletsString } = useChartFiltersSync({
+    const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
         initialFilters: initialFilters || {
             timePeriod: initialTimePeriod,
             wallets: initialWallets.length > 0 ? initialWallets : undefined,
         },
         debounceDelay: 300,
     });
+
+    const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+    const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() =>
+        getWindowDaysFromPeriod(initialFilters?.timePeriod ?? initialTimePeriod),
+    );
+
+    const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+
+    useEffect(() => {
+        if (!loadOnInteractionOnly) {
+            return;
+        }
+        setInteractionLoadCount(0);
+    }, [walletsString, loadOnInteractionOnly]);
 
     const query = useMemo<PnLRequestParams>(
         () => ({
@@ -75,9 +97,28 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         useStandardChartController<PnLChartData, PnLRequestParams>({
             fetcher: fetchPnLChart,
             query,
-            autoRefresh,
+            fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+            autoRefresh: effectiveAutoRefresh,
             refreshInterval,
         });
+
+    useEffect(() => {
+        if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+            return;
+        }
+        void refetch(true);
+    }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+
+    useEffect(() => {
+        setChartWindowDays(getWindowDaysFromPeriod(filters.timePeriod));
+    }, [filters.timePeriod]);
+
+    const handleWindowRangeClick = (days: 7 | 30) => {
+        const period = days === 7 ? "7D" : "30D";
+        setChartWindowDays(days);
+        setTimePeriod(period);
+        setInteractionLoadCount((c) => c + 1);
+    };
 
     const displayData = data;
 
@@ -255,18 +296,61 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         return [];
     }, [displayData, createChartOption]);
 
-    const isEmpty = !displayData || 'error' in displayData || (
-        (!('wallets' in displayData) || !displayData.wallets || displayData.wallets.length === 0) &&
-        (!('dailyPnL' in displayData) || !displayData.dailyPnL || displayData.dailyPnL.length === 0)
-    );
+    const isEmpty =
+        (loadOnInteractionOnly && interactionLoadCount === 0) ||
+        !displayData ||
+        'error' in displayData ||
+        ((!('wallets' in displayData) || !displayData.wallets || displayData.wallets.length === 0) &&
+            (!('dailyPnL' in displayData) || !displayData.dailyPnL || displayData.dailyPnL.length === 0));
 
     return (
         <BaseChart
             title={chartTitle}
             loadingState={loadingState}
             isEmpty={isEmpty}
-            onRetry={() => refetch(false)}
+            onRetry={() => {
+                if (loadOnInteractionOnly && interactionLoadCount === 0) {
+                    return;
+                }
+                refetch(false);
+            }}
+            preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
+            actions={
+                loadOnInteractionOnly ? (
+                    <button
+                        type="button"
+                        className="cds--btn cds--btn--primary cds--btn--sm"
+                        onClick={() => handleWindowRangeClick(chartWindowDays)}
+                    >
+                        {tr('charts.loadData')}
+                    </button>
+                ) : undefined
+            }
         >
+            {loadOnInteractionOnly && (
+                <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
+                    <div className={sharedStyles.balanceChartControlTopRow}>
+                        <div className={sharedStyles.balanceChartWindowToggleGroup}>
+                            <button
+                                type="button"
+                                className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                                onClick={() => handleWindowRangeClick(7)}
+                                aria-pressed={interactionLoadCount > 0 && chartWindowDays === 7}
+                            >
+                                {tr('charts.balanceChart.window7d')}
+                            </button>
+                            <button
+                                type="button"
+                                className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+                                onClick={() => handleWindowRangeClick(30)}
+                                aria-pressed={interactionLoadCount > 0 && chartWindowDays === 30}
+                            >
+                                {tr('charts.balanceChart.window30d')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--between']} ${sharedStyles['chartControls--withBackground']}`}>
                 <div className={sharedStyles['chartToggle--padded']}>
                     <button

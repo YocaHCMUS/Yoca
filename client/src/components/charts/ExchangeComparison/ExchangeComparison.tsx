@@ -7,7 +7,7 @@
  * @module ExchangeComparison
  */
 
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -59,6 +59,9 @@ export interface ExchangeComparisonProps {
 
   /** Additional CSS class */
   className?: string;
+
+  /** When true, user must click Load before any request; no auto-refresh. */
+  loadOnInteractionOnly?: boolean;
 }
 
 /**
@@ -95,6 +98,7 @@ export function ExchangeComparison({
   refreshInterval = 30000,
   onDataLoaded,
   className,
+  loadOnInteractionOnly = false,
 }: ExchangeComparisonProps) {
   // i18n
   const { tr } = useLocalization();
@@ -102,6 +106,16 @@ export function ExchangeComparison({
 
   // State management
   const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
+  const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+
+  const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly) {
+      return;
+    }
+    setInteractionLoadCount(0);
+  }, [walletAddress, loadOnInteractionOnly]);
 
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -132,10 +146,18 @@ export function ExchangeComparison({
   const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({
     fetcher: fetchExchangeComparison,
     query,
-    autoRefresh,
+    fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+    autoRefresh: effectiveAutoRefresh,
     refreshInterval,
     onDataLoaded,
   });
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+      return;
+    }
+    void refetch(true);
+  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
 
   /**
    * Setup chart export
@@ -364,10 +386,30 @@ export function ExchangeComparison({
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0}
-      onRetry={() => refetch(false)}
+      isEmpty={
+        (loadOnInteractionOnly && interactionLoadCount === 0) ||
+        !isChartSuccess(data, 'exchanges') ||
+        data.exchanges.length === 0
+      }
+      onRetry={() => {
+        if (loadOnInteractionOnly && interactionLoadCount === 0) {
+          return;
+        }
+        void refetch(false);
+      }}
       onExport={handleExport}
       className={className}
+      actions={
+        loadOnInteractionOnly ? (
+          <button
+            type="button"
+            className="cds--btn cds--btn--primary cds--btn--sm"
+            onClick={() => setInteractionLoadCount((c) => c + 1)}
+          >
+            {tr('charts.loadData')}
+          </button>
+        ) : undefined
+      }
     >
       {chartOptions && (
         <ChartGridItem minHeight={minHeight}>

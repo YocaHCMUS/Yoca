@@ -457,6 +457,7 @@ export const translation = {
     pdfBadge: "PDF",
     exportSuccess: "Chart exported successfully",
     exportFailed: "Export failed. Please try again.",
+    loadData: "Load data",
 
     // Filters
     timePeriod: "Time Period",

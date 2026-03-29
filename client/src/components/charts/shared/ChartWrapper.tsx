@@ -60,6 +60,12 @@ interface ChartWrapperProps {
   /** Whether data is empty */
   isEmpty?: boolean;
 
+  /**
+   * When true, chart body still renders while empty (e.g. manual-load controls live in `children`).
+   * Suppresses the generic empty panel only in that case so users can reach 7D/30D etc.
+   */
+  preserveChildrenWhenEmpty?: boolean;
+
   /** Enable export functionality (default: true) */
   enableExport?: boolean;
 
@@ -104,6 +110,7 @@ export function ChartWrapper({
   emptyState,
   className,
   isEmpty = false,
+  preserveChildrenWhenEmpty = false,
   enableExport = true,
   onExport,
   enableFullscreen = true,
@@ -267,7 +274,7 @@ export function ChartWrapper({
       )}
 
       {/* Empty state */}
-      {loadingState.status === 'success' && isEmpty && (
+      {loadingState.status === 'success' && isEmpty && !preserveChildrenWhenEmpty && (
         <ChartEmptyState
           title={emptyState?.title}
           message={emptyState?.message}
@@ -278,7 +285,7 @@ export function ChartWrapper({
 
       {/* Chart content (success with data or refreshing) */}
       {(loadingState.status === 'success' || loadingState.status === 'refreshing') &&
-        !isEmpty && (
+        (!isEmpty || preserveChildrenWhenEmpty) && (
           <div className={styles.chartContainer}>
             {children}
           </div>

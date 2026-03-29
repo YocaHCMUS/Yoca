@@ -438,6 +438,7 @@ export const translation = defineTranslation({
     pdfBadge: "PDF",
     exportSuccess: "Xuất biểu đồ thành công",
     exportFailed: "Xuất thất bại. Vui lòng thử lại.",
+    loadData: "Tải dữ liệu",
 
     // Filters
     timePeriod: "Khoảng thời gian",

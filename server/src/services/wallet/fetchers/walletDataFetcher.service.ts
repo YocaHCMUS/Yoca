@@ -18,6 +18,8 @@ import {
   getMoralisCursor,
   getNextCursor,
   getTokenLogoUri,
+  birdeyeTxListEntryLooksLikeSwap,
+  mapBirdeyeTxListEntryToWalletSwap,
   mapHeliusSwapEntry,
   mapHeliusTransferEntry,
   mapMoralisSwapEntry,
@@ -636,6 +638,45 @@ export async function fetchHeliusSolanaSwapChunk(
   };
 }
 
+const BIRDEYE_TX_LIST_PAGE_LIMIT = 100;
+
+/**
+ * Swaps from Birdeye Wallet tx_list (beta). Filters rows to swap-like activity; pagination follows
+ * raw tx_list pages (not swap-only), so sparse swap pages are possible.
+ * @see https://docs.birdeye.so/reference/get-v1-wallet-tx_list
+ */
+export async function fetchBirdeyeSolanaSwapChunk(
+  address: string,
+  options?: HeliusSwapChunkOptions,
+): Promise<WalletProviderChunk<WalletSwap>> {
+  const limit = Math.min(
+    Math.max(Math.floor(options?.limit ?? BIRDEYE_TX_LIST_PAGE_LIMIT), 1),
+    BIRDEYE_TX_LIST_PAGE_LIMIT,
+  );
+
+  const json = await birdeyeGetJson<any>("/v1/wallet/tx_list", {
+    wallet: address,
+    limit,
+    ...(options?.before ? { before: options.before } : {}),
+  });
+
+  const rows: any[] = Array.isArray(json?.data?.solana) ? json.data.solana : [];
+  const items = rows
+    .filter(birdeyeTxListEntryLooksLikeSwap)
+    .map((row) => mapBirdeyeTxListEntryToWalletSwap(row, address))
+    .filter((row): row is WalletSwap => row != null);
+
+  const lastHash =
+    rows.length > 0 ? String(rows[rows.length - 1]?.txHash ?? "").trim() : "";
+  const hasMore = rows.length === limit && lastHash.length > 0;
+
+  return {
+    items,
+    nextCursor: hasMore ? lastHash : null,
+    hasMore,
+  };
+}
+
 export async function fetchMoralisSolanaSwapChunk(
   address: string,
   options?: MoralisSwapChunkOptions,
@@ -822,6 +863,73 @@ export async function fetchHeliusSolanaSwap(
   });
 
   return paged.items;
+}
+
+/**
+ * Full short-window swap list via Birdeye tx_list + pagination (newest first).
+ */
+export async function fetchBirdeyeSolanaSwap(
+  address: string,
+  from: HeliusHistoryFrom = "7d",
+): Promise<WalletSwap[]> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec =
+    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
+
+  const swaps: WalletSwap[] = [];
+  let before: string | null = null;
+  let pages = 0;
+  const maxPages = 500;
+
+  while (pages < maxPages) {
+    pages += 1;
+
+    const json = await birdeyeGetJson<any>("/v1/wallet/tx_list", {
+      wallet: address,
+      limit: BIRDEYE_TX_LIST_PAGE_LIMIT,
+      ...(before ? { before } : {}),
+    });
+
+    const rows: any[] = Array.isArray(json?.data?.solana) ? json.data.solana : [];
+    if (rows.length === 0) {
+      break;
+    }
+
+    let reachedRangeCutoff = false;
+
+    for (const entry of rows) {
+      if (!birdeyeTxListEntryLooksLikeSwap(entry)) {
+        continue;
+      }
+      const mapped = mapBirdeyeTxListEntryToWalletSwap(entry, address);
+      if (!mapped) {
+        continue;
+      }
+
+      const tsSec = Math.floor(Date.parse(mapped.timestamp) / 1000);
+      if (tsSec < fromSec) {
+        reachedRangeCutoff = true;
+        break;
+      }
+
+      swaps.push(mapped);
+    }
+
+    if (reachedRangeCutoff) {
+      break;
+    }
+    if (rows.length < BIRDEYE_TX_LIST_PAGE_LIMIT) {
+      break;
+    }
+
+    const lastHash = String(rows[rows.length - 1]?.txHash ?? "").trim();
+    if (!lastHash) {
+      break;
+    }
+    before = lastHash;
+  }
+
+  return swaps;
 }
 
 type MoralisSwapFetchOptions = {

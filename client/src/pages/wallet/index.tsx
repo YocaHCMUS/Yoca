@@ -197,16 +197,20 @@ export default function WalletPage() {
     [portfolioMeta],
   );
 
+  const DEFAULT_TOKEN_OPTIONS = useMemo(() => ['SOL', 'USDC', 'USDT'], []);
+
   const balanceTokenOptions = useMemo(
-    () =>
-      Array.from(
+    () => {
+      const fromPortfolio = Array.from(
         new Set(
           portfolio
             .map((item) => item.symbol.trim().toUpperCase())
             .filter((symbol) => symbol.length > 0),
         ),
-      ).slice(0, 12),
-    [portfolio],
+      ).slice(0, 12);
+      return fromPortfolio.length > 0 ? fromPortfolio : DEFAULT_TOKEN_OPTIONS;
+    },
+    [portfolio, DEFAULT_TOKEN_OPTIONS],
   );
 
   const getSoldBoughtChanges = (swap: WalletSwap) => {
@@ -565,6 +569,8 @@ export default function WalletPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadData = async () => {
       if (!address || address === 'null') return;
 
@@ -585,6 +591,8 @@ export default function WalletPage() {
           }),
         ]);
 
+        if (cancelled) return;
+
         if (portfolioResult.status === 'fulfilled' && Array.isArray(portfolioResult.value)) {
           setPortfolio(portfolioResult.value);
         }
@@ -594,7 +602,7 @@ export default function WalletPage() {
           if (Array.isArray(swapsData)) {
             setSwapPages({ 1: swapsData });
             setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
-            console.log("[swaps] ✓ loaded:", swapsData.length, "swaps");
+            console.log("[swaps] loaded:", swapsData.length, "swaps");
           }
         }
 
@@ -603,7 +611,7 @@ export default function WalletPage() {
           if (Array.isArray(transfersData)) {
             setTransferPages({ 1: transfersData });
             setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
-            console.log('[transfers] ✓ loaded:', transfersData.length, 'transfers');
+            console.log('[transfers] loaded:', transfersData.length, 'transfers');
           }
         }
 
@@ -611,20 +619,25 @@ export default function WalletPage() {
           const counterpartiesData = counterpartiesResult.value?.counterparties ?? [];
           if (Array.isArray(counterpartiesData)) {
             setCounterparties(counterpartiesData);
-            console.log('[counterparties] ✓ loaded:', counterpartiesData.length, 'rows');
+            console.log('[counterparties] loaded:', counterpartiesData.length, 'rows');
           }
         }
       } catch (err) {
-        console.error('Failed to load wallet data:', err);
+        if (!cancelled) {
+          console.error('Failed to load wallet data:', err);
+        }
       } finally {
-        setPortfolioLoading(false);
-        setSwapLoading(false);
-        setTransferLoading(false);
-        setCounterpartyLoading(false);
+        if (!cancelled) {
+          setPortfolioLoading(false);
+          setSwapLoading(false);
+          setTransferLoading(false);
+          setCounterpartyLoading(false);
+        }
       }
     };
 
     loadData();
+    return () => { cancelled = true; };
   }, [address]);
 
   function handleSwapRowClick(_row: unknown[], rowIndex: number) {
@@ -832,18 +845,22 @@ export default function WalletPage() {
                   ]}
                   tabs={[
                     <BalanceChart
+                      key={address}
                       minHeight={460}
                       initialFilters={{
                         timePeriod: "7D",
                         wallets: [address],
                       }}
-                      tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ['SOL', 'USDC', 'USDT']}
-                      autoRefresh={true}
+                      tokenSelectorOptions={balanceTokenOptions}
+                      loadOnInteractionOnly
+                      autoRefresh={false}
                     />,
                     <PnLChart
+                      key={address}
                       minHeight={400}
                       aggregation="daily"
-                      autoRefresh={true}
+                      loadOnInteractionOnly
+                      autoRefresh={false}
                       initialFilters={{
                         timePeriod: "7D",
                         wallets: [address],
@@ -944,11 +961,13 @@ export default function WalletPage() {
               <div className={styles.sideBySide}>
                 <div className={styles.columnWrapper}>
                   <AssetDistribution
+                    key={address}
                     initialFilters={{
                       wallets: address ? [address] : [],
                       timePeriod: "30D",
                     }}
-                    autoRefresh={true}
+                    loadOnInteractionOnly
+                    autoRefresh={false}
                   />
                 </div>
                 <div className={styles.columnWrapper}>
@@ -973,7 +992,12 @@ export default function WalletPage() {
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>{tr("walletPage.topExchange")}</h2>
               <div className={styles.chartSection}>
-                <ExchangeComparison walletAddress={address} />
+                <ExchangeComparison
+                  key={address}
+                  walletAddress={address}
+                  loadOnInteractionOnly
+                  autoRefresh={false}
+                />
               </div>
             </div>
 
@@ -984,12 +1008,14 @@ export default function WalletPage() {
               </h2>
               <div className={styles.chartSection}>
                 <CounterpartyActivity
+                  key={address}
                   minHeight={320}
                   initialFilters={{
                     timePeriod: "7D",
                     wallets: [address],
                   }}
-                  autoRefresh={true}
+                  loadOnInteractionOnly
+                  autoRefresh={false}
                 />
               </div>
             </div>

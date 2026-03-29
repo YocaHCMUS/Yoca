@@ -133,7 +133,7 @@ export interface WalletSwap {
     bought?: WalletSwapBalanceChange | null,
     baseQuotePrice?: number | null,
     totalValueUsd?: number | null,
-    source?: "helius" | "moralis" | string,
+    source?: "helius" | "moralis" | "birdeye" | string,
 
 }
 
@@ -592,6 +592,6 @@ export type OverviewActivitySnapshot = {
     source: "birdeye-overall-pnl" | "overview-cache" | "none";
 };
 
-export type SwapProviderSource = "helius" | "moralis";
+export type SwapProviderSource = "helius" | "moralis" | "birdeye";
 export type WalletProviderPolicy = "helius" | "birdeye" | "fallback";
 

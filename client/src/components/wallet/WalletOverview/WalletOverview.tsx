@@ -95,6 +95,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     }, [user, walletAddress]);
 
     useEffect(() => {
+        let cancelled = false;
+
         const loadOverview = async () => {
             try {
                 setLoading(true);
@@ -104,6 +106,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     fetchWalletOverview(walletAddress, 'solana'),
                     fetchWalletIntelligence(walletAddress, 'solana'),
                 ]);
+
+                if (cancelled) return;
 
                 if (overviewResult.status === 'rejected') {
                     throw overviewResult.reason;
@@ -118,11 +122,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     setIntelligence(null);
                 }
             } catch (err) {
+                if (cancelled) return;
                 console.error('Failed to fetch wallet overview:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load wallet data');
                 setIntelligence(null);
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
@@ -131,9 +138,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
             if (autoRefresh) {
                 const interval = setInterval(loadOverview, refreshInterval);
-                return () => clearInterval(interval);
+                return () => { cancelled = true; clearInterval(interval); };
             }
         }
+
+        return () => { cancelled = true; };
     }, [walletAddress, autoRefresh, refreshInterval]);
 
     const handleLabelSave = (newLabel: string) => {

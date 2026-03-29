@@ -119,6 +119,120 @@ export function mapHeliusTransferEntry(entry: any, address: string): WalletTrans
     };
 }
 
+/** Heuristic: Birdeye tx_list mixes all tx types; keep swap-like rows for the swaps table. */
+export function birdeyeTxListEntryLooksLikeSwap(entry: any): boolean {
+    const main = String(entry?.mainAction ?? "").toLowerCase();
+    if (main.includes("swap")) {
+        return true;
+    }
+    if (main.includes("trade")) {
+        return true;
+    }
+
+    const bc = Array.isArray(entry?.balanceChange) ? entry.balanceChange : [];
+    if (bc.length < 2) {
+        return false;
+    }
+
+    const rawAmounts = bc
+        .map((b: any) => Number(b?.amount))
+        .filter((n) => Number.isFinite(n));
+    if (rawAmounts.length < 2) {
+        return false;
+    }
+
+    const hasNeg = rawAmounts.some((a) => a < 0);
+    const hasPos = rawAmounts.some((a) => a > 0);
+    return hasNeg && hasPos;
+}
+
+function normalizeBirdeyeSolanaFee(raw: unknown): number {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+        return 0;
+    }
+    // Helius uses SOL floats; Birdeye often returns integer lamports.
+    if (n > 0 && n < 1) {
+        return n;
+    }
+    return n / 1e9;
+}
+
+/**
+ * Map Birdeye GET /v1/wallet/tx_list (Solana) row → internal WalletSwap.
+ * @see https://docs.birdeye.so/reference/get-v1-wallet-tx_list
+ */
+export function mapBirdeyeTxListEntryToWalletSwap(entry: any, address: string): WalletSwap | null {
+    const signature = String(entry?.txHash ?? "").trim();
+    if (!signature) {
+        return null;
+    }
+
+    const timestamp = toIsoTimestamp(entry?.blockTime);
+    if (!timestamp) {
+        return null;
+    }
+
+    const slot = Math.floor(toFiniteNumber(entry?.blockNumber ?? 0, 0));
+
+    const balanceChangeRaw = Array.isArray(entry?.balanceChange) ? entry.balanceChange : [];
+    const balanceChanges = balanceChangeRaw
+        .map((b: any) => {
+            const decimals = Math.max(0, Math.floor(toFiniteNumber(b?.decimals ?? 9, 9)));
+            const rawAmt = Number(b?.amount ?? 0);
+            const amount = rawAmt / 10 ** decimals;
+            const mint = String(b?.address ?? "").trim();
+            if (!mint) {
+                return null;
+            }
+            return {
+                mint,
+                amount,
+                decimals,
+                symbol: b?.symbol != null ? String(b.symbol) : null,
+                name: b?.name != null ? String(b.name) : null,
+                logoUri: getTokenLogoUri(b),
+                priceUsd: null,
+                valueUsd: null,
+            };
+        })
+        .filter((c): c is NonNullable<typeof c> => c != null);
+
+    const label = entry?.contractLabel;
+    const exchange =
+        label && typeof label === "object"
+            ? {
+                name: label.name != null ? String(label.name) : null,
+                address: label.address != null ? String(label.address) : null,
+                logo:
+                    label.metadata?.icon != null
+                        ? String(label.metadata.icon)
+                        : null,
+            }
+            : null;
+
+    return {
+        walletAddress: address,
+        signature,
+        timestamp,
+        slot,
+        fee: normalizeBirdeyeSolanaFee(entry?.fee),
+        feePayer: String(entry?.from ?? address),
+        balanceChanges,
+        feeChanges: [],
+        transactionType: entry?.mainAction != null ? String(entry.mainAction) : null,
+        subCategory: null,
+        blockNumber: entry?.blockNumber != null ? Number(entry.blockNumber) : null,
+        exchange,
+        pair: null,
+        sold: null,
+        bought: null,
+        baseQuotePrice: null,
+        totalValueUsd: null,
+        source: "birdeye",
+    };
+}
+
 export function mapHeliusSwapEntry(entry: any, address: string): WalletSwap | null {
     const tsSec =
         typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)

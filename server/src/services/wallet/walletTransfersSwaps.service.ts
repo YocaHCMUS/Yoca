@@ -1,7 +1,7 @@
 import { saveSwapsCache, saveTransfersCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getCachedWalletTransfers, getCachedWalletTransfersChunk, getCachedWalletSwaps, getCachedWalletSwapsChunk } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type { WalletTransfersQueryOptions, WalletTransfersResponse, WalletSwapsQueryOptions, WalletSwapsResponse, WalletSwap, SwapProviderSource } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { fetchHeliusSolanaTransfers, fetchHeliusSolanaTransfersChunk, fetchMoralisSolanaSwap, fetchHeliusSolanaSwap, fetchMoralisSolanaSwapChunk, fetchHeliusSolanaSwapChunk } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { fetchBirdeyeSolanaSwap, fetchBirdeyeSolanaSwapChunk, fetchHeliusSolanaTransfers, fetchHeliusSolanaTransfersChunk, fetchMoralisSolanaSwap, fetchHeliusSolanaSwap, fetchMoralisSolanaSwapChunk, fetchHeliusSolanaSwapChunk } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
 import { DEFAULT_SWAP_PROVIDER_SOURCE, WALLET_TABLE_PAGE_SIZE } from "@sv/services/wallet/wallet.constants.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
 import { normalizeCursorValue } from "@sv/services/wallet/walletTime.utils.js";
@@ -171,6 +171,11 @@ export async function getWalletSwaps(
                         `[getWalletSwaps] Moralis failed; fallback fetched ${swaps.length} swaps from Helius for ${address}`,
                     );
                 }
+            } else if (providerSource === "birdeye") {
+                swaps = await fetchBirdeyeSolanaSwap(address, shortPeriod);
+                console.log(
+                    `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Birdeye tx_list for ${address}`,
+                );
             } else {
                 swaps = await fetchHeliusSolanaSwap(address, shortPeriod);
                 console.log(
@@ -248,6 +253,14 @@ export async function getWalletSwaps(
                     `[getWalletSwaps] Moralis failed; fallback fetched ${chunk.items.length} swaps from Helius chunk for ${address}`,
                 );
             }
+        } else if (providerSource === "birdeye") {
+            chunk = await fetchBirdeyeSolanaSwapChunk(address, {
+                limit: WALLET_TABLE_PAGE_SIZE,
+                before: cursor,
+            });
+            console.log(
+                `[getWalletSwaps] Successfully fetched ${chunk.items.length} swaps from Birdeye tx_list chunk for ${address}`,
+            );
         } else {
             chunk = await fetchHeliusSolanaSwapChunk(address, {
                 limit: WALLET_TABLE_PAGE_SIZE,
@@ -289,5 +302,11 @@ function resolveSwapProviderSource(): SwapProviderSource {
         .trim()
         .toLowerCase();
 
-    return raw === "moralis" ? "moralis" : "helius";
+    if (raw === "moralis") {
+        return "moralis";
+    }
+    if (raw === "birdeye") {
+        return "birdeye";
+    }
+    return "helius";
 }

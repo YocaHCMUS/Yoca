@@ -31,11 +31,14 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             {/* Balance history comparision */}
             <div className={styles.stableCoinChart}>
                 <BalanceChart
+                    key={walletAddresses.join(',')}
                     initialFilters={{
                         timePeriod: "30D",
                         wallets: walletAddresses
                     }}
                     minHeight={300}
+                    loadOnInteractionOnly
+                    autoRefresh={false}
                 />
             </div>
 

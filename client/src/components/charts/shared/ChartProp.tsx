@@ -34,6 +34,12 @@ export interface ChartProps {
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
 
+  /**
+   * When true, chart data loads only after the user explicitly selects a range (e.g. 7D / 30D).
+   * Skips fetch on mount and disables auto-refresh until the user triggers load again.
+   */
+  loadOnInteractionOnly?: boolean;
+
   /** Additional CSS class name */
   className?: string;
 

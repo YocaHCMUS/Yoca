@@ -7,7 +7,7 @@
  * @module CounterpartyActivity
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -105,6 +105,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   autoRefresh = true,
   refreshInterval = 30000,
   className,
+  loadOnInteractionOnly = false,
   // onDataLoaded,
 }) => {
   // i18n
@@ -125,7 +126,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   const chartTheme = useChartTheme();
 
   // Use centralized filter sync hook
-  const { filters } = useChartFiltersSync({
+  const { filters, setTimePeriod } = useChartFiltersSync({
     initialFilters: initialFilters
   });
 
@@ -136,6 +137,24 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return filters.wallets.join(',');
   }, [filters.wallets]);
+
+  const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+  const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() =>
+    initialFilters?.timePeriod?.toUpperCase() === '7D' ? 7 : 30,
+  );
+
+  const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly) {
+      return;
+    }
+    setInteractionLoadCount(0);
+  }, [walletsQuery, loadOnInteractionOnly]);
+
+  useEffect(() => {
+    setChartWindowDays(filters.timePeriod?.toUpperCase() === '7D' ? 7 : 30);
+  }, [filters.timePeriod]);
 
   // Query for the controller
   const query = useMemo<CounterpartiesRequestParams>(() => ({
@@ -150,10 +169,25 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
     fetcher: fetchCounterpartyActivity,
     query,
-    autoRefresh,
+    fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+    autoRefresh: effectiveAutoRefresh,
     refreshInterval,
     // onDataLoaded,
   });
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+      return;
+    }
+    void refetch(true);
+  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+
+  const handleWindowRangeClick = (days: 7 | 30) => {
+    const period = days === 7 ? "7D" : "30D";
+    setChartWindowDays(days);
+    setTimePeriod(period);
+    setInteractionLoadCount((c) => c + 1);
+  };
 
   // Export functionality
   // const { exportChart } = useChartExportr({
@@ -398,10 +432,49 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
-      onRetry={refetch}
-      isEmpty={!isChartSuccess(data, 'counterparties') || counterpartyCountRanking.length === 0}
+      onRetry={() => {
+        if (loadOnInteractionOnly && interactionLoadCount === 0) {
+          return;
+        }
+        void refetch(false);
+      }}
+      isEmpty={
+        (loadOnInteractionOnly && interactionLoadCount === 0) ||
+        !isChartSuccess(data, 'counterparties') ||
+        counterpartyCountRanking.length === 0
+      }
+      preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
+      actions={
+        loadOnInteractionOnly ? (
+          <button
+            type="button"
+            className="cds--btn cds--btn--primary cds--btn--sm"
+            onClick={() => handleWindowRangeClick(chartWindowDays)}
+          >
+            {tr('charts.loadData')}
+          </button>
+        ) : undefined
+      }
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
+        {loadOnInteractionOnly && (
+          <div className={sharedStyles.balanceChartWindowToggleGroup}>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+              onClick={() => handleWindowRangeClick(7)}
+            >
+              {tr('charts.balanceChart.window7d')}
+            </button>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+              onClick={() => handleWindowRangeClick(30)}
+            >
+              {tr('charts.balanceChart.window30d')}
+            </button>
+          </div>
+        )}
         <div className={sharedStyles.limitSelector} >
           <label htmlFor="limit-select">Top:</label>
           <select

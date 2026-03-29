@@ -5,6 +5,8 @@ import { useAutoRefresh } from "./useAutoRefresh";
 interface StandardChartConfig<TData, TQuery> {
   fetcher: (query: TQuery) => Promise<TData>;
   query: TQuery;
+  /** When `manual`, no fetch on mount or query change — call `refetch()` only. */
+  fetchMode?: "auto" | "manual";
   autoRefresh?: boolean;
   refreshInterval?: number;
   onDataLoaded?: (data: TData) => void;
@@ -19,6 +21,7 @@ interface StandardChartController<TData> {
 export function useStandardChartController<TData, TQuery>({
     fetcher,
     query,
+    fetchMode = "auto",
     autoRefresh = true,
     refreshInterval = 30000,
     onDataLoaded,
@@ -33,28 +36,26 @@ export function useStandardChartController<TData, TQuery>({
     const lastQueryRef = useRef<string | null>(null);
     const cacheRef = useRef<Map<string, TData>>(new Map());
 
+    const dataRef = useRef<TData | null>(null);
+    const onDataLoadedRef = useRef(onDataLoaded);
+    onDataLoadedRef.current = onDataLoaded;
+
     const fetchData = useCallback(async (isRefreshing = false) => {
-        // Serialize query for comparison and caching
         const queryKey = JSON.stringify(query);
 
-        // Skip fetch if query hasn't changed and we have data (unless refreshing)
-        if (!isRefreshing && queryKey === lastQueryRef.current && data !== null) {
-            console.log('[useChartController] Skipping fetch - query unchanged and data exists', { query });
+        if (!isRefreshing && queryKey === lastQueryRef.current && dataRef.current !== null) {
             return;
         }
 
-        // Check cache for non-refreshing requests
         if (!isRefreshing && cacheRef.current.has(queryKey)) {
             const cachedData = cacheRef.current.get(queryKey)!;
-            console.log('[useChartController] Using cached data', { query, cachedData });
             setData(cachedData);
+            dataRef.current = cachedData;
             setLoadingState({ status: 'success', retryCount: 0 });
-            onDataLoaded?.(cachedData);
+            onDataLoadedRef.current?.(cachedData);
             lastQueryRef.current = queryKey;
             return;
         }
-
-        console.log('[useChartController] Fetching fresh data', { query, isRefreshing });
 
         setLoadingState(prev => ({
             status: isRefreshing ? 'refreshing' : 'loading',
@@ -63,15 +64,13 @@ export function useStandardChartController<TData, TQuery>({
 
         try {
             const result = await fetcher(query);
-            console.log('[useChartController] Fetch successful', { query, result });
             setData(result);
+            dataRef.current = result;
             setLoadingState({ status: 'success', retryCount: 0 });
             
-            // Update cache
             cacheRef.current.set(queryKey, result);
             lastQueryRef.current = queryKey;
             
-            // Limit cache size to prevent memory leaks (keep last 10 queries)
             if (cacheRef.current.size > 10) {
                 const firstKey = cacheRef.current.keys().next().value;
                 if (firstKey !== undefined) {
@@ -79,7 +78,7 @@ export function useStandardChartController<TData, TQuery>({
                 }
             }
             
-            onDataLoaded?.(result);
+            onDataLoadedRef.current?.(result);
         } catch (error) {
             console.error('[useChartController] Fetch failed', { query, error });
             setLoadingState(prev => ({
@@ -92,7 +91,7 @@ export function useStandardChartController<TData, TQuery>({
                 },
             }));
         }
-    }, [fetcher, query, data, onDataLoaded]);
+    }, [fetcher, query]);
 
     useAutoRefresh({
         onRefresh: () => fetchData(true),
@@ -101,12 +100,15 @@ export function useStandardChartController<TData, TQuery>({
             interval: refreshInterval,
             pauseOnInteraction: true,
         },
-        enabled: autoRefresh && loadingState.status === 'success',
+        enabled: fetchMode !== "manual" && autoRefresh && loadingState.status === 'success',
     });
 
     useEffect(() => {
+        if (fetchMode === "manual") {
+            return;
+        }
         fetchData();
-    }, [fetchData]);
+    }, [fetchData, fetchMode]);
 
     return { data, loadingState, refetch: fetchData };
 }

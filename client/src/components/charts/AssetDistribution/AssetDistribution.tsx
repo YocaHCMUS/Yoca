@@ -18,6 +18,7 @@
  */
 
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import sharedChartStyles from '../shared/ChartStyle.module.scss';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -115,12 +116,17 @@ type AssetDistributionData = InferFetcherData<typeof fetchAssetDistribution>;
 //   className?: string;
 // }
 
+function getWindowDaysFromPeriod(timePeriod?: string): 7 | 30 {
+  return timePeriod?.toUpperCase() === '7D' ? 7 : 30;
+}
+
 export const AssetDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
   initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
   className,
+  loadOnInteractionOnly = false,
 }) => {
   const { tr } = useLocalization();
   const chartTitle = tr('charts.assetDistributionChart.title');
@@ -138,10 +144,28 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const [minPct, setMinPct] = useState<MinPctOption>(0); // 0 = no min
 
   // Use centralized filter sync hook
-  const { filters, walletsString } = useChartFiltersSync({
+  const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
+
+  const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+  const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() =>
+    getWindowDaysFromPeriod(initialFilters?.timePeriod),
+  );
+
+  const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly) {
+      return;
+    }
+    setInteractionLoadCount(0);
+  }, [walletsString, loadOnInteractionOnly]);
+
+  useEffect(() => {
+    setChartWindowDays(getWindowDaysFromPeriod(filters.timePeriod));
+  }, [filters.timePeriod]);
 
   /**
    * Memoize query to prevent unnecessary re-fetches
@@ -161,9 +185,24 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     useStandardChartController<AssetDistributionData, DistributionRequestParams>({
       fetcher: fetchAssetDistribution,
       query,
-      autoRefresh,
+      fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+      autoRefresh: effectiveAutoRefresh,
       refreshInterval,
     });
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+      return;
+    }
+    void refetch(true);
+  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+
+  const handleWindowRangeClick = (days: 7 | 30) => {
+    const period = days === 7 ? "7D" : "30D";
+    setChartWindowDays(days);
+    setTimePeriod(period);
+    setInteractionLoadCount((c) => c + 1);
+  };
 
   /**
    * Setup chart export
@@ -452,10 +491,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     return [];
   }, [data, createChartOption]);
 
-  const isEmpty = !data || (
-    (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
-    (!('data' in data) || !data.data || data.data.length === 0)
-  ) || (filters.wallets && filters.wallets.length === 0);
+  const isEmpty =
+    (loadOnInteractionOnly && interactionLoadCount === 0) ||
+    !data ||
+    (((!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
+      (!('data' in data) || !data.data || data.data.length === 0))) ||
+    (filters.wallets && filters.wallets.length === 0);
 
   // ── Compact header filter controls ────────────────────────────────────
   const selectStyle: React.CSSProperties = {
@@ -469,8 +510,38 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     height: '2.5rem',
   };
 
+  const periodToggle = loadOnInteractionOnly ? (
+    <div
+      className={sharedChartStyles.balanceChartWindowToggleGroup}
+      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}
+    >
+      <button
+        type="button"
+        className="cds--btn cds--btn--primary cds--btn--sm"
+        onClick={() => handleWindowRangeClick(chartWindowDays)}
+      >
+        {tr('charts.loadData')}
+      </button>
+      <button
+        type="button"
+        className={`${sharedChartStyles.chartToggleButton} ${sharedChartStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedChartStyles.balanceChartWindowButtonActive : ''}`}
+        onClick={() => handleWindowRangeClick(7)}
+      >
+        {tr('charts.balanceChart.window7d')}
+      </button>
+      <button
+        type="button"
+        className={`${sharedChartStyles.chartToggleButton} ${sharedChartStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 30 ? sharedChartStyles.balanceChartWindowButtonActive : ''}`}
+        onClick={() => handleWindowRangeClick(30)}
+      >
+        {tr('charts.balanceChart.window30d')}
+      </button>
+    </div>
+  ) : null;
+
   const filterControls = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {periodToggle}
       <select
         value={topN}
         onChange={(e) => setTopN(Number(e.target.value) as TopNOption)}
@@ -500,13 +571,19 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
+      preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
       emptyState={filters.wallets && filters.wallets.length === 0
         ? {
           title: tr('charts.noWalletsTitle'),
           message: tr('charts.assetDistributionChart.noWalletsMessage'),
         }
         : undefined}
-      onRetry={() => refetch(false)}
+      onRetry={() => {
+        if (loadOnInteractionOnly && interactionLoadCount === 0) {
+          return;
+        }
+        refetch(false);
+      }}
       onExport={handleExport}
       className={className}
       actions={filterControls}
