@@ -1,367 +1,418 @@
-
-import { getWalletOverview } from "./walletOverview.service";
 import { mapWithConcurrency } from "@sv/util/concurrency";
-import { WalletOverviewPeriodKey, WalletTimePeriod } from "./dtos/walletDataObjects";
-import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service";
-import { getWalletBalanceHistory } from "./walletCharts.service";
+import {
+  WalletOverviewPeriodKey,
+  WalletTimePeriod,
+} from "./dtos/walletDataObjects";
+import {
+  getWalletBalanceHistory,
+  resolveWalletTimeRangeSec,
+} from "./walletCharts.service";
+import { getWalletOverview } from "./walletOverview.service";
 import { getWalletPortfolio } from "./walletPortfolio.service";
-import { resolveWalletTimeRangeSec } from "./walletCharts.service";
+import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service";
 
 export interface StablecoinRatioRequest {
-    wallets: string[];
-    timePeriod?: WalletTimePeriod;
+  wallets: string[];
+  timePeriod?: WalletTimePeriod;
 }
 
 export interface StablecoinRatioRow {
-    timestamp: number;
-    date: string;
-    [walletKey: string]: number | string;
+  timestamp: number;
+  date: string;
+  [walletKey: string]: number | string;
 }
 
 type WalletRatioPoint = {
-    timestamp: number;
-    date: string;
-    ratio: number;
+  timestamp: number;
+  date: string;
+  ratio: number;
 };
 
 const STABLECOIN_SYMBOLS = new Set([
-    "USDC",
-    "USDT",
-    "DAI",
-    "USDH",
-    "USDX",
-    "USDE",
-    "FDUSD",
-    "TUSD",
-    "PYUSD",
-    "USDS",
+  "USDC",
+  "USDT",
+  "DAI",
+  "USDH",
+  "USDX",
+  "USDE",
+  "FDUSD",
+  "TUSD",
+  "PYUSD",
+  "USDS",
 ]);
 
+export async function getTradingVolumes(
+  wallets: string[],
+  period: WalletOverviewPeriodKey = "30D",
+): Promise<{ wallet: string; tradingVolumeUsd: number | null }[]> {
+  // period is for future proofing
 
-export async function getTradingVolumes(wallets: string[], period: WalletOverviewPeriodKey = '30D'): Promise<{ wallet: string; tradingVolumeUsd: number | null }[]> {
-    // period is for future proofing
-
-    return await mapWithConcurrency(
-        wallets,
-        5, // MAX_WALLET_CHART_CONCURRENCY
-        async (wallet) => {
-            const overview = await getWalletOverview(wallet);
-            return {
-                wallet,
-                tradingVolumeUsd: overview.periods[period].tradingVolumeUsd,
-            };
-        }
-    );
+  return await mapWithConcurrency(
+    wallets,
+    5, // MAX_WALLET_CHART_CONCURRENCY
+    async (wallet) => {
+      const overview = await getWalletOverview(wallet);
+      return {
+        wallet,
+        tradingVolumeUsd: overview.periods[period].tradingVolumeUsd,
+      };
+    },
+  );
 }
 
-export async function getTradingVolumeDistribution(wallets: string[], period: WalletOverviewPeriodKey = '30D') {
-    return await mapWithConcurrency(
-        wallets,
-        5, // MAX_WALLET_CHART_CONCURRENCY
-        async (wallet) => {
-            const overview = await getWalletOverview(wallet);
-            return {
-                wallet,
-                buy: overview.periods[period].buy,
-                sell: overview.periods[period].sell,
-            };
-        }
-    );
+export async function getTradingVolumeDistribution(
+  wallets: string[],
+  period: WalletOverviewPeriodKey = "30D",
+) {
+  return await mapWithConcurrency(
+    wallets,
+    5, // MAX_WALLET_CHART_CONCURRENCY
+    async (wallet) => {
+      const overview = await getWalletOverview(wallet);
+      return {
+        wallet,
+        buy: overview.periods[period].buy,
+        sell: overview.periods[period].sell,
+      };
+    },
+  );
 }
 
-export async function getTradingVolumePerTransaction(wallets: string[], period: WalletOverviewPeriodKey = '30D') {
-    return await mapWithConcurrency(
-        wallets,
-        5, // MAX_WALLET_CHART_CONCURRENCY,
-        async (wallet) => {
-            const overview = await getWalletOverview(wallet);
-            const volume = overview.periods[period].tradingVolumeUsd;
-            const txnCount = overview.periods[period].transactionCount;
-            return {
-                wallet,
-                tradingVolumePerTransaction: volume && txnCount ? volume / txnCount : null,
-            };
-        }
-    );
+export async function getTradingVolumePerTransaction(
+  wallets: string[],
+  period: WalletOverviewPeriodKey = "30D",
+) {
+  return await mapWithConcurrency(
+    wallets,
+    5, // MAX_WALLET_CHART_CONCURRENCY,
+    async (wallet) => {
+      const overview = await getWalletOverview(wallet);
+      const volume = overview.periods[period].tradingVolumeUsd;
+      const txnCount = overview.periods[period].transactionCount;
+      return {
+        wallet,
+        tradingVolumePerTransaction:
+          volume && txnCount ? volume / txnCount : null,
+      };
+    },
+  );
 }
 
 export async function getStablecoinRatio(
-    request: StablecoinRatioRequest,
+  request: StablecoinRatioRequest,
 ): Promise<StablecoinRatioRow[]> {
-    const wallets = request.wallets.filter((wallet) => wallet.trim().length > 0);
-    const timePeriod = request.timePeriod ?? "30D";
+  const wallets = request.wallets.filter((wallet) => wallet.trim().length > 0);
+  const timePeriod = request.timePeriod ?? "30D";
 
-    if (wallets.length === 0) {
-        return [];
-    }
+  if (wallets.length === 0) {
+    return [];
+  }
 
-    try {
-        const rangeSec = resolveWalletTimeRangeSec(timePeriod);
+  try {
+    const rangeSec = resolveWalletTimeRangeSec(timePeriod);
 
-        const walletSeries = await mapWithConcurrency(
-            wallets,
-            3,
-            async (wallet, index) => {
-                const walletKey = `wallet${index + 1}`;
+    const walletSeries = await mapWithConcurrency(
+      wallets,
+      3,
+      async (wallet, index) => {
+        const walletKey = `wallet${index + 1}`;
 
-                try {
-                    const portfolio = await getWalletPortfolio(wallet);
-                    if (portfolio.length === 0) {
-                        return {
-                            wallet,
-                            walletKey,
-                            points: [] as WalletRatioPoint[],
-                        };
-                    }
+        try {
+          const portfolio = await getWalletPortfolio(wallet);
+          if (portfolio.length === 0) {
+            return {
+              wallet,
+              walletKey,
+              points: [] as WalletRatioPoint[],
+            };
+          }
 
-                    const tokenSeries = await mapWithConcurrency(
-                        portfolio,
-                        4,
-                        async (token) => {
-                            try {
-                                const series = await getWalletTokenBalanceHistory(wallet, token.tokenAddress);
-                                return {
-                                    symbol: token.symbol,
-                                    usdSeries: series.usdSeries,
-                                };
-                            } catch {
-                                return {
-                                    symbol: token.symbol,
-                                    usdSeries: [],
-                                };
-                            }
-                        },
-                    );
-
-                    const totalByTimestamp = new Map<number, number>();
-                    const stableByTimestamp = new Map<number, number>();
-
-                    for (const token of tokenSeries) {
-                        const isStable = isStablecoinSymbol(token.symbol);
-                        for (const point of token.usdSeries) {
-                            const timestampSec = Math.floor(point.timestamp / 1000);
-                            if (timestampSec < rangeSec.fromSec || timestampSec > rangeSec.toSec) {
-                                continue;
-                            }
-
-                            const value = Number.isFinite(point.value) ? point.value : 0;
-                            if (value <= 0) {
-                                continue;
-                            }
-
-                            totalByTimestamp.set(
-                                point.timestamp,
-                                (totalByTimestamp.get(point.timestamp) ?? 0) + value,
-                            );
-
-                            if (isStable) {
-                                stableByTimestamp.set(
-                                    point.timestamp,
-                                    (stableByTimestamp.get(point.timestamp) ?? 0) + value,
-                                );
-                            }
-                        }
-                    }
-
-                    const points: WalletRatioPoint[] = Array.from(totalByTimestamp.keys())
-                        .sort((a, b) => a - b)
-                        .map((timestamp) => {
-                            const total = totalByTimestamp.get(timestamp) ?? 0;
-                            const stable = stableByTimestamp.get(timestamp) ?? 0;
-                            const ratio = total > 0 ? clampToPercent((stable / total) * 100) : 0;
-                            return {
-                                timestamp,
-                                date: formatDateForChart(timestamp),
-                                ratio,
-                            };
-                        });
-
-                    return {
-                        wallet,
-                        walletKey,
-                        points,
-                    };
-                } catch (walletError) {
-                    console.error("[getStablecoinRatio] Failed to compute wallet series", {
-                        wallet,
-                        walletKey,
-                        timePeriod,
-                        error: walletError,
-                    });
-
-                    return {
-                        wallet,
-                        walletKey,
-                        points: [] as WalletRatioPoint[],
-                    };
-                }
-            },
-        );
-
-        const mergedByTimestamp = new Map<number, StablecoinRatioRow>();
-        for (const walletData of walletSeries) {
-            for (const point of walletData.points) {
-                const existing = mergedByTimestamp.get(point.timestamp) ?? {
-                    timestamp: point.timestamp,
-                    date: point.date,
+          const tokenSeries = await mapWithConcurrency(
+            portfolio,
+            4,
+            async (token) => {
+              try {
+                const series = await getWalletTokenBalanceHistory(
+                  wallet,
+                  token.tokenAddress,
+                );
+                return {
+                  symbol: token.symbol,
+                  usdSeries: series.usdSeries,
                 };
+              } catch {
+                return {
+                  symbol: token.symbol,
+                  usdSeries: [],
+                };
+              }
+            },
+          );
 
-                existing[walletData.walletKey] = point.ratio;
-                mergedByTimestamp.set(point.timestamp, existing);
+          const totalByTimestamp = new Map<number, number>();
+          const stableByTimestamp = new Map<number, number>();
+
+          for (const token of tokenSeries) {
+            const isStable = isStablecoinSymbol(token.symbol);
+            for (const point of token.usdSeries) {
+              const timestampSec = Math.floor(point.timestamp / 1000);
+              if (
+                timestampSec < rangeSec.fromSec ||
+                timestampSec > rangeSec.toSec
+              ) {
+                continue;
+              }
+
+              const value = Number.isFinite(point.value) ? point.value : 0;
+              if (value <= 0) {
+                continue;
+              }
+
+              totalByTimestamp.set(
+                point.timestamp,
+                (totalByTimestamp.get(point.timestamp) ?? 0) + value,
+              );
+
+              if (isStable) {
+                stableByTimestamp.set(
+                  point.timestamp,
+                  (stableByTimestamp.get(point.timestamp) ?? 0) + value,
+                );
+              }
             }
-        }
+          }
 
-        const walletKeys = walletSeries.map((item) => item.walletKey);
-        const rows = Array.from(mergedByTimestamp.values()).sort((a, b) => a.timestamp - b.timestamp);
-        for (const row of rows) {
-            for (const walletKey of walletKeys) {
-                if (typeof row[walletKey] !== "number") {
-                    row[walletKey] = 0;
-                }
-            }
-        }
+          const points: WalletRatioPoint[] = Array.from(totalByTimestamp.keys())
+            .sort((a, b) => a - b)
+            .map((timestamp) => {
+              const total = totalByTimestamp.get(timestamp) ?? 0;
+              const stable = stableByTimestamp.get(timestamp) ?? 0;
+              const ratio =
+                total > 0 ? clampToPercent((stable / total) * 100) : 0;
+              return {
+                timestamp,
+                date: formatDateForChart(timestamp),
+                ratio,
+              };
+            });
 
-        return rows;
-    } catch (error) {
-        console.error("[getStablecoinRatio] Failed to build stablecoin ratio dataset", {
-            wallets,
-            timePeriod,
-            error,
-        });
-        return [];
+          return {
+            wallet,
+            walletKey,
+            points,
+          };
+        } catch (walletError) {
+          console.error(
+            "[getStablecoinRatio] Failed to compute wallet series",
+            {
+              wallet,
+              walletKey,
+              timePeriod,
+              error: walletError,
+            },
+          );
+
+          return {
+            wallet,
+            walletKey,
+            points: [] as WalletRatioPoint[],
+          };
+        }
+      },
+    );
+
+    const mergedByTimestamp = new Map<number, StablecoinRatioRow>();
+    for (const walletData of walletSeries) {
+      for (const point of walletData.points) {
+        const existing = mergedByTimestamp.get(point.timestamp) ?? {
+          timestamp: point.timestamp,
+          date: point.date,
+        };
+
+        existing[walletData.walletKey] = point.ratio;
+        mergedByTimestamp.set(point.timestamp, existing);
+      }
     }
+
+    const walletKeys = walletSeries.map((item) => item.walletKey);
+    const rows = Array.from(mergedByTimestamp.values()).sort(
+      (a, b) => a.timestamp - b.timestamp,
+    );
+    for (const row of rows) {
+      for (const walletKey of walletKeys) {
+        if (typeof row[walletKey] !== "number") {
+          row[walletKey] = 0;
+        }
+      }
+    }
+
+    return rows;
+  } catch (error) {
+    console.error(
+      "[getStablecoinRatio] Failed to build stablecoin ratio dataset",
+      {
+        wallets,
+        timePeriod,
+        error,
+      },
+    );
+    return [];
+  }
 }
 
-export async function processStablecoinRatioData(rawData: StablecoinRatioRow[], period: WalletTimePeriod): Promise<{
-    wallets: any[];
-    metadata: {
-        period: string;
-        timestamp: number;
-        currency: string;
-    };
+export async function processStablecoinRatioData(
+  rawData: StablecoinRatioRow[],
+  period: WalletTimePeriod,
+): Promise<{
+  wallets: {
+    walletAddress: string;
+    walletName: string;
+    data: {
+      timestamp: number;
+      value: number;
+    }[];
+    currentRatio: number | null;
+    averageRatio: number | null;
+  }[];
+  metadata: {
+    period: string;
+    timestamp: number;
+    currency: string;
+  };
 }> {
-    const metadata = {
-        period,
-        timestamp: Date.now(),
-        currency: "USD",
-    }
+  const metadata = {
+    period,
+    timestamp: Date.now(),
+    currency: "USD",
+  };
 
-    const walletKeys = Object.keys(rawData[0] ?? {}).filter((key) => key.startsWith("wallet"));
-    const wallets = walletKeys.map((walletKey) => {
-        const dataPoints = rawData.map((row) => ({
-            timestamp: row.timestamp,
-            value: row[walletKey] as number,
-        }));
-        const currentRatio = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
-        const averageRatio = dataPoints.length > 0
-            ? clampToPercent(dataPoints.reduce((sum, point) => sum + point.value, 0) / dataPoints.length)
-            : null;
+  const walletKeys = Object.keys(rawData[0] ?? {}).filter((key) =>
+    key.startsWith("wallet"),
+  );
+  const wallets = walletKeys.map((walletKey) => {
+    const dataPoints = rawData.map((row) => ({
+      timestamp: row.timestamp,
+      value: row[walletKey] as number,
+    }));
+    const currentRatio =
+      dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
+    const averageRatio =
+      dataPoints.length > 0
+        ? clampToPercent(
+            dataPoints.reduce((sum, point) => sum + point.value, 0) /
+              dataPoints.length,
+          )
+        : null;
 
-        return {
-            walletAddress: walletKey,
-            walletName: walletKey, // Replace with actual wallet name if available
-            data: dataPoints,
-            currentRatio,
-            averageRatio,
-        };
-    });
+    return {
+      walletAddress: walletKey,
+      walletName: walletKey, // Replace with actual wallet name if available
+      data: dataPoints,
+      currentRatio,
+      averageRatio,
+    };
+  });
 
-    return { wallets, metadata };
+  return { wallets, metadata };
 }
 
 function isStablecoinSymbol(symbol: string | null | undefined): boolean {
-    if (!symbol) {
-        return false;
-    }
+  if (!symbol) {
+    return false;
+  }
 
-    const normalized = symbol.trim().toUpperCase();
-    return STABLECOIN_SYMBOLS.has(normalized);
+  const normalized = symbol.trim().toUpperCase();
+  return STABLECOIN_SYMBOLS.has(normalized);
 }
 
 function clampToPercent(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 0;
-    }
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
 
-    const rounded = Math.round(value * 100) / 100;
-    if (rounded < 0) {
-        return 0;
-    }
-    if (rounded > 100) {
-        return 100;
-    }
-    return rounded;
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded < 0) {
+    return 0;
+  }
+  if (rounded > 100) {
+    return 100;
+  }
+  return rounded;
 }
 
 function formatDateForChart(timestampMs: number): string {
-    const date = new Date(timestampMs);
-    const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
-    const day = `${date.getUTCDate()}`.padStart(2, "0");
-    const year = date.getUTCFullYear();
-    return `${month}/${day}/${year}`;
+  const date = new Date(timestampMs);
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getUTCDate()}`.padStart(2, "0");
+  const year = date.getUTCFullYear();
+  return `${month}/${day}/${year}`;
 }
 
-export async function getRollingAnnualReturns(wallets: string[], period: WalletOverviewPeriodKey = '30D') {
-    return await mapWithConcurrency(
-        wallets,
-        5, // MAX_WALLET_CHART_CONCURRENCY,
-        async (wallet) => {
-            const overview = await getWalletOverview(wallet);
-            const returns = overview.periods[period].pnl;
-            return {
-                walletAddress: wallet,
-                rollingAnnualReturns: returns ? returns : null, // annualize the returns
-            };
-        }
-    );
+export async function getRollingAnnualReturns(
+  wallets: string[],
+  period: WalletOverviewPeriodKey = "30D",
+) {
+  return await mapWithConcurrency(
+    wallets,
+    5, // MAX_WALLET_CHART_CONCURRENCY,
+    async (wallet) => {
+      const overview = await getWalletOverview(wallet);
+      const returns = overview.periods[period].pnl;
+      return {
+        walletAddress: wallet,
+        rollingAnnualReturns: returns ? returns : null, // annualize the returns
+      };
+    },
+  );
 }
 
 // winrate
 // export async function get
 
+export async function getDrawdown(
+  wallets: string[],
+  period: WalletOverviewPeriodKey = "30D",
+) {
+  return await mapWithConcurrency(
+    wallets,
+    5, // MAX_WALLET_CHART_CONCURRENCY,
+    async (wallet) => {
+      const balanceHistory = await getWalletBalanceHistory(wallet);
+      if (!balanceHistory || balanceHistory.length === 0) {
+        return { drawdownResult: [], walletAddress: wallet };
+      }
 
-export async function getDrawdown(wallets: string[], period: WalletOverviewPeriodKey = '30D') {
-    return await mapWithConcurrency(
-        wallets,
-        5, // MAX_WALLET_CHART_CONCURRENCY,
-        async (wallet) => {
-            const balanceHistory = await getWalletBalanceHistory(wallet);
-            if (!balanceHistory || balanceHistory.length === 0) {
-                return { drawdownResult: [], walletAddress: wallet };
-            }
+      let peak = balanceHistory[0].value;
+      let trough = balanceHistory[0].value;
+      const drawdownResult = [];
 
-            let peak = balanceHistory[0].value;
-            let trough = balanceHistory[0].value;
-            const drawdownResult = [];
-
-            for (let i = 0; i < balanceHistory.length; i++) {
-                const point = balanceHistory[i];
-                // New peak resets trough
-                if (point.value > peak) {
-                    peak = point.value;
-                    trough = point.value;
-                }
-                // New trough
-                if (point.value < trough) {
-                    trough = point.value;
-                }
-                // Drawdown is always relative to the most recent peak
-                const drawdown = peak === 0 ? 0 : (point.value - peak) / peak;
-                drawdownResult.push({
-                    timestamp: point.timestamp,
-                    date: point.date,
-                    value: point.value,
-                    peak,
-                    trough,
-                    drawdown,
-                });
-            }
-
-            return {
-                drawdownResult,
-                walletAddress: wallet,
-            };
+      for (let i = 0; i < balanceHistory.length; i++) {
+        const point = balanceHistory[i];
+        // New peak resets trough
+        if (point.value > peak) {
+          peak = point.value;
+          trough = point.value;
         }
-    );
-}
+        // New trough
+        if (point.value < trough) {
+          trough = point.value;
+        }
+        // Drawdown is always relative to the most recent peak
+        const drawdown = peak === 0 ? 0 : (point.value - peak) / peak;
+        drawdownResult.push({
+          timestamp: point.timestamp,
+          date: point.date,
+          value: point.value,
+          peak,
+          trough,
+          drawdown,
+        });
+      }
 
+      return {
+        drawdownResult,
+        walletAddress: wallet,
+      };
+    },
+  );
+}

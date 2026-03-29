@@ -249,7 +249,6 @@ export const translation = defineTranslation({
     action: "Hành động",
     buy: "Mua",
     sell: "Bán",
-    exchange: "Sàn",
     transaction: "Giao dịch",
     openInSolscan: "Mở trên Solscan",
     avgBuyPrice: "Giá mua TB",

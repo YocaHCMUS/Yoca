@@ -1,35 +1,44 @@
 /**
  * ExchangeComparison Component
- * 
+ *
  * Displays grouped bar chart comparing deposits vs withdrawals across exchanges,
  * delivering immediate insight into exchange-specific activity patterns.
- * 
+ *
  * @module ExchangeComparison
  */
 
-import { useMemo, useRef, useState, useCallback } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { useLocalization } from '@/contexts/LocalizationContext';
-import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
-import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
-import { useChartContext } from '@/contexts/ChartContext';
-import { fetchExchangeComparison, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
-import { createTooltipHeader, createSeriesIndicator } from '@/util/tooltip-helpers';
-import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { ExchangesRequestParams } from '@/types/chart-api.types';
+import { ChartWrapper } from "@/components/charts/shared/ChartWrapper";
+import { useChartContext } from "@/contexts/ChartContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useStandardChartController } from "@/hooks/useChartController";
+import { useChartExport } from "@/hooks/useChartExport";
+import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
+import {
+  getChartGridConfig,
+  getThemedChartBaseOption,
+  useChartTheme,
+} from "@/hooks/useChartTheme";
+import {
+  fetchExchangeComparison,
+  type InferFetcherData,
+} from "@/services/chart/chartApi";
+import { runChartExport } from "@/services/chart/chartExportService";
+import type { ExchangesRequestParams } from "@/types/chart-api.types";
+import type { ChartDataSeries } from "@/types/chart-data.types";
+import type { ExportFormat } from "@/types/chart-filters.types";
+import { formatCurrency, isChartSuccess } from "@/util/chart-helpers";
+import { getMultiSeriesLegend } from "@/util/chart-legend-config";
+import {
+  createSeriesIndicator,
+  createTooltipHeader,
+} from "@/util/tooltip-helpers";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ChartGridItem } from "../shared";
 
 // Infer response type from fetcher
 type ExchangeComparisonData = InferFetcherData<typeof fetchExchangeComparison>;
-import type { TimePeriod, ExportFormat } from '@/types/chart-filters.types';
-import { useStandardChartController } from '@/hooks/useChartController';
-import { useChartExport } from '@/hooks/useChartExport';
-import type { ChartDataSeries } from '@/types/chart-data.types';
-import { ChartGridItem } from '../shared';
-import { runChartExport } from '@/services/chart/chartExportService';
-
 
 /**
  * Props for ExchangeComparison component
@@ -46,7 +55,7 @@ export interface ExchangeComparisonProps {
   limit?: number;
 
   /** Metric to display: count (transaction count) or volume (USD value) */
-  metric?: 'count' | 'volume';
+  metric?: "count" | "volume";
 
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
@@ -63,9 +72,9 @@ export interface ExchangeComparisonProps {
 
 /**
  * ExchangeComparison Component
- * 
+ *
  * User Story 3: Compare Exchange Trading Activity (Priority: P2)
- * 
+ *
  * Displays grouped bar chart with:
  * - Exchange names on X-axis
  * - Deposits vs withdrawals as grouped bars
@@ -73,7 +82,7 @@ export interface ExchangeComparisonProps {
  * - Time period filtering
  * - Metric selector (count vs volume)
  * - Auto-refresh every 30 seconds
- * 
+ *
  * @example
  * ```tsx
  * <ExchangeComparison
@@ -90,7 +99,7 @@ export function ExchangeComparison({
   minHeight = 400,
   walletAddress,
   limit = 2000,
-  metric = 'count',
+  metric = "count",
   autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
@@ -98,10 +107,12 @@ export function ExchangeComparison({
 }: ExchangeComparisonProps) {
   // i18n
   const { tr } = useLocalization();
-  const chartTitle = title || tr('charts.exchangeComparisonChart.title');
+  const chartTitle = title || tr("charts.exchangeComparisonChart.title");
 
   // State management
-  const [currentMetric, setCurrentMetric] = useState<'count' | 'volume'>(metric);
+  const [currentMetric, setCurrentMetric] = useState<"count" | "volume">(
+    metric,
+  );
 
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
@@ -121,15 +132,21 @@ export function ExchangeComparison({
   });
 
   // Query for the controller
-  const query = useMemo<ExchangesRequestParams>(() => ({
-    limit: filters.limit,
-    wallet: walletAddress,
-    metric: currentMetric,
-    timezone,
-  }), [filters.limit, currentMetric, timezone, walletAddress]);
+  const query = useMemo<ExchangesRequestParams>(
+    () => ({
+      limit: filters.limit,
+      wallet: walletAddress,
+      metric: currentMetric,
+      timezone,
+    }),
+    [filters.limit, currentMetric, timezone, walletAddress],
+  );
 
   // Use standard chart controller
-  const { data, loadingState, refetch } = useStandardChartController<ExchangeComparisonData, ExchangesRequestParams>({
+  const { data, loadingState, refetch } = useStandardChartController<
+    ExchangeComparisonData,
+    ExchangesRequestParams
+  >({
     fetcher: fetchExchangeComparison,
     query,
     autoRefresh,
@@ -143,90 +160,106 @@ export function ExchangeComparison({
   const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
-    baseFilename: 'exchange-comparison',
+    baseFilename: "exchange-comparison",
   });
 
   /**
    * Handle export based on format
    */
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    if (!isChartSuccess(data, 'exchanges')) return;
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      if (!isChartSuccess(data, "exchanges")) return;
 
-    const instance = chartRef.current?.getEchartsInstance() ?? null;
-    const csvData: ChartDataSeries[] = [
-      {
-        id: 'deposits',
-        name: tr('charts.exchangeComparisonChart.deposits'),
-        type: 'bar',
-        visible: true,
-        data: data.exchanges.map(ex => ({
-          name: ex.name,
-          value: currentMetric === 'count' ? ex.deposits : ex.depositsVolume,
-        })),
-      },
-      {
-        id: 'withdrawals',
-        name: tr('charts.exchangeComparisonChart.withdrawals'),
-        type: 'bar',
-        visible: true,
-        data: data.exchanges.map(ex => ({
-          name: ex.name,
-          value: currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume,
-        })),
-      },
-    ];
+      const instance = chartRef.current?.getEchartsInstance() ?? null;
+      const csvData: ChartDataSeries[] = [
+        {
+          id: "deposits",
+          name: tr("charts.exchangeComparisonChart.deposits"),
+          type: "bar",
+          visible: true,
+          data: data.exchanges.map((ex) => ({
+            name: ex.name,
+            value: currentMetric === "count" ? ex.deposits : ex.depositsVolume,
+          })),
+        },
+        {
+          id: "withdrawals",
+          name: tr("charts.exchangeComparisonChart.withdrawals"),
+          type: "bar",
+          visible: true,
+          data: data.exchanges.map((ex) => ({
+            name: ex.name,
+            value:
+              currentMetric === "count" ? ex.withdrawals : ex.withdrawalsVolume,
+          })),
+        },
+      ];
 
-    await runChartExport(
-      {
-        format,
-        filters,
-        chartInstance: instance as any,
-        csvData,
-      },
-      { exportPNG, exportSVG, exportPDF, exportCSV }
-    );
-  }, [data, filters, currentMetric, exportPNG, exportSVG, exportPDF, exportCSV, tr]);
+      await runChartExport(
+        {
+          format,
+          filters,
+          chartInstance: instance as any,
+          csvData,
+        },
+        { exportPNG, exportSVG, exportPDF, exportCSV },
+      );
+    },
+    [
+      data,
+      filters,
+      currentMetric,
+      exportPNG,
+      exportSVG,
+      exportPDF,
+      exportCSV,
+      tr,
+    ],
+  );
 
   /**
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0) return null;
+    if (!isChartSuccess(data, "exchanges") || data.exchanges.length === 0)
+      return null;
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
 
     // Extract exchange names and values
-    const exchangeNames = data.exchanges.map(ex => ex.name);
-    const deposits = data.exchanges.map(ex =>
-      currentMetric === 'count' ? ex.deposits : ex.depositsVolume
+    const exchangeNames = data.exchanges.map((ex) => ex.name);
+    const deposits = data.exchanges.map((ex) =>
+      currentMetric === "count" ? ex.deposits : ex.depositsVolume,
     );
-    const withdrawals = data.exchanges.map(ex =>
-      currentMetric === 'count' ? ex.withdrawals : ex.withdrawalsVolume
+    const withdrawals = data.exchanges.map((ex) =>
+      currentMetric === "count" ? ex.withdrawals : ex.withdrawalsVolume,
     );
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      grid: getChartGridConfig().grid,
       tooltip: {
         ...baseOption.tooltip,
-        trigger: 'axis',
+        trigger: "axis",
         axisPointer: {
-          type: 'shadow',
+          type: "shadow",
         },
         formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
+          if (!Array.isArray(params) || params.length === 0) return "";
 
           const exchangeName = params[0].axisValue;
           let tooltipContent = createTooltipHeader(exchangeName);
 
           params.forEach((param: any) => {
-            const value = currentMetric === 'count'
-              ? `${param.value.toLocaleString()} txns`
-              : formatCurrency(param.value);
-            tooltipContent += `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">`
-              + `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>`
-              + `<strong>${value}</strong></div>`;
+            const value =
+              currentMetric === "count"
+                ? `${param.value.toLocaleString()} txns`
+                : formatCurrency(param.value);
+            tooltipContent +=
+              `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">` +
+              `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>` +
+              `<strong>${value}</strong></div>`;
           });
 
           return tooltipContent;
@@ -234,12 +267,15 @@ export function ExchangeComparison({
       },
       legend: getMultiSeriesLegend(
         chartTheme,
-        [tr('charts.exchangeComparisonChart.deposits'), tr('charts.exchangeComparisonChart.withdrawals')],
-        false
+        [
+          tr("charts.exchangeComparisonChart.deposits"),
+          tr("charts.exchangeComparisonChart.withdrawals"),
+        ],
+        false,
       ),
       xAxis: {
         ...baseOption.xAxis,
-        type: 'category',
+        type: "category",
         data: exchangeNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
@@ -248,12 +284,15 @@ export function ExchangeComparison({
       },
       yAxis: {
         ...baseOption.yAxis,
-        type: 'value',
-        name: currentMetric === 'count' ? tr('charts.exchangeComparisonChart.count') : tr('charts.exchangeComparisonChart.volume'),
+        type: "value",
+        name:
+          currentMetric === "count"
+            ? tr("charts.exchangeComparisonChart.count")
+            : tr("charts.exchangeComparisonChart.volume"),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => {
-            if (currentMetric === 'count') {
+            if (currentMetric === "count") {
               return value.toLocaleString();
             }
             return formatCurrency(value);
@@ -262,17 +301,17 @@ export function ExchangeComparison({
       },
       series: [
         {
-          name: tr('charts.exchangeComparisonChart.deposits'),
-          type: 'bar',
+          name: tr("charts.exchangeComparisonChart.deposits"),
+          type: "bar",
           data: deposits,
           itemStyle: {
-            color: '#10b981', // Green for deposits
+            color: "#10b981", // Green for deposits
           },
           label: {
             show: true,
-            position: 'top',
+            position: "top",
             formatter: (params: any) => {
-              if (currentMetric === 'count') {
+              if (currentMetric === "count") {
                 return params.value >= 1000
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
@@ -284,17 +323,17 @@ export function ExchangeComparison({
           barMaxWidth: 50,
         },
         {
-          name: tr('charts.exchangeComparisonChart.withdrawals'),
-          type: 'bar',
+          name: tr("charts.exchangeComparisonChart.withdrawals"),
+          type: "bar",
           data: withdrawals,
           itemStyle: {
-            color: '#ef4444', // Red for withdrawals
+            color: "#ef4444", // Red for withdrawals
           },
           label: {
             show: true,
-            position: 'top',
+            position: "top",
             formatter: (params: any) => {
-              if (currentMetric === 'count') {
+              if (currentMetric === "count") {
                 return params.value >= 1000
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
@@ -364,7 +403,9 @@ export function ExchangeComparison({
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={!isChartSuccess(data, 'exchanges') || data.exchanges.length === 0}
+      isEmpty={
+        !isChartSuccess(data, "exchanges") || data.exchanges.length === 0
+      }
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
@@ -374,8 +415,12 @@ export function ExchangeComparison({
           <ReactECharts
             ref={chartRef}
             option={chartOptions}
-            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-            opts={{ renderer: 'canvas' }}
+            style={{
+              height: "100%",
+              width: "100%",
+              minHeight: `${minHeight}px`,
+            }}
+            opts={{ renderer: "canvas" }}
             notMerge={true}
             lazyUpdate={true}
           />

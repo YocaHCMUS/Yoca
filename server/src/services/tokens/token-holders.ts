@@ -5,7 +5,7 @@ import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as mrl from "@sv/util/util-moralis.js";
 import { eq } from "drizzle-orm";
-import type { MRL_TopHolders } from "../_types/token_raw_responses.js";
+import type { MRL_TopHolders } from "../_types/token-raw-responses.js";
 
 // https://docs.moralis.com/web3-data-api/solana/reference/get-token-top-holders
 async function fetchTopHoldersForToken(tokenAddress: string) {

@@ -27,6 +27,6 @@
     "strictNullChecks": true,
   },
   "include": ["src/**/*", "vite-env.d.ts"],
-  "exclude": ["node_modules", "build"]
+  "exclude": ["node_modules", "build", "**/__test__/**"]
 }
 

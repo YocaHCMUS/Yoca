@@ -4,7 +4,7 @@ import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
+import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export async function fetchCgMarketDataBatched(

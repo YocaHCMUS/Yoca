@@ -1,54 +1,65 @@
 /**
  * Drawdown Chart Component
- * 
+ *
  * Displays drawdown analysis with:
  * - Line chart per wallet with fill effect
  * - Header showing maximum drawdown data and duration
- * 
+ *
  * Features:
  * - Multiple wallet support (separate lines per wallet)
  * - Fill effect below zero line
  * - Max drawdown statistics in header
  * - Auto-refresh on wallet changes
- * 
+ *
  * @module components/charts/Drawdown
  */
 
-import React, { useMemo, useRef } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { useLocalization } from '@/contexts/LocalizationContext';
-import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
-import { useChartContext } from '@/contexts/ChartContext';
-import { fetchDrawdown, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatTimestampWithTimezone } from '@/util/chart-helpers';
-import { formatAxisTooltip } from '@/util/tooltip-helpers';
-import { getConditionalLegend } from '@/util/chart-legend-config';
-import type { DrawdownRequestParams } from '@/types/chart-api.types';
+import { useChartContext } from "@/contexts/ChartContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
+import {
+  getChartGridConfig,
+  getThemedChartBaseOption,
+  useChartTheme,
+} from "@/hooks/useChartTheme";
+import {
+  fetchDrawdown,
+  type InferFetcherData,
+} from "@/services/chart/chartApi";
+import type { DrawdownRequestParams } from "@/types/chart-api.types";
+import { formatTimestampWithTimezone } from "@/util/chart-helpers";
+import { getConditionalLegend } from "@/util/chart-legend-config";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import { useMemo, useRef } from "react";
 
 // Infer response type from fetcher
 type DrawdownData = InferFetcherData<typeof fetchDrawdown>;
 
-import { useStandardChartController } from '@/hooks/useChartController';
-import { BaseChart } from '../Base/BaseChart';
-import { ChartStatsHeader, ChartContainer, ChartSection, ChartGridItem } from '../shared';
-import type { ChartProps } from '../shared/ChartProp';
-import type { StatCard } from '../shared/ChartStatsHeader';
+import { useStandardChartController } from "@/hooks/useChartController";
+import { BaseChart } from "../Base/BaseChart";
+import {
+  ChartContainer,
+  ChartGridItem,
+  ChartSection,
+  ChartStatsHeader,
+} from "../shared";
+import type { ChartProps } from "../shared/ChartProp";
+import type { StatCard } from "../shared/ChartStatsHeader";
 
 export function DrawdownChart({
   title,
   minHeight = 400,
   initialFilters = {
-    timePeriod: '30D',
-    wallets: []
+    timePeriod: "30D",
+    wallets: [],
   },
   autoRefresh = true,
   refreshInterval = 30000,
   className,
 }: ChartProps) {
   const { tr } = useLocalization();
-  const chartTitle = title || tr('charts.drawdownChart.title');
+  const chartTitle = title || tr("charts.drawdownChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -68,19 +79,21 @@ export function DrawdownChart({
       period: filters.timePeriod,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [filters.timePeriod, walletsString],
   );
 
   /**
    * Lifecycle controller
    */
-  const { data, loadingState, refetch } =
-    useStandardChartController<DrawdownData, DrawdownRequestParams>({
-      fetcher: fetchDrawdown,
-      query,
-      autoRefresh,
-      refreshInterval,
-    });
+  const { data, loadingState, refetch } = useStandardChartController<
+    DrawdownData,
+    DrawdownRequestParams
+  >({
+    fetcher: fetchDrawdown,
+    query,
+    autoRefresh,
+    refreshInterval,
+  });
 
   /**
    * Generate drawdown chart option
@@ -89,7 +102,7 @@ export function DrawdownChart({
     const baseOption = getThemedChartBaseOption(chartTheme);
     if (
       !data ||
-      'error' in data ||
+      "error" in data ||
       !data.wallets ||
       !Array.isArray(data.wallets) ||
       data.wallets.length === 0
@@ -99,11 +112,15 @@ export function DrawdownChart({
 
     // data format: { wallets: Array<{ walletAddress, walletName?, data: Array<{timestamp, value, ...}>, ... }>, metadata: { timestamp } }
     const series = data.wallets.map((wallet: any, index: number) => {
-      const color = chartTheme.colorPalette[index % chartTheme.colorPalette.length];
+      const color =
+        chartTheme.colorPalette[index % chartTheme.colorPalette.length];
       return {
         name: wallet.walletName || wallet.walletAddress,
-        type: 'line' as const,
-        data: wallet.drawdownResult.map((d: any) => [d.timestamp, d.drawdown * 100]), // convert to percentage
+        type: "line" as const,
+        data: wallet.drawdownResult.map((d: any) => [
+          d.timestamp,
+          d.drawdown * 100,
+        ]), // convert to percentage
         smooth: true,
         lineStyle: {
           color: color,
@@ -114,7 +131,7 @@ export function DrawdownChart({
         },
         areaStyle: {
           color: {
-            type: 'linear' as const,
+            type: "linear" as const,
             x: 0,
             y: 0,
             x2: 0,
@@ -131,38 +148,39 @@ export function DrawdownChart({
             ],
           },
         },
-        symbol: 'none' as const,
+        symbol: "none" as const,
         emphasis: {
-          focus: 'series' as const,
+          focus: "series" as const,
         },
       };
     });
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      grid: getChartGridConfig().grid,
       xAxis: {
         ...baseOption.xAxis,
-        type: 'time',
+        type: "time",
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          formatter: (value: number) => formatTimestampWithTimezone(value, timezone, 'MM/dd'),
+          formatter: (value: number) =>
+            formatTimestampWithTimezone(value, timezone, "MM/dd"),
         },
       },
       yAxis: {
         ...baseOption.yAxis,
-        type: 'value',
-        name: 'Drawdown (%)',
+        type: "value",
+        name: "Drawdown (%)",
         max: 0,
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: '{value}%',
+          formatter: "{value}%",
         },
         splitLine: {
           show: true,
           lineStyle: {
             color: chartTheme.splitLineColor,
-            type: 'dashed',
+            type: "dashed",
           },
         },
       },
@@ -171,36 +189,46 @@ export function DrawdownChart({
         chartTheme,
         data.wallets.map((w: any) => w.walletName || w.walletAddress),
         2,
-        false
+        false,
       ),
       tooltip: {
         ...baseOption.tooltip,
-        trigger: 'axis',
+        trigger: "axis",
         axisPointer: {
-          type: 'cross',
+          type: "cross",
         },
         formatter: (params: any) => {
           // params is an array of points for the hovered x value
-          if (!Array.isArray(params)) return '';
-          let tooltip = '';
+          if (!Array.isArray(params)) return "";
+          let tooltip = "";
           params.forEach((p: any) => {
             const data = p.data || [];
             // data: [timestamp, drawdown%], but we want to show all drawdownResult fields
             // Try to find the full drawdownResult object from the series data
             const wallet = data.walletAddress || p.seriesName;
             // Find the wallet object in data.wallets
-            const walletObj = data && typeof data === 'object' && data.walletAddress
-              ? data
-              : (data && typeof data === 'object' && data.drawdownResult
+            const walletObj =
+              data && typeof data === "object" && data.walletAddress
                 ? data
-                : null);
+                : data && typeof data === "object" && data.drawdownResult
+                  ? data
+                  : null;
             // Fallback: try to find walletObj from chart data
             let drawdownObj = null;
             if (walletObj && walletObj.drawdownResult) {
-              drawdownObj = walletObj.drawdownResult.find((d: any) => d.timestamp === p.value[0]);
-            } else if (p.value && p.seriesIndex != null && data.wallets && Array.isArray(data.wallets)) {
+              drawdownObj = walletObj.drawdownResult.find(
+                (d: any) => d.timestamp === p.value[0],
+              );
+            } else if (
+              p.value &&
+              p.seriesIndex != null &&
+              data.wallets &&
+              Array.isArray(data.wallets)
+            ) {
               const w = data.wallets[p.seriesIndex];
-              drawdownObj = w?.drawdownResult?.find((d: any) => d.timestamp === p.value[0]);
+              drawdownObj = w?.drawdownResult?.find(
+                (d: any) => d.timestamp === p.value[0],
+              );
             }
             // If not found, fallback to p.value
             if (!drawdownObj && p.value) {
@@ -211,13 +239,17 @@ export function DrawdownChart({
             }
             // Compose tooltip
             tooltip += `<div><strong>${p.seriesName}</strong></div>`;
-            tooltip += `<div>${formatTimestampWithTimezone(p.value[0], timezone, 'yyyy-MM-dd HH:mm')}</div>`;
+            tooltip += `<div>${formatTimestampWithTimezone(p.value[0], timezone, "yyyy-MM-dd HH:mm")}</div>`;
             if (drawdownObj) {
               tooltip += `<div>Drawdown: ${(drawdownObj.drawdown * 100).toFixed(2)}%</div>`;
-              if ('value' in drawdownObj) tooltip += `<div>Value: ${drawdownObj.value}</div>`;
-              if ('peak' in drawdownObj) tooltip += `<div>Peak: ${drawdownObj.peak}</div>`;
-              if ('trough' in drawdownObj) tooltip += `<div>Trough: ${drawdownObj.trough}</div>`;
-              if ('date' in drawdownObj) tooltip += `<div>Date: ${drawdownObj.date}</div>`;
+              if ("value" in drawdownObj)
+                tooltip += `<div>Value: ${drawdownObj.value}</div>`;
+              if ("peak" in drawdownObj)
+                tooltip += `<div>Peak: ${drawdownObj.peak}</div>`;
+              if ("trough" in drawdownObj)
+                tooltip += `<div>Trough: ${drawdownObj.trough}</div>`;
+              if ("date" in drawdownObj)
+                tooltip += `<div>Date: ${drawdownObj.date}</div>`;
             }
             tooltip += '<hr style="margin:2px 0;opacity:0.2">';
           });
@@ -233,7 +265,7 @@ export function DrawdownChart({
   const statsCards = useMemo<StatCard[]>(() => {
     if (
       !data ||
-      'error' in data ||
+      "error" in data ||
       !data.wallets ||
       !Array.isArray(data.wallets) ||
       data.wallets.length === 0
@@ -248,7 +280,12 @@ export function DrawdownChart({
         return {
           title: walletAddress,
           stats: [
-            { label: 'No data', value: '-', suffix: '', valueClassName: 'text-muted' },
+            {
+              label: "No data",
+              value: "-",
+              suffix: "",
+              valueClassName: "text-muted",
+            },
           ],
         };
       }
@@ -256,40 +293,54 @@ export function DrawdownChart({
       // Max drawdown is the 'trough' value of the latest entry
       const latest = drawdownResult[drawdownResult.length - 1];
       // const maxDrawdown = latest.trough;
-      const maxDrawdown = Math.min(...drawdownResult.map((d: any) => d.drawdown));
-      const maxDrawdownEntry = drawdownResult.find((d: any) => d.drawdown === maxDrawdown);
-      const maxDrawdownTimestamp = maxDrawdownEntry ? maxDrawdownEntry.timestamp : null;
+      const maxDrawdown = Math.min(
+        ...drawdownResult.map((d: any) => d.drawdown),
+      );
+      const maxDrawdownEntry = drawdownResult.find(
+        (d: any) => d.drawdown === maxDrawdown,
+      );
+      const maxDrawdownTimestamp = maxDrawdownEntry
+        ? maxDrawdownEntry.timestamp
+        : null;
       const currentDrawdown = latest?.drawdown ?? 0;
 
       let daysSinceMaxDrawdown = null;
       if (maxDrawdownTimestamp) {
         const now = Date.now();
         const msPerDay = 24 * 60 * 60 * 1000;
-        daysSinceMaxDrawdown = Math.floor((now - maxDrawdownTimestamp) / msPerDay);
+        daysSinceMaxDrawdown = Math.floor(
+          (now - maxDrawdownTimestamp) / msPerDay,
+        );
       }
 
       return {
         title: walletAddress,
         stats: [
           {
-            label: 'Max Drawdown',
+            label: "Max Drawdown",
             value: (maxDrawdown * 100).toFixed(2),
-            suffix: '%',
-            valueClassName: 'text-danger',
+            suffix: "%",
+            valueClassName: "text-danger",
           },
           {
-            label: 'Days Since Max DD',
-            value: daysSinceMaxDrawdown != null ? daysSinceMaxDrawdown : '-',
-            suffix: 'days',
+            label: "Days Since Max DD",
+            value: daysSinceMaxDrawdown != null ? daysSinceMaxDrawdown : "-",
+            suffix: "days",
           },
           {
-            label: 'Current Drawdown',
+            label: "Current Drawdown",
             value: (currentDrawdown * 100).toFixed(2),
-            suffix: '%',
+            suffix: "%",
           },
           {
-            label: 'Max DD Date',
-            value: maxDrawdownTimestamp ? formatTimestampWithTimezone(maxDrawdownTimestamp, timezone, 'yyyy-MM-dd') : '-',
+            label: "Max DD Date",
+            value: maxDrawdownTimestamp
+              ? formatTimestampWithTimezone(
+                  maxDrawdownTimestamp,
+                  timezone,
+                  "yyyy-MM-dd",
+                )
+              : "-",
           },
         ],
       };
@@ -302,14 +353,14 @@ export function DrawdownChart({
       loadingState={loadingState}
       isEmpty={
         !data ||
-        'error' in data ||
+        "error" in data ||
         !data.wallets ||
         !Array.isArray(data.wallets) ||
         data.wallets.length === 0
       }
       onRetry={() => refetch(false)}
     >
-      <ChartContainer gap='0'>
+      <ChartContainer gap="0">
         <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />
         <ChartSection minHeight={`${minHeight}px`}>
           {chartOption && (
@@ -317,7 +368,11 @@ export function DrawdownChart({
               <ReactECharts
                 ref={chartRef}
                 option={chartOption}
-                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  minHeight: `${minHeight}px`,
+                }}
                 notMerge
                 lazyUpdate
               />

@@ -8,10 +8,16 @@
  */
 
 import { BaseChart } from "@/components/charts/Base/BaseChart";
+import sharedStyles from "@/components/charts/shared/ChartStyle.module.scss";
 import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
-import { getThemedChartBaseOption, useChartTheme } from "@/hooks/useChartTheme";
+import {
+  getChartGridConfig,
+  getThemedChartBaseOption,
+  useChartTheme,
+} from "@/hooks/useChartTheme";
 import {
   fetchCounterpartyActivity,
   type InferFetcherData,
@@ -23,6 +29,8 @@ import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo, useRef, useState } from "react";
+import { ChartGridItem } from "../shared";
+import type { ChartProps } from "../shared/ChartProp";
 
 // Infer response type from fetcher
 type CounterpartyActivityData = InferFetcherData<
@@ -253,13 +261,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: {
-        left: "8%",
-        right: "8%",
-        bottom: "12%",
-        top: "20%",
-        containLabel: true,
-      },
+      grid: getChartGridConfig().grid,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
@@ -346,13 +348,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: {
-        left: "3%",
-        right: "4%",
-        bottom: "15%",
-        top: "15%",
-        containLabel: true,
-      },
+      grid: getChartGridConfig().grid,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",

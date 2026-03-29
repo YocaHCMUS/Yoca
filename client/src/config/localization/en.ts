@@ -277,7 +277,6 @@ export const translation = {
     filter7d: "7d",
     filter30d: "30d",
     filter90d: "90d",
-    exchange: "Exchange",
     pair: "Pair",
     tokenSold: "Token Sold",
     tokenBought: "Token Bought",

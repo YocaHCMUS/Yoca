@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import type { ThemeMode } from "../contexts/ThemeContext";
 import { useUserTheme } from "../contexts/ThemeContext";
-import type { EChartsOption } from "echarts-for-react";
 
 export interface ChartThemeConfig {
   backgroundColor: string;
@@ -133,13 +132,13 @@ export function getThemedChartBaseOption(themeConfig: ChartThemeConfig) {
   };
 }
 
-export function getChartGridConfig(): EChartsOption['grid'] {
+export function getChartGridConfig() {
   return {
     grid: {
-      left: '6rem',
-      right: '6rem',
-      bottom: '6rem',
-      top: '6rem',
+      left: "6rem",
+      right: "6rem",
+      bottom: "6rem",
+      top: "6rem",
       containLabel: true,
     },
   };

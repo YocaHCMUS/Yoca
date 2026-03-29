@@ -38,7 +38,9 @@ import { BaseChart } from "../Base/BaseChart";
 import { ChartGridItem } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 
-type TotalTradingVolumeData = InferFetcherData<typeof fetchTotalTradingVolume>;
+type TotalTradingVolumeResponse = InferFetcherData<
+  typeof fetchTotalTradingVolume
+>;
 
 export function TotalTradingVolumeChart({
   title,
@@ -81,9 +83,7 @@ export function TotalTradingVolumeChart({
     TotalTradingVolumeResponse,
     TotalTradingVolumeRequestParams
   >({
-    fetcher: fetchTotalTradingVolume as (
-      query: TotalTradingVolumeRequestParams,
-    ) => Promise<TotalTradingVolumeResponse>,
+    fetcher: fetchTotalTradingVolume,
     query,
     autoRefresh,
     refreshInterval,
@@ -98,7 +98,7 @@ export function TotalTradingVolumeChart({
       !data.wallets ||
       !Array.isArray(data.wallets) ||
       data.wallets.length === 0 ||
-      (data.wallets as any).error
+      "error" in data.wallets
     ) {
       return null;
     }
@@ -117,7 +117,7 @@ export function TotalTradingVolumeChart({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      grid: getChartGridConfig().grid,
       legend: getMultiSeriesLegend(chartTheme, ["Total Volume"], false),
       xAxis: {
         ...baseOption.xAxis,
