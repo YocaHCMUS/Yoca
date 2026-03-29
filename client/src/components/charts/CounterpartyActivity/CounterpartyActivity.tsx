@@ -7,7 +7,7 @@
  * @module CounterpartyActivity
  */
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect, type RefObject } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -153,17 +153,22 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   }, [walletsQuery, loadOnInteractionOnly]);
 
   useEffect(() => {
+    if (loadOnInteractionOnly) return;
     setChartWindowDays(filters.timePeriod?.toUpperCase() === '7D' ? 7 : 30);
-  }, [filters.timePeriod]);
+  }, [filters.timePeriod, loadOnInteractionOnly]);
+
+  const effectivePeriod = loadOnInteractionOnly
+    ? (chartWindowDays === 7 ? '7D' : '30D')
+    : filters.timePeriod;
 
   // Query for the controller
   const query = useMemo<CounterpartiesRequestParams>(() => ({
-    timePeriod: filters.timePeriod,
+    timePeriod: effectivePeriod,
     transactionType: filters.transactionType,
     limit: currentLimit,
     timezone,
     ...(walletsQuery ? { wallets: walletsQuery } : {}),
-  }), [filters.timePeriod, filters.transactionType, currentLimit, timezone, walletsQuery]);
+  }), [effectivePeriod, filters.transactionType, currentLimit, timezone, walletsQuery]);
 
   // Use standard chart controller
   const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
@@ -175,12 +180,15 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     // onDataLoaded,
   });
 
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
   useEffect(() => {
     if (!loadOnInteractionOnly || interactionLoadCount === 0) {
       return;
     }
-    void refetch(true);
-  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+    void refetchRef.current(true);
+  }, [interactionLoadCount, loadOnInteractionOnly]);
 
   const handleWindowRangeClick = (days: 7 | 30) => {
     const period = days === 7 ? "7D" : "30D";

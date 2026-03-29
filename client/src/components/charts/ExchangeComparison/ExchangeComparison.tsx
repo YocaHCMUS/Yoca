@@ -152,12 +152,15 @@ export function ExchangeComparison({
     onDataLoaded,
   });
 
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
   useEffect(() => {
     if (!loadOnInteractionOnly || interactionLoadCount === 0) {
       return;
     }
-    void refetch(true);
-  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+    void refetchRef.current(true);
+  }, [interactionLoadCount, loadOnInteractionOnly]);
 
   /**
    * Setup chart export

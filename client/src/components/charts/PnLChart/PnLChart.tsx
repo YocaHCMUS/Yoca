@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect, type RefObject } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -83,14 +83,23 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         setInteractionLoadCount(0);
     }, [walletsString, loadOnInteractionOnly]);
 
+    useEffect(() => {
+        if (loadOnInteractionOnly) return;
+        setChartWindowDays(getWindowDaysFromPeriod(filters.timePeriod));
+    }, [filters.timePeriod, loadOnInteractionOnly]);
+
+    const effectivePeriod = loadOnInteractionOnly
+        ? (chartWindowDays === 7 ? '7D' : '30D')
+        : filters.timePeriod;
+
     const query = useMemo<PnLRequestParams>(
         () => ({
-            period: filters.timePeriod,
+            period: effectivePeriod,
             wallets: walletsString,
             aggregation,
             timezone,
         }),
-        [filters.timePeriod, walletsString, aggregation, timezone]
+        [effectivePeriod, walletsString, aggregation, timezone]
     );
 
     const { data, loadingState, refetch } =
@@ -102,16 +111,15 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             refreshInterval,
         });
 
+    const refetchRef = useRef(refetch);
+    refetchRef.current = refetch;
+
     useEffect(() => {
         if (!loadOnInteractionOnly || interactionLoadCount === 0) {
             return;
         }
-        void refetch(true);
-    }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
-
-    useEffect(() => {
-        setChartWindowDays(getWindowDaysFromPeriod(filters.timePeriod));
-    }, [filters.timePeriod]);
+        void refetchRef.current(true);
+    }, [interactionLoadCount, loadOnInteractionOnly]);
 
     const handleWindowRangeClick = (days: 7 | 30) => {
         const period = days === 7 ? "7D" : "30D";

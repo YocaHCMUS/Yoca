@@ -43,6 +43,7 @@ export interface WalletOverviewProps {
     initialFilters?: Partial<any>;
     autoRefresh?: boolean;
     refreshInterval?: number;
+    loadOnInteractionOnly?: boolean;
 }
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
 
@@ -50,6 +51,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',
     autoRefresh = true,
     refreshInterval = 30000,
+    loadOnInteractionOnly = false,
 }) => {
     const { user } = useAuth();
     const { tr, fmt } = useLocalization();
@@ -70,6 +72,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [bookmark, setBookmark] = useState(false);
     const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false);
     const utilityMenuRef = useRef<HTMLDivElement>(null);
+    const [manualLoadCount, setManualLoadCount] = useState(0);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -95,6 +98,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     }, [user, walletAddress]);
 
     useEffect(() => {
+        if (loadOnInteractionOnly && manualLoadCount === 0) {
+            setLoading(false);
+            return;
+        }
+
         let cancelled = false;
 
         const loadOverview = async () => {
@@ -136,14 +144,15 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         if (walletAddress && walletAddress !== 'null') {
             loadOverview();
 
-            if (autoRefresh) {
+            const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+            if (effectiveAutoRefresh) {
                 const interval = setInterval(loadOverview, refreshInterval);
                 return () => { cancelled = true; clearInterval(interval); };
             }
         }
 
         return () => { cancelled = true; };
-    }, [walletAddress, autoRefresh, refreshInterval]);
+    }, [walletAddress, autoRefresh, refreshInterval, loadOnInteractionOnly, manualLoadCount]);
 
     const handleLabelSave = (newLabel: string) => {
         setLabel(newLabel);
@@ -329,6 +338,16 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
                 {/* Actions: filter dropdown + utility icon buttons (default) / menu (mini) */}
                 <div className={styles.actionsSection}>
+                    {loadOnInteractionOnly && (
+                        <button
+                            type="button"
+                            className="cds--btn cds--btn--primary cds--btn--sm"
+                            style={{ width: '100%', justifyContent: 'center' }}
+                            onClick={() => setManualLoadCount((c) => c + 1)}
+                        >
+                            {tr('charts.loadData')}
+                        </button>
+                    )}
                     <div className={styles.utilityButtonsDefault}>
                         <Tooltip label={bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
                             <button

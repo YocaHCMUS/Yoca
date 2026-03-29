@@ -17,7 +17,7 @@
  * @module components/charts/AssetDistribution
  */
 
-import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useCallback, useState, useEffect, type RefObject } from 'react';
 import sharedChartStyles from '../shared/ChartStyle.module.scss';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -164,18 +164,23 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   }, [walletsString, loadOnInteractionOnly]);
 
   useEffect(() => {
+    if (loadOnInteractionOnly) return;
     setChartWindowDays(getWindowDaysFromPeriod(filters.timePeriod));
-  }, [filters.timePeriod]);
+  }, [filters.timePeriod, loadOnInteractionOnly]);
+
+  const effectivePeriod = loadOnInteractionOnly
+    ? (chartWindowDays === 7 ? '7D' : '30D')
+    : filters.timePeriod;
 
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
   const query = useMemo<DistributionRequestParams>(
     () => ({
-      period: filters.timePeriod,
+      period: effectivePeriod,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [effectivePeriod, walletsString]
   );
 
   /**
@@ -190,12 +195,15 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       refreshInterval,
     });
 
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
   useEffect(() => {
     if (!loadOnInteractionOnly || interactionLoadCount === 0) {
       return;
     }
-    void refetch(true);
-  }, [interactionLoadCount, loadOnInteractionOnly, refetch]);
+    void refetchRef.current(true);
+  }, [interactionLoadCount, loadOnInteractionOnly]);
 
   const handleWindowRangeClick = (days: 7 | 30) => {
     const period = days === 7 ? "7D" : "30D";

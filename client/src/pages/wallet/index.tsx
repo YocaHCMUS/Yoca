@@ -82,6 +82,7 @@ export default function WalletPage() {
 
   const [mainActiveTab, setMainActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
+  const [tableLoadCount, setTableLoadCount] = useState(0);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
@@ -569,6 +570,8 @@ export default function WalletPage() {
   };
 
   useEffect(() => {
+    if (tableLoadCount === 0) return;
+
     let cancelled = false;
 
     const loadData = async () => {
@@ -638,7 +641,7 @@ export default function WalletPage() {
 
     loadData();
     return () => { cancelled = true; };
-  }, [address]);
+  }, [address, tableLoadCount]);
 
   function handleSwapRowClick(_row: unknown[], rowIndex: number) {
     const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
@@ -773,7 +776,7 @@ export default function WalletPage() {
       >
         {/* ── Left Column: Wallet Sidebar ── */}
         <div className={styles.leftColumn}>
-          <WalletOverview walletAddress={address} />
+          <WalletOverview walletAddress={address} loadOnInteractionOnly autoRefresh={false} />
         </div>
 
         {/* ── Resize Divider ── */}
@@ -875,6 +878,15 @@ export default function WalletPage() {
             {/* Swap / Transfer / Inflow / Outflow / Counterparties Tables */}
             <div className={styles.section}>
               <div className={styles.chartSection}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="cds--btn cds--btn--primary cds--btn--sm"
+                    onClick={() => setTableLoadCount((c) => c + 1)}
+                  >
+                    {tr('charts.loadData')}
+                  </button>
+                </div>
                 <TabContainer
                   activeTab={secondaryActiveTab}
                   names={[

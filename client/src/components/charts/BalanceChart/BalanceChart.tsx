@@ -349,8 +349,9 @@ export function BalanceChart({
     }, [isMultiWallet]);
 
     useEffect(() => {
+        if (loadOnInteractionOnly) return;
         setChartWindowDays(getWindowDaysFromTimePeriod(filters.timePeriod));
-    }, [filters.timePeriod]);
+    }, [filters.timePeriod, loadOnInteractionOnly]);
 
     useEffect(() => {
         if (!loadOnInteractionOnly) {
@@ -359,13 +360,17 @@ export function BalanceChart({
         setInteractionLoadCount(0);
     }, [walletsString, loadOnInteractionOnly]);
 
+    const effectivePeriod = loadOnInteractionOnly
+        ? (chartWindowDays === 7 ? '7D' : '30D')
+        : filters.timePeriod;
+
     const generalQuery = useMemo<BalanceRequestParams>(
         () => ({
-            timePeriod: filters.timePeriod,
+            timePeriod: effectivePeriod,
             wallets: walletsString,
             timezone,
         }),
-        [filters.timePeriod, walletsString, timezone],
+        [effectivePeriod, walletsString, timezone],
     );
 
     const activeTokenTags = useMemo(() => {
@@ -374,12 +379,12 @@ export function BalanceChart({
 
     const tokenQuery = useMemo<BalanceRequestParams>(
         () => ({
-            timePeriod: filters.timePeriod,
+            timePeriod: effectivePeriod,
             wallets: walletsString,
             timezone,
             tokens: activeTokenTags.length > 0 ? activeTokenTags.join(',') : undefined,
         }),
-        [filters.timePeriod, walletsString, timezone, activeTokenTags],
+        [effectivePeriod, walletsString, timezone, activeTokenTags],
     );
 
     const {
@@ -411,13 +416,18 @@ export function BalanceChart({
         refreshInterval,
     });
 
+    const refetchGeneralRef = useRef(refetchGeneral);
+    refetchGeneralRef.current = refetchGeneral;
+    const refetchTokenRef = useRef(refetchToken);
+    refetchTokenRef.current = refetchToken;
+
     useEffect(() => {
         if (!loadOnInteractionOnly || interactionLoadCount === 0) {
             return;
         }
-        void refetchGeneral(true);
-        void refetchToken(true);
-    }, [interactionLoadCount, loadOnInteractionOnly, refetchGeneral, refetchToken]);
+        void refetchGeneralRef.current(true);
+        void refetchTokenRef.current(true);
+    }, [interactionLoadCount, loadOnInteractionOnly]);
 
     const generalData = useMemo<BalanceChartDisplayData | null>(() => {
         if (generalRawData && !('error' in generalRawData) && isBalanceChartDisplayData(generalRawData)) {
@@ -547,7 +557,7 @@ export function BalanceChart({
 
             for (const tokenChunk of chunks) {
                 const response = await fetchBalanceTrendWithCache({
-                    timePeriod: filters.timePeriod,
+                    timePeriod: effectivePeriod,
                     wallets: walletsString,
                     timezone,
                     tokens: tokenChunk.join(','),
@@ -580,7 +590,7 @@ export function BalanceChart({
         return () => {
             isCancelled = true;
         };
-    }, [candidateTokenSymbols, filters.timePeriod, walletsString, timezone, loadOnInteractionOnly, interactionLoadCount]);
+    }, [candidateTokenSymbols, effectivePeriod, walletsString, timezone, loadOnInteractionOnly, interactionLoadCount]);
 
     const tokenOptions = useMemo(() => {
         const optionsMap = new Map<string, string>();
