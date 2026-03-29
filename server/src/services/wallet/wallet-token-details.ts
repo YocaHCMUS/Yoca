@@ -48,7 +48,7 @@ export async function getTokenDetails(wallet: string) {
   }
 
   const tokenDetails = (res?.data?.tokens ?? []).map(
-    (tokenDetail: any): WalletTokenDetailsInsert => ({
+    (tokenDetail): WalletTokenDetailsInsert => ({
       symbol: tokenDetail.symbol,
       address: tokenDetail.address,
       tokenAddress: tokenDetail.address,
