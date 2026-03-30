@@ -283,9 +283,9 @@ export function ChartWrapper({
         />
       )}
 
-      {/* Chart content (success with data or refreshing) */}
-      {(loadingState.status === 'success' || loadingState.status === 'refreshing') &&
-        (!isEmpty || preserveChildrenWhenEmpty) && (
+      {/* Chart content (success with data or refreshing, or idle with manual-load controls) */}
+      {(((loadingState.status === 'success' || loadingState.status === 'refreshing') &&
+        (!isEmpty || preserveChildrenWhenEmpty)) || (preserveChildrenWhenEmpty && loadingState.status === 'idle')) && (
           <div className={styles.chartContainer}>
             {children}
           </div>
