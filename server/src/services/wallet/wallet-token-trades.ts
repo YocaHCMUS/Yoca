@@ -69,9 +69,11 @@ async function fetchWalletTokenSwaps(
     }),
   );
 
+  const filteredTrades = trades.filter((trade) => !isNaN(trade.baseAmount) && !isNaN(trade.quoteAmount));
+
   const inserted = await db
     .insert(walletTokenTrades)
-    .values(trades)
+    .values(filteredTrades)
     .returning();
 
   return inserted;

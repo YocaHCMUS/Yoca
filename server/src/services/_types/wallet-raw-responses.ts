@@ -56,8 +56,8 @@ export const bds_WalletTokenDetailsSchema = z.object({
         }),
         pricing: z.object({
           current_price: z.number().nullable(),
-          avg_buy_cost: z.number(),
-          avg_sell_cost: z.number(),
+          avg_buy_cost: z.number().nullable(),
+          avg_sell_cost: z.number().nullable(),
         }),
       }),
     ),
@@ -88,7 +88,7 @@ export const bds_WalletTokenDetailsSchema = z.object({
 });
 
 export const mrl_WalletTokenSwapsSchema = z.object({
-  cursor: z.string(),
+  cursor: z.string().nullable(),
   page: z.number(),
   pageSize: z.number(),
   result: z.array(
