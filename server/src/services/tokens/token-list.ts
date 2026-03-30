@@ -144,7 +144,7 @@ async function fetchAddressesByCoinGeckoIds(
       .insert(coinGeckoTokenList)
       .values(solanaTokens)
       .onConflictDoUpdate({
-        target: [coinGeckoTokenList.coinGeckoId],
+        target: [coinGeckoTokenList.tokenAddress],
         set: { tokenAddress: excluded(coinGeckoTokenList.tokenAddress) },
       });
   }

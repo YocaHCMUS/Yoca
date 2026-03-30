@@ -52,6 +52,33 @@ export function defineTextFormat() {
   };
 }
 
+// Look kinda cheap heh?
+// 1e-12 would be written like this: 0.0₁₂1
+function toSubscript(num: number): string {
+  const map = "₀₁₂₃₄₅₆₇₈₉";
+  return String(num)
+    .split("")
+    .map((d) => map[Number(d)] ?? d)
+    .join("");
+}
+
+function formatSmallCompact(value: number): string {
+  const str = value.toFixed(20);
+  const match = str.match(/^0\.0+/);
+
+  if (!match) return value.toString();
+
+  const zeroCount = match[0].length - 2;
+  const significant = str.slice(match[0].length, match[0].length + 3);
+
+  return `0.0${toSubscript(zeroCount)}${significant}`;
+}
+
+function replaceNumbers(formatted: string, replacement: string): string {
+  const numberPattern = /-?(?:\d+(?:\.\d+)?|\.\d+)/;
+  return formatted.replace(numberPattern, replacement);
+}
+
 export function defineNumberFormat(
   langCode: string,
   strategy: NumberFormattingStrategy,
@@ -89,7 +116,7 @@ export function defineNumberFormat(
   ) {
     const effectiveStyle = style == "unit" ? "decimal" : style;
 
-    if (typeof value !== "number" && typeof value !== "string")
+    if (typeof value != "number" && typeof value != "string")
       return nullDisplay;
     const numValue = typeof value == "string" ? Number(value) : value;
     if (!Number.isFinite(numValue)) return nullDisplay;
@@ -97,7 +124,11 @@ export function defineNumberFormat(
     const exchangedValue =
       style == "currency" && getExchangeRate
         ? numValue * getExchangeRate()
-        : numValue;
+        : style == "percent"
+          ? numValue / 100
+          : numValue;
+
+    const absValue = Math.abs(exchangedValue);
 
     let decimals = 2;
     if (effectiveStyle == "currency") {
@@ -106,6 +137,10 @@ export function defineNumberFormat(
       decimals = strategy.decimalResolution.resolveDecimal(exchangedValue);
     } else if (effectiveStyle == "percent") {
       decimals = strategy.decimalResolution.resolvePercent(exchangedValue);
+    }
+
+    if (notation == "compact" && Math.abs(exchangedValue) >= 1000) {
+      decimals = Math.min(decimals, 2);
     }
 
     const key = `${effectiveStyle}|${notation}|${decimals}`;
@@ -126,6 +161,14 @@ export function defineNumberFormat(
 
     if (style == "unit" && unit) {
       return `${formatted} ${unit}`;
+    }
+
+    // small number override for compact
+    if (notation == "compact" && absValue < strategy.smallCompactThreshold) {
+      return replaceNumbers(
+        formatted,
+        formatSmallCompact(abs ? absValue : exchangedValue),
+      );
     }
 
     return formatted;

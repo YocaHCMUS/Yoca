@@ -1,10 +1,19 @@
-import { RECENT_TRADES_TTL_MS } from "@sv/config/constants.js";
+import {
+  RECENT_TRADES_TTL_MS,
+  TRADER_GAINEERS_LOSERS_TTL_MS as TRADER_GAINERS_LOSERS_TTL_MS,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { recentTrades, type RecentTradeInsert } from "@sv/db/schema.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import {
+  recentTrades,
+  topLosers,
+  topTraders,
+  type RecentTradeInsert,
+} from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { bds_TopTradersSchema } from "@sv/services/_types/trade-raw-responses.js";
 import * as bds from "@sv/util/util-birdeye.js";
-import { and, desc, gte } from "drizzle-orm";
-import type { BDS_RecentTrades } from "./_types/token_raw_responses.js";
+import { and, asc, desc, gte } from "drizzle-orm";
+import { bds_RecentTradesSchema } from "./_types/token-raw-responses.js";
 
 type TimeWindow = "6h" | "12h" | "24h";
 type SortBy = "volume" | "time";
@@ -23,41 +32,32 @@ async function fetchRecentTrades() {
     tx_type: "swap",
   }).toString();
 
-  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
-  const resp = await trackedFetch({
-    provider: "birdeye",
-    url: bdsEndpoint,
-    init: {
-      method: "GET",
-      headers,
-    },
-    apiKey,
-    serviceFile: "server/src/services/trades.ts",
-    functionName: "fetchRecentTrades",
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
   });
 
-  if (!resp.ok) {
-    return [];
+  const resp = await fetch(req);
+
+  const res = await getTrackedApiResult(bds_RecentTradesSchema, resp);
+
+  if (!res) {
+    return null;
   }
 
-  const res = await resp.json() as BDS_RecentTrades;
   const trades = res.data.items.map(
     (raw): RecentTradeInsert => ({
       transactionHash: raw.tx_hash,
       instructionIndex: raw.ins_index,
       innerInstructionIndex: raw.inner_ins_index,
 
-      baseSymbol: raw.base.symbol,
       baseAddress: raw.base.address,
-      baseDecimals: raw.base.decimals,
       basePrice: raw.base.price,
-      baseAmount: raw.base.amount,
+      baseAmount: Number(raw.base.amount),
 
-      quoteSymbol: raw.quote.symbol,
       quoteAddress: raw.quote.address,
-      quoteDecimals: raw.quote.decimals,
       quotePrice: raw.quote.price,
-      quoteAmount: raw.quote.amount,
+      quoteAmount: Number(raw.quote.amount),
 
       blockUnixTime: raw.block_unix_time,
       volumeUsd: raw.volume_usd,
@@ -65,6 +65,8 @@ async function fetchRecentTrades() {
       owner: raw.owner,
       source: raw.source,
       poolAddress: raw.pool_id,
+
+      tradeAction: raw.base.type_swap == "from" ? "sell" : "buy",
     }),
   );
 
@@ -130,4 +132,79 @@ function getTimeWindowMs(timeWindow: TimeWindow): number {
     "24h": 24 * 60 * 60 * 1000,
   };
   return timeWindowMap[timeWindow];
+}
+
+async function fetchTraderGainersLosers(sortType: "asc" | "desc") {
+  const bdsEndpoint = bds.getEndpoint("/trader/gainers-losers");
+
+  bdsEndpoint.search = new URLSearchParams({
+    type: "1W",
+    sort_by: "PnL",
+    sort_type: sortType,
+  }).toString();
+
+  const req = new Request(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
+
+  const resp = await fetch(req);
+  const res = await getTrackedApiResult(bds_TopTradersSchema, resp);
+
+  if (!res) {
+    return null;
+  }
+
+  return res.data.items.map((trader, index) => ({
+    address: trader.address,
+    rank: index + 1,
+    pnl: trader.pnl,
+    volume: trader.volume,
+    tradeCount: trader.trade_count,
+  }));
+}
+
+export async function getTopGainers() {
+  const cached = await db
+    .select()
+    .from(topTraders)
+    .orderBy(asc(topTraders.rank));
+
+  const thresholdTime = new Date(Date.now() - TRADER_GAINERS_LOSERS_TTL_MS);
+
+  if (cached.length > 0 && cached[0].updatedAt > thresholdTime) {
+    return cached;
+  }
+
+  const items = await fetchTraderGainersLosers("desc");
+  if (items == null) return null;
+  if (items.length == 0) return [];
+
+  await db.delete(topTraders);
+  await db.insert(topTraders).values(items);
+
+  return await db.select().from(topTraders).orderBy(asc(topTraders.rank));
+}
+
+export async function getTopLosers() {
+  const existing = await db
+    .select()
+    .from(topLosers)
+    .orderBy(asc(topLosers.rank));
+
+  const thresholdTime = new Date(Date.now() - TRADER_GAINERS_LOSERS_TTL_MS);
+
+  if (existing.length > 0 && existing[0].updatedAt > thresholdTime) {
+    return existing;
+  }
+
+  const items = await fetchTraderGainersLosers("asc");
+  if (!items) {
+    return existing.length > 0 ? existing : null;
+  }
+
+  await db.delete(topLosers);
+  await db.insert(topLosers).values(items);
+
+  return await db.select().from(topLosers).orderBy(asc(topLosers.rank));
 }

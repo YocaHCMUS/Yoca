@@ -1,32 +1,285 @@
 import client from "@/api/main";
+import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
 import { CpyBtn } from "@/components/CpyBtn";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import Tble from "@/components/Tble";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
+import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
+import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { useGet } from "@/hooks/useGet";
-import { IconButton, Link, Stack, Tooltip } from "@carbon/react";
-import { ChartAverage } from "@carbon/react/icons";
-import { useMemo } from "react";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { cds } from "@/util/carbon-theme";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import { ChartAverage, Launch } from "@carbon/react/icons";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
+
+type TokenAverageTradePriceProps = {
+  walletAddress: string;
+  tokenAddress: string;
+  tokenImgUrl: string | null;
+  tokenSymbol: string | null;
+  tokenName: string | null;
+  tokenCurrentPrice: number | null;
+  avgBuyPrice: number;
+  avgSellPrice: number;
+};
+
+type TokenPriceDayRange = 7 | 30 | 90;
+
+function TokenAverageTradePrice({
+  walletAddress,
+  tokenAddress,
+  tokenImgUrl,
+  tokenSymbol,
+  tokenName,
+  tokenCurrentPrice,
+  avgBuyPrice,
+  avgSellPrice,
+}: TokenAverageTradePriceProps) {
+  const { sellColor, buyColor } = useCarbonTokens({
+    sellColor: cds.supportError,
+    buyColor: cds.supportWarning,
+  });
+  const { fmt, tr } = useLocalization();
+  const [selectedTimeRange, setSelectedTimeRange] =
+    useState<TokenPriceDayRange>(7);
+
+  const priceData = useGet(
+    client.api.tokens.markets.chart[":address"].daily,
+    200,
+    {
+      param: { address: tokenAddress },
+      query: {
+        days: selectedTimeRange,
+      },
+    },
+    {
+      select: (data) => {
+        return data.map((dataPoint) => ({
+          unixTimeMs: dataPoint.unixTimestampMs,
+          value: dataPoint.price,
+        }));
+      },
+    },
+  );
+  const recentTrades = useGet(
+    client.api.wallets[":walletAddress"].trades[":tokenAddress"],
+    200,
+    {
+      param: {
+        walletAddress,
+        tokenAddress,
+      },
+    },
+  );
+
+  const recentTradesRows = useMemo(() => {
+    if (!recentTrades.data) return [];
+
+    return recentTrades.data.map((trade, index) => {
+      const isBuy = trade.tradeAction == "buy";
+      const amount = isBuy ? trade.baseAmount : trade.quoteAmount;
+      const symbol = tokenSymbol;
+
+      return {
+        id: index.toString(),
+        time: fmt.datetime.relativeShort(trade.blockUnixTimeMs, true),
+        tradeAction: (
+          <span
+            style={{
+              color: isBuy ? cds.supportSuccess : cds.supportError,
+              textTransform: "uppercase",
+            }}
+          >
+            {isBuy ? tr("walletPage.buy") : tr("walletPage.sell")}
+          </span>
+        ),
+        amount: fmt.num.compact.unit(amount, symbol?.toUpperCase() || null),
+        value: fmt.num.compact.currency(trade.volumeUsd),
+        exchange: (
+          <div style={{ width: "4rem" }}>
+            <Txt secondary ellipsis size="sm" stretch>
+              {trade.exchangeName || "Unknown"}
+            </Txt>
+          </div>
+        ),
+        transaction: (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
+            label={tr("walletPage.openInSolscan")}
+            kind="ghost"
+            size="sm"
+          >
+            <Launch size={18} />
+          </IconButton>
+        ),
+      };
+    });
+  }, [recentTrades.data, fmt]);
+
+  return (
+    <Stack>
+      <Grid narrow className={overwriteStyles.grdNarrowCustom}>
+        <Column sm={2} md={2} lg={4}>
+          <Stack
+            orientation="horizontal"
+            gap={3}
+            style={{ justifyContent: "start", alignItems: "center" }}
+          >
+            <TknImg src={tokenImgUrl} alt={tokenSymbol} size={48} />
+            <Stack>
+              <Stack orientation="horizontal" style={{ alignItems: "center" }}>
+                <Link
+                  style={{
+                    fontFamily: "monospace",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {tokenSymbol ??
+                    fmt.text.address(tokenAddress, {
+                      maxLength: 4,
+                      position: "end",
+                    })}
+                </Link>
+                <CpyBtn size="xs" copyWhat={tokenAddress} />
+              </Stack>
+
+              <Txt size="sm" secondary ellipsis>
+                {tokenName}
+              </Txt>
+            </Stack>
+          </Stack>
+        </Column>
+
+        <Column sm={1} md={3} lg={6}>
+          <Txt size="xl" center stretch>
+            {fmt.num.compact.currency(tokenCurrentPrice)}
+          </Txt>
+        </Column>
+
+        <Column sm={1} md={3} lg={6}>
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              height: "100%",
+              justifyContent: "end",
+              alignItems: "center",
+            }}
+          >
+            <FilterSwitch
+              options={[
+                {
+                  label: "7d",
+                  value: 7,
+                },
+                {
+                  label: "30d",
+                  value: 30,
+                },
+                {
+                  label: "90d",
+                  value: 90,
+                },
+              ]}
+              value={selectedTimeRange}
+              onChange={(v) => setSelectedTimeRange(v)}
+            />
+          </div>
+        </Column>
+      </Grid>
+      <TimeSeriesLineChart
+        markLines={[
+          {
+            label: tr("walletPage.avgBuyPrice"),
+            value: avgBuyPrice,
+            color: buyColor,
+          },
+          {
+            label: tr("walletPage.avgSellPrice"),
+            value: avgSellPrice,
+            color: sellColor,
+          },
+        ]}
+        helper="average-buy-sell"
+        valueFormatter={fmt.num.compact.currency}
+        data={priceData.data}
+        loading={priceData.isLoading}
+      />
+      <Tble
+        title={tr("walletPage.recentTrades")}
+        description={tr("walletPage.recentTradesDescription")}
+        loading={recentTrades.isLoading}
+        rows={recentTradesRows}
+        headers={[
+          {
+            key: "time",
+            header: tr("walletPage.time"),
+            align: "end",
+            width: "10%",
+          },
+          {
+            key: "tradeAction",
+            header: tr("walletPage.action"),
+            align: "center",
+          },
+          {
+            key: "amount",
+            header: tr("walletPage.amount"),
+            align: "end",
+          },
+          {
+            key: "value",
+            header: `${tr("walletPage.value")} (USD)`,
+            align: "end",
+          },
+          {
+            key: "exchange",
+            header: tr("walletPage.exchange"),
+            align: "start",
+          },
+          {
+            key: "transaction",
+            header: tr("walletPage.transaction"),
+            align: "center",
+          },
+        ]}
+        boxed
+        enablePagination
+        // stickyHeader
+        pageSize={8}
+      />
+    </Stack>
+  );
+}
 
 export function TokenDetailsDemo() {
   const { address } = useParams<{
     address: string;
   }>();
 
-  if (!address) {
-    return <></>;
-  }
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    avgBuyCost: number;
+    avgSellCost: number;
+  } | null>(null);
 
-  const { tr, fmt } = useLocalization();
+  const { tr, lang, fmt } = useLocalization();
 
   const walletTokenDetails = useGet(
     client.api.wallets[":address"].tokens,
     200,
     {
-      param: { address },
+      param: { address: address || "" },
+    },
+    {
+      enabled: !!address,
     },
   );
 
@@ -44,8 +297,18 @@ export function TokenDetailsDemo() {
     { param: { addresses: tokenAddresses || "" } },
     {
       enabled: !!tokenAddresses,
-      select: (data) =>
-        Object.fromEntries(data.map((item) => [item.address, item])),
+      select: (data) => {
+        return Object.fromEntries(data.map((item) => [item.address, item]));
+      },
+    },
+  );
+
+  const tokenMarket = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
     },
   );
 
@@ -55,17 +318,27 @@ export function TokenDetailsDemo() {
     return walletTokenDetails.data.map((details) => ({
       id: details.tokenAddress,
       token: (
-        <Stack orientation="horizontal" gap={2}>
+        <Stack
+          orientation="horizontal"
+          gap={2}
+          style={{ alignItems: "center" }}
+        >
           <TknImg
-            size={32}
-            // loading={tokenMeta.isLoading}
+            size={42}
+            loading={tokenMeta.isLoading}
             src={tokenMeta.data?.[details.tokenAddress]?.imageUrl}
           />
           <Stack>
             <Stack orientation="horizontal" style={{ alignItems: "center" }}>
               <Tooltip label={details.tokenAddress} align="right-top">
                 <Link style={{ fontFamily: "monospace" }}>
-                  {fmt.text.address(details.tokenAddress)}
+                  {tokenMeta.data?.[
+                    details.tokenAddress
+                  ]?.symbol.toUpperCase() ??
+                    fmt.text.address(details.tokenAddress, {
+                      maxLength: 4,
+                      position: "end",
+                    })}
                 </Link>
               </Tooltip>
               <CpyBtn size="xs" copyWhat={details.tokenAddress} />
@@ -81,12 +354,19 @@ export function TokenDetailsDemo() {
       ),
       balance: (
         <Stack>
-          <p>{fmt.num.compact.decimal("Replace me")}</p>
+          <p>
+            {fmt.num.compact.currency(
+              tokenMarket.data?.[details.tokenAddress]?.priceUsd
+                ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
+                    details.balanceAmount
+                : null,
+            )}
+          </p>
           <p>{fmt.num.compact.decimal(details.balanceAmount)}</p>
         </Stack>
       ),
       pnl: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <TrendNum
             prefixes="plus-minus"
             value={details.unrealizedProfitUsd + details.realizedProfitUsd}
@@ -102,7 +382,7 @@ export function TokenDetailsDemo() {
         </Stack>
       ),
       realizedPnl: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <TrendNum
             prefixes="plus-minus"
             value={details.realizedProfitUsd}
@@ -123,13 +403,13 @@ export function TokenDetailsDemo() {
         />
       ),
       buy: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <p>{fmt.num.compact.currency(details.totalBoughtUsd)}</p>
           <p>{fmt.num.compact.decimal(details.totalBoughtAmount)}</p>
         </Stack>
       ),
       sell: (
-        <Stack>
+        <Stack style={{ justifyContent: "inherit" }}>
           <p>{fmt.num.compact.currency(details.totalSoldUsd)}</p>
           <p>{fmt.num.compact.decimal(details.totalSoldAmount)}</p>
         </Stack>
@@ -147,8 +427,8 @@ export function TokenDetailsDemo() {
             value={details.totalBuyCount}
             formatter={fmt.num.compact.decimal}
             prefixes="none"
-          />
-          /
+          />{" "}
+          /{" "}
           <TrendNum
             value={-details.totalSellCount}
             formatter={fmt.num.compact.decimal}
@@ -157,76 +437,104 @@ export function TokenDetailsDemo() {
         </span>
       ),
       avgTradePrice: (
-        <Stack>
-          <p>{fmt.num.currency(details.avgBuyCost)}</p>
-          <p>{fmt.num.currency(details.avgSellCost)}</p>
+        <Stack style={{ justifyContent: "inherit" }}>
+          <p>{fmt.num.compact.currency(details.avgBuyCost)}</p>
+          <p>{fmt.num.compact.currency(details.avgSellCost)}</p>
         </Stack>
       ),
       tradePriceGraph: (
-        <IconButton kind="ghost" label="Average trading price">
+        <IconButton
+          kind="ghost"
+          label={tr("walletPage.averageTradingPrice")}
+          align="bottom-right"
+          onClick={() =>
+            setSelectedToken({
+              address: details.tokenAddress,
+              symbol:
+                tokenMeta.data?.[details.tokenAddress]?.symbol.toUpperCase() ??
+                "Unknown",
+              avgBuyCost: details.avgBuyCost,
+              avgSellCost: details.avgSellCost,
+            })
+          }
+        >
           <ChartAverage />
         </IconButton>
       ),
     }));
-  }, [walletTokenDetails.data]);
+  }, [
+    walletTokenDetails.data,
+    tokenMeta.isLoading,
+    tokenMeta.data,
+    tokenMarket.data,
+    lang,
+  ]);
+
+  if (!address) {
+    return <></>;
+  }
 
   return (
-    <PageWrapper>
+    <PageWrapper
+      extraHeaderPanel={{
+        isOpen: !!selectedToken,
+        content: selectedToken && (
+          <TokenAverageTradePrice
+            walletAddress={address}
+            tokenAddress={selectedToken.address}
+            tokenImgUrl={
+              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+            }
+            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+            tokenSymbol={
+              tokenMeta.data?.[selectedToken.address]?.symbol || null
+            }
+            tokenCurrentPrice={
+              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+            }
+            avgBuyPrice={selectedToken.avgBuyCost}
+            avgSellPrice={selectedToken.avgSellCost}
+          />
+        ),
+        size: "lg",
+        onClose: () => setSelectedToken(null),
+      }}
+    >
       <Tble
         loading={walletTokenDetails.isLoading}
-        title={"Tokens Last Traded"}
-        description={"Tokens which recent trading activities"}
+        boxed
+        title={tr("walletPage.tokensLastTraded")}
+        description={tr("walletPage.tokensLastTradedDescription")}
         rows={rows}
-        size="xl"
+        height={800}
+        stickyHeader
+        enablePagination
         headers={[
           {
             key: "token",
-            header: "Token/Last traded",
+            header: `${tr("walletPage.token")}/${tr("walletPage.time")}`,
+            align: "start",
           },
-          {
-            key: "balance",
-            header: "Balance",
-          },
-          {
-            key: "pnl",
-            header: "Profit",
-          },
-          {
-            key: "realizedPnl",
-            header: "Realized Profit",
-          },
-          {
-            key: "unrealizedPnl",
-            header: "Unrealized Profit",
-          },
-          {
-            key: "buy",
-            header: "Total Bought",
-            align: "end",
-          },
-          {
-            key: "sell",
-            header: "Total Sold",
-            align: "end",
-          },
-          {
-            key: "net",
-            header: "Net Value",
-            align: "end",
-          },
+          { key: "balance", header: tr("walletPage.balance"), align: "center" },
+          { key: "pnl", header: tr("walletPage.profit") },
+          { key: "realizedPnl", header: tr("walletPage.realizedProfit") },
+          { key: "unrealizedPnl", header: tr("walletPage.unrealizedProfit") },
+          { key: "buy", header: tr("walletPage.totalBought"), align: "end" },
+          { key: "sell", header: tr("walletPage.totalSold"), align: "end" },
+          { key: "net", header: tr("walletPage.netValue"), align: "end" },
           {
             key: "tradeCount",
-            header: "Transactions",
+            header: tr("walletPage.transactions"),
             align: "end",
           },
           {
             key: "avgTradePrice",
-            header: "Avg Buy/Sell Price",
+            header: tr("walletPage.avgBuySellPrice"),
             align: "end",
           },
           {
             key: "tradePriceGraph",
-            header: "",
+            header: tr("walletPage.graph"),
             align: "center",
           },
         ]}

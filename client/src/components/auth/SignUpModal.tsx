@@ -21,6 +21,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import z from "zod";
 import { Divider } from "../partials/Divider/Divider";
+import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { WalletAuthButton } from "./WalletAuthButton";
 
@@ -96,7 +97,7 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
   };
 
   return (
-    <ComposedModal open={open} onClose={onClose}>
+    <ComposedModal className={styles.modalLayer} open={open} onClose={onClose}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signUp")} />
       <ModalBody hasScrollingContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -191,20 +192,12 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
         </Stack>
       </ModalBody>
       <ModalFooter>
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            whiteSpace: "pre-wrap",
-          }}
-        >
+        <span className={styles.bottomInfo}>
           {tr("auth.termsAndPrivacy", {
             $terms: <Link href="/terms">{tr("auth.termsOfService")} </Link>,
             $privacy: <Link href="/privacy">{tr("auth.privacyPolicy")}</Link>,
           })}
-        </div>
+        </span>
       </ModalFooter>
     </ComposedModal>
   );

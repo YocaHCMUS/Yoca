@@ -69,10 +69,17 @@ export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
+// Notes: All schema fields of Hono's "query" must be optional for the
+// type inferrence to work correct (for some reason)
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
   sortBy: z.enum(["volume", "time"]).default("volume").optional(),
+});
+
+export const walletTokenTradesSchema = z.object({
+  walletAddress: solanaBase58Schema,
+  tokenAddress: solanaBase58Schema,
 });
 
 // Helper to validate using Zod schema and return if errors happen before the routes even run
@@ -94,4 +101,41 @@ export function validate<
     }
     return parsed.data;
   });
+}
+
+// Check if result schema was like expected. Useful for debugging
+export async function getTrackedApiResult<T extends z.ZodType>(
+  schema: T,
+  resp: Response,
+) {
+  try {
+    const rawRes = await resp.json();
+    const parseRes = schema.safeParse(rawRes);
+    if (!parseRes.success) {
+      console.log("Unexpected response!");
+      console.log("Zod errors:", parseRes.error.issues);
+      console.log(`Actual response (${resp.status}):`);
+      const safeStr = (() => {
+        try {
+          return JSON.stringify(rawRes, null, 2);
+        } catch {
+          return String(rawRes);
+        }
+      })();
+      const maxLog = 1000;
+      if (safeStr.length > maxLog) {
+        console.log(
+          safeStr.slice(0, maxLog) +
+            `\n... (truncated ${safeStr.length - maxLog} chars)`,
+        );
+      } else {
+        console.log(safeStr);
+      }
+      return;
+    }
+    return parseRes.data;
+  } catch (err) {
+    console.log("Unexpected Error:", err);
+    return;
+  }
 }

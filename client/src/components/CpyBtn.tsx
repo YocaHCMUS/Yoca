@@ -18,7 +18,13 @@ export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
   };
 
   return (
-    <IconButton size={size} kind="ghost" label="Copy" onClick={handleCopy}>
+    <IconButton
+      size={size}
+      kind="ghost"
+      label={copied ? "Copied" : "Copy"}
+      align="right"
+      onClick={handleCopy}
+    >
       {copied ? <Checkmark /> : <Copy />}
     </IconButton>
   );
