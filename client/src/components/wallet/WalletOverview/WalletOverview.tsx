@@ -338,16 +338,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
                 {/* Actions: filter dropdown + utility icon buttons (default) / menu (mini) */}
                 <div className={styles.actionsSection}>
-                    {loadOnInteractionOnly && (
-                        <button
-                            type="button"
-                            className="cds--btn cds--btn--primary cds--btn--sm"
-                            style={{ width: '100%', justifyContent: 'center' }}
-                            onClick={() => setManualLoadCount((c) => c + 1)}
-                        >
-                            {tr('charts.loadData')}
-                        </button>
-                    )}
                     <div className={styles.utilityButtonsDefault}>
                         <Tooltip label={bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
                             <button
@@ -447,7 +437,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             hideLabel={true}
                             id="period-select"
                             value={selectedPeriod}
-                            onChange={(e) => setSelectedPeriod(e.target.value as WalletOverviewPeriodKey)}
+                            onChange={(e) => {
+                                setSelectedPeriod(e.target.value as WalletOverviewPeriodKey);
+                                if (loadOnInteractionOnly) {
+                                    setManualLoadCount((c) => c + 1);
+                                }
+                            }}
                         >
                             {PERIOD_OPTIONS.map((option) => (
                                 <SelectItem key={option.key} value={option.key} text={tr(option.labelKey)} />
@@ -469,20 +464,22 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                 '14px',
                             )}
                         </div>
-                        {(assetChange24hPercent != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
-                                {renderValue(
-                                    assetChange24hPercent != null,
-                                    fmt.num.percent(assetChange24hPercent),
-                                    assetChange24hPercent != null && assetChange24hPercent >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '62px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
+                        <div className={styles.subStatRow}>
+                            <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
+                            {renderValue(
+                                assetChange24hPercent != null,
+                                assetChange24hPercent != null
+                                    ? fmt.num.percent(assetChange24hPercent)
+                                    : '—',
+                                assetChange24hPercent != null && assetChange24hPercent >= 0
+                                    ? styles.subStatValuePositive
+                                    : assetChange24hPercent != null
+                                        ? styles.subStatValueNegative
+                                        : styles.statValue,
+                                '62px',
+                                '12px',
+                            )}
+                        </div>
                     </div>
                     <div className={styles.statColumn}>
                         <div className={styles.statRow}>

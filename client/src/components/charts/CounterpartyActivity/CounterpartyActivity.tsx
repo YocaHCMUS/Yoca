@@ -452,17 +452,6 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         counterpartyCountRanking.length === 0
       }
       preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
-      actions={
-        loadOnInteractionOnly ? (
-          <button
-            type="button"
-            className="cds--btn cds--btn--primary cds--btn--sm"
-            onClick={() => handleWindowRangeClick(chartWindowDays)}
-          >
-            {tr('charts.loadData')}
-          </button>
-        ) : undefined
-      }
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
         {loadOnInteractionOnly && (

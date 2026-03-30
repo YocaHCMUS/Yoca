@@ -993,17 +993,6 @@ export function BalanceChart({
             }
             onRetry={handleRetry}
             preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
-            actions={
-                loadOnInteractionOnly ? (
-                    <button
-                        type="button"
-                        className="cds--btn cds--btn--primary cds--btn--sm"
-                        onClick={() => handleWindowRangeClick(chartWindowDays)}
-                    >
-                        {tr('charts.loadData')}
-                    </button>
-                ) : undefined
-            }
         >
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
                 <div className={sharedStyles.balanceChartControlTopRow}>

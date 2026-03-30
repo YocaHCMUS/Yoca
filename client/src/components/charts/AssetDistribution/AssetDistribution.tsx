@@ -525,13 +525,6 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     >
       <button
         type="button"
-        className="cds--btn cds--btn--primary cds--btn--sm"
-        onClick={() => handleWindowRangeClick(chartWindowDays)}
-      >
-        {tr('charts.loadData')}
-      </button>
-      <button
-        type="button"
         className={`${sharedChartStyles.chartToggleButton} ${sharedChartStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedChartStyles.balanceChartWindowButtonActive : ''}`}
         onClick={() => handleWindowRangeClick(7)}
       >

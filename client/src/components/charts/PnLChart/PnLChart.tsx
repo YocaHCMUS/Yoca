@@ -323,17 +323,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                 refetch(false);
             }}
             preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
-            actions={
-                loadOnInteractionOnly ? (
-                    <button
-                        type="button"
-                        className="cds--btn cds--btn--primary cds--btn--sm"
-                        onClick={() => handleWindowRangeClick(chartWindowDays)}
-                    >
-                        {tr('charts.loadData')}
-                    </button>
-                ) : undefined
-            }
         >
             {loadOnInteractionOnly && (
                 <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
