@@ -28,6 +28,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { base64 } from "zod";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -663,55 +664,33 @@ export const walletTransactions = pgTable(
 export const walletSwap = pgTable(
   "wallet_swap",
   {
-    address: varchar("address", { length: 66 }).notNull(),
-    signature: varchar("signature", { length: 128 }).notNull(),
-    blockTimestamp: timestamp("block_timestamp").notNull(),
-    slot: bigint("slot", { mode: "number" }).notNull(),
-    fee: decimal("fee").notNull(),
-    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
-    transactionType: text("transaction_type"),
-    subCategory: text("sub_category"),
-    blockNumber: bigint("block_number", { mode: "number" }),
-    exchange: jsonb("exchange").$type<{
-      name?: string | null;
-      address?: string | null;
-      logo?: string | null;
-    } | null>(),
-    pair: jsonb("pair").$type<{
-      address?: string | null;
-      label?: string | null;
-      baseTokenAddress?: string | null;
-      quoteTokenAddress?: string | null;
-    } | null>(),
-    sold: jsonb("sold").$type<{
-      mint: string;
-      amount: number;
-      decimals: number;
-      symbol?: string | null;
-      priceUsd?: number | null;
-      valueUsd?: number | null;
-    } | null>(),
-    bought: jsonb("bought").$type<{
-      mint: string;
-      amount: number;
-      decimals: number;
-      symbol?: string | null;
-      priceUsd?: number | null;
-      valueUsd?: number | null;
-    } | null>(),
-    baseQuotePrice: decimal("base_quote_price"),
+    transactionHash: text("transaction_hash").notNull(),
+    transactionType: text("transaction_type").notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+
+    subcategory: text("subcategory"),
+
+    walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+    pairAddress: varchar("pair_address", { length: 66 }).notNull(),
+
+    tokensInvoled: text("tokens_involved").$type<string[]>().notNull(),
+
+    exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
+    exchangeName: text("exchange_name").notNull(),
+    exchangeLogo: text("exchange_logo").notNull(),
+
+    baseTokenAddress: varchar("base_token_address", { length: 66 }).notNull(),
+    baseTokenAmount: decimal("base_token_amount").notNull(),
+    baseTokenPriceUsd: decimal("base_token_price_usd").notNull(),
+
+    quoteTokenAddress: varchar("quote_token_address", { length: 66 }).notNull(),
+    quoteTokenAmount: decimal("quote_token_amount").notNull(),
+    quoteTokenPriceUsd: decimal("quote_token_price_usd").notNull(),
+
     totalValueUsd: decimal("total_value_usd"),
-    source: varchar("source", { length: 16 }),
-    // First two entries are the swap legs
-    swapBalanceChanges: jsonb("swap_balance_changes")
-      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
-      .notNull(),
-    // Remaining entries represent fee/rent/other adjustments
-    feeBalanceChanges: jsonb("fee_balance_changes")
-      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
-      .notNull(),
+    baseQuotePrice: decimal("base_quote_price_usd"),
   },
-  (t) => [primaryKey({ columns: [t.address, t.signature] })],
+  (t) => [primaryKey({ columns: [t.transactionHash] })],
 );
 
 export const walletExchangeCountsCache = pgTable(

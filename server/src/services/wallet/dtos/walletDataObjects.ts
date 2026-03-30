@@ -116,25 +116,41 @@ export interface WalletSwapPair {
 }
 
 export interface WalletSwap {
-    walletAddress: string,
-    signature: string,
-    timestamp: string,
-    slot: number,
-    fee: number,
-    feePayer: string,
-    balanceChanges: WalletSwapBalanceChange[],
-    feeChanges: WalletSwapBalanceChange[],
-    transactionType?: string | null,
-    subCategory?: string | null,
-    blockNumber?: number | null,
-    exchange?: WalletSwapExchange | null,
-    pair?: WalletSwapPair | null,
-    sold?: WalletSwapBalanceChange | null,
-    bought?: WalletSwapBalanceChange | null,
-    baseQuotePrice?: number | null,
-    totalValueUsd?: number | null,
-    source?: "helius" | "moralis" | string,
+    transactionHash: string,
+    transactionType: string,
+    blockTimestampIso: string,
 
+    subcategory: string | null,
+
+    walletAddress: string,
+    pairAddress: string,
+
+    tokensInvolved: string[],
+    exchangeAddress: string,
+    exchangeName: string,
+    exchangeLogo: string,
+
+    baseToken: {
+        address: string;
+        amount: number;
+        symbol: string | null;
+        name: string | null;
+        logoUri: string | null;
+        priceUsd: number;
+        valueUsd: number;
+    },
+    quoteToken: {
+        address: string;
+        amount: number;
+        symbol: string | null;
+        name: string | null;
+        logoUri: string | null;
+        priceUsd: number;
+        valueUsd: number;
+    },
+
+    totalValueUsd: number | null;
+    baseQuotePrice: number | null;
 }
 
 export interface WalletTransactionHelius {

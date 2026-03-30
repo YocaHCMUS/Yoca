@@ -17,13 +17,13 @@ export async function enrichWithSolanaTokenPrices(
 
     const isWalletSwap = (
         tx: WalletTransaction | WalletTransfer | WalletSwap,
-    ): tx is WalletSwap => "balanceChanges" in tx && "feeChanges" in tx;
+    ): tx is WalletSwap => "baseToken" in tx && "quoteToken" in tx;
 
     const candidateAddressesByKey = new Map<string, string>();
 
     const resolveLookupAddress = (
-        rawTokenAddress: unknown,
-        rawTokenSymbol?: unknown,
+        rawTokenAddress: string,
+        rawTokenSymbol?: string,
     ): string | undefined => {
         const normalizedSymbol = normalizePortfolioText(rawTokenSymbol);
         if (normalizedSymbol?.toLowerCase() === "sol") {
@@ -44,8 +44,8 @@ export async function enrichWithSolanaTokenPrices(
     };
 
     const getAddressKey = (
-        rawTokenAddress: unknown,
-        rawTokenSymbol?: unknown,
+        rawTokenAddress: string,
+        rawTokenSymbol?: string,
     ): string | undefined => {
         const lookupAddress = resolveLookupAddress(rawTokenAddress, rawTokenSymbol);
         return lookupAddress ? normalizePortfolioAddressKey(lookupAddress) : undefined;
@@ -54,7 +54,7 @@ export async function enrichWithSolanaTokenPrices(
     for (const tx of transactions) {
         if (isWalletTransaction(tx)) {
             const lookupAddress = resolveLookupAddress(
-                tx.primaryTokenAddress,
+                tx.primaryTokenAddress || "",
                 tx.primaryTokenSymbol,
             );
             if (lookupAddress) {
@@ -79,14 +79,12 @@ export async function enrichWithSolanaTokenPrices(
 
         if (isWalletSwap(tx)) {
             const swapChanges = [
-                ...tx.balanceChanges,
-                ...tx.feeChanges,
-                ...(tx.sold ? [tx.sold] : []),
-                ...(tx.bought ? [tx.bought] : []),
-            ];
+                tx.baseToken,
+                tx.quoteToken,
+            ]
 
             for (const change of swapChanges) {
-                const lookupAddress = resolveLookupAddress(change.mint, change.symbol);
+                const lookupAddress = resolveLookupAddress(change.address);
                 if (!lookupAddress) {
                     continue;
                 }
@@ -191,8 +189,8 @@ export async function enrichWithSolanaTokenPrices(
         for (const tx of transactions) {
             if (isWalletTransaction(tx)) {
                 const addressKey = getAddressKey(
-                    tx.primaryTokenAddress,
-                    tx.primaryTokenSymbol,
+                    tx.primaryTokenAddress || "",
+                    tx.primaryTokenSymbol || "",
                 );
 
                 if (!addressKey) {
@@ -271,12 +269,12 @@ export async function enrichWithSolanaTokenPrices(
 
             let changed = false;
 
-            const enrichSwapChange = (change: WalletSwap["sold"]) => {
+            const enrichSwapChange = (change: WalletSwap["baseToken"] | WalletSwap["quoteToken"]) => {
                 if (!change) {
                     return;
                 }
 
-                const addressKey = getAddressKey(change.mint, change.symbol);
+                const addressKey = getAddressKey(change.address);
                 if (!addressKey) {
                     return;
                 }
@@ -324,23 +322,14 @@ export async function enrichWithSolanaTokenPrices(
                 }
             };
 
-            for (const change of tx.balanceChanges) {
-                enrichSwapChange(change);
-            }
-
-            for (const change of tx.feeChanges) {
-                enrichSwapChange(change);
-            }
-
-            enrichSwapChange(tx.sold);
-            enrichSwapChange(tx.bought);
+            enrichSwapChange(tx.baseToken);
+            enrichSwapChange(tx.quoteToken);
 
             const hasTotalValueUsd = tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
             if (!hasTotalValueUsd) {
                 const fallbackCandidates = [
-                    Number(tx.sold?.valueUsd),
-                    Number(tx.bought?.valueUsd),
-                    ...tx.balanceChanges.map((change) => Number(change.valueUsd)),
+                    Number(tx.baseToken?.valueUsd),
+                    Number(tx.quoteToken?.valueUsd),
                 ];
 
                 const derivedTotalValueUsd = fallbackCandidates.find(

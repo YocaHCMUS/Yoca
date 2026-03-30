@@ -1,8 +1,8 @@
 import { saveSwapsCache, saveTransfersCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getCachedWalletTransfers, getCachedWalletTransfersChunk, getCachedWalletSwaps, getCachedWalletSwapsChunk } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type { WalletTransfersQueryOptions, WalletTransfersResponse, WalletSwapsQueryOptions, WalletSwapsResponse, WalletSwap, SwapProviderSource } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { fetchHeliusSolanaTransfers, fetchHeliusSolanaTransfersChunk, fetchMoralisSolanaSwap, fetchHeliusSolanaSwap, fetchMoralisSolanaSwapChunk, fetchHeliusSolanaSwapChunk } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
-import { DEFAULT_SWAP_PROVIDER_SOURCE, WALLET_TABLE_PAGE_SIZE } from "@sv/services/wallet/wallet.constants.js";
+import { fetchHeliusSolanaTransfers, fetchHeliusSolanaTransfersChunk, fetchMoralisSolanaSwap, fetchMoralisSolanaSwapChunk } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { WALLET_TABLE_PAGE_SIZE } from "@sv/services/wallet/wallet.constants.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
 import { normalizeCursorValue } from "@sv/services/wallet/walletTime.utils.js";
 import { normalizeShortHistoryPeriod, toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
@@ -132,8 +132,6 @@ export async function getWalletSwaps(
     address: string,
     options?: WalletSwapsQueryOptions,
 ): Promise<WalletSwapsResponse> {
-    const providerSource = resolveSwapProviderSource();
-
     const shortPeriod = normalizeShortHistoryPeriod(options?.from);
     if (shortPeriod) {
         const limit = Math.min(options?.limit ?? 100, 500);
@@ -153,29 +151,18 @@ export async function getWalletSwaps(
         }
 
         try {
-            let swaps: WalletSwap[];
-            if (providerSource === "moralis") {
-                try {
-                    swaps = await fetchMoralisSolanaSwap(address, shortPeriod, {
-                        limit,
-                        cursor: options?.cursor ?? options?.before,
-                    });
+            let swaps: WalletSwap[] = [];
+            try {
+                swaps = await fetchMoralisSolanaSwap(address, shortPeriod, {
+                    limit,
+                    cursor: options?.cursor ?? options?.before,
+                });
 
-                    console.log(
-                        `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Moralis for ${address}`,
-                    );
-                } catch (moralisErr) {
-                    console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
-                    swaps = await fetchHeliusSolanaSwap(address, shortPeriod);
-                    console.log(
-                        `[getWalletSwaps] Moralis failed; fallback fetched ${swaps.length} swaps from Helius for ${address}`,
-                    );
-                }
-            } else {
-                swaps = await fetchHeliusSolanaSwap(address, shortPeriod);
                 console.log(
-                    `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Helius for ${address}`,
+                    `[getWalletSwaps] Successfully fetched ${swaps.length} swaps from Moralis for ${address}`,
                 );
+            } catch (moralisErr) {
+                console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
             }
 
             await saveSwapsCache(address, swaps);
@@ -225,37 +212,38 @@ export async function getWalletSwaps(
     }
 
     try {
-        let chunk: { items: WalletSwap[]; nextCursor: string | null; hasMore: boolean };
+        let chunk: { items: WalletSwap[]; nextCursor: string | null; hasMore: boolean } = {
+            items: [],
+            nextCursor: null,
+            hasMore: false,
+        };
 
-        if (providerSource === "moralis") {
-            try {
-                chunk = await fetchMoralisSolanaSwapChunk(address, {
-                    limit: WALLET_TABLE_PAGE_SIZE,
-                    cursor,
-                });
-
-                console.log(
-                    `[getWalletSwaps] Successfully fetched ${chunk.items.length} swaps from Moralis chunk for ${address}`,
-                );
-            } catch (moralisErr) {
-                console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
-
-                chunk = await fetchHeliusSolanaSwapChunk(address, {
-                    limit: WALLET_TABLE_PAGE_SIZE,
-                    before: cursor,
-                });
-                console.log(
-                    `[getWalletSwaps] Moralis failed; fallback fetched ${chunk.items.length} swaps from Helius chunk for ${address}`,
-                );
-            }
-        } else {
-            chunk = await fetchHeliusSolanaSwapChunk(address, {
+        try {
+            chunk = await fetchMoralisSolanaSwapChunk(address, {
                 limit: WALLET_TABLE_PAGE_SIZE,
-                before: cursor,
+                cursor,
             });
+
             console.log(
-                `[getWalletSwaps] Successfully fetched ${chunk.items.length} swaps from Helius chunk for ${address}`,
+                `[getWalletSwaps] Successfully fetched ${chunk.items.length} swaps from Moralis chunk for ${address}`,
             );
+        } catch (moralisErr) {
+            console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
+            console.log(
+                `[getWalletSwaps] Moralis failed; fallback fetched ${chunk.items.length} swaps from Helius chunk for ${address}`,
+            );
+        }
+
+        if (!chunk.items.length) {
+            return {
+                address,
+                swaps: [],
+                pageInfo: toWalletPageInfo({
+                    hasMore: false,
+                    nextCursor: null,
+                    source: "provider",
+                }),
+            }
         }
 
         await saveSwapsCache(address, chunk.items);
@@ -282,12 +270,4 @@ export async function getWalletSwaps(
             }),
         };
     }
-}
-
-function resolveSwapProviderSource(): SwapProviderSource {
-    const raw = String(process.env.SWAP_PROVIDER_SOURCE ?? DEFAULT_SWAP_PROVIDER_SOURCE)
-        .trim()
-        .toLowerCase();
-
-    return raw === "moralis" ? "moralis" : "helius";
 }

@@ -611,31 +611,6 @@ export async function fetchHeliusSolanaTransfersChunk(
   };
 }
 
-export async function fetchHeliusSolanaSwapChunk(
-  address: string,
-  options?: HeliusSwapChunkOptions,
-): Promise<WalletProviderChunk<WalletSwap>> {
-  const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
-
-  const json = await heliusGetJson<any>(
-    `/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`,
-    {
-      limit,
-      ...(options?.before ? { before: options.before } : {}),
-    },
-  );
-  const rows: any[] = Array.isArray(json?.data) ? json.data : [];
-  const items = rows
-    .map((entry) => mapHeliusSwapEntry(entry, address))
-    .filter((entry): entry is WalletSwap => entry != null);
-
-  return {
-    items,
-    nextCursor: getNextCursor(json?.pagination),
-    hasMore: Boolean(json?.pagination?.hasMore),
-  };
-}
-
 export async function fetchMoralisSolanaSwapChunk(
   address: string,
   options?: MoralisSwapChunkOptions,
@@ -757,73 +732,6 @@ export async function fetchHeliusSolanaTransfers(
   return paged.items;
 }
 
-export async function fetchHeliusSolanaSwap(
-  address: string,
-  from: HeliusHistoryFrom = "7d",
-): Promise<WalletSwap[]> {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const fromSec =
-    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
-
-  // Helius history endpoint returns at most 100 items per page.
-  const HELIUS_PAGE_LIMIT = 100;
-
-  const paged = await runCursorPagination<WalletSwap>({
-    initialCursor: null,
-    maxPages: 500,
-    maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor, page) => {
-      let json: any = null;
-      try {
-        json = await heliusGetJson<any>(
-          `/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`,
-          {
-            limit: HELIUS_PAGE_LIMIT,
-            ...(cursor ? { before: cursor } : {}),
-          },
-        );
-      } catch (err) {
-        console.error("Helius wallet transaction request failed", err);
-        throw err;
-      }
-
-      const data: any[] = Array.isArray(json?.data) ? json.data : [];
-      const pageItems: WalletSwap[] = [];
-      let reachedRangeCutoff = false;
-
-      for (const entry of data) {
-        const mapped = mapHeliusSwapEntry(entry, address);
-        if (!mapped) {
-          continue;
-        }
-
-        const tsSec = Math.floor(Date.parse(mapped.timestamp) / 1000);
-        if (tsSec < fromSec) {
-          reachedRangeCutoff = true;
-          break;
-        }
-
-        pageItems.push(mapped);
-      }
-
-      console.log(`[fetchHeliusSolanaSwap] Page ${page}: Collected ${pageItems.length} swaps on page`);
-
-      const nextCursor = getNextCursor(json?.pagination);
-      const hasMore = reachedRangeCutoff
-        ? false
-        : Boolean(json?.pagination?.hasMore && nextCursor);
-
-      return {
-        pageItems,
-        nextCursor,
-        hasMore,
-      };
-    },
-  });
-
-  return paged.items;
-}
-
 type MoralisSwapFetchOptions = {
   limit?: number; // Max total swaps to fetch across all pages (will be capped by API limits)
   cursor?: string;
@@ -889,7 +797,7 @@ export async function fetchMoralisSolanaSwap(
         .map((row) => mapMoralisSwapEntry(row, address))
         .filter((row): row is WalletSwap => row != null)
         .filter((row) => {
-          const tsSec = Math.floor(Date.parse(row.timestamp) / 1000);
+          const tsSec = Math.floor(Date.parse(row.blockTimestampIso) / 1000);
           return Number.isFinite(tsSec) && tsSec >= fromSec && tsSec <= nowSec;
         });
 
