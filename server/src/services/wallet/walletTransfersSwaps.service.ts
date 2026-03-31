@@ -246,6 +246,8 @@ export async function getWalletSwaps(
             }
         }
 
+        chunk.items.filter(swap => swap != null);
+
         await saveSwapsCache(address, chunk.items);
         await enrichWithSolanaTokenPrices(chunk.items);
 

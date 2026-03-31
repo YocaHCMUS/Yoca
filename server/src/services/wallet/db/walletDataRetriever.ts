@@ -378,26 +378,26 @@ export async function getCachedWalletSwaps(
 		exchangeAddress: r.exchangeAddress,
 		exchangeName: r.exchangeName,
 		exchangeLogo: r.exchangeLogo,
-		baseToken: {
-			address: r.baseTokenAddress,
-			amount: r.baseTokenAmount,
+		bought: {
+			address: r.boughtTokenAddress,
+			amount: r.boughtTokenAmount,
 			symbol: null,
 			name: null,
 			logoUri: null,
-			priceUsd: r.baseTokenPriceUsd,
-			valueUsd: r.baseTokenAmount != null && r.baseTokenPriceUsd != null
-				? Number(r.baseTokenAmount) * Number(r.baseTokenPriceUsd)
+			priceUsd: r.boughtTokenPriceUsd,
+			valueUsd: r.boughtTokenAmount != null && r.boughtTokenPriceUsd != null
+				? Number(r.boughtTokenAmount) * Number(r.boughtTokenPriceUsd)
 				: 0,
 		},
-		quoteToken: {
-			address: r.quoteTokenAddress,
-			amount: r.quoteTokenAmount,
+		sold: {
+			address: r.soldTokenAddress,
+			amount: r.soldTokenAmount,
 			symbol: null,
 			name: null,
 			logoUri: null,
-			priceUsd: r.quoteTokenPriceUsd,
-			valueUsd: r.quoteTokenAmount != null && r.quoteTokenPriceUsd != null
-				? Number(r.quoteTokenAmount) * Number(r.quoteTokenPriceUsd)
+			priceUsd: r.soldTokenPriceUsd,
+			valueUsd: r.soldTokenAmount != null && r.soldTokenPriceUsd != null
+				? Number(r.soldTokenAmount) * Number(r.soldTokenPriceUsd)
 				: 0,
 		},
 		totalValueUsd: r.totalValueUsd,
@@ -610,31 +610,30 @@ export async function getCachedWalletSwapsChunk(
 		exchangeAddress: r.exchangeAddress,
 		exchangeName: r.exchangeName,
 		exchangeLogo: r.exchangeLogo,
-		baseToken: {
-			address: r.baseTokenAddress,
-			amount: r.baseTokenAmount,
+		bought: {
+			address: r.boughtTokenAddress,
+			amount: r.boughtTokenAmount,
 			symbol: null,
 			name: null,
 			logoUri: null,
-			priceUsd: r.baseTokenPriceUsd,
-			valueUsd: r.baseTokenAmount != null && r.baseTokenPriceUsd != null
-				? Number(r.baseTokenAmount) * Number(r.baseTokenPriceUsd)
+			priceUsd: r.boughtTokenPriceUsd,
+			valueUsd: r.boughtTokenAmount != null && r.boughtTokenPriceUsd != null
+				? Number(r.boughtTokenAmount) * Number(r.boughtTokenPriceUsd)
 				: 0,
 		},
-		quoteToken: {
-			address: r.quoteTokenAddress,
-			amount: r.quoteTokenAmount,
+		sold: {
+			address: r.soldTokenAddress,
+			amount: r.soldTokenAmount,
 			symbol: null,
 			name: null,
 			logoUri: null,
-			priceUsd: r.quoteTokenPriceUsd,
-			valueUsd: r.quoteTokenAmount != null && r.quoteTokenPriceUsd != null
-				? Number(r.quoteTokenAmount) * Number(r.quoteTokenPriceUsd)
+			priceUsd: r.soldTokenPriceUsd,
+			valueUsd: r.soldTokenAmount != null && r.soldTokenPriceUsd != null
+				? Number(r.soldTokenAmount) * Number(r.soldTokenPriceUsd)
 				: 0,
 		},
 		totalValueUsd: r.totalValueUsd,
 		baseQuotePrice: r.baseQuotePrice,
-
 	}));
 	const hasMore = rows.length > limit;
 	const nextCursor =

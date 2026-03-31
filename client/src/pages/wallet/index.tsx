@@ -4,7 +4,6 @@ import { ExchangeComparison } from "@/components/charts/ExchangeComparison/Excha
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
-  createSwapTokenCellRenderer,
   renderBase,
   renderCode,
   renderCurrency,
@@ -12,6 +11,7 @@ import {
   renderHash,
   renderPositiveNegative,
   renderReducedNumber,
+  renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import {
   SwapDetailModal,
@@ -35,6 +35,7 @@ import {
   type WalletPortfolioItem,
   type WalletSwap,
   type WalletTransfer,
+  type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -154,7 +155,7 @@ export default function WalletPage() {
   );
 
   const swapBySignature = useMemo(
-    () => new Map(loadedSwaps.map((swap) => [swap.signature, swap])),
+    () => new Map(loadedSwaps.map((swap) => [swap.transactionHash, swap])),
     [loadedSwaps],
   );
 
@@ -209,15 +210,6 @@ export default function WalletPage() {
     [portfolio],
   );
 
-  const getSoldBoughtChanges = (swap: WalletSwap) => {
-    const soldFromBalance = swap.balanceChanges.find((change) => change.amount < 0);
-    const boughtFromBalance = swap.balanceChanges.find((change) => change.amount > 0);
-
-    return {
-      sold: swap.sold ?? soldFromBalance ?? null,
-      bought: swap.bought ?? boughtFromBalance ?? null,
-    };
-  };
 
   const getSwapTokenLabel = (change: WalletSwap["sold"]): string => {
     if (!change) {
@@ -229,7 +221,7 @@ export default function WalletPage() {
       return symbolCandidate.toUpperCase();
     }
 
-    const mint = change.mint || "";
+    const mint = change.address || "";
     if (mint.length > 8) {
       return `${mint.slice(0, 4)}...${mint.slice(-4)}`;
     }
@@ -237,7 +229,7 @@ export default function WalletPage() {
     return mint || tr('walletPage.unknown').toUpperCase();
   };
 
-  const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
+  const formatSwapTokenDisplay = (change: WalletSwap["sold"] | WalletSwap["bought"]): string => {
     if (!change) return "—";
 
     const amount = Math.abs(change.amount).toFixed(4);
@@ -245,35 +237,25 @@ export default function WalletPage() {
   };
 
   const formatSwapPair = (swap: WalletSwap): string => {
-    const pairLabel = swap.pair?.label?.trim();
-    if (pairLabel) {
-      return pairLabel;
-    }
-
-    const pairAddress = swap.pair?.address ?? null;
-    if (pairAddress && pairAddress.length > 8) {
-      return `${pairAddress.slice(0, 4)}...${pairAddress.slice(-4)}`;
-    }
-
-    return pairAddress ?? "—";
+    const tokensInvolved = swap.tokensInvolved;
+    return tokensInvolved.replace(/,/g, " → ");
   };
 
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
-        const { sold, bought } = getSoldBoughtChanges(swap);
         return [
-          swap.timestamp,
-          swap.exchange?.name ?? "—",
+          swap.blockTimestampIso,
+          swap.exchangeName ?? "—",
           formatSwapPair(swap),
-          formatSwapTokenDisplay(sold),
-          formatSwapTokenDisplay(bought),
+          swap.sold,
+          swap.bought,
           swap.totalValueUsd ?? "—",
-          swap.fee,
-          swap.signature,
+          swap.baseQuotePrice ?? "—",
+          swap.transactionHash,
         ];
       }),
-    [loadedSwaps, formatSwapPair, formatSwapTokenDisplay, getSoldBoughtChanges],
+    [loadedSwaps, formatSwapPair, formatSwapTokenDisplay],
   );
 
   const transferData = useMemo(
@@ -385,25 +367,27 @@ export default function WalletPage() {
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
   ];
 
-  const renderSwapTokenCell = (side: "sold" | "bought") =>
-    createSwapTokenCellRenderer({
-      side,
-      swapBySignature,
-      getSoldBoughtChanges,
-      getSwapTokenLabel,
-      classNames: {
-        container: styles.swapTokenCell,
-        amount: styles.swapTokenAmount,
-      },
-      imageSize: 18,
-    });
+  const renderSwapTokenInfoClassnames = {
+    container: styles.swapTokenCell,
+    amount: styles.swapTokenAmount,
+  }
 
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    renderSwapTokenCell("sold"),
-    renderSwapTokenCell("bought"),
+    (value: any, row?: unknown[] | null) => {
+      if (!value || typeof value !== 'object') return renderCode(String(value));
+      const token = value as WalletSwapTokenInfo;
+      const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
+      return renderer(String(token.symbol ?? ''), row ?? null);
+    },
+    (value: any, row?: unknown[] | null) => {
+      if (!value || typeof value !== 'object') return renderCode(String(value));
+      const token = value as WalletSwapTokenInfo;
+      const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
+      return renderer(String(token.symbol ?? ''), row ?? null);
+    },
     (value: string) =>
       value === "—"
         ? renderBase(value)

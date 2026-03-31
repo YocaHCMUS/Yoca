@@ -79,8 +79,8 @@ export async function enrichWithSolanaTokenPrices(
 
         if (isWalletSwap(tx)) {
             const swapChanges = [
-                tx.baseToken,
-                tx.quoteToken,
+                tx.bought,
+                tx.sold,
             ]
 
             for (const change of swapChanges) {
@@ -269,7 +269,7 @@ export async function enrichWithSolanaTokenPrices(
 
             let changed = false;
 
-            const enrichSwapChange = (change: WalletSwap["baseToken"] | WalletSwap["quoteToken"]) => {
+            const enrichSwapChange = (change: WalletSwap["bought"] | WalletSwap["sold"]) => {
                 if (!change) {
                     return;
                 }
@@ -322,14 +322,14 @@ export async function enrichWithSolanaTokenPrices(
                 }
             };
 
-            enrichSwapChange(tx.baseToken);
-            enrichSwapChange(tx.quoteToken);
+            enrichSwapChange(tx.bought);
+            enrichSwapChange(tx.sold);
 
             const hasTotalValueUsd = tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
             if (!hasTotalValueUsd) {
                 const fallbackCandidates = [
-                    Number(tx.baseToken?.valueUsd),
-                    Number(tx.quoteToken?.valueUsd),
+                    Number(tx.bought?.valueUsd),
+                    Number(tx.sold?.valueUsd),
                 ];
 
                 const derivedTotalValueUsd = fallbackCandidates.find(

@@ -673,19 +673,19 @@ export const walletSwap = pgTable(
     walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
     pairAddress: varchar("pair_address", { length: 66 }).notNull(),
 
-    tokensInvoled: text("tokens_involved").$type<string[]>().notNull(),
+    tokensInvoled: text("tokens_involved").notNull(),
 
     exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
     exchangeName: text("exchange_name").notNull(),
     exchangeLogo: text("exchange_logo").notNull(),
 
-    baseTokenAddress: varchar("base_token_address", { length: 66 }).notNull(),
-    baseTokenAmount: decimal("base_token_amount").notNull(),
-    baseTokenPriceUsd: decimal("base_token_price_usd").notNull(),
+    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAmount: decimal("bought_token_amount").notNull(),
+    boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
 
-    quoteTokenAddress: varchar("quote_token_address", { length: 66 }).notNull(),
-    quoteTokenAmount: decimal("quote_token_amount").notNull(),
-    quoteTokenPriceUsd: decimal("quote_token_price_usd").notNull(),
+    soldTokenAddress: varchar("sold_token_address", { length: 66 }).notNull(),
+    soldTokenAmount: decimal("sold_token_amount").notNull(),
+    soldTokenPriceUsd: decimal("sold_token_price_usd").notNull(),
 
     totalValueUsd: decimal("total_value_usd"),
     baseQuotePrice: decimal("base_quote_price_usd"),

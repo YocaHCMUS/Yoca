@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
 import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
+import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
 
 /**
  * Renders a value as monospace code with secondary color
@@ -156,58 +157,26 @@ export const renderHash = (value: string, prefixLen: number = 6, suffixLen: numb
   );
 };
 
-type SwapTokenCellSide = 'sold' | 'bought';
-
-type SwapTokenChangeLike = {
-  amount: number;
-  name?: string | null;
-  logoUri?: string | null;
-};
-
-type CreateSwapTokenCellRendererOptions<TSwap, TTokenChange extends SwapTokenChangeLike> = {
-  side: SwapTokenCellSide;
-  swapBySignature: Map<string, TSwap>;
-  getSoldBoughtChanges: (swap: TSwap) => { sold: TTokenChange | null; bought: TTokenChange | null };
-  getSwapTokenLabel: (change: TTokenChange) => string;
+export const renderTokenCell = (
+  token: WalletSwapTokenInfo,
   classNames?: {
     container?: string;
     amount?: string;
-  };
-  imageSize?: number;
-};
-
-export const createSwapTokenCellRenderer = <TSwap, TTokenChange extends SwapTokenChangeLike>({
-  side,
-  swapBySignature,
-  getSoldBoughtChanges,
-  getSwapTokenLabel,
-  classNames,
-  imageSize = 18,
-}: CreateSwapTokenCellRendererOptions<TSwap, TTokenChange>) => {
+  },
+  imageSize?: number,
+) => {
   return (value: string, row?: unknown[] | null) => {
     if (!Array.isArray(row)) {
       return renderCode(value);
     }
 
-    const signature = String(row[7] ?? '');
-    const swap = swapBySignature.get(signature);
-    if (!swap) {
-      return renderCode(value);
-    }
-
-    const { sold, bought } = getSoldBoughtChanges(swap);
-    const tokenChange = side === 'sold' ? sold : bought;
-    if (!tokenChange) {
-      return renderBase('—');
-    }
-
     return (
       <span className={classNames?.container}>
-        <span className={classNames?.amount}>{Math.abs(tokenChange.amount).toFixed(4)}</span>
+        <span className={classNames?.amount}>{Math.abs(token.amount).toFixed(4)}</span>
         <TokenIdentityCell
-          symbol={getSwapTokenLabel(tokenChange)}
-          fullName={tokenChange.name ?? undefined}
-          imageUrl={tokenChange.logoUri ?? undefined}
+          symbol={token.symbol || "Unknown"}
+          fullName={token.name ?? undefined}
+          imageUrl={token.logoUri ?? undefined}
           imageSize={imageSize}
           showInitialsFallback
           tooltipAlign="right"

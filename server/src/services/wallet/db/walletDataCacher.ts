@@ -13,6 +13,7 @@ export async function saveSwapsCache(
       // Deduplicate by transaction hash to avoid multiple rows with the same
       // (address, signature) primary key when providers return several
       // legs for a single on-chain transaction.
+
       const uniqueBySignature = new Map<string, WalletSwap>();
       for (const tx of transactions) {
         if (!uniqueBySignature.has(tx.transactionHash)) {
@@ -37,13 +38,13 @@ export async function saveSwapsCache(
         exchangeName: tx.exchangeName,
         exchangeLogo: tx.exchangeLogo,
 
-        baseTokenAddress: tx.baseToken.address,
-        baseTokenAmount: tx.baseToken.amount,
-        baseTokenPriceUsd: tx.baseToken.priceUsd,
+        boughtTokenAddress: tx.bought.address,
+        boughtTokenAmount: tx.bought.amount,
+        boughtTokenPriceUsd: tx.bought.priceUsd,
 
-        quoteTokenAddress: tx.quoteToken.address,
-        quoteTokenAmount: tx.quoteToken.amount,
-        quoteTokenPriceUsd: tx.quoteToken.priceUsd,
+        soldTokenAddress: tx.sold.address,
+        soldTokenAmount: tx.sold.amount,
+        soldTokenPriceUsd: tx.sold.priceUsd,
 
         totalValueUsd: tx.totalValueUsd,
         baseQuotePrice: tx.baseQuotePrice,

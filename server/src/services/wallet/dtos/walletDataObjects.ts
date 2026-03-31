@@ -91,7 +91,7 @@ export interface WalletTransaction {
     totalUsd?: number;
 }
 
-export interface WalletSwapBalanceChange {
+export interface WalletTransactionBalanceChange {
     mint: string,
     amount: number,
     decimals: number,
@@ -102,18 +102,18 @@ export interface WalletSwapBalanceChange {
     valueUsd?: number | null,
 }
 
-export interface WalletSwapExchange {
-    name?: string | null,
-    address?: string | null,
-    logo?: string | null,
-}
+// export interface WalletSwapExchange {
+//     name?: string | null,
+//     address?: string | null,
+//     logo?: string | null,
+// }
 
-export interface WalletSwapPair {
-    address?: string | null,
-    label?: string | null,
-    baseTokenAddress?: string | null,
-    quoteTokenAddress?: string | null,
-}
+// export interface WalletSwapPair {
+//     address?: string | null,
+//     label?: string | null,
+//     baseTokenAddress?: string | null,
+//     quoteTokenAddress?: string | null,
+// }
 
 export interface WalletSwap {
     transactionHash: string,
@@ -125,32 +125,26 @@ export interface WalletSwap {
     walletAddress: string,
     pairAddress: string,
 
-    tokensInvolved: string[],
+    tokensInvolved: string,
     exchangeAddress: string,
     exchangeName: string,
     exchangeLogo: string,
 
-    baseToken: {
-        address: string;
-        amount: number;
-        symbol: string | null;
-        name: string | null;
-        logoUri: string | null;
-        priceUsd: number;
-        valueUsd: number;
-    },
-    quoteToken: {
-        address: string;
-        amount: number;
-        symbol: string | null;
-        name: string | null;
-        logoUri: string | null;
-        priceUsd: number;
-        valueUsd: number;
-    },
+    bought: WalletSwapTokenChange,
+    sold: WalletSwapTokenChange,
 
     totalValueUsd: number | null;
     baseQuotePrice: number | null;
+}
+
+export interface WalletSwapTokenChange {
+    address: string;
+    amount: number;
+    symbol: string | null;
+    name: string | null;
+    logoUri: string | null;
+    priceUsd: number;
+    valueUsd: number;
 }
 
 export interface WalletTransactionHelius {
@@ -160,7 +154,7 @@ export interface WalletTransactionHelius {
     slot: number,
     fee: number,
     feePayer: string,
-    balanceChanges: WalletSwapBalanceChange[],
+    balanceChanges: WalletTransactionBalanceChange[],
 }
 
 export interface WalletTransfer {

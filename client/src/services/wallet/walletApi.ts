@@ -8,6 +8,7 @@
  */
 
 import client from '@/api/main';
+import type { Wallet } from '@solana/wallet-adapter-react';
 
 /**
  * Utility type to extract the inferred response type from a fetcher function
@@ -55,24 +56,46 @@ export interface WalletSwapPair {
 }
 
 export interface WalletSwap {
-  walletAddress: string;
-  signature: string;
-  timestamp: string;
-  slot: number;
-  fee: number;
-  feePayer: string;
-  balanceChanges: WalletSwapBalanceChange[];
-  feeChanges: WalletSwapBalanceChange[];
-  transactionType?: string | null;
-  subCategory?: string | null;
-  blockNumber?: number | null;
-  exchange?: WalletSwapExchange | null;
-  pair?: WalletSwapPair | null;
-  sold?: WalletSwapBalanceChange | null;
-  bought?: WalletSwapBalanceChange | null;
-  baseQuotePrice?: number | null;
-  totalValueUsd?: number | null;
-  source?: "helius" | "moralis" | string;
+  transactionHash: string,
+  transactionType: string,
+  blockTimestampIso: string,
+
+  subcategory: string | null,
+
+  walletAddress: string,
+  pairAddress: string,
+
+  tokensInvolved: string,
+  exchangeAddress: string,
+  exchangeName: string,
+  exchangeLogo: string,
+
+  bought: WalletSwapTokenChange,
+  sold: WalletSwapTokenChange,
+
+  totalValueUsd: number | null;
+  baseQuotePrice: number | null;
+}
+
+export interface WalletSwapTokenChange {
+  address: string;
+  amount: number;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  priceUsd: number;
+  valueUsd: number;
+}
+
+
+export interface WalletSwapTokenInfo {
+  address: string;
+  amount: number;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  priceUsd: number;
+  valueUsd: number;
 }
 
 export interface WalletPageInfo {
@@ -82,13 +105,18 @@ export interface WalletPageInfo {
   source: "cache" | "provider" | "mixed";
 }
 
+// export interface WalletSwapsResponse {
+//   address: string;
+//   chain?: string;
+//   swaps: WalletSwap[];
+//   pageInfo: WalletPageInfo;
+// }
+
 export interface WalletSwapsResponse {
   address: string;
-  chain?: string;
   swaps: WalletSwap[];
   pageInfo: WalletPageInfo;
 }
-
 export interface WalletTransfer {
   from: string;
   to: string;
