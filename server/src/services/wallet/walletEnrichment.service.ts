@@ -17,7 +17,8 @@ export async function enrichWithSolanaTokenPrices(
 
     const isWalletSwap = (
         tx: WalletTransaction | WalletTransfer | WalletSwap,
-    ): tx is WalletSwap => "baseToken" in tx && "quoteToken" in tx;
+    ): tx is WalletSwap =>
+        ("bought" in tx && "sold" in tx);
 
     const candidateAddressesByKey = new Map<string, string>();
 
@@ -79,11 +80,14 @@ export async function enrichWithSolanaTokenPrices(
 
         if (isWalletSwap(tx)) {
             const swapChanges = [
-                tx.bought,
-                tx.sold,
-            ]
+                // Prefer `bought`/`sold` shape, fall back to legacy `baseToken`/`quoteToken`.
+                (tx as any).bought,
+                (tx as any).sold,
+            ];
 
             for (const change of swapChanges) {
+                if (!change) continue;
+
                 const lookupAddress = resolveLookupAddress(change.address);
                 if (!lookupAddress) {
                     continue;
