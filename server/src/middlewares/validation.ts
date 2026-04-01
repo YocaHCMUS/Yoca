@@ -4,12 +4,19 @@ import type { ValidationTargets } from "hono";
 import { validator } from "hono/validator";
 import z from "zod";
 
-export const solanaBase58Schema = z
+export const solanaAddressSchema = z
   .string()
   .trim()
   .min(32)
   .max(44)
-  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
+  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/, "Invalid Solana address format");
+
+export const solanaTxHashSchema = z
+  .string()
+  .trim()
+  .min(87)
+  .max(88)
+  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/, "Invalid Solana transaction hash format");
 
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
@@ -21,14 +28,14 @@ export const daysQuerySchema = z.object({
 });
 
 export const addressSchema = z.object({
-  address: solanaBase58Schema,
+  address: solanaAddressSchema,
 });
 
 export const addressListSchema = z.object({
   addresses: z
     .string()
     .transform((v) => v.split(","))
-    .pipe(solanaBase58Schema.array()),
+    .pipe(solanaAddressSchema.array()),
 });
 
 export const tokenIdSchema = z.object({
@@ -51,11 +58,11 @@ export const googleTokenSchema = z.object({
 });
 
 export const solanaNounceRequestSchema = z.object({
-  pubKey: solanaBase58Schema,
+  pubKey: solanaAddressSchema,
 });
 
 export const solanaVerificationRequestSchema = z.object({
-  pubKey: solanaBase58Schema,
+  pubKey: solanaAddressSchema,
   signature: z.base64(),
 });
 
@@ -69,6 +76,13 @@ export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
+export const transactionListSchema = z.object({
+  transactions: z
+    .string()
+    .transform((v) => v.split(","))
+    .pipe(solanaTxHashSchema.array()),
+});
+
 // Notes: All schema fields of Hono's "query" must be optional for the
 // type inferrence to work correct (for some reason)
 export const recentTradesQuerySchema = z.object({
@@ -78,8 +92,8 @@ export const recentTradesQuerySchema = z.object({
 });
 
 export const walletTokenTradesSchema = z.object({
-  walletAddress: solanaBase58Schema,
-  tokenAddress: solanaBase58Schema,
+  walletAddress: solanaAddressSchema,
+  tokenAddress: solanaAddressSchema,
 });
 
 // Helper to validate using Zod schema and return if errors happen before the routes even run

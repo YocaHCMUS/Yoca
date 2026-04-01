@@ -1,19 +1,20 @@
-import { paginationSchema, validate } from "@sv/middlewares/validation.js";
-import * as transferService from "@sv/services/transfers.deprecated.js";
+import { transactionListSchema, validate } from "@sv/middlewares/validation";
+import * as transactionService from "@sv/services/transactions.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
 const app = new Hono().get(
-  "/",
-  validate("query", paginationSchema),
+  "/:transactions",
+  validate("param", transactionListSchema),
   async (c) => {
     try {
-      const { limit, offset } = c.req.valid("query");
+      const { transactions } = c.req.valid("param");
 
-      const transfers = await transferService.getLatestTransfers(limit, offset);
+      const transactionDetails =
+        await transactionService.getTransactionDetails(transactions);
 
-      if (transfers) {
-        return c.json(transfers, statusCode.Ok);
+      if (transactionDetails) {
+        return c.json(transactionDetails, statusCode.Ok);
       } else {
         return c.json(
           messageText.FailedToFetchRequestData,

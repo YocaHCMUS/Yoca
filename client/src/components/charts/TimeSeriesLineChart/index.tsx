@@ -45,8 +45,6 @@ export function TimeSeriesLineChart({
 }: TimeSeriesChartProps) {
   const { fmt, tr } = useLocalization();
 
-  console.log(markLines);
-
   const tokens = useCarbonTokens({
     textPrimary: cds.textPrimary,
     textSecondary: cds.textSecondary,
