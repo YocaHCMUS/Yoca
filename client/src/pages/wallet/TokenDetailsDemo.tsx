@@ -31,7 +31,7 @@ type TokenAverageTradePriceProps = {
 
 type TokenPriceDayRange = 7 | 30 | 90;
 
-function TokenAverageTradePrice({
+export function TokenAverageTradePrice({
   walletAddress,
   tokenAddress,
   tokenImgUrl,
@@ -258,17 +258,28 @@ function TokenAverageTradePrice({
   );
 }
 
-export function TokenDetailsDemo() {
+export function TokenDetailsDemo({
+  setSelectedToken,
+}: {
+  setSelectedToken: React.Dispatch<
+    React.SetStateAction<{
+      address: string;
+      symbol: string;
+      avgBuyCost: number;
+      avgSellCost: number;
+    } | null>
+  >;
+}) {
   const { address } = useParams<{
     address: string;
   }>();
 
-  const [selectedToken, setSelectedToken] = useState<{
-    address: string;
-    symbol: string;
-    avgBuyCost: number;
-    avgSellCost: number;
-  } | null>(null);
+  // const [selectedToken, setSelectedToken] = useState<{
+  //   address: string;
+  //   symbol: string;
+  //   avgBuyCost: number;
+  //   avgSellCost: number;
+  // } | null>(null);
 
   const { tr, lang, fmt } = useLocalization();
 
@@ -358,7 +369,7 @@ export function TokenDetailsDemo() {
             {fmt.num.compact.currency(
               tokenMarket.data?.[details.tokenAddress]?.priceUsd
                 ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
-                    details.balanceAmount
+                details.balanceAmount
                 : null,
             )}
           </p>
@@ -447,16 +458,26 @@ export function TokenDetailsDemo() {
           kind="ghost"
           label={tr("walletPage.averageTradingPrice")}
           align="bottom-right"
-          onClick={() =>
-            setSelectedToken({
+          onClick={() => setSelectedToken(
+            {
               address: details.tokenAddress,
               symbol:
                 tokenMeta.data?.[details.tokenAddress]?.symbol.toUpperCase() ??
                 "Unknown",
               avgBuyCost: details.avgBuyCost,
               avgSellCost: details.avgSellCost,
-            })
-          }
+            }
+          )}
+        // onClick={() =>
+        //   setSelectedToken({
+        //     address: details.tokenAddress,
+        //     symbol:
+        //       tokenMeta.data?.[details.tokenAddress]?.symbol.toUpperCase() ??
+        //       "Unknown",
+        //     avgBuyCost: details.avgBuyCost,
+        //     avgSellCost: details.avgSellCost,
+        //   })
+        // }
         >
           <ChartAverage />
         </IconButton>
@@ -475,70 +496,70 @@ export function TokenDetailsDemo() {
   }
 
   return (
-    <PageWrapper
-      extraHeaderPanel={{
-        isOpen: !!selectedToken,
-        content: selectedToken && (
-          <TokenAverageTradePrice
-            walletAddress={address}
-            tokenAddress={selectedToken.address}
-            tokenImgUrl={
-              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-            }
-            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-            tokenSymbol={
-              tokenMeta.data?.[selectedToken.address]?.symbol || null
-            }
-            tokenCurrentPrice={
-              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-            }
-            avgBuyPrice={selectedToken.avgBuyCost}
-            avgSellPrice={selectedToken.avgSellCost}
-          />
-        ),
-        size: "lg",
-        onClose: () => setSelectedToken(null),
-      }}
-    >
-      <Tble
-        loading={walletTokenDetails.isLoading}
-        boxed
-        title={tr("walletPage.tokensLastTraded")}
-        description={tr("walletPage.tokensLastTradedDescription")}
-        rows={rows}
-        height={800}
-        stickyHeader
-        enablePagination
-        headers={[
-          {
-            key: "token",
-            header: `${tr("walletPage.token")}/${tr("walletPage.time")}`,
-            align: "start",
-          },
-          { key: "balance", header: tr("walletPage.balance"), align: "center" },
-          { key: "pnl", header: tr("walletPage.profit") },
-          { key: "realizedPnl", header: tr("walletPage.realizedProfit") },
-          { key: "unrealizedPnl", header: tr("walletPage.unrealizedProfit") },
-          { key: "buy", header: tr("walletPage.totalBought"), align: "end" },
-          { key: "sell", header: tr("walletPage.totalSold"), align: "end" },
-          { key: "net", header: tr("walletPage.netValue"), align: "end" },
-          {
-            key: "tradeCount",
-            header: tr("walletPage.transactions"),
-            align: "end",
-          },
-          {
-            key: "avgTradePrice",
-            header: tr("walletPage.avgBuySellPrice"),
-            align: "end",
-          },
-          {
-            key: "tradePriceGraph",
-            header: tr("walletPage.graph"),
-            align: "center",
-          },
-        ]}
-      />
-    </PageWrapper>
+    // <PageWrapper
+    //   extraHeaderPanel={{
+    //     isOpen: !!selectedToken,
+    //     content: selectedToken && (
+    //       <TokenAverageTradePrice
+    //         walletAddress={address}
+    //         tokenAddress={selectedToken.address}
+    //         tokenImgUrl={
+    //           tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+    //         }
+    //         tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+    //         tokenSymbol={
+    //           tokenMeta.data?.[selectedToken.address]?.symbol || null
+    //         }
+    //         tokenCurrentPrice={
+    //           tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+    //         }
+    //         avgBuyPrice={selectedToken.avgBuyCost}
+    //         avgSellPrice={selectedToken.avgSellCost}
+    //       />
+    //     ),
+    //     size: "lg",
+    //     onClose: () => setSelectedToken(null),
+    //   }}
+    // >
+    <Tble
+      loading={walletTokenDetails.isLoading}
+      boxed
+      title={tr("walletPage.tokensLastTraded")}
+      description={tr("walletPage.tokensLastTradedDescription")}
+      rows={rows}
+      height={800}
+      stickyHeader
+      enablePagination
+      headers={[
+        {
+          key: "token",
+          header: `${tr("walletPage.token")}/${tr("walletPage.time")}`,
+          align: "start",
+        },
+        { key: "balance", header: tr("walletPage.balance"), align: "center" },
+        { key: "pnl", header: tr("walletPage.profit") },
+        { key: "realizedPnl", header: tr("walletPage.realizedProfit") },
+        { key: "unrealizedPnl", header: tr("walletPage.unrealizedProfit") },
+        { key: "buy", header: tr("walletPage.totalBought"), align: "end" },
+        { key: "sell", header: tr("walletPage.totalSold"), align: "end" },
+        { key: "net", header: tr("walletPage.netValue"), align: "end" },
+        {
+          key: "tradeCount",
+          header: tr("walletPage.transactions"),
+          align: "end",
+        },
+        {
+          key: "avgTradePrice",
+          header: tr("walletPage.avgBuySellPrice"),
+          align: "end",
+        },
+        {
+          key: "tradePriceGraph",
+          header: tr("walletPage.graph"),
+          align: "center",
+        },
+      ]}
+    />
+    // </PageWrapper>
   );
 }

@@ -47,6 +47,23 @@ import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
+// ported from token details demo
+import client from "@/api/main";
+import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
+import { CpyBtn } from "@/components/CpyBtn";
+import { FilterSwitch } from "@/components/FilterSwitch";
+import Tble from "@/components/Tble";
+import { TknImg } from "@/components/TknImg";
+import { TrendNum } from "@/components/TrendNum";
+import { Txt } from "@/components/Txt";
+import { SOLSCAN_TX_URL } from "@/config/constants";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { useGet } from "@/hooks/useGet";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { cds } from "@/util/carbon-theme";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import { ChartAverage, Launch } from "@carbon/react/icons";
+import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
@@ -95,6 +112,56 @@ export default function WalletPage() {
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(420);
+
+  // ported from token details demo:
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    avgBuyCost: number;
+    avgSellCost: number;
+  } | null>(null);
+
+  const walletTokenDetails = useGet(
+    client.api.wallets[":address"].tokens,
+    200,
+    {
+      param: { address: address || "" },
+    },
+    {
+      enabled: !!address,
+    },
+  );
+
+  const tokenAddresses = useMemo(
+    () =>
+      walletTokenDetails.data
+        ?.map((details) => details.tokenAddress)
+        .join(",") || null,
+    [walletTokenDetails.data],
+  );
+
+  const tokenMeta = useGet(
+    client.api.tokens.meta[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
+      select: (data) => {
+        return Object.fromEntries(data.map((item) => [item.address, item]));
+      },
+    },
+  );
+
+  const tokenMarket = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
+    },
+  );
+
+
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -763,7 +830,32 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper>
+    // <PageWrapper>
+    <PageWrapper
+      extraHeaderPanel={{
+        isOpen: !!selectedToken,
+        content: selectedToken && (
+          <TokenAverageTradePrice
+            walletAddress={address}
+            tokenAddress={selectedToken.address}
+            tokenImgUrl={
+              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+            }
+            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+            tokenSymbol={
+              tokenMeta.data?.[selectedToken.address]?.symbol || null
+            }
+            tokenCurrentPrice={
+              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+            }
+            avgBuyPrice={selectedToken.avgBuyCost}
+            avgSellPrice={selectedToken.avgSellCost}
+          />
+        ),
+        size: "lg",
+        onClose: () => setSelectedToken(null),
+      }}
+    >
       <div
         ref={pdfExportContainerRef}
         className={styles.walletGrid}
@@ -952,15 +1044,16 @@ export default function WalletPage() {
             {/* Assets: Distribution + Portfolio */}
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>{tr("walletPage.asset")}</h2>
-              <div className={styles.sideBySide}>
+              <AssetDistribution
+                initialFilters={{
+                  wallets: address ? [address] : [],
+                  timePeriod: "30D",
+                }}
+                autoRefresh={true}
+              />
+              <TokenDetailsDemo setSelectedToken={setSelectedToken} />
+              {/* <div className={styles.sideBySide}>
                 <div className={styles.columnWrapper}>
-                  <AssetDistribution
-                    initialFilters={{
-                      wallets: address ? [address] : [],
-                      timePeriod: "30D",
-                    }}
-                    autoRefresh={true}
-                  />
                 </div>
                 <div className={styles.columnWrapper}>
                   <Table
@@ -977,8 +1070,9 @@ export default function WalletPage() {
                     loading={portfolioLoading && portfolioData.length === 0}
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
+
 
             {/* Top Exchange */}
             <div className={styles.section}>
