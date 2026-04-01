@@ -1,1 +1,0 @@
-export { TotalTradingVolumeChart } from './TotalTradingVolumeChart';
