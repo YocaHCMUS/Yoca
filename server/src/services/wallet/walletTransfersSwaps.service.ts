@@ -1,11 +1,24 @@
 import { saveSwapsCache, saveTransfersCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getCachedWalletTransfers, getCachedWalletTransfersChunk, getCachedWalletSwaps, getCachedWalletSwapsChunk } from "@sv/services/wallet/db/walletDataRetriever.js";
-import type { WalletTransfersQueryOptions, WalletTransfersResponse, WalletSwapsQueryOptions, WalletSwapsResponse, WalletSwap, SwapProviderSource } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletTransfersQueryOptions, WalletTransfersResponse, WalletSwapsQueryOptions, WalletSwapsResponse, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { fetchHeliusSolanaTransfers, fetchHeliusSolanaTransfersChunk, fetchMoralisSolanaSwap, fetchMoralisSolanaSwapChunk } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
 import { WALLET_TABLE_PAGE_SIZE } from "@sv/services/wallet/wallet.constants.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
 import { normalizeCursorValue } from "@sv/services/wallet/walletTime.utils.js";
 import { normalizeShortHistoryPeriod, toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
+
+function filterSwapsByToken(swaps: WalletSwap[], tokenAddress?: string): WalletSwap[] {
+    const normalizedTokenAddress = tokenAddress?.trim().toLowerCase();
+    if (!normalizedTokenAddress) {
+        return swaps;
+    }
+
+    return swaps.filter((swap) => {
+        const boughtAddress = swap.bought.address.trim().toLowerCase();
+        const soldAddress = swap.sold.address.trim().toLowerCase();
+        return boughtAddress === normalizedTokenAddress || soldAddress === normalizedTokenAddress;
+    });
+}
 
 export async function getWalletTransfers(
     address: string,
@@ -132,16 +145,19 @@ export async function getWalletSwaps(
     address: string,
     options?: WalletSwapsQueryOptions,
 ): Promise<WalletSwapsResponse> {
+    const limit = Math.min(options?.limit ?? WALLET_TABLE_PAGE_SIZE, WALLET_TABLE_PAGE_SIZE);
+
     const shortPeriod = normalizeShortHistoryPeriod(options?.from);
     if (shortPeriod) {
-        const limit = Math.min(options?.limit ?? 100, 500);
+        const shortPeriodLimit = Math.min(limit, 500);
 
         const cachedSwaps = await getCachedWalletSwaps(address, shortPeriod);
         if (cachedSwaps) {
-            await enrichWithSolanaTokenPrices(cachedSwaps);
+            const filteredCachedSwaps = filterSwapsByToken(cachedSwaps, options?.tokenAddress);
+            await enrichWithSolanaTokenPrices(filteredCachedSwaps);
             return {
                 address,
-                swaps: cachedSwaps.slice(0, limit),
+                swaps: filteredCachedSwaps.slice(0, shortPeriodLimit),
                 pageInfo: toWalletPageInfo({
                     hasMore: false,
                     nextCursor: null,
@@ -154,7 +170,7 @@ export async function getWalletSwaps(
             let swaps: WalletSwap[] = [];
             try {
                 swaps = await fetchMoralisSolanaSwap(address, shortPeriod, {
-                    limit,
+                    limit: shortPeriodLimit,
                     cursor: options?.cursor ?? options?.before,
                 });
 
@@ -166,11 +182,12 @@ export async function getWalletSwaps(
             }
 
             await saveSwapsCache(address, swaps);
-            await enrichWithSolanaTokenPrices(swaps);
+            const filteredSwaps = filterSwapsByToken(swaps, options?.tokenAddress);
+            await enrichWithSolanaTokenPrices(filteredSwaps);
 
             return {
                 address,
-                swaps: swaps.slice(0, limit),
+                swaps: filteredSwaps.slice(0, shortPeriodLimit),
                 pageInfo: toWalletPageInfo({
                     hasMore: false,
                     nextCursor: null,
@@ -195,14 +212,15 @@ export async function getWalletSwaps(
 
     const cachedChunk = await getCachedWalletSwapsChunk(address, {
         before: cursor,
-        limit: WALLET_TABLE_PAGE_SIZE,
+        limit,
     });
 
     if (cachedChunk.available && (!cursor || cachedChunk.cursorMatched)) {
-        await enrichWithSolanaTokenPrices(cachedChunk.items);
+        const filteredCachedItems = filterSwapsByToken(cachedChunk.items, options?.tokenAddress).slice(0, limit);
+        await enrichWithSolanaTokenPrices(filteredCachedItems);
         return {
             address,
-            swaps: cachedChunk.items,
+            swaps: filteredCachedItems,
             pageInfo: toWalletPageInfo({
                 hasMore: cachedChunk.hasMore,
                 nextCursor: cachedChunk.nextCursor,
@@ -220,7 +238,7 @@ export async function getWalletSwaps(
 
         try {
             chunk = await fetchMoralisSolanaSwapChunk(address, {
-                limit: WALLET_TABLE_PAGE_SIZE,
+                limit,
                 cursor,
             });
 
@@ -249,11 +267,12 @@ export async function getWalletSwaps(
         chunk.items.filter(swap => swap != null);
 
         await saveSwapsCache(address, chunk.items);
-        await enrichWithSolanaTokenPrices(chunk.items);
+        const filteredChunkItems = filterSwapsByToken(chunk.items, options?.tokenAddress).slice(0, limit);
+        await enrichWithSolanaTokenPrices(filteredChunkItems);
 
         return {
             address,
-            swaps: chunk.items,
+            swaps: filteredChunkItems,
             pageInfo: toWalletPageInfo({
                 hasMore: chunk.hasMore,
                 nextCursor: chunk.nextCursor,

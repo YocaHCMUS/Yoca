@@ -16,7 +16,6 @@ import {
   bigint,
   check,
   decimal as dec,
-  index,
   integer,
   jsonb,
   pgEnum,
@@ -845,49 +844,6 @@ export const walletTokenDetails = pgTable(
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
-
-export const walletTokenTrades = pgTable(
-  "wallet_token_trades",
-  {
-    // Underscore before name to signal this is synthetic field and is not
-    // inferred from the actual data by any means (which usually discouraged)
-    _tradeId: uuid("_trade_id").primaryKey().defaultRandom(),
-
-    address: varchar("address", { length: 44 }).notNull(),
-    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-
-    // Transaction identity
-    transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
-    blockUnixTimeMs: bigint("block_unix_time_ms", { mode: "number" }).notNull(),
-
-    // Swap details - base/quote pair
-    baseTokenAddress: varchar("base_token_address", { length: 44 }).notNull(),
-    quoteTokenAddress: varchar("quote_token_address", { length: 44 }).notNull(),
-
-    // Amounts
-    baseAmount: decimal("base_amount").notNull(),
-    quoteAmount: decimal("quote_amount").notNull(),
-
-    // Pricing
-    basePrice: decimal("base_price"),
-    quotePrice: decimal("quote_price"),
-    volumeUsd: decimal("volume_usd").notNull(),
-
-    // Exchange/Pool info
-    exchangeName: varchar("exchange_name"),
-    exchangeProgramAddress: varchar("exchange_program_address", { length: 44 }),
-    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
-    poolName: varchar("pool_name"),
-
-    // Transaction metadata
-    tradeAction: enumTradeAction("trade_action").notNull(),
-
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [index("idx_addr_token").on(table.address, table.tokenAddress)],
-);
 // #endregion
 
 // #region Types
@@ -934,7 +890,6 @@ export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
-export type WalletTokenTradesInsert = typeof walletTokenTrades.$inferInsert;
 
 // #endregion
 

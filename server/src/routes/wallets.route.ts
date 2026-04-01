@@ -5,8 +5,8 @@ import {
   walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import * as walletService from "@sv/services/wallet/index.js";
+import type { WalletPortfolioItem, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getTokenDetails, getWalletFirstFund } from "@sv/services/wallet/index.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -181,6 +181,50 @@ function parseExchangeLimit(rawLimit?: string): number | undefined {
   return Math.min(integerLimit, MAX_EXCHANGE_LIMIT);
 }
 
+function mapSwapToTokenTradeRow(
+  swap: WalletSwap,
+  walletAddress: string,
+  tokenAddress: string,
+) {
+  const normalizedToken = tokenAddress.trim().toLowerCase();
+  const boughtAddress = swap.bought.address.trim().toLowerCase();
+  const soldAddress = swap.sold.address.trim().toLowerCase();
+
+  const inferredAction: "buy" | "sell" =
+    boughtAddress === normalizedToken
+      ? "buy"
+      : soldAddress === normalizedToken
+        ? "sell"
+        : swap.transactionType.trim().toLowerCase() === "buy"
+          ? "buy"
+          : "sell";
+
+  const selectedAmount = inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress = inferredAction === "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress = inferredAction === "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice = inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice = inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+
+  return {
+    address: walletAddress,
+    tokenAddress,
+    transactionHash: swap.transactionHash,
+    blockUnixTimeMs: new Date(swap.blockTimestampIso).getTime(),
+    baseTokenAddress: selectedTokenAddress,
+    quoteTokenAddress: otherTokenAddress,
+    baseAmount: selectedAmount,
+    quoteAmount: selectedAmount,
+    basePrice: selectedPrice,
+    quotePrice: otherPrice,
+    volumeUsd: swap.totalValueUsd ?? 0,
+    exchangeName: swap.exchangeName,
+    exchangeProgramAddress: swap.exchangeAddress || null,
+    poolAddress: swap.pairAddress,
+    poolName: null,
+    tradeAction: inferredAction,
+  };
+}
+
 const routes = router
   .get("/overview", async (c) => {
     const query = c.req.query();
@@ -238,11 +282,21 @@ const routes = router
     validate("param", walletTokenTradesSchema),
     async (c) => {
       const { walletAddress, tokenAddress } = c.req.valid("param");
+      const limitParam = c.req.query("limit");
+      const cursor = c.req.query("cursor");
+      const before = c.req.query("before");
+      const limit = limitParam ? Number(limitParam) : undefined;
 
       try {
-        const trades = await walletService.getWalletTokenSwaps(
-          walletAddress,
+        const swaps = await getWalletSwaps(walletAddress, {
           tokenAddress,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          cursor: cursor ?? undefined,
+          before: before ?? undefined,
+        });
+
+        const trades = swaps.swaps.map((swap) =>
+          mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
         );
 
         if (!trades) {
@@ -459,7 +513,7 @@ const routes = router
   .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const firstFunds = await walletService.getWalletFirstFund(address);
+      const firstFunds = await getWalletFirstFund(address);
       if (firstFunds == null) {
         return c.json(
           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
@@ -479,7 +533,7 @@ const routes = router
   .get("/:address/tokens", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const tokenDetails = await walletService.getTokenDetails(address);
+      const tokenDetails = await getTokenDetails(address);
       if (tokenDetails == null) {
         return c.json(
           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),

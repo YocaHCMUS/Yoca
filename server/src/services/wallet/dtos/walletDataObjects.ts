@@ -255,6 +255,7 @@ export type WalletTransfersQueryOptions = WalletCursorOptions & {
 
 export type WalletSwapsQueryOptions = WalletCursorOptions & {
     from?: WalletTimePeriodInput;
+    tokenAddress?: string;
 };
 
 export type PnLAggregation = "daily" | "weekly" | "monthly";
