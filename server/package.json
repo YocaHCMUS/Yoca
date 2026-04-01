@@ -1,0 +1,45 @@
+{
+  "name": "server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "start": "node build/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "clear": "rimraf ./node_modules && npm run clean",
+    "clean": "rimraf ./build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push --verbose",
+    "db:push-force": "drizzle-kit push --verbose --force",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@coingecko/coingecko-typescript": "^3.1.0",
+    "@hono/node-server": "^1.19.6",
+    "@solana/instruction-plans": "^6.5.0",
+    "@solana/kit": "^6.5.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-seed": "^0.3.1",
+    "ethers": "^6.15.0",
+    "google-auth-library": "^10.5.0",
+    "helius-sdk": "^2.2.2",
+    "hono": "^4.10.4",
+    "postgres": "^3.4.7",
+    "puppeteer": "^24.40.0",
+    "redis": "^5.11.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "drizzle-kit": "^0.31.7",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6"
+  }
+}

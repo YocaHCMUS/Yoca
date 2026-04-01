@@ -1,0 +1,124 @@
+@use '@carbon/react/scss/theme' as *;
+
+// Container owns the 6 columns — all rows inherit via subgrid for true alignment
+.container {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content max-content 1fr max-content;
+  background: $background;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  border-bottom: 1px solid $border-subtle;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: max-content 1fr max-content;
+  }
+}
+
+// Each cell spans 3 columns; right cell gets divider
+.cell {
+  display: grid;
+  grid-column: span 3;
+  grid-template-columns: subgrid;
+
+  &:nth-child(2) {
+    border-left: none;
+  }
+}
+
+.pair {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+  white-space: nowrap;
+  padding: 14px 8px 14px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.currency {
+  font-size: 14px;
+  color: $text-secondary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.price {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+  white-space: nowrap;
+  padding: 14px 16px 14px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.skeletonRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid $border-subtle;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.skeletonCell {
+  height: 48px;
+  margin: 8px 16px;
+  border-radius: 3px;
+  background: $skeleton-background;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+// ===== Show More =====
+.showMoreWrap {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px;
+  border-top: 1px solid $border-subtle;
+}
+
+.showMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: $layer-01;
+  color: $text-primary;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}

@@ -1,0 +1,31 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.futuresTab {
+  background: $layer-01;
+  border-radius: 4px;
+  padding: $spacing-06;
+
+  .title {
+    @include type-style('heading-03');
+    margin-bottom: $spacing-05;
+  }
+}
+
+.pairName {
+  font-weight: 600;
+}
+
+.positive,
+.negative {
+  font-weight: 600;
+}
+
+.positive {
+  color: $support-success;
+}
+
+.negative {
+  color: $support-error;
+}

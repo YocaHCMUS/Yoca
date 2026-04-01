@@ -1,0 +1,227 @@
+@use '@carbon/react/scss/theme' as *;
+
+.container {
+    margin-top: 0;
+    background: $background;
+    padding: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px;
+    cursor: pointer;
+    background: $background;
+    border-bottom: none;
+}
+
+.title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: $text-primary;
+}
+
+.stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.totalPercentage {
+    font-size: 16px;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+.accordionButton {
+    background: $layer-accent-01;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: $text-secondary;
+    transition: background 0.2s;
+    width: 24px;
+    height: 24px;
+
+    &:hover {
+        background: $border-subtle;
+    }
+}
+
+// Table Wrapper Overrides
+.tableWrapper {
+    padding: 0;
+    background: $background;
+
+    // Deep selector to override Carbon Table styles
+    :global {
+        .cds--data-table-container {
+            padding-top: 0;
+            background: $background;
+        }
+
+        .cds--data-table {
+            background: $background;
+
+            thead {
+                background: $background;
+
+                tr {
+                    height: 32px;
+                }
+            }
+
+            th {
+                background: $background;
+                color: $text-helper;
+                font-family: 'Inter', system-ui, sans-serif;
+                font-weight: 600;
+                font-size: 11px;
+                text-transform: uppercase;
+                border-bottom: none;
+                padding: 4px 8px;
+                text-align: left;
+
+                // Rank column (#)
+                &:first-child {
+                    width: 40px;
+                    padding-left: 16px;
+                    padding-right: 0;
+                }
+
+                // Address column
+                &:nth-child(2) {
+                    padding-left: 12px;
+                }
+
+                // % Column (Last child)
+                &:last-child {
+                    text-align: right;
+                    padding-right: 16px;
+
+                    div, .cds--table-header-label {
+                        justify-content: flex-end;
+                        text-align: right;
+                        width: 100%;
+                    }
+                }
+
+                span {
+                    padding: 0;
+                }
+            }
+
+            tbody {
+                tr {
+                    background: $background;
+                    height: 44px;
+
+                    // Top 1 Holder Highlight
+                    &:first-child td {
+                        background-color: $layer-accent-01;
+                        font-weight: 600;
+                    }
+
+                    &:hover {
+                        background-color: transparent;
+
+                        td {
+                            background-color: transparent;
+                        }
+                    }
+
+                    td {
+                        background: $background;
+                        border-top: none;
+                        border-bottom: none;
+                        padding: 4px 8px;
+                        color: $text-primary;
+                        font-family: 'Inter', system-ui, sans-serif;
+                        font-size: 14px;
+                        font-weight: 500;
+                        text-align: left;
+
+                        // Rank cell
+                        &:first-child {
+                            padding-left: 16px;
+                            padding-right: 0;
+                        }
+
+                        // Address cell
+                        &:nth-child(2) {
+                            padding-left: 12px;
+                        }
+
+                        // % Cell
+                        &:last-child {
+                            text-align: right;
+                            padding-right: 16px;
+                        }
+                    }
+
+                    &:first-child td {
+                        border-top: none;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.rank {
+    color: $text-secondary;
+    font-size: 14px;
+    font-weight: 500;
+    width: 24px;
+    display: inline-block;
+}
+
+.addressWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.addressLink {
+    color: $link-primary;
+    text-decoration: none;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.copyButton {
+    color: $text-helper;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+        color: $text-secondary;
+    }
+}
+
+.percentage {
+    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+.emptyState {
+    padding: 32px;
+    text-align: center;
+    color: $text-secondary;
+    font-size: 14px;
+}

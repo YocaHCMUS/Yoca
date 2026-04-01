@@ -1,0 +1,10 @@
+.headerPanel {
+  &:global(.cds--header-panel--expanded) {
+    inline-size: 22rem !important;
+  }
+}
+
+.contentNoTopPadding {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}

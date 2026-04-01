@@ -1,0 +1,107 @@
+@use '@carbon/react/scss/theme' as *;
+
+.tableContainer {
+    width: 100%;
+    background: $background;
+    border-radius: 8px;
+    overflow: hidden;
+
+    // Override Carbon table background to match page
+    :global(.cds--data-table-container) {
+        background: transparent;
+    }
+
+    :global(.cds--data-table) {
+        background: transparent;
+    }
+
+    // Header row
+    :global(.cds--data-table thead tr th),
+    :global(.cds--data-table thead tr) {
+        background: $background;
+        font-size: 14px;
+        font-weight: 700;
+        color: $text-primary;
+        text-transform: none;
+        padding: 14px 16px;
+        border-bottom: 1px solid $border-subtle;
+    }
+
+    // Data rows
+    :global(.cds--data-table tbody tr td),
+    :global(.cds--data-table tbody tr) {
+        background: $background;
+        font-size: 14px;
+        font-weight: 400;
+        color: $text-primary;
+        padding: 14px 16px;
+        border-bottom: 1px solid $border-subtle;
+        vertical-align: middle;
+    }
+
+    // Row hover
+    :global(.cds--data-table tbody tr:hover td),
+    :global(.cds--data-table tbody tr:hover) {
+        background: $layer-hover-01;
+    }
+
+    // Last row no bottom border
+    :global(.cds--data-table tbody tr:last-child td) {
+        border-bottom: none;
+    }
+
+    // Alignment: Left-align #, Exchange, Pair, and Price (columns 1-4)
+    :global(.cds--data-table thead tr th:nth-child(-n+4)),
+    :global(.cds--data-table tbody tr td:nth-child(-n+4)) {
+        text-align: left;
+    }
+
+    // Alignment: Right-align all other columns (n >= 5)
+    :global(.cds--data-table thead tr th:nth-child(n+5)),
+    :global(.cds--data-table tbody tr td:nth-child(n+5)) {
+        text-align: right;
+    }
+
+    // Tighten # column and push Exchange right
+    :global(.cds--data-table thead tr th:first-child),
+    :global(.cds--data-table tbody tr td:first-child) {
+        width: 48px;
+    }
+
+    :global(.cds--data-table thead tr th:nth-child(2)),
+    :global(.cds--data-table tbody tr td:nth-child(2)) {
+        padding-left: 48px;
+    }
+
+    // Header buttons for right-aligned columns
+    :global(.cds--data-table thead tr th:nth-child(n+5) .cds--table-header-label) {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
+    }
+}
+
+.table {
+    background: transparent;
+}
+
+.positive {
+    color: #16c784;
+    font-weight: 600;
+}
+
+.negative {
+    color: #ea3943;
+    font-weight: 600;
+}
+
+.pairLink {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+        text-decoration: underline;
+        opacity: 0.85;
+    }
+}

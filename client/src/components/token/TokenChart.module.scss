@@ -1,0 +1,24 @@
+@use '@carbon/react/scss/theme' as *;
+
+.container {
+    background: $background;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+}
+
+.header {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: $text-primary;
+}
+
+.loading {
+    background: $background;
+    padding: 32px;
+    text-align: center;
+    border-radius: 8px;
+    color: $text-secondary;
+    font-size: 14px;
+}

@@ -1,0 +1,143 @@
+@use '@carbon/react/scss/theme' as *;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+// Semantic colors (same in both themes)
+$color-success: #10b981; // Emerald 500
+$color-danger: #ef4444; // Red 500
+$font-family: 'Inter', system-ui, sans-serif;
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $font-family;
+    border-radius: 0;
+    background: $background;
+    overflow: visible;
+    box-sizing: border-box;
+
+    &.horizontal {
+        flex-direction: row;
+    }
+}
+
+// Grid Row - Generic container for a row of stats
+.gridRow {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid $border-subtle;
+    min-height: 60px;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    // Special styling for single item rows (like Traders)
+    &.singleItemRow {
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 16px;
+    }
+}
+
+// Grid Cell - Generic cell
+.gridCell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border-right: 1px solid $border-subtle;
+    gap: 4px;
+
+    &:last-child {
+        border-right: none;
+    }
+}
+
+// Special Cells for Vol/Txns Row (Left aligned first col, Right aligned others)
+.gridCellLeft {
+    flex: 4 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 12px;
+    gap: 0;
+}
+
+.gridCellRight {
+    flex: 3 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 10px 12px;
+    gap: 0;
+}
+
+// Labels & Values
+
+.label {
+    font-size: 13px;
+    font-weight: 400;
+    color: $text-helper;
+    text-transform: uppercase;
+    letter-spacing: -0.1px;
+    white-space: nowrap;
+}
+
+.pricesContainer {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.subtext {
+    font-size: 12px;
+    color: $text-helper;
+    font-weight: 500;
+}
+
+.valueLarge {
+    font-size: 15px;
+    font-weight: 600;
+    color: $text-primary;
+}
+
+.valueMedium {
+    font-size: 15px;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+.valueSmall {
+    font-size: 15px;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+// Utility Colors
+
+.buyColor {
+    color: $color-success !important;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sellColor {
+    color: $color-danger !important;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.positive {
+    color: $color-success !important;
+}
+
+.negative {
+    color: $color-danger !important;
+}

@@ -1,0 +1,524 @@
+/**
+ * CounterpartyActivity Component
+ * 
+ * Displays grouped bar charts showing transaction counts and volumes per counterparty,
+ * delivering actionable insights about trading relationships.
+ * 
+ * @module CounterpartyActivity
+ */
+
+import { useMemo, useRef, useState, useEffect, type RefObject } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import { useLocalization } from '@/contexts/LocalizationContext';
+import { BaseChart } from '@/components/charts/Base/BaseChart';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchCounterpartyActivity, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
+import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
+import { getMultiSeriesLegend } from '@/util/chart-legend-config';
+import type { CounterpartiesRequestParams } from '@/types/chart-api.types';
+
+// Infer response type from fetcher
+type CounterpartyActivityData = InferFetcherData<typeof fetchCounterpartyActivity>;
+import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
+import { useStandardChartController } from '@/hooks/useChartController';
+import sharedStyles from '../shared/ChartStyle.module.scss';
+import type { ChartProps } from '../shared/ChartProp';
+import { ChartGridItem } from '../shared';
+/**
+ * Props for CounterpartyActivity component
+ */
+// export interface CounterpartyActivityProps {
+//   /** Chart title */
+//   title?: string;
+
+//   /** Chart minimum height in pixels */
+//   minHeight?: number;
+
+//   /** Initial time period (default: 30D) */
+//   initialTimePeriod?: TimePeriod;
+
+//   /** Transaction type filter (default: all) */
+//   initialTransactionType?: TransactionType;
+
+//   /** Limit to top N counterparties (default: 10) */
+//   limit?: number;
+
+//   /** Enable auto-refresh (default: true) */
+//   autoRefresh?: boolean;
+
+//   /** Auto-refresh interval in milliseconds (default: 30000) */
+//   refreshInterval?: number;
+
+//   /** Callback when data is loaded */
+//   onDataLoaded?: (data: CounterpartyActivityResponse) => void;
+
+//   /** Additional CSS class */
+//   className?: string;
+// }
+
+/**
+ * CounterpartyActivity Component
+ * 
+ * User Story 4: Analyze Counterparty Transaction Activity (Priority: P2)
+ * 
+ * Displays grouped bar chart with:
+ * - Counterparty identifiers on X-axis
+ * - Transaction count and total volume as grouped bars
+ * - Time period filtering
+ * - Transaction type filtering
+ * - Limit selector for top N counterparties
+ * - Auto-refresh every 30 seconds
+ * 
+ * @example
+ * ```tsx
+ * <CounterpartyActivity
+ *   title="Counterparty Analysis"
+ *   minHeight={400}
+ *   initialTimePeriod="30D"
+ *   initialTransactionType="all"
+ *   limit={10}
+ *   autoRefresh={true}
+ * />
+ * ```
+ */
+export const CounterpartyActivity: React.FC<ChartProps> = ({
+  // minHeight = 400,
+  // initialFilters = {{
+  //   timePeriod = '30D',
+  //   transactionType = 'all',
+  //   limit = 10,
+  //   tokens = ['All']
+  // }},
+  // autoRefresh = true,
+  // refreshInterval = 30000,
+  // className,
+  // onDataLoaded,
+  // title,
+
+  title,
+  minHeight = 400,
+  initialFilters,
+  autoRefresh = true,
+  refreshInterval = 30000,
+  className,
+  loadOnInteractionOnly = false,
+  // onDataLoaded,
+}) => {
+  // i18n
+  const { tr } = useLocalization();
+  const chartTitle = title || tr('charts.counterpartyActivityChart.title');
+
+  // State management
+  const [currentLimit, setCurrentLimit] = useState<number>(10);
+
+  // Chart instance refs for export
+  const transactionCountChartRef = useRef<ReactECharts>(null);
+  const totalVolumeChartRef = useRef<ReactECharts>(null);
+
+  // Get timezone from context
+  const { selectedTimezone: timezone } = useChartContext();
+
+  // Get theme configuration
+  const chartTheme = useChartTheme();
+
+  // Use centralized filter sync hook
+  const { filters, setTimePeriod } = useChartFiltersSync({
+    initialFilters: initialFilters
+  });
+
+  const walletsQuery = useMemo(() => {
+    if (!Array.isArray(filters.wallets) || filters.wallets.length === 0) {
+      return undefined;
+    }
+
+    return filters.wallets.join(',');
+  }, [filters.wallets]);
+
+  const [interactionLoadCount, setInteractionLoadCount] = useState(0);
+  const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() =>
+    initialFilters?.timePeriod?.toUpperCase() === '7D' ? 7 : 30,
+  );
+
+  const effectiveAutoRefresh = loadOnInteractionOnly ? false : autoRefresh;
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly) {
+      return;
+    }
+    setInteractionLoadCount(0);
+  }, [walletsQuery, loadOnInteractionOnly]);
+
+  useEffect(() => {
+    if (loadOnInteractionOnly) return;
+    setChartWindowDays(filters.timePeriod?.toUpperCase() === '7D' ? 7 : 30);
+  }, [filters.timePeriod, loadOnInteractionOnly]);
+
+  const effectivePeriod = loadOnInteractionOnly
+    ? (chartWindowDays === 7 ? '7D' : '30D')
+    : filters.timePeriod;
+
+  // Query for the controller
+  const query = useMemo<CounterpartiesRequestParams>(() => ({
+    timePeriod: effectivePeriod,
+    transactionType: filters.transactionType,
+    limit: currentLimit,
+    timezone,
+    ...(walletsQuery ? { wallets: walletsQuery } : {}),
+  }), [effectivePeriod, filters.transactionType, currentLimit, timezone, walletsQuery]);
+
+  // Use standard chart controller
+  const { data, loadingState, refetch } = useStandardChartController<CounterpartyActivityData, CounterpartiesRequestParams>({
+    fetcher: fetchCounterpartyActivity,
+    query,
+    fetchMode: loadOnInteractionOnly ? "manual" : "auto",
+    autoRefresh: effectiveAutoRefresh,
+    refreshInterval,
+    // onDataLoaded,
+  });
+
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
+  useEffect(() => {
+    if (!loadOnInteractionOnly || interactionLoadCount === 0) {
+      return;
+    }
+    void refetchRef.current(true);
+  }, [interactionLoadCount, loadOnInteractionOnly]);
+
+  const handleWindowRangeClick = (days: 7 | 30) => {
+    const period = days === 7 ? "7D" : "30D";
+    setChartWindowDays(days);
+    setTimePeriod(period);
+    setInteractionLoadCount((c) => c + 1);
+  };
+
+  // Export functionality
+  // const { exportChart } = useChartExportr({
+  //   chartTitle,
+  //   timezone,
+  //   baseFilename: 'counterparty-activity',
+  // });
+
+  // Handle export
+  // const handleExport = async (format: ExportFormat) => {
+  //   const echartsInstance = chartRef.current?.getEchartsInstance();
+  //   const chartInstance = echartsInstance ? (echartsInstance as any) : null;
+
+  //   // Prepare CSV data
+  //   const csvData = data ? [
+  //     {
+  //       id: 'transaction-count',
+  //       name: 'Transaction Count',
+  //       type: 'bar' as const,
+  //       data: data.counterparties.map(cp => ({
+  //         category: cp.name,
+  //         value: cp.transactionCount,
+  //       })),
+  //       visible: true,
+  //     },
+  //     {
+  //       id: 'total-volume',
+  //       name: 'Total Volume',
+  //       type: 'bar' as const,
+  //       data: data.counterparties.map(cp => ({
+  //         category: cp.name,
+  //         value: cp.totalVolume,
+  //       })),
+  //       visible: true,
+  //     }
+  //   ] : [];
+
+  //   exportChartr(format, chartInstance, csvData, filters);
+  // };
+
+  const counterpartyCountRanking = useMemo(() => {
+    if (!isChartSuccess(data, 'counterparties')) {
+      return [];
+    }
+
+    if (Array.isArray(data.counterpartiesByTransactionCount) && data.counterpartiesByTransactionCount.length > 0) {
+      return data.counterpartiesByTransactionCount;
+    }
+
+    return data.counterparties;
+  }, [data]);
+
+  const counterpartyVolumeRanking = useMemo(() => {
+    if (!isChartSuccess(data, 'counterparties')) {
+      return [];
+    }
+
+    if (Array.isArray(data.counterpartiesByVolume) && data.counterpartiesByVolume.length > 0) {
+      return data.counterpartiesByVolume;
+    }
+
+    return data.counterparties;
+  }, [data]);
+
+  // Generate chart options for transaction counts
+  const transactionCountOptions: EChartsOption = useMemo(() => {
+    if (counterpartyCountRanking.length === 0) {
+      return {};
+    }
+
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+
+    // Extract counterparty names and values
+    const counterpartyNames = counterpartyCountRanking.map(cp => cp.name);
+    const transactionCounts = counterpartyCountRanking.map(cp => cp.transactionCount);
+
+    return {
+      ...baseOption,
+      grid: getChartGridConfig(),
+      tooltip: {
+        ...baseOption.tooltip,
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow',
+        },
+        formatter: (params: any) => {
+          if (!Array.isArray(params) || params.length === 0) return '';
+
+          const counterpartyName = params[0].axisValue;
+          const count = params[0].value;
+
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+              tr('charts.counterpartyActivityChart.transactionCount'),
+              count.toLocaleString(),
+              { color: params[0].color, showIndicator: true }
+            );
+        },
+      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [tr('charts.counterpartyActivityChart.transactionCount')],
+        false
+      ),
+      xAxis: {
+        ...baseOption.xAxis,
+        type: 'category',
+        data: counterpartyNames,
+        axisLabel: {
+          ...baseOption.xAxis.axisLabel,
+          rotate: 45,
+          interval: 0,
+          formatter: (value: string) => {
+            // Truncate long addresses/names
+            return value.length > 20 ? `${value.substring(0, 17)}...` : value;
+          },
+        },
+      },
+      yAxis: {
+        ...baseOption.yAxis,
+        type: 'value',
+        name: tr('charts.counterpartyActivityChart.transactionCount'),
+        position: 'left',
+        nameTextStyle: { color: chartTheme.textColor },
+        axisLabel: {
+          ...baseOption.yAxis.axisLabel,
+          formatter: (value: number) => value.toLocaleString(),
+        },
+      },
+      series: [
+        {
+          name: tr('charts.counterpartyActivityChart.transactionCount'),
+          type: 'bar',
+          data: transactionCounts,
+          itemStyle: {
+            color: chartTheme.colorPalette[0],
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (params: any) => params.value.toLocaleString(),
+            fontSize: 10,
+          },
+        },
+      ],
+    };
+  }, [counterpartyCountRanking, chartTheme, tr]);
+
+  // Generate chart options for total volume
+  const totalVolumeOptions: EChartsOption = useMemo(() => {
+    if (counterpartyVolumeRanking.length === 0) {
+      return {};
+    }
+
+    // Get base theme configuration
+    const baseOption = getThemedChartBaseOption(chartTheme);
+
+    // Extract counterparty names and values
+    const counterpartyNames = counterpartyVolumeRanking.map(cp => cp.name);
+    const totalVolumes = counterpartyVolumeRanking.map(cp => cp.totalVolume);
+
+    return {
+      ...baseOption,
+      grid: getChartGridConfig(),
+      tooltip: {
+        ...baseOption.tooltip,
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow',
+        },
+        formatter: (params: any) => {
+          if (!Array.isArray(params) || params.length === 0) return '';
+
+          const counterpartyName = params[0].axisValue;
+          const volume = params[0].value;
+
+          return createTooltipHeader(counterpartyName)
+            + createTooltipRow(
+              tr('charts.counterpartyActivityChart.totalVolume'),
+              formatCurrency(volume),
+              { color: params[0].color, showIndicator: true }
+            );
+        },
+      },
+      legend: getMultiSeriesLegend(
+        chartTheme,
+        [tr('charts.counterpartyActivityChart.totalVolume')],
+        false
+      ),
+      xAxis: {
+        ...baseOption.xAxis,
+        type: 'category',
+        data: counterpartyNames,
+        axisLabel: {
+          ...baseOption.xAxis.axisLabel,
+          rotate: 45,
+          interval: 0,
+          formatter: (value: string) => {
+            // Truncate long addresses/names
+            return value.length > 20 ? `${value.substring(0, 17)}...` : value;
+          },
+        },
+      },
+      yAxis: {
+        ...baseOption.yAxis,
+        type: 'value',
+        name: tr('charts.counterpartyActivityChart.totalVolume'),
+        position: 'left',
+        nameTextStyle: { color: chartTheme.textColor },
+        axisLabel: {
+          ...baseOption.yAxis.axisLabel,
+          formatter: (value: number) => formatCurrency(value),
+        },
+      },
+      series: [
+        {
+          name: tr('charts.counterpartyActivityChart.totalVolume'),
+          type: 'bar',
+          data: totalVolumes,
+          itemStyle: {
+            color: '#24a148',
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (params: any) => formatCurrency(params.value),
+            fontSize: 10,
+          },
+        },
+      ],
+    };
+  }, [counterpartyVolumeRanking, chartTheme, tr]);
+
+  // Handle limit change
+  const handleLimitChange = (newLimit: number) => {
+    setCurrentLimit(newLimit);
+  };
+
+  // Render chart with wrapper
+  return (
+    <BaseChart
+      title={chartTitle}
+      loadingState={loadingState}
+      onRetry={() => {
+        if (loadOnInteractionOnly && interactionLoadCount === 0) {
+          return;
+        }
+        void refetch(false);
+      }}
+      isEmpty={
+        (loadOnInteractionOnly && interactionLoadCount === 0) ||
+        !isChartSuccess(data, 'counterparties') ||
+        counterpartyCountRanking.length === 0
+      }
+      preserveChildrenWhenEmpty={loadOnInteractionOnly && interactionLoadCount === 0}
+    >
+      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']}`}>
+        {loadOnInteractionOnly && (
+          <div className={sharedStyles.balanceChartWindowToggleGroup}>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 7 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+              onClick={() => handleWindowRangeClick(7)}
+            >
+              {tr('charts.balanceChart.window7d')}
+            </button>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${interactionLoadCount > 0 && chartWindowDays === 30 ? sharedStyles.balanceChartWindowButtonActive : ''}`}
+              onClick={() => handleWindowRangeClick(30)}
+            >
+              {tr('charts.balanceChart.window30d')}
+            </button>
+          </div>
+        )}
+        <div className={sharedStyles.limitSelector} >
+          <label htmlFor="limit-select">Top:</label>
+          <select
+            id="limit-select"
+            value={currentLimit}
+            onChange={(e) => handleLimitChange(Number(e.target.value))}
+            className={sharedStyles.chartSelect}
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Transaction counts chart */}
+      {counterpartyCountRanking.length > 0 && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.transactionCount')}</h3>
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={transactionCountChartRef}
+              option={transactionCountOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
+        </div>
+      )}
+
+      {/* Total volume chart */}
+      {counterpartyVolumeRanking.length > 0 && (
+        <div className={sharedStyles.chartSection}>
+          <h3 className={sharedStyles.chartTitle}>{tr('charts.counterpartyActivityChart.totalVolume')}</h3>
+          <ChartGridItem minHeight={minHeight}>
+            <ReactECharts
+              ref={totalVolumeChartRef}
+              option={totalVolumeOptions}
+              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+              opts={{ renderer: 'canvas' }}
+              notMerge={true}
+            />
+          </ChartGridItem>
+        </div>
+      )}
+    </BaseChart>
+  );
+}

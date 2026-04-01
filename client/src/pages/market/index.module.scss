@@ -1,0 +1,440 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.marketPage {
+  min-height: 100vh;
+  background: $background;
+
+  * {
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  :global(.cds--data-table) {
+    table-layout: fixed !important;
+  }
+}
+
+.headerSection {
+  margin-block-end: $spacing-07;
+  
+  .title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-block-end: $spacing-02;
+    color: var(--cds-text-primary);
+  }
+
+  .subtitle {
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+    line-height: 1.5;
+  }
+}
+
+.tabsContainer {
+  margin-bottom: $spacing-05;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tabActions {
+  display: flex;
+  align-items: center;
+}
+
+.treeMapButton {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-03;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #0062ff;
+  color: #0062ff;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e5f1ff;
+    border-color: #0062ff;
+  }
+}
+
+.clearButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--cds-support-error, #da1e28);
+  color: var(--cds-support-error, #da1e28);
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-right: $spacing-05;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #fff1f1;
+    border-color: #ba1b23;
+    color: #ba1b23;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: $spacing-03;
+  background: var(--cds-layer-01, #f4f4f4);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.tab {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--cds-text-secondary, #808080);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--cds-text-primary, #161616);
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &.active {
+    background: #e5f1ff; // Light blue background
+    color: #0062ff; // Primary blue color
+  }
+}
+
+.starButton {
+  padding: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  &:focus,
+  &:active,
+  &:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+}
+
+.activeStarIcon {
+  fill: #f1c40f !important;
+  color: #f1c40f !important;
+}
+
+.placeholderTab {
+  padding: $spacing-09;
+  text-align: center;
+  background: var(--cds-layer-01, #ffffff);
+  border-radius: 4px;
+  
+  h3 {
+    margin-bottom: $spacing-03;
+    color: var(--cds-text-primary);
+  }
+  
+  p {
+    color: var(--cds-text-secondary);
+  }
+}
+
+.content {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 0 0 $spacing-06;
+  padding-inline: 80px;
+}
+
+.marketGrid {
+  row-gap: $spacing-03;
+}
+
+.marketColumn {
+  display: flex;
+  height: auto;
+  min-height: 630px;
+}
+
+.tradersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 800px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+
+  .title {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cds-text-primary, #1a1a1a);
+  }
+
+  .description {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary, #525252);
+    line-height: 1.5;
+  }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.boxedTableHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.filterContainer {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+
+  .filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .filterLabel {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--cds-text-secondary);
+    }
+  }
+}
+
+.boxedTableContainer {
+  background: #ffffff !important;
+  border: 1px solid #c4c4c4;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  margin: 5px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  :global(.cds--g100) & {
+    background: #000000 !important;
+    border-color: #393939;
+  }
+
+  :global(.cds--table-container),
+  :global(.cds--data-table-content) {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  // Force EVERYTHING inside the table to be transparent to show the container background
+  :global(.cds--table-container),
+  :global(.cds--data-table-header),
+  :global(.cds--data-table-content),
+  :global(.cds--data-table),
+  :global(.cds--data-table thead),
+  :global(.cds--data-table thead tr),
+  :global(.cds--data-table thead tr th),
+  :global(.cds--data-table tbody),
+  :global(.cds--data-table tbody tr),
+  :global(.cds--data-table tbody tr td),
+  :global(.cds--data-table tbody tr:hover td),
+  :global(.cds--data-table tbody tr:hover) {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-top: none !important;
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  :global(.cds--data-table thead tr th) {
+    border-bottom: 2px solid var(--cds-border-subtle, #f0f0f0) !important;
+    color: var(--cds-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  :global(.cds--data-table tbody tr) {
+    height: 48px;
+  }
+
+  :global(.cds--data-table tbody tr td) {
+    border-bottom: 1px solid var(--cds-border-subtle, #f0f0f0) !important;
+    padding: 0.875rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  :global(.cds--data-table tbody tr:last-child td) {
+    border-bottom: none !important;
+  }
+
+  // Ensure no focus outline or border-top on hover
+  :global(.cds--data-table tbody tr:hover) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.panel {
+  width: 100%;
+  border-radius: 10px;
+  background: transparent;
+  overflow: hidden;
+
+  &.panelTrades {
+    overflow: visible;
+  }
+}
+
+.treeMapModal {
+  :global(.cds--modal-container) {
+    background: var(--cds-layer-01, #ffffff);
+  }
+  
+  .heatmapBody {
+    padding: $spacing-05;
+  }
+}
+
+.panel {
+  :global(.cds--table-container) {
+    height: auto !important;
+    border-bottom: 0;
+    background: $layer-01;
+  }
+
+  :global(.cds--data-table-content) {
+    background: $layer-01;
+  }
+
+  :global(.cds--data-table thead tr th),
+  :global(.cds--data-table thead tr) {
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: none;
+    border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0) !important;
+  }
+
+  :global(.cds--data-table tbody tr td),
+  :global(.cds--data-table tbody tr) {
+    font-size: 14px;
+    font-weight: 400;
+    border-bottom: 1px solid var(--cds-border-subtle, #e0e0e0) !important;
+  }
+}
+
+:global([data-carbon-theme='white']),
+:global(.cds--white),
+:global(.cds-theme-zone--white) {
+  .panel,
+  .heatmapPanel {
+    background: #fff;
+  }
+
+  .panel {
+    :global(.cds--table-container),
+    :global(.cds--data-table-content) {
+      background: #fff;
+    }
+  }
+}
+
+:global([data-carbon-theme='g10']),
+:global(.cds--g10),
+:global(.cds-theme-zone--g10) {
+  .panel,
+  .heatmapPanel {
+    background: #fff;
+  }
+
+  .panel {
+    :global(.cds--table-container),
+    :global(.cds--data-table-content) {
+      background: #fff;
+    }
+  }
+}
+
+:global([data-carbon-theme='g100']),
+:global(.cds--g100),
+:global(.cds-theme-zone--g100) {
+  .panel,
+  .heatmapPanel {
+    background: $background !important;
+  }
+
+  .panel {
+    :global(.cds--table-container),
+    :global(.cds--data-table-header),
+    :global(.cds--data-table) td,
+    :global(.cds--data-table) th,
+    :global(.cds--data-table-content) {
+      background: $background !important;
+    }
+  }
+}
+
+.heatmapPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+:global(.cds--modal-content) {
+  padding: 0 !important;
+}
+
+@media (max-width: 1056px) {
+  .content {
+    padding-inline: $spacing-03;
+  }
+}
+
+@media (max-width: 672px) {
+  .content {
+    padding-inline: $spacing-03;
+  }
+}

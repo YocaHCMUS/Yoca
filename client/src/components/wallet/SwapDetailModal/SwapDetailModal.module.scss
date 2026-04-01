@@ -1,0 +1,245 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.card {
+  background-color: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  width: 480px;
+  max-width: calc(100vw - #{$spacing-09});
+  padding: $spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Header ──────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  @include type-style('heading-03');
+  color: $text-primary;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+/* ── Swap visual row ─────────────────────────── */
+.swapRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-04;
+  background-color: $layer-02;
+  border-radius: 6px;
+  padding: $spacing-05;
+}
+
+.tokenCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-02;
+  min-width: 0; // allows text children to shrink below their natural size
+  overflow: hidden;
+}
+
+.dirLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tokenAmt {
+  @include type-style('heading-04');
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tokenSym {
+  @include type-style('body-compact-02');
+  color: $text-secondary;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tokenIdentity {
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.arrow {
+  flex-shrink: 0;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Summary sentence ────────────────────────── */
+.summary {
+  @include type-style('body-01');
+  color: $text-secondary;
+  text-align: center;
+  margin: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+
+  strong {
+    color: $text-primary;
+  }
+}
+
+/* ── Detail rows ─────────────────────────────── */
+.details {
+  border-top: 1px solid $border-subtle;
+  padding-top: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-05;
+}
+
+.detailKey {
+  @include type-style('label-01');
+  color: $text-secondary;
+  flex-shrink: 0;
+}
+
+.detailVal {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: right;
+}
+
+.detailLink {
+  @include type-style('body-compact-01');
+  color: $link-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  text-decoration: none;
+
+  &:hover {
+    color: $link-primary-hover;
+    text-decoration: underline;
+  }
+}
+
+/* ── Balance Changes Section ────────────────── */
+.balanceChanges {
+  border-top: 1px solid $border-subtle;
+  padding-top: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+}
+
+.sectionTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.changesList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.changeItem {
+  display: grid;
+  grid-template-columns: auto auto minmax(7.5rem, 1fr) auto;
+  gap: $spacing-03;
+  align-items: center;
+  padding: $spacing-03;
+  background-color: $layer-02;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.changeDirection {
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  width: 1.25rem;
+  text-align: center;
+
+  &:has(+.changeAmount) {
+    color: $support-success;
+  }
+}
+
+.changeAmount {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.changeSymbol {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 600;
+}
+
+.changeTokenIdentity {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.changeMint {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-size: 0.75rem;
+}
