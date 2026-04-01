@@ -172,6 +172,7 @@ export async function getWalletSwaps(
                 swaps = await fetchMoralisSolanaSwap(address, shortPeriod, {
                     limit: shortPeriodLimit,
                     cursor: options?.cursor ?? options?.before,
+                    tokenAddress: options?.tokenAddress,
                 });
 
                 console.log(
@@ -240,6 +241,7 @@ export async function getWalletSwaps(
             chunk = await fetchMoralisSolanaSwapChunk(address, {
                 limit,
                 cursor,
+                tokenAddress: options?.tokenAddress,
             });
 
             console.log(
@@ -247,9 +249,6 @@ export async function getWalletSwaps(
             );
         } catch (moralisErr) {
             console.error("[getWalletSwaps] Moralis swap fetch failed", moralisErr);
-            console.log(
-                `[getWalletSwaps] Moralis failed; fallback fetched ${chunk.items.length} swaps from Helius chunk for ${address}`,
-            );
         }
 
         if (!chunk.items.length) {

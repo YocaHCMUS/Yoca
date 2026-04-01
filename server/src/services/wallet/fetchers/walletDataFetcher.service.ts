@@ -583,6 +583,7 @@ export type HeliusSwapChunkOptions = {
 export type MoralisSwapChunkOptions = {
   cursor?: string;
   limit?: number;
+  tokenAddress?: string; // Optional filter to only include swaps involving a specific token address
 };
 
 export async function fetchHeliusSolanaTransfersChunk(
@@ -618,8 +619,13 @@ export async function fetchMoralisSolanaSwapChunk(
 
   const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
   url.searchParams.set("limit", String(limit));
+
   if (options?.cursor) {
     url.searchParams.set("cursor", options.cursor);
+  }
+
+  if (options?.tokenAddress) {
+    url.searchParams.set("tokenAddress", options.tokenAddress);
   }
 
   const response = await moralis.moralisFetch(url, {
@@ -724,6 +730,7 @@ export async function fetchHeliusSolanaTransfers(
 type MoralisSwapFetchOptions = {
   limit?: number; // Max total swaps to fetch across all pages (will be capped by API limits)
   cursor?: string;
+  tokenAddress?: string; // Optional filter to only include swaps involving a specific token address
 };
 
 export async function fetchMoralisSolanaSwap(
@@ -747,6 +754,10 @@ export async function fetchMoralisSolanaSwap(
       // url.searchParams.set("limit", String(MORALIS_PAGE_LIMIT));
       url.searchParams.set("fromDate", fromDateIso);
       url.searchParams.set("toDate", toDateIso);
+      if (options?.tokenAddress) {
+        url.searchParams.set("tokenAddress", options.tokenAddress);
+      }
+
       if (cursor) {
         url.searchParams.set("cursor", cursor);
       }
