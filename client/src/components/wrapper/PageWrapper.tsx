@@ -2,7 +2,8 @@ import appLogo from "@/assets/app-logo.png";
 import { useUserTheme } from "@/contexts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Asleep, Light } from "@carbon/icons-react";
+import { cds } from "@/util/carbon-theme";
+import { Asleep, FireFill, Light } from "@carbon/icons-react";
 import {
   Content,
   Header,
@@ -14,7 +15,6 @@ import {
   HeaderNavigation,
   HeaderPanel,
   HeaderSideNavItems,
-  Heading,
   SideNav,
   SideNavItems,
   Stack,
@@ -25,6 +25,7 @@ import {
 import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
+import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
@@ -48,24 +49,30 @@ function ThemeToggleGlobalAction() {
   );
 }
 
-export function PageWrapper({
-  children,
-  noTopPadding = false,
-}: {
+type PageWrapperProps = {
   children: ReactNode;
-  noTopPadding?: boolean;
-}) {
+  extraHeaderPanel?: {
+    isOpen: boolean;
+    content: ReactNode;
+    size?: "md" | "lg";
+    onClose: () => void;
+  };
+  onHeaderPanelOpenChange?: (isOpen: boolean) => void;
+};
+
+export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
   const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
+  const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key == "k") {
         e.preventDefault();
         setIsSearchOpen(true);
       }
@@ -74,11 +81,24 @@ export function PageWrapper({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Open extra panel when extraHeaderPanel.isOpen becomes true
+  useEffect(() => {
+    if (extraHeaderPanel?.isOpen) {
+      setOpenPanel(null);
+      setTimeout(() => setIsExtraHeaderPanelOpen(true), 0);
+    }
+  }, [extraHeaderPanel?.isOpen]);
+
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
   };
 
   const togglePanel = (panel: "lang" | "account") => {
+    // Close header panel extension if it's open
+    if (isExtraPanelOpen) {
+      setIsExtraHeaderPanelOpen(false);
+      extraHeaderPanel?.onClose();
+    }
     setOpenPanel((prev) => (prev == panel ? null : panel));
   };
 
@@ -103,7 +123,8 @@ export function PageWrapper({
         />
 
         <HeaderName href="#" prefix="">
-          <Stack gap={3}
+          <Stack
+            gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
           >
@@ -153,6 +174,7 @@ export function PageWrapper({
         <HeaderPanel
           className={styles.headerPanel}
           expanded={openPanel == "lang"}
+          onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher
             aria-label="Language Switcher"
@@ -197,6 +219,7 @@ export function PageWrapper({
         <HeaderPanel
           className={styles.headerPanel}
           expanded={openPanel == "account"}
+          onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher aria-label="Account" expanded={openPanel == "account"}>
             <SwitcherItem aria-labelledby="account-id" isSelected={false}>
@@ -233,6 +256,23 @@ export function PageWrapper({
           </Switcher>
         </HeaderPanel>
 
+        {extraHeaderPanel && (
+          <HeaderPanel
+            className={
+              extraHeaderPanel.size == "lg"
+                ? styles.headerPanelLarge
+                : styles.headerPanel
+            }
+            expanded={isExtraPanelOpen}
+          >
+            <Switcher aria-label="Extra" expanded={isExtraPanelOpen}>
+              <div className={styles.extraHeaderPanelContent}>
+                {extraHeaderPanel.content}
+              </div>
+            </Switcher>
+          </HeaderPanel>
+        )}
+
         <SideNav
           aria-label="Side navigation"
           expanded={isSideNavExpanded}
@@ -247,13 +287,26 @@ export function PageWrapper({
         </SideNav>
       </Header>
 
+      <MarketTicker
+        className={styles.marketTicker}
+        label={tr("marketPage.trending")}
+        icon={<FireFill size={16} fill={cds.supportError} />}
+      />
+
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content
         id="main-content"
-        style={{ height: "100%", paddingTop: 0, paddingBottom: 0 }}
-        className={noTopPadding ? styles.contentNoTopPadding : undefined}
+        className={isExtraPanelOpen ? styles.contentDimmed : ""}
+        onClick={
+          isExtraPanelOpen
+            ? () => {
+                setIsExtraHeaderPanelOpen(false);
+                extraHeaderPanel?.onClose();
+              }
+            : undefined
+        }
       >
         {children}
       </Content>

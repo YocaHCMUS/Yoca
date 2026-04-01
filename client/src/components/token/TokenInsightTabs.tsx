@@ -1,7 +1,7 @@
 import client from "@/api/main";
+import { FilterSwitch } from "@/components/FilterSwitch";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { FilterSwitch } from "@/components/FilterSwitch";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import type { InferResponseType } from "hono/client";
@@ -18,9 +18,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 interface MarketData {
@@ -63,14 +63,6 @@ interface TokenInsightTabsProps {
   holdersLoading?: boolean;
 }
 
-// ─── Format Helpers ────────────────────────────────────────────
-
-function fmtPct(v: number | null | undefined): string {
-  if (v == null || isNaN(v)) return "—";
-  const sign = v >= 0 ? "+" : "";
-  return `${sign}${v.toFixed(2)}%`;
-}
-
 // ─── Donut Chart ─────────────────────────────────────────────────────────────
 
 const DONUT_COLORS = ["#1665C0", "#3D8DF5", "#7BB8F5", "#C4DFF9"];
@@ -92,13 +84,13 @@ function buildDonutOption(
     {
       name: labels.mid1,
       value: parseFloat(
-        ((distribution as unknown) as Record<string, string>)[mid1Key] ?? "0",
+        (distribution as unknown as Record<string, string>)[mid1Key] ?? "0",
       ),
     },
     {
       name: labels.mid2,
       value: parseFloat(
-        ((distribution as unknown) as Record<string, string>)[mid2Key] ?? "0",
+        (distribution as unknown as Record<string, string>)[mid2Key] ?? "0",
       ),
     },
     {
@@ -138,7 +130,7 @@ function buildDonutOption(
       itemGap: 24,
       textStyle: { fontSize: 13, color: isDark ? "#c6c6c6" : "#444" },
       formatter: (name: string) => {
-        const entry = entries.find((e) => e.name === name);
+        const entry = entries.find((e) => e.name == name);
         return entry ? `${name}  ${entry.value.toFixed(2)}%` : name;
       },
     },
@@ -171,7 +163,8 @@ function buildDonutOption(
 
 function HighlightedText({ text }: { text: string }) {
   // Highlight $-prefixed USD values, +/-% changes, and Vietnamese đồng amounts
-  const regex = /(\.?\$[\d,.]+[KMBT]?|[+-][\d.]+%|[\d,.]+(?:\s+(?:nghìn tỷ|tỷ|triệu|nghìn))?\s+đồng)/g;
+  const regex =
+    /(\.?\$[\d,.]+[KMBT]?|[+-][\d.]+%|[\d,.]+(?:\s+(?:nghìn tỷ|tỷ|triệu|nghìn))?\s+đồng)/g;
   const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -182,11 +175,23 @@ function HighlightedText({ text }: { text: string }) {
     }
     const val = match[0];
     if (val.startsWith("-") && val.endsWith("%")) {
-      parts.push(<span key={match.index} className={styles.negative}>{val}</span>);
+      parts.push(
+        <span key={match.index} className={styles.negative}>
+          {val}
+        </span>,
+      );
     } else if (val.startsWith("+") && val.endsWith("%")) {
-      parts.push(<span key={match.index} className={styles.positive}>{val}</span>);
+      parts.push(
+        <span key={match.index} className={styles.positive}>
+          {val}
+        </span>,
+      );
     } else {
-      parts.push(<span key={match.index} className={styles.highlightValue}>{val}</span>);
+      parts.push(
+        <span key={match.index} className={styles.highlightValue}>
+          {val}
+        </span>,
+      );
     }
     lastIndex = regex.lastIndex;
   }
@@ -224,25 +229,29 @@ export function TokenInsightTabs({
   meta,
   market,
   holders,
-  holdersInfo,
   holdersLoading = false,
 }: TokenInsightTabsProps) {
   const { tr, fmt } = useLocalization();
   const { theme } = useUserTheme();
-  const isDark = theme === "dark";
-  const fmtCurrency = (v: number | null | undefined) => fmt.num.readableCompact.currency(v ?? null);
+  const isDark = theme == "dark";
+  const fmtCurrency = (v: number | null | undefined) =>
+    fmt.num.readableCompact.currency(v ?? null);
   const fmtSupply = (v: number | null | undefined, symbol: string): string => {
     if (v == null || isNaN(v)) return "—";
-    const count = v >= 1e9
-      ? Math.round(v / 1e9)
-      : v >= 1e6
-        ? Math.round(v / 1e6)
-        : v >= 1e3
-          ? Math.round(v / 1e3)
-          : null;
-    if (v >= 1e9) return tr("token.insightTabs.supplyBillion", { count: count!, symbol });
-    if (v >= 1e6) return tr("token.insightTabs.supplyMillion", { count: count!, symbol });
-    if (v >= 1e3) return tr("token.insightTabs.supplyThousand", { count: count!, symbol });
+    const count =
+      v >= 1e9
+        ? Math.round(v / 1e9)
+        : v >= 1e6
+          ? Math.round(v / 1e6)
+          : v >= 1e3
+            ? Math.round(v / 1e3)
+            : null;
+    if (v >= 1e9)
+      return tr("token.insightTabs.supplyBillion", { count: count!, symbol });
+    if (v >= 1e6)
+      return tr("token.insightTabs.supplyMillion", { count: count!, symbol });
+    if (v >= 1e3)
+      return tr("token.insightTabs.supplyThousand", { count: count!, symbol });
     return `${v.toLocaleString()} ${symbol}`;
   };
   const [activeTab, setActiveTab] = useState(0);
@@ -265,7 +274,7 @@ export function TokenInsightTabs({
           });
         }
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setDistLoading(false));
   }, [address]);
 
@@ -275,61 +284,61 @@ export function TokenInsightTabs({
 
   const insightCards = market
     ? [
-      {
-        question: tr("token.insightTabs.volumeQ", { name, symbol }),
-        answer: tr("token.insightTabs.volumeA", {
-          name,
-          symbol,
-          volume: fmtCurrency(market.volume24h),
-          change: fmtPct(market.priceChangePercentage24h),
-        }),
-      },
-      ...(market.ath != null
-        ? [
-          {
-            question: tr("token.insightTabs.athAtlQ", { name, symbol }),
-            answer: tr("token.insightTabs.athAtlA", {
-              name,
-              symbol,
-              ath: fmtCurrency(market.ath),
-              atl: fmtCurrency(market.atl),
-              athPct: fmtPct(market.athChangePercentage),
-              atlPct: fmtPct(market.atlChangePercentage),
-            }),
-          },
-        ]
-        : []),
-      ...(market.marketCap != null
-        ? [
-          {
-            question: tr("token.insightTabs.marketCapQ", { name, symbol }),
-            answer: tr("token.insightTabs.marketCapA", {
-              name,
-              symbol,
-              marketCap: fmtCurrency(market.marketCap),
-              rank: String(market.marketCapRank ?? "—"),
-              supply: fmtSupply(market.circulatingSupply, symbol),
-            }),
-          },
-        ]
-        : []),
-      ...(market.fullyDilutedValuation != null
-        ? [
-          {
-            question: tr("token.insightTabs.fdvQ", { name, symbol }),
-            answer: tr("token.insightTabs.fdvA", {
-              name,
-              symbol,
-              fdv: fmtCurrency(market.fullyDilutedValuation),
-              maxSupply: fmtSupply(
-                market.maxSupply ?? market.totalSupply,
-                symbol,
-              ),
-            }),
-          },
-        ]
-        : []),
-    ]
+        {
+          question: tr("token.insightTabs.volumeQ", { name, symbol }),
+          answer: tr("token.insightTabs.volumeA", {
+            name,
+            symbol,
+            volume: fmtCurrency(market.volume24h),
+            change: fmt.num.percent(market.priceChangePercentage24h),
+          }),
+        },
+        ...(market.ath != null
+          ? [
+              {
+                question: tr("token.insightTabs.athAtlQ", { name, symbol }),
+                answer: tr("token.insightTabs.athAtlA", {
+                  name,
+                  symbol,
+                  ath: fmtCurrency(market.ath),
+                  atl: fmtCurrency(market.atl),
+                  athPct: fmt.num.percent(market.athChangePercentage),
+                  atlPct: fmt.num.percent(market.atlChangePercentage),
+                }),
+              },
+            ]
+          : []),
+        ...(market.marketCap != null
+          ? [
+              {
+                question: tr("token.insightTabs.marketCapQ", { name, symbol }),
+                answer: tr("token.insightTabs.marketCapA", {
+                  name,
+                  symbol,
+                  marketCap: fmtCurrency(market.marketCap),
+                  rank: String(market.marketCapRank ?? "—"),
+                  supply: fmtSupply(market.circulatingSupply, symbol),
+                }),
+              },
+            ]
+          : []),
+        ...(market.fullyDilutedValuation != null
+          ? [
+              {
+                question: tr("token.insightTabs.fdvQ", { name, symbol }),
+                answer: tr("token.insightTabs.fdvA", {
+                  name,
+                  symbol,
+                  fdv: fmtCurrency(market.fullyDilutedValuation),
+                  maxSupply: fmtSupply(
+                    market.maxSupply ?? market.totalSupply,
+                    symbol,
+                  ),
+                }),
+              },
+            ]
+          : []),
+      ]
     : [];
 
   // ── Donut labels ────────────────────────────
@@ -347,19 +356,17 @@ export function TokenInsightTabs({
 
   return (
     <div className={styles.container}>
-      <div>
-        <FilterSwitch
-          options={[
-            { value: "0", label: tr("token.insightTabs.about") || "Stats" },
-            { value: "1", label: tr("token.insightTabs.holders") || "Holders" }
-          ]}
-          value={activeTab.toString()}
-          onChange={(v) => setActiveTab(parseInt(v, 10))}
-          tooltipLabel="Insights"
-        />
-      </div>
+      <FilterSwitch
+        width="lg"
+        options={[
+          { value: "0", label: tr("token.insightTabs.about") || "Stats" },
+          { value: "1", label: tr("token.insightTabs.holders") || "Holders" },
+        ]}
+        value={activeTab.toString()}
+        onChange={(v) => setActiveTab(parseInt(v, 10))}
+      />
 
-      {activeTab === 0 && (
+      {activeTab == 0 && (
         <div className={styles.tabContent} key="about">
           {insightCards.length > 0 && (
             <div className={styles.insightGrid}>
@@ -371,7 +378,7 @@ export function TokenInsightTabs({
         </div>
       )}
 
-      {activeTab === 1 && (
+      {activeTab == 1 && (
         <div className={styles.tabContent} key="holders">
           <div className={styles.holdersLayout}>
             <div className={styles.holdersTable}>
@@ -383,7 +390,9 @@ export function TokenInsightTabs({
                   {tr("token.insightTabs.distributionTitle")}
                 </h4>
                 <p className={styles.chartDescription}>
-                  {tr("token.insightTabs.distributionDescription", { symbol: meta?.symbol ?? "" })}
+                  {tr("token.insightTabs.distributionDescription", {
+                    symbol: meta?.symbol ?? "",
+                  })}
                 </p>
               </div>
               {distLoading ? (

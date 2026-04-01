@@ -131,3 +131,15 @@ export function getThemedChartBaseOption(themeConfig: ChartThemeConfig) {
     },
   };
 }
+
+export function getChartGridConfig() {
+  return {
+    grid: {
+      left: "6rem",
+      right: "6rem",
+      bottom: "6rem",
+      top: "6rem",
+      containLabel: true,
+    },
+  };
+}

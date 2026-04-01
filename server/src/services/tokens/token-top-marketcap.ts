@@ -10,7 +10,7 @@ import {
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { asc, gt } from "drizzle-orm";
-import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
+import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
 import { getAddressesByCoinGeckoIds } from "./token-list.js";
 import { getMarketDataFromRaw } from "./token-market-data.js";
 

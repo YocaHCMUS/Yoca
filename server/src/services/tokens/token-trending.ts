@@ -5,11 +5,11 @@ import {
   UPDATE_TRENDING_TOKENS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { trendingTokens } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { asc } from "drizzle-orm";
-import type { BDS_TrendingList } from "../_types/token_raw_responses.js";
+import type { BDS_TrendingList } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 async function fetchTrendingPage(params: {
@@ -42,7 +42,7 @@ async function fetchTrendingPage(params: {
     return null;
   }
 
-  const res: BDS_TrendingList = await resp.json();
+  const res = (await resp.json()) as BDS_TrendingList;
   if (!res.success) {
     return null;
   }
@@ -75,7 +75,7 @@ export async function getTrendingTokens() {
     });
 
     if (page == null) {
-      return null;
+      return result.length > 0 ? result : [];
     }
 
     const pageAddresses = page.data.tokens.map((token) => token.address);

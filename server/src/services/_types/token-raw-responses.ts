@@ -1,5 +1,5 @@
 import type { MarketGetResponse } from "@coingecko/coingecko-typescript/resources/coins.mjs";
-
+import { z } from "zod";
 export interface CG_Token {
   id: string;
   name: string;
@@ -338,45 +338,41 @@ export type MRL_TopHolders = {
   totalSupply: string;
 };
 
-type TokenSide = {
-  symbol: string;
-  address: string;
-  decimals: number;
-  price: number;
-  amount: string;
-  ui_amount: number;
-  ui_change_amount: number;
-  type_swap: "from" | "to";
-  is_scaled_ui_token: boolean;
-  multiplier: number | null;
-};
+export const tokenSideSchema = z.object({
+  symbol: z.string().optional(),
+  address: z.string(),
+  decimals: z.number(),
+  price: z.number().nullable(),
+  amount: z.string(),
+  ui_amount: z.number(),
+  ui_change_amount: z.number(),
+  type_swap: z.enum(["from", "to"]),
+  is_scaled_ui_token: z.boolean(),
+  multiplier: z.number().nullable(),
+});
 
-type SwapItem = {
-  base: TokenSide;
-  quote: TokenSide;
+export const swapItemSchema = z.object({
+  base: tokenSideSchema,
+  quote: tokenSideSchema,
+  tx_type: z.literal("swap"),
+  tx_hash: z.string(),
+  ins_index: z.number().nullable(),
+  inner_ins_index: z.number().nullable(),
+  block_unix_time: z.number(),
+  block_number: z.number(),
+  volume_usd: z.number(),
+  volume: z.number(),
+  owner: z.string(),
+  signers: z.array(z.string()),
+  source: z.string(),
+  interacted_program_id: z.string(),
+  pool_id: z.string(),
+});
 
-  tx_type: "swap";
-  tx_hash: string;
+export const bds_RecentTradesSchema = z.object({
+  data: z.object({
+    items: z.array(swapItemSchema),
+  }),
+});
 
-  ins_index: number;
-  inner_ins_index: number | null;
-
-  block_unix_time: number;
-  block_number: number;
-
-  volume_usd: number;
-  volume: number;
-
-  owner: string;
-  signers: string[];
-
-  source: string;
-  interacted_program_id: string;
-  pool_id: string;
-};
-
-export type BDS_RecentTrades = {
-  data: {
-    items: SwapItem[];
-  };
-};
+export type BDS_RecentTrades = z.infer<typeof bds_RecentTradesSchema>;

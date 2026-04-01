@@ -10,13 +10,13 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateTradingVolumeDistribution } from '../../services/mockChartData.service.js';
+import { getTradingVolumeDistribution } from '@sv/services/wallet/walletComparison.js';
 
 /**
  * Request parameter schema for trading volume distribution endpoint
  */
 const tradingVolumeDistributionRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional(),
 });
 
@@ -49,10 +49,11 @@ const app = new Hono()
       const query = c.req.query();
       const params = tradingVolumeDistributionRequestSchema.parse(query);
 
-      // Generate trading volume distribution data
-      const data = generateTradingVolumeDistribution(
+      const wallets = params.wallets ? params.wallets.split(',').filter(Boolean) : [];
+      // Fetch trading volume distribution from wallet comparison service
+      const data = await getTradingVolumeDistribution(
+        wallets,
         params.period,
-        params.wallets
       );
 
       // Return response

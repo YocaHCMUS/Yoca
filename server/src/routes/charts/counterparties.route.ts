@@ -8,8 +8,8 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { generateCounterpartyData } from '../../services/mockChartData.service.js';
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
+import { error } from "console";
 
 /**
  * Request parameter schema for counterparty activity endpoint
@@ -172,15 +172,15 @@ const app = new Hono()
         );
       }
 
-      // Generate counterparty activity data
-      const data = generateCounterpartyData(
-        params.timePeriod,
-        params.transactionType,
-        limit,
-      );
 
-      // Return response
-      return c.json(data, 200);
+
+      return c.json(
+        {
+          error: "Failed to fetch counterparty activity data",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500,
+      );
     } catch (error) {
       console.error("Error fetching counterparty activity data:", error);
       return c.json(

@@ -18,7 +18,7 @@ import {
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte, lte } from "drizzle-orm";
-import type { CG_TokenMarketChart } from "../_types/token_raw_responses.js";
+import type { CG_TokenMarketChart } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
@@ -65,7 +65,7 @@ export async function fetch24hTokenMarketChart(
   });
 
   if (resp.ok) {
-    const res: CG_TokenMarketChart = await resp.json();
+    const res = (await resp.json()) as CG_TokenMarketChart;
     const chartDataPoints = res.prices.map(
       ([timestamp, price], index): TokenMarketChart24hInsert => ({
         address: tokenAddress,
@@ -202,7 +202,7 @@ async function fetchAndCacheRangedChart(
   });
   if (!resp.ok) return;
 
-  const res: CG_TokenMarketChart = await resp.json();
+  const res = (await resp.json()) as CG_TokenMarketChart;
   if (res.prices.length == 0) return;
 
   const unixUpdatedAtMs = now;

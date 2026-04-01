@@ -462,6 +462,38 @@ export interface RollingAnnualReturnResponse extends ChartResponseBase {
 }
 
 /**
+ * Rolling Profit & Loss (period-based) API response
+ *
+ * Some backends return period-summary P&L (not timeseries). This normalized
+ * shape represents either a per-wallet array of metrics or an aggregated metrics object.
+ */
+export interface RollingProfitAndLossWalletMetrics {
+  total?: number;
+  realized?: number;
+  unrealized?: number;
+}
+
+export interface RollingProfitAndLossWallet {
+  walletAddress: string;
+  walletName?: string;
+  metrics: RollingProfitAndLossWalletMetrics;
+}
+
+export interface RollingProfitAndLossResponse extends ChartResponseBase {
+  /** Per-wallet metrics when multiple wallets are returned */
+  wallets?: RollingProfitAndLossWallet[];
+
+  /** Aggregated/summary metrics when backend returns an aggregated object */
+  metrics?: RollingProfitAndLossWalletMetrics;
+
+  metadata: {
+    timestamp: number;
+    currency?: string;
+    availableValueTypes: ('total' | 'realized' | 'unrealized')[];
+  };
+}
+
+/**
  * Average rolling annual return API response
  * GET /api/charts/average-rolling-annual-return
  * 

@@ -22,13 +22,13 @@ import type { TimePeriod } from '../types/chart-filters.types';
 export function formatCurrency(value: number, _currency: string = 'USD'): string {
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
-  
+
   // Handle very small values (like BONK) with appropriate precision
   if (absValue > 0 && absValue < 0.01) {
     // For very small values, show up to 6 decimal places
     return `${sign}$${absValue.toFixed(6)}`;
   }
-  
+
   // Format large numbers with K, M, B suffixes
   if (absValue >= 1_000_000_000) {
     return `${sign}$${(absValue / 1_000_000_000).toFixed(2)}B`;
@@ -79,7 +79,7 @@ export function formatDate(
   formatStr: string = 'MMM d, yyyy'
 ): string {
   const dateObj = typeof date === 'number' ? new Date(date) : date;
-  
+
   try {
     return formatInTimeZone(dateObj, timezone, formatStr);
   } catch (error) {
@@ -102,7 +102,7 @@ export function formatTimestamp(
   const formatStr = includeSeconds
     ? 'MMM d, yyyy h:mm:ss a zzz'
     : 'MMM d, yyyy h:mm a zzz';
-  
+
   return formatDate(timestamp, timezone, formatStr);
 }
 
@@ -148,12 +148,12 @@ export function generateFilename(
     .toISOString()
     .replace(/[:.]/g, '-')
     .slice(0, -5); // Remove milliseconds and Z
-  
+
   const filterParts = [
     filters.timePeriod,
     filters.tokens.join(','),
   ].filter(Boolean);
-  
+
   const filterStr = filterParts.join('-');
   return `${baseName}-${filterStr}-${timestamp}.${extension}`;
 }
@@ -176,7 +176,7 @@ export function estimateDataPoints(
     weekly: 24 * 7,
     monthly: 24 * 30,
   };
-  
+
   const hours = {
     '7D': 7 * 24,
     '30D': 30 * 24,
@@ -186,7 +186,7 @@ export function estimateDataPoints(
     'All': 730 * 24, // Assume 2 years max
     'custom': 30 * 24, // Default to 30 days
   };
-  
+
   return Math.ceil(hours[timePeriod] / hoursPerUnit[granularity]);
 }
 
@@ -207,14 +207,14 @@ export function getOptimalAggregation(
     'weekly',
     'monthly',
   ];
-  
+
   for (const granularity of granularities) {
     const points = estimateDataPoints(timePeriod, granularity);
     if (points <= maxPoints) {
       return granularity;
     }
   }
-  
+
   return 'monthly';
 }
 
@@ -233,7 +233,7 @@ export function calculateStaggerOffset(chartId: string, maxOffset: number = 5000
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
-  
+
   // Map to 0-maxOffset range
   return Math.abs(hash) % maxOffset;
 }

@@ -73,7 +73,7 @@ function getBackoffDelayMs(attempt: number, error: unknown): number {
 async function birdeyeRequestJsonWithRetry<T>(input: {
     url: URL;
     method: "GET" | "POST";
-    headers: HeadersInit;
+    headers: Record<string, string>;
     body?: unknown;
 }): Promise<T> {
     let lastError: unknown;

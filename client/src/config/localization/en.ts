@@ -56,6 +56,7 @@ export const format = {
         }).format(value);
       },
     },
+    smallCompactThreshold: 1e-4,
   }),
   datetime: defineDateTimeFormat(langCode, {
     datePattern: "MM/DD/YYYY",
@@ -115,6 +116,15 @@ export const translation = {
     success: "Success",
     or: "or",
     and: "and",
+    noData: "No data available",
+  },
+  // Table & Pagination
+  table: {
+    itemsPerPageText: "Items per page",
+    pageRangeText: "Page {{count}} of {{total}}",
+    itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
+    nextPage: "Next Page",
+    previousPage: "Previous Page",
   },
   // Authentication
   auth: {
@@ -240,7 +250,33 @@ export const translation = {
     holding: "Holding",
     value: "Value",
     change24h: "Change (24h)",
+    // Token Details Demo
+    tokensLastTraded: "Tokens Last Traded",
+    tokensLastTradedDescription: "Tokens with recent trading activities",
+    balance: "Balance",
+    profit: "Profit",
+    realizedProfit: "Realized Profit",
+    unrealizedProfit: "Unrealized Profit",
+    totalBought: "Total Bought",
+    totalSold: "Total Sold",
+    netValue: "Net Value",
+    transactions: "Transactions",
+    avgBuySellPrice: "Avg Buy/Sell Price",
+    graph: "Graph",
+    recentTrades: "Recent trades",
+    recentTradesDescription: "Recent trades on this token",
+    action: "Action",
+    buy: "Buy",
+    sell: "Sell",
     exchange: "Exchange",
+    transaction: "Transaction",
+    openInSolscan: "Open in Solscan",
+    avgBuyPrice: "Avg Buy Price",
+    avgSellPrice: "Avg Sell Price",
+    averageTradingPrice: "Average trading price",
+    filter7d: "7d",
+    filter30d: "30d",
+    filter90d: "90d",
     pair: "Pair",
     tokenSold: "Token Sold",
     tokenBought: "Token Bought",
@@ -271,16 +307,21 @@ export const translation = {
   marketPage: {
     topTokens: "Top tokens",
     topTokensDescription: "Top 50 tokens by market cap",
+    tokenPerformanceTitle: "Token Performance",
     trendingTokens: "Trending tokens",
+    trending: "Trending",
     trendingTokensDescription: "Top 10 trending tokens",
     profitableTraders: "Profitable traders",
     profitableTradersDescription: "Top 20 traders by market cap",
     topGainers: "Top Gainers",
-    topGainersDesc: "List of traders with the highest profit in the selected period.",
+    topGainersDesc:
+      "List of traders with the highest profit in the selected period.",
     topLosers: "Top Losers",
-    topLosersDesc: "List of traders with the highest loss in the selected period.",
+    topLosersDesc:
+      "List of traders with the highest loss in the selected period.",
     recentTrades: "Recent trades",
-    recentTradesDesc: "Latest token swaps across major decentralized exchanges.",
+    recentTradesDesc:
+      "Latest token swaps across major decentralized exchanges.",
     marketHeatmapDescription: "Treemap of top tokens by market cap",
     marketCap: "Market Cap",
     volume24h: "24h Volume",
@@ -303,7 +344,25 @@ export const translation = {
     sortBy: "Sort by",
     more: "more",
     watchlistEmptyTitle: "Your Watchlist is Empty",
-    watchlistEmptySubtitle: "Start starring tokens in the 'All' tab to track them here!",
+    watchlistEmptySubtitle:
+      "Start starring tokens in the 'All' tab to track them here!",
+    all: "All",
+    watchlist: "Watchlist",
+    allTokensTitle: "Cryptocurrency Prices by Market Cap",
+    allTokensSubtitle:
+      "The global cryptocurrency market continues to evolve with significant activity across key assets. Below is an overview of the top tokens by market capitalization and their recent performance.",
+    watchlistTitle: "Your Watchlist",
+    watchlistSubtitle:
+      "Track your favorite tokens and monitor their performance in one place.",
+    tradesTitle: "Market Activity & Highlights",
+    tradesSubtitle:
+      "Discover top performing traders and the latest significant swaps across decentralized exchanges.",
+    filterAll: "All",
+    filterGreaterThan: "≥{{val}}",
+    selectToken: "Select a token to view details",
+    allTimeHigh: "All-Time High",
+    allTimeLow: "All-Time Low",
+    na: "N/A",
   },
   // Wallet Comparison Page
   walletComparison: {
@@ -326,12 +385,13 @@ export const translation = {
     account: "Account",
     language: "Language",
     search: "Search",
-    searchPlaceholder: "Search tokens by name or address…",
-    searchHint: "Type to search for tokens",
+    searchPlaceholder: "Search tokens or wallet addresses…",
+    searchHint: "Type to search for tokens, pools, or wallets",
     searchLoading: "Searching…",
-    searchNoResults: "No tokens found",
+    searchNoResults: "No results found",
     searchTokens: "Tokens",
     searchPools: "Pools",
+    searchWallets: "Wallets",
     searchNavigate: "to navigate",
     searchSelect: "to select",
     searchClose: "to close",
@@ -623,6 +683,8 @@ export const translation = {
       noWalletsTitle: "No Wallets Selected",
       noWalletsMessage:
         "Please select at least one wallet to view trading volume distribution.",
+      buy: "Buy",
+      sell: "Sell",
     },
     tokenPriceChart: {
       price: "{{tokenSymbol}} Price",
@@ -712,7 +774,7 @@ export const translation = {
       historicalData: "Historical Data",
     },
     marketsTable: {
-      rank: "#",
+      rank: "Rank",
       exchange: "Exchange",
       pair: "Pair",
       price: "Price",
@@ -766,9 +828,9 @@ export const translation = {
       noAddress: "No token address for bubblemaps",
     },
     topHolders: {
-      rank: "#",
+      rank: "Rank",
       address: "Address",
-      percent: "%",
+      percent: "Percentage",
       noData: "No holders data found for this token.",
     },
     historicalData: {

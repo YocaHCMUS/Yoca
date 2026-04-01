@@ -8,10 +8,10 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { generateAssetDistribution } from "@sv/services/mockChartData.service.js";
 
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
+import { mapWithConcurrency } from "@sv/util/concurrency";
 
 /**
  * Request parameter schema for distribution endpoint
@@ -65,52 +65,57 @@ const app = new Hono()
         const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
 
         // For single wallet, return aggregated data
-        if (walletAddresses.length === 1) {
-          const address = walletAddresses[0];
+        const response = await mapWithConcurrency(
+          walletAddresses,
+          5,
+          async (address: string) => {
+            try {
+              const portfolio = await getWalletPortfolio(address);
+              const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
 
-          try {
-            const portfolio = await getWalletPortfolio(address);
+              const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
+                name: item.symbol || item.name || item.tokenAddress || "Unknown",
+                value: item.valueUsd ?? 0,
+                percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
+                rawAmount: item.amount ?? 0,
+                tokenAddress: item.tokenAddress ?? "",
+                symbol: item.symbol ?? "",
+                logoUri: item.logoUri ?? undefined,
+              }));
 
-            // Transform portfolio data into distribution format
-            const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
-
-            const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
-              name: item.symbol || item.name || item.tokenAddress || "Unknown",
-              value: item.valueUsd ?? 0,
-              percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
-              rawAmount: item.amount ?? 0,
-              tokenAddress: item.tokenAddress ?? "",
-              symbol: item.symbol ?? "",
-              logoUri: item.logoUri ?? undefined,
-            }));
-
-            return c.json({
-              data: distributionData,
-              totalValue: totalValue,
-              address: address,
-              metadata: {
-                currency: 'USD',
-                timestamp: Date.now()
-              }
-            });
-          } catch (err) {
-            console.error("Failed to fetch wallet portfolio for distribution", err);
-            // Fall back to mock data on error
-            const data = generateAssetDistribution(params.period, params.wallets);
-            return c.json(data, 200);
+              return {
+                walletAddress: address,
+                data: distributionData,
+                totalValue: totalValue,
+              };
+            } catch (err) {
+              return {
+                walletAddress: address,
+                data: [],
+                totalValue: 0,
+                error: "Failed to fetch wallet portfolio"
+              };
+            }
           }
-        }
+        );
 
-        // For multiple wallets, fall back to mock data generation
-        const data = generateAssetDistribution(params.period, params.wallets);
-        return c.json(data, 200);
+        return c.json({
+          wallets: response,
+          metadata: {
+            currency: 'USD',
+            timestamp: Date.now()
+          }
+        });
       }
 
-      // Generate asset distribution data (mock)
-      const data = generateAssetDistribution(params.period, params.wallets);
-
       // Return response
-      return c.json(data, 200);
+      return c.json(
+        {
+          error: "Wallet addresses are required",
+          message: "Wallet addresses are required.",
+        },
+        400,
+      );
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
@@ -136,6 +141,7 @@ const app = new Hono()
         500,
       );
     }
-  });
+  }
+  );
 
 export default app;

@@ -9,13 +9,13 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateDrawdownData } from '../../services/mockChartData.service.js';
+import { getDrawdown } from '@sv/services/wallet/walletComparison.js';
 
 /**
  * Request parameter schema for drawdown endpoint
  */
 const drawdownRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 
@@ -52,10 +52,10 @@ const app = new Hono()
       const query = c.req.query();
       const params = drawdownRequestSchema.parse(query);
 
-      // Generate drawdown data
-      const data = generateDrawdownData(
+      // Fetch drawdown data from wallet comparison service
+      const data = await getDrawdown(
         params.wallets,
-        params.period
+        params.period,
       );
 
       // Return response

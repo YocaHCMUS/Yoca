@@ -9,14 +9,14 @@
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateRollingAnnualReturn } from '../../services/mockChartData.service.js';
+import { getRollingAnnualReturns } from '@sv/services/wallet/walletComparison.js';
 
 /**
  * Request parameter schema for rolling annual return endpoint
  */
 const rollingAnnualReturnRequestSchema = z.object({
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
-  period: z.string().optional().default('1Y'),
+  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
   timeUnit: z.enum(['month', 'quarter', 'year', 'custom']).optional().default('month'),
   windowSize: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
   timezone: z.string().optional().default('UTC'),
@@ -59,12 +59,10 @@ const app = new Hono()
       const query = c.req.query();
       const params = rollingAnnualReturnRequestSchema.parse(query);
 
-      // Generate rolling annual return data
-      const data = generateRollingAnnualReturn(
+      // Fetch rolling annual returns from wallet comparison service
+      const data = await getRollingAnnualReturns(
         params.wallets,
         params.period,
-        params.timeUnit,
-        params.windowSize
       );
 
       // Return response

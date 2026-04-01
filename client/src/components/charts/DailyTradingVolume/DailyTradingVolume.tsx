@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { ChartWrapper } from '@/components/charts/shared/ChartWrapper';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { formatCurrency } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
@@ -61,19 +61,19 @@ function generateWalletVolume(walletAddress: string, seed: number): number[] {
 
   // Base volume varies by wallet (30K - 100K range)
   const baseVolume = 30000 + seededRandom(0) * 70000;
-  
+
   // Generate 6 days of data with realistic patterns
   return Array.from({ length: 6 }, (_, i) => {
     // Growth trend
     const growthFactor = 1 + (i * 0.08); // 8% growth per day
-    
+
     // Weekly pattern (some days are higher)
     const dayOfWeek = (i + new Date().getDay()) % 7;
     const weekdayFactor = [0.9, 1.0, 1.1, 1.15, 1.2, 0.85, 0.8][dayOfWeek];
-    
+
     // Random variation (±20%)
     const randomFactor = 0.8 + seededRandom(i + 10) * 0.4;
-    
+
     return Math.round(baseVolume * growthFactor * weekdayFactor * randomFactor);
   });
 }
@@ -95,19 +95,19 @@ function generateBenchmarkData(): number[] {
  */
 function generateMockData(walletAddresses: string[]) {
   const dates = ['10/05/2025', '10/06/2025', '10/07/2025', '10/08/2025', '10/09/2025', '10/10/2025'];
-  
+
   // Generate data for each selected wallet
   const wallets = walletAddresses.map((address, index) => {
     // Create a seed from wallet address for consistent but different data
     const seed = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    
+
     return {
       name: `${address.slice(0, 4)}...${address.slice(-4)}`, // Shorten address for display
       color: WALLET_COLORS[index % WALLET_COLORS.length],
       data: generateWalletVolume(address, seed),
     };
   });
-  
+
   return {
     dates,
     wallets,
@@ -252,14 +252,14 @@ export function DailyTradingVolume({
       cancelled = true;
     };
   }, [filters.timePeriod, walletsString, autoRefresh, refreshInterval]);
-  
+
   /**
    * Generate eCharts options for dual-axis chart
    */
   const chartOptions: EChartsOption = useMemo(() => {
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Create bar series for each wallet
     const barSeries = data.wallets.map((wallet) => ({
       name: wallet.name,
@@ -286,7 +286,7 @@ export function DailyTradingVolume({
         focus: 'series' as const,
       },
     }));
-    
+
     // Create line series for benchmark
     const lineSeries = {
       name: data.benchmark.name,
@@ -315,16 +315,10 @@ export function DailyTradingVolume({
         focus: 'series' as const,
       },
     };
-    
+
     return {
       ...baseOption,
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: false,
-      },
+      grid: getChartGridConfig(),
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
@@ -432,7 +426,7 @@ export function DailyTradingVolume({
 
     return [...walletSeries, benchmarkSeries];
   }, [data]);
-  
+
   /**
    * Handle export
    */
@@ -447,7 +441,7 @@ export function DailyTradingVolume({
       { exportPNG, exportSVG, exportPDF, exportCSV }
     );
   };
-  
+
   // Show empty state if no wallets selected
   const hasWallets = data.wallets.length > 0;
   if (!hasWallets) {
@@ -461,19 +455,19 @@ export function DailyTradingVolume({
         enableMiniPlayer={false}
         className={className}
       >
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           height: `${minHeight}px`,
-          color: chartTheme.textColor 
+          color: chartTheme.textColor
         }}>
           <p>No wallets selected. Please add wallet addresses to view trading volume comparison.</p>
         </div>
       </ChartWrapper>
     );
   }
-  
+
   return (
     <ChartWrapper
       title={chartTitle}
@@ -494,7 +488,7 @@ export function DailyTradingVolume({
               key={benchmark}
               renderIcon={Close}
               size='sm'>
-                {benchmark}
+              {benchmark}
             </Button>
             // <button
             //   key={benchmark}
@@ -508,7 +502,7 @@ export function DailyTradingVolume({
           <Button
             renderIcon={Add}
             size='sm'
-            >
+          >
             Add benchmark
           </Button>
           {/* <button className={sharedStyles.addFilterButton}>
@@ -516,7 +510,7 @@ export function DailyTradingVolume({
           </button> */}
         </div>
       </div>
-      
+
       {/* Chart */}
       <ChartGridItem minHeight={minHeight}>
         <ReactECharts

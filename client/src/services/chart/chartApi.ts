@@ -9,6 +9,7 @@
  */
 
 import client from '@/api/main';
+import type { RollingProfitAndLossResponse } from '@/types/chart-api.types';
 
 /**
  * Utility type to extract the inferred response type from a fetcher function
@@ -53,8 +54,8 @@ async function handleResponse(response: Response) {
 export async function fetchBalanceTrend(params?: Parameters<typeof client.api.charts.balance.$get>[0]) {
   // Hono RPC client requires wrapping query params in { query: {...} }
   const honoParams = params ? { query: params } : undefined;
-  
-  const response = await client.api.charts.balance.$get(honoParams as any);
+
+  const response = await client.api.charts.balance.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -67,7 +68,7 @@ export async function fetchBalanceTrend(params?: Parameters<typeof client.api.ch
  */
 export async function fetchAssetDistribution(params?: Parameters<typeof client.api.charts.distribution.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.distribution.$get(honoParams as any);
+  const response = await client.api.charts.distribution.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -80,7 +81,7 @@ export async function fetchAssetDistribution(params?: Parameters<typeof client.a
  */
 export async function fetchExchangeComparison(params?: Parameters<typeof client.api.charts.exchanges.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.exchanges.$get(honoParams as any);
+  const response = await client.api.charts.exchanges.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -93,7 +94,7 @@ export async function fetchExchangeComparison(params?: Parameters<typeof client.
  */
 export async function fetchCounterpartyActivity(params?: Parameters<typeof client.api.charts.counterparties.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.counterparties.$get(honoParams as any);
+  const response = await client.api.charts.counterparties.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -106,7 +107,7 @@ export async function fetchCounterpartyActivity(params?: Parameters<typeof clien
  */
 export async function fetchPnLChart(params?: Parameters<typeof client.api.charts.pnl.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.pnl.$get(honoParams as any);
+  const response = await client.api.charts.pnl.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -119,7 +120,7 @@ export async function fetchPnLChart(params?: Parameters<typeof client.api.charts
  */
 export async function fetchTransactionDistribution(params?: Parameters<typeof client.api.charts.transactions.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.transactions.$get(honoParams as any);
+  const response = await client.api.charts.transactions.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -132,7 +133,7 @@ export async function fetchTransactionDistribution(params?: Parameters<typeof cl
  */
 export async function fetchHoldingDurations(params?: Parameters<typeof client.api.charts.holdings.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.holdings.$get(honoParams as any);
+  const response = await client.api.charts.holdings.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -145,7 +146,7 @@ export async function fetchHoldingDurations(params?: Parameters<typeof client.ap
  */
 export async function fetchVolumeBenchmark(params?: Parameters<typeof client.api.charts.volume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.volume.$get(honoParams as any);
+  const response = await client.api.charts.volume.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -166,10 +167,33 @@ export async function fetchVolumeBenchmark(params?: Parameters<typeof client.api
  */
 export async function fetchTradingVolumeDistribution(params?: Parameters<typeof client.api.charts.tradingVolumeDistribution.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.tradingVolumeDistribution.$get(honoParams as any);
+  const response = await client.api.charts.tradingVolumeDistribution.$get(honoParams);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+
+  // Normalize backend shape to { wallets: [{ walletAddress, data: [{name,value,percentage}], totalVolume }] }
+  const wallets = Array.isArray(raw)
+    ? raw.map((r: any) => {
+      const buyVol = r.buy.volumeUsd || 0;
+      const sellVol = r.sell.volumeUsd || 0;
+      const buyTx = r.buy.transactionCount || 0;
+      const sellTx = r.sell.transactionCount || 0;
+      const total = buyVol + sellVol;
+      const totalTx = buyTx + sellTx;
+
+      return {
+        walletAddress: r.wallet,
+        buyVolume: buyVol,
+        sellVolume: sellVol,
+        totalVolume: total,
+        buyTransactionCount: buyTx,
+        sellTransactionCount: sellTx,
+        totalTransactionCount: totalTx,
+      };
+    })
+    : [];
+
+  return { wallets, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 
@@ -178,12 +202,13 @@ export async function fetchTradingVolumeDistribution(params?: Parameters<typeof 
  * GET /api/charts/trading-volume-per-transaction
  * Type automatically inferred from server route via Hono RPC
  */
-export async function fetchTradingVolumePerTransaction(params?:  Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
+export async function fetchTradingVolumePerTransaction(params?: Parameters<typeof client.api.charts.tradingVolumePerTransaction.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.tradingVolumePerTransaction.$get(honoParams as any);
+  const response = await client.api.charts.tradingVolumePerTransaction.$get(honoParams);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+
+  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 /**
@@ -192,11 +217,85 @@ export async function fetchTradingVolumePerTransaction(params?:  Parameters<type
  * Type automatically inferred from server route via Hono RPC
  */
 export async function fetchRollingAnnualReturn(params?: Parameters<typeof client.api.charts.rollingAnnualReturn.$get>[0]) {
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.rollingAnnualReturn.$get(honoParams as any);
+  // Map client-side period values to backend-accepted options
+  const mapPeriod = (p?: any) => {
+    if (p == null) return p;
+    const s = String(p);
+    const allowed = ['7D', '30D', '90D', 'All'];
+    if (allowed.includes(s)) return s;
+    const mappings: Record<string, string> = {
+      '1Y': 'All',
+      '1M': '30D',
+      '3M': '90D',
+      '1W': '7D',
+    };
+    if (mappings[s]) return mappings[s];
+    if (/^\d+D$/.test(s)) return s;
+    // conservative fallback
+    return '30D';
+  };
+
+  const safeParams = params ? { ...(params as any), period: mapPeriod((params as any).period) } : undefined;
+  const honoParams = safeParams ? { query: safeParams } : undefined;
+  const response = await client.api.charts.rollingAnnualReturn.$get(honoParams);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+
+  // Normalize period-based P&L (per-wallet array or aggregated object)
+  const toNumber = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // If backend returns an array of per-wallet metrics
+  if (Array.isArray(raw)) {
+    const wallets = raw.map((r: any) => {
+      const source = r.rollingAnnualReturns ?? r;
+      return {
+        walletAddress: r.wallet ?? r.walletAddress ?? '',
+        walletName: r.walletName ?? r.walletLabel ?? undefined,
+        metrics: {
+          total: toNumber(source.totalUsd ?? source.total ?? r.totalUsd ?? 0),
+          realized: toNumber(source.realizedUsd ?? source.realized ?? r.realizedUsd ?? 0),
+          unrealized: toNumber(source.unrealizedUsd ?? source.unrealized ?? r.unrealizedUsd ?? 0),
+        },
+      };
+    });
+
+    const availableSet = new Set<string>();
+    wallets.forEach(w => {
+      if (typeof w.metrics.total === 'number' && !isNaN(w.metrics.total)) availableSet.add('total');
+      if (typeof w.metrics.realized === 'number' && !isNaN(w.metrics.realized)) availableSet.add('realized');
+      if (typeof w.metrics.unrealized === 'number' && !isNaN(w.metrics.unrealized)) availableSet.add('unrealized');
+    });
+
+    const availableValueTypes = Array.from(availableSet) as ('total' | 'realized' | 'unrealized')[];
+
+    return {
+      wallets,
+      metadata: { timestamp: Date.now(), currency: 'USD', availableValueTypes },
+    } as RollingProfitAndLossResponse;
+  }
+
+  // // If backend returns an aggregated object with rollingAnnualReturns
+  // if (raw && (raw.rollingAnnualReturns || raw.totalUsd || raw.realizedUsd || raw.unrealizedUsd)) {
+  //   const source = raw.rollingAnnualReturns ?? raw;
+  //   const metrics = {
+  //     total: toNumber(source.totalUsd ?? source.total ?? raw.totalUsd ?? 0),
+  //     realized: toNumber(source.realizedUsd ?? source.realized ?? raw.realizedUsd ?? 0),
+  //     unrealized: toNumber(source.unrealizedUsd ?? source.unrealized ?? raw.unrealizedUsd ?? 0),
+  //   };
+
+  //   const availableValueTypes: ('total' | 'realized' | 'unrealized')[] = [];
+  //   if (!isNaN(metrics.total)) availableValueTypes.push('total');
+  //   if (!isNaN(metrics.realized)) availableValueTypes.push('realized');
+  //   if (!isNaN(metrics.unrealized)) availableValueTypes.push('unrealized');
+
+  //   return { metrics, metadata: { timestamp: Date.now(), currency: raw?.currency ?? 'USD', availableValueTypes } } as RollingProfitAndLossResponse;
+  // }
+
+  // // Fallback: return raw for backward compatibility (timeseries shape)
+  // return raw;
 }
 
 /**
@@ -206,7 +305,7 @@ export async function fetchRollingAnnualReturn(params?: Parameters<typeof client
  */
 export async function fetchAverageRollingAnnualReturn(params?: Parameters<typeof client.api.charts.averageRollingAnnualReturn.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.averageRollingAnnualReturn.$get(honoParams as any);
+  const response = await client.api.charts.averageRollingAnnualReturn.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -219,7 +318,7 @@ export async function fetchAverageRollingAnnualReturn(params?: Parameters<typeof
  */
 export async function fetchWinrate(params?: Parameters<typeof client.api.charts.winrate.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.winrate.$get(honoParams as any);
+  const response = await client.api.charts.winrate.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -232,10 +331,14 @@ export async function fetchWinrate(params?: Parameters<typeof client.api.charts.
  */
 export async function fetchDrawdown(params?: Parameters<typeof client.api.charts.drawdown.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.drawdown.$get(honoParams as any);
+  const response = await client.api.charts.drawdown.$get(honoParams);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+  if (!Array.isArray(raw) && raw.error) {
+    throw new Error(`API error: ${raw.error}`);
+  }
+
+  return { wallets: raw, metadata: { timestamp: Date.now(), currency: 'USD' } };
 }
 
 /**
@@ -245,10 +348,11 @@ export async function fetchDrawdown(params?: Parameters<typeof client.api.charts
  */
 export async function fetchTotalTradingVolume(params?: Parameters<typeof client.api.charts.totalTradingVolume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.totalTradingVolume.$get(honoParams as any);
+  const response = await client.api.charts.totalTradingVolume.$get(honoParams);
   await handleResponse(response);
-  const data = await response.json();
-  return data;
+  const raw = await response.json();
+
+  return { wallets: raw, metadata: { currency: 'USD', timestamp: Date.now() } };
 }
 
 /**
@@ -257,7 +361,7 @@ export async function fetchTotalTradingVolume(params?: Parameters<typeof client.
  */
 export async function fetchDailyTradingVolume(params?: Parameters<typeof client.api.charts.dailyTradingVolume.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.dailyTradingVolume.$get(honoParams as any);
+  const response = await client.api.charts.dailyTradingVolume.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -270,7 +374,7 @@ export async function fetchDailyTradingVolume(params?: Parameters<typeof client.
  */
 export async function fetchStablecoinRatio(params?: Parameters<typeof client.api.charts.stablecoinRatio.$get>[0]) {
   const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.stablecoinRatio.$get(honoParams as any);
+  const response = await client.api.charts.stablecoinRatio.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
   return data;

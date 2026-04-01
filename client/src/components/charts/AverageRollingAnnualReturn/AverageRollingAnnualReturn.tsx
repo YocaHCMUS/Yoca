@@ -24,7 +24,7 @@ import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getSingleSeriesLegend } from '@/util/chart-legend-config';
 
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAverageRollingAnnualReturn, type InferFetcherData } from '@/services/chart/chartApi';
 import type { AverageRollingAnnualReturnRequestParams } from '@/types/chart-api.types';
@@ -64,19 +64,19 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Extract initial values - using type assertion for custom properties
   const customFilters = initialFilters as any;
-  const initialTimeUnit = 
+  const initialTimeUnit =
     customFilters?.timeUnit === 'month' ||
-    customFilters?.timeUnit === 'quarter' ||
-    customFilters?.timeUnit === 'year' ||
-    customFilters?.timeUnit === 'custom'
+      customFilters?.timeUnit === 'quarter' ||
+      customFilters?.timeUnit === 'year' ||
+      customFilters?.timeUnit === 'custom'
       ? customFilters.timeUnit
       : 'month';
   const initialWindowSize = typeof customFilters?.windowSize === 'number' ? customFilters.windowSize : 30;
   const initialWallets = Array.isArray(initialFilters?.wallets) ? initialFilters.wallets : undefined;
-  
+
   // State for time unit and window size
   const [selectedTimeUnit, setSelectedTimeUnit] = useState<TimeUnit>(initialTimeUnit);
   const [windowSize, setWindowSize] = useState<number>(initialWindowSize);
@@ -122,17 +122,17 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Filter valid wallets
     const validWallets = data.wallets.filter(
       wallet => wallet && wallet.walletName && wallet.returns
     );
-    
+
     if (validWallets.length === 0) return null;
-    
+
     // Prepare categories (wallet names)
     const categories = validWallets.map(w => w.walletAddress);
-    
+
     // Prepare box plot data
     const boxData = validWallets.map(w => [
       w.returns.min,
@@ -141,17 +141,11 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
       w.returns.q3,
       w.returns.max,
     ]);
-    
+
     return {
       ...baseOption,
       color: ['#5470C6'], // Blue for returns
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      grid: getChartGridConfig(),
       legend: getSingleSeriesLegend(chartTheme),
       xAxis: {
         ...baseOption.xAxis,
@@ -197,7 +191,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
               const [min, q1, median, q3, max] = param.data;
               const wallet = validWallets[param.dataIndex];
               const avg = wallet.averageReturn;
-              
+
               return formatItemTooltip(param.name, [
                 { label: 'Average', value: `${avg.toFixed(2)}%` },
                 { label: 'Max', value: `${max.toFixed(2)}%` },
@@ -227,9 +221,9 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
       onRetry={() => refetch(false)}
     >
       <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}>
-        <select 
-          value={selectedTimeUnit} 
-          onChange={e => setSelectedTimeUnit(e.target.value as TimeUnit)} 
+        <select
+          value={selectedTimeUnit}
+          onChange={e => setSelectedTimeUnit(e.target.value as TimeUnit)}
           className={sharedStyles.chartSelect}
         >
           <option value="month">{tr('charts.averageRollingAnnualReturn.month')}</option>

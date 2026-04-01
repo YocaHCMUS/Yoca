@@ -75,8 +75,8 @@ function SolanaProviderContent({ children }: { children: ReactNode }) {
   return (
     <SolanaContext.Provider value={contextValue}>
       {children}
-      <ModalStateManager renderLauncher={({}) => <></>}>
-        {({}) => (
+      <ModalStateManager renderLauncher={() => <></>}>
+        {() => (
           <ComposedModal
             open={isModalOpen}
             onClose={closeModal}

@@ -4,7 +4,7 @@ import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type { CG_CoinMarkets } from "../_types/token_raw_responses.js";
+import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export async function fetchCgMarketDataBatched(
@@ -47,12 +47,29 @@ export async function fetchCgMarketDataBatched(
 export function getMarketDataFromRaw(
   address: string,
   raw: CG_CoinMarkets[number],
-): TokenMarketDataInsert {
+): TokenMarketDataInsert | null {
+  const priceFromSparkline =
+    raw.sparkline_in_7d && Array.isArray(raw.sparkline_in_7d.price)
+      ? raw.sparkline_in_7d.price[raw.sparkline_in_7d.price.length - 1]
+      : null;
+
+  const price = raw.current_price ?? priceFromSparkline ?? null;
+
+  // If we don't have a price, skip this entry to avoid inserting null into
+  // the not-null `price_usd` column.
+  if (price == null) return null;
+
   return {
     address,
-    fullyDilutedValuation: raw.fully_diluted_valuation!,
-    marketCap: raw.market_cap!,
-    priceUsd: raw.current_price!,
+    fullyDilutedValuation:
+      raw.fully_diluted_valuation ??
+      (raw.max_supply && price
+        ? raw.max_supply * price
+        : raw.total_supply && price
+          ? raw.total_supply * price
+          : 0),
+    marketCap: raw.market_cap ?? 0,
+    priceUsd: price,
     totalSupply: raw.total_supply,
     updatedAt: new Date(),
     marketCapRank: raw.market_cap_rank,
@@ -76,8 +93,8 @@ export function getMarketDataFromRaw(
     atl: raw.atl,
     atlChangePercentage: raw.atl_change_percentage,
     atlDate: raw.atl_date ? new Date(raw.atl_date) : null,
-    volume24h: raw.total_volume!,
-    sparkline7d: raw.sparkline_in_7d.price,
+    volume24h: raw.total_volume ?? 0,
+    sparkline7d: raw.sparkline_in_7d?.price,
   };
 }
 
@@ -89,12 +106,16 @@ async function fetchCgMarketData(cgIdToAddress: Record<string, string>) {
 
   const res = await fetchCgMarketDataBatched(cgIds);
 
-  return Object.fromEntries(
-    res.map((raw): [string, TokenMarketDataInsert] => [
-      cgIdToAddress[raw.id!],
-      getMarketDataFromRaw(cgIdToAddress[raw.id!], raw),
-    ]),
-  );
+  const entries = res
+    .map((raw) => {
+      const addr = cgIdToAddress[raw.id!];
+      const md = getMarketDataFromRaw(addr, raw);
+      if (!md) return null;
+      return [addr, md] as [string, TokenMarketDataInsert];
+    })
+    .filter(Boolean) as [string, TokenMarketDataInsert][];
+
+  return Object.fromEntries(entries);
 }
 
 async function fetchTokenMarketData(tokenAddresses: string[]) {

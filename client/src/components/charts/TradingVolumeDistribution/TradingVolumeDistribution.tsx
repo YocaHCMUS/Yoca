@@ -22,6 +22,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
+import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
@@ -29,6 +30,7 @@ import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
+import sharedStyles from '@/components/charts/shared/ChartStyle.module.scss';
 
 type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 import { useStandardChartController } from '@/hooks/useChartController';
@@ -39,14 +41,6 @@ import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
 
-// export interface AssetDistributionProps {
-//   minHeight?: number;
-//   initialFilters?: Partial<any>;
-//   autoRefresh?: boolean;
-//   refreshInterval?: number;
-//   className?: string;
-// }
-
 export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
   initialFilters,
@@ -56,16 +50,19 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
 }) => {
   const { tr } = useLocalization();
   const chartTitle = tr('charts.tradingVolumeDistributionChart.title');
+  // Store translated labels in variables to avoid TS literal type issues
+  const buyLabel = tr('charts.tradingVolumeDistributionChart.buy');
+  const sellLabel = tr('charts.tradingVolumeDistributionChart.sell');
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Track selected assets for legend filtering
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
   // Use centralized filter sync hook
-  const { filters, walletsString } = useChartFiltersSync({
+  const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
@@ -107,21 +104,25 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       if (!isChartSuccess(data, 'wallets')) return;
+      if (!data.wallets || !Array.isArray(data.wallets) || data.wallets.length === 0) return;
 
       const instance = chartRef.current?.getEchartsInstance() ?? null;
       const csv: ChartDataSeries[] = [];
 
-      if (data.wallets) {
-        data.wallets.forEach(wallet => {
+      if (data.wallets && Array.isArray(data.wallets)) {
+        data.wallets.forEach((wallet: any) => {
+          const buy = wallet.buyVolume ?? 0;
+          const sell = wallet.sellVolume ?? 0;
+          const total = wallet.totalVolume ?? (buy + sell);
           csv.push({
-            id: `trading-volume-distribution-${wallet.walletAddress}`,
-            name: `Trading Volume Distribution - ${wallet.walletAddress}`,
+            id: `trading-volume-distribution-${wallet.wallet}`,
+            name: `Trading Volume Distribution - ${wallet.wallet}`,
             type: 'pie',
             visible: true,
-            data: wallet.data.map(t => ({
-              name: t.name,
-              value: t.value,
-            })),
+            data: [
+              { name: buyLabel, value: buy },
+              { name: sellLabel, value: sell },
+            ],
           });
         });
       }
@@ -149,12 +150,12 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
     isMultiWallet?: boolean
   ): EChartsOption => {
     const base = getThemedChartBaseOption(chartTheme);
-    
+
     // Filter data based on selected assets in multi-wallet view
     const filteredData = isMultiWallet && selectedAssets.size > 0
       ? distributionData.filter(a => selectedAssets.has(a.name))
       : distributionData;
-    
+
     // Recalculate total and percentages for filtered data
     const filteredTotal = filteredData.reduce((sum, a) => sum + a.value, 0);
     const dataWithRecalculatedPercentages = filteredData.map(a => ({
@@ -181,13 +182,13 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         trigger: 'item',
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
-              tr('charts.tradingVolumeDistributionChart.volume'),
-              formatCurrency(p.value)
-            )
+            tr('charts.tradingVolumeDistributionChart.volume'),
+            formatCurrency(p.value)
+          )
           + createTooltipRow(
-              tr('charts.tradingVolumeDistributionChart.percentage'),
-              `${p.data.percentage.toFixed(2)}%`
-            ),
+            tr('charts.tradingVolumeDistributionChart.percentage'),
+            `${p.data.percentage.toFixed(2)}%`
+          ),
       },
       legend: getPieLegend(
         chartTheme,
@@ -248,25 +249,20 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * Extract unique assets across all wallets for aggregated legend
    */
   const aggregatedLegendData = useMemo(() => {
-    if (!isChartSuccess(data, 'wallets')) return null;
-    if (data.wallets.length <= 1) return null;
-    
-    const uniqueAssets = new Map<string, { name: string; color: string }>();
-    
-    data.wallets.forEach((wallet, walletIndex) => {
-      wallet.data.forEach((token, tokenIndex) => {
-        if (!uniqueAssets.has(token.name)) {
-          uniqueAssets.set(token.name, {
-            name: token.name,
-            color: (token as any).color ?? chartTheme.colorPalette[tokenIndex % chartTheme.colorPalette.length],
-          });
-        }
-      });
-    });
-    
-    return Array.from(uniqueAssets.values());
-  }, [data, chartTheme.colorPalette]);
-  
+    if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length <= 1) return null;
+    // Only two assets: Buy and Sell
+    return [
+      {
+        name: buyLabel,
+        color: chartTheme.colorPalette[0],
+      },
+      {
+        name: sellLabel,
+        color: chartTheme.colorPalette[1],
+      },
+    ];
+  }, [data, chartTheme.colorPalette, buyLabel, sellLabel]);
+
   /**
    * Initialize selected assets when data changes
    */
@@ -275,7 +271,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
     }
   }, [aggregatedLegendData]);
-  
+
   /**
    * Toggle asset selection for legend filtering
    */
@@ -298,25 +294,31 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
    * ECharts options - multiple charts for per-wallet view
    */
   const chartOptions = useMemo(() => {
-    if (!isChartSuccess(data, 'wallets')) return [];
+    if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length === 0 || (data.wallets as any).error) return [];
 
     const isMultiWallet = data.wallets.length > 1;
 
-    // Multi-wallet or single wallet view
-    if (data.wallets.length > 0) {
-      return data.wallets.map(wallet => ({
+    // Each wallet: { wallet, buyVolume, sellVolume, totalVolume, ... }
+    return data.wallets.map((wallet) => {
+      const buy = wallet.buyVolume ?? 0;
+      const sell = wallet.sellVolume ?? 0;
+      const total = wallet.totalVolume ?? (buy + sell);
+      // Calculate percentages
+      const pieData = [
+        { name: buyLabel, value: buy, percentage: total > 0 ? (buy / total) * 100 : 0 },
+        { name: sellLabel, value: sell, percentage: total > 0 ? (sell / total) * 100 : 0 },
+      ];
+      return {
         walletAddress: wallet.walletAddress,
         option: createChartOption(
-          wallet.data,
-          wallet.totalVolume,
+          pieData,
+          total,
           `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),
-      }));
-    }
-
-    return [];
-  }, [data, createChartOption]);
+      };
+    });
+  }, [data, createChartOption, buyLabel, sellLabel]);
 
   const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || (filters.wallets && filters.wallets.length === 0);
 
@@ -325,16 +327,21 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
-      emptyState={filters.wallets && filters.wallets.length === 0 
+      emptyState={filters.wallets && filters.wallets.length === 0
         ? {
-            title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),
-            message: tr('charts.tradingVolumeDistributionChart.noWalletsMessage'),
-          }
+          title: tr('charts.tradingVolumeDistributionChart.noWalletsTitle'),
+          message: tr('charts.tradingVolumeDistributionChart.noWalletsMessage'),
+        }
         : undefined}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
     >
+
+      <div className={sharedStyles.chartControls}>
+        <PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} compact />
+      </div>
+
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           {/* Aggregated Legend for Multi-Wallet View */}

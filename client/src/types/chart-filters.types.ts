@@ -1,25 +1,33 @@
 /**
  * Chart Filter Types
- * 
+ *
  * Defines filter-related types and interfaces for chart data filtering.
- * 
+ *
  * @module chart-filters.types
  */
 
 /**
  * Time period filter options
  */
-export type TimePeriod = '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' | 'custom';
+export type TimePeriod =
+  | "24H"
+  | "7D"
+  | "30D"
+  | "60D"
+  | "90D"
+  | "1Y"
+  | "All"
+  | "custom";
 
 /**
  * Transaction type filter options
  */
 export type TransactionType =
-  | 'all' // All transaction types
-  | 'trades' // Only trade transactions
-  | 'transfers' // Only transfer transactions
-  | 'deposits' // Only deposits
-  | 'withdrawals'; // Only withdrawals
+  | "all" // All transaction types
+  | "trades" // Only trade transactions
+  | "transfers" // Only transfer transactions
+  | "deposits" // Only deposits
+  | "withdrawals"; // Only withdrawals
 
 /**
  * Date range for custom time periods
@@ -39,8 +47,12 @@ export interface ChartFilters {
   /** Time range filter */
   timePeriod: TimePeriod;
 
+  timeUnit: "month" | "quater" | "year" | "days" | "custom";
+
   /** Selected tokens (['All'] or specific tokens) */
   tokens?: string[];
+
+  topN: number;
 
   /** Transaction type filter */
   transactionType: TransactionType;
@@ -58,7 +70,7 @@ export interface ChartFilters {
 /**
  * Export format options
  */
-export type ExportFormat = 'png' | 'svg' | 'csv' | 'pdf';
+export type ExportFormat = "png" | "svg" | "csv" | "pdf";
 
 /**
  * Export configuration
@@ -104,36 +116,14 @@ export interface ExportMetadata {
  * Default chart filters
  */
 export const DEFAULT_FILTERS: ChartFilters = {
-  timePeriod: '30D',
+  timePeriod: "30D",
   tokens: undefined,
-  transactionType: 'all',
+  transactionType: "all",
   wallets: undefined,
   customDateRange: undefined,
+  timeUnit: "month",
   limit: 2000,
-};
-
-/**
- * Time period display labels
- */
-export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
-  '7D': 'Last 7 Days',
-  '30D': 'Last 30 Days',
-  '60D': 'Last 60 Days',
-  '90D': 'Last 90 Days',
-  '1Y': 'Last Year',
-  'All': 'All Time',
-  'custom': 'Custom Range',
-};
-
-/**
- * Transaction type display labels
- */
-export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  all: 'All Types',
-  trades: 'Trades',
-  transfers: 'Transfers',
-  deposits: 'Deposits',
-  withdrawals: 'Withdrawals',
+  topN: 1,
 };
 
 /**
@@ -141,12 +131,17 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
  */
 export function validateFilters(filters: ChartFilters): boolean {
   // If tokens includes 'All', it must be the only element
-  if (filters.tokens && Array.isArray(filters.tokens) && filters.tokens.includes('All') && filters.tokens.length > 1) {
+  if (
+    filters.tokens &&
+    Array.isArray(filters.tokens) &&
+    filters.tokens.includes("All") &&
+    filters.tokens.length > 1
+  ) {
     return false;
   }
 
   // If timePeriod is 'custom', customDateRange must be provided
-  if (filters.timePeriod === 'custom' && !filters.customDateRange) {
+  if (filters.timePeriod === "custom" && !filters.customDateRange) {
     return false;
   }
 
@@ -158,7 +153,11 @@ export function validateFilters(filters: ChartFilters): boolean {
   }
 
   // wallets array must be non-empty if provided
-  if (filters.wallets !== undefined && Array.isArray(filters.wallets) && filters.wallets.length === 0) {
+  if (
+    filters.wallets !== undefined &&
+    Array.isArray(filters.wallets) &&
+    filters.wallets.length === 0
+  ) {
     return false;
   }
 
