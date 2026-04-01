@@ -55,6 +55,23 @@ const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
+const DEFAULT_OVERVIEW_PERIOD = "24H";
+
+function parseOverviewPeriod(rawPeriod?: string): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+  const normalized = String(rawPeriod ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (normalized === "24H") return "24H";
+  if (normalized === "7D") return "7D";
+  if (normalized === "30D") return "30D";
+  if (normalized === "60D") return "60D";
+  if (normalized === "90D") return "90D";
+  if (normalized === "1Y") return "1Y";
+  if (normalized === "ALL") return "All";
+
+  return DEFAULT_OVERVIEW_PERIOD;
+}
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
   status: 400 | 401 | 502 | 503;
@@ -169,9 +186,10 @@ const routes = router
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
     const address = params.address;
+    const period = parseOverviewPeriod(c.req.query("period"));
 
     try {
-      const overview = await getWalletOverview(address);
+      const overview = await getWalletOverview(address, { timePeriod: period });
       return c.json(overview);
     } catch (err) {
       console.error("Failed to get wallet overview", err);

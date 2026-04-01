@@ -237,39 +237,66 @@ export default function WalletPage() {
   };
 
   const formatSwapPair = (swap: WalletSwap): string => {
-    const tokensInvolved = swap.tokensInvolved;
+    const tokensInvolved = typeof swap.tokensInvolved === "string"
+      ? swap.tokensInvolved
+      : String(swap.tokensInvolved ?? "");
     return tokensInvolved.replace(/,/g, " → ");
+  };
+
+  const toOptionalFiniteNumber = (value: unknown): number | undefined => {
+    if (value == null) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   };
 
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
+        const totalValueUsd = toOptionalFiniteNumber((swap as unknown as { totalValueUsd?: unknown }).totalValueUsd);
+        const baseQuotePrice = toOptionalFiniteNumber((swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice);
+
         return [
-          swap.blockTimestampIso,
-          swap.exchangeName ?? "—",
+          String(swap.blockTimestampIso ?? ""),
+          typeof swap.exchangeName === "string" && swap.exchangeName.trim().length > 0
+            ? swap.exchangeName
+            : "—",
           formatSwapPair(swap),
           swap.sold,
           swap.bought,
-          swap.totalValueUsd ?? "—",
-          swap.baseQuotePrice ?? "—",
+          totalValueUsd ?? "—",
+          baseQuotePrice ?? "—",
           swap.transactionHash,
         ];
       }),
     [loadedSwaps, formatSwapPair, formatSwapTokenDisplay],
   );
 
-  const transferData = useMemo(
-    () =>
-      loadedTransfers.map((transfer) => [
-        transfer.from,
-        transfer.to,
-        transfer.tokenSymbol,
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-      ]),
-    [loadedTransfers],
-  );
+  const transferData = useMemo(() => {
+    const deriveTransferTokenDisplay = (value: unknown): string => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized.length > 0 ? normalized : "Unknown";
+      }
+
+      if (value && typeof value === "object") {
+        const symbol = (value as { symbol?: unknown }).symbol;
+        if (typeof symbol === "string" && symbol.trim().length > 0) {
+          return symbol.trim();
+        }
+      }
+
+      return "Unknown";
+    };
+
+    return loadedTransfers.map((transfer) => [
+      transfer.from,
+      transfer.to,
+      deriveTransferTokenDisplay(transfer.tokenSymbol),
+      transfer.amount,
+      transfer.timestamp,
+      `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+    ]);
+  }, [loadedTransfers]);
 
   const counterpartyTableData = useMemo(
     () =>

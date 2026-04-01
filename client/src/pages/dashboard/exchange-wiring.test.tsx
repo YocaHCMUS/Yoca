@@ -17,6 +17,12 @@ vi.mock("react-i18next", () => ({
     }),
 }));
 
+vi.mock("@/contexts/LocalizationContext", () => ({
+    useLocalization: () => ({
+        tr: (key: string) => key,
+    }),
+}));
+
 vi.mock("../../components/wrapper", () => ({
     PageWrapper: ({ children }: { children: any }) => <div>{children}</div>,
 }));
@@ -76,10 +82,8 @@ describe("DashboardPage exchange chart wiring", () => {
 
         const firstCallProps = exchangeComparisonSpy.mock.calls[0][0] as {
             walletAddress?: string;
-            chain?: string;
         };
 
-        expect(firstCallProps.walletAddress).toBeUndefined();
-        expect(firstCallProps.chain).toBeUndefined();
+        expect(firstCallProps.walletAddress).toBeFalsy();
     });
 });

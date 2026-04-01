@@ -7,14 +7,50 @@ import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
  * Renders a value as monospace code with secondary color
  * Useful for displaying signatures, hashes, or technical identifiers
  */
-export const renderCode = (value: string) => (
-  <code style={{ color: 'var(--cds-text-secondary)', fontSize: '0.75rem' }} title={value}>
-    {value}
-  </code>
-);
+export const renderCode = (value: unknown) => {
+  let normalized = '';
 
-export const renderBase = (value: string) => (
-  <span>{value}</span>
+  if (typeof value === 'string') {
+    normalized = value;
+  } else if (value == null) {
+    normalized = '';
+  } else {
+    try {
+      normalized = JSON.stringify(value);
+    } catch {
+      normalized = String(value);
+    }
+  }
+
+  return (
+    <code style={{ color: 'var(--cds-text-secondary)', fontSize: '0.75rem' }} title={normalized}>
+      {normalized}
+    </code>
+  );
+};
+
+function toDisplayText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+export const renderBase = (value: unknown) => (
+  <span>{toDisplayText(value)}</span>
 );
 
 /**
@@ -212,9 +248,12 @@ export const renderBold = (value: string) => (
 /**
  * Renders a numeric value with currency symbol
  */
-export const renderCurrency = (value: string, symbol: string = '$', isInFront: boolean = true) => (
-  isInFront ? <span>{symbol}{value}</span> : <span>{value}{symbol}</span>
-);
+export const renderCurrency = (value: unknown, symbol: string = '$', isInFront: boolean = true) => {
+  const normalized = toDisplayText(value);
+  return (
+    isInFront ? <span>{symbol}{normalized}</span> : <span>{normalized}{symbol}</span>
+  );
+};
 
 /**
  * Renders a status with icon and conditional coloring
