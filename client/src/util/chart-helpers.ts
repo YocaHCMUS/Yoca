@@ -10,7 +10,7 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { TimePeriod } from '../types/chart-filters.types';
-import { time } from 'console';
+
 
 /**
  * Format currency value with appropriate precision and units

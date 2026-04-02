@@ -9,7 +9,7 @@ import TokenPage from "./pages/token";
 import TokenOverviewPage from "./pages/token-overview";
 import WalletPage from "./pages/wallet";
 import SwrDebugDemo from "./pages/wallet/demo";
-import { TokenDetailsDemo } from "./pages/wallet/TokenDetailsDemo";
+// import { TokenDetailsDemo } from "./pages/wallet/TokenDetailsDemo";
 import WalletsComparisionPage from "./pages/walletsComparision";
 
 function App() {
@@ -28,10 +28,10 @@ function App() {
           path="/historical-data/:address"
           element={<HistoricalDataPage />}
         />
-        <Route
+        {/* <Route
           path="/wallets/:address/token-details-demo"
           element={<TokenDetailsDemo />}
-        />
+        /> */}
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
           path="/comparision/wallets"
