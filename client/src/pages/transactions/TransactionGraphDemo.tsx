@@ -1,85 +1,35 @@
 import client from "@/api/main";
-import { useCallback, useEffect } from "react";
-import { useParams } from "react-router";
-import ReactFlow, {
-  addEdge,
-  Background,
-  Controls,
-  Handle,
-  MarkerType,
-  MiniMap,
-  Position,
-  useEdgesState,
-  useNodesState,
-  type Connection,
-  type Edge,
-  type Node,
-} from "reactflow";
-
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import "reactflow/dist/style.css";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import type { InferResponseType } from "hono/client";
+import { useMemo } from "react";
+import { useParams } from "react-router";
 
-type GraphNodeData = {
-  label: string;
-  address: string;
+type TransactionResponse = InferResponseType<
+  (typeof client.api.transactions)[":transactions"]["$get"],
+  200
+>;
+
+type TransactionDetails = TransactionResponse[number];
+
+type EdgeAccumulator = {
+  labels: string[];
 };
 
-type TransactionGraphData = {
-  info: { txHash: string };
-  tokenTransfers: Array<{
-    amount: number;
-    tokenAddress: string;
-    fromWallet: string;
-    toWallet: string;
-  }>;
-  nativeTransfers: Array<{
-    amount: number;
-    fromWallet: string;
-    toWallet: string;
-  }>;
-};
+function shortAddress(address: string): string {
+  if (address.length <= 16) {
+    return address;
+  }
 
-function CustomNode({ data }: { data: GraphNodeData }) {
-  const shortAddress =
-    data.address.length > 16
-      ? `${data.address.slice(0, 6)}...${data.address.slice(-6)}`
-      : data.address;
-
-  return (
-    <div
-      style={{
-        padding: 10,
-        border: "1px solid #ccc",
-        borderRadius: 8,
-        background: "#fff",
-        minWidth: 150,
-      }}
-    >
-      <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: "small", fontWeight: "bold" }}>{data.label}</div>
-      <div style={{ fontSize: "10px", color: "#666", marginTop: 4 }}>
-        {shortAddress}
-      </div>
-      <Handle type="source" position={Position.Right} />
-    </div>
-  );
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
 }
 
-const nodeTypes = {
-  custom: CustomNode,
-};
-
-const initialNodes: Node<GraphNodeData>[] = [];
-
-// Component
 export function TransactionGraphDemo() {
   const { txHash } = useParams<{ txHash: string }>();
   const { fmt } = useLocalization();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // This is mainly how to interact with the API
   const transactionDetails = useGet(
     client.api.transactions[":transactions"],
     200,
@@ -94,135 +44,168 @@ export function TransactionGraphDemo() {
     },
   );
 
-  // Update graph when transaction details are loaded
-  useEffect(() => {
-    if (transactionDetails.data) {
-      const transaction = transactionDetails.data;
-      const addressSet = new Set<string>();
-      const edgeMap = new Map<string, { label: string[]; amount: number }>();
-
-      // Collect all addresses
-      for (const transfer of transaction.tokenTransfers) {
-        const fromWallet = transfer.fromWallet;
-        const toWallet = transfer.toWallet;
-
-        addressSet.add(fromWallet);
-        addressSet.add(toWallet);
-      }
-      for (const transfer of transaction.nativeTransfers) {
-        const fromWallet = transfer.fromWallet;
-        const toWallet = transfer.toWallet;
-
-        addressSet.add(fromWallet);
-        addressSet.add(toWallet);
-      }
-
-      // Create nodes
-      const addresses = Array.from(addressSet);
-      const newNodes: Node<GraphNodeData>[] = addresses.map(
-        (address, index) => ({
-          id: address,
-          type: "custom",
-          position: {
-            x: (index % 4) * 300,
-            y: Math.floor(index / 4) * 200,
-          },
-          data: { label: address, address },
-        }),
-      );
-
-      // Create edges from token transfers
-      for (const transfer of transaction.tokenTransfers) {
-        if (!transfer.fromWallet || !transfer.toWallet) continue;
-        const edgeKey = `${transfer.fromWallet}-${transfer.toWallet}`;
-        const tokenSymbol = fmt.text.address(transfer.tokenAddress);
-        const label = fmt.num.unit(transfer.amount, tokenSymbol);
-
-        if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, { label: [label], amount: transfer.amount });
-        } else {
-          const existing = edgeMap.get(edgeKey)!;
-          existing.label.push(label);
-          existing.amount += transfer.amount;
-        }
-      }
-
-      // Create edges from native transfers
-      for (const transfer of transaction.nativeTransfers) {
-        const edgeKey = `${transfer.fromWallet}-${transfer.toWallet}`;
-        const label = fmt.num.unit(transfer.amount, "SOL");
-
-        if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, { label: [label], amount: transfer.amount });
-        } else {
-          const existing = edgeMap.get(edgeKey)!;
-          existing.label.push(label);
-          existing.amount += transfer.amount;
-        }
-      }
-
-      const newEdges: Edge[] = Array.from(edgeMap.entries()).map(
-        ([edgeKey, { label }]) => {
-          const [source, target] = edgeKey.split("-");
-          return {
-            id: edgeKey,
-            source,
-            target,
-            label: label.join(" + "),
-            type: "bezier",
-            style: { stroke: "#000" },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: "#000",
-            },
-          };
-        },
-      );
-
-      setNodes(newNodes);
-      setEdges(newEdges);
+  const option = useMemo((): EChartsOption => {
+    if (!transactionDetails.data || !txHash) {
+      return {};
     }
-  }, [transactionDetails.data, setNodes, setEdges]);
+    const transaction = transactionDetails.data;
 
-  const onConnect = useCallback(
-    (params: Edge | Connection) =>
-      setEdges((eds) =>
-        addEdge({ ...params, type: "bezier", style: { stroke: "#000" } }, eds),
-      ),
-    [setEdges],
-  );
+    const addressSet = new Set<string>();
+    for (const t of transaction.tokenTransfers) {
+      addressSet.add(t.fromWallet);
+      addressSet.add(t.toWallet);
+    }
+
+    for (const t of transaction.nativeTransfers) {
+      addressSet.add(t.fromWallet);
+      addressSet.add(t.toWallet);
+    }
+
+    const addresses = Array.from(addressSet);
+    const nodeCount = addresses.length;
+    const radius = Math.max(180, nodeCount * 24);
+    const centerX = 640;
+    const centerY = 360;
+
+    const data = addresses.map((address, index) => {
+      const angle = (2 * Math.PI * index) / Math.max(nodeCount, 1);
+
+      return {
+        id: address,
+        name: shortAddress(address),
+        value: address,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        itemStyle: {
+          color: "#0f62fe",
+          borderColor: "#001d6c",
+          borderWidth: 1.5,
+        },
+      };
+    });
+
+    const links = [
+      ...transaction.tokenTransfers.map((t, index) => ({
+        source: t.fromWallet,
+        target: t.toWallet,
+        value: t.amount,
+        label: {
+          show: true,
+          formatter: fmt.num.unit(
+            t.amount,
+            fmt.text.address(t.tokenAddress, {
+              maxLength: 4,
+            }),
+          ),
+        },
+        lineStyle: {
+          width: 2,
+          opacity: 0.9,
+          curveness: (index % 3) * 0.2, // helps separate overlapping edges
+        },
+      })),
+
+      ...transaction.nativeTransfers.map((t, index) => ({
+        source: t.fromWallet,
+        target: t.toWallet,
+        value: t.amount,
+        label: {
+          show: true,
+          formatter: fmt.num.unit(t.amount, "SOL"),
+        },
+        lineStyle: {
+          width: 2,
+          opacity: 0.9,
+          curveness: (index % 3) * 0.2,
+        },
+      })),
+    ];
+
+    type LinkType = (typeof links)[number];
+
+    return {
+      title: {
+        text: `Transaction Graph - ${shortAddress(txHash)}`,
+        left: 12,
+        top: 10,
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 600,
+        },
+      },
+
+      animationDurationUpdate: 1500,
+      animationEasingUpdate: "quinticInOut",
+      series: [
+        {
+          type: "graph" as const,
+          layout: "none",
+          roam: true,
+          draggable: true,
+          label: {
+            show: true,
+            fontSize: 10,
+            color: "#fff",
+          },
+          symbol: "rect",
+          symbolSize: [120, 120],
+          edgeSymbol: ["none", "arrow"],
+          edgeSymbolSize: [4, 10],
+          edgeLabel: {
+            show: true,
+            fontSize: 11,
+            formatter: "{b}",
+            backgroundColor: "rgba(255,255,255,0.75)",
+            borderRadius: 4,
+            padding: [2, 4],
+          },
+          data,
+          links,
+          lineStyle: {
+            opacity: 0.9,
+            width: 2,
+            curveness: 0,
+            color: "#6f6f6f",
+          },
+          emphasis: {
+            focus: "adjacency",
+            lineStyle: {
+              width: 3,
+            },
+          },
+        },
+      ],
+    };
+  }, [transactionDetails.data, txHash, fmt]);
+
+  if (!txHash) {
+    return <div style={{ padding: 20 }}>Missing transaction hash.</div>;
+  }
 
   if (transactionDetails.isLoading) {
+    return <div style={{ padding: 20 }}>Loading transaction graph...</div>;
+  }
+
+  if (transactionDetails.error) {
+    return <div style={{ padding: 20 }}>Failed to load transaction graph.</div>;
+  }
+
+  if (!option) {
     return (
-      <div>
-        <div style={{ padding: 20 }}>Loading transaction graph...</div>
-      </div>
+      <div style={{ padding: 20 }}>No transaction transfer data found.</div>
     );
   }
 
   return (
-    <div>
-      <div
-        style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-      >
-        <div style={{ padding: 10, fontSize: "14px", color: "#666" }}>
-          Transaction Graph - {txHash}
-        </div>
-        <div style={{ flex: 1, position: "relative" }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            fitView
-          >
-            <MiniMap />
-            <Controls />
-            <Background />
-          </ReactFlow>
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div style={{ padding: 12, fontSize: 14, color: "#666" }}>
+        Transaction Graph - {shortAddress(txHash)}
+      </div>
+      <div style={{ flex: 1, minHeight: 480 }}>
+        <ReactECharts
+          option={option}
+          style={{ width: "100%", height: "100%" }}
+        />
       </div>
     </div>
   );
