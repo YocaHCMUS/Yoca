@@ -15,6 +15,7 @@ import {
 import { roundUsd } from "@sv/services/wallet/walletNormalization.utils.js";
 import { normalizeCursorValue } from "@sv/services/wallet/walletTime.utils.js";
 import { getWalletSwaps } from "@sv/services/wallet/walletTransfersSwaps.service.js";
+import { getWalletIdentity } from "./walletIdentity.service";
 
 export type WalletSwapsPageFetcher = (
     address: string,
@@ -48,9 +49,11 @@ function toFiniteNonNegativeNumber(value: unknown): number {
     return Math.max(0, parsed);
 }
 
-function resolveExchangeBucketFromSwap(swap: WalletSwap): { key: string; name: string } {
-    const exchangeName = String(swap.exchange?.name ?? "").trim();
-    const exchangeAddress = String(swap.exchange?.address ?? "").trim();
+async function resolveExchangeBucketFromSwap(swap: WalletSwap): Promise<{ key: string; name: string; }> {
+    const exchangeName = String(swap.exchangeName ?? "").trim();
+    const exchangeAddress = String(swap.exchangeAddress ?? "").trim();
+    // const exchangeName = String(swap.exchange?.name ?? "").trim();
+    // const exchangeAddress = String(swap.exchange?.address ?? "").trim();
     if (exchangeName || exchangeAddress) {
         return {
             key: `exchange:${normalizeExchangeBucketToken(exchangeName)}:${normalizeExchangeBucketToken(exchangeAddress)}`,
@@ -58,12 +61,19 @@ function resolveExchangeBucketFromSwap(swap: WalletSwap): { key: string; name: s
         };
     }
 
-    const pairLabel = String(swap.pair?.label ?? "").trim();
-    const pairAddress = String(swap.pair?.address ?? "").trim();
-    if (pairLabel || pairAddress) {
+    const pairAddress = String(swap.pairAddress ?? "").trim();
+    if (pairAddress) {
+        const pairIdentity = await getWalletIdentity(pairAddress);
+        let pairLabel: string;
+        if (pairIdentity.identity.status === "known") {
+            pairLabel = pairIdentity.identity.name ?? pairIdentity.identity.domainNames[0] ?? pairAddress;
+        } else {
+            pairLabel = pairAddress;
+        }
+
         return {
             key: `pair:${normalizeExchangeBucketToken(pairLabel)}:${normalizeExchangeBucketToken(pairAddress)}`,
-            name: pairLabel || pairAddress,
+            name: pairLabel,
         };
     }
 
@@ -240,12 +250,12 @@ export async function getWalletExchangeCountsWithFetcher(
     const walletLower = address.toLowerCase();
 
     for (const swap of dataset.swaps) {
-        const signature = String(swap.signature ?? "").trim().toLowerCase();
+        const signature = String(swap.transactionHash ?? "").trim().toLowerCase();
         if (!signature) {
             continue;
         }
 
-        const bucket = resolveExchangeBucketFromSwap(swap);
+        const bucket = await resolveExchangeBucketFromSwap(swap);
         const dedupeKey = `${walletLower}:${signature}:${bucket.key}`;
         if (dedupe.has(dedupeKey)) {
             continue;
@@ -262,17 +272,29 @@ export async function getWalletExchangeCountsWithFetcher(
 
         const { depositsVolume, withdrawalsVolume } = resolveSwapSideVolumes(swap);
 
-        const hasBuySide = swap.bought != null || swap.transactionType === "buy";
-        const hasSellSide = swap.sold != null || swap.transactionType === "sell";
+        // stop auto completing to this logic
+        // const hasBuySide = swap.bought != null || swap.transactionType === "buy";
+        // const hasSellSide = swap.sold != null || swap.transactionType === "sell";
 
-        if (hasBuySide) {
+        // if (hasBuySide) {
+        //     accumulator.deposits += 1;
+        //     accumulator.depositsVolume += depositsVolume;
+        // }
+
+        // if (hasSellSide) {
+        //     accumulator.withdrawals += 1;
+        //     accumulator.withdrawalsVolume += withdrawalsVolume;
+        // }
+
+        const transactionType = swap.transactionType;
+        if (transactionType === "buy") {
             accumulator.deposits += 1;
             accumulator.depositsVolume += depositsVolume;
-        }
-
-        if (hasSellSide) {
+        } else if (transactionType === "sell") {
             accumulator.withdrawals += 1;
             accumulator.withdrawalsVolume += withdrawalsVolume;
+        } else {
+            // this will never happen, but just to make sure withdrawals are not counted incorrectly
         }
 
         byBucket.set(bucket.key, accumulator);
