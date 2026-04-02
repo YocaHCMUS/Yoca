@@ -1,11 +1,7 @@
 import React from 'react';
 import type WalletComparisionProp from "./WalletComparisionProp";
-import { AssetDistribution } from '@/components/charts/AssetDistribution';
-import { HoldingDurations } from '@/components/charts/HoldingDurations';
 import styles from './GeneralTab.module.scss';
 import { BalanceChart } from '@/components/charts/BalanceChart';
-import { VolumeBenchmark } from '@/components/charts/VolumeBenchmark';
-import { DailyTradingVolume } from '@/components/charts/DailyTradingVolume';
 import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution';
 import { TradingVolumePerTransaction } from '@/components/charts/TradingVolume/TradingVolumePerTransaction';
 import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume';
