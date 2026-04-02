@@ -121,7 +121,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 
     return {
       ...base,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       xAxis: {
         ...base.xAxis,
         type: "category",
@@ -155,7 +155,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 
     return {
       ...base,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       xAxis: { ...base.xAxis, type: "category", data: labels },
       yAxis: { ...base.yAxis, type: "value", name: "USD" },
       tooltip: {

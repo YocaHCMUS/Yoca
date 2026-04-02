@@ -24,9 +24,7 @@ import { Button } from '@carbon/react';
 import { Add, Close } from '@carbon/react/icons';
 import { ChartGridItem } from '../shared';
 import { fetchDailyTradingVolume } from '@/services/chart/chartApi';
-import type { VolumeBenchmarkResponse } from '@/types/chart-api.types';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useStandardChartController } from '@/hooks/useChartController';
 import { useChartExport } from '@/hooks/useChartExport';
 import { runChartExport } from '@/services/chart/chartExportService';
 import type { ChartProps } from '../shared/ChartProp';
@@ -318,7 +316,7 @@ export function DailyTradingVolume({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig(),
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',

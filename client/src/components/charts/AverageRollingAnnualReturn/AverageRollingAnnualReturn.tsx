@@ -145,7 +145,7 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
     return {
       ...baseOption,
       color: ['#5470C6'], // Blue for returns
-      grid: getChartGridConfig(),
+      ...getChartGridConfig,
       legend: getSingleSeriesLegend(chartTheme),
       xAxis: {
         ...baseOption.xAxis,

@@ -117,7 +117,7 @@ export function TotalTradingVolumeChart({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       legend: getMultiSeriesLegend(chartTheme, ["Total Volume"], false),
       xAxis: {
         ...baseOption.xAxis,

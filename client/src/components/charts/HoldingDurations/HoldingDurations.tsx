@@ -67,8 +67,8 @@ export const HoldingDurations: React.FC<ChartProps> = ({
     typeof customFilters?.topN === "number" ? customFilters.topN : 10;
   const initialUnit =
     customFilters?.timeUnit === "weeks" ||
-    customFilters?.timeUnit === "months" ||
-    customFilters?.timeUnit === "days"
+      customFilters?.timeUnit === "months" ||
+      customFilters?.timeUnit === "days"
       ? customFilters.timeUnit
       : "days";
   const initialWallets = Array.isArray(initialFilters?.wallets)
@@ -233,7 +233,7 @@ export const HoldingDurations: React.FC<ChartProps> = ({
           2,
           false,
         ),
-        grid: getChartGridConfig().grid,
+        ...getChartGridConfig,
         xAxis: {
           ...base.xAxis,
           type: "category",

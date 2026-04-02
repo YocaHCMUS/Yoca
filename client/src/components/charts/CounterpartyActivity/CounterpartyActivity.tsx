@@ -261,7 +261,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
@@ -348,7 +348,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",

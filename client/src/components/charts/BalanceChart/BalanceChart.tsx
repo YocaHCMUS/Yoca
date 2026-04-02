@@ -877,7 +877,7 @@ export function BalanceChart({
         return {
             ...baseOption,
             color: colors,
-            ...getChartGridConfig(),
+            ...getChartGridConfig,
             legend: getConditionalLegend(chartTheme, windowedDisplaySeries.map((series) => series.label), 2, false),
             xAxis: {
                 ...baseOption.xAxis,

@@ -13,7 +13,7 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { ChartGridItem } from '@/components/charts/shared';
 import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '../../../hooks/useChartTheme';
 import { useChartContext } from '../../../contexts/ChartContext';
 import { fetchTransactionDistribution, type InferFetcherData } from '../../../services/chart/chartApi';
 import { formatDate, isChartSuccess } from '../../../util/chart-helpers';
@@ -33,31 +33,31 @@ import sharedStyles from '../shared/ChartStyle.module.scss';
 export interface TransactionDistributionProps {
   /** Chart title */
   title?: string;
-  
+
   /** Chart minimum height in pixels for each sub-chart */
   minHeight?: number;
-  
+
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
-  
+
   /** Initial transaction type filter */
   initialTransactionType?: TransactionType;
-  
+
   /** Display mode for transaction counts chart */
   chartMode?: 'stacked' | 'grouped';
-  
+
   /** Wallet IDs to display (empty array = all wallets) */
   walletIds?: string[];
-  
+
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
-  
+
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-  
+
   /** Callback when data is loaded */
   onDataLoaded?: (data: TransactionDistributionData) => void;
-  
+
   /** Additional CSS class */
   className?: string;
 }
@@ -102,20 +102,20 @@ export function TransactionDistribution({
   // i18n
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.transactionDistributionChart.title');
-  
+
   // State for chart mode
   const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
-  
+
   // Chart instance refs for export
   const transactionChartRef = useRef<ReactECharts>(null);
   const tokenChartRef = useRef<ReactECharts>(null);
-  
+
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Get theme configuration
   const chartTheme = useChartTheme();
-  
+
   // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
@@ -125,7 +125,7 @@ export function TransactionDistribution({
     },
     debounceDelay: 300,
   });
-  
+
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
@@ -138,7 +138,7 @@ export function TransactionDistribution({
     }),
     [filters.timePeriod, filters.transactionType, walletsString, timezone]
   );
-  
+
   /**
    * Centralized lifecycle handling
    */
@@ -150,7 +150,7 @@ export function TransactionDistribution({
       refreshInterval,
       onDataLoaded,
     });
-  
+
   /**
    * Generate eCharts options for transaction counts chart
    */
@@ -158,13 +158,13 @@ export function TransactionDistribution({
     if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Use theme color palette
     const colorPalette = chartTheme.colorPalette;
-    
+
     // Create series for each wallet
     const series = data.transactionCounts.map((wallet, index) => ({
       name: wallet.walletName,
@@ -185,16 +185,10 @@ export function TransactionDistribution({
         focus: 'series',
       },
     }));
-    
+
     return {
       ...baseOption,
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
@@ -203,13 +197,13 @@ export function TransactionDistribution({
         },
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          
+
           const timestamp = params[0].value[0];
           const dateStr = formatDate(new Date(timestamp), timezone);
-          
+
           let tooltipContent = `<strong>${dateStr}</strong><br/>`;
           let total = 0;
-          
+
           params.forEach((param: any) => {
             const count = param.value[1];
             total += count;
@@ -222,11 +216,11 @@ export function TransactionDistribution({
               </div>
             `;
           });
-          
+
           if (selectedChartMode === 'stacked') {
             tooltipContent += `<div style="margin-top: 8px; padding-top: 4px; border-top: 1px solid #ccc;"><strong>Total: ${total}</strong></div>`;
           }
-          
+
           return tooltipContent;
         },
       },
@@ -270,7 +264,7 @@ export function TransactionDistribution({
       ],
     };
   }, [data, selectedChartMode, timezone, chartTheme, tr]);
-  
+
   /**
    * Generate eCharts options for unique token counts chart
    */
@@ -278,19 +272,13 @@ export function TransactionDistribution({
     if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     return {
       ...baseOption,
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      ...getChartGridConfig,
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -372,14 +360,14 @@ export function TransactionDistribution({
       ],
     };
   }, [data, timezone, chartTheme, tr]);
-  
+
   // Export functionality
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
   //   chartTitle,
   //   timezone,
   //   baseFilename: 'transaction-distribution',
   // });
-  
+
   // /**
   //  * Handle export based on format
   //  */
@@ -389,7 +377,7 @@ export function TransactionDistribution({
   //     console.error('Transaction chart instance not available for export');
   //     return;
   //   }
-    
+
   //   if (format === 'png') {
   //     exportPNG(transactionChartInstance as any, filters);
   //   } else if (format === 'svg') {
@@ -412,7 +400,7 @@ export function TransactionDistribution({
   //       })),
   //       visible: true,
   //     }));
-      
+
   //     // Add unique token counts as a separate series
   //     csvData.push({
   //       id: 'unique-tokens',
@@ -424,25 +412,25 @@ export function TransactionDistribution({
   //       })),
   //       visible: true,
   //     });
-      
+
   //     exportCSV(csvData, filters);
   //   }
   // };
-  
+
   /**
    * Handle chart mode toggle
    */
   const handleChartModeChange = (mode: 'stacked' | 'grouped') => {
     setSelectedChartMode(mode);
   };
-  
+
   /**
    * Handle retry on error
    */
   const handleRetry = () => {
     refetch(false);
   };
-  
+
   return (
     <BaseChart
       title={chartTitle}
@@ -474,7 +462,7 @@ export function TransactionDistribution({
           </button>
         </div>
       </div>
-      
+
       {/* Transaction counts chart */}
       {data && (
         <div className={sharedStyles.chartSection}>
@@ -490,7 +478,7 @@ export function TransactionDistribution({
           </ChartGridItem>
         </div>
       )}
-      
+
       {/* Unique token counts chart */}
       {data && (
         <div className={sharedStyles.chartSection}>

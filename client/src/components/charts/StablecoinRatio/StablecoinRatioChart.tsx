@@ -17,7 +17,7 @@ import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
-import { getThemedChartBaseOption, useChartTheme } from "@/hooks/useChartTheme";
+import { getChartGridConfig, getThemedChartBaseOption, useChartTheme } from "@/hooks/useChartTheme";
 import {
   fetchStablecoinRatio,
   type InferFetcherData,
@@ -131,13 +131,7 @@ export function StablecoinRatioChart({
 
     return {
       ...baseOption,
-      grid: {
-        left: "8%",
-        right: "8%",
-        bottom: "12%",
-        top: "20%",
-        containLabel: true,
-      },
+      ...getChartGridConfig,
       xAxis: {
         ...baseOption.xAxis,
         type: "time",

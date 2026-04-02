@@ -12,7 +12,7 @@ import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { BaseChart } from '@/components/charts/Base/BaseChart';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchVolumeBenchmark, type InferFetcherData } from '@/services/chart/chartApi';
 import { formatCurrency, formatDate, isChartSuccess } from '@/util/chart-helpers';
@@ -32,31 +32,31 @@ import { ChartGridItem } from '../shared';
 export interface VolumeBenchmarkProps {
   /** Chart title */
   title?: string;
-  
+
   /** Chart minimum height in pixels */
   minHeight?: number;
-  
+
   /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
-  
+
   /** Display as line or bar chart */
   chartType?: 'line' | 'bar';
-  
+
   /** Show data labels on points/bars */
   showDataLabels?: boolean;
-  
+
   /** Wallet IDs to compare (empty array = all wallets) */
   walletIds?: string[];
-  
+
   /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
-  
+
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-  
+
   /** Callback when data is loaded */
   onDataLoaded?: (data: VolumeBenchmarkData) => void;
-  
+
   /** Additional CSS class */
   className?: string;
 }
@@ -102,16 +102,16 @@ export function VolumeBenchmark({
   // i18n
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.volumeBenchmarkChart.title');
-  
+
   // Chart instance ref for export
   const chartRef = useRef<ReactECharts>(null);
-  
+
   // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
-  
+
   // Get theme configuration
   const chartTheme = useChartTheme();
-  
+
   // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
@@ -120,10 +120,10 @@ export function VolumeBenchmark({
     },
     debounceDelay: 300,
   });
-  
+
   // State for chart type
   const [selectedChartType, setSelectedChartType] = useState<'line' | 'bar'>(chartType);
-  
+
   /**
    * Memoize query to prevent unnecessary re-fetches
    */
@@ -135,7 +135,7 @@ export function VolumeBenchmark({
     }),
     [filters.timePeriod, walletsString, timezone]
   );
-  
+
   /**
    * Centralized lifecycle handling
    */
@@ -147,7 +147,7 @@ export function VolumeBenchmark({
       refreshInterval,
       onDataLoaded,
     });
-  
+
   /**
    * Generate eCharts options for volume benchmark visualization
    */
@@ -155,13 +155,13 @@ export function VolumeBenchmark({
     if (!isChartSuccess(data, 'wallets')) {
       return {};
     }
-    
+
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     // Use theme color palette
     const colorPalette = chartTheme.colorPalette;
-    
+
     // Create series for each wallet
     const series = data.wallets.map((wallet, index) => ({
       name: wallet.name,
@@ -181,16 +181,10 @@ export function VolumeBenchmark({
         focus: 'series',
       },
     }));
-    
+
     return {
       ...baseOption,
-      grid: {
-        left: '8%',
-        right: '8%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      ...getChartGridConfig,
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -248,14 +242,14 @@ export function VolumeBenchmark({
       ],
     };
   }, [data, selectedChartType, showDataLabels, timezone, chartTheme]);
-  
+
   // Export functionality
   // const { exportPNG, exportSVG, exportCSV } = useChartExport({
   //   chartTitle,
   //   timezone,
   //   baseFilename: 'volume-benchmark',
   // });
-  
+
   // /**
   //  * Handle export based on format
   //  */
@@ -265,7 +259,7 @@ export function VolumeBenchmark({
   //     console.error('Chart instance not available for export');
   //     return;
   //   }
-    
+
   //   if (format === 'png') {
   //     exportPNG(chartInstance as any, filters);
   //   } else if (format === 'svg') {
@@ -285,21 +279,21 @@ export function VolumeBenchmark({
   //     exportCSV(csvData, filters);
   //   }
   // }, [exportPNG, exportSVG, exportCSV, data, filters]);
-  
+
   /**
    * Handle chart type toggle
    */
   const handleChartTypeChange = (type: 'line' | 'bar') => {
     setSelectedChartType(type);
   };
-  
+
   /**
    * Handle retry on error
    */
   const handleRetry = () => {
     refetch(false);
   };
-  
+
   return (
     <BaseChart
       title={chartTitle}
@@ -331,7 +325,7 @@ export function VolumeBenchmark({
           </button>
         </div>
       </div>
-      
+
       {/* Chart */}
       {isChartSuccess(data, 'wallets') && (
         <ChartGridItem minHeight={minHeight}>
