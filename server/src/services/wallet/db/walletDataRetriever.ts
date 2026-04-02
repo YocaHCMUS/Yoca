@@ -13,6 +13,7 @@ import {
 	walletTransactionsMeta,
 	walletTransferMeta,
 	walletBalanceHistoryCache,
+	walletFirstFund,
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
@@ -686,4 +687,18 @@ export async function getCachedWalletBalanceHistory(
 		coveredFromMs: Number(rows[0].coveredFromMs),
 		coveredToMs: Number(rows[0].coveredToMs),
 	};
+}
+
+export async function getCachedWalletFirstFund(
+	address: string
+) {
+	const row = await db
+		.select()
+		.from(walletFirstFund)
+		.where(
+			eq(walletFirstFund.reciepient, address),
+		)
+		.limit(1);
+
+	return row.length > 0 ? row[0] : null;
 }
