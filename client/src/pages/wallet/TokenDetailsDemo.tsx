@@ -1,12 +1,16 @@
 import client from "@/api/main";
-import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
+import {
+  getDefaultAggregationForDayRange,
+  mapTradesWithFallbackPrice,
+  TimeSeriesTradesScatterChart,
+  type TradePoint,
+} from "@/components/charts/TimeSeriesTradesScatterChart";
 import { CpyBtn } from "@/components/CpyBtn";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import Tble from "@/components/Tble";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
-import { PageWrapper } from "@/components/wrapper";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
@@ -30,6 +34,55 @@ type TokenAverageTradePriceProps = {
 };
 
 type TokenPriceDayRange = 7 | 30 | 90;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function toOptionalFiniteNumber(value: unknown): number | null {
+  if (typeof value !== "number") return null;
+  if (!Number.isFinite(value)) return null;
+  return value;
+}
+
+function getTradeRowPrice(trade: Record<string, unknown>): number | null {
+  const directCandidates = [
+    trade.basePrice,
+    trade.priceUsd,
+    trade.tradePriceUsd,
+    trade.baseQuotePrice,
+  ];
+
+  for (const candidate of directCandidates) {
+    const parsed = toOptionalFiniteNumber(candidate);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+export function isTradeWithinSelectedRange(
+  tradeUnixTimeMs: unknown,
+  selectedTimeRange: TokenPriceDayRange,
+  nowMs = Date.now(),
+): boolean {
+  if (typeof tradeUnixTimeMs !== "number" || !Number.isFinite(tradeUnixTimeMs)) {
+    return false;
+  }
+
+  const rangeStartMs = nowMs - selectedTimeRange * DAY_MS;
+  return tradeUnixTimeMs >= rangeStartMs && tradeUnixTimeMs <= nowMs;
+}
+
+export function filterTradesWithinSelectedRange(
+  trades: TradePoint[],
+  selectedTimeRange: TokenPriceDayRange,
+  nowMs = Date.now(),
+): TradePoint[] {
+  return trades.filter((trade) =>
+    isTradeWithinSelectedRange(trade.unixTimeMs, selectedTimeRange, nowMs),
+  );
+}
 
 export function TokenAverageTradePrice({
   walletAddress,
@@ -76,6 +129,44 @@ export function TokenAverageTradePrice({
         tokenAddress,
       },
     },
+  );
+
+  const mappedTradePoints = useMemo(() => {
+    if (!recentTrades.data) {
+      return [] as TradePoint[];
+    }
+
+    const normalizedTrades = recentTrades.data
+      .map((trade) => {
+        const side = trade.tradeAction === "buy" ? "buy" : "sell";
+        const price = getTradeRowPrice(trade as Record<string, unknown>);
+
+        return {
+          unixTimeMs: trade.blockUnixTimeMs,
+          side,
+          volumeUsd: trade.volumeUsd,
+          price,
+          priceSource: price === null ? "missing" : "trade",
+          transactionHash: trade.transactionHash,
+        } as TradePoint;
+      })
+      .filter((trade) => Number.isFinite(trade.unixTimeMs));
+
+    const selectedRangeTrades = filterTradesWithinSelectedRange(
+      normalizedTrades,
+      selectedTimeRange,
+    );
+
+    return mapTradesWithFallbackPrice(
+      selectedRangeTrades,
+      priceData.data,
+      true,
+    );
+  }, [recentTrades.data, priceData.data, selectedTimeRange]);
+
+  const tradeAggregation = useMemo(
+    () => getDefaultAggregationForDayRange(selectedTimeRange),
+    [selectedTimeRange],
   );
 
   const recentTradesRows = useMemo(() => {
@@ -193,7 +284,7 @@ export function TokenAverageTradePrice({
           </div>
         </Column>
       </Grid>
-      <TimeSeriesLineChart
+      <TimeSeriesTradesScatterChart
         markLines={[
           {
             label: tr("walletPage.avgBuyPrice"),
@@ -206,10 +297,11 @@ export function TokenAverageTradePrice({
             color: sellColor,
           },
         ]}
-        helper="average-buy-sell"
         valueFormatter={fmt.num.compact.currency}
         data={priceData.data}
-        loading={priceData.isLoading}
+        trades={mappedTradePoints}
+        aggregation={tradeAggregation}
+        loading={priceData.isLoading || recentTrades.isLoading}
       />
       <Tble
         title={tr("walletPage.recentTrades")}
@@ -563,3 +655,4 @@ export function TokenDetailsDemo({
     // </PageWrapper>
   );
 }
+
