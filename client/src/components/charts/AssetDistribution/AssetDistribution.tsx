@@ -107,14 +107,6 @@ function applyGrouping(
 // Infer the response type from the fetcher function automatically
 type AssetDistributionData = InferFetcherData<typeof fetchAssetDistribution>;
 
-// export interface AssetDistributionProps {
-//   minHeight?: number;
-//   initialFilters?: Partial<any>;
-//   autoRefresh?: boolean;
-//   refreshInterval?: number;
-//   className?: string;
-// }
-
 export const AssetDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
   initialFilters,
@@ -185,7 +177,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       const csv: ChartDataSeries[] = [];
 
       if ('wallets' in data && data.wallets) {
-        data.wallets.forEach((wallet: any) => {
+        data.wallets.forEach((wallet) => {
           const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
           csv.push({
             id: `asset-distribution-${wallet.walletAddress}`,
@@ -235,7 +227,6 @@ export const AssetDistribution: React.FC<ChartProps> = ({
    */
   const createChartOption = useCallback((
     distributionData: { name: string; value: number; percentage: number; color?: string }[],
-    total: number,
     walletLabel?: string,
     isMultiWallet?: boolean
   ): EChartsOption => {
@@ -434,27 +425,17 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
-          wallet.totalValue,
           `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),
       }));
     }
 
-    // // Single/aggregated view
-    // if ('data' in data && data.data && data.data.length > 0) {
-    //   return [{
-    //     walletAddress: 'aggregated',
-    //     option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
-    //   }];
-    // }
-
     if ('wallets' in data && data.wallets && data.wallets.length > 0) {
       return data.wallets.map((wallet) => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
-          wallet.totalValue,
           `${wallet.walletAddress.slice(0, 8)}...`,
           isMultiWallet
         ),

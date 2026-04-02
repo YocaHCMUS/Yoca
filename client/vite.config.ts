@@ -5,7 +5,7 @@ import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
-  const env = loadEnv(mode, ".");
+  loadEnv(mode, ".");
 
   return defineConfig({
     css: {

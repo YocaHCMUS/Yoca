@@ -47,7 +47,7 @@ export interface ChartFilters {
   /** Time range filter */
   timePeriod: TimePeriod;
 
-  timeUnit: "month" | "quater" | "year" | "days" | "custom";
+  timeUnit: "month" | "quarter" | "year" | "days" | "custom";
 
   /** Selected tokens (['All'] or specific tokens) */
   tokens?: string[];
@@ -65,6 +65,8 @@ export interface ChartFilters {
 
   /** Custom date range (if timePeriod is 'custom') */
   customDateRange?: DateRange;
+
+  windowSize?: number;
 }
 
 /**

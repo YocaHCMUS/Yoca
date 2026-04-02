@@ -2,7 +2,7 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { useEffect, useState } from "react";
 
 export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
-  const { theme, themeRef } = useUserTheme();
+  const { themeRef } = useUserTheme();
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
     }
 
     setValues(resolved);
-  }, [theme]);
+  });
 
   return values as { [K in keyof T]: string };
 }
@@ -28,10 +28,4 @@ export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
 function extractVarName(token: string) {
   const match = token.match(/var\((--[^)]+)\)/);
   return match?.[1];
-}
-
-function getCSSVar(varName: string) {
-  return getComputedStyle(document.documentElement)
-    .getPropertyValue(varName)
-    .trim();
 }

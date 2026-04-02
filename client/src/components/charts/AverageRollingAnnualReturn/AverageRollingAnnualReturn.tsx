@@ -16,7 +16,7 @@
  * @module components/charts/AverageRollingAnnualReturn
  */
 
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -63,10 +63,10 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
 
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
-  const { selectedTimezone: timezone } = useChartContext();
+  // const { selectedTimezone: timezone } = useChartContext();
 
   // Extract initial values - using type assertion for custom properties
-  const customFilters = initialFilters as any;
+  const customFilters = initialFilters;
   const initialTimeUnit =
     customFilters?.timeUnit === 'month' ||
       customFilters?.timeUnit === 'quarter' ||
@@ -187,8 +187,9 @@ export const AverageRollingAnnualReturn: React.FC<ChartProps> = ({
           },
           tooltip: {
             ...baseOption.tooltip,
-            formatter: (param: any) => {
-              const [min, q1, median, q3, max] = param.data;
+            formatter: (param) => {
+              const data = param.data;
+              const [min, q1, median, q3, max] = data as number[];
               const wallet = validWallets[param.dataIndex];
               const avg = wallet.averageReturn;
 

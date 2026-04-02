@@ -27,7 +27,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { base64 } from "zod";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass

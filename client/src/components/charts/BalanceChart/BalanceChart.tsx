@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { Add, Close, Repeat } from '@carbon/react/icons';
+import { Close } from '@carbon/react/icons';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
@@ -900,7 +900,7 @@ export function BalanceChart({
             tooltip: {
                 ...baseOption.tooltip,
                 trigger: 'axis',
-                formatter: (params: any) =>
+                formatter: (params) =>
                     formatAxisTooltip(
                         params,
                         (point) => formatTimestampWithTimezone(point.value[0], timezone, 'PPpp'),

@@ -8,7 +8,6 @@
  */
 
 import client from '@/api/main';
-import type { Wallet } from '@solana/wallet-adapter-react';
 
 /**
  * Utility type to extract the inferred response type from a fetcher function

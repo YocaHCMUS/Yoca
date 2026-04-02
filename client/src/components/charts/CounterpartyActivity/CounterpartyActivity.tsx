@@ -268,7 +268,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         axisPointer: {
           type: "shadow",
         },
-        formatter: (params: any) => {
+        formatter: (params: string | any[]) => {
           if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
@@ -325,7 +325,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => params.value.toLocaleString(),
+            formatter: (params: { value: { toLocaleString: () => any; }; }) => params.value.toLocaleString(),
             fontSize: 10,
           },
         },
@@ -355,7 +355,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         axisPointer: {
           type: "shadow",
         },
-        formatter: (params: any) => {
+        formatter: (params: string | any[]) => {
           if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
@@ -412,7 +412,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => formatCurrency(params.value),
+            formatter: (params: { value: number; }) => formatCurrency(params.value),
             fontSize: 10,
           },
         },
