@@ -16,7 +16,6 @@ import {
   bigint,
   check,
   decimal as dec,
-  index,
   integer,
   jsonb,
   pgEnum,
@@ -28,6 +27,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { base64 } from "zod";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -663,55 +663,33 @@ export const walletTransactions = pgTable(
 export const walletSwap = pgTable(
   "wallet_swap",
   {
-    address: varchar("address", { length: 66 }).notNull(),
-    signature: varchar("signature", { length: 128 }).notNull(),
-    blockTimestamp: timestamp("block_timestamp").notNull(),
-    slot: bigint("slot", { mode: "number" }).notNull(),
-    fee: decimal("fee").notNull(),
-    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
-    transactionType: text("transaction_type"),
-    subCategory: text("sub_category"),
-    blockNumber: bigint("block_number", { mode: "number" }),
-    exchange: jsonb("exchange").$type<{
-      name?: string | null;
-      address?: string | null;
-      logo?: string | null;
-    } | null>(),
-    pair: jsonb("pair").$type<{
-      address?: string | null;
-      label?: string | null;
-      baseTokenAddress?: string | null;
-      quoteTokenAddress?: string | null;
-    } | null>(),
-    sold: jsonb("sold").$type<{
-      mint: string;
-      amount: number;
-      decimals: number;
-      symbol?: string | null;
-      priceUsd?: number | null;
-      valueUsd?: number | null;
-    } | null>(),
-    bought: jsonb("bought").$type<{
-      mint: string;
-      amount: number;
-      decimals: number;
-      symbol?: string | null;
-      priceUsd?: number | null;
-      valueUsd?: number | null;
-    } | null>(),
-    baseQuotePrice: decimal("base_quote_price"),
+    transactionHash: text("transaction_hash").notNull(),
+    transactionType: text("transaction_type").notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+
+    subcategory: text("subcategory"),
+
+    walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+    pairAddress: varchar("pair_address", { length: 66 }).notNull(),
+
+    tokensInvoled: text("tokens_involved").notNull(),
+
+    exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
+    exchangeName: text("exchange_name").notNull(),
+    exchangeLogo: text("exchange_logo").notNull(),
+
+    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAmount: decimal("bought_token_amount").notNull(),
+    boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
+
+    soldTokenAddress: varchar("sold_token_address", { length: 66 }).notNull(),
+    soldTokenAmount: decimal("sold_token_amount").notNull(),
+    soldTokenPriceUsd: decimal("sold_token_price_usd").notNull(),
+
     totalValueUsd: decimal("total_value_usd"),
-    source: varchar("source", { length: 16 }),
-    // First two entries are the swap legs
-    swapBalanceChanges: jsonb("swap_balance_changes")
-      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
-      .notNull(),
-    // Remaining entries represent fee/rent/other adjustments
-    feeBalanceChanges: jsonb("fee_balance_changes")
-      .$type<Array<{ mint: string; amount: number; decimals: number }>>()
-      .notNull(),
+    baseQuotePrice: decimal("base_quote_price_usd"),
   },
-  (t) => [primaryKey({ columns: [t.address, t.signature] })],
+  (t) => [primaryKey({ columns: [t.transactionHash] })],
 );
 
 export const walletExchangeCountsCache = pgTable(
@@ -866,49 +844,6 @@ export const walletTokenDetails = pgTable(
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
-
-export const walletTokenTrades = pgTable(
-  "wallet_token_trades",
-  {
-    // Underscore before name to signal this is synthetic field and is not
-    // inferred from the actual data by any means (which usually discouraged)
-    _tradeId: uuid("_trade_id").primaryKey().defaultRandom(),
-
-    address: varchar("address", { length: 44 }).notNull(),
-    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-
-    // Transaction identity
-    transactionHash: varchar("transaction_hash", { length: 88 }).notNull(),
-    blockUnixTimeMs: bigint("block_unix_time_ms", { mode: "number" }).notNull(),
-
-    // Swap details - base/quote pair
-    baseTokenAddress: varchar("base_token_address", { length: 44 }).notNull(),
-    quoteTokenAddress: varchar("quote_token_address", { length: 44 }).notNull(),
-
-    // Amounts
-    baseAmount: decimal("base_amount").notNull(),
-    quoteAmount: decimal("quote_amount").notNull(),
-
-    // Pricing
-    basePrice: decimal("base_price"),
-    quotePrice: decimal("quote_price"),
-    volumeUsd: decimal("volume_usd").notNull(),
-
-    // Exchange/Pool info
-    exchangeName: varchar("exchange_name"),
-    exchangeProgramAddress: varchar("exchange_program_address", { length: 44 }),
-    poolAddress: varchar("pool_address", { length: 44 }).notNull(),
-    poolName: varchar("pool_name"),
-
-    // Transaction metadata
-    tradeAction: enumTradeAction("trade_action").notNull(),
-
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [index("idx_addr_token").on(table.address, table.tokenAddress)],
-);
 // #endregion
 
 // #region Types
@@ -955,7 +890,6 @@ export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
-export type WalletTokenTradesInsert = typeof walletTokenTrades.$inferInsert;
 
 // #endregion
 

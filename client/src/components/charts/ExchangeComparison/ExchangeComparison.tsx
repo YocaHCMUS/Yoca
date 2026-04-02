@@ -238,7 +238,7 @@ export function ExchangeComparison({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",

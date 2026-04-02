@@ -15,6 +15,22 @@ type TokenMeta = {
     tokenAddress?: string;
 };
 
+function toSerializableError(error: unknown): { message: string; name?: string; code?: string } {
+    if (error instanceof Error) {
+        return {
+            message: error.message,
+            name: error.name,
+            code: typeof (error as { code?: unknown }).code === "string"
+                ? (error as { code?: string }).code
+                : undefined,
+        };
+    }
+
+    return {
+        message: typeof error === "string" ? error : "Unknown error",
+    };
+}
+
 const balanceRequestSchema = z.object({
     timePeriod: z.enum(["7D", "30D", "60D", "90D", "1Y", "All"]).optional().default("30D"),
     tokens: z.string().optional(),
@@ -235,7 +251,10 @@ const app = new Hono().get("/", async (c) => {
         }
 
         console.error("[BalanceChart] Error fetching wallet balance history:", error);
-        return c.json({ error: "[BalanceChart] Error fetching wallet balance history:", details: error }, 500);
+        return c.json({
+            error: "[BalanceChart] Error fetching wallet balance history:",
+            details: toSerializableError(error),
+        }, 500);
     }
 });
 

@@ -166,8 +166,8 @@ describe("WalletPage exchange chart wiring", () => {
         });
 
         const hasWalletScopedCall = hoisted.exchangeComparisonSpy.mock.calls.some(([props]) => {
-            const typed = props as { walletAddress?: string; chain?: string };
-            return typed.walletAddress === "wallet-abc" && typed.chain === "solana";
+            const typed = props as { walletAddress?: string };
+            return typed.walletAddress === "wallet-abc";
         });
 
         expect(hasWalletScopedCall).toBe(true);

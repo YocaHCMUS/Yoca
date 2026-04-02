@@ -67,20 +67,37 @@ export async function getTokenDetails(wallet: string) {
       realizedProfitPercent: tokenDetail.pnl.realized_profit_percent,
       unrealizedProfitUsd: tokenDetail.pnl.unrealized_usd,
       unrealizedProfitPercent: tokenDetail.pnl.unrealized_percent,
-      avgBuyCost: tokenDetail.pricing.avg_buy_cost,
-      avgSellCost: tokenDetail.pricing.avg_sell_cost,
+      avgBuyCost: tokenDetail.pricing.avg_buy_cost ?? 0,
+      avgSellCost: tokenDetail.pricing.avg_sell_cost ?? 0,
     }),
+  );
+
+  const filteredTokenDetails = tokenDetails.filter(
+    (detail) =>
+      !isNaN(detail.totalBoughtAmount) &&
+      !isNaN(detail.totalSoldAmount) &&
+      !isNaN(detail.balanceAmount) &&
+      !isNaN(detail.costOfQuantitySold) &&
+      !isNaN(detail.totalBoughtUsd) &&
+      !isNaN(detail.totalSoldUsd) &&
+      !isNaN(detail.currentValue) &&
+      !isNaN(detail.realizedProfitUsd) &&
+      !isNaN(detail.realizedProfitPercent) &&
+      !isNaN(detail.unrealizedProfitUsd) &&
+      !isNaN(detail.unrealizedProfitPercent) &&
+      !isNaN(detail.avgBuyCost) &&
+      !isNaN(detail.avgSellCost),
   );
 
   return await db
     .insert(walletTokenDetails)
-    .values(tokenDetails)
+    .values(filteredTokenDetails)
     .onConflictDoUpdate({
       target: [walletTokenDetails.address, walletTokenDetails.tokenAddress],
       set: excludedAutoFromInsert(
         walletTokenDetails,
         [walletTokenDetails.address, walletTokenDetails.tokenAddress],
-        tokenDetails,
+        filteredTokenDetails,
       ),
     })
     .returning();

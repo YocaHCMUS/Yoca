@@ -335,6 +335,22 @@ export const Table: React.FC<TableProps> = ({
         return rowData;
     });
 
+    const toRenderableCellValue = (value: unknown): string | number | boolean => {
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            return value;
+        }
+
+        if (value == null) {
+            return '';
+        }
+
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    };
+
     /**  
     * Handle custom sorts
     */
@@ -631,7 +647,7 @@ export const Table: React.FC<TableProps> = ({
                                                                 <TableCell key={cell.id}>
                                                                     {renderer
                                                                         ? renderer(rawValue, safeRow, rowIndex)
-                                                                        : <span className={className}>{rawValue}</span>
+                                                                        : <span className={className}>{toRenderableCellValue(rawValue)}</span>
                                                                     }
                                                                 </TableCell>
                                                             );

@@ -1,8 +1,8 @@
 import { buildActivitySnapshotFromProviders, buildHoldingsSnapshotFromProviders, buildOverviewResponse, getLatestOverviewCacheRow, getOverviewFromFreshCache, OVERVIEW_PERIOD_KEYS } from "@sv/services/wallet/walletData.core.js";
-import type { WalletOverview, WalletOverviewPeriodKey } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletOverview, WalletOverviewPeriodKey, WalletOverviewQueryOptions } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 
-export async function getWalletOverview(address: string): Promise<WalletOverview> {
+export async function getWalletOverview(address: string, _query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
     const cacheRow = await getLatestOverviewCacheRow(address);
     const cachedOverview = getOverviewFromFreshCache(cacheRow, address);
     if (cachedOverview) {

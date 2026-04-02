@@ -4,7 +4,6 @@ import { ExchangeComparison } from "@/components/charts/ExchangeComparison/Excha
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
 import {
-  createSwapTokenCellRenderer,
   renderBase,
   renderCode,
   renderCurrency,
@@ -12,6 +11,7 @@ import {
   renderHash,
   renderPositiveNegative,
   renderReducedNumber,
+  renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import {
   SwapDetailModal,
@@ -35,6 +35,7 @@ import {
   type WalletPortfolioItem,
   type WalletSwap,
   type WalletTransfer,
+  type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -46,6 +47,23 @@ import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
+// ported from token details demo
+import client from "@/api/main";
+import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
+import { CpyBtn } from "@/components/CpyBtn";
+import { FilterSwitch } from "@/components/FilterSwitch";
+import Tble from "@/components/Tble";
+import { TknImg } from "@/components/TknImg";
+import { TrendNum } from "@/components/TrendNum";
+import { Txt } from "@/components/Txt";
+import { SOLSCAN_TX_URL } from "@/config/constants";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { useGet } from "@/hooks/useGet";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { cds } from "@/util/carbon-theme";
+import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
+import { ChartAverage, Launch } from "@carbon/react/icons";
+import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
@@ -94,6 +112,56 @@ export default function WalletPage() {
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(420);
+
+  // ported from token details demo:
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    avgBuyCost: number;
+    avgSellCost: number;
+  } | null>(null);
+
+  const walletTokenDetails = useGet(
+    client.api.wallets[":address"].tokens,
+    200,
+    {
+      param: { address: address || "" },
+    },
+    {
+      enabled: !!address,
+    },
+  );
+
+  const tokenAddresses = useMemo(
+    () =>
+      walletTokenDetails.data
+        ?.map((details) => details.tokenAddress)
+        .join(",") || null,
+    [walletTokenDetails.data],
+  );
+
+  const tokenMeta = useGet(
+    client.api.tokens.meta[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
+      select: (data) => {
+        return Object.fromEntries(data.map((item) => [item.address, item]));
+      },
+    },
+  );
+
+  const tokenMarket = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    { param: { addresses: tokenAddresses || "" } },
+    {
+      enabled: !!tokenAddresses,
+    },
+  );
+
+
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -154,7 +222,7 @@ export default function WalletPage() {
   );
 
   const swapBySignature = useMemo(
-    () => new Map(loadedSwaps.map((swap) => [swap.signature, swap])),
+    () => new Map(loadedSwaps.map((swap) => [swap.transactionHash, swap])),
     [loadedSwaps],
   );
 
@@ -209,15 +277,6 @@ export default function WalletPage() {
     [portfolio],
   );
 
-  const getSoldBoughtChanges = (swap: WalletSwap) => {
-    const soldFromBalance = swap.balanceChanges.find((change) => change.amount < 0);
-    const boughtFromBalance = swap.balanceChanges.find((change) => change.amount > 0);
-
-    return {
-      sold: swap.sold ?? soldFromBalance ?? null,
-      bought: swap.bought ?? boughtFromBalance ?? null,
-    };
-  };
 
   const getSwapTokenLabel = (change: WalletSwap["sold"]): string => {
     if (!change) {
@@ -229,7 +288,7 @@ export default function WalletPage() {
       return symbolCandidate.toUpperCase();
     }
 
-    const mint = change.mint || "";
+    const mint = change.address || "";
     if (mint.length > 8) {
       return `${mint.slice(0, 4)}...${mint.slice(-4)}`;
     }
@@ -237,7 +296,7 @@ export default function WalletPage() {
     return mint || tr('walletPage.unknown').toUpperCase();
   };
 
-  const formatSwapTokenDisplay = (change: WalletSwap["sold"]): string => {
+  const formatSwapTokenDisplay = (change: WalletSwap["sold"] | WalletSwap["bought"]): string => {
     if (!change) return "—";
 
     const amount = Math.abs(change.amount).toFixed(4);
@@ -245,49 +304,66 @@ export default function WalletPage() {
   };
 
   const formatSwapPair = (swap: WalletSwap): string => {
-    const pairLabel = swap.pair?.label?.trim();
-    if (pairLabel) {
-      return pairLabel;
-    }
+    const tokensInvolved = typeof swap.tokensInvolved === "string"
+      ? swap.tokensInvolved
+      : String(swap.tokensInvolved ?? "");
+    return tokensInvolved.replace(/,/g, " → ");
+  };
 
-    const pairAddress = swap.pair?.address ?? null;
-    if (pairAddress && pairAddress.length > 8) {
-      return `${pairAddress.slice(0, 4)}...${pairAddress.slice(-4)}`;
-    }
-
-    return pairAddress ?? "—";
+  const toOptionalFiniteNumber = (value: unknown): number | undefined => {
+    if (value == null) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   };
 
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
-        const { sold, bought } = getSoldBoughtChanges(swap);
+        const totalValueUsd = toOptionalFiniteNumber((swap as unknown as { totalValueUsd?: unknown }).totalValueUsd);
+        const baseQuotePrice = toOptionalFiniteNumber((swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice);
+
         return [
-          swap.timestamp,
-          swap.exchange?.name ?? "—",
+          String(swap.blockTimestampIso ?? ""),
+          typeof swap.exchangeName === "string" && swap.exchangeName.trim().length > 0
+            ? swap.exchangeName
+            : "—",
           formatSwapPair(swap),
-          formatSwapTokenDisplay(sold),
-          formatSwapTokenDisplay(bought),
-          swap.totalValueUsd ?? "—",
-          swap.fee,
-          swap.signature,
+          swap.sold,
+          swap.bought,
+          totalValueUsd ?? "—",
+          baseQuotePrice ?? "—",
+          swap.transactionHash,
         ];
       }),
-    [loadedSwaps, formatSwapPair, formatSwapTokenDisplay, getSoldBoughtChanges],
+    [loadedSwaps, formatSwapPair, formatSwapTokenDisplay],
   );
 
-  const transferData = useMemo(
-    () =>
-      loadedTransfers.map((transfer) => [
-        transfer.from,
-        transfer.to,
-        transfer.tokenSymbol,
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-      ]),
-    [loadedTransfers],
-  );
+  const transferData = useMemo(() => {
+    const deriveTransferTokenDisplay = (value: unknown): string => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized.length > 0 ? normalized : "Unknown";
+      }
+
+      if (value && typeof value === "object") {
+        const symbol = (value as { symbol?: unknown }).symbol;
+        if (typeof symbol === "string" && symbol.trim().length > 0) {
+          return symbol.trim();
+        }
+      }
+
+      return "Unknown";
+    };
+
+    return loadedTransfers.map((transfer) => [
+      transfer.from,
+      transfer.to,
+      deriveTransferTokenDisplay(transfer.tokenSymbol),
+      transfer.amount,
+      transfer.timestamp,
+      `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+    ]);
+  }, [loadedTransfers]);
 
   const counterpartyTableData = useMemo(
     () =>
@@ -385,25 +461,27 @@ export default function WalletPage() {
     (value: string) => renderReducedNumber(value, renderBase, bcp47),
   ];
 
-  const renderSwapTokenCell = (side: "sold" | "bought") =>
-    createSwapTokenCellRenderer({
-      side,
-      swapBySignature,
-      getSoldBoughtChanges,
-      getSwapTokenLabel,
-      classNames: {
-        container: styles.swapTokenCell,
-        amount: styles.swapTokenAmount,
-      },
-      imageSize: 18,
-    });
+  const renderSwapTokenInfoClassnames = {
+    container: styles.swapTokenCell,
+    amount: styles.swapTokenAmount,
+  }
 
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    renderSwapTokenCell("sold"),
-    renderSwapTokenCell("bought"),
+    (value: any, row?: unknown[] | null) => {
+      if (!value || typeof value !== 'object') return renderCode(String(value));
+      const token = value as WalletSwapTokenInfo;
+      const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
+      return renderer(String(token.symbol ?? ''), row ?? null);
+    },
+    (value: any, row?: unknown[] | null) => {
+      if (!value || typeof value !== 'object') return renderCode(String(value));
+      const token = value as WalletSwapTokenInfo;
+      const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
+      return renderer(String(token.symbol ?? ''), row ?? null);
+    },
     (value: string) =>
       value === "—"
         ? renderBase(value)
@@ -752,7 +830,32 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper>
+    // <PageWrapper>
+    <PageWrapper
+      extraHeaderPanel={{
+        isOpen: !!selectedToken,
+        content: selectedToken && (
+          <TokenAverageTradePrice
+            walletAddress={address}
+            tokenAddress={selectedToken.address}
+            tokenImgUrl={
+              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+            }
+            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+            tokenSymbol={
+              tokenMeta.data?.[selectedToken.address]?.symbol || null
+            }
+            tokenCurrentPrice={
+              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+            }
+            avgBuyPrice={selectedToken.avgBuyCost}
+            avgSellPrice={selectedToken.avgSellCost}
+          />
+        ),
+        size: "lg",
+        onClose: () => setSelectedToken(null),
+      }}
+    >
       <div
         ref={pdfExportContainerRef}
         className={styles.walletGrid}
@@ -941,15 +1044,16 @@ export default function WalletPage() {
             {/* Assets: Distribution + Portfolio */}
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>{tr("walletPage.asset")}</h2>
-              <div className={styles.sideBySide}>
+              <AssetDistribution
+                initialFilters={{
+                  wallets: address ? [address] : [],
+                  timePeriod: "30D",
+                }}
+                autoRefresh={true}
+              />
+              <TokenDetailsDemo setSelectedToken={setSelectedToken} />
+              {/* <div className={styles.sideBySide}>
                 <div className={styles.columnWrapper}>
-                  <AssetDistribution
-                    initialFilters={{
-                      wallets: address ? [address] : [],
-                      timePeriod: "30D",
-                    }}
-                    autoRefresh={true}
-                  />
                 </div>
                 <div className={styles.columnWrapper}>
                   <Table
@@ -966,8 +1070,9 @@ export default function WalletPage() {
                     loading={portfolioLoading && portfolioData.length === 0}
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
+
 
             {/* Top Exchange */}
             <div className={styles.section}>

@@ -7,144 +7,204 @@ import { isMissingPortfolioLogoUri, isValidPortfolioTokenAddress, normalizePortf
 export async function enrichWithSolanaTokenPrices(
     transactions: WalletTransaction[] | WalletTransfer[] | WalletSwap[],
 ): Promise<void> {
-    const isWalletTransaction = (
-        tx: WalletTransaction | WalletTransfer | WalletSwap,
-    ): tx is WalletTransaction => "hash" in tx;
+    type RecordLike = Record<string, unknown>;
+    type TokenMetaRow = {
+        address?: unknown;
+        symbol?: unknown;
+        name?: unknown;
+        imageUrl?: unknown;
+    };
 
-    const isWalletTransfer = (
-        tx: WalletTransaction | WalletTransfer | WalletSwap,
-    ): tx is WalletTransfer => "transactionSignature" in tx;
+    const counters = {
+        candidatesCollected: 0,
+        invalidCandidatesDropped: 0,
+        tokenMetaHits: 0,
+        tokenMetaMisses: 0,
+        marketDataHits: 0,
+        marketDataMisses: 0,
+        transferFieldFills: 0,
+        swapFieldFills: 0,
+        transactionFieldFills: 0,
+        invalidEntriesSkipped: 0,
+    };
 
-    const isWalletSwap = (
-        tx: WalletTransaction | WalletTransfer | WalletSwap,
-    ): tx is WalletSwap => "balanceChanges" in tx && "feeChanges" in tx;
-
-    const candidateAddressesByKey = new Map<string, string>();
-
-    const resolveLookupAddress = (
-        rawTokenAddress: unknown,
-        rawTokenSymbol?: unknown,
-    ): string | undefined => {
-        const normalizedSymbol = normalizePortfolioText(rawTokenSymbol);
-        if (normalizedSymbol?.toLowerCase() === "sol") {
-            return SOL_MINT;
+    const toOptionalString = (value: unknown): string | undefined => {
+        if (typeof value !== "string") {
+            return undefined;
         }
 
-        const normalizedAddress = normalizePortfolioText(rawTokenAddress);
+        const normalized = normalizePortfolioText(value);
+        return normalized ?? undefined;
+    };
+
+    const toOptionalFiniteNumber = (value: unknown): number | undefined => {
+        if (value == null) {
+            return undefined;
+        }
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    const toTokenDisplaySymbol = (value: unknown, fallback = "Unknown"): string => {
+        const fromString = toOptionalString(value);
+        if (fromString) {
+            return fromString;
+        }
+
+        if (value && typeof value === "object") {
+            const nestedSymbol = toOptionalString((value as RecordLike).symbol);
+            if (nestedSymbol) {
+                return nestedSymbol;
+            }
+        }
+
+        const normalizedFallback = toOptionalString(fallback);
+        return normalizedFallback || "Unknown";
+    };
+
+    const isRecord = (value: unknown): value is RecordLike =>
+        Boolean(value) && typeof value === "object";
+
+    const isWalletTransactionRecord = (value: unknown): value is WalletTransaction =>
+        isRecord(value) && ("hash" in value);
+
+    const isWalletTransferRecord = (value: unknown): value is WalletTransfer =>
+        isRecord(value) && ("transactionSignature" in value);
+
+    const isWalletSwapRecord = (value: unknown): value is WalletSwap =>
+        isRecord(value) && ("bought" in value || "sold" in value || "transactionHash" in value);
+
+    const resolveLookupAndKey = (
+        rawTokenAddress: unknown,
+        rawTokenSymbol?: unknown,
+    ): { lookupAddress: string; addressKey: string } | undefined => {
+        const normalizedSymbol = normalizePortfolioText(toOptionalString(rawTokenSymbol));
+        if (normalizedSymbol?.toLowerCase() === "sol") {
+            const lookupAddress = normalizePortfolioLookupAddress(SOL_MINT);
+            return {
+                lookupAddress,
+                addressKey: normalizePortfolioAddressKey(lookupAddress),
+            };
+        }
+
+        const normalizedAddress = normalizePortfolioText(toOptionalString(rawTokenAddress));
         if (!normalizedAddress) {
+            counters.invalidCandidatesDropped += 1;
             return undefined;
         }
 
         const lookupAddress = normalizePortfolioLookupAddress(normalizedAddress);
         if (!isValidPortfolioTokenAddress(lookupAddress)) {
+            counters.invalidCandidatesDropped += 1;
             return undefined;
         }
 
-        return lookupAddress;
+        return {
+            lookupAddress,
+            addressKey: normalizePortfolioAddressKey(lookupAddress),
+        };
     };
 
-    const getAddressKey = (
-        rawTokenAddress: unknown,
-        rawTokenSymbol?: unknown,
-    ): string | undefined => {
-        const lookupAddress = resolveLookupAddress(rawTokenAddress, rawTokenSymbol);
-        return lookupAddress ? normalizePortfolioAddressKey(lookupAddress) : undefined;
+    const collectTransactionCandidateAddress = (
+        tx: WalletTransaction,
+        candidateAddressesByKey: Map<string, string>,
+    ) => {
+        const resolved = resolveLookupAndKey(tx.primaryTokenAddress, tx.primaryTokenSymbol);
+        if (!resolved) {
+            return;
+        }
+
+        candidateAddressesByKey.set(resolved.addressKey, resolved.lookupAddress);
+        counters.candidatesCollected += 1;
     };
 
-    for (const tx of transactions) {
-        if (isWalletTransaction(tx)) {
-            const lookupAddress = resolveLookupAddress(
-                tx.primaryTokenAddress,
-                tx.primaryTokenSymbol,
-            );
-            if (lookupAddress) {
-                candidateAddressesByKey.set(
-                    normalizePortfolioAddressKey(lookupAddress),
-                    lookupAddress,
-                );
+    const collectTransferCandidateAddress = (
+        transfer: WalletTransfer,
+        candidateAddressesByKey: Map<string, string>,
+    ) => {
+        const resolved = resolveLookupAndKey(transfer.tokenAddress, transfer.tokenSymbol);
+        if (!resolved) {
+            return;
+        }
+
+        candidateAddressesByKey.set(resolved.addressKey, resolved.lookupAddress);
+        counters.candidatesCollected += 1;
+    };
+
+    const getSwapLegCandidates = (swap: WalletSwap): RecordLike[] => {
+        const rawSwap = swap as unknown as RecordLike;
+        const candidates: unknown[] = [
+            rawSwap.bought,
+            rawSwap.sold,
+        ];
+
+        return candidates.filter(isRecord);
+    };
+
+    const collectSwapCandidateAddresses = (
+        swap: WalletSwap,
+        candidateAddressesByKey: Map<string, string>,
+    ) => {
+        for (const change of getSwapLegCandidates(swap)) {
+            const resolved = resolveLookupAndKey(change.address ?? change.mint);
+            if (!resolved) {
+                continue;
             }
+
+            candidateAddressesByKey.set(resolved.addressKey, resolved.lookupAddress);
+            counters.candidatesCollected += 1;
+        }
+    };
+
+    const candidateAddressesByKey = new Map<string, string>();
+    for (const record of transactions as unknown[]) {
+        if (isWalletTransactionRecord(record)) {
+            collectTransactionCandidateAddress(record, candidateAddressesByKey);
             continue;
         }
 
-        if (isWalletTransfer(tx)) {
-            const lookupAddress = resolveLookupAddress(tx.tokenAddress, tx.tokenSymbol);
-            if (lookupAddress) {
-                candidateAddressesByKey.set(
-                    normalizePortfolioAddressKey(lookupAddress),
-                    lookupAddress,
-                );
-            }
+        if (isWalletTransferRecord(record)) {
+            collectTransferCandidateAddress(record, candidateAddressesByKey);
             continue;
         }
 
-        if (isWalletSwap(tx)) {
-            const swapChanges = [
-                ...tx.balanceChanges,
-                ...tx.feeChanges,
-                ...(tx.sold ? [tx.sold] : []),
-                ...(tx.bought ? [tx.bought] : []),
-            ];
-
-            for (const change of swapChanges) {
-                const lookupAddress = resolveLookupAddress(change.mint, change.symbol);
-                if (!lookupAddress) {
-                    continue;
-                }
-
-                candidateAddressesByKey.set(
-                    normalizePortfolioAddressKey(lookupAddress),
-                    lookupAddress,
-                );
-            }
+        if (isWalletSwapRecord(record)) {
+            collectSwapCandidateAddresses(record, candidateAddressesByKey);
+            continue;
         }
+
+        counters.invalidEntriesSkipped += 1;
     }
 
-    console.log(
-        `[enrichWithSolanaTokenPrices] Processing ${transactions.length} records with ${candidateAddressesByKey.size} unique tokens`,
-    );
+    console.log("[enrichWithSolanaTokenPrices] Candidate collection summary", {
+        processed: transactions.length,
+        uniqueCandidates: candidateAddressesByKey.size,
+        candidatesCollected: counters.candidatesCollected,
+        invalidCandidatesDropped: counters.invalidCandidatesDropped,
+        invalidEntriesSkipped: counters.invalidEntriesSkipped,
+    });
 
     if (candidateAddressesByKey.size === 0) {
-        // No tokens to enrich.
         return;
     }
 
     try {
-        type TokenMetaRow = {
-            address?: unknown;
-            symbol?: unknown;
-            name?: unknown;
-            imageUrl?: unknown;
-        };
-
         const candidateAddresses = Array.from(candidateAddressesByKey.values());
-
-        const tokenMetaByKey = new Map<
-            string,
-            {
-                symbol?: string;
-                name?: string;
-                logoUri?: string;
-            }
-        >();
+        const tokenMetaByKey = new Map<string, { symbol?: string; name?: string; logoUri?: string }>();
         const marketPriceByKey = new Map<string, number>();
 
         try {
             const tokenMeta = await getTokenMeta(candidateAddresses) as TokenMetaRow[];
             for (const meta of tokenMeta) {
-                const address = normalizePortfolioText(meta.address);
-                if (!address) {
+                const resolved = resolveLookupAndKey(meta.address);
+                if (!resolved) {
                     continue;
                 }
 
-                const lookupAddress = normalizePortfolioLookupAddress(address);
-                if (!isValidPortfolioTokenAddress(lookupAddress)) {
-                    continue;
-                }
-
-                tokenMetaByKey.set(normalizePortfolioAddressKey(lookupAddress), {
-                    symbol: normalizePortfolioText(meta.symbol),
-                    name: normalizePortfolioText(meta.name),
-                    logoUri: normalizePortfolioText(meta.imageUrl),
+                tokenMetaByKey.set(resolved.addressKey, {
+                    symbol: toOptionalString(meta.symbol),
+                    name: toOptionalString(meta.name),
+                    logoUri: toOptionalString(meta.imageUrl),
                 });
             }
         } catch (err) {
@@ -154,26 +214,26 @@ export async function enrichWithSolanaTokenPrices(
         try {
             const marketData = await getTokenMarketData(candidateAddresses);
             for (const [rawAddress, data] of Object.entries(marketData ?? {})) {
-                const normalizedAddress = normalizePortfolioText(rawAddress);
-                if (!normalizedAddress) {
+                const resolved = resolveLookupAndKey(rawAddress);
+                if (!resolved) {
                     continue;
                 }
 
-                const lookupAddress = normalizePortfolioLookupAddress(normalizedAddress);
-                if (!isValidPortfolioTokenAddress(lookupAddress)) {
+                const priceUsd = toOptionalFiniteNumber((data as RecordLike)?.priceUsd);
+                if (priceUsd == null) {
                     continue;
                 }
 
-                const priceUsd = Number(data?.priceUsd);
-                if (!Number.isFinite(priceUsd)) {
-                    continue;
-                }
-
-                marketPriceByKey.set(normalizePortfolioAddressKey(lookupAddress), priceUsd);
+                marketPriceByKey.set(resolved.addressKey, priceUsd);
             }
         } catch (err) {
             console.warn("[enrichWithSolanaTokenPrices] Token market-data enrichment failed", err);
         }
+
+        const getAddressKey = (
+            rawTokenAddress: unknown,
+            rawTokenSymbol?: unknown,
+        ): string | undefined => resolveLookupAndKey(rawTokenAddress, rawTokenSymbol)?.addressKey;
 
         const resolvePriceUsd = (addressKey: string | undefined): number | undefined => {
             if (!addressKey) {
@@ -184,177 +244,166 @@ export async function enrichWithSolanaTokenPrices(
             return Number.isFinite(priceUsd) ? priceUsd : undefined;
         };
 
-        let transactionEnrichedCount = 0;
-        let transferEnrichedCount = 0;
-        let swapEnrichedCount = 0;
-
-        for (const tx of transactions) {
-            if (isWalletTransaction(tx)) {
-                const addressKey = getAddressKey(
-                    tx.primaryTokenAddress,
-                    tx.primaryTokenSymbol,
-                );
-
-                if (!addressKey) {
-                    tx.priceUsd = undefined;
-                    tx.totalUsd = undefined;
-                    continue;
-                }
-
+        for (const record of transactions as unknown[]) {
+            if (isWalletTransactionRecord(record)) {
+                const tx = record;
+                const addressKey = getAddressKey(tx.primaryTokenAddress, tx.primaryTokenSymbol);
                 const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd == null) {
+
+                if (addressKey && priceUsd != null) {
+                    counters.marketDataHits += 1;
+                    tx.priceUsd = priceUsd;
+                    const amount = toOptionalFiniteNumber(tx.primaryTokenAmount);
+                    tx.totalUsd = amount != null ? priceUsd * amount : undefined;
+                    counters.transactionFieldFills += 1;
+                } else {
+                    counters.marketDataMisses += 1;
                     tx.priceUsd = undefined;
                     tx.totalUsd = undefined;
-                    continue;
                 }
-
-                tx.priceUsd = priceUsd;
-                tx.totalUsd =
-                    tx.primaryTokenAmount != null ? priceUsd * tx.primaryTokenAmount : undefined;
-                transactionEnrichedCount += 1;
                 continue;
             }
 
-            if (isWalletTransfer(tx)) {
+            if (isWalletTransferRecord(record)) {
+                const transfer = record;
                 let changed = false;
 
-                const addressKey = getAddressKey(tx.tokenAddress, tx.tokenSymbol);
-                if (addressKey) {
-                    const tokenMeta = tokenMetaByKey.get(addressKey);
-                    if (tokenMeta) {
-                        const shouldFillSymbol = shouldFillPortfolioText(tx.tokenSymbol) && Boolean(tokenMeta.symbol);
-                        const shouldFillName = shouldFillPortfolioText(tx.tokenName) && Boolean(tokenMeta.name);
-                        const shouldFillLogo = isMissingPortfolioLogoUri(tx.tokenLogoUri) && Boolean(tokenMeta.logoUri);
+                transfer.tokenSymbol = toTokenDisplaySymbol(transfer.tokenSymbol, "Unknown");
+                transfer.tokenName = toOptionalString(transfer.tokenName);
+                transfer.tokenLogoUri = toOptionalString(transfer.tokenLogoUri);
 
-                        if (shouldFillSymbol) {
-                            tx.tokenSymbol = String(tokenMeta.symbol);
-                            changed = true;
-                        }
+                const addressKey = getAddressKey(transfer.tokenAddress, transfer.tokenSymbol);
+                const tokenMeta = addressKey ? tokenMetaByKey.get(addressKey) : undefined;
 
-                        if (shouldFillName) {
-                            tx.tokenName = String(tokenMeta.name);
-                            changed = true;
-                        }
-
-                        if (shouldFillLogo) {
-                            tx.tokenLogoUri = String(tokenMeta.logoUri);
-                            changed = true;
-                        }
+                if (tokenMeta) {
+                    counters.tokenMetaHits += 1;
+                    if (shouldFillPortfolioText(transfer.tokenSymbol) && tokenMeta.symbol) {
+                        transfer.tokenSymbol = toTokenDisplaySymbol(tokenMeta.symbol, transfer.tokenSymbol);
+                        changed = true;
                     }
 
-                    const priceUsd = resolvePriceUsd(addressKey);
-                    if (priceUsd != null) {
-                        const hasPriceUsd = tx.priceUsd != null && Number.isFinite(Number(tx.priceUsd));
-                        if (!hasPriceUsd) {
-                            tx.priceUsd = priceUsd;
-                            changed = true;
-                        }
-
-                        const amountUsd = Number(tx.amount) * Number(tx.priceUsd ?? priceUsd);
-                        const hasAmountUsd = tx.amountUsd != null && Number.isFinite(Number(tx.amountUsd));
-                        if (!hasAmountUsd && Number.isFinite(amountUsd)) {
-                            tx.amountUsd = amountUsd;
-                            changed = true;
-                        }
+                    if (shouldFillPortfolioText(transfer.tokenName) && tokenMeta.name) {
+                        transfer.tokenName = tokenMeta.name;
+                        changed = true;
                     }
+
+                    if (isMissingPortfolioLogoUri(transfer.tokenLogoUri) && tokenMeta.logoUri) {
+                        transfer.tokenLogoUri = tokenMeta.logoUri;
+                        changed = true;
+                    }
+                } else {
+                    counters.tokenMetaMisses += 1;
+                }
+
+                const priceUsd = resolvePriceUsd(addressKey);
+                if (priceUsd != null) {
+                    counters.marketDataHits += 1;
+                    const hasPriceUsd = toOptionalFiniteNumber(transfer.priceUsd) != null;
+                    if (!hasPriceUsd) {
+                        transfer.priceUsd = priceUsd;
+                        changed = true;
+                    }
+
+                    const hasAmountUsd = toOptionalFiniteNumber(transfer.amountUsd) != null;
+                    const amount = toOptionalFiniteNumber(transfer.amount);
+                    const basePrice = toOptionalFiniteNumber(transfer.priceUsd) ?? priceUsd;
+                    const amountUsd = amount != null ? amount * basePrice : undefined;
+
+                    if (!hasAmountUsd && amountUsd != null && Number.isFinite(amountUsd)) {
+                        transfer.amountUsd = amountUsd;
+                        changed = true;
+                    }
+                } else {
+                    counters.marketDataMisses += 1;
                 }
 
                 if (changed) {
-                    transferEnrichedCount += 1;
+                    counters.transferFieldFills += 1;
                 }
                 continue;
             }
 
-            if (!isWalletSwap(tx)) {
+            if (!isWalletSwapRecord(record)) {
+                counters.invalidEntriesSkipped += 1;
                 continue;
             }
 
+            const swap = record;
+            const rawSwap = swap as unknown as RecordLike;
             let changed = false;
 
-            const enrichSwapChange = (change: WalletSwap["sold"]) => {
-                if (!change) {
+            const enrichSwapLeg = (leg: unknown) => {
+                if (!isRecord(leg)) {
                     return;
                 }
 
-                const addressKey = getAddressKey(change.mint, change.symbol);
-                if (!addressKey) {
-                    return;
-                }
+                leg.symbol = toTokenDisplaySymbol(leg.symbol, "Unknown");
+                leg.name = toOptionalString(leg.name) ?? null;
+                leg.logoUri = toOptionalString(leg.logoUri) ?? null;
 
-                const tokenMeta = tokenMetaByKey.get(addressKey);
+                const addressKey = getAddressKey(leg.address ?? leg.mint, leg.symbol);
+                const tokenMeta = addressKey ? tokenMetaByKey.get(addressKey) : undefined;
+
                 if (tokenMeta) {
-                    const shouldFillSymbol = shouldFillPortfolioText(change.symbol ?? undefined) && Boolean(tokenMeta.symbol);
-                    const shouldFillName = shouldFillPortfolioText(change.name ?? undefined) && Boolean(tokenMeta.name);
-                    const shouldFillLogo = isMissingPortfolioLogoUri(change.logoUri ?? undefined) && Boolean(tokenMeta.logoUri);
-
-                    if (shouldFillSymbol) {
-                        change.symbol = String(tokenMeta.symbol);
+                    counters.tokenMetaHits += 1;
+                    if (shouldFillPortfolioText(toOptionalString(leg.symbol)) && tokenMeta.symbol) {
+                        leg.symbol = toTokenDisplaySymbol(tokenMeta.symbol, "Unknown");
                         changed = true;
                     }
 
-                    if (shouldFillName) {
-                        change.name = String(tokenMeta.name);
+                    if (shouldFillPortfolioText(toOptionalString(leg.name)) && tokenMeta.name) {
+                        leg.name = tokenMeta.name;
                         changed = true;
                     }
 
-                    if (shouldFillLogo) {
-                        change.logoUri = String(tokenMeta.logoUri);
+                    if (isMissingPortfolioLogoUri(toOptionalString(leg.logoUri)) && tokenMeta.logoUri) {
+                        leg.logoUri = tokenMeta.logoUri;
                         changed = true;
                     }
+                } else {
+                    counters.tokenMetaMisses += 1;
                 }
 
                 const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd == null) {
-                    return;
-                }
-
-                const hasPriceUsd = change.priceUsd != null && Number.isFinite(Number(change.priceUsd));
-                if (!hasPriceUsd) {
-                    change.priceUsd = priceUsd;
-                    changed = true;
-                }
-
-                const hasValueUsd = change.valueUsd != null && Number.isFinite(Number(change.valueUsd));
-                if (!hasValueUsd) {
-                    const computedValueUsd = Math.abs(Number(change.amount)) * Number(change.priceUsd ?? priceUsd);
-                    if (Number.isFinite(computedValueUsd)) {
-                        change.valueUsd = computedValueUsd;
+                if (priceUsd != null) {
+                    counters.marketDataHits += 1;
+                    const hasPriceUsd = toOptionalFiniteNumber(leg.priceUsd) != null;
+                    if (!hasPriceUsd) {
+                        leg.priceUsd = priceUsd;
                         changed = true;
                     }
+
+                    const hasValueUsd = toOptionalFiniteNumber(leg.valueUsd) != null;
+                    const amount = toOptionalFiniteNumber(leg.amount);
+                    const basePrice = toOptionalFiniteNumber(leg.priceUsd) ?? priceUsd;
+                    const computedValueUsd = amount != null ? Math.abs(amount) * basePrice : undefined;
+
+                    if (!hasValueUsd && computedValueUsd != null && Number.isFinite(computedValueUsd)) {
+                        leg.valueUsd = computedValueUsd;
+                        changed = true;
+                    }
+                } else {
+                    counters.marketDataMisses += 1;
                 }
             };
 
-            for (const change of tx.balanceChanges) {
-                enrichSwapChange(change);
-            }
+            enrichSwapLeg(rawSwap.bought);
+            enrichSwapLeg(rawSwap.sold);
 
-            for (const change of tx.feeChanges) {
-                enrichSwapChange(change);
-            }
-
-            enrichSwapChange(tx.sold);
-            enrichSwapChange(tx.bought);
-
-            const hasTotalValueUsd = tx.totalValueUsd != null && Number.isFinite(Number(tx.totalValueUsd));
+            const hasTotalValueUsd = toOptionalFiniteNumber(rawSwap.totalValueUsd) != null;
             if (!hasTotalValueUsd) {
-                const fallbackCandidates = [
-                    Number(tx.sold?.valueUsd),
-                    Number(tx.bought?.valueUsd),
-                    ...tx.balanceChanges.map((change) => Number(change.valueUsd)),
-                ];
-
-                const derivedTotalValueUsd = fallbackCandidates.find(
-                    (value) => Number.isFinite(value) && value > 0,
-                );
+                const boughtValue = toOptionalFiniteNumber(rawSwap.bought && (rawSwap.bought as RecordLike).valueUsd);
+                const soldValue = toOptionalFiniteNumber(rawSwap.sold && (rawSwap.sold as RecordLike).valueUsd);
+                const derivedTotalValueUsd = [boughtValue, soldValue].find((value) => value != null && value > 0);
 
                 if (derivedTotalValueUsd != null) {
-                    tx.totalValueUsd = derivedTotalValueUsd;
+                    rawSwap.totalValueUsd = derivedTotalValueUsd;
                     changed = true;
                 }
             }
 
             if (changed) {
-                swapEnrichedCount += 1;
+                counters.swapFieldFills += 1;
             }
         }
 
@@ -362,20 +411,14 @@ export async function enrichWithSolanaTokenPrices(
             processed: transactions.length,
             tokenMetaCount: tokenMetaByKey.size,
             marketPriceCount: marketPriceByKey.size,
-            transactionEnrichedCount,
-            transferEnrichedCount,
-            swapEnrichedCount,
+            ...counters,
         });
     } catch (err) {
-        console.error(
-            "Failed to enrich transactions with Solana token prices",
-            err,
-        );
-        // Only transaction DTOs include output price fields.
-        for (const tx of transactions) {
-            if (isWalletTransaction(tx)) {
-                tx.priceUsd = undefined;
-                tx.totalUsd = undefined;
+        console.error("Failed to enrich transactions with Solana token prices", err);
+        for (const record of transactions as unknown[]) {
+            if (isWalletTransactionRecord(record)) {
+                record.priceUsd = undefined;
+                record.totalUsd = undefined;
             }
         }
     }

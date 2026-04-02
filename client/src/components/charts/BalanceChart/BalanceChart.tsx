@@ -514,12 +514,22 @@ export function BalanceChart({
             const nextMap: Record<string, BalanceSeries> = {};
 
             for (const tokenChunk of chunks) {
-                const response = await fetchBalanceTrendWithCache({
-                    timePeriod: filters.timePeriod,
-                    wallets: walletsString,
-                    timezone,
-                    tokens: tokenChunk.join(','),
-                });
+                let response: BalanceTrendData | null = null;
+
+                try {
+                    response = await fetchBalanceTrendWithCache({
+                        timePeriod: filters.timePeriod,
+                        wallets: walletsString,
+                        timezone,
+                        tokens: tokenChunk.join(','),
+                    });
+                } catch (error) {
+                    console.warn('[BalanceChart] token prefetch failed for chunk', {
+                        tokenChunk,
+                        error: error instanceof Error ? error.message : String(error),
+                    });
+                    continue;
+                }
 
                 if (!isBalanceChartDisplayData(response)) {
                     continue;
@@ -867,7 +877,7 @@ export function BalanceChart({
         return {
             ...baseOption,
             color: colors,
-            grid: getChartGridConfig(),
+            ...getChartGridConfig,
             legend: getConditionalLegend(chartTheme, windowedDisplaySeries.map((series) => series.label), 2, false),
             xAxis: {
                 ...baseOption.xAxis,

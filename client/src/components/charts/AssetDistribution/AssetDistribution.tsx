@@ -441,12 +441,24 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       }));
     }
 
-    // Single/aggregated view
-    if ('data' in data && data.data && data.data.length > 0) {
-      return [{
-        walletAddress: 'aggregated',
-        option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
-      }];
+    // // Single/aggregated view
+    // if ('data' in data && data.data && data.data.length > 0) {
+    //   return [{
+    //     walletAddress: 'aggregated',
+    //     option: createChartOption(data.data, data.totalValue ?? 0, undefined, false),
+    //   }];
+    // }
+
+    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
+      return data.wallets.map((wallet) => ({
+        walletAddress: wallet.walletAddress,
+        option: createChartOption(
+          wallet.data,
+          wallet.totalValue,
+          `${wallet.walletAddress.slice(0, 8)}...`,
+          isMultiWallet
+        ),
+      }));
     }
 
     return [];
@@ -454,7 +466,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   const isEmpty = !data || (
     (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
-    (!('data' in data) || !data.data || data.data.length === 0)
+    // (!('data' in data) || !data.data || data.data.length === 0)
+    (!('wallets' in data) || !data.wallets || data.wallets.length === 0)
   ) || (filters.wallets && filters.wallets.length === 0);
 
   // ── Compact header filter controls ────────────────────────────────────

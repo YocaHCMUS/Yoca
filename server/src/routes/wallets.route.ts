@@ -5,8 +5,8 @@ import {
   walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import * as walletService from "@sv/services/wallet/index.js";
+import type { WalletPortfolioItem, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { getTokenDetails, getWalletFirstFund } from "@sv/services/wallet/index.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -55,6 +55,23 @@ const DEFAULT_COUNTERPARTY_PERIOD = "7d";
 const DEFAULT_COUNTERPARTY_LIMIT = 20;
 const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
+const DEFAULT_OVERVIEW_PERIOD = "24H";
+
+function parseOverviewPeriod(rawPeriod?: string): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+  const normalized = String(rawPeriod ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (normalized === "24H") return "24H";
+  if (normalized === "7D") return "7D";
+  if (normalized === "30D") return "30D";
+  if (normalized === "60D") return "60D";
+  if (normalized === "90D") return "90D";
+  if (normalized === "1Y") return "1Y";
+  if (normalized === "ALL") return "All";
+
+  return DEFAULT_OVERVIEW_PERIOD;
+}
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
   status: 400 | 401 | 502 | 503;
@@ -164,14 +181,59 @@ function parseExchangeLimit(rawLimit?: string): number | undefined {
   return Math.min(integerLimit, MAX_EXCHANGE_LIMIT);
 }
 
+function mapSwapToTokenTradeRow(
+  swap: WalletSwap,
+  walletAddress: string,
+  tokenAddress: string,
+) {
+  const normalizedToken = tokenAddress.trim().toLowerCase();
+  const boughtAddress = swap.bought.address.trim().toLowerCase();
+  const soldAddress = swap.sold.address.trim().toLowerCase();
+
+  const inferredAction: "buy" | "sell" =
+    boughtAddress === normalizedToken
+      ? "buy"
+      : soldAddress === normalizedToken
+        ? "sell"
+        : swap.transactionType.trim().toLowerCase() === "buy"
+          ? "buy"
+          : "sell";
+
+  const selectedAmount = inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress = inferredAction === "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress = inferredAction === "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice = inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice = inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+
+  return {
+    address: walletAddress,
+    tokenAddress,
+    transactionHash: swap.transactionHash,
+    blockUnixTimeMs: new Date(swap.blockTimestampIso).getTime(),
+    baseTokenAddress: selectedTokenAddress,
+    quoteTokenAddress: otherTokenAddress,
+    baseAmount: selectedAmount,
+    quoteAmount: selectedAmount,
+    basePrice: selectedPrice,
+    quotePrice: otherPrice,
+    volumeUsd: swap.totalValueUsd ?? 0,
+    exchangeName: swap.exchangeName,
+    exchangeProgramAddress: swap.exchangeAddress || null,
+    poolAddress: swap.pairAddress,
+    poolName: null,
+    tradeAction: inferredAction,
+  };
+}
+
 const routes = router
   .get("/overview", async (c) => {
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
     const address = params.address;
+    const period = parseOverviewPeriod(c.req.query("period"));
 
     try {
-      const overview = await getWalletOverview(address);
+      const overview = await getWalletOverview(address, { timePeriod: period });
       return c.json(overview);
     } catch (err) {
       console.error("Failed to get wallet overview", err);
@@ -220,11 +282,21 @@ const routes = router
     validate("param", walletTokenTradesSchema),
     async (c) => {
       const { walletAddress, tokenAddress } = c.req.valid("param");
+      const limitParam = c.req.query("limit");
+      const cursor = c.req.query("cursor");
+      const before = c.req.query("before");
+      const limit = limitParam ? Number(limitParam) : undefined;
 
       try {
-        const trades = await walletService.getWalletTokenSwaps(
-          walletAddress,
+        const swaps = await getWalletSwaps(walletAddress, {
           tokenAddress,
+          limit: Number.isFinite(limit) ? limit : undefined,
+          cursor: cursor ?? undefined,
+          before: before ?? undefined,
+        });
+
+        const trades = swaps.swaps.map((swap) =>
+          mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
         );
 
         if (!trades) {
@@ -441,7 +513,7 @@ const routes = router
   .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const firstFunds = await walletService.getWalletFirstFund(address);
+      const firstFunds = await getWalletFirstFund(address);
       if (firstFunds == null) {
         return c.json(
           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
@@ -461,7 +533,7 @@ const routes = router
   .get("/:address/tokens", validate("param", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("param");
-      const tokenDetails = await walletService.getTokenDetails(address);
+      const tokenDetails = await getTokenDetails(address);
       if (tokenDetails == null) {
         return c.json(
           setErr("FAILED_TO_FETCH_REQUESTED_DATA"),

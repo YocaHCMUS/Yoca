@@ -13,35 +13,41 @@ export async function saveSwapsCache(
       // Deduplicate by transaction hash to avoid multiple rows with the same
       // (address, signature) primary key when providers return several
       // legs for a single on-chain transaction.
+
       const uniqueBySignature = new Map<string, WalletSwap>();
       for (const tx of transactions) {
-        if (!uniqueBySignature.has(tx.signature)) {
-          uniqueBySignature.set(tx.signature, tx);
+        if (!uniqueBySignature.has(tx.transactionHash)) {
+          uniqueBySignature.set(tx.transactionHash, tx);
         }
       }
 
       const uniqueTransactions = Array.from(uniqueBySignature.values());
 
       const rows = uniqueTransactions.map((tx) => ({
-        address: tx.walletAddress,
-        signature: tx.signature,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        slot: tx.slot,
-        fee: tx.fee,
-        feePayer: tx.feePayer,
-        transactionType: tx.transactionType ?? null,
-        subCategory: tx.subCategory ?? null,
-        blockNumber: tx.blockNumber ?? null,
-        exchange: tx.exchange ?? null,
-        pair: tx.pair ?? null,
-        sold: tx.sold ?? null,
-        bought: tx.bought ?? null,
-        baseQuotePrice: tx.baseQuotePrice ?? null,
-        totalValueUsd: tx.totalValueUsd ?? null,
-        source: tx.source ?? null,
-        // First two entries are the swap legs
-        swapBalanceChanges: tx.balanceChanges,
-        feeBalanceChanges: tx.feeChanges,
+        transactionHash: tx.transactionHash,
+        transactionType: tx.transactionType,
+        blockTimestampMs: new Date(Date.parse(tx.blockTimestampIso) || Date.now()).getTime(),
+
+        subcategory: tx.subcategory,
+
+        walletAddress: tx.walletAddress,
+        pairAddress: tx.pairAddress,
+
+        tokensInvoled: tx.tokensInvolved,
+        exchangeAddress: tx.exchangeAddress,
+        exchangeName: tx.exchangeName,
+        exchangeLogo: tx.exchangeLogo,
+
+        boughtTokenAddress: tx.bought.address,
+        boughtTokenAmount: tx.bought.amount,
+        boughtTokenPriceUsd: tx.bought.priceUsd,
+
+        soldTokenAddress: tx.sold.address,
+        soldTokenAmount: tx.sold.amount,
+        soldTokenPriceUsd: tx.sold.priceUsd,
+
+        totalValueUsd: tx.totalValueUsd,
+        baseQuotePrice: tx.baseQuotePrice,
       }));
 
       await db.insert(walletSwap).values(rows).onConflictDoNothing();
