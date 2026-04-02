@@ -55,8 +55,8 @@ export const txTokenTransfers = pgTable(
     txHash: varchar("tx_hash", { length: 88 })
       .notNull()
       .references(() => txInfo.txHash, { onDelete: "cascade" }),
-    fromWallet: varchar("from_wallet", { length: 44 }),
-    toWallet: varchar("to_wallet", { length: 44 }),
+    fromWallet: varchar("from_wallet", { length: 44 }).notNull(),
+    toWallet: varchar("to_wallet", { length: 44 }).notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
     amount: decimal("amount").notNull(),
   },
@@ -77,8 +77,8 @@ export const txNativeTransfers = pgTable(
     txHash: varchar("tx_hash", { length: 88 })
       .notNull()
       .references(() => txInfo.txHash, { onDelete: "cascade" }),
-    fromWallet: varchar("from_wallet", { length: 44 }),
-    toWallet: varchar("to_wallet", { length: 44 }),
+    fromWallet: varchar("from_wallet", { length: 44 }).notNull(),
+    toWallet: varchar("to_wallet", { length: 44 }).notNull(),
     amount: decimal("amount").notNull(),
   },
   (table) => [

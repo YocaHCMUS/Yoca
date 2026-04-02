@@ -7,8 +7,8 @@ import HistoricalDataPage from "./pages/historical-data";
 import MarketPage from "./pages/market";
 import TokenPage from "./pages/token";
 import TokenOverviewPage from "./pages/token-overview";
+import { TransactionGraphDemo } from "./pages/transactions/TransactionGraphDemo";
 import WalletPage from "./pages/wallet";
-import SwrDebugDemo from "./pages/wallet/demo";
 import { TokenDetailsDemo } from "./pages/wallet/TokenDetailsDemo";
 import WalletsComparisionPage from "./pages/walletsComparision";
 
@@ -22,7 +22,6 @@ function App() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenOverviewPage />} />
-        <Route path="/debug/swr" element={<SwrDebugDemo />} />
         <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
         <Route
           path="/historical-data/:address"
@@ -31,6 +30,10 @@ function App() {
         <Route
           path="/wallets/:address/token-details-demo"
           element={<TokenDetailsDemo />}
+        />
+        <Route
+          path="/transactions/:txHash/graph-demo"
+          element={<TransactionGraphDemo />}
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
