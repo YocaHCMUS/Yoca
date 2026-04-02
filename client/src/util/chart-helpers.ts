@@ -10,6 +10,7 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { TimePeriod } from '../types/chart-filters.types';
+import { time } from 'console';
 
 /**
  * Format currency value with appropriate precision and units
@@ -20,6 +21,7 @@ import type { TimePeriod } from '../types/chart-filters.types';
  * formatCurrency(0.000034) // "$0.000034"
  */
 export function formatCurrency(value: number, _currency: string = 'USD'): string {
+  void _currency;
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
@@ -178,6 +180,7 @@ export function estimateDataPoints(
   };
 
   const hours = {
+    '24H': 24,
     '7D': 7 * 24,
     '30D': 30 * 24,
     '60D': 60 * 24,
@@ -274,7 +277,7 @@ export function isValidTimezone(timezone: string): boolean {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

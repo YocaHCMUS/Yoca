@@ -38,6 +38,7 @@ export const RecentTransactions = ({
   baseMeta,
   quoteMeta,
 }: RecentTransactionsProps) => {
+  void quoteMeta;
   const [showBubbleMapModal, setShowBubbleMapModal] = useState(false);
   const { tr, fmt } = useLocalization();
 
@@ -152,7 +153,7 @@ export const RecentTransactions = ({
             <div className={styles.bubblemapsContainer}>
               {baseMeta.address ? (
                 <iframe
-                src={`${BUBBLEMAPS_SOL_URL}/${baseMeta.address}?theme=light`}
+                  src={`${BUBBLEMAPS_SOL_URL}/${baseMeta.address}?theme=light`}
                   title="BubbleMaps"
                   className={styles.bubblemapsIframe}
                 />

@@ -73,9 +73,9 @@ type PoolData = InferResponseType<
 
 type MarketData =
   | InferResponseType<
-      (typeof client.api.tokens.markets)[":addresses"]["$get"],
-      200
-    >[number]
+    (typeof client.api.tokens.markets)[":addresses"]["$get"],
+    200
+  >[number]
   | null;
 
 type TopHoldersData = InferResponseType<
@@ -85,9 +85,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
+    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+    200
+  >[number]
   | null;
 
 interface MarketStatsProps {
@@ -107,6 +107,7 @@ export const MarketStats = ({
   marketsCount,
   layout = "vertical",
 }: MarketStatsProps) => {
+  void marketsCount;
   const { tr, fmt } = useLocalization();
 
   const top10HoldersPercent = holdersInfo?.top10Percent
@@ -147,10 +148,10 @@ export const MarketStats = ({
             <div className={styles.pricesContainer}>
               <span className={styles.valueLarge}>
                 {pool.baseTokenPriceUsd != null &&
-                pool.quoteTokenPriceUsd != null
+                  pool.quoteTokenPriceUsd != null
                   ? (pool.baseTokenPriceUsd / pool.quoteTokenPriceUsd).toFixed(
-                      6,
-                    )
+                    6,
+                  )
                   : "-"}
               </span>
             </div>
@@ -370,9 +371,9 @@ export const MarketStats = ({
               tip={
                 pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
                   ? fmt.num.currency(
-                      Number(pool.buyVolumeUsd24h) -
-                        Number(pool.sellVolumeUsd24h),
-                    )
+                    Number(pool.buyVolumeUsd24h) -
+                    Number(pool.sellVolumeUsd24h),
+                  )
                   : null
               }
               className={classNames(styles.valueSmall, {
@@ -380,20 +381,20 @@ export const MarketStats = ({
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
                   Number(pool.buyVolumeUsd24h) -
-                    Number(pool.sellVolumeUsd24h) >=
-                    0,
+                  Number(pool.sellVolumeUsd24h) >=
+                  0,
                 [styles.negative]:
                   pool.buyVolumeUsd24h != null &&
                   pool.sellVolumeUsd24h != null &&
                   Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) <
-                    0,
+                  0,
               })}
             >
               {pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
                 ? fmt.num.compact.currency(
-                    Number(pool.buyVolumeUsd24h) -
-                      Number(pool.sellVolumeUsd24h),
-                  )
+                  Number(pool.buyVolumeUsd24h) -
+                  Number(pool.sellVolumeUsd24h),
+                )
                 : "-"}
             </Tip>
           </div>
@@ -414,8 +415,8 @@ export const MarketStats = ({
               tip={
                 pool.buys24h && pool.sells24h
                   ? fmt.num.decimal(
-                      Number(pool.buys24h) + Number(pool.sells24h),
-                    )
+                    Number(pool.buys24h) + Number(pool.sells24h),
+                  )
                   : null
               }
               className={styles.valueMedium}
@@ -460,8 +461,8 @@ export const MarketStats = ({
               tip={
                 pool.buys24h != null && pool.sells24h != null
                   ? fmt.num.decimal(
-                      Number(pool.buys24h) - Number(pool.sells24h),
-                    )
+                    Number(pool.buys24h) - Number(pool.sells24h),
+                  )
                   : null
               }
               className={classNames(styles.valueSmall, {
@@ -477,8 +478,8 @@ export const MarketStats = ({
             >
               {pool.buys24h != null && pool.sells24h != null
                 ? fmt.num.compact.decimal(
-                    Number(pool.buys24h) - Number(pool.sells24h),
-                  )
+                  Number(pool.buys24h) - Number(pool.sells24h),
+                )
                 : "-"}
             </Tip>
           </div>
@@ -495,8 +496,8 @@ export const MarketStats = ({
             tip={
               pool.buyers24h && pool.sellers24h
                 ? fmt.num.decimal(
-                    Number(pool.buyers24h) + Number(pool.sellers24h),
-                  )
+                  Number(pool.buyers24h) + Number(pool.sellers24h),
+                )
                 : null
             }
             className={styles.valueLarge}

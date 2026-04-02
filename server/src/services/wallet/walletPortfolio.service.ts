@@ -1,13 +1,13 @@
 import { WALLET_PORTFOLIO_TTL_MS } from "@sv/config/constants.js";
 import type { PnLDataPoint, PriceTimelinePoint, WalletPortfolioItem, WalletTransactionHelius } from "./dtos/walletDataObjects.js";
-import { buildSnapshotTimestamps, calculatePortfolioValueUsd, enrichWalletPortfolioMetadata, normalizeMint, normalizePriceTimeline, resolveWalletProviderPolicy, toCurrentPriceFallback } from "./walletData.core.js";
+import { buildSnapshotTimestamps, calculatePortfolioValueUsd, enrichWalletPortfolioMetadata, normalizeMint, normalizePriceTimeline, toCurrentPriceFallback } from "./walletData.core.js";
 import { normalizeBalanceDelta, roundUsd } from "./walletNormalization.utils.js";
 import { db } from "@sv/db/index.js";
 import { walletPortfolioCache } from "@sv/db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getHourlyTokenMarketChart, getDailyTokenMarketChart } from "../tokens/token-chart.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
-import { fetchBirdeyePortfolio, fetchHeliusSolanaPortfolio } from "./fetchers/walletDataFetcher.service.js";
+import { fetchBirdeyePortfolio } from "./fetchers/walletDataFetcher.service.js";
 import { DAY_MS } from "./wallet.constants.js";
 import { parseTimestampMs } from "./walletTime.utils.js";
 import { getWalletTransactionHelius } from "./walletHistory.service.js";

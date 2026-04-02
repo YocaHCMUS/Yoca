@@ -49,20 +49,7 @@ import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 // ported from token details demo
 import client from "@/api/main";
-import { TimeSeriesLineChart } from "@/components/charts/TimeSeriesLineChart";
-import { CpyBtn } from "@/components/CpyBtn";
-import { FilterSwitch } from "@/components/FilterSwitch";
-import Tble from "@/components/Tble";
-import { TknImg } from "@/components/TknImg";
-import { TrendNum } from "@/components/TrendNum";
-import { Txt } from "@/components/Txt";
-import { SOLSCAN_TX_URL } from "@/config/constants";
-import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { useGet } from "@/hooks/useGet";
-import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { cds } from "@/util/carbon-theme";
-import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
-import { ChartAverage, Launch } from "@carbon/react/icons";
 import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
@@ -94,6 +81,7 @@ export default function WalletPage() {
   const [transferLoading, setTransferLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [counterpartyLoading, setCounterpartyLoading] = useState(false);
+  void portfolioLoading;
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
@@ -225,6 +213,7 @@ export default function WalletPage() {
     () => new Map(loadedSwaps.map((swap) => [swap.transactionHash, swap])),
     [loadedSwaps],
   );
+  void swapBySignature;
 
   const transferByKey = useMemo(
     () =>
@@ -425,6 +414,7 @@ export default function WalletPage() {
 
   const isSortableCounterparties = [false, false, true, false, true, true];
   const isSortablePortfolio = [false, true, true, true, true];
+  void isSortablePortfolio;
   const isSortableSwaps = [true, false, false, false, false, true, true];
   const isSortableTransfers = [false, false, false, true, true];
 
@@ -451,6 +441,7 @@ export default function WalletPage() {
     3: { type: SortType.Number },
     4: { type: SortType.Number },
   };
+  void portfolioSortConfig;
 
   const counterpartyCellRenderers = [
     (value: string) => renderHash(value),
@@ -470,13 +461,13 @@ export default function WalletPage() {
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: any, row?: unknown[] | null) => {
+    (value: unknown, row?: unknown[] | null) => {
       if (!value || typeof value !== 'object') return renderCode(String(value));
       const token = value as WalletSwapTokenInfo;
       const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
       return renderer(String(token.symbol ?? ''), row ?? null);
     },
-    (value: any, row?: unknown[] | null) => {
+    (value: unknown, row?: unknown[] | null) => {
       if (!value || typeof value !== 'object') return renderCode(String(value));
       const token = value as WalletSwapTokenInfo;
       const renderer = renderTokenCell(token, renderSwapTokenInfoClassnames, 18);
@@ -539,6 +530,7 @@ export default function WalletPage() {
     (value: string) => renderCurrency(value),
     (value: string) => renderPositiveNegative(value, true, true),
   ];
+  void portfolioCellRenderers;
 
   const counterpartyFilterSchema = {
     0: { type: FilterType.Select },
@@ -556,6 +548,7 @@ export default function WalletPage() {
     3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
     4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 },
   };
+  void portfolioFilterSchema;
 
   const handleSwapPageChange = async (targetPage: number): Promise<boolean> => {
     void targetPage;

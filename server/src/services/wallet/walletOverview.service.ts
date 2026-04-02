@@ -3,6 +3,7 @@ import type { WalletOverview, WalletOverviewPeriodKey, WalletOverviewQueryOption
 import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 
 export async function getWalletOverview(address: string, _query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
+    void _query;
     const cacheRow = await getLatestOverviewCacheRow(address);
     const cachedOverview = getOverviewFromFreshCache(cacheRow, address);
     if (cachedOverview) {

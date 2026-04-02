@@ -24,7 +24,7 @@ export const format = {
         if (frac >= 0.0001) return 6;
         return 8;
       },
-      resolvePercent(_value: number): number {
+      resolvePercent(): number {
         return 4;
       },
     },

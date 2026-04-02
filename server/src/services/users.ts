@@ -129,7 +129,7 @@ export async function findUserByWalletAddress(pubKey: string) {
 
 export async function createUserWithWallet(pubKey: string) {
   let userId = "";
-  let nounce = crypto.randomUUID();
+  const nounce = crypto.randomUUID();
   await db.transaction(async (tx) => {
     const [newUser] = await tx.insert(users).values({}).returning();
     await tx.insert(authAccounts).values({
@@ -145,7 +145,7 @@ export async function createUserWithWallet(pubKey: string) {
 }
 
 export async function updateWalletLoginNounce(userId: string) {
-  let nounce = crypto.randomUUID();
+  const nounce = crypto.randomUUID();
   await db
     .update(authAccounts)
     .set({
