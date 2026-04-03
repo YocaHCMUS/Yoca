@@ -163,6 +163,7 @@ export const translation = {
   },
   // Wallet
   wallet: {
+    transactionCount: "Transaction Count",
     connectWallet: "Connect Wallet",
     selectWallet: "Select a wallet",
     detected: "Detected",

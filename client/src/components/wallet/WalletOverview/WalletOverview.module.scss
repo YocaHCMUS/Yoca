@@ -260,7 +260,8 @@ $divider: $border-subtle;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  padding: 10px 16px;
+  gap: 8px;
 
   &:last-child {
     border-bottom: none;
@@ -286,15 +287,26 @@ $divider: $border-subtle;
   justify-items: center;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   border-bottom: 1px solid $divider;
 
+}
+
+
+
+.alignedStatRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .statLabel {
   font-size: 14px;
   font-weight: 400;
   color: $text-secondary;
+  display: flex;
+  align-self: center;
+  gap: 6px;
 }
 
 .statValue {
@@ -313,6 +325,107 @@ $divider: $border-subtle;
 .subStatLabel {
   font-size: 12px;
   color: $text-secondary;
+}
+
+.splitMetricBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 8px;
+}
+
+.splitVolumePanel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.sideMetric {
+  flex: 0 0 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.sideMetricValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-primary;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.splitVolumeChartWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.splitVolumeSkeleton {
+  width: 100%;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, $layer-02 0%, $layer-hover-01 50%, $layer-02 100%);
+  background-size: 200% 100%;
+  animation: splitVolumeShimmer 1.25s ease-in-out infinite;
+}
+
+.splitVolumeEmpty {
+  width: 100%;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-secondary;
+  font-size: 12px;
+}
+
+.splitVolumeTotal {
+  display: flex;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.countMetricBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 8px;
+}
+
+.countChartWrap {
+  width: 100%;
+}
+
+.countValuesRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.countValueItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+@keyframes splitVolumeShimmer {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .subStatValue {
@@ -367,4 +480,87 @@ $divider: $border-subtle;
   font-size: 12px;
   color: $support-error;
   line-height: 1.4;
+}
+
+.pnlSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid $divider;
+}
+
+.pnlTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $text-secondary;
+}
+
+.pnlTotalRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pnlTotalLabel {
+  font-size: 14px;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+.pnlTotalValuePositive {
+  color: $color-success;
+}
+
+.pnlTotalValueNegative {
+  color: $color-danger;
+}
+
+
+.Card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 6px;
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+  flex: 1;
+}
+
+.CardLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.CardValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pnlCardValuePositive,
+.pnlCardValueNegative {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pnlCardValuePositive {
+  color: $color-success;
+}
+
+.pnlCardValueNegative {
+  color: $color-danger;
+}
+
+.pnlCardPercent {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-secondary;
 }
