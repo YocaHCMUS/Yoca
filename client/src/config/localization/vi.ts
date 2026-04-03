@@ -144,6 +144,7 @@ export const translation = defineTranslation({
   },
   // Wallet
   wallet: {
+    transactionCount: "Số lượng giao dịch",
     connectWallet: "Kết nối ví",
     selectWallet: "Chọn một ví",
     detected: "Đã phát hiện",

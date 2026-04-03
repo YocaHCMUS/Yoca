@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu, Wallet } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,6 +98,9 @@ export interface WalletOverviewProps {
     refreshInterval?: number;
 }
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import WalletOverviewValueSection from './WalletOverviewValueSection';
+import WalletOverviewTradingSection from './WalletOverviewTradingSection';
+import WalletOverviewPnLSection from './WalletOverviewPnLSection';
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',
@@ -521,151 +524,32 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* Stats rows (vertical, like TokenOverviewStats) */}
                 <div className={styles.statsSection}>
                     <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.totalAssetValue')}</span>
-                            {renderValue(
-                                totalAssetValue != null,
-                                fmt.num.currency(totalAssetValue != null ? parseFloat(totalAssetValue.toFixed(6)) : null),
-                                styles.statValue,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(assetChange24hPercent != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
-                                {renderValue(
-                                    assetChange24hPercent != null,
-                                    fmt.num.percent(assetChange24hPercent),
-                                    assetChange24hPercent != null && assetChange24hPercent >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '62px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
+                        <WalletOverviewValueSection
+                            value={totalAssetValue}
+                            unrealizedPnlInPeriod={selectedStats?.pnl?.unrealizedUsd}
+                            loading={loading}
+                        />
                     </div>
-                    <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.tradingVolume')}</span>
-                            {renderValue(
-                                tradingVolume != null,
-                                fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null),
-                                styles.statValue,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(buyTransactionCount != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.buyTransactionCount')}</span>
-                                {renderValue(
-                                    buyTransactionCount != null,
-                                    fmt.num.decimal(buyTransactionCount),
-                                    styles.subStatValue,
-                                    '54px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(buyVolumeUsd != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.buyVolume')}</span>
-                                {renderValue(
-                                    buyVolumeUsd != null,
-                                    fmt.num.currency(buyVolumeUsd),
-                                    styles.subStatValue,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(sellTransactionCount != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.sellTransactionCount')}</span>
-                                {renderValue(
-                                    sellTransactionCount != null,
-                                    fmt.num.decimal(sellTransactionCount),
-                                    styles.subStatValue,
-                                    '54px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(sellVolumeUsd != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.sellVolume')}</span>
-                                {renderValue(
-                                    sellVolumeUsd != null,
-                                    fmt.num.currency(sellVolumeUsd),
-                                    styles.subStatValue,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.totalPnL')}</span>
-                            {renderValue(
-                                totalPnL != null,
-                                fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null),
-                                totalPnL != null && totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(pnlRealized != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.realizedPnL')}</span>
-                                {renderValue(
-                                    pnlRealized != null,
-                                    fmt.num.currency(pnlRealized),
-                                    pnlRealized != null && pnlRealized >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(pnlUnrealized != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.unrealizedPnL')}</span>
-                                {renderValue(
-                                    pnlUnrealized != null,
-                                    fmt.num.currency(pnlUnrealized),
-                                    pnlUnrealized != null && pnlUnrealized >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <div className={styles.statRow}>
-                        <span className={styles.statLabel}>{tr('wallet.tokensTraded')}</span>
-                        {renderValue(
-                            tokenTraded != null,
-                            fmt.num.decimal(tokenTraded),
-                            styles.statValue,
-                            '52px',
-                            '14px',
-                        )}
-                    </div>
-                    <div className={styles.statRow}>
-                        <span className={styles.statLabel}>{tr('wallet.tokensHolding')}</span>
-                        {renderValue(
-                            numberOfTokenHolding != null,
-                            fmt.num.decimal(numberOfTokenHolding),
-                            styles.statValue,
-                            '52px',
-                            '14px',
-                        )}
-                    </div>
+
+                    <WalletOverviewPnLSection
+                        totalPnL={totalPnL}
+                        realizedPnL={pnlRealized}
+                        unrealizedPnL={pnlUnrealized}
+                        loading={loading}
+                    />
+
+                    <WalletOverviewTradingSection
+                        tradingVolume={tradingVolume}
+                        buyTransactionCount={buyTransactionCount}
+                        buyTradingVolume={buyVolumeUsd}
+                        sellTransactionCount={sellTransactionCount}
+                        sellTradingVolume={sellVolumeUsd}
+                        loading={loading}
+                        tokenAmountTraded={tokenTraded}
+                        tokenAmountHolding={numberOfTokenHolding}
+                    />
+
+
                 </div>
             </div>
 
