@@ -57,7 +57,21 @@ export interface WalletIdentityAnalysis {
         exchangeInteractions24h: number;
         uniqueKnownEntities7d: number;
     };
+    firstFund: WalletFirstFundInsight | null;
     userTags?: string[];
+}
+
+export interface WalletFirstFundInsight {
+    targetAddress: string;
+    funderAddress: string | null;
+    funderName: string | null;
+    funderType: string | null;
+    funderLabel: string | null;
+    firstFundDate: string | null;
+    firstFundTimestampSec: number | null;
+    walletAgeDays: number | null;
+    walletAgeLabel: string | null;
+    signature: string | null;
 }
 
 export interface WalletIntelligenceResponse {

@@ -5,6 +5,8 @@ import type {
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { DAY_SEC } from "@sv/services/wallet/wallet.constants.js";
 
+const DAY_MS = DAY_SEC * 1000;
+
 export type WalletHistoryRange = {
     fromSec: number;
     toSec: number;
@@ -26,6 +28,49 @@ export function getTimestampSecFromIso(iso: string): number {
 export function parseTimestampMs(timestamp: string): number {
     const ms = Date.parse(timestamp);
     return Number.isNaN(ms) ? 0 : ms;
+}
+
+export function parseTimestampSec(value: number | string | null | undefined): number | null {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? Math.floor(value) : null;
+    }
+
+    if (typeof value === "string") {
+        const parsedMs = Date.parse(value);
+        if (Number.isNaN(parsedMs)) {
+            return null;
+        }
+
+        return Math.floor(parsedMs / 1000);
+    }
+
+    return null;
+}
+
+export function computeWalletAgeDays(firstFundTimestampSec: number, nowMs: number = Date.now()): number {
+    const elapsedMs = Math.max(0, nowMs - firstFundTimestampSec * 1000);
+    return Math.max(0, Math.floor(elapsedMs / DAY_MS));
+}
+
+export function formatWalletAgeLabel(walletAgeDays: number): string {
+    if (walletAgeDays < 30) {
+        return `${walletAgeDays} day${walletAgeDays === 1 ? "" : "s"}`;
+    }
+
+    const years = Math.floor(walletAgeDays / 365);
+    const remainingAfterYears = walletAgeDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const remainingDays = remainingAfterYears % 30;
+
+    if (years > 0) {
+        return `${years}y${months > 0 ? ` ${months}m` : ""}`;
+    }
+
+    if (months > 0) {
+        return `${months}m${remainingDays > 0 ? ` ${remainingDays}d` : ""}`;
+    }
+
+    return `${walletAgeDays} days`;
 }
 
 export function getHistoryRange(options?: WalletRangeOptions): WalletHistoryRange {

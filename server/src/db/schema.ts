@@ -847,7 +847,7 @@ export const walletTokenDetails = pgTable(
 export const walletFirstFund = pgTable(
   "wallet_first_fund",
   {
-    reciepient: varchar("recipient", { length: 44 }).notNull().primaryKey(),
+    reciepient: varchar("recipient", { length: 44 }).notNull(),
     funder: varchar("funder", { length: 44 }).notNull(),
     funderName: varchar("funder_name", { length: 256 }),
     funderType: varchar("funder_type", { length: 256 }),

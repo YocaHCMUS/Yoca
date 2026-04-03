@@ -179,6 +179,63 @@ export interface WalletCounterpartiesResponse {
   };
 }
 
+export interface WalletFirstFundInsight {
+  targetAddress: string;
+  funderAddress: string | null;
+  funderName: string | null;
+  funderType: string | null;
+  funderLabel: string | null;
+  firstFundDate: string | null;
+  firstFundTimestampSec: number | null;
+  walletAgeDays: number | null;
+  walletAgeLabel: string | null;
+  signature: string | null;
+}
+
+export interface WalletIdentityAnalysis {
+  riskScore: number;
+  riskLevel: "low" | "medium" | "high";
+  signals: string[];
+  counterpartyProfile: {
+    exchangeInteractions24h: number;
+    uniqueKnownEntities7d: number;
+  };
+  firstFund: WalletFirstFundInsight | null;
+  userTags?: string[];
+}
+
+export interface WalletIdentityNormalized {
+  status: "known" | "unknown" | "unavailable";
+  type: string | null;
+  name: string | null;
+  category: string | null;
+  tags: string[];
+  domainNames: string[];
+  provider: "helius";
+  providerVersion: "wallet-api-beta";
+  resolvedAt: string;
+}
+
+export interface WalletIdentityProviderMetadata {
+  statusCode?: number;
+  errorCode?: string;
+}
+
+export interface WalletIntelligenceResponse {
+  address: string;
+  identity: WalletIdentityNormalized;
+  analysis: WalletIdentityAnalysis;
+  metadata: {
+    cache: {
+      identityHit: boolean;
+      analysisHit: boolean;
+      ttlSec: number;
+      staleIdentity: boolean;
+    };
+    provider: WalletIdentityProviderMetadata;
+  };
+}
+
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
 
 export interface WalletOverviewPeriodStats {
@@ -462,14 +519,14 @@ export async function fetchWalletIdentityBatch(
 export async function fetchWalletIntelligence(
   address: string,
   chain?: string,
-) {
+): Promise<WalletIntelligenceResponse> {
   const query = { address, ...(chain && { chain }) };
   const response = await client.api.wallets.intelligence.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletIntelligenceResponse;
 }
 
 export const walletApi = {

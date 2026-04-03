@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
     fetchWalletIntelligence,
     fetchWalletOverview,
+    type WalletIdentityAnalysis,
+    type WalletIntelligenceResponse,
     type WalletOverviewMultiPeriodResponse,
     type WalletOverviewPeriodKey,
 } from '@/services/wallet/walletApi';
@@ -37,6 +39,14 @@ function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
     return 'red';
 }
 
+function getFirstFundDisplayLabel(firstFund: WalletIdentityAnalysis['firstFund']): string | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    return firstFund.funderLabel ?? firstFund.funderAddress ?? null;
+}
+
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
@@ -56,7 +66,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>('24H');
-    const [intelligence, setIntelligence] = useState<any>(null);
+    const [intelligence, setIntelligence] = useState<WalletIntelligenceResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -158,6 +168,9 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityName = intelligence?.identity?.name ?? null;
     const identityCategory = intelligence?.identity?.category ?? null;
     const riskLevel = intelligence?.analysis?.riskLevel ?? null;
+    const firstFund = intelligence?.analysis?.firstFund ?? null;
+    const firstFundAddress = firstFund?.funderAddress ?? null;
+    const firstFundLabel = getFirstFundDisplayLabel(firstFund);
 
     const name = label || (identityStatus === 'known' && identityName ? identityName : tr('walletPage.defaultWalletName'));
     const displayedAddress = identityStatus === 'unknown'
@@ -235,6 +248,10 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
+    const handleOpenFirstFunder = (funderAddress: string) => {
+        navigate(`/wallets/${encodeURIComponent(funderAddress)}`);
+    };
+
     return (
         <>
             <div className={styles.walletOverview}>
@@ -275,6 +292,28 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         {identityStatus === 'known' && identityCategory && (
                             <Tag size="sm" type="teal">
                                 {identityCategory}
+                            </Tag>
+                        )}
+                        {firstFundAddress && firstFundLabel && (
+                            <button
+                                type="button"
+                                className={styles.inlineTagButton}
+                                onClick={() => handleOpenFirstFunder(firstFundAddress)}
+                                aria-label={`Open first funder wallet ${firstFundLabel}`}
+                            >
+                                <Tag size="sm" type="blue">
+                                    First funder: {firstFundLabel}
+                                </Tag>
+                            </button>
+                        )}
+                        {!firstFund && intelligence && (
+                            <Tag size="sm" type="cool-gray">
+                                First funder unavailable
+                            </Tag>
+                        )}
+                        {firstFund?.walletAgeLabel && (
+                            <Tag size="sm" type="warm-gray">
+                                Wallet age: {firstFund.walletAgeLabel}
                             </Tag>
                         )}
                         {identityStatus === 'unknown' && (

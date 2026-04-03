@@ -5,18 +5,26 @@ import { fetchHeliusWalletFirstFund } from "@sv/services/wallet/fetchers/walletD
 
 export async function getWalletFirstFund(
     address: string,
-) {
+): Promise<HeliusWalletFirstFund | null> {
+    const normalizedAddress = address.trim();
+    console.log("[wallet-first-fund] resolving", normalizedAddress);
 
-    const cached = await getCachedWalletFirstFund(address);
+    const cached = await getCachedWalletFirstFund(normalizedAddress);
+    // const cached = null; // TODO: re-enable cache once we have some data and can verify cache correctness
     if (cached) {
+        console.log("[wallet-first-fund] cache hit", normalizedAddress);
         return cached as HeliusWalletFirstFund;
     } else {
         try {
-            const firstFund = await fetchHeliusWalletFirstFund(address);
+            console.log("[wallet-first-fund] cache miss, fetching provider", normalizedAddress);
+            const firstFund = await fetchHeliusWalletFirstFund(normalizedAddress);
             await saveWalletFirstFundCache(firstFund);
+
+            console.log("[wallet-first-fund] fetched and cached", normalizedAddress, firstFund);
             return firstFund;
         } catch (err) {
-            return { error: (err instanceof Error) ? err.message : 'Unknown error' };
+            console.error("[wallet-first-fund] failed", normalizedAddress, err);
+            return null;
         }
     }
 }
