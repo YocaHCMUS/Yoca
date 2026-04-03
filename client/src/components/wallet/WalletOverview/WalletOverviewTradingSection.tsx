@@ -53,6 +53,20 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
 
     const buyCount = buyTransactionCount ?? 0;
     const sellCount = sellTransactionCount ?? 0;
+    const hasCountSplit = buyCount + sellCount > 0;
+
+    const tradingVolumeToDisplay = (
+        <span>
+            <span className={styles.subStatValuePositive}>{fmt.num.currency(buyVolume)}</span> / <span className={styles.subStatValueNegative}>{fmt.num.currency(sellVolume)}</span>
+        </span>
+    )
+
+    const tradingCountToDisplay = (
+        <span>
+            <span className={styles.subStatValuePositive}>{fmt.num.decimal(buyCount)}</span> / <span className={styles.subStatValueNegative}>{fmt.num.decimal(sellCount)}</span>
+        </span>
+    )
+
 
     return (
         <div className={styles.statColumn}>
@@ -73,51 +87,27 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
             </div>
 
             <div className={styles.statRow}>
-                <div className={styles.subStatLabel}>{tr('wallet.tradingVolume')}</div>
-                <div>
-                    {renderValue(
-                        hasVolumeSplit,
-                        `${fmt.num.currency(buyVolume)}`,
-                        [styles.subStatValue, styles.subStatValuePositive],
-                        '52px',
-                        '12px',
-                        loading
-                    )}
-                    /
-                    {renderValue(
-                        hasVolumeSplit,
-                        `${fmt.num.currency(sellVolume)}`,
-                        [styles.subStatValue, styles.subStatValueNegative],
-                        '52px',
-                        '12px',
-                        loading
-                    )}
-
-                </div>
+                <div className={styles.subStatLabel}>{`${tr('wallet.tradingVolume')} (${tr('walletPage.buy')}/${tr('walletPage.sell')})`}</div>
+                {renderValue(
+                    hasVolumeSplit,
+                    tradingVolumeToDisplay,
+                    [styles.subStatValue],
+                    '52px',
+                    '12px',
+                    loading
+                )}
             </div>
 
             <div className={styles.statRow}>
-                <div className={styles.subStatLabel}>{tr('wallet.transactionCount')}</div>
-                <div>
-                    {renderValue(
-                        hasVolumeSplit,
-                        `${fmt.num.decimal(buyCount)}`,
-                        [styles.subStatValue, styles.subStatValuePositive],
-                        '52px',
-                        '12px',
-                        loading
-                    )}
-                    /
-                    {renderValue(
-                        hasVolumeSplit,
-                        `${fmt.num.decimal(sellCount)}`,
-                        [styles.subStatValue, styles.subStatValueNegative],
-                        '52px',
-                        '12px',
-                        loading
-                    )}
-
-                </div>
+                <div className={styles.subStatLabel}>{`${tr('wallet.transactionCount')} (${tr('walletPage.buy')}/${tr('walletPage.sell')})`}</div>
+                {renderValue(
+                    hasCountSplit,
+                    tradingCountToDisplay,
+                    [styles.subStatValue],
+                    '52px',
+                    '12px',
+                    loading
+                )}
             </div>
 
             <div className={styles.statRow}>

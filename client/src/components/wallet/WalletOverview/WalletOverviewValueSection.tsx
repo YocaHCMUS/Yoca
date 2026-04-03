@@ -45,7 +45,8 @@ const WalletOverviewValueSection = ({ value, unrealizedPnlInPeriod, loading }: W
                 )}
                 {hasPnl && (
                     <div className={`${styles.subStatLabel} ${styles.subScript} ${pnlClass}`}>
-                        {`${isPositive ? '+' : '-'}${pnlPercentage.toFixed(2)}%`}
+                        {isPositive ? "▲" : isNegative ? "▼" : ""}{" "}
+                        {`${pnlPercentage.toFixed(2)}%`}
                     </div>
                 )}
             </div>
