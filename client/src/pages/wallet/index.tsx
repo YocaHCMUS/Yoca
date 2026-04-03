@@ -20,23 +20,26 @@ import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.ts
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { locale } from "@/config/localization/index.ts";
-import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
+import { useExportReport } from "@/hooks/useExportReport";
 import { Button } from "@carbon/react";
 import { ChevronDown, Download } from "@carbon/icons-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import {
   fetchWalletCounterparties,
+  fetchWalletOverview,
   fetchWalletPortfolio,
   fetchWalletTransfers,
   fetchWalletSwaps,
   type WalletCounterpartyRow,
+  type WalletOverviewMultiPeriodResponse,
   type WalletPageInfo,
   type WalletPortfolioItem,
   type WalletSwap,
   type WalletTransfer,
   type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
+import { fetchWalletTags } from "@/services/wallet/walletTagsApi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import {
@@ -47,6 +50,7 @@ import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import styles from "./index.module.scss";
 import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
+import { WalletReportTemplate } from "@/components/WalletReportTemplate";
 // ported from token details demo
 import client from "@/api/main";
 import { useGet } from "@/hooks/useGet";
@@ -85,6 +89,7 @@ export default function WalletPage() {
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
+  const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
 
   const [mainActiveTab, setMainActiveTab] = useState(0);
   const [secondaryActiveTab, setSecondaryActiveTab] = useState(0);
@@ -92,8 +97,14 @@ export default function WalletPage() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isChartsExporting, setIsChartsExporting] = useState(false);
+  const [reportTags, setReportTags] = useState<string[]>([]);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
-  const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
+  const reportTemplateRef = useRef<HTMLDivElement | null>(null);
+
+  const { exportReportAsPdf } = useExportReport({
+    filenameBase: `wallet-audit-report-${address?.slice(0, 8) || "overview"}`,
+    reportRef: reportTemplateRef,
+  });
 
   // Resizable divider
   const [leftWidth, setLeftWidth] = useState(420);
@@ -195,6 +206,20 @@ export default function WalletPage() {
       document.removeEventListener("mousedown", onOutsideClick);
     };
   }, [isExportMenuOpen]);
+
+  useEffect(() => {
+    if (!address || address === "null") {
+      setReportTags([]);
+      return;
+    }
+
+    fetchWalletTags(address)
+      .then((nextTags) => setReportTags(nextTags))
+      .catch((error) => {
+        console.error("[WalletPage] Failed to load report tags:", error);
+        setReportTags([]);
+      });
+  }, [address]);
 
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
@@ -645,7 +670,8 @@ export default function WalletPage() {
       setCounterpartyLoading(true);
 
       try {
-        const [portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+        const [overviewResult, portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+          fetchWalletOverview(address, "solana"),
           fetchWalletPortfolio(address),
           fetchWalletSwaps(address),
           fetchWalletTransfers(address),
@@ -655,6 +681,10 @@ export default function WalletPage() {
             includeTokens: true,
           }),
         ]);
+
+        if (overviewResult.status === "fulfilled") {
+          setOverview(overviewResult.value);
+        }
 
         if (portfolioResult.status === 'fulfilled' && Array.isArray(portfolioResult.value)) {
           setPortfolio(portfolioResult.value);
@@ -712,17 +742,10 @@ export default function WalletPage() {
     setIsPagePdfExporting(true);
     setIsExportMenuOpen(false);
     try {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve());
-      });
-
-      await exportCurrentPageAsPdf({
-        baseFilename: `wallet-page-${address?.slice(0, 8) || 'overview'}`,
-        targetRef: pdfExportContainerRef,
-      });
+      await exportReportAsPdf();
     } catch (error) {
       console.error("[WalletPage] Failed to export page PDF:", error);
-      // Remove alert to let user see partial output
+      window.alert(tr("walletPage.exportPdfFailed"));
     } finally {
       setIsPagePdfExporting(false);
     }
@@ -850,7 +873,6 @@ export default function WalletPage() {
       }}
     >
       <div
-        ref={pdfExportContainerRef}
         className={styles.walletGrid}
         style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
       >
@@ -1092,6 +1114,31 @@ export default function WalletPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: -20000,
+          top: 0,
+          visibility: "hidden",
+          pointerEvents: "none",
+          width: 1024,
+          zIndex: -1,
+        }}
+      >
+        <div ref={reportTemplateRef}>
+          <WalletReportTemplate
+            walletAddress={address}
+            tags={reportTags}
+            holdings={portfolio}
+            overview={overview}
+            counterparties={counterparties}
+            balanceTokenOptions={balanceTokenOptions}
+            reportDate={new Date()}
+          />
         </div>
       </div>
 
