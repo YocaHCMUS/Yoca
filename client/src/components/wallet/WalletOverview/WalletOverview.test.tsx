@@ -23,7 +23,16 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 vi.mock('@/contexts/LocalizationContext', () => ({
     useLocalization: () => ({
-        tr: (key: string) => key,
+        tr: (key: string, params?: Record<string, unknown>) => {
+            if (!params) {
+                return key;
+            }
+
+            return Object.entries(params).reduce(
+                (acc, [paramKey, paramValue]) => acc.replace(`{{${paramKey}}}`, String(paramValue)),
+                key,
+            );
+        },
         fmt: {
             num: {
                 currency: (value: number | null) => (value == null ? '—' : `$${value.toFixed(2)}`),
@@ -210,9 +219,9 @@ describe('WalletOverview first-fund tags', () => {
 
         render(<WalletOverview walletAddress="TargetWallet1111111111111111111111111111111111" autoRefresh={false} />);
 
-        const funderButton = await screen.findByRole('button', { name: /open first funder wallet alpha fund/i });
-        expect(screen.getByText('First funder: Alpha Fund')).toBeInTheDocument();
-        expect(screen.getByText('Wallet age: 1y 1m')).toBeInTheDocument();
+        const funderButton = await screen.findByRole('button', { name: /walletPage.openFirstFunderWallet Alpha Fund/i });
+        expect(screen.getByText('walletPage.firstFunderTag: Alpha Fund')).toBeInTheDocument();
+        expect(screen.getByText('walletPage.walletAgeTag: 1 walletPage.walletAgeUnitYear 1 walletPage.walletAgeUnitMonth')).toBeInTheDocument();
 
         fireEvent.click(funderButton);
 

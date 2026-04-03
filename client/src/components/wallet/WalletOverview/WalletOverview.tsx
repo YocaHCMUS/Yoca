@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
-import type { TranslationKeyPath } from '@/config/localization';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     fetchWalletIntelligence,
@@ -45,6 +44,50 @@ function getFirstFundDisplayLabel(firstFund: WalletIdentityAnalysis['firstFund']
     }
 
     return firstFund.funderLabel ?? firstFund.funderAddress ?? null;
+}
+
+function resolveWalletAgeDays(firstFund: WalletIdentityAnalysis['firstFund']): number | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    if (firstFund.walletAgeDays != null && Number.isFinite(firstFund.walletAgeDays)) {
+        return Math.max(0, Math.floor(firstFund.walletAgeDays));
+    }
+
+    if (firstFund.firstFundTimestampSec != null && Number.isFinite(firstFund.firstFundTimestampSec)) {
+        const elapsedMs = Math.max(0, Date.now() - firstFund.firstFundTimestampSec * 1000);
+        return Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
+    }
+
+    return null;
+}
+
+function formatLocalizedWalletAge(
+    ageDays: number,
+    units: { day: string; month: string; year: string },
+): string {
+    const years = Math.floor(ageDays / 365);
+    const remainingAfterYears = ageDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const days = remainingAfterYears % 30;
+
+    const parts: string[] = [];
+    if (years > 0) {
+        parts.push(`${years} ${units.year}`);
+    }
+    if (months > 0) {
+        parts.push(`${months} ${units.month}`);
+    }
+    if (days > 0 && years === 0) {
+        parts.push(`${days} ${units.day}`);
+    }
+
+    if (parts.length === 0) {
+        return `0 ${units.day}`;
+    }
+
+    return parts.slice(0, 2).join(' ');
 }
 
 export interface WalletOverviewProps {
@@ -171,6 +214,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const firstFund = intelligence?.analysis?.firstFund ?? null;
     const firstFundAddress = firstFund?.funderAddress ?? null;
     const firstFundLabel = getFirstFundDisplayLabel(firstFund);
+    const walletAgeDays = resolveWalletAgeDays(firstFund);
+    const walletAgeLabel = walletAgeDays != null
+        ? formatLocalizedWalletAge(walletAgeDays, {
+            day: String(tr('walletPage.walletAgeUnitDay')),
+            month: String(tr('walletPage.walletAgeUnitMonth')),
+            year: String(tr('walletPage.walletAgeUnitYear')),
+        })
+        : null;
 
     const name = label || (identityStatus === 'known' && identityName ? identityName : tr('walletPage.defaultWalletName'));
     const displayedAddress = identityStatus === 'unknown'
@@ -299,21 +350,21 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                 type="button"
                                 className={styles.inlineTagButton}
                                 onClick={() => handleOpenFirstFunder(firstFundAddress)}
-                                aria-label={`Open first funder wallet ${firstFundLabel}`}
+                                aria-label={`${String(tr('walletPage.openFirstFunderWallet'))} ${firstFundLabel}`}
                             >
                                 <Tag size="sm" type="blue">
-                                    First funder: {firstFundLabel}
+                                    {String(tr('walletPage.firstFunderTag'))}: {firstFundLabel}
                                 </Tag>
                             </button>
                         )}
                         {!firstFund && intelligence && (
                             <Tag size="sm" type="cool-gray">
-                                First funder unavailable
+                                {String(tr('walletPage.firstFunderUnavailable'))}
                             </Tag>
                         )}
-                        {firstFund?.walletAgeLabel && (
+                        {walletAgeLabel && (
                             <Tag size="sm" type="warm-gray">
-                                Wallet age: {firstFund.walletAgeLabel}
+                                {String(tr('walletPage.walletAgeTag'))}: {walletAgeLabel}
                             </Tag>
                         )}
                         {identityStatus === 'unknown' && (
