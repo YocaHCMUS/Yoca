@@ -36,6 +36,7 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -451,41 +452,68 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     (!('wallets' in data) || !data.wallets || data.wallets.length === 0)
   ) || (filters.wallets && filters.wallets.length === 0);
 
-  // ── Compact header filter controls ────────────────────────────────────
-  const selectStyle: React.CSSProperties = {
-    padding: '0.5rem 1rem',
-    fontSize: '0.75rem',
-    border: '1px solid var(--cds-border-strong)',
-    borderRadius: '0.25rem',
-    background: 'var(--cds-layer-02)',
-    color: 'var(--cds-text-primary)',
-    cursor: 'pointer',
-    height: '2.5rem',
-  };
+  const topNOptions: Array<{ value: TopNOption; label: string }> = [
+    { value: 5, label: tr('charts.assetDistributionChart.filters.top5') },
+    { value: 10, label: tr('charts.assetDistributionChart.filters.top10') },
+    { value: 0, label: tr('charts.assetDistributionChart.filters.all') },
+  ];
+
+  const minPctOptions: Array<{ value: MinPctOption; label: string }> = [
+    { value: 0, label: tr('charts.assetDistributionChart.filters.allPercent') },
+    { value: 1, label: tr('charts.assetDistributionChart.filters.minPct1') },
+    { value: 5, label: tr('charts.assetDistributionChart.filters.minPct5') },
+    { value: 10, label: tr('charts.assetDistributionChart.filters.minPct10') },
+  ];
 
   const filterControls = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <select
-        value={topN}
-        onChange={(e) => setTopN(Number(e.target.value) as TopNOption)}
-        style={selectStyle}
-        aria-label={tr('charts.assetDistributionChart.ariaLabels.topNFilter')}
-      >
-        <option value={5}>{tr('charts.assetDistributionChart.filters.top5')}</option>
-        <option value={10}>{tr('charts.assetDistributionChart.filters.top10')}</option>
-        <option value={0}>{tr('charts.assetDistributionChart.filters.all')}</option>
-      </select>
-      <select
-        value={minPct}
-        onChange={(e) => setMinPct(Number(e.target.value) as MinPctOption)}
-        style={selectStyle}
-        aria-label={tr('charts.assetDistributionChart.ariaLabels.minPctFilter')}
-      >
-        <option value={0}>{tr('charts.assetDistributionChart.filters.allPercent')}</option>
-        <option value={1}>{tr('charts.assetDistributionChart.filters.minPct1')}</option>
-        <option value={5}>{tr('charts.assetDistributionChart.filters.minPct5')}</option>
-        <option value={10}>{tr('charts.assetDistributionChart.filters.minPct10')}</option>
-      </select>
+    <div
+      className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}
+    >
+      <label className={sharedStyles.filterField}>
+        <span className={sharedStyles.filterLabelSmall}>
+          {tr('charts.assetDistributionChart.filters.topN')}
+        </span>
+        <div
+          className={sharedStyles.filterSegmentedGroup}
+          role="group"
+          aria-label={tr('charts.assetDistributionChart.ariaLabels.topNFilter')}
+        >
+          {topNOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTopN(option.value)}
+              className={`${sharedStyles.filterSegmentedButton} ${topN === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
+              aria-pressed={topN === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </label>
+
+      <label className={sharedStyles.filterField}>
+        <span className={sharedStyles.filterLabelSmall}>
+          {tr('charts.assetDistributionChart.filters.minPct')}
+        </span>
+        <div
+          className={sharedStyles.filterSegmentedGroup}
+          role="group"
+          aria-label={tr('charts.assetDistributionChart.ariaLabels.minPctFilter')}
+        >
+          {minPctOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setMinPct(option.value)}
+              className={`${sharedStyles.filterSegmentedButton} ${minPct === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
+              aria-pressed={minPct === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </label>
     </div>
   );
 

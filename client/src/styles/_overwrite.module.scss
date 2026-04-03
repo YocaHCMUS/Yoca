@@ -65,6 +65,20 @@
     white-space: nowrap;
   }
 
+  .stickyHeaderCell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    :global(.cds--table-header-label) {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+      line-height: 1.25;
+      display: block;
+    }
+  }
+
   .alignStart {
     text-align: left;
     justify-content: flex-start;

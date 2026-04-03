@@ -104,7 +104,8 @@ export default function Tble({
           : overwriteStyles.alignStart;
 
     return {
-      className: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
+      bodyClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
+      headerClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyHeaderCell : ""}`,
       style: {
         width: header?.width,
         minWidth: header?.width,
@@ -192,7 +193,7 @@ export default function Tble({
                         <TableHeader
                           {...getHeaderProps({ header })}
                           key={header.key}
-                          className={`${overwriteStyles.headerCell} ${config.className}`}
+                          className={`${overwriteStyles.headerCell} ${config.headerClassName}`}
                           style={config.style}
                         >
                           {header.header}
@@ -210,7 +211,7 @@ export default function Tble({
                           <TableCell
                             {...getCellProps({ cell })}
                             key={cell.id}
-                            className={config.className}
+                            className={config.bodyClassName}
                             style={config.style}
                           >
                             {cell.value}
