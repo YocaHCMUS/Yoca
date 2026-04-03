@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 
 export async function saveSwapsCache(
@@ -423,3 +423,20 @@ export async function saveBalanceHistoryCache(
   }
 }
 
+export async function saveWalletFirstFundCache(
+  firstFund: HeliusWalletFirstFund,
+) {
+  try {
+    await db
+      .insert(walletFirstFund)
+      .values(firstFund)
+      .onConflictDoUpdate({
+        target: [walletFirstFund.reciepient],
+        set: {
+          ...firstFund,
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet first fund cache", err);
+  }
+}

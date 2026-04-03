@@ -606,3 +606,20 @@ export type OverviewActivitySnapshot = {
 export type SwapProviderSource = "helius" | "moralis";
 export type WalletProviderPolicy = "helius" | "birdeye" | "fallback";
 
+export type HeliusWalletFirstFund = {
+    reciepient: string
+    funder: string
+    funderName: string | null
+    funderType: string | null
+    mint: string
+    symbol: string
+    amount: number
+    amountRaw: string
+    decimals: number
+    date: string
+    signature: string
+    timestamp: number
+    slot: number
+    explorerUrl: string
+};
+

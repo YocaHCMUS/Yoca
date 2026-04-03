@@ -12,7 +12,8 @@ import type {
   WalletTransactionHelius, WalletTransfer,
   BirdeyeNetworthHistoryResult, BirdeyePortfolioSnapshotResult, BirdeyeOverallPnlResult,
   BirdeyeTokenPnlDetailsResult,
-  BirdeyeNetworthDirection, BirdeyeNetworthType, BirdeyeSortType, BirdeyePnlDuration, BirdeyeNetworthHistoryPoint, BirdeyeTokenPnlDetailsOptions
+  BirdeyeNetworthDirection, BirdeyeNetworthType, BirdeyeSortType, BirdeyePnlDuration, BirdeyeNetworthHistoryPoint, BirdeyeTokenPnlDetailsOptions,
+  HeliusWalletFirstFund
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
   getNextCursor,
@@ -1235,4 +1236,17 @@ export async function fetchBirdeyeTokenPnLDetails(
     tokens: Array.isArray(data?.tokens) ? data.tokens : [],
     summary: data?.summary ?? null,
   };
+}
+
+export async function fetchHeliusWalletFirstFund(
+  address: string,
+) {
+  const json = await heliusGetJson<any>(`/v1/wallet/${address}/funded-by`);
+
+  if ('error' in json) {
+    throw new Error(`Helius API error: ${json.error}`);
+  }
+
+
+  return { reciepient: address, ...json } as HeliusWalletFirstFund;
 }

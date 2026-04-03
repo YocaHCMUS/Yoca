@@ -124,6 +124,14 @@ $divider: $border-subtle;
   margin-top: 4px;
 }
 
+.inlineTagButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 // ===== Actions Section (filter dropdown + utility buttons) =====
 .actionsSection {
   display: flex;

@@ -2,11 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
-import type { TranslationKeyPath } from '@/config/localization';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     fetchWalletIntelligence,
     fetchWalletOverview,
+    type WalletIdentityAnalysis,
+    type WalletIntelligenceResponse,
     type WalletOverviewMultiPeriodResponse,
     type WalletOverviewPeriodKey,
 } from '@/services/wallet/walletApi';
@@ -37,6 +38,58 @@ function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
     return 'red';
 }
 
+function getFirstFundDisplayLabel(firstFund: WalletIdentityAnalysis['firstFund']): string | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    return firstFund.funderLabel ?? firstFund.funderAddress ?? null;
+}
+
+function resolveWalletAgeDays(firstFund: WalletIdentityAnalysis['firstFund']): number | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    if (firstFund.walletAgeDays != null && Number.isFinite(firstFund.walletAgeDays)) {
+        return Math.max(0, Math.floor(firstFund.walletAgeDays));
+    }
+
+    if (firstFund.firstFundTimestampSec != null && Number.isFinite(firstFund.firstFundTimestampSec)) {
+        const elapsedMs = Math.max(0, Date.now() - firstFund.firstFundTimestampSec * 1000);
+        return Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
+    }
+
+    return null;
+}
+
+function formatLocalizedWalletAge(
+    ageDays: number,
+    units: { day: string; month: string; year: string },
+): string {
+    const years = Math.floor(ageDays / 365);
+    const remainingAfterYears = ageDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const days = remainingAfterYears % 30;
+
+    const parts: string[] = [];
+    if (years > 0) {
+        parts.push(`${years} ${units.year}`);
+    }
+    if (months > 0) {
+        parts.push(`${months} ${units.month}`);
+    }
+    if (days > 0 && years === 0) {
+        parts.push(`${days} ${units.day}`);
+    }
+
+    if (parts.length === 0) {
+        return `0 ${units.day}`;
+    }
+
+    return parts.slice(0, 2).join(' ');
+}
+
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
@@ -56,7 +109,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>('24H');
-    const [intelligence, setIntelligence] = useState<any>(null);
+    const [intelligence, setIntelligence] = useState<WalletIntelligenceResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -158,6 +211,17 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityName = intelligence?.identity?.name ?? null;
     const identityCategory = intelligence?.identity?.category ?? null;
     const riskLevel = intelligence?.analysis?.riskLevel ?? null;
+    const firstFund = intelligence?.analysis?.firstFund ?? null;
+    const firstFundAddress = firstFund?.funderAddress ?? null;
+    const firstFundLabel = getFirstFundDisplayLabel(firstFund);
+    const walletAgeDays = resolveWalletAgeDays(firstFund);
+    const walletAgeLabel = walletAgeDays != null
+        ? formatLocalizedWalletAge(walletAgeDays, {
+            day: String(tr('walletPage.walletAgeUnitDay')),
+            month: String(tr('walletPage.walletAgeUnitMonth')),
+            year: String(tr('walletPage.walletAgeUnitYear')),
+        })
+        : null;
 
     const name = label || (identityStatus === 'known' && identityName ? identityName : tr('walletPage.defaultWalletName'));
     const displayedAddress = identityStatus === 'unknown'
@@ -235,6 +299,10 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
+    const handleOpenFirstFunder = (funderAddress: string) => {
+        navigate(`/wallets/${encodeURIComponent(funderAddress)}`);
+    };
+
     return (
         <>
             <div className={styles.walletOverview}>
@@ -275,6 +343,28 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         {identityStatus === 'known' && identityCategory && (
                             <Tag size="sm" type="teal">
                                 {identityCategory}
+                            </Tag>
+                        )}
+                        {firstFundAddress && firstFundLabel && (
+                            <button
+                                type="button"
+                                className={styles.inlineTagButton}
+                                onClick={() => handleOpenFirstFunder(firstFundAddress)}
+                                aria-label={`${String(tr('walletPage.openFirstFunderWallet'))} ${firstFundLabel}`}
+                            >
+                                <Tag size="sm" type="blue">
+                                    {String(tr('walletPage.firstFunderTag'))}: {firstFundLabel}
+                                </Tag>
+                            </button>
+                        )}
+                        {!firstFund && intelligence && (
+                            <Tag size="sm" type="cool-gray">
+                                {String(tr('walletPage.firstFunderUnavailable'))}
+                            </Tag>
+                        )}
+                        {walletAgeLabel && (
+                            <Tag size="sm" type="warm-gray">
+                                {String(tr('walletPage.walletAgeTag'))}: {walletAgeLabel}
                             </Tag>
                         )}
                         {identityStatus === 'unknown' && (

@@ -843,6 +843,28 @@ export const walletTokenDetails = pgTable(
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
+
+export const walletFirstFund = pgTable(
+  "wallet_first_fund",
+  {
+    reciepient: varchar("recipient", { length: 44 }).notNull(),
+    funder: varchar("funder", { length: 44 }).notNull(),
+    funderName: varchar("funder_name", { length: 256 }),
+    funderType: varchar("funder_type", { length: 256 }),
+    mint: varchar("mint", { length: 44 }),
+    symbol: varchar("symbol", { length: 64 }),
+    amount: decimal("amount"),
+    amountRaw: varchar("amount_raw", { length: 256 }),
+    decimals: integer("decimals").notNull(),
+    date: varchar("date", { length: 256 }),
+    signature: varchar("signature", { length: 256 }),
+    timestamp: integer("timestamp").notNull(),
+    slot: integer("slot").notNull(),
+    explorerUrl: varchar("explorer_url", { length: 256 }),
+  },
+  (t) => [primaryKey({ columns: [t.reciepient] })]
+);
+
 // #endregion
 
 // #region Types
@@ -889,6 +911,7 @@ export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
+export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 
 // #endregion
 
