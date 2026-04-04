@@ -1,25 +1,33 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Handle, Position } from "reactflow";
+import { HoverContext } from "../TransactionGraphDemo";
 
 export type WalletNodeData = {
   address: string;
   shortAddress: string;
   isSigner: boolean;
+  activeTokens: string[];
 };
 
 export function WalletNode({ data }: { data: WalletNodeData }) {
-  const { isSigner, shortAddress } = data;
+  const { isSigner, shortAddress, activeTokens } = data;
+  
+  // Note: HoverContext provides hoveredToken
+  const hoverContext = useContext(HoverContext);
+  const hoveredToken = hoverContext?.hoveredToken;
+
+  const isHighlighted = hoveredToken && activeTokens?.includes(hoveredToken);
 
   return (
     <div
       style={{
+        position: "relative",
         width: 160,
         backgroundColor: isSigner ? "#fff7ed" : "#ffffff",
-        border: `1px solid ${isSigner ? "#f97316" : "#cbd5e1"}`,
-        borderWidth: isSigner ? 2 : 1,
-        borderRadius: 10,
-        boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
-        padding: isSigner ? "12px 0" : "15px 0",
+        border: `1px solid ${isHighlighted ? "#3b82f6" : (isSigner ? "#f97316" : "#cbd5e1")}`,
+        borderRadius: 8,
+        boxShadow: isHighlighted ? "0 0 0 1px #3b82f6, 0 4px 12px rgba(59, 130, 246, 0.15)" : "0 3px 8px rgba(0,0,0,0.06)",
+        padding: "14px 0",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

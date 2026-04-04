@@ -2,8 +2,13 @@ import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import type { InferResponseType } from "hono/client";
-import { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+
+export const HoverContext = React.createContext<{
+  hoveredToken: string | null;
+  setHoveredToken: React.Dispatch<React.SetStateAction<string | null>>;
+}>({ hoveredToken: null, setHoveredToken: () => {} });
 import ReactFlow, {
   Background,
   Controls,
@@ -58,15 +63,20 @@ function columnPositions(
   canvasH: number
 ): { addr: string; x: number; y: number }[] {
   if (addrs.length === 0) return [];
-  const spacing = canvasH / (addrs.length + 1);
-  return addrs.map((addr, i) => ({ addr, x, y: spacing * (i + 1) }));
+  // Vast spacing: Guarantee at least 150px vertical gap between nodes
+  const FIXED_SPACING = 150;
+  // Center the block of nodes gracefully around y=300
+  const totalHeight = (addrs.length - 1) * FIXED_SPACING;
+  const startY = 300 - totalHeight / 2;
+
+  return addrs.map((addr, i) => ({ addr, x, y: startY + i * FIXED_SPACING }));
 }
 
 const nodeTypes = { wallet: WalletNode };
 const edgeTypes = { curved: CurvedEdge };
 
-const CANVAS_H = 400;
-const COL_X = { left: 50, middle: 400, right: 750 };
+const CANVAS_H = 600; // Not strictly used for spacing anymore, just a base reference
+const COL_X = { left: 50, middle: 400, right: 850 }; // Spread horizontally even wider (850 instead of 750)
 
 export function TransactionGraphDemo() {
   const { txHash } = useParams<{ txHash: string }>();
@@ -81,6 +91,7 @@ export function TransactionGraphDemo() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [hoveredToken, setHoveredToken] = useState<string | null>(null);
   const initializedHash = useRef<string | null>(null);
 
   useEffect(() => {
@@ -117,6 +128,15 @@ export function TransactionGraphDemo() {
     const xPosMap: Record<string, number> = {};
     positions.forEach(p => xPosMap[p.addr] = p.x);
 
+    const walletTokens: Record<string, Set<string>> = {};
+    positions.forEach(p => walletTokens[p.addr] = new Set<string>());
+    
+    allTransfers.forEach(t => {
+      const tokenId = t.tokenAddress || "SOL";
+      if (walletTokens[t.fromWallet]) walletTokens[t.fromWallet].add(tokenId);
+      if (walletTokens[t.toWallet]) walletTokens[t.toWallet].add(tokenId);
+    });
+
     const nodesData: Node[] = positions.map(({ addr, x, y }) => {
       const isSigner = addr === signer;
       return {
@@ -127,6 +147,7 @@ export function TransactionGraphDemo() {
           address: addr,
           shortAddress: shortAddress(addr),
           isSigner,
+          activeTokens: Array.from(walletTokens[addr]),
         },
       };
     });
@@ -165,9 +186,10 @@ export function TransactionGraphDemo() {
         type: "curved",
         data: {
           amountText: fmt.num.unit(t.amount, tokenSymbol),
+          tokenAddress: t.tokenAddress,
           color: "#f97316",
           labelOffset: nextLabelOffset(t.fromWallet, t.toWallet),
-          parallelOffset: transferSet.has(`${t.toWallet}→${t.fromWallet}`) ? 10 : 0,
+          parallelOffset: (transferSet.has(`${t.toWallet}→${t.fromWallet}`) && t.fromWallet > t.toWallet) ? 10 : 0,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -187,9 +209,10 @@ export function TransactionGraphDemo() {
         type: "curved",
         data: {
           amountText: fmt.num.unit(t.amount / 1e9, "SOL"),
+          tokenAddress: "SOL",
           color: "#94a3b8",
           labelOffset: nextLabelOffset(t.fromWallet, t.toWallet),
-          parallelOffset: transferSet.has(`${t.toWallet}→${t.fromWallet}`) ? 10 : 0,
+          parallelOffset: (transferSet.has(`${t.toWallet}→${t.fromWallet}`) && t.fromWallet > t.toWallet) ? 10 : 0,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -232,21 +255,23 @@ export function TransactionGraphDemo() {
       </div>
 
       <div style={styles.chartWrap}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          minZoom={0.5}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background color="#cbd5e1" gap={24} size={2} />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+        <HoverContext.Provider value={{ hoveredToken, setHoveredToken }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+            minZoom={0.5}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="#cbd5e1" gap={24} size={2} />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </HoverContext.Provider>
       </div>
 
       <div style={styles.legend}>
