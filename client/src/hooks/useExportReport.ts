@@ -31,6 +31,153 @@ function waitForPaint(): Promise<void> {
   });
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function toProxyImageUrl(url: string): string {
+  const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN;
+  const base = typeof apiDomain === "string" && apiDomain.length > 0
+    ? apiDomain.replace(/\/$/, "")
+    : "";
+  return `${base}/api/misc/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
+function rewriteCrossOriginImagesForCapture(element: HTMLElement): () => void {
+  const images = Array.from(element.querySelectorAll<HTMLImageElement>("img"));
+  const rollback: Array<() => void> = [];
+
+  for (const image of images) {
+    const originalSrc = image.getAttribute("src") ?? "";
+    if (!originalSrc || originalSrc.startsWith("data:") || originalSrc.startsWith("blob:")) {
+      continue;
+    }
+
+    let absoluteUrl: URL;
+    try {
+      absoluteUrl = new URL(originalSrc, window.location.href);
+    } catch {
+      continue;
+    }
+
+    if (absoluteUrl.origin === window.location.origin) {
+      continue;
+    }
+
+    const previousCrossOrigin = image.getAttribute("crossorigin");
+    const previousReferrerPolicy = image.getAttribute("referrerpolicy");
+
+    image.setAttribute("src", toProxyImageUrl(absoluteUrl.toString()));
+    image.setAttribute("crossorigin", "anonymous");
+    image.setAttribute("referrerpolicy", "no-referrer");
+
+    rollback.push(() => {
+      image.setAttribute("src", originalSrc);
+      if (previousCrossOrigin == null) {
+        image.removeAttribute("crossorigin");
+      } else {
+        image.setAttribute("crossorigin", previousCrossOrigin);
+      }
+      if (previousReferrerPolicy == null) {
+        image.removeAttribute("referrerpolicy");
+      } else {
+        image.setAttribute("referrerpolicy", previousReferrerPolicy);
+      }
+    });
+  }
+
+  return () => {
+    for (const restore of rollback) {
+      restore();
+    }
+  };
+}
+
+function hideExportOnlyElements(element: HTMLElement): () => void {
+  const targets = Array.from(
+    element.querySelectorAll<HTMLElement>(
+      '[data-export-hide="copy-button"], button[title="Copy"], button[aria-label="Copy"]',
+    ),
+  );
+
+  const rollback: Array<() => void> = [];
+  for (const target of targets) {
+    const previousDisplay = target.style.display;
+    target.style.display = "none";
+    rollback.push(() => {
+      target.style.display = previousDisplay;
+    });
+  }
+
+  return () => {
+    for (const restore of rollback) {
+      restore();
+    }
+  };
+}
+
+async function waitForReportReady(element: HTMLElement): Promise<void> {
+  const timeoutMs = 8000;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const hasSkeleton = element.querySelector(
+      ".cds--skeleton, .cds--skeleton__placeholder",
+    ) !== null;
+    const hasBusyNode = element.querySelector('[aria-busy="true"]') !== null;
+
+    const images = Array.from(element.querySelectorAll<HTMLImageElement>("img"));
+    const hasPendingImages = images.some((img) => !img.complete);
+
+    if (!hasSkeleton && !hasBusyNode && !hasPendingImages) {
+      return;
+    }
+
+    await wait(150);
+  }
+}
+
+function waitForImages(element: HTMLElement): Promise<void> {
+  const images = Array.from(element.querySelectorAll<HTMLImageElement>("img"));
+  if (images.length === 0) {
+    return Promise.resolve();
+  }
+
+  const waiters = images.map((img) => new Promise<void>((resolve) => {
+    if (!img.getAttribute("loading")) {
+      img.setAttribute("loading", "eager");
+    }
+    if (!img.getAttribute("decoding")) {
+      img.setAttribute("decoding", "async");
+    }
+
+    if (img.complete) {
+      resolve();
+      return;
+    }
+
+    const handleDone = () => {
+      img.removeEventListener("load", handleDone);
+      img.removeEventListener("error", handleDone);
+      resolve();
+    };
+
+    img.addEventListener("load", handleDone, { once: true });
+    img.addEventListener("error", handleDone, { once: true });
+  }));
+
+  const timeout = new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), 5000);
+  });
+
+  return Promise.race([
+    Promise.all(waiters).then(() => undefined),
+    timeout,
+  ]);
+}
+
 function appendCanvasAsSinglePdfPage(
   pdf: jsPDF,
   canvas: HTMLCanvasElement,
@@ -94,22 +241,31 @@ export function useExportReport({
       pointerEvents: reportElement.style.pointerEvents,
     };
 
+    let restoreImageSources: (() => void) | null = null;
+    let restoreExportOnlyElements: (() => void) | null = null;
+
     try {
       reportElement.style.display = "block";
       reportElement.style.visibility = "visible";
-      reportElement.style.position = "absolute";
+      reportElement.style.position = "fixed";
       reportElement.style.top = "0";
-      reportElement.style.left = "-9999px";
+      reportElement.style.left = "0";
       reportElement.style.width = `${REPORT_CAPTURE_WIDTH_PX}px`;
       reportElement.style.height = "max-content";
       reportElement.style.maxHeight = "none";
       reportElement.style.overflow = "visible";
-      reportElement.style.zIndex = "1";
-      reportElement.style.opacity = "1";
+      reportElement.style.zIndex = "2147483647";
+      reportElement.style.opacity = "0";
       reportElement.style.pointerEvents = "none";
 
+      restoreImageSources = rewriteCrossOriginImagesForCapture(reportElement);
+      restoreExportOnlyElements = hideExportOnlyElements(reportElement);
+
       await waitForFonts();
+      await waitForReportReady(reportElement);
+      await waitForImages(reportElement);
       await waitForPaint();
+      await wait(200);
 
       const captureScale = REPORT_CAPTURE_SCALE;
       const reportPages = Array.from(
@@ -147,6 +303,12 @@ export function useExportReport({
 
       pdf.save(filename);
     } finally {
+      if (restoreImageSources) {
+        restoreImageSources();
+      }
+      if (restoreExportOnlyElements) {
+        restoreExportOnlyElements();
+      }
       reportElement.style.display = previousInlineStyle.display;
       reportElement.style.visibility = previousInlineStyle.visibility;
       reportElement.style.position = previousInlineStyle.position;

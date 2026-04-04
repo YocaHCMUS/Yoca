@@ -69,6 +69,26 @@ function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
         .flatMap((page) => pages[page] ?? []);
 }
 
+const WSOL_MINT = "So11111111111111111111111111111111111111112";
+
+function resolveTokenMetaLookupAddress(tokenAddress: string | undefined): string | undefined {
+    if (!tokenAddress) {
+        return undefined;
+    }
+
+    const normalized = tokenAddress.trim().toLowerCase();
+    if (
+        normalized === "native"
+        || normalized === "sol"
+        || normalized === "11111111111111111111111111111111"
+        || normalized === "so11111111111111111111111111111111111111111"
+    ) {
+        return WSOL_MINT;
+    }
+
+    return tokenAddress;
+}
+
 function PageSection({ children }: { children: ReactNode }) {
     return (
         <section className={styles.section}>
@@ -378,12 +398,16 @@ export default function WalletPage() {
 
     const portfolioCellRenderers = [
         (value: string) => {
-            const tokenMeta = portfolioMetaMap.get(value);
+            const portfolioTokenMeta = portfolioMetaMap.get(value);
+            const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(portfolioTokenMeta?.tokenAddress);
+            const fallbackLogoUri = tokenMetaLookupAddress
+                ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
+                : undefined;
             return (
                 <TokenIdentityCell
                     symbol={value}
-                    fullName={tokenMeta?.fullName}
-                    imageUrl={tokenMeta?.logoUri}
+                    fullName={portfolioTokenMeta?.fullName}
+                    imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
                     imageSize={20}
                     showInitialsFallback
                     tooltipAlign="right"
