@@ -113,26 +113,32 @@ export default function Tble({
     };
   };
 
-  const RenderHeader = title && (
+  const hasHeaderContent = Boolean(title || description || toolBar);
+
+  const RenderHeader = hasHeaderContent ? (
     <Stack gap={1}>
-      <Stack
-        gap={1}
-        className={overwriteStyles.titleContainer}
-        style={{ paddingLeft: boxed ? 16 : undefined }}
-      >
-        <strong className={overwriteStyles.titleText}>{title}</strong>
-        <span className={overwriteStyles.tblDsc}>{description}</span>
-      </Stack>
-      <div className={overwriteStyles.tblToolbar}>
-        <div
-          className={overwriteStyles.tblToolbarContent}
-          style={{ paddingRight: boxed ? 4 : undefined }}
+      {(title || description) && (
+        <Stack
+          gap={1}
+          className={overwriteStyles.titleContainer}
+          style={{ paddingLeft: boxed ? 16 : undefined }}
         >
-          {toolBar}
+          {title ? <strong className={overwriteStyles.titleText}>{title}</strong> : null}
+          {description ? <span className={overwriteStyles.tblDsc}>{description}</span> : null}
+        </Stack>
+      )}
+      {toolBar ? (
+        <div className={overwriteStyles.tblToolbar}>
+          <div
+            className={overwriteStyles.tblToolbarContent}
+            style={{ paddingRight: boxed ? 4 : undefined }}
+          >
+            {toolBar}
+          </div>
         </div>
-      </div>
+      ) : null}
     </Stack>
-  );
+  ) : null;
 
   if (loading || rows.length == 0) {
     return (

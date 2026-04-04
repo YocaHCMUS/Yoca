@@ -377,47 +377,54 @@ export default function MarketPage() {
                   setActiveTabIndex(selectedIndex)
                 }
               >
-                <TabList aria-label="Market Navigation">
-                  <Tab>All</Tab>
-                  <Tab>Watchlist</Tab>
-                  <Tab>Trades</Tab>
-                </TabList>
+                <Stack
+                  orientation="horizontal"
+                  style={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <TabList aria-label="Market Navigation">
+                    <Tab>All</Tab>
+                    <Tab>Watchlist</Tab>
+                    <Tab>Trades</Tab>
+                  </TabList>
+                  <ModalStateManager
+                    renderLauncher={({ setOpen }) => (
+                      <Button
+                        kind="ghost"
+                        onClick={() => setOpen(true)}
+                        renderIcon={ChartTreemap}
+                      >
+                        {tr("marketPage.marketMap")}
+                      </Button>
+                    )}
+                  >
+                    {({ open, setOpen }) => (
+                      <Modal
+                        open={open}
+                        onRequestClose={() => setOpen(false)}
+                        modalHeading={tr("marketPage.marketMap")}
+                        passiveModal
+                        size="md"
+                      >
+                        <TokenTreeMap
+                          loading={loading}
+                          data={treeMapData}
+                          height={400}
+                          maxTrendValue={20}
+                        />
+                      </Modal>
+                    )}
+                  </ModalStateManager>
+                </Stack>
                 <TabPanels>
                   <TabPanel>
                     <Tble
                       loading={loading}
                       headers={tokenHeaders}
                       rows={topTokenRows}
-                      toolBar={
-                        <ModalStateManager
-                          renderLauncher={({ setOpen }) => (
-                            <Button
-                              kind="ghost"
-                              onClick={() => setOpen(true)}
-                              renderIcon={ChartTreemap}
-                            >
-                              {tr("marketPage.marketMap")}
-                            </Button>
-                          )}
-                        >
-                          {({ open, setOpen }) => (
-                            <Modal
-                              open={open}
-                              onRequestClose={() => setOpen(false)}
-                              modalHeading={tr("marketPage.marketMap")}
-                              passiveModal
-                              size="md"
-                            >
-                              <TokenTreeMap
-                                loading={loading}
-                                data={treeMapData}
-                                height={400}
-                                maxTrendValue={20}
-                              />
-                            </Modal>
-                          )}
-                        </ModalStateManager>
-                      }
                     />
                   </TabPanel>
                   <TabPanel>
