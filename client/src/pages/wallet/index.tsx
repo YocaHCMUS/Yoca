@@ -703,6 +703,30 @@ export default function WalletPage() {
         </div>
     );
 
+    const tabActions = (
+        <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
+            <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
+                {tr("charts.export")}
+            </Button>
+            {isExportMenuOpen && (
+                <div className={styles.exportMenu}>
+                    <button type="button" className={styles.exportMenuItem} onClick={handleExportDataXlsx} disabled={isDataExporting}>
+                        <Download size={16} />
+                        {isDataExporting ? tr("walletPage.exportingData") : tr("walletPage.exportDataXlsx")}
+                    </button>
+                    <button type="button" className={styles.exportMenuItem} onClick={handleExportChartsZip} disabled={isChartsExporting}>
+                        <Download size={16} />
+                        {isChartsExporting ? tr("walletPage.exportingCharts") : tr("walletPage.exportChartsZip")}
+                    </button>
+                    <button type="button" className={styles.exportMenuItem} onClick={handleExportPagePdf} disabled={isPagePdfExporting}>
+                        <Download size={16} />
+                        {isPagePdfExporting ? tr("walletPage.exportingReport") : tr("walletPage.exportReportPdf")}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
     if (!address) {
         return (
             <PageWrapper>
@@ -741,40 +765,13 @@ export default function WalletPage() {
                 </div>
 
                 <div className={styles.rightColumn}>
-                    <div className={styles.rightHeader}>
-                        <div className={styles.rightHeaderCopy}>
-                            {/* <p className={styles.rightHeaderEyebrow}>Wallet</p>
-                            <h1 className={styles.rightHeaderTitle}>{`${address.slice(0, 8)}…${address.slice(-4)}`}</h1> */}
-                        </div>
-                        <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
-                            <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
-                                {tr("charts.export")}
-                            </Button>
-                            {isExportMenuOpen && (
-                                <div className={styles.exportMenu}>
-                                    <button type="button" className={styles.exportMenuItem} onClick={handleExportDataXlsx} disabled={isDataExporting}>
-                                        <Download size={16} />
-                                        {isDataExporting ? tr("walletPage.exportingData") : tr("walletPage.exportDataXlsx")}
-                                    </button>
-                                    <button type="button" className={styles.exportMenuItem} onClick={handleExportChartsZip} disabled={isChartsExporting}>
-                                        <Download size={16} />
-                                        {isChartsExporting ? tr("walletPage.exportingCharts") : tr("walletPage.exportChartsZip")}
-                                    </button>
-                                    <button type="button" className={styles.exportMenuItem} onClick={handleExportPagePdf} disabled={isPagePdfExporting}>
-                                        <Download size={16} />
-                                        {isPagePdfExporting ? tr("walletPage.exportingReport") : tr("walletPage.exportReportPdf")}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     <div className={styles.rightContent}>
                         <TabContainer
                             activeTab={activeTab}
                             names={[tr("walletPage.overview"), tr("walletPage.holdings"), tr("walletPage.activityRisk")]}
                             tabs={[overviewTab, holdingsTab, activityTab]}
                             onTabChange={(index) => setActiveTab(index)}
+                            actions={tabActions}
                         />
                     </div>
                 </div>

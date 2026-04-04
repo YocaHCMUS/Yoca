@@ -67,44 +67,6 @@
   background: $background;
 }
 
-.rightHeader {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 20px;
-  background: $layer-01;
-  border-bottom: 1px solid $border-subtle;
-  z-index: 10;
-}
-
-.rightHeaderCopy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.rightHeaderEyebrow {
-  margin: 0;
-  color: $text-secondary;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.rightHeaderTitle {
-  margin: 0;
-  color: $text-primary;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .exportMenuWrapper {
   position: relative;
 }
