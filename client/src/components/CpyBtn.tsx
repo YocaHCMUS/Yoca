@@ -24,6 +24,7 @@ export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
       label={copied ? "Copied" : "Copy"}
       align="right"
       onClick={handleCopy}
+      data-export-hide="copy-button"
     >
       {copied ? <Checkmark /> : <Copy />}
     </IconButton>
