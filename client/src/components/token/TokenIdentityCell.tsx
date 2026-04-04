@@ -75,6 +75,10 @@ export function TokenIdentityCell({
                     width={imageSize}
                     height={imageSize}
                     style={getImageStyle(imageSize)}
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                    loading="eager"
+                    decoding="async"
                     onError={() => setImgFailed(true)}
                 />
             ) : showInitialsFallback ? (
