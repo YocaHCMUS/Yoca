@@ -24,8 +24,8 @@ import {
   type ReactNode,
 } from "react";
 
-interface TblHdr {
-  header: string;
+export interface TblHdr {
+  header: string | ReactNode;
   key: string;
   align?: "start" | "center" | "end";
   width?: number | string;

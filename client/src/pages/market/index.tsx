@@ -32,7 +32,7 @@ import {
   Tabs,
   Tooltip,
 } from "@carbon/react";
-import { ChartTreemap, Launch, Star, StarFilled } from "@carbon/react/icons";
+import { ChartTreemap, ChevronDown, Launch, Star, StarFilled } from "@carbon/react/icons";
 import { useEffect, useMemo, useState } from "react";
 
 type TradeVolumeOption = 0 | 1 | 100 | 500;
@@ -128,8 +128,14 @@ export default function MarketPage() {
     },
     {
       key: "marketCap",
-      header: tr("marketPage.marketCap"),
+      header: (
+        <span style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+          {tr("marketPage.marketCap")}
+          <ChevronDown size={16} />
+        </span>
+      ),
       align: "end" as const,
+      style: { paddingRight: "16px" },
     },
     { key: "fdv", header: tr("token.marketStats.fdv"), align: "end" as const },
     {
@@ -138,7 +144,7 @@ export default function MarketPage() {
       align: "end" as const,
       width: "15%",
     },
-  ];
+  ] as any;
 
   const traderHeaders = [
     { key: "trader", header: tr("marketPage.trader"), align: "start" as const },
