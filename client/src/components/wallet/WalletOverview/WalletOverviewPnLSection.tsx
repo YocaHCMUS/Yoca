@@ -52,7 +52,7 @@ const WalletOverviewPnLSection = ({ totalPnL, realizedPnL, unrealizedPnL, loadin
             <div className={styles.statRow}>
                 <div className={styles.statLabel}>
                     <Analytics />
-                    <div className={styles.statLabel}>PnL Overview</div>
+                    <div className={styles.statLabel}>{tr('charts.pnlChart.title')}</div>
                 </div>
             </div>
 

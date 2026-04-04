@@ -204,6 +204,9 @@ export const translation = defineTranslation({
   // Wallet Page
   walletPage: {
     addressNotFound: "Không tìm thấy địa chỉ",
+    overview: "Tổng quan",
+    holdings: "Nắm giữ",
+    activityRisk: "Hoạt động / Rủi ro",
     activity: "Hoạt động",
     asset: "Tài sản",
     topExchange: "Sàn giao dịch hàng đầu",
