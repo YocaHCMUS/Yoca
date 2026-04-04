@@ -8,6 +8,7 @@ export interface TabContainerProps {
   names: string[];
   tabs: React.ReactNode[];
   onTabChange?: (index: tabIndex) => void;
+  actions?: React.ReactNode;
 }
 
 export const TabContainer: React.FC<TabContainerProps> = ({
@@ -15,22 +16,32 @@ export const TabContainer: React.FC<TabContainerProps> = ({
   names,
   tabs,
   onTabChange,
+  actions,
 }) => {
+  const hasActions = Boolean(actions);
+
   return (
     <div className={styles.tabContainer}>
       {/* Tab Headers */}
-      <div className={styles.tabHeaders}>
-        {names.map((name, index) => (
-          <button
-            key={index}
-            onClick={() => onTabChange?.(index)}
-            className={
-              activeTab === index ? styles.tabButtonActive : styles.tabButton
-            }
-          >
-            {name}
-          </button>
-        ))}
+      <div
+        className={`${styles.tabHeaders} ${hasActions ? styles.tabHeadersWithActions : ""}`.trim()}
+      >
+        <div className={styles.tabHeaderTabs}>
+          {names.map((name, index) => (
+            <button
+              key={index}
+              onClick={() => onTabChange?.(index)}
+              className={
+                activeTab === index ? styles.tabButtonActive : styles.tabButton
+              }
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        {hasActions ? (
+          <div className={styles.tabHeaderActions}>{actions}</div>
+        ) : null}
       </div>
 
       {/* Tab Content */}

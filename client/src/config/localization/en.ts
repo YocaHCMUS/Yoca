@@ -223,6 +223,9 @@ export const translation = {
   // Wallet Page
   walletPage: {
     addressNotFound: "Address not found",
+    overview: "Overview",
+    holdings: "Holdings",
+    activityRisk: "Activity / Risk",
     activity: "Activity",
     asset: "Assets",
     topExchange: "Top exchange",
