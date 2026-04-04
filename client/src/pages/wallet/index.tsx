@@ -19,11 +19,13 @@ import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailM
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
+import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
-import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
+import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
 import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx";
+import { WalletReportTemplate, type WalletReportSection } from "@/components/WalletReportTemplate";
 import { buildPortfolioMetaMap, mapPortfolioItems } from "../../util/wallet-portfolio-mapper.ts";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { Button } from "@carbon/react";
@@ -34,16 +36,19 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useNavigate, useParams } from "react-router";
 import {
     fetchWalletCounterparties,
+    fetchWalletOverview,
     fetchWalletPortfolio,
     fetchWalletSwaps,
     fetchWalletTransfers,
     type WalletCounterpartyRow,
+    type WalletOverviewMultiPeriodResponse,
     type WalletPageInfo,
     type WalletPortfolioItem,
     type WalletSwap,
     type WalletSwapTokenInfo,
     type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
+import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import styles from "./index.module.scss";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
@@ -71,6 +76,7 @@ function PageSection({ children }: { children: ReactNode }) {
 }
 
 export default function WalletPage() {
+    const { user } = useAuth();
     const { tr, fmt, lang } = useLocalization();
     const bcp47 = locale[lang].langCode;
     const navigate = useNavigate();
@@ -89,6 +95,8 @@ export default function WalletPage() {
 
     const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
     const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
+    const [overviewReport, setOverviewReport] = useState<WalletOverviewMultiPeriodResponse | null>(null);
+    const [walletTags, setWalletTags] = useState<string[]>([]);
 
     const [activeTab, setActiveTab] = useState(0);
     const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
@@ -96,7 +104,7 @@ export default function WalletPage() {
     const [isDataExporting, setIsDataExporting] = useState(false);
     const [isChartsExporting, setIsChartsExporting] = useState(false);
     const exportMenuRef = useRef<HTMLDivElement | null>(null);
-    const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
+    const reportTemplateRef = useRef<HTMLDivElement | null>(null);
 
     const [leftWidth, setLeftWidth] = useState(420);
     const isDragging = useRef(false);
@@ -447,6 +455,20 @@ export default function WalletPage() {
     };
 
     useEffect(() => {
+        if (!user || !address || address === "null") {
+            setWalletTags([]);
+            return;
+        }
+
+        fetchWalletTags(address)
+            .then(setWalletTags)
+            .catch((error) => {
+                console.error("[WalletPage] Failed to load wallet tags:", error);
+                setWalletTags([]);
+            });
+    }, [address, user]);
+
+    useEffect(() => {
         const loadData = async () => {
             if (!address || address === "null") return;
             setPortfolioLoading(true);
@@ -455,11 +477,12 @@ export default function WalletPage() {
             setCounterpartyLoading(true);
 
             try {
-                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult, overviewResult] = await Promise.allSettled([
                     fetchWalletPortfolio(address),
                     fetchWalletSwaps(address),
                     fetchWalletTransfers(address),
                     fetchWalletCounterparties(address, { period: "7d", limit: 50, includeTokens: true }),
+                    fetchWalletOverview(address, "solana"),
                 ]);
 
                 if (portfolioResult.status === "fulfilled" && Array.isArray(portfolioResult.value)) {
@@ -488,6 +511,12 @@ export default function WalletPage() {
                         setCounterparties(counterpartiesData);
                     }
                 }
+
+                if (overviewResult.status === "fulfilled") {
+                    setOverviewReport(overviewResult.value ?? null);
+                } else {
+                    setOverviewReport(null);
+                }
             } finally {
                 setPortfolioLoading(false);
                 setSwapLoading(false);
@@ -499,16 +528,28 @@ export default function WalletPage() {
         loadData();
     }, [address]);
 
+    const activeReportSection = useMemo<WalletReportSection>(() => {
+        if (activeTab === 1) {
+            return "holdings";
+        }
+        if (activeTab === 2) {
+            return "activity_risk";
+        }
+        return "overview";
+    }, [activeTab]);
+
+    const { exportReportAsPdf } = useExportReport({
+        filenameBase: `wallet-report-${address?.slice(0, 8) || "overview"}`,
+        reportRef: reportTemplateRef,
+    });
+
     async function handleExportPagePdf() {
         if (isPagePdfExporting) return;
         setIsPagePdfExporting(true);
         setIsExportMenuOpen(false);
         try {
             await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-            await exportCurrentPageAsPdf({
-                baseFilename: `wallet-page-${address?.slice(0, 8) || "overview"}`,
-                targetRef: pdfExportContainerRef,
-            });
+            await exportReportAsPdf();
         } catch (error) {
             console.error("[WalletPage] Failed to export page PDF:", error);
         } finally {
@@ -768,7 +809,7 @@ export default function WalletPage() {
                 onClose: () => setSelectedToken(null),
             }}
         >
-            <div ref={pdfExportContainerRef} className={styles.walletGrid} style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}>
+            <div className={styles.walletGrid} style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}>
                 <div className={styles.leftColumn}>
                     <WalletOverview walletAddress={walletAddress} />
                 </div>
@@ -788,6 +829,18 @@ export default function WalletPage() {
                         />
                     </div>
                 </div>
+            </div>
+
+            <div ref={reportTemplateRef} className={styles.hiddenReportTemplate} aria-hidden="true">
+                <WalletReportTemplate
+                    walletAddress={walletAddress}
+                    tags={walletTags}
+                    overview={overviewReport}
+                    activeSection={activeReportSection}
+                    overviewContent={overviewTab}
+                    holdingsContent={holdingsTab}
+                    activityRiskContent={activityTab}
+                />
             </div>
 
             <SwapDetailModal isOpen={swapModalOpen} onClose={() => setSwapModalOpen(false)} swap={selectedSwap} />

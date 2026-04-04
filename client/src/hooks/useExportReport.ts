@@ -111,7 +111,7 @@ export function useExportReport({
       await waitForFonts();
       await waitForPaint();
 
-      const captureScale = Math.max(REPORT_CAPTURE_SCALE, window.devicePixelRatio || 1);
+      const captureScale = REPORT_CAPTURE_SCALE;
       const reportPages = Array.from(
         reportElement.querySelectorAll<HTMLElement>('[data-report-page="true"]'),
       );
