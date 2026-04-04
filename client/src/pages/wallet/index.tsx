@@ -36,11 +36,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useNavigate, useParams } from "react-router";
 import {
     fetchWalletCounterparties,
+    fetchWalletIntelligence,
     fetchWalletOverview,
     fetchWalletPortfolio,
     fetchWalletSwaps,
     fetchWalletTransfers,
     type WalletCounterpartyRow,
+    type WalletIntelligenceResponse,
     type WalletOverviewMultiPeriodResponse,
     type WalletPageInfo,
     type WalletPortfolioItem,
@@ -96,6 +98,7 @@ export default function WalletPage() {
     const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
     const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
     const [overviewReport, setOverviewReport] = useState<WalletOverviewMultiPeriodResponse | null>(null);
+    const [intelligenceReport, setIntelligenceReport] = useState<WalletIntelligenceResponse | null>(null);
     const [walletTags, setWalletTags] = useState<string[]>([]);
 
     const [activeTab, setActiveTab] = useState(0);
@@ -477,12 +480,13 @@ export default function WalletPage() {
             setCounterpartyLoading(true);
 
             try {
-                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult, overviewResult] = await Promise.allSettled([
+                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult, overviewResult, intelligenceResult] = await Promise.allSettled([
                     fetchWalletPortfolio(address),
                     fetchWalletSwaps(address),
                     fetchWalletTransfers(address),
                     fetchWalletCounterparties(address, { period: "7d", limit: 50, includeTokens: true }),
                     fetchWalletOverview(address, "solana"),
+                    fetchWalletIntelligence(address, "solana"),
                 ]);
 
                 if (portfolioResult.status === "fulfilled" && Array.isArray(portfolioResult.value)) {
@@ -517,6 +521,12 @@ export default function WalletPage() {
                 } else {
                     setOverviewReport(null);
                 }
+
+                if (intelligenceResult.status === "fulfilled") {
+                    setIntelligenceReport(intelligenceResult.value ?? null);
+                } else {
+                    setIntelligenceReport(null);
+                }
             } finally {
                 setPortfolioLoading(false);
                 setSwapLoading(false);
@@ -537,6 +547,34 @@ export default function WalletPage() {
         }
         return "overview";
     }, [activeTab]);
+
+    const reportHeaderTags = useMemo(() => {
+        const tags: string[] = [];
+
+        const identityCategory = intelligenceReport?.identity?.status === "known"
+            ? intelligenceReport.identity.category
+            : null;
+        if (typeof identityCategory === "string" && identityCategory.trim().length > 0) {
+            tags.push(identityCategory.trim());
+        }
+
+        const firstFund = intelligenceReport?.analysis?.firstFund ?? null;
+        const firstFunderLabel = firstFund?.funderLabel ?? firstFund?.funderAddress ?? null;
+        if (firstFund?.funderAddress && firstFunderLabel) {
+            tags.push(`${tr("walletPage.firstFunderTag")}: ${firstFunderLabel}`);
+        }
+
+        const walletAgeLabel = firstFund?.walletAgeLabel ?? null;
+        if (walletAgeLabel) {
+            tags.push(`${tr("walletPage.walletAgeTag")}: ${walletAgeLabel}`);
+        }
+
+        if (walletTags.length > 0) {
+            tags.push(...walletTags);
+        }
+
+        return Array.from(new Set(tags));
+    }, [intelligenceReport, walletTags, tr]);
 
     const { exportReportAsPdf } = useExportReport({
         filenameBase: `wallet-report-${address?.slice(0, 8) || "overview"}`,
@@ -834,7 +872,7 @@ export default function WalletPage() {
             <div ref={reportTemplateRef} className={styles.hiddenReportTemplate} aria-hidden="true">
                 <WalletReportTemplate
                     walletAddress={walletAddress}
-                    tags={walletTags}
+                    tags={reportHeaderTags}
                     overview={overviewReport}
                     activeSection={activeReportSection}
                     overviewContent={overviewTab}
