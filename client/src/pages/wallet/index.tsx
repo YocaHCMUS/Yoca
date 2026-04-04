@@ -31,7 +31,7 @@ import { ChevronDown, Download } from "@carbon/icons-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
     fetchWalletCounterparties,
     fetchWalletPortfolio,
@@ -73,6 +73,7 @@ function PageSection({ children }: { children: ReactNode }) {
 export default function WalletPage() {
     const { tr, fmt, lang } = useLocalization();
     const bcp47 = locale[lang].langCode;
+    const navigate = useNavigate();
     const { address } = useParams<{ address: string }>();
     const walletAddress = address ?? "";
 
@@ -603,6 +604,12 @@ export default function WalletPage() {
                                 dataEntries={portfolioData}
                                 isSortable={isSortablePortfolio}
                                 sortConfigs={portfolioSortConfig}
+                                onRowClick={(_row, rowIndex) => {
+                                    const tokenAddress = rowIndex >= 0 ? portfolioMeta[rowIndex]?.tokenAddress : undefined;
+                                    if (tokenAddress) {
+                                        navigate(`/tokens/${tokenAddress}`);
+                                    }
+                                }}
                                 loading={portfolioLoading && portfolioData.length === 0}
                             />
                         </div>

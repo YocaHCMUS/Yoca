@@ -1,16 +1,16 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 
-import Index from "./pages";
-import AuthShowcase from "./pages/auth";
-import HistoricalDataPage from "./pages/historical-data";
-import MarketPage from "./pages/market";
-import TokenPage from "./pages/token";
-import TokenOverviewPage from "./pages/token-overview";
-import WalletPage from "./pages/wallet";
-import SwrDebugDemo from "./pages/wallet/demo";
-// import { TokenDetailsDemo } from "./pages/wallet/TokenDetailsDemo";
-import WalletsComparisionPage from "./pages/walletsComparision";
+import Index from "@/pages";
+import AuthShowcase from "@/pages/auth";
+import HistoricalDataPage from "@/pages/historical-data";
+import MarketPage from "@/pages/market";
+import TokenPage from "@/pages/token";
+import TokenOverviewPage from "@/pages/token-overview";
+import WalletPage from "@/pages/wallet";
+import SwrDebugDemo from "@/pages/wallet/demo";
+// import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
+import WalletsComparisionPage from "@/pages/walletsComparision";
 
 function App() {
   return (
