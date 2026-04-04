@@ -702,6 +702,12 @@ export default function WalletPage() {
                             dataEntries={counterpartyTableData}
                             isSortable={isSortableCounterparties}
                             sortConfigs={counterpartySortConfigs}
+                            onRowClick={(_row, rowIndex) => {
+                                const counterpartyAddress = rowIndex >= 0 ? counterparties[rowIndex]?.address : undefined;
+                                if (counterpartyAddress) {
+                                    navigate(`/wallets/${counterpartyAddress}`);
+                                }
+                            }}
                             loading={counterpartyLoading && counterpartyTableData.length === 0}
                         />
                     </div>

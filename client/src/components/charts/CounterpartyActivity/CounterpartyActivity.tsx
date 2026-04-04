@@ -425,36 +425,51 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     setCurrentLimit(newLimit);
   };
 
+  const selectStyle: React.CSSProperties = {
+    padding: "0.5rem 1rem",
+    fontSize: "0.75rem",
+    border: "1px solid var(--cds-border-strong)",
+    borderRadius: "0.25rem",
+    background: "var(--cds-layer-02)",
+    color: "var(--cds-text-primary)",
+    cursor: "pointer",
+    height: "2.5rem",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: "0.75rem",
+    color: "var(--cds-text-secondary)",
+  };
+
+  const filterControls = (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <label htmlFor="counterparty-limit-select" style={labelStyle}>Top:</label>
+      <select
+        id="counterparty-limit-select"
+        value={currentLimit}
+        onChange={(e) => handleLimitChange(Number(e.target.value))}
+        style={selectStyle}
+      >
+        <option value={5}>5</option>
+        <option value={10}>10</option>
+        <option value={20}>20</option>
+        <option value={50}>50</option>
+      </select>
+    </div>
+  );
+
   // Render chart with wrapper
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       onRetry={refetch}
+      actions={filterControls}
       isEmpty={
         !isChartSuccess(data, "counterparties") ||
         counterpartyCountRanking.length === 0
       }
     >
-      <div
-        className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]}`}
-      >
-        <div className={sharedStyles.limitSelector}>
-          <label htmlFor="limit-select">Top:</label>
-          <select
-            id="limit-select"
-            value={currentLimit}
-            onChange={(e) => handleLimitChange(Number(e.target.value))}
-            className={sharedStyles.chartSelect}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-        </div>
-      </div>
-
       {/* Transaction counts chart */}
       {counterpartyCountRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
