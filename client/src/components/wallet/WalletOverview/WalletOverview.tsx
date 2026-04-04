@@ -235,7 +235,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const holdings = overview?.holdings ?? null;
 
     const totalAssetValue = holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd ?? null;
-    const assetChange24hPercent = holdings?.change24hPercent ?? null;
     const tradingVolume = selectedStats?.tradingVolumeUsd ?? overview?.tradingVolumeUsd24h ?? null;
     const totalPnL = selectedStats?.pnl?.totalUsd ?? overview?.pnlUsdTotal ?? null;
     const tokenTraded = selectedStats?.tokensTradedCount ?? overview?.tokensTradedCount ?? null;
@@ -355,7 +354,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                 onClick={() => handleOpenFirstFunder(firstFundAddress)}
                                 aria-label={`${String(tr('walletPage.openFirstFunderWallet'))} ${firstFundLabel}`}
                             >
-                                <Tag size="sm" type="blue">
+                                <Tag size="sm" type="blue" style={{ cursor: 'pointer' }}>
                                     {String(tr('walletPage.firstFunderTag'))}: {firstFundLabel}
                                 </Tag>
                             </button>

@@ -272,7 +272,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         option: createChartOption(
           wallet.dailyPnL,
           wallet.cumulativePnL,
-          `${wallet.walletAddress.slice(0, 8)}...`,
+          displayData.wallets.length > 1 ? `${wallet.walletAddress.slice(0, 8)}...` : undefined,
         ),
       }));
     }
