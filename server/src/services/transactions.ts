@@ -90,14 +90,16 @@ export async function fecthTransactionDetails(transactions: string[]) {
     .values(txDetails.map((details) => details.info))
     .onConflictDoNothing()
     .returning();
-  const tokenTransfers = await db
-    .insert(txTokenTransfers)
-    .values(txDetails.flatMap((details) => details.tokenTransfers))
-    .returning();
-  const nativeTransfers = await db
-    .insert(txNativeTransfers)
-    .values(txDetails.flatMap((details) => details.nativeTransfers))
-    .returning();
+
+  const allTokenTransfers = txDetails.flatMap((details) => details.tokenTransfers);
+  const tokenTransfers = allTokenTransfers.length > 0
+    ? await db.insert(txTokenTransfers).values(allTokenTransfers).returning()
+    : [];
+
+  const allNativeTransfers = txDetails.flatMap((details) => details.nativeTransfers);
+  const nativeTransfers = allNativeTransfers.length > 0
+    ? await db.insert(txNativeTransfers).values(allNativeTransfers).returning()
+    : [];
 
   return aggregate({ infos, tokenTransfers, nativeTransfers });
 }
