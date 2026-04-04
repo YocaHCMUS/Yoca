@@ -473,7 +473,7 @@ export function TokenDetailsDemo({
           <TrendNum
             prefixes="plus-minus"
             value={details.unrealizedProfitUsd + details.realizedProfitUsd}
-            formatter={fmt.num.currency}
+            formatter={fmt.num.compact.currency}
           />
           <TrendNum
             prefixes="plus-minus"
@@ -489,7 +489,7 @@ export function TokenDetailsDemo({
           <TrendNum
             prefixes="plus-minus"
             value={details.realizedProfitUsd}
-            formatter={fmt.num.currency}
+            formatter={fmt.num.compact.currency}
           />
           <TrendNum
             prefixes="plus-minus"
@@ -502,7 +502,7 @@ export function TokenDetailsDemo({
         <TrendNum
           prefixes="plus-minus"
           value={details.unrealizedProfitUsd}
-          formatter={fmt.num.currency}
+          formatter={fmt.num.compact.currency}
         />
       ),
       buy: (
