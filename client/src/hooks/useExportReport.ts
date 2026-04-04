@@ -37,6 +37,20 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function getCaptureWidth(element: HTMLElement): number {
+  const rawWidth = Number(element.getAttribute("data-report-capture-width") ?? "");
+  if (Number.isFinite(rawWidth) && rawWidth > 0) {
+    return rawWidth;
+  }
+
+  return REPORT_CAPTURE_WIDTH_PX;
+}
+
+function getCaptureOrientation(element: HTMLElement): "portrait" | "landscape" {
+  const rawOrientation = (element.getAttribute("data-report-orientation") ?? "portrait").toLowerCase();
+  return rawOrientation === "landscape" ? "landscape" : "portrait";
+}
+
 function toProxyImageUrl(url: string): string {
   const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN;
   const base = typeof apiDomain === "string" && apiDomain.length > 0
@@ -258,6 +272,8 @@ export function useExportReport({
       reportElement.style.opacity = "0";
       reportElement.style.pointerEvents = "none";
 
+      const captureWidth = getCaptureWidth(reportElement);
+      const captureOrientation = getCaptureOrientation(reportElement);
       restoreImageSources = rewriteCrossOriginImagesForCapture(reportElement);
       restoreExportOnlyElements = hideExportOnlyElements(reportElement);
 
@@ -273,7 +289,7 @@ export function useExportReport({
       );
       const captureTargets = reportPages.length > 0 ? reportPages : [reportElement];
       const pdf = new jsPDF({
-        orientation: "portrait",
+        orientation: captureOrientation,
         unit: "mm",
         format: "a4",
         compress: true,
@@ -286,8 +302,8 @@ export function useExportReport({
           allowTaint: true,
           scale: captureScale,
           backgroundColor: "#ffffff",
-          width: REPORT_CAPTURE_WIDTH_PX,
-          windowWidth: REPORT_CAPTURE_WIDTH_PX,
+          width: captureWidth,
+          windowWidth: captureWidth,
           scrollX: 0,
           scrollY: 0,
           logging: false,

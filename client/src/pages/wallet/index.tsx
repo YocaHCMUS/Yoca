@@ -278,6 +278,19 @@ export default function WalletPage() {
         [loadedSwaps],
     );
 
+    const swapReportRows = useMemo(
+        () => loadedSwaps.map((swap) => [
+            fmt.datetime.relativeShort(swap.blockTimestampIso, true),
+            swap.exchangeName || "Unknown",
+            formatSwapPair(swap),
+            swap.sold?.symbol ? String(swap.sold.symbol).toUpperCase() : "—",
+            swap.bought?.symbol ? String(swap.bought.symbol).toUpperCase() : "—",
+            swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
+            swap.baseQuotePrice != null ? fmt.num.decimal(swap.baseQuotePrice) : "—",
+        ]),
+        [fmt, loadedSwaps],
+    );
+
     const transferData = useMemo(
         () => loadedTransfers.map((transfer) => [
             transfer.from,
@@ -381,11 +394,15 @@ export default function WalletPage() {
             const transferKey = String(row[5] ?? "");
             const transfer = transferByKey.get(transferKey);
             if (!transfer) return renderCode(value);
+            const transferTokenMetaLookupAddress = resolveTokenMetaLookupAddress(transfer.tokenAddress);
+            const fallbackLogoUri = transferTokenMetaLookupAddress
+                ? tokenMeta.data?.[transferTokenMetaLookupAddress]?.imageUrl
+                : undefined;
             return (
                 <TokenIdentityCell
                     symbol={String(transfer.tokenSymbol ?? value)}
                     fullName={transfer.tokenName}
-                    imageUrl={transfer.tokenLogoUri}
+                    imageUrl={transfer.tokenLogoUri ?? fallbackLogoUri}
                     imageSize={18}
                     showInitialsFallback
                     tooltipAlign="right"
@@ -599,6 +616,8 @@ export default function WalletPage() {
 
         return Array.from(new Set(tags));
     }, [intelligenceReport, walletTags, tr]);
+
+    const reportDate = useMemo(() => new Date(), []);
 
     const { exportReportAsPdf } = useExportReport({
         filenameBase: `wallet-report-${address?.slice(0, 8) || "overview"}`,
@@ -819,6 +838,169 @@ export default function WalletPage() {
         </div>
     );
 
+    const pdfPageStyle: React.CSSProperties = {
+        width: 1024,
+        background: "#ffffff",
+        color: "#0f172a",
+        padding: 32,
+        boxSizing: "border-box",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    };
+
+    const pdfCardStyle: React.CSSProperties = {
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        background: "#ffffff",
+        overflow: "hidden",
+        marginBottom: 20,
+    };
+
+    const renderPdfHeader = (pageTitle: string) => (
+        <header style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 16, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>Wallet Audit Report</h1>
+                    <p style={{ margin: "8px 0 0", fontSize: 13, color: "#475569" }}>
+                        Export Date: {reportDate.toLocaleDateString("en-GB")}
+                    </p>
+                </div>
+                <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        Wallet Address
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{walletAddress}</div>
+                </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {reportHeaderTags.length > 0 ? (
+                    reportHeaderTags.map((tag) => (
+                        <span
+                            key={tag}
+                            style={{
+                                border: "1px solid #cbd5e1",
+                                borderRadius: 999,
+                                padding: "4px 10px",
+                                fontSize: 12,
+                                color: "#1e293b",
+                                background: "#f8fafc",
+                            }}
+                        >
+                            {tag}
+                        </span>
+                    ))
+                ) : (
+                    <span style={{ fontSize: 12, color: "#64748b" }}>No Tags</span>
+                )}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 20 }}>{pageTitle}</h2>
+            </div>
+        </header>
+    );
+
+    const PrintableTable = ({
+        title,
+        headers,
+        rows,
+    }: {
+        title: string;
+        headers: string[];
+        rows: (string | number)[][];
+    }) => (
+        <section style={pdfCardStyle}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h3>
+            </div>
+            <div style={{ padding: 12 }}>
+                {rows.length > 0 ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: 11 }}>
+                        <thead>
+                            <tr style={{ background: "#f1f5f9" }}>
+                                {headers.map((header) => (
+                                    <th
+                                        key={header}
+                                        style={{
+                                            borderBottom: "1px solid #cbd5e1",
+                                            padding: "8px 6px",
+                                            textAlign: "left",
+                                            verticalAlign: "top",
+                                            wordBreak: "break-word",
+                                            whiteSpace: "normal",
+                                        }}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, rowIndex) => (
+                                <tr key={`${title}-${rowIndex}`}>
+                                    {row.map((cell, cellIndex) => (
+                                        <td
+                                            key={`${title}-${rowIndex}-${cellIndex}`}
+                                            style={{
+                                                borderBottom: "1px solid #e2e8f0",
+                                                padding: "8px 6px",
+                                                verticalAlign: "top",
+                                                wordBreak: "break-word",
+                                                whiteSpace: "normal",
+                                            }}
+                                        >
+                                            {String(cell)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div style={{ minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                        No data available
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+
+    const activityRiskPdfContent = (
+        <>
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <section style={pdfCardStyle}>
+                    <div style={{ padding: "12px 14px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Counterparty Activity Analysis</h3>
+                    </div>
+                    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 20 }}>
+                        <div className={styles.chartSection}>
+                            <CounterpartyActivity minHeight={320} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} autoRefresh />
+                        </div>
+                        <div className={styles.chartSection}>
+                            <ExchangeComparison walletAddress={walletAddress} />
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Swap" headers={swapHeaders} rows={swapReportRows} />
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Transfer" headers={transferHeaders} rows={transferData.map((row) => row.map((cell) => String(cell)))} />
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Counterparties" headers={counterpartyHeaders} rows={counterpartyTableData.map((row) => row.map((cell) => String(cell)))} />
+            </div>
+        </>
+    );
+
     const tabActions = (
         <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
             <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
@@ -901,7 +1083,8 @@ export default function WalletPage() {
                     activeSection={activeReportSection}
                     overviewContent={overviewTab}
                     holdingsContent={holdingsTab}
-                    activityRiskContent={activityTab}
+                    activityRiskContent={activityRiskPdfContent}
+                    reportDate={reportDate}
                 />
             </div>
 

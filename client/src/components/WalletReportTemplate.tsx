@@ -26,6 +26,7 @@ type OverviewDetailItem = {
 };
 
 const REPORT_WIDTH_PX = 1024;
+
 const REPORT_PAGE_STYLE = {
   width: REPORT_WIDTH_PX,
   background: "#ffffff",
@@ -204,8 +205,11 @@ export function WalletReportTemplate({
   }, [activeSection, activityRiskContent, holdingsContent, overviewContent]);
 
   return (
-    <div style={{ width: REPORT_WIDTH_PX, background: "#ffffff" }}>
-      <div data-report-page="true" style={REPORT_PAGE_STYLE}>
+    <>
+      {activeSection === "activity_risk" ? (
+        <>{activityRiskContent}</>
+      ) : (
+        <div data-report-page="true" style={REPORT_PAGE_STYLE}>
         <header style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 16, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
             <div>
@@ -323,7 +327,8 @@ export function WalletReportTemplate({
 
           <div>{sectionContent}</div>
         </section>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
