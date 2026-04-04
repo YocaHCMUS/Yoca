@@ -419,24 +419,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
     const isMultiWallet = 'wallets' in data && data.wallets && data.wallets.length > 1;
 
-    // Multi-wallet view
-    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
-      return data.wallets.map((wallet: any) => ({
-        walletAddress: wallet.walletAddress,
-        option: createChartOption(
-          wallet.data,
-          `${wallet.walletAddress.slice(0, 8)}...`,
-          isMultiWallet
-        ),
-      }));
-    }
-
     if ('wallets' in data && data.wallets && data.wallets.length > 0) {
       return data.wallets.map((wallet) => ({
         walletAddress: wallet.walletAddress,
         option: createChartOption(
           wallet.data,
-          `${wallet.walletAddress.slice(0, 8)}...`,
+          data.wallets.length > 1 ? `${wallet.walletAddress.slice(0, 8)}...` : undefined,
           isMultiWallet
         ),
       }));

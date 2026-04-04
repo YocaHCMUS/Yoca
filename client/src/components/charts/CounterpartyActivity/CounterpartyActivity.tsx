@@ -479,7 +479,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
       {/* Total volume chart */}
       {counterpartyVolumeRanking.length > 0 && (
-        <div className={sharedStyles.chartSection}>
+        <div className={sharedStyles.chartSection} style={{ marginTop: '32px' }}>
           <h3 className={sharedStyles.chartTitle}>
             {tr("charts.counterpartyActivityChart.totalVolume")}
           </h3>

@@ -25,37 +25,37 @@ export type LegendOrientation = 'horizontal' | 'vertical';
 export interface LegendConfigOptions {
   /** Show/hide legend */
   show?: boolean;
-  
+
   /** Legend position */
   position?: LegendPosition;
-  
+
   /** Legend orientation */
   orientation?: LegendOrientation;
-  
+
   /** Distance from the position edge (percentage or pixels) */
   offset?: string | number;
-  
+
   /** Legend data array */
   data?: string[];
-  
+
   /** Custom icon type */
   icon?: 'circle' | 'rect' | 'roundRect' | 'triangle' | 'diamond' | 'pin' | 'arrow' | 'none';
-  
+
   /** Icon width */
   itemWidth?: number;
-  
+
   /** Icon height */
   itemHeight?: number;
-  
+
   /** Gap between legend items */
   itemGap?: number;
-  
+
   /** Custom text style overrides */
   textStyle?: {
     fontSize?: number;
     fontWeight?: string | number;
   };
-  
+
   /** Whether to account for a chart title above */
   hasTitle?: boolean;
 }
@@ -128,14 +128,14 @@ export function getLegendConfig(
   // Calculate position offset
   const getPositionOffset = () => {
     if (offset !== undefined) return offset;
-    
+
     if (position === 'top') {
       return hasTitle ? DEFAULTS.offsetWithTitle : DEFAULTS.offsetTop;
     }
     if (position === 'bottom') return DEFAULTS.offsetBottom;
     if (position === 'left') return DEFAULTS.offsetLeft;
     if (position === 'right') return DEFAULTS.offsetRight;
-    
+
     return DEFAULTS.offsetTop;
   };
 
@@ -146,13 +146,13 @@ export function getLegendConfig(
       if (position === 'right') return { right: getPositionOffset(), top: 'center' };
       return { left: 'center', top: getPositionOffset() };
     }
-    
+
     // Horizontal orientation
     if (position === 'top') return { top: getPositionOffset(), left: 'center' };
     if (position === 'bottom') return { bottom: getPositionOffset(), left: 'center' };
     if (position === 'left') return { left: getPositionOffset(), top: 'center' };
     if (position === 'right') return { right: getPositionOffset(), top: 'center' };
-    
+
     return { top: getPositionOffset(), left: 'center' };
   };
 
@@ -212,8 +212,8 @@ export function getPieLegend(
 ): any {
   return getLegendConfig(theme, {
     show,
-    position: 'right',
-    orientation: 'vertical',
+    position: 'bottom',
+    orientation: 'horizontal',
     data,
     icon: 'circle',
   });
@@ -287,7 +287,7 @@ export function getConditionalLegend(
   hasTitle = false
 ): any {
   const shouldShow = data.length >= minSeriesCount;
-  
+
   return getLegendConfig(theme, {
     show: shouldShow,
     position: 'top',
