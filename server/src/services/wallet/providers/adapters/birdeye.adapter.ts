@@ -1,10 +1,10 @@
-import { callViaAcms } from "./index";
+import { callViaAcms } from "./index.js";
 
 export async function callBirdeye<T>(
-    endpoint: string | URL,
-    params: any,
-    fetcher: () => Promise<T>,
-    opts?: { requestSchema?: any; responseSchema?: any },
+  endpoint: string | URL,
+  params: any,
+  fetcher: () => Promise<T>,
+  opts?: { requestSchema?: any; responseSchema?: any },
 ): Promise<T> {
-    return callViaAcms("birdeye", endpoint, params, fetcher, opts);
+  return callViaAcms("birdeye", endpoint, params, fetcher, opts);
 }

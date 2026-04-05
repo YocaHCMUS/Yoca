@@ -1,15 +1,15 @@
-import { mapWithConcurrency } from "@sv/util/concurrency";
+import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type {
   WalletOverviewPeriodKey,
   WalletTimePeriod,
-} from "./dtos/walletDataObjects";
+} from "./dtos/walletDataObjects.js";
 import {
   getWalletBalanceHistory,
   resolveWalletTimeRangeSec,
-} from "./walletCharts.service";
-import { getWalletOverview } from "./walletOverview.service";
-import { getWalletPortfolio } from "./walletPortfolio.service";
-import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service";
+} from "./walletCharts.service.js";
+import { getWalletOverview } from "./walletOverview.service.js";
+import { getWalletPortfolio } from "./walletPortfolio.service.js";
+import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service.js";
 
 export interface StablecoinRatioRequest {
   wallets: string[];

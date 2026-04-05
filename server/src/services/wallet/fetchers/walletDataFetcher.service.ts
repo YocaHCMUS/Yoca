@@ -31,7 +31,7 @@ import {
   toOptionalNumber,
   toTokenAmount,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter";
+import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
 import {
   birdeyeGetJson,
   birdeyePostJson,
