@@ -255,8 +255,8 @@ export const translation = {
     value: "Value",
     change24h: "Change (24h)",
     // Token Details Demo
-    tokensLastTraded: "Tokens Last Traded",
-    tokensLastTradedDescription: "Tokens with recent trading activities",
+    tokensLastTraded: "Last traded tokens",
+    tokensLastTradedDescription: "Tokens with recent trading activity",
     balance: "Balance",
     profit: "Profit",
     realizedProfit: "Realized Profit",

@@ -236,8 +236,8 @@ export const translation = defineTranslation({
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
     // Token Details Demo
-    tokensLastTraded: "Token vừa giao dịch",
-    tokensLastTradedDescription: "Các token có hoạt động giao dịch gần đây",
+    tokensLastTraded: "Những token giao dịch gần nhất",
+    tokensLastTradedDescription: "Token có hoạt động giao dịch gần đây",
     balance: "Số dư",
     profit: "Lợi nhuận",
     realizedProfit: "Lợi nhuận thực hiện",

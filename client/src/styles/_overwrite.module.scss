@@ -66,16 +66,18 @@
   }
 
   .stickyHeaderCell {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
 
     :global(.cds--table-header-label) {
-      white-space: normal !important;
-      overflow: visible !important;
-      text-overflow: unset !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
       line-height: 1.25;
       display: block;
+      max-width: 100%;
     }
   }
 
@@ -109,6 +111,10 @@
 
   .titleText {
     text-transform: uppercase;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   .tblTitle {

@@ -29,6 +29,8 @@ interface TblHdr {
   key: string;
   align?: "start" | "center" | "end";
   width?: number | string;
+  minWidth?: number | string;
+  maxWidth?: number | string;
   style?: CSSProperties;
 }
 
@@ -103,14 +105,19 @@ export default function Tble({
           ? overwriteStyles.alignCenter
           : overwriteStyles.alignStart;
 
+    const minW = header?.minWidth ?? header?.width;
+    const style: CSSProperties = {
+      ...(header?.width != null ? { width: header.width } : {}),
+      ...(minW != null ? { minWidth: minW } : {}),
+      ...(header?.maxWidth != null ? { maxWidth: header.maxWidth } : {}),
+      verticalAlign: stickyHeader ? undefined : "middle",
+      ...header?.style,
+    };
+
     return {
       bodyClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
       headerClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyHeaderCell : ""}`,
-      style: {
-        width: header?.width,
-        minWidth: header?.width,
-        verticalAlign: stickyHeader ? undefined : "middle",
-      } as CSSProperties,
+      style,
     };
   };
 
@@ -180,11 +187,18 @@ export default function Tble({
             <div
               style={{
                 height,
-                tableLayout: "fixed",
                 width: "100%",
+                overflow: "auto",
               }}
             >
-              <Table {...getTableProps()}>
+              <Table
+                {...getTableProps()}
+                style={{
+                  width: "max-content",
+                  minWidth: "100%",
+                  tableLayout: "auto",
+                }}
+              >
                 <TableHead hidden={hideHeaders}>
                   <TableRow>
                     {internalHeaders.map((header) => {
