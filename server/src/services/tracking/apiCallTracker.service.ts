@@ -2,6 +2,7 @@ import {
     API_CALL_TRACKER_ENABLED,
     API_CALL_TRACKER_PROVIDER_ALLOWLIST,
 } from "@sv/config/constants.js";
+import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import {
     getRequestContext,
     setFirstCallerIfUnset,
@@ -151,19 +152,20 @@ export interface TrackedFetchInput {
 export async function trackedFetch(input: TrackedFetchInput): Promise<Response> {
     const urlString = input.url instanceof URL ? input.url.toString() : input.url;
     const method = input.init?.method ?? "GET";
+    const init = mergeOutboundFetchTimeout(input.init);
 
     return trackApiCallResponse(
         {
             provider: input.provider,
             url: urlString,
             method,
-            requestHeaders: input.init?.headers,
-            requestBody: input.init?.body,
+            requestHeaders: init.headers,
+            requestBody: init.body,
             apiKey: input.apiKey,
             serviceFile: input.serviceFile,
             functionName: input.functionName,
             routeHint: input.routeHint,
         },
-        () => fetch(urlString, input.init),
+        () => fetch(urlString, init),
     );
 }

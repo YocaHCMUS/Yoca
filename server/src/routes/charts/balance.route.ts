@@ -95,7 +95,7 @@ const app = new Hono().get("/", async (c) => {
             const allHistories = await mapWithConcurrency(
                 walletAddresses,
                 MAX_WALLET_CHART_CONCURRENCY,
-                async (address) => getWalletBalanceHistory(address),
+                async (address) => getWalletBalanceHistory(address, params.timePeriod),
             );
 
             const series =
@@ -120,7 +120,7 @@ const app = new Hono().get("/", async (c) => {
                     series,
                     wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
                     metadata: {
-                        timePeriod: "30D",
+                        timePeriod: params.timePeriod,
                         aggregation: "daily",
                         dataPoints: allHistories[0]?.length ?? 0,
                         currency: "USD",
@@ -231,7 +231,7 @@ const app = new Hono().get("/", async (c) => {
                 series,
                 wallets: walletAddresses.length > 1 ? walletAddresses : undefined,
                 metadata: {
-                    timePeriod: "30D",
+                    timePeriod: params.timePeriod,
                     aggregation: "daily",
                     dataPoints: pairResults[0]?.tokenSeries.length ?? 0,
                     currency: "USD",

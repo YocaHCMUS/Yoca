@@ -1,4 +1,5 @@
 import {
+	WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
 	WALLET_SWAPS_TTL_MS,
 	WALLET_TRANSACTIONS_TTL_MS,
 	WALLET_TRANSFERS_TTL_MS,
@@ -50,8 +51,6 @@ const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
 	30,
 	Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000),
 );
-const BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
 function toIsoTimestamp(value: unknown): string {
 	if (value instanceof Date) {
 		return Number.isNaN(value.getTime())
@@ -665,7 +664,7 @@ export async function getCachedWalletBalanceHistory(
 	coveredFromMs: number;
 	coveredToMs: number;
 } | null> {
-	const threshold = new Date(Date.now() - BALANCE_HISTORY_CACHE_TTL_MS);
+	const threshold = new Date(Date.now() - WALLET_BALANCE_HISTORY_CACHE_TTL_MS);
 	const rows = await db
 		.select()
 		.from(walletBalanceHistoryCache)

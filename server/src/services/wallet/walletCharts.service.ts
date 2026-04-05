@@ -13,16 +13,33 @@ import {
 import { roundUsd } from "./walletNormalization.utils.js";
 import { getHistoricalPortfolioValueSeries } from "./walletPortfolio.service.js";
 import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.service.js";
+import { getCachedWalletBalanceHistory } from "./db/walletDataRetriever.js";
+import { saveBalanceHistoryCache } from "./db/walletDataCacher.js";
+
+function startOfUtcTodayMs(): number {
+    const d = new Date();
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
 
 export async function getWalletBalanceHistory(
     address: string,
+    timePeriod: WalletTimePeriod = "30D",
 ): Promise<BalanceDataPoint[]> {
-    const timePeriod: WalletTimePeriod = "30D";
     const rangeSec = resolveWalletTimeRangeSec(timePeriod);
     const fromMs = rangeSec.fromSec * 1000;
     const toMs = rangeSec.toSec * 1000;
 
     try {
+        const cached = await getCachedWalletBalanceHistory(address, timePeriod);
+        if (cached && cached.points.length > 0) {
+            const filtered = cached.points.filter(
+                (p) => p.timestamp >= fromMs && p.timestamp <= toMs,
+            );
+            if (filtered.length > 0) {
+                return [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+            }
+        }
+
         const response = await fetchBirdeyeNetworthHistory(address, {
             type: "1d",
             count: 30,
@@ -44,13 +61,27 @@ export async function getWalletBalanceHistory(
             pointsByTimestamp.set(timestamp, roundUsd(point.netWorthUsd));
         }
 
-        return Array.from(pointsByTimestamp.entries())
+        const series = Array.from(pointsByTimestamp.entries())
             .map(([timestamp, value]) => ({
                 timestamp,
                 value,
                 date: new Date(timestamp).toISOString(),
             }))
             .sort((a, b) => a.timestamp - b.timestamp);
+
+        const todayStart = startOfUtcTodayMs();
+        const forCache = series.filter((p) => p.timestamp < todayStart);
+        if (forCache.length > 0) {
+            await saveBalanceHistoryCache(
+                address,
+                timePeriod,
+                forCache,
+                forCache[0]!.timestamp,
+                forCache[forCache.length - 1]!.timestamp,
+            );
+        }
+
+        return series;
     } catch (error) {
         console.error("[WalletBalanceHistory] failed to build historical series", {
             address,

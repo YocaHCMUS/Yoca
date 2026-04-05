@@ -1,4 +1,5 @@
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
+import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 
@@ -46,18 +47,19 @@ export async function moralisFetch(
   let attempts = 0;
 
   while (attempts <= MAX_429_RETRIES) {
+    const fetchInit = mergeOutboundFetchTimeout(init);
     const resp = await trackApiCallResponse(
       {
         provider: "moralis",
         url: url.toString(),
-        method: init.method ?? "GET",
-        requestHeaders: init.headers,
-        requestBody: init.body,
+        method: fetchInit.method ?? "GET",
+        requestHeaders: fetchInit.headers,
+        requestBody: fetchInit.body,
         apiKey: keyMeta,
         serviceFile: "server/src/util/util-moralis.ts",
         functionName: "moralisFetch",
       },
-      () => fetch(url, init),
+      () => fetch(url, fetchInit),
     );
     lastResponse = resp;
     if (resp.status !== 429) {
