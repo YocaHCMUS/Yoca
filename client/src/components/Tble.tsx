@@ -209,6 +209,11 @@ export default function Tble({
                           key={header.key}
                           className={`${overwriteStyles.headerCell} ${config.headerClassName}`}
                           style={config.style}
+                          title={
+                            typeof header.header === "string"
+                              ? header.header
+                              : undefined
+                          }
                         >
                           {header.header}
                         </TableHeader>
