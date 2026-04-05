@@ -11,7 +11,6 @@ import {
     renderCurrency,
     renderDateTime,
     renderHash,
-    renderPositiveNegative,
     renderReducedNumber,
     renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
@@ -353,18 +352,17 @@ export default function WalletPage() {
         tr("walletPage.price"),
         tr("walletPage.holding"),
         tr("walletPage.value"),
-        tr("walletPage.change24h"),
     ];
 
     const isSortableCounterparties = [false, false, true, false, true, true];
-    const isSortablePortfolio = [false, true, true, true, true];
+    const isSortablePortfolio = [false, true, true, true];
     const isSortableSwaps = [true, false, false, false, false, true, true];
     const isSortableTransfers = [false, false, false, true, true];
 
     const counterpartySortConfigs = { 2: { type: SortType.Number }, 4: { type: SortType.Number }, 5: { type: SortType.Number } };
     const swapSortConfigs = { 0: { type: SortType.Date }, 5: { type: SortType.Number }, 6: { type: SortType.Number } };
     const transferSortConfigs = { 3: { type: SortType.Number }, 4: { type: SortType.Date } };
-    const portfolioSortConfig = { 1: { type: SortType.Number }, 2: { type: SortType.Number }, 3: { type: SortType.Number }, 4: { type: SortType.Number } };
+    const portfolioSortConfig = { 1: { type: SortType.Number }, 2: { type: SortType.Number }, 3: { type: SortType.Number } };
 
     const counterpartyCellRenderers = [
         (value: string) => renderHash(value),
@@ -439,10 +437,15 @@ export default function WalletPage() {
                 />
             );
         },
-        (value: string) => renderCurrency(value),
+        (value: unknown) => {
+            const n = Number(value);
+            return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
+        },
         (value: string) => renderReducedNumber(value, renderBase, bcp47),
-        (value: string) => renderCurrency(value),
-        (value: string) => renderPositiveNegative(value, true, true),
+        (value: unknown) => {
+            const n = Number(value);
+            return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
+        },
     ];
 
     const counterpartyFilterSchema = {
@@ -459,7 +462,6 @@ export default function WalletPage() {
         1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
         2: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
         3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
-        4: { type: FilterType.Range, min: -1, max: 1, step: 0.001 },
     };
 
     const handleSwapPageChange = async (): Promise<boolean> => {
@@ -876,11 +878,11 @@ export default function WalletPage() {
         <div className={styles.tabPane}>
             <PageSection>
                 <div className={styles.sectionStack}>
-                    <div style={{ display: "flex" }}>
-                        <div className={styles.chartSection} style={{ flex: 1 }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                        <div className={styles.chartSection} style={{ flex: "0 1 48%", minWidth: 0 }}>
                             <AssetDistribution initialFilters={{ wallets: address ? [address] : [], timePeriod: "30D" }} autoRefresh />
                         </div>
-                        <div className={styles.chartSection} style={{ flex: 1 }}>
+                        <div className={styles.chartSection} style={{ flex: "1 1 52%", minWidth: 280 }}>
                             <Table
                                 maxHeight={400}
                                 title={tr("walletPage.portfolio")}

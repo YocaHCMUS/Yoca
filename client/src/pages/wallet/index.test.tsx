@@ -100,12 +100,7 @@ describe('WalletPage portfolio data preparation', () => {
             const { rows } = mapPortfolioItems([solItem]);
             expect(typeof rows[0][3]).toBe('number');
             expect(rows[0][3]).toBe(1500);
-        });
-
-        it('change24h column (4) is numeric (fraction of percent)', () => {
-            const { rows } = mapPortfolioItems([solItem]);
-            expect(typeof rows[0][4]).toBe('number');
-            expect(rows[0][4]).toBeCloseTo(0.05); // 5% → 0.05
+            expect(rows[0]).toHaveLength(4);
         });
     });
 

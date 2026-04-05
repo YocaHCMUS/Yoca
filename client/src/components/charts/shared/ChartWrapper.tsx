@@ -204,47 +204,52 @@ export function ChartWrapper({
   /**
    * Render viewing mode controls
    */
-  const renderControls = () => (
-    <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
-      {enableFullscreen && (
-        <button
-          className={styles.controlButton}
-          onClick={enterFullscreen}
-          aria-label={tr('charts.enterFullscreenMode')}
-          title={tr('charts.fullscreen')}
-          disabled={loadingState.status === 'loading'}
-          tabIndex={0}
-        >
-          <Maximize
-            width={20}
-            height={20}
-            stroke='currentColor'
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round" />
-        </button>
-      )}
+  const renderControls = () => {
+    if (!enableFullscreen && !enableMiniPlayer) {
+      return null;
+    }
+    return (
+      <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
+        {enableFullscreen && (
+          <button
+            className={styles.controlButton}
+            onClick={enterFullscreen}
+            aria-label={tr('charts.enterFullscreenMode')}
+            title={tr('charts.fullscreen')}
+            disabled={loadingState.status === 'loading'}
+            tabIndex={0}
+          >
+            <Maximize
+              width={20}
+              height={20}
+              stroke='currentColor'
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round" />
+          </button>
+        )}
 
-      {enableMiniPlayer && (
-        <button
-          className={styles.controlButton}
-          onClick={enterMiniPlayer}
-          aria-label={tr('charts.openMiniPlayer')}
-          title={tr('charts.miniPlayer')}
-          disabled={loadingState.status === 'loading'}
-          tabIndex={0}
-        >
-          <ShrinkScreen
-            width="20"
-            height="20"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1"
-          />
-        </button>
-      )}
-    </div>
-  );
+        {enableMiniPlayer && (
+          <button
+            className={styles.controlButton}
+            onClick={enterMiniPlayer}
+            aria-label={tr('charts.openMiniPlayer')}
+            title={tr('charts.miniPlayer')}
+            disabled={loadingState.status === 'loading'}
+            tabIndex={0}
+          >
+            <ShrinkScreen
+              width="20"
+              height="20"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="1"
+            />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   /**
    * Render chart content area
@@ -312,14 +317,18 @@ export function ChartWrapper({
           </h2>
           <div className={styles.headerActions}>
             {actions}
-            {renderControls()}
-            {enableExport && onExport && (
-              <ExportMenu
-                onExport={handleExport}
-                isExporting={isExporting}
-                disabled={loadingState.status === 'loading' || isEmpty}
-              />
-            )}
+            <div className={styles.headerToolbarColumn}>
+              {renderControls()}
+              {enableExport && onExport && (
+                <div className={styles.exportMenuRow}>
+                  <ExportMenu
+                    onExport={handleExport}
+                    isExporting={isExporting}
+                    disabled={loadingState.status === 'loading' || isEmpty}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

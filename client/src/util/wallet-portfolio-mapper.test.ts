@@ -122,11 +122,6 @@ describe('mapPortfolioItems', () => {
         expect(rows[0][3]).toBe(6375);
     });
 
-    it('column 4 (change24h) is change24hPercent / 100', () => {
-        const { rows } = mapPortfolioItems([makeItem({ change24hPercent: 5 })]);
-        expect(rows[0][4]).toBeCloseTo(0.05);
-    });
-
     it('defaults missing numeric fields to 0', () => {
         const { rows } = mapPortfolioItems([
             makeItem({ priceUsd: undefined, amount: 0, valueUsd: 0, change24hPercent: undefined }),
@@ -134,7 +129,7 @@ describe('mapPortfolioItems', () => {
         expect(rows[0][1]).toBe(0);
         expect(rows[0][2]).toBe(0);
         expect(rows[0][3]).toBe(0);
-        expect(rows[0][4]).toBe(0);
+        expect(rows[0]).toHaveLength(4);
     });
 
     it('produces parallel meta with logoUri', () => {
