@@ -65,6 +65,26 @@
     white-space: nowrap;
   }
 
+  /* Sticky headers: show full titles (wrap at word boundaries; no ellipsis). */
+  .stickyHeaderCell {
+    white-space: normal;
+    overflow: visible;
+    vertical-align: bottom;
+    word-break: normal;
+    overflow-wrap: break-word;
+
+    :global(.cds--table-header-label) {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+      line-height: 1.35;
+      display: block;
+      max-width: none;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+  }
+
   .alignStart {
     text-align: left;
     justify-content: flex-start;
@@ -95,6 +115,10 @@
 
   .titleText {
     text-transform: uppercase;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   .tblTitle {

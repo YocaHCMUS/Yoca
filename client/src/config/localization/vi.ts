@@ -144,6 +144,7 @@ export const translation = defineTranslation({
   },
   // Wallet
   wallet: {
+    transactionCount: "Số lượng giao dịch",
     connectWallet: "Kết nối ví",
     selectWallet: "Chọn một ví",
     detected: "Đã phát hiện",
@@ -203,6 +204,9 @@ export const translation = defineTranslation({
   // Wallet Page
   walletPage: {
     addressNotFound: "Không tìm thấy địa chỉ",
+    overview: "Tổng quan",
+    holdings: "Nắm giữ",
+    activityRisk: "Hoạt động / Rủi ro",
     activity: "Hoạt động",
     asset: "Tài sản",
     topExchange: "Sàn giao dịch hàng đầu",
@@ -232,8 +236,8 @@ export const translation = defineTranslation({
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
     // Token Details Demo
-    tokensLastTraded: "Token vừa giao dịch",
-    tokensLastTradedDescription: "Các token có hoạt động giao dịch gần đây",
+    tokensLastTraded: "Những token giao dịch gần nhất",
+    tokensLastTradedDescription: "Token có hoạt động giao dịch gần đây",
     balance: "Số dư",
     profit: "Lợi nhuận",
     realizedProfit: "Lợi nhuận thực hiện",
@@ -271,6 +275,13 @@ export const translation = defineTranslation({
     unknownEntity: "Thực thể không xác định",
     identityKnown: "Đã biết",
     identityUnavailable: "Định danh không khả dụng",
+    firstFunderTag: "Ví tài trợ đầu",
+    firstFunderUnavailable: "Không có dữ liệu ví tài trợ đầu",
+    openFirstFunderWallet: "Mở ví tài trợ đầu",
+    walletAgeTag: "Tuổi ví",
+    walletAgeUnitDay: "Ng",
+    walletAgeUnitMonth: "Thg",
+    walletAgeUnitYear: "Nm",
     manageTagsLabel: "Quản lý nhãn",
     signInManageTagsLabel: "Đăng nhập để quản lý nhãn",
     defaultWalletName: "Ví",

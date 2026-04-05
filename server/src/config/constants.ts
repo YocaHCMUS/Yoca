@@ -42,6 +42,7 @@ export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function readBooleanEnv(name: string, fallback: boolean): boolean {
   const value = process.env[name]?.trim().toLowerCase();
@@ -65,6 +66,12 @@ function readNumberEnv(name: string, fallback: number): number {
 
   return parsed;
 }
+
+/** Upper bound for outbound provider HTTP requests (Helius, Moralis, Birdeye, CoinGecko, etc.). */
+export const OUTBOUND_FETCH_TIMEOUT_MS = readNumberEnv(
+  "OUTBOUND_FETCH_TIMEOUT_MS",
+  90_000,
+);
 
 function readListEnv(name: string): string[] {
   const raw = process.env[name]?.trim();

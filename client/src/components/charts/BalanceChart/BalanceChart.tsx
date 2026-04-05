@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { Add, Close, Repeat } from '@carbon/react/icons';
+import { Close } from '@carbon/react/icons';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
@@ -514,12 +514,22 @@ export function BalanceChart({
             const nextMap: Record<string, BalanceSeries> = {};
 
             for (const tokenChunk of chunks) {
-                const response = await fetchBalanceTrendWithCache({
-                    timePeriod: filters.timePeriod,
-                    wallets: walletsString,
-                    timezone,
-                    tokens: tokenChunk.join(','),
-                });
+                let response: BalanceTrendData | null = null;
+
+                try {
+                    response = await fetchBalanceTrendWithCache({
+                        timePeriod: filters.timePeriod,
+                        wallets: walletsString,
+                        timezone,
+                        tokens: tokenChunk.join(','),
+                    });
+                } catch (error) {
+                    console.warn('[BalanceChart] token prefetch failed for chunk', {
+                        tokenChunk,
+                        error: error instanceof Error ? error.message : String(error),
+                    });
+                    continue;
+                }
 
                 if (!isBalanceChartDisplayData(response)) {
                     continue;
@@ -867,7 +877,7 @@ export function BalanceChart({
         return {
             ...baseOption,
             color: colors,
-            grid: getChartGridConfig(),
+            ...getChartGridConfig,
             legend: getConditionalLegend(chartTheme, windowedDisplaySeries.map((series) => series.label), 2, false),
             xAxis: {
                 ...baseOption.xAxis,
@@ -890,7 +900,7 @@ export function BalanceChart({
             tooltip: {
                 ...baseOption.tooltip,
                 trigger: 'axis',
-                formatter: (params: any) =>
+                formatter: (params) =>
                     formatAxisTooltip(
                         params,
                         (point) => formatTimestampWithTimezone(point.value[0], timezone, 'PPpp'),

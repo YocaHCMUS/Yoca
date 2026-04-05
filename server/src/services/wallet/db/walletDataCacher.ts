@@ -1,8 +1,23 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
+/** Provider payloads sometimes omit exchange fields; DB columns are NOT NULL. */
+function walletSwapExchangeForDb(tx: WalletSwap): {
+  exchangeAddress: string;
+  exchangeName: string;
+  exchangeLogo: string;
+} {
+  const addr = (tx.exchangeAddress ?? "").trim().slice(0, 66);
+  const name = (tx.exchangeName ?? "").trim();
+  const logo = (tx.exchangeLogo ?? "").trim();
+  return {
+    exchangeAddress: addr,
+    exchangeName: name.length > 0 ? name : "Unknown",
+    exchangeLogo: logo,
+  };
+}
 
 export async function saveSwapsCache(
   address: string,
@@ -13,36 +28,45 @@ export async function saveSwapsCache(
       // Deduplicate by transaction hash to avoid multiple rows with the same
       // (address, signature) primary key when providers return several
       // legs for a single on-chain transaction.
+
       const uniqueBySignature = new Map<string, WalletSwap>();
       for (const tx of transactions) {
-        if (!uniqueBySignature.has(tx.signature)) {
-          uniqueBySignature.set(tx.signature, tx);
+        if (!uniqueBySignature.has(tx.transactionHash)) {
+          uniqueBySignature.set(tx.transactionHash, tx);
         }
       }
 
       const uniqueTransactions = Array.from(uniqueBySignature.values());
 
-      const rows = uniqueTransactions.map((tx) => ({
-        address: tx.walletAddress,
-        signature: tx.signature,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        slot: tx.slot,
-        fee: tx.fee,
-        feePayer: tx.feePayer,
-        transactionType: tx.transactionType ?? null,
-        subCategory: tx.subCategory ?? null,
-        blockNumber: tx.blockNumber ?? null,
-        exchange: tx.exchange ?? null,
-        pair: tx.pair ?? null,
-        sold: tx.sold ?? null,
-        bought: tx.bought ?? null,
-        baseQuotePrice: tx.baseQuotePrice ?? null,
-        totalValueUsd: tx.totalValueUsd ?? null,
-        source: tx.source ?? null,
-        // First two entries are the swap legs
-        swapBalanceChanges: tx.balanceChanges,
-        feeBalanceChanges: tx.feeChanges,
-      }));
+      const rows = uniqueTransactions.map((tx) => {
+        const ex = walletSwapExchangeForDb(tx);
+        return {
+          transactionHash: tx.transactionHash,
+          transactionType: tx.transactionType,
+          blockTimestampMs: new Date(Date.parse(tx.blockTimestampIso) || Date.now()).getTime(),
+
+          subcategory: tx.subcategory,
+
+          walletAddress: tx.walletAddress,
+          pairAddress: tx.pairAddress,
+
+          tokensInvoled: tx.tokensInvolved,
+          exchangeAddress: ex.exchangeAddress,
+          exchangeName: ex.exchangeName,
+          exchangeLogo: ex.exchangeLogo,
+
+          boughtTokenAddress: tx.bought.address,
+          boughtTokenAmount: tx.bought.amount,
+          boughtTokenPriceUsd: tx.bought.priceUsd,
+
+          soldTokenAddress: tx.sold.address,
+          soldTokenAmount: tx.sold.amount,
+          soldTokenPriceUsd: tx.sold.priceUsd,
+
+          totalValueUsd: tx.totalValueUsd,
+          baseQuotePrice: tx.baseQuotePrice,
+        };
+      });
 
       await db.insert(walletSwap).values(rows).onConflictDoNothing();
     }
@@ -417,3 +441,20 @@ export async function saveBalanceHistoryCache(
   }
 }
 
+export async function saveWalletFirstFundCache(
+  firstFund: HeliusWalletFirstFund,
+) {
+  try {
+    await db
+      .insert(walletFirstFund)
+      .values(firstFund)
+      .onConflictDoUpdate({
+        target: [walletFirstFund.reciepient],
+        set: {
+          ...firstFund,
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet first fund cache", err);
+  }
+}

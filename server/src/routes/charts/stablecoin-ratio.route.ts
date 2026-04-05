@@ -61,7 +61,11 @@ const app = new Hono()
 
       // Generate stablecoin ratio data
       const data = await getStablecoinRatio(request);
-      const processedData = await processStablecoinRatioData(data, request.period);
+      const processedData = await processStablecoinRatioData(
+        data,
+        request.period,
+        request.wallets,
+      );
 
       // Return response
       return c.json(processedData, 200);

@@ -47,7 +47,6 @@ import {
   WALLET_TABLE_PAGE_SIZE,
 } from "@sv/services/wallet/wallet.constants.js";
 import { getWalletExchangeCountsWithFetcher } from "@sv/services/wallet/walletExchangeAggregation.service.js";
-import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
 
 export type { WalletOverviewTimePeriod, WalletTimePeriod };
@@ -411,7 +410,7 @@ export function getOverviewPeriodStatsFromCache(
   };
 }
 
-function isPeriodStatsPopulated(stats: WalletOverviewPeriodStats): boolean {
+export function isPeriodStatsPopulated(stats: WalletOverviewPeriodStats): boolean {
   return (
     stats.tradingVolumeUsd != null ||
     stats.transactionCount != null ||
@@ -712,10 +711,11 @@ export async function buildActivitySnapshotFromProviders(
   };
 }
 
-export function mapBirdeyeSummaryToPeriodStats(summary: any): OverviewActivitySnapshot {
-  const counts = summary?.counts ?? undefined;
-  const cashflowUsd = summary?.cashflow_usd ?? undefined;
-  const pnl = summary?.pnl ?? undefined;
+export function mapBirdeyeSummaryToPeriodStats(summary: unknown): OverviewActivitySnapshot {
+  const summaryObj = (summary ?? {}) as Record<string, unknown>;
+  const counts = (summaryObj.counts ?? {}) as Record<string, unknown>;
+  const cashflowUsd = (summaryObj.cashflow_usd ?? {}) as Record<string, unknown>;
+  const pnl = (summaryObj.pnl ?? {}) as Record<string, unknown>;
 
   const buyTransactionCount = toNullableFiniteNumber(counts?.total_buy);
   const sellTransactionCount = toNullableFiniteNumber(counts?.total_sell);
@@ -738,7 +738,7 @@ export function mapBirdeyeSummaryToPeriodStats(summary: any): OverviewActivitySn
       (buyTransactionCount != null || sellTransactionCount != null
         ? (buyTransactionCount ?? 0) + (sellTransactionCount ?? 0)
         : null),
-    tokensTradedCount: toNullableFiniteNumber(summary?.unique_tokens),
+    tokensTradedCount: toNullableFiniteNumber(summaryObj.unique_tokens),
     pnlTotalUsd: toNullableFiniteNumber(pnl?.total_usd),
     pnlRealizedUsd: toNullableFiniteNumber(pnl?.realized_profit_usd),
     pnlUnrealizedUsd: toNullableFiniteNumber(pnl?.unrealized_usd),

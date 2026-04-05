@@ -16,7 +16,7 @@ import { isTimeSeriesPoint, isCategoricalPoint, isDistributionPoint } from '../.
  */
 export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata): string {
   const lines: string[] = [];
-  
+
   // Add metadata header
   lines.push(`# Chart: ${metadata.chartTitle}`);
   lines.push(`# Timezone: ${metadata.timezone}`);
@@ -29,18 +29,18 @@ export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata):
   }
   lines.push(`# Data Points: ${metadata.dataPointCount}`);
   lines.push('');
-  
+
   if (data.length === 0 || data[0].data.length === 0) {
     lines.push('No data available');
     return lines.join('\n');
   }
-  
+
   const firstPoint = data[0].data[0];
-  
+
   // Time series data format
   if (isTimeSeriesPoint(firstPoint)) {
     lines.push('Timestamp,ISO Date,Series,Value');
-    
+
     data.forEach((series) => {
       series.data.forEach((point) => {
         if (isTimeSeriesPoint(point)) {
@@ -55,7 +55,7 @@ export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata):
   // Categorical data format
   else if (isCategoricalPoint(firstPoint)) {
     lines.push('Category,Series,Value');
-    
+
     data.forEach((series) => {
       series.data.forEach((point) => {
         if (isCategoricalPoint(point)) {
@@ -67,7 +67,7 @@ export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata):
   // Distribution data format
   else if (isDistributionPoint(firstPoint)) {
     lines.push('Name,Series,Value');
-    
+
     data.forEach((series) => {
       series.data.forEach((point) => {
         if (isDistributionPoint(point)) {
@@ -76,7 +76,7 @@ export function convertToCSV(data: ChartDataSeries[], metadata: ExportMetadata):
       });
     });
   }
-  
+
   return lines.join('\n');
 }
 
@@ -98,7 +98,7 @@ export function convertToJSON(data: ChartDataSeries[], metadata: ExportMetadata)
     metadata,
     series: data,
   };
-  
+
   return JSON.stringify(exportData, null, 2);
 }
 
@@ -120,17 +120,19 @@ export function calculateExportDimensions(
  * Validate export filename
  */
 export function validateFilename(filename: string): boolean {
-  // Check for invalid characters
-  const invalidChars = /[<>:"/\\|?*\x00-\x1f]/g;
-  if (invalidChars.test(filename)) {
-    return false;
+  // Check for invalid filename chars and ASCII control chars.
+  for (const ch of filename) {
+    const code = ch.charCodeAt(0);
+    if (code <= 31 || '<>:"/\\|?*'.includes(ch)) {
+      return false;
+    }
   }
-  
+
   // Check length (Windows MAX_PATH limit)
   if (filename.length > 255) {
     return false;
   }
-  
+
   return true;
 }
 
@@ -138,19 +140,21 @@ export function validateFilename(filename: string): boolean {
  * Sanitize filename by removing/replacing invalid characters
  */
 export function sanitizeFilename(filename: string): string {
-  // Replace invalid characters with underscores
-  const invalidChars = /[<>:"/\\|?*\x00-\x1f]/g;
-  let sanitized = filename.replace(invalidChars, '_');
-  
+  // Replace invalid chars and ASCII control chars with underscores.
+  let sanitized = Array.from(filename, (ch) => {
+    const code = ch.charCodeAt(0);
+    return code <= 31 || '<>:"/\\|?*'.includes(ch) ? '_' : ch;
+  }).join('');
+
   // Trim whitespace
   sanitized = sanitized.trim();
-  
+
   // Limit length
   if (sanitized.length > 200) {
     const ext = sanitized.slice(sanitized.lastIndexOf('.'));
     sanitized = sanitized.slice(0, 200 - ext.length) + ext;
   }
-  
+
   return sanitized;
 }
 
@@ -164,7 +168,7 @@ export function getMimeType(format: 'png' | 'svg' | 'csv' | 'json'): string {
     csv: 'text/csv',
     json: 'application/json',
   };
-  
+
   return mimeTypes[format] || 'application/octet-stream';
 }
 
@@ -173,23 +177,23 @@ export function getMimeType(format: 'png' | 'svg' | 'csv' | 'json'): string {
  */
 export function triggerDownload(content: string | Blob, filename: string, mimeType?: string): void {
   let url: string;
-  
+
   if (typeof content === 'string') {
     const blob = new Blob([content], { type: mimeType || 'text/plain' });
     url = URL.createObjectURL(blob);
   } else {
     url = URL.createObjectURL(content);
   }
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = sanitizeFilename(filename);
-  
+
   // Append to body, click, and remove
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   // Clean up URL after a short delay
   setTimeout(() => {
     URL.revokeObjectURL(url);

@@ -2,8 +2,6 @@
  * Test CoinGecko API - Get SOL Token Data
  */
 
-const API_KEY = "CG-DEMO-API-KEY"; // Demo key có thể dùng free
-
 async function fetchSolData() {
     const url = "https://api.coingecko.com/api/v3/coins/markets";
 

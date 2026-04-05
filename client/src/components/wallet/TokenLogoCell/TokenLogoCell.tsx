@@ -68,6 +68,10 @@ export function TokenLogoCell({ label, logoUri }: TokenLogoCellProps): React.Rea
                     style={imgStyle}
                     width={20}
                     height={20}
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                    loading="eager"
+                    decoding="async"
                     onError={() => setImgFailed(true)}
                 />
             ) : (

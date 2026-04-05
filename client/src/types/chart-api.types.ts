@@ -12,6 +12,7 @@ import type { TimeSeriesPoint, DistributionPoint } from './chart-data.types';
  * Base interface for all responses
  */
 export interface ChartResponseBase {
+  _base?: never;
 }
 
 /**

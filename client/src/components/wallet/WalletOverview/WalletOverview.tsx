@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu, Wallet } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
-import type { TranslationKeyPath } from '@/config/localization';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     fetchWalletIntelligence,
     fetchWalletOverview,
+    type WalletIdentityAnalysis,
+    type WalletIntelligenceResponse,
     type WalletOverviewMultiPeriodResponse,
     type WalletOverviewPeriodKey,
 } from '@/services/wallet/walletApi';
@@ -37,26 +38,84 @@ function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
     return 'red';
 }
 
+function getFirstFundDisplayLabel(firstFund: WalletIdentityAnalysis['firstFund']): string | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    return firstFund.funderLabel ?? firstFund.funderAddress ?? null;
+}
+
+function resolveWalletAgeDays(firstFund: WalletIdentityAnalysis['firstFund']): number | null {
+    if (!firstFund) {
+        return null;
+    }
+
+    if (firstFund.walletAgeDays != null && Number.isFinite(firstFund.walletAgeDays)) {
+        return Math.max(0, Math.floor(firstFund.walletAgeDays));
+    }
+
+    if (firstFund.firstFundTimestampSec != null && Number.isFinite(firstFund.firstFundTimestampSec)) {
+        const elapsedMs = Math.max(0, Date.now() - firstFund.firstFundTimestampSec * 1000);
+        return Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
+    }
+
+    return null;
+}
+
+function formatLocalizedWalletAge(
+    ageDays: number,
+    units: { day: string; month: string; year: string },
+): string {
+    const years = Math.floor(ageDays / 365);
+    const remainingAfterYears = ageDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const days = remainingAfterYears % 30;
+
+    const parts: string[] = [];
+    if (years > 0) {
+        parts.push(`${years} ${units.year}`);
+    }
+    if (months > 0) {
+        parts.push(`${months} ${units.month}`);
+    }
+    if (days > 0 && years === 0) {
+        parts.push(`${days} ${units.day}`);
+    }
+
+    if (parts.length === 0) {
+        return `0 ${units.day}`;
+    }
+
+    return parts.slice(0, 2).join(' ');
+}
+
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
     initialFilters?: Partial<any>;
     autoRefresh?: boolean;
     refreshInterval?: number;
+    /** When false, skips GET /wallets/intelligence until enabled (saves heavy API work until needed). */
+    enableIntelligence?: boolean;
 }
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import WalletOverviewValueSection from './WalletOverviewValueSection';
+import WalletOverviewTradingSection from './WalletOverviewTradingSection';
+import WalletOverviewPnLSection from './WalletOverviewPnLSection';
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',
     autoRefresh = true,
     refreshInterval = 30000,
+    enableIntelligence = true,
 }) => {
     const { user } = useAuth();
     const { tr, fmt } = useLocalization();
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>('24H');
-    const [intelligence, setIntelligence] = useState<any>(null);
+    const [intelligence, setIntelligence] = useState<WalletIntelligenceResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -100,27 +159,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 setLoading(true);
                 setError(null);
 
-                const [overviewResult, intelligenceResult] = await Promise.allSettled([
-                    fetchWalletOverview(walletAddress, 'solana'),
-                    fetchWalletIntelligence(walletAddress, 'solana'),
-                ]);
-
-                if (overviewResult.status === 'rejected') {
-                    throw overviewResult.reason;
-                }
-
-                setOverview(overviewResult.value);
-                setSelectedPeriod(overviewResult.value.selectedPeriod ?? '24H');
-
-                if (intelligenceResult.status === 'fulfilled') {
-                    setIntelligence(intelligenceResult.value);
-                } else {
-                    setIntelligence(null);
-                }
+                const overviewResult = await fetchWalletOverview(walletAddress, 'solana');
+                setOverview(overviewResult);
+                setSelectedPeriod(overviewResult.selectedPeriod ?? '24H');
             } catch (err) {
                 console.error('Failed to fetch wallet overview:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load wallet data');
-                setIntelligence(null);
             } finally {
                 setLoading(false);
             }
@@ -135,6 +179,34 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             }
         }
     }, [walletAddress, autoRefresh, refreshInterval]);
+
+    useEffect(() => {
+        if (!walletAddress || walletAddress === 'null') {
+            return;
+        }
+
+        if (!enableIntelligence) {
+            setIntelligence(null);
+            return;
+        }
+
+        const loadIntelligence = async () => {
+            try {
+                const intelligenceResult = await fetchWalletIntelligence(walletAddress, 'solana');
+                setIntelligence(intelligenceResult);
+            } catch (err) {
+                console.error('Failed to fetch wallet intelligence:', err);
+                setIntelligence(null);
+            }
+        };
+
+        loadIntelligence();
+
+        if (autoRefresh) {
+            const interval = setInterval(loadIntelligence, refreshInterval);
+            return () => clearInterval(interval);
+        }
+    }, [walletAddress, enableIntelligence, autoRefresh, refreshInterval]);
 
     const handleLabelSave = (newLabel: string) => {
         setLabel(newLabel);
@@ -158,6 +230,17 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityName = intelligence?.identity?.name ?? null;
     const identityCategory = intelligence?.identity?.category ?? null;
     const riskLevel = intelligence?.analysis?.riskLevel ?? null;
+    const firstFund = intelligence?.analysis?.firstFund ?? null;
+    const firstFundAddress = firstFund?.funderAddress ?? null;
+    const firstFundLabel = getFirstFundDisplayLabel(firstFund);
+    const walletAgeDays = resolveWalletAgeDays(firstFund);
+    const walletAgeLabel = walletAgeDays != null
+        ? formatLocalizedWalletAge(walletAgeDays, {
+            day: String(tr('walletPage.walletAgeUnitDay')),
+            month: String(tr('walletPage.walletAgeUnitMonth')),
+            year: String(tr('walletPage.walletAgeUnitYear')),
+        })
+        : null;
 
     const name = label || (identityStatus === 'known' && identityName ? identityName : tr('walletPage.defaultWalletName'));
     const displayedAddress = identityStatus === 'unknown'
@@ -168,7 +251,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const holdings = overview?.holdings ?? null;
 
     const totalAssetValue = holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd ?? null;
-    const assetChange24hPercent = holdings?.change24hPercent ?? null;
     const tradingVolume = selectedStats?.tradingVolumeUsd ?? overview?.tradingVolumeUsd24h ?? null;
     const totalPnL = selectedStats?.pnl?.totalUsd ?? overview?.pnlUsdTotal ?? null;
     const tokenTraded = selectedStats?.tokensTradedCount ?? overview?.tokensTradedCount ?? null;
@@ -235,6 +317,10 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
+    const handleOpenFirstFunder = (funderAddress: string) => {
+        navigate(`/wallets/${encodeURIComponent(funderAddress)}`);
+    };
+
     return (
         <>
             <div className={styles.walletOverview}>
@@ -275,6 +361,28 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         {identityStatus === 'known' && identityCategory && (
                             <Tag size="sm" type="teal">
                                 {identityCategory}
+                            </Tag>
+                        )}
+                        {firstFundAddress && firstFundLabel && (
+                            <button
+                                type="button"
+                                className={styles.inlineTagButton}
+                                onClick={() => handleOpenFirstFunder(firstFundAddress)}
+                                aria-label={`${String(tr('walletPage.openFirstFunderWallet'))} ${firstFundLabel}`}
+                            >
+                                <Tag size="sm" type="blue" style={{ cursor: 'pointer' }}>
+                                    {String(tr('walletPage.firstFunderTag'))}: {firstFundLabel}
+                                </Tag>
+                            </button>
+                        )}
+                        {!firstFund && intelligence && (
+                            <Tag size="sm" type="cool-gray">
+                                {String(tr('walletPage.firstFunderUnavailable'))}
+                            </Tag>
+                        )}
+                        {walletAgeLabel && (
+                            <Tag size="sm" type="warm-gray">
+                                {String(tr('walletPage.walletAgeTag'))}: {walletAgeLabel}
                             </Tag>
                         )}
                         {identityStatus === 'unknown' && (
@@ -431,151 +539,32 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* Stats rows (vertical, like TokenOverviewStats) */}
                 <div className={styles.statsSection}>
                     <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.totalAssetValue')}</span>
-                            {renderValue(
-                                totalAssetValue != null,
-                                fmt.num.currency(totalAssetValue != null ? parseFloat(totalAssetValue.toFixed(6)) : null),
-                                styles.statValue,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(assetChange24hPercent != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.change24hPercent')}</span>
-                                {renderValue(
-                                    assetChange24hPercent != null,
-                                    fmt.num.percent(assetChange24hPercent),
-                                    assetChange24hPercent != null && assetChange24hPercent >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '62px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
+                        <WalletOverviewValueSection
+                            value={totalAssetValue}
+                            unrealizedPnlInPeriod={selectedStats?.pnl?.unrealizedUsd}
+                            loading={loading}
+                        />
                     </div>
-                    <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.tradingVolume')}</span>
-                            {renderValue(
-                                tradingVolume != null,
-                                fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null),
-                                styles.statValue,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(buyTransactionCount != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.buyTransactionCount')}</span>
-                                {renderValue(
-                                    buyTransactionCount != null,
-                                    fmt.num.decimal(buyTransactionCount),
-                                    styles.subStatValue,
-                                    '54px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(buyVolumeUsd != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.buyVolume')}</span>
-                                {renderValue(
-                                    buyVolumeUsd != null,
-                                    fmt.num.currency(buyVolumeUsd),
-                                    styles.subStatValue,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(sellTransactionCount != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.sellTransactionCount')}</span>
-                                {renderValue(
-                                    sellTransactionCount != null,
-                                    fmt.num.decimal(sellTransactionCount),
-                                    styles.subStatValue,
-                                    '54px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(sellVolumeUsd != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.sellVolume')}</span>
-                                {renderValue(
-                                    sellVolumeUsd != null,
-                                    fmt.num.currency(sellVolumeUsd),
-                                    styles.subStatValue,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <div className={styles.statColumn}>
-                        <div className={styles.statRow}>
-                            <span className={styles.statLabel}>{tr('wallet.totalPnL')}</span>
-                            {renderValue(
-                                totalPnL != null,
-                                fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null),
-                                totalPnL != null && totalPnL >= 0 ? styles.statValuePositive : styles.statValueNegative,
-                                '88px',
-                                '14px',
-                            )}
-                        </div>
-                        {(pnlRealized != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.realizedPnL')}</span>
-                                {renderValue(
-                                    pnlRealized != null,
-                                    fmt.num.currency(pnlRealized),
-                                    pnlRealized != null && pnlRealized >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                        {(pnlUnrealized != null || loading) && (
-                            <div className={styles.subStatRow}>
-                                <span className={styles.subStatLabel}>{tr('wallet.unrealizedPnL')}</span>
-                                {renderValue(
-                                    pnlUnrealized != null,
-                                    fmt.num.currency(pnlUnrealized),
-                                    pnlUnrealized != null && pnlUnrealized >= 0
-                                        ? styles.subStatValuePositive
-                                        : styles.subStatValueNegative,
-                                    '74px',
-                                    '12px',
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <div className={styles.statRow}>
-                        <span className={styles.statLabel}>{tr('wallet.tokensTraded')}</span>
-                        {renderValue(
-                            tokenTraded != null,
-                            fmt.num.decimal(tokenTraded),
-                            styles.statValue,
-                            '52px',
-                            '14px',
-                        )}
-                    </div>
-                    <div className={styles.statRow}>
-                        <span className={styles.statLabel}>{tr('wallet.tokensHolding')}</span>
-                        {renderValue(
-                            numberOfTokenHolding != null,
-                            fmt.num.decimal(numberOfTokenHolding),
-                            styles.statValue,
-                            '52px',
-                            '14px',
-                        )}
-                    </div>
+
+                    <WalletOverviewPnLSection
+                        totalPnL={totalPnL}
+                        realizedPnL={pnlRealized}
+                        unrealizedPnL={pnlUnrealized}
+                        loading={loading}
+                    />
+
+                    <WalletOverviewTradingSection
+                        tradingVolume={tradingVolume}
+                        buyTransactionCount={buyTransactionCount}
+                        buyTradingVolume={buyVolumeUsd}
+                        sellTransactionCount={sellTransactionCount}
+                        sellTradingVolume={sellVolumeUsd}
+                        loading={loading}
+                        tokenAmountTraded={tokenTraded}
+                        tokenAmountHolding={numberOfTokenHolding}
+                    />
+
+
                 </div>
             </div>
 

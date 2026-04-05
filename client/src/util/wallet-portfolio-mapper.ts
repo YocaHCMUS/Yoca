@@ -81,9 +81,9 @@ export function resolveTokenLabel(
  *   1  priceUsd   number  – USD price per token (0 if absent)
  *   2  amount     number  – token holding amount (0 if absent)
  *   3  valueUsd   number  – USD value of holding (0 if absent)
- *   4  change24h  number  – 24-hour change in percent / 100 (e.g. 0.05 = 5%)
  *
- * Keeping columns 1-4 as numbers allows SortType.Number to work correctly.
+ * Keeping columns 1–3 as numbers allows SortType.Number to work correctly.
+ * (24h change is omitted: portfolio API does not reliably provide it.)
  *
  * @returns rows   Row tuples consumable by <Table dataEntries={rows}>.
  * @returns meta   Parallel metadata array for logo rendering.
@@ -103,7 +103,6 @@ export function mapPortfolioItems(items: WalletPortfolioItem[]): {
             item.priceUsd ?? 0,
             item.amount ?? 0,
             item.valueUsd ?? 0,
-            (item.change24hPercent ?? 0) / 100,
         ]);
 
         meta.push({

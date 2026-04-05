@@ -120,7 +120,7 @@ export function TradingVolumePerTransaction({
     return {
       ...baseOption,
       color: ["#5470C6", "#91CC75"], // Blue for deposits, Green for withdrawals
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
       //   barCategoryGap: '60%', // Gap between wallet categories
       legend: getMultiSeriesLegend(

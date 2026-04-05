@@ -1,9 +1,44 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type CSSProperties } from "react";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import { DataTable, DataTableSkeleton, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
 import { Filter } from "@carbon/react/icons";
 import styles from './Table.module.scss';
+
+/** Rich column header (min width / alignment) — same idea as `Tble` headers. */
+export type TableColumnHeader =
+    | string
+    | {
+        header: string;
+        minWidth?: string | number;
+        align?: 'start' | 'center' | 'end';
+    };
+
+export function tableHeaderLabel(h: TableColumnHeader): string {
+    return typeof h === 'string' ? h : h.header;
+}
+
+function normalizeTableHeaders(headers: TableColumnHeader[]): {
+    labels: string[];
+    minWidths: (string | number | undefined)[];
+    aligns: ('start' | 'center' | 'end' | undefined)[];
+} {
+    const labels: string[] = [];
+    const minWidths: (string | number | undefined)[] = [];
+    const aligns: ('start' | 'center' | 'end' | undefined)[] = [];
+    for (const h of headers) {
+        if (typeof h === 'string') {
+            labels.push(h);
+            minWidths.push(undefined);
+            aligns.push(undefined);
+        } else {
+            labels.push(h.header);
+            minWidths.push(h.minWidth);
+            aligns.push(h.align);
+        }
+    }
+    return { labels, minWidths, aligns };
+}
 
 
 type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
@@ -41,7 +76,7 @@ export interface ServerPaginationConfig {
 
 export interface TableProps {
     title: string;
-    headers: string[];
+    headers: TableColumnHeader[];
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
     filterSchema: Record<number, FilterConfig>;
@@ -72,6 +107,9 @@ export const Table: React.FC<TableProps> = ({
     serverPagination,
     loading = false,
 }) => {
+    const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
+        normalizeTableHeaders(headers);
+
     const [clientPage, setClientPage] = useState(1);
     const [clientPageSize, setClientPageSize] = useState(20);
     // const [sortIndex, setSortIndex] = useState(0);
@@ -192,7 +230,7 @@ export const Table: React.FC<TableProps> = ({
         Object.entries(filters).forEach(([columnIndex, filterValue]) => {
             const colIdx = parseInt(columnIndex);
             const schema = filterSchema[colIdx];
-            const columnName = headers[colIdx] || `Column ${colIdx}`;
+            const columnName = headerLabels[colIdx] || `Column ${colIdx}`;
 
             if (!schema || !filterValue) return;
 
@@ -298,7 +336,7 @@ export const Table: React.FC<TableProps> = ({
     const handleExport = async (format: ExportFormat) => {
         if (format === 'csv') {
             // Export as CSV (filtered data)
-            const csvHeaders = headers.join(',');
+            const csvHeaders = headerLabels.join(',');
             const csvRows = filteredData.map(row =>
                 row.map(entry =>
                     typeof entry === 'string' ? `"${entry.replace(/"/g, '""')}"` : entry
@@ -317,12 +355,14 @@ export const Table: React.FC<TableProps> = ({
     };
 
     // Transform headers for Carbon DataTable
-    const carbonHeaders = headers.map((header, index) => ({
+    const carbonHeaders = headerLabels.map((label, index) => ({
         key: `header-${index}`,
-        header: header,
+        header: label,
         index: index,
-        sortConfig: sortConfigs?.[index], // Attach config to the header
-        isSortable: !!sortConfigs?.[index] // Only enable sort if config exists
+        sortConfig: sortConfigs?.[index],
+        isSortable: !!sortConfigs?.[index],
+        minWidth: headerMinWidths[index],
+        align: headerAligns[index],
     }));
     const skeletonHeaders = carbonHeaders.map(({ key, header }) => ({ key, header }));
 
@@ -334,6 +374,22 @@ export const Table: React.FC<TableProps> = ({
         });
         return rowData;
     });
+
+    const toRenderableCellValue = (value: unknown): string | number | boolean => {
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            return value;
+        }
+
+        if (value == null) {
+            return '';
+        }
+
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    };
 
     /**  
     * Handle custom sorts
@@ -397,7 +453,7 @@ export const Table: React.FC<TableProps> = ({
         if (openFilterModal !== columnIndex) return null;
 
         const schema = filterSchema[columnIndex];
-        const columnHeader = headers[columnIndex] || `Column ${columnIndex}`;
+        const columnHeader = headerLabels[columnIndex] || `Column ${columnIndex}`;
 
         if (!schema) return null;
 
@@ -560,16 +616,41 @@ export const Table: React.FC<TableProps> = ({
                                             <TableRow className={styles.stickyHeader}>
                                                 {headers.map((header, index) => {
                                                     const isColumnSortable = isSortable[index] ?? false;
-                                                    const { key, ...headerProps } = getHeaderProps({
+                                                    const h = header as {
+                                                        key: string;
+                                                        header: string;
+                                                        minWidth?: string | number;
+                                                        align?: 'start' | 'center' | 'end';
+                                                    };
+                                                    const { key, className: carbonThClass, style: carbonThStyle, ...headerPropsRest } = getHeaderProps({
                                                         header,
                                                         isSortable: isColumnSortable
                                                     });
                                                     const activeFilter = getActiveFilters().find(f => f.columnIndex === index);
+                                                    const thExtra: CSSProperties = {};
+                                                    if (h.minWidth != null) {
+                                                        thExtra.minWidth = h.minWidth;
+                                                    }
+                                                    const alignClass =
+                                                        h.align === 'end'
+                                                            ? styles.headerThAlignEnd
+                                                            : h.align === 'center'
+                                                                ? styles.headerThAlignCenter
+                                                                : h.align === 'start'
+                                                                    ? styles.headerThAlignStart
+                                                                    : undefined;
                                                     return (
                                                         <TableHeader
                                                             key={key}
-                                                            {...headerProps}
-                                                            className={isColumnSortable ? styles.sortableHeader : undefined}
+                                                            {...headerPropsRest}
+                                                            className={[
+                                                                carbonThClass,
+                                                                isColumnSortable ? styles.sortableHeader : '',
+                                                                styles.tableHeaderThFull,
+                                                                alignClass,
+                                                            ].filter(Boolean).join(' ')}
+                                                            style={{ ...(carbonThStyle as CSSProperties | undefined), ...thExtra }}
+                                                            title={typeof h.header === 'string' ? h.header : undefined}
                                                         >
                                                             <div className={styles.headerContent}>
                                                                 <span className={styles.headerText}>
@@ -631,7 +712,7 @@ export const Table: React.FC<TableProps> = ({
                                                                 <TableCell key={cell.id}>
                                                                     {renderer
                                                                         ? renderer(rawValue, safeRow, rowIndex)
-                                                                        : <span className={className}>{rawValue}</span>
+                                                                        : <span className={className}>{toRenderableCellValue(rawValue)}</span>
                                                                     }
                                                                 </TableCell>
                                                             );

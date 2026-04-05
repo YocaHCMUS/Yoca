@@ -28,9 +28,6 @@ export function PoolSelector({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const capitalizeDex = (dex: string | null) =>
-    dex ? dex.charAt(0).toUpperCase() + dex.slice(1) : "";
-
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -199,17 +199,17 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         ...baseOption,
         title: walletLabel
           ? {
-              text: walletLabel,
-              left: 8,
-              top: 8,
-              textStyle: {
-                color: chartTheme.textColor,
-                fontSize: 16,
-                fontWeight: "bold",
-              },
-            }
+            text: walletLabel,
+            left: 8,
+            top: 8,
+            textStyle: {
+              color: chartTheme.textColor,
+              fontSize: 16,
+              fontWeight: "bold",
+            },
+          }
           : undefined,
-        grid: getChartGridConfig().grid,
+        ...getChartGridConfig,
         tooltip: {
           ...baseOption.tooltip,
           trigger: "axis",
@@ -272,7 +272,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         option: createChartOption(
           wallet.dailyPnL,
           wallet.cumulativePnL,
-          `${wallet.walletAddress.slice(0, 8)}...`,
+          displayData.wallets.length > 1 ? `${wallet.walletAddress.slice(0, 8)}...` : undefined,
         ),
       }));
     }

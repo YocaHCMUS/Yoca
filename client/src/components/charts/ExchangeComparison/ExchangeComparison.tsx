@@ -238,7 +238,7 @@ export function ExchangeComparison({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
@@ -279,7 +279,10 @@ export function ExchangeComparison({
         data: exchangeNames,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
+          rotate: 45,
           interval: 0,
+          formatter: (value: string) =>
+            value.length > 20 ? `${value.substring(0, 17)}...` : value,
         },
       },
       yAxis: {

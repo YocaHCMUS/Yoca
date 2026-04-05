@@ -24,7 +24,7 @@ export const format = {
         if (frac >= 0.0001) return 6;
         return 8;
       },
-      resolvePercent(_value: number): number {
+      resolvePercent(): number {
         return 4;
       },
     },
@@ -163,6 +163,7 @@ export const translation = {
   },
   // Wallet
   wallet: {
+    transactionCount: "Transaction Count",
     connectWallet: "Connect Wallet",
     selectWallet: "Select a wallet",
     detected: "Detected",
@@ -222,6 +223,9 @@ export const translation = {
   // Wallet Page
   walletPage: {
     addressNotFound: "Address not found",
+    overview: "Overview",
+    holdings: "Holdings",
+    activityRisk: "Activity / Risk",
     activity: "Activity",
     asset: "Assets",
     topExchange: "Top exchange",
@@ -251,8 +255,8 @@ export const translation = {
     value: "Value",
     change24h: "Change (24h)",
     // Token Details Demo
-    tokensLastTraded: "Tokens Last Traded",
-    tokensLastTradedDescription: "Tokens with recent trading activities",
+    tokensLastTraded: "Last traded tokens",
+    tokensLastTradedDescription: "Tokens with recent trading activity",
     balance: "Balance",
     profit: "Profit",
     realizedProfit: "Realized Profit",
@@ -290,6 +294,13 @@ export const translation = {
     unknownEntity: "Unknown Entity",
     identityKnown: "Known",
     identityUnavailable: "Identity Unavailable",
+    firstFunderTag: "First funder",
+    firstFunderUnavailable: "First funder unavailable",
+    openFirstFunderWallet: "Open first funder wallet",
+    walletAgeTag: "Wallet age",
+    walletAgeUnitDay: "D",
+    walletAgeUnitMonth: "Mth",
+    walletAgeUnitYear: "Yr",
     manageTagsLabel: "Manage tags",
     signInManageTagsLabel: "Sign in to manage tags",
     defaultWalletName: "Wallet",

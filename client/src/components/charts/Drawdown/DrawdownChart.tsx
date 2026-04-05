@@ -157,7 +157,7 @@ export function DrawdownChart({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       xAxis: {
         ...baseOption.xAxis,
         type: "time",
@@ -336,10 +336,10 @@ export function DrawdownChart({
             label: "Max DD Date",
             value: maxDrawdownTimestamp
               ? formatTimestampWithTimezone(
-                  maxDrawdownTimestamp,
-                  timezone,
-                  "yyyy-MM-dd",
-                )
+                maxDrawdownTimestamp,
+                timezone,
+                "yyyy-MM-dd",
+              )
               : "-",
           },
         ],

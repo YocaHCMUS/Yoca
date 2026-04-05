@@ -147,7 +147,7 @@ function exportCanvasAsSinglePagePdf(
   pdf.save(filename);
 }
 
-function exportLongCanvasAsA4Pdf(
+export function exportLongCanvasAsA4Pdf(
   canvas: HTMLCanvasElement,
   filename: string,
 ): void {
@@ -221,7 +221,7 @@ const EMPTY_STATE_TEXT_MARKERS = [
   "không có dữ liệu",
 ];
 
-type InlineStyleSnapshot = Partial<
+export type InlineStyleSnapshot = Partial<
   Record<
     "height" | "maxHeight" | "overflow" | "overflowX" | "overflowY" | "width",
     string

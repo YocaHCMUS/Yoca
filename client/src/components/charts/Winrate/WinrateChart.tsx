@@ -21,7 +21,7 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
 import { isChartSuccess } from '@/util/chart-helpers';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
@@ -99,19 +99,13 @@ export function WinrateChart({
     if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
 
     const baseOption = getThemedChartBaseOption(chartTheme);
-    
+
     const categories = data.wallets.map(w => w.walletName || shortenWalletAddress(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
-    
+
     return {
       ...baseOption,
-      grid: {
-        left: '4%',
-        right: '4%',
-        bottom: '12%',
-        top: '20%',
-        containLabel: true,
-      },
+      ...getChartGridConfig,
       xAxis: {
         ...baseOption.xAxis,
         type: 'category',
@@ -178,12 +172,12 @@ export function WinrateChart({
 
     return data.wallets.map((wallet) => {
       const baseOption = getThemedChartBaseOption(chartTheme);
-      
+
       // Prepare data
       const categories = wallet.winningDistribution.map(d => d.range);
       const winningCounts = wallet.winningDistribution.map(d => d.count);
       const losingCounts = wallet.losingDistribution.map(d => -d.count); // Negative for inverse display
-      
+
       const option: EChartsOption = {
         ...baseOption,
         // title: {
@@ -280,7 +274,7 @@ export function WinrateChart({
           },
         },
       };
-      
+
       return {
         walletAddress: wallet.walletAddress,
         option,
@@ -310,7 +304,7 @@ export function WinrateChart({
             </ChartGridItem>
           )}
         </ChartSection>
-        
+
         {/* Distribution Histograms Grid */}
         <ChartGrid itemCount={distributionCharts.length} autoFit minColumnWidth="400px">
           {distributionCharts.map((chart) => (

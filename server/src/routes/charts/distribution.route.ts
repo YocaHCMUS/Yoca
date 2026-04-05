@@ -88,7 +88,7 @@ const app = new Hono()
                 data: distributionData,
                 totalValue: totalValue,
               };
-            } catch (err) {
+            } catch {
               return {
                 walletAddress: address,
                 data: [],

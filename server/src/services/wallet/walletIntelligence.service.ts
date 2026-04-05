@@ -1,10 +1,13 @@
 import type {
+    WalletFirstFundInsight,
     WalletIdentityAnalysis,
     WalletIdentityResponse,
     WalletIntelligenceBatchResponse,
     WalletIntelligenceResponse,
 } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
 import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+import { buildWalletFirstFundInsight } from "@sv/services/wallet/walletFirstFundInsight.js";
+import { getWalletFirstFund } from "@sv/services/wallet/walletFirstFund.service.js";
 import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletTags } from "@sv/services/walletTags.js";
 import {
@@ -70,6 +73,7 @@ function hasTrustedTag(tags: string[]): boolean {
 function buildWalletIdentityAnalysis(input: {
     identity: WalletIdentityResponse["identity"];
     analysisInputs: AnalysisInputs;
+    firstFund: WalletFirstFundInsight | null;
     userTags: string[];
 }): WalletIdentityAnalysis {
     const signals: string[] = [];
@@ -138,6 +142,7 @@ function buildWalletIdentityAnalysis(input: {
             exchangeInteractions24h: input.analysisInputs.exchangeInteractions24h,
             uniqueKnownEntities7d: input.analysisInputs.uniqueKnownEntities7d,
         },
+        firstFund: input.firstFund,
         userTags: input.userTags,
     };
 }
@@ -216,16 +221,20 @@ async function composeFromIdentityResponse(
     identityResponse: WalletIdentityResponse,
     options?: ComposeWalletIntelligenceOptions,
 ): Promise<WalletIntelligenceResponse> {
-    const [analysisInputs, userTags] = await Promise.all([
+    const [analysisInputs, userTags, firstFund] = await Promise.all([
         getAnalysisInputs(identityResponse.address),
         options?.includeUserTags === false
             ? Promise.resolve([])
             : getOptionalUserTags(options?.userId, identityResponse.address),
+        getWalletFirstFund(identityResponse.address)
+            .then((value) => buildWalletFirstFundInsight(identityResponse.address, value))
+            .catch(() => null),
     ]);
 
     const analysis = buildWalletIdentityAnalysis({
         identity: identityResponse.identity,
         analysisInputs,
+        firstFund,
         userTags,
     });
 

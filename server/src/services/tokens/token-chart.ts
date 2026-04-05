@@ -237,11 +237,17 @@ async function fetchAndCacheRangedChart(
 export async function getHourlyTokenMarketChart(
   tokenAddress: string,
   days: number,
+  cgIdByAddress?: Record<string, string> | null,
 ) {
   if (!tokenAddress) return [];
 
-  const cgIdLookup = await getCoinGeckoIdsByAddresses([tokenAddress]);
-  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+  let cgId: string | null = null;
+  if (cgIdByAddress != null) {
+    cgId = cgIdByAddress[tokenAddress] ?? null;
+  } else {
+    const cgIdLookup = await getCoinGeckoIdsByAddresses([tokenAddress]);
+    cgId = cgIdLookup[tokenAddress] ?? null;
+  }
   if (!cgId) return [];
 
   const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -288,11 +294,17 @@ export async function getHourlyTokenMarketChart(
 export async function getDailyTokenMarketChart(
   tokenAddress: string,
   days: number,
+  cgIdByAddress?: Record<string, string> | null,
 ) {
   if (!tokenAddress) return [];
 
-  const cgIdLookup = await getCoinGeckoIdsByAddresses([tokenAddress]);
-  const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
+  let cgId: string | null = null;
+  if (cgIdByAddress != null) {
+    cgId = cgIdByAddress[tokenAddress] ?? null;
+  } else {
+    const cgIdLookup = await getCoinGeckoIdsByAddresses([tokenAddress]);
+    cgId = cgIdLookup[tokenAddress] ?? null;
+  }
   if (!cgId) return [];
 
   const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;

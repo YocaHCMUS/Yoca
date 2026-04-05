@@ -71,6 +71,12 @@ interface ChartWrapperProps {
 
   /** Enable mini-player mode (default: true) */
   enableMiniPlayer?: boolean;
+
+  /**
+   * default: title left, custom actions + toolbar on the same row (right).
+   * stacked: title on its own row; next row = actions left, viewing + export right (aligned on one line).
+   */
+  toolbarLayout?: 'default' | 'stacked';
 }
 
 /**
@@ -108,6 +114,7 @@ export function ChartWrapper({
   onExport,
   enableFullscreen = true,
   enableMiniPlayer = true,
+  toolbarLayout = 'default',
 }: ChartWrapperProps) {
   const { tr } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -201,50 +208,64 @@ export function ChartWrapper({
   //   return () => document.removeEventListener('keydown', handleKeyDown);
   // }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
 
+  const exportMenu =
+    enableExport && onExport ? (
+      <ExportMenu
+        onExport={handleExport}
+        isExporting={isExporting}
+        disabled={loadingState.status === 'loading' || isEmpty}
+      />
+    ) : null;
+
   /**
    * Render viewing mode controls
    */
-  const renderControls = () => (
-    <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
-      {enableFullscreen && (
-        <button
-          className={styles.controlButton}
-          onClick={enterFullscreen}
-          aria-label={tr('charts.enterFullscreenMode')}
-          title={tr('charts.fullscreen')}
-          disabled={loadingState.status === 'loading'}
-          tabIndex={0}
-        >
-          <Maximize
-            width={20}
-            height={20}
-            stroke='currentColor'
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round" />
-        </button>
-      )}
+  const renderControls = () => {
+    if (!enableFullscreen && !enableMiniPlayer) {
+      return null;
+    }
+    return (
+      <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
+        {enableFullscreen && (
+          <button
+            className={styles.controlButton}
+            onClick={enterFullscreen}
+            aria-label={tr('charts.enterFullscreenMode')}
+            title={tr('charts.fullscreen')}
+            disabled={loadingState.status === 'loading'}
+            tabIndex={0}
+          >
+            <Maximize
+              width={20}
+              height={20}
+              stroke='currentColor'
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round" />
+          </button>
+        )}
 
-      {enableMiniPlayer && (
-        <button
-          className={styles.controlButton}
-          onClick={enterMiniPlayer}
-          aria-label={tr('charts.openMiniPlayer')}
-          title={tr('charts.miniPlayer')}
-          disabled={loadingState.status === 'loading'}
-          tabIndex={0}
-        >
-          <ShrinkScreen
-            width="20"
-            height="20"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1"
-          />
-        </button>
-      )}
-    </div>
-  );
+        {enableMiniPlayer && (
+          <button
+            className={styles.controlButton}
+            onClick={enterMiniPlayer}
+            aria-label={tr('charts.openMiniPlayer')}
+            title={tr('charts.miniPlayer')}
+            disabled={loadingState.status === 'loading'}
+            tabIndex={0}
+          >
+            <ShrinkScreen
+              width="20"
+              height="20"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="1"
+            />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   /**
    * Render chart content area
@@ -306,21 +327,44 @@ export function ChartWrapper({
         </div>
 
         {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.title} id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-            {title}
-          </h2>
-          <div className={styles.headerActions}>
-            {actions}
-            {renderControls()}
-            {enableExport && onExport && (
-              <ExportMenu
-                onExport={handleExport}
-                isExporting={isExporting}
-                disabled={loadingState.status === 'loading' || isEmpty}
-              />
-            )}
-          </div>
+        <div
+          className={`${styles.header} ${toolbarLayout === 'stacked' ? styles.headerStacked : ''}`}
+        >
+          {toolbarLayout === 'stacked' ? (
+            <>
+              <h2
+                className={styles.title}
+                id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
+              >
+                {title}
+              </h2>
+              <div className={styles.headerToolbarRow}>
+                <div className={styles.headerFilters}>{actions}</div>
+                <div className={styles.headerToolbarRight}>
+                  {renderControls()}
+                  {exportMenu}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2
+                className={styles.title}
+                id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
+              >
+                {title}
+              </h2>
+              <div className={styles.headerActions}>
+                {actions}
+                <div className={styles.headerToolbarColumn}>
+                  {renderControls()}
+                  {exportMenu && (
+                    <div className={styles.exportMenuRow}>{exportMenu}</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content area */}

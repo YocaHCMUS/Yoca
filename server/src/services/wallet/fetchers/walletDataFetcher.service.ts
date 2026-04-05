@@ -12,13 +12,12 @@ import type {
   WalletTransactionHelius, WalletTransfer,
   BirdeyeNetworthHistoryResult, BirdeyePortfolioSnapshotResult, BirdeyeOverallPnlResult,
   BirdeyeTokenPnlDetailsResult,
-  BirdeyeNetworthDirection, BirdeyeNetworthType, BirdeyeSortType, BirdeyePnlDuration, BirdeyeNetworthHistoryPoint, BirdeyeTokenPnlDetailsOptions
+  BirdeyeNetworthDirection, BirdeyeNetworthType, BirdeyeSortType, BirdeyePnlDuration, BirdeyeNetworthHistoryPoint, BirdeyeTokenPnlDetailsOptions,
+  HeliusWalletFirstFund
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  getMoralisCursor,
   getNextCursor,
   getTokenLogoUri,
-  mapHeliusSwapEntry,
   mapHeliusTransferEntry,
   mapMoralisSwapEntry,
   toFiniteNumber,
@@ -31,6 +30,7 @@ import {
   runOffsetPagination,
 } from "@sv/services/wallet/fetchers/walletPagination.js";
 import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
+import { MoralisSwapResponseRoot, MoralisSwapResult } from "./walletThirdPartyResponses";
 
 
 export type WalletProviderChunk<T> = {
@@ -584,6 +584,7 @@ export type HeliusSwapChunkOptions = {
 export type MoralisSwapChunkOptions = {
   cursor?: string;
   limit?: number;
+  tokenAddress?: string; // Optional filter to only include swaps involving a specific token address
 };
 
 export async function fetchHeliusSolanaTransfersChunk(
@@ -611,31 +612,6 @@ export async function fetchHeliusSolanaTransfersChunk(
   };
 }
 
-export async function fetchHeliusSolanaSwapChunk(
-  address: string,
-  options?: HeliusSwapChunkOptions,
-): Promise<WalletProviderChunk<WalletSwap>> {
-  const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
-
-  const json = await heliusGetJson<any>(
-    `/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`,
-    {
-      limit,
-      ...(options?.before ? { before: options.before } : {}),
-    },
-  );
-  const rows: any[] = Array.isArray(json?.data) ? json.data : [];
-  const items = rows
-    .map((entry) => mapHeliusSwapEntry(entry, address))
-    .filter((entry): entry is WalletSwap => entry != null);
-
-  return {
-    items,
-    nextCursor: getNextCursor(json?.pagination),
-    hasMore: Boolean(json?.pagination?.hasMore),
-  };
-}
-
 export async function fetchMoralisSolanaSwapChunk(
   address: string,
   options?: MoralisSwapChunkOptions,
@@ -644,8 +620,13 @@ export async function fetchMoralisSolanaSwapChunk(
 
   const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
   url.searchParams.set("limit", String(limit));
+
   if (options?.cursor) {
     url.searchParams.set("cursor", options.cursor);
+  }
+
+  if (options?.tokenAddress) {
+    url.searchParams.set("tokenAddress", options.tokenAddress);
   }
 
   const response = await moralis.moralisFetch(url, {
@@ -659,21 +640,18 @@ export async function fetchMoralisSolanaSwapChunk(
     );
   }
 
-  const json = (await response.json()) as any;
-  const rows: any[] = Array.isArray(json?.result)
-    ? json.result
-    : Array.isArray(json?.data)
-      ? json.data
-      : [];
+  const json = (await response.json()) as MoralisSwapResponseRoot;
+
+  const rows = json.result || [];
 
   const items = rows
     .map((entry) => mapMoralisSwapEntry(entry, address))
     .filter((entry): entry is WalletSwap => entry != null);
 
-  const nextCursor = getMoralisCursor(json);
-  const hasMore = Boolean(
-    json?.hasMore ?? json?.pagination?.hasMore ?? nextCursor,
-  );
+
+
+  const nextCursor = json.cursor;
+  const hasMore = Boolean(nextCursor);
 
   return {
     items,
@@ -681,13 +659,6 @@ export async function fetchMoralisSolanaSwapChunk(
     hasMore,
   };
 }
-
-// function toPubkey(entry: any): string {
-//     if (!entry) return "";
-//     if (typeof entry === "string") return entry;
-//     if (typeof entry.pubkey === "string") return entry.pubkey;
-//     return "";
-// }
 
 export async function fetchHeliusSolanaTransfers(
   address: string,
@@ -757,76 +728,10 @@ export async function fetchHeliusSolanaTransfers(
   return paged.items;
 }
 
-export async function fetchHeliusSolanaSwap(
-  address: string,
-  from: HeliusHistoryFrom = "7d",
-): Promise<WalletSwap[]> {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const fromSec =
-    from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
-
-  // Helius history endpoint returns at most 100 items per page.
-  const HELIUS_PAGE_LIMIT = 100;
-
-  const paged = await runCursorPagination<WalletSwap>({
-    initialCursor: null,
-    maxPages: 500,
-    maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor, page) => {
-      let json: any = null;
-      try {
-        json = await heliusGetJson<any>(
-          `/v1/wallet/${address}/history?type=SWAP&tokenAccounts=balanceChanged`,
-          {
-            limit: HELIUS_PAGE_LIMIT,
-            ...(cursor ? { before: cursor } : {}),
-          },
-        );
-      } catch (err) {
-        console.error("Helius wallet transaction request failed", err);
-        throw err;
-      }
-
-      const data: any[] = Array.isArray(json?.data) ? json.data : [];
-      const pageItems: WalletSwap[] = [];
-      let reachedRangeCutoff = false;
-
-      for (const entry of data) {
-        const mapped = mapHeliusSwapEntry(entry, address);
-        if (!mapped) {
-          continue;
-        }
-
-        const tsSec = Math.floor(Date.parse(mapped.timestamp) / 1000);
-        if (tsSec < fromSec) {
-          reachedRangeCutoff = true;
-          break;
-        }
-
-        pageItems.push(mapped);
-      }
-
-      console.log(`[fetchHeliusSolanaSwap] Page ${page}: Collected ${pageItems.length} swaps on page`);
-
-      const nextCursor = getNextCursor(json?.pagination);
-      const hasMore = reachedRangeCutoff
-        ? false
-        : Boolean(json?.pagination?.hasMore && nextCursor);
-
-      return {
-        pageItems,
-        nextCursor,
-        hasMore,
-      };
-    },
-  });
-
-  return paged.items;
-}
-
 type MoralisSwapFetchOptions = {
   limit?: number; // Max total swaps to fetch across all pages (will be capped by API limits)
   cursor?: string;
+  tokenAddress?: string; // Optional filter to only include swaps involving a specific token address
 };
 
 export async function fetchMoralisSolanaSwap(
@@ -838,7 +743,6 @@ export async function fetchMoralisSolanaSwap(
   const fromSec =
     from === "24h" ? nowSec - 24 * 60 * 60 : nowSec - 7 * 24 * 60 * 60;
 
-  const MORALIS_PAGE_LIMIT = Math.min(Math.max(options?.limit ?? 100, 1), 100);
   const fromDateIso = new Date(fromSec * 1000).toISOString();
   const toDateIso = new Date(nowSec * 1000).toISOString();
 
@@ -851,11 +755,15 @@ export async function fetchMoralisSolanaSwap(
       // url.searchParams.set("limit", String(MORALIS_PAGE_LIMIT));
       url.searchParams.set("fromDate", fromDateIso);
       url.searchParams.set("toDate", toDateIso);
+      if (options?.tokenAddress) {
+        url.searchParams.set("tokenAddress", options.tokenAddress);
+      }
+
       if (cursor) {
         url.searchParams.set("cursor", cursor);
       }
 
-      let json: any;
+      let json: MoralisSwapResponseRoot;
       try {
         const response = await moralis.moralisFetch(url, {
           method: "GET",
@@ -873,28 +781,32 @@ export async function fetchMoralisSolanaSwap(
           );
         }
 
-        json = await response.json();
+        json = await response.json() as MoralisSwapResponseRoot;
+        console.log(`[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
+          {
+            url: url.toString(),
+            responseStatus: response.status,
+          }
+        );
       } catch (err) {
         console.error("Moralis wallet-swaps request failed", err);
         throw err;
       }
 
-      const rows: any[] = Array.isArray(json?.result)
+      const rows: MoralisSwapResult[] = Array.isArray(json?.result)
         ? json.result
-        : Array.isArray(json?.data)
-          ? json.data
-          : [];
+        : [];
 
       const pageItems = rows
         .map((row) => mapMoralisSwapEntry(row, address))
         .filter((row): row is WalletSwap => row != null)
         .filter((row) => {
-          const tsSec = Math.floor(Date.parse(row.timestamp) / 1000);
+          const tsSec = Math.floor(Date.parse(row.blockTimestampIso) / 1000);
           return Number.isFinite(tsSec) && tsSec >= fromSec && tsSec <= nowSec;
         });
 
-      const nextCursor = getMoralisCursor(json);
-      const hasMore = Boolean(json?.hasMore ?? json?.pagination?.hasMore ?? nextCursor);
+      const nextCursor = json.cursor;
+      const hasMore = Boolean(nextCursor);
 
       console.log(
         `[fetchMoralisSolanaSwap] Page ${page}: Collected ${pageItems.length} swaps on page`,
@@ -1324,4 +1236,17 @@ export async function fetchBirdeyeTokenPnLDetails(
     tokens: Array.isArray(data?.tokens) ? data.tokens : [],
     summary: data?.summary ?? null,
   };
+}
+
+export async function fetchHeliusWalletFirstFund(
+  address: string,
+) {
+  const json = await heliusGetJson<any>(`/v1/wallet/${address}/funded-by`);
+
+  if ('error' in json) {
+    throw new Error(`Helius API error: ${json.error}`);
+  }
+
+
+  return { reciepient: address, ...json } as HeliusWalletFirstFund;
 }

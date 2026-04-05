@@ -261,14 +261,14 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
         axisPointer: {
           type: "shadow",
         },
-        formatter: (params: any) => {
+        formatter: (params: string | any[]) => {
           if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
@@ -325,7 +325,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => params.value.toLocaleString(),
+            formatter: (params: { value: { toLocaleString: () => any; }; }) => params.value.toLocaleString(),
             fontSize: 10,
           },
         },
@@ -348,14 +348,14 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
     return {
       ...baseOption,
-      grid: getChartGridConfig().grid,
+      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
         axisPointer: {
           type: "shadow",
         },
-        formatter: (params: any) => {
+        formatter: (params: string | any[]) => {
           if (!Array.isArray(params) || params.length === 0) return "";
 
           const counterpartyName = params[0].axisValue;
@@ -412,7 +412,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => formatCurrency(params.value),
+            formatter: (params: { value: number; }) => formatCurrency(params.value),
             fontSize: 10,
           },
         },
@@ -425,36 +425,51 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
     setCurrentLimit(newLimit);
   };
 
+  const selectStyle: React.CSSProperties = {
+    padding: "0.5rem 1rem",
+    fontSize: "0.75rem",
+    border: "1px solid var(--cds-border-strong)",
+    borderRadius: "0.25rem",
+    background: "var(--cds-layer-02)",
+    color: "var(--cds-text-primary)",
+    cursor: "pointer",
+    height: "2.5rem",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: "0.75rem",
+    color: "var(--cds-text-secondary)",
+  };
+
+  const filterControls = (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <label htmlFor="counterparty-limit-select" style={labelStyle}>Top:</label>
+      <select
+        id="counterparty-limit-select"
+        value={currentLimit}
+        onChange={(e) => handleLimitChange(Number(e.target.value))}
+        style={selectStyle}
+      >
+        <option value={5}>5</option>
+        <option value={10}>10</option>
+        <option value={20}>20</option>
+        <option value={50}>50</option>
+      </select>
+    </div>
+  );
+
   // Render chart with wrapper
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       onRetry={refetch}
+      actions={filterControls}
       isEmpty={
         !isChartSuccess(data, "counterparties") ||
         counterpartyCountRanking.length === 0
       }
     >
-      <div
-        className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]}`}
-      >
-        <div className={sharedStyles.limitSelector}>
-          <label htmlFor="limit-select">Top:</label>
-          <select
-            id="limit-select"
-            value={currentLimit}
-            onChange={(e) => handleLimitChange(Number(e.target.value))}
-            className={sharedStyles.chartSelect}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-        </div>
-      </div>
-
       {/* Transaction counts chart */}
       {counterpartyCountRanking.length > 0 && (
         <div className={sharedStyles.chartSection}>
@@ -479,7 +494,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
 
       {/* Total volume chart */}
       {counterpartyVolumeRanking.length > 0 && (
-        <div className={sharedStyles.chartSection}>
+        <div className={sharedStyles.chartSection} style={{ marginTop: '32px' }}>
           <h3 className={sharedStyles.chartTitle}>
             {tr("charts.counterpartyActivityChart.totalVolume")}
           </h3>

@@ -2,6 +2,7 @@ export type ProviderName = "helius" | "birdeye" | "moralis" | "unknown";
 
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 
 export class ProviderRequestError extends Error {
     readonly provider: ProviderName;
@@ -46,11 +47,11 @@ export async function requestProviderJson<T>(input: {
     fetchImpl?: (url: URL, init: RequestInit) => Promise<Response>;
 }): Promise<T> {
     const fetchImpl = input.fetchImpl ?? (async (url, init) => fetch(url.toString(), init));
-    const requestInit: RequestInit = {
+    const requestInit = mergeOutboundFetchTimeout({
         method: input.method,
         headers: input.headers,
         body: input.body == null ? undefined : JSON.stringify(input.body),
-    };
+    });
 
     const response = await trackApiCallResponse(
         {

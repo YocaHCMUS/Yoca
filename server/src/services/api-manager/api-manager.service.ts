@@ -4,8 +4,6 @@ import { Cache } from './internal/cache';
 import { ThrottledQueue } from './internal/queue';
 // import { birdeyeConfig } from './providers/birdeye.config';
 // import { heliusConfig } from './providers/helius.config';
-import { db } from '../../db/index';
-import { acmsApiCache } from '../../db/schema';
 
 import { ZodSchema } from 'zod';
 
@@ -32,10 +30,10 @@ export class ApiManagerService {
     async call<T>(
         provider: Provider,
         endpoint: string,
-        params: any,
+        params: unknown,
         fetcher: () => Promise<T>,
         opts?: {
-            requestSchema?: ZodSchema<any>,
+            requestSchema?: ZodSchema<unknown>,
             responseSchema?: ZodSchema<T>,
         }
     ): Promise<T> {
@@ -87,7 +85,7 @@ export class ApiManagerService {
         return result;
     }
 
-    private generateKey(provider: Provider, endpoint: string, params: any): string {
+    private generateKey(provider: Provider, endpoint: string, params: unknown): string {
         // Simple key for now; replace with hash for production
         return `${provider}:${endpoint}:${JSON.stringify(params)}`;
     }

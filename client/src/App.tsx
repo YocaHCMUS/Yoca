@@ -1,16 +1,15 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 
-import Index from "./pages";
-import AuthShowcase from "./pages/auth";
-import HistoricalDataPage from "./pages/historical-data";
-import MarketPage from "./pages/market";
-import TokenPage from "./pages/token";
-import TokenOverviewPage from "./pages/token-overview";
-import { TransactionGraphDemo } from "./pages/transactions/TransactionGraphDemo";
-import WalletPage from "./pages/wallet";
-import { TokenDetailsDemo } from "./pages/wallet/TokenDetailsDemo";
-import WalletsComparisionPage from "./pages/walletsComparision";
+import Index from "@/pages";
+import AuthShowcase from "@/pages/auth";
+import HistoricalDataPage from "@/pages/historical-data";
+import MarketPage from "@/pages/market";
+import TokenPage from "@/pages/token";
+import TokenOverviewPage from "@/pages/token-overview";
+import WalletPage from "@/pages/wallet";
+// import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
+import WalletsComparisionPage from "@/pages/walletsComparision";
 
 function App() {
   return (
@@ -27,14 +26,10 @@ function App() {
           path="/historical-data/:address"
           element={<HistoricalDataPage />}
         />
-        <Route
+        {/* <Route
           path="/wallets/:address/token-details-demo"
           element={<TokenDetailsDemo />}
-        />
-        <Route
-          path="/transactions/:txHash/graph-demo"
-          element={<TransactionGraphDemo />}
-        />
+        /> */}
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
           path="/comparision/wallets"

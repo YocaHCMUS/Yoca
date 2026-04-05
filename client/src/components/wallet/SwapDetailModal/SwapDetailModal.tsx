@@ -120,46 +120,44 @@ function formatAmount(amount: number): string {
     : `${sign}0.0${sig}`;
 }
 
-function resolveSwapLegs(swap: WalletSwap): {
-  sold: WalletSwapBalanceChange | null;
-  bought: WalletSwapBalanceChange | null;
-} {
-  const soldFromChanges =
-    swap.balanceChanges.find((change) => change.amount < 0) ?? null;
-  const boughtFromChanges =
-    swap.balanceChanges.find((change) => change.amount > 0) ?? null;
+// function resolveSwapLegs(swap: WalletSwap): {
+//   sold: WalletSwapBalanceChange | null;
+//   bought: WalletSwapBalanceChange | null;
+// } {
+//   const soldFromChanges = swap.sold.amount;
+//   // swap.balanceChanges.find((change) => change.amount < 0) ?? null;
+//   const boughtFromChanges = swap.bought.amount;
+//   // swap.balanceChanges.find((change) => change.amount > 0) ?? null;
 
-  return {
-    sold: swap.sold ?? soldFromChanges,
-    bought: swap.bought ?? boughtFromChanges,
-  };
-}
+//   return {
+//     sold: soldFromChanges,
+//     bought: boughtFromChanges,
+//     // sold: swap.sold ?? soldFromChanges,
+//     // bought: swap.bought ?? boughtFromChanges,
+//   };
+// }
 
 function formatFeeLabel(swap: WalletSwap): string {
-  if (!Number.isFinite(swap.fee)) {
+  if (!swap.baseQuotePrice || !Number.isFinite(swap.baseQuotePrice)) {
     return "—";
   }
 
-  if (swap.source === "moralis") {
-    return `${swap.fee} SOL`;
-  }
-
-  return `${swap.fee * 10 ** (-9)} SOL`;
+  return `${swap.baseQuotePrice * 10 ** (-9)} SOL`;
 }
 
-function formatPairLabel(swap: WalletSwap): string {
-  const pairName = swap.pair?.label?.trim();
-  if (pairName) {
-    return pairName;
-  }
+// function formatPairLabel(swap: WalletSwap): string {
+//   const pairName = swap.pair?.label?.trim();
+//   if (pairName) {
+//     return pairName;
+//   }
 
-  const pairAddress = swap.pair?.address ?? "";
-  if (pairAddress.length === 0) {
-    return "—";
-  }
+//   const pairAddress = swap.pair?.address ?? "";
+//   if (pairAddress.length === 0) {
+//     return "—";
+//   }
 
-  return truncateAddr(pairAddress);
-}
+//   return truncateAddr(pairAddress);
+// }
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -191,11 +189,11 @@ export function SwapDetailModal({
   const modalRoot = document.getElementById(ID_MODAL_ROOT);
   if (!modalRoot) return null;
 
-  const { sold: outTransfer, bought: inTransfer } = resolveSwapLegs(swap);
-  const allChanges = swap.balanceChanges ?? [];
+  // const { sold: outTransfer, bought: inTransfer } = resolveSwapLegs(swap);
+  // const allChanges = swap.balanceChanges ?? [];
 
-  const signature = swap.signature;
-  const timestamp = swap.timestamp;
+  const signature = swap.transactionHash;
+  const timestamp = swap.blockTimestampIso;
 
   return ReactDOM.createPortal(
     // Backdrop – clicking it closes the modal
@@ -224,16 +222,16 @@ export function SwapDetailModal({
         <div className={styles.swapRow}>
           <div className={styles.tokenCard}>
             <span className={styles.dirLabel}>Sold</span>
-            {outTransfer ? (
+            {swap.sold ? (
               <>
-                <span className={styles.tokenAmt} title={String(outTransfer.amount)}>
-                  {formatAmount(Math.abs(outTransfer.amount))}
+                <span className={styles.tokenAmt} title={String(swap.sold.amount)}>
+                  {formatAmount(Math.abs(swap.sold.amount))}
                 </span>
-                <span className={styles.tokenIdentity} title={outTransfer.symbol ?? outTransfer.mint}>
+                <span className={styles.tokenIdentity} title={swap.sold.symbol ?? swap.sold.address}>
                   <TokenIdentityCell
-                    symbol={getSymbolOrMint(outTransfer)}
-                    fullName={getTokenName(outTransfer)}
-                    imageUrl={getTokenImageUrl(outTransfer)}
+                    symbol={swap.sold.symbol ?? swap.sold.address}
+                    fullName={swap.sold.name ?? swap.sold.address}
+                    imageUrl={swap.sold.logoUri ?? undefined}
                     imageSize={18}
                     showInitialsFallback
                     tooltipAlign="right"
@@ -251,16 +249,16 @@ export function SwapDetailModal({
 
           <div className={styles.tokenCard}>
             <span className={styles.dirLabel}>Bought</span>
-            {inTransfer ? (
+            {swap.bought ? (
               <>
-                <span className={styles.tokenAmt} title={String(inTransfer.amount)}>
-                  {formatAmount(Math.abs(inTransfer.amount))}
+                <span className={styles.tokenAmt} title={String(swap.bought.amount)}>
+                  {formatAmount(Math.abs(swap.bought.amount))}
                 </span>
-                <span className={styles.tokenIdentity} title={inTransfer.symbol ?? inTransfer.mint}>
+                <span className={styles.tokenIdentity} title={swap.bought.symbol ?? swap.bought.address}>
                   <TokenIdentityCell
-                    symbol={getSymbolOrMint(inTransfer)}
-                    fullName={getTokenName(inTransfer)}
-                    imageUrl={getTokenImageUrl(inTransfer)}
+                    symbol={swap.bought.symbol ?? swap.bought.address}
+                    fullName={swap.bought.name ?? swap.bought.address}
+                    imageUrl={swap.bought.logoUri ?? undefined}
                     imageSize={18}
                     showInitialsFallback
                     tooltipAlign="right"
@@ -274,15 +272,15 @@ export function SwapDetailModal({
         </div>
 
         {/* ── Plain-English summary ── */}
-        {outTransfer && inTransfer && (
+        {swap.sold && swap.bought && (
           <p className={styles.summary}>
             Swapped{" "}
             <strong>
-              {formatAmount(Math.abs(outTransfer.amount))} {getSymbolOrMint(outTransfer)}
+              {formatAmount(Math.abs(swap.sold.amount))} {swap.sold.symbol ?? "UNKNOWN"}
             </strong>{" "}
             for{" "}
             <strong>
-              {formatAmount(Math.abs(inTransfer.amount))} {getSymbolOrMint(inTransfer)}
+              {formatAmount(Math.abs(swap.bought.amount))} {swap.bought.symbol ?? "UNKNOWN"}
             </strong>
           </p>
         )}
@@ -314,18 +312,20 @@ export function SwapDetailModal({
             </div>
           )}
 
-          {swap.exchange?.name && (
+          {swap.exchangeName && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Exchange</span>
-              <span className={styles.detailVal}>{swap.exchange.name}</span>
+              <span className={styles.detailVal}>{swap.exchangeName}</span>
             </div>
           )}
 
-          {formatPairLabel(swap) !== "—" && (
+
+          {swap.tokensInvolved && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Pair</span>
-              <span className={styles.detailVal} title={swap.pair?.address ?? undefined}>
-                {formatPairLabel(swap)}
+              <span className={styles.detailVal} title={swap.tokensInvolved ?? undefined}>
+                {/* {formatPairLabel(swap)} */}
+                {swap.tokensInvolved}
               </span>
             </div>
           )}
@@ -344,39 +344,39 @@ export function SwapDetailModal({
             </div>
           )}
 
-          {Number.isFinite(swap.fee) && (
+          {Number.isFinite(swap.baseQuotePrice) && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Transaction Fee</span>
               <span className={styles.detailVal}>{formatFeeLabel(swap)}</span>
             </div>
           )}
 
-          {swap.blockNumber != null && (
+          {/* {swap.blockNumber != null && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Block Number</span>
               <span className={styles.detailVal}>{swap.blockNumber.toLocaleString()}</span>
             </div>
-          )}
-
+          )} */}
+          {/* 
           {swap.slot !== undefined && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Slot</span>
               <span className={styles.detailVal}>{swap.slot.toLocaleString()}</span>
             </div>
-          )}
+          )} */}
 
-          {swap.feePayer && (
+          {/* {swap.feePayer && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Fee Payer</span>
               <span className={styles.detailVal} title={swap.feePayer}>
                 {truncateAddr(swap.feePayer)}
               </span>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* ── All Balance Changes (for complex swaps with >2 changes) ── */}
-        {allChanges.length > 2 && (
+        {/* {allChanges.length > 2 && (
           <div className={styles.balanceChanges}>
             <h3 className={styles.sectionTitle}>All Balance Changes ({allChanges.length})</h3>
             <div className={styles.changesList}>
@@ -405,7 +405,7 @@ export function SwapDetailModal({
               ))}
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>,
     modalRoot,

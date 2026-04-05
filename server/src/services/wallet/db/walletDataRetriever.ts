@@ -1,4 +1,5 @@
 import {
+	WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
 	WALLET_SWAPS_TTL_MS,
 	WALLET_TRANSACTIONS_TTL_MS,
 	WALLET_TRANSFERS_TTL_MS,
@@ -13,6 +14,7 @@ import {
 	walletTransactionsMeta,
 	walletTransferMeta,
 	walletBalanceHistoryCache,
+	walletFirstFund,
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
@@ -49,8 +51,6 @@ const MOVING_NOW_HEAD_FRESHNESS_SEC = Math.max(
 	30,
 	Math.floor(WALLET_TRANSACTIONS_TTL_MS / 1000),
 );
-const BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
 function toIsoTimestamp(value: unknown): string {
 	if (value instanceof Date) {
 		return Number.isNaN(value.getTime())
@@ -347,44 +347,62 @@ export async function getCachedWalletSwaps(
 	}
 
 	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000);
-	const toDate = new Date(range.toSec * 1000);
+	const fromDate = new Date(range.fromSec * 1000).getTime();
+	const toDate = new Date(range.toSec * 1000).getTime();
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
 		.where(
 			and(
-				eq(walletSwap.address, address),
-				gte(walletSwap.blockTimestamp, fromDate),
-				lte(walletSwap.blockTimestamp, toDate),
+				eq(walletSwap.walletAddress, address),
+				gte(walletSwap.blockTimestampMs, fromDate),
+				lte(walletSwap.blockTimestampMs, toDate),
 			),
 		)
-		.orderBy(desc(walletSwap.blockTimestamp));
+		.orderBy(desc(walletSwap.blockTimestampMs));
 
 	if (rows.length === 0) {
 		return null;
 	}
 
 	return rows.map((r) => ({
-		walletAddress: r.address,
-		signature: r.signature,
-		timestamp: toIsoTimestamp(r.blockTimestamp),
-		slot: r.slot,
-		fee: r.fee,
-		feePayer: r.feePayer,
-		transactionType: r.transactionType ?? null,
-		subCategory: r.subCategory ?? null,
-		blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
-		exchange: r.exchange ?? null,
-		pair: r.pair ?? null,
-		sold: r.sold ?? null,
-		bought: r.bought ?? null,
-		baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
-		totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
-		source: r.source ?? undefined,
-		balanceChanges: r.swapBalanceChanges,
-		feeChanges: r.feeBalanceChanges,
+		walletAddress: r.walletAddress,
+		transactionHash: r.transactionHash,
+		blockTimestampIso: toIsoTimestamp(new Date(r.blockTimestampMs)),
+		transactionType: r.transactionType,
+		subcategory: r.subcategory,
+		tokensInvolved: r.tokensInvoled,
+
+		pairAddress: r.pairAddress,
+		exchangeAddress: r.exchangeAddress,
+		exchangeName: r.exchangeName,
+		exchangeLogo: r.exchangeLogo,
+		bought: {
+			address: r.boughtTokenAddress,
+			amount: r.boughtTokenAmount,
+			symbol: null,
+			name: null,
+			logoUri: null,
+			priceUsd: r.boughtTokenPriceUsd,
+			valueUsd: r.boughtTokenAmount != null && r.boughtTokenPriceUsd != null
+				? Number(r.boughtTokenAmount) * Number(r.boughtTokenPriceUsd)
+				: 0,
+		},
+		sold: {
+			address: r.soldTokenAddress,
+			amount: r.soldTokenAmount,
+			symbol: null,
+			name: null,
+			logoUri: null,
+			priceUsd: r.soldTokenPriceUsd,
+			valueUsd: r.soldTokenAmount != null && r.soldTokenPriceUsd != null
+				? Number(r.soldTokenAmount) * Number(r.soldTokenPriceUsd)
+				: 0,
+		},
+		totalValueUsd: r.totalValueUsd,
+		baseQuotePrice: r.baseQuotePrice,
+
 	}));
 }
 
@@ -529,24 +547,24 @@ export async function getCachedWalletSwapsChunk(
 	}
 
 	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
-	const addressPredicate = eq(walletSwap.address, address);
+	const addressPredicate = eq(walletSwap.walletAddress, address);
 	const before = String(options?.before ?? "").trim();
 	let pagePredicate = addressPredicate;
 
 	if (before) {
 		const cursorRows = await db
 			.select({
-				blockTimestamp: walletSwap.blockTimestamp,
-				signature: walletSwap.signature,
+				blockTimestampMs: walletSwap.blockTimestampMs,
+				transactionHash: walletSwap.transactionHash,
 			})
 			.from(walletSwap)
 			.where(
 				and(
 					addressPredicate,
-					eq(walletSwap.signature, before),
+					eq(walletSwap.transactionHash, before),
 				),
 			)
-			.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature))
+			.orderBy(desc(walletSwap.blockTimestampMs), desc(walletSwap.transactionHash))
 			.limit(1);
 
 		if (cursorRows.length === 0) {
@@ -563,10 +581,10 @@ export async function getCachedWalletSwapsChunk(
 		pagePredicate = and(
 			addressPredicate,
 			or(
-				lt(walletSwap.blockTimestamp, anchor.blockTimestamp),
+				lt(walletSwap.blockTimestampMs, anchor.blockTimestampMs),
 				and(
-					eq(walletSwap.blockTimestamp, anchor.blockTimestamp),
-					lt(walletSwap.signature, anchor.signature),
+					eq(walletSwap.blockTimestampMs, anchor.blockTimestampMs),
+					lt(walletSwap.transactionHash, anchor.transactionHash),
 				),
 			),
 		)!;
@@ -576,34 +594,51 @@ export async function getCachedWalletSwapsChunk(
 		.select()
 		.from(walletSwap)
 		.where(pagePredicate)
-		.orderBy(desc(walletSwap.blockTimestamp), desc(walletSwap.signature))
+		.orderBy(desc(walletSwap.blockTimestampMs), desc(walletSwap.transactionHash))
 		.limit(limit + 1);
 
 	const pageRows = rows.slice(0, limit);
 	const pageItems = pageRows.map((r) => ({
-		walletAddress: r.address,
-		signature: r.signature,
-		timestamp: toIsoTimestamp(r.blockTimestamp),
-		slot: r.slot,
-		fee: r.fee,
-		feePayer: r.feePayer,
-		transactionType: r.transactionType ?? null,
-		subCategory: r.subCategory ?? null,
-		blockNumber: r.blockNumber != null ? Number(r.blockNumber) : null,
-		exchange: r.exchange ?? null,
-		pair: r.pair ?? null,
-		sold: r.sold ?? null,
-		bought: r.bought ?? null,
-		baseQuotePrice: toNullableFiniteNumber(r.baseQuotePrice),
-		totalValueUsd: toNullableFiniteNumber(r.totalValueUsd),
-		source: r.source ?? undefined,
-		balanceChanges: r.swapBalanceChanges,
-		feeChanges: r.feeBalanceChanges,
+		walletAddress: r.walletAddress,
+		transactionHash: r.transactionHash,
+		blockTimestampIso: toIsoTimestamp(new Date(r.blockTimestampMs)),
+		transactionType: r.transactionType,
+		subcategory: r.subcategory,
+		tokensInvolved: r.tokensInvoled,
+
+		pairAddress: r.pairAddress,
+		exchangeAddress: r.exchangeAddress,
+		exchangeName: r.exchangeName,
+		exchangeLogo: r.exchangeLogo,
+		bought: {
+			address: r.boughtTokenAddress,
+			amount: r.boughtTokenAmount,
+			symbol: null,
+			name: null,
+			logoUri: null,
+			priceUsd: r.boughtTokenPriceUsd,
+			valueUsd: r.boughtTokenAmount != null && r.boughtTokenPriceUsd != null
+				? Number(r.boughtTokenAmount) * Number(r.boughtTokenPriceUsd)
+				: 0,
+		},
+		sold: {
+			address: r.soldTokenAddress,
+			amount: r.soldTokenAmount,
+			symbol: null,
+			name: null,
+			logoUri: null,
+			priceUsd: r.soldTokenPriceUsd,
+			valueUsd: r.soldTokenAmount != null && r.soldTokenPriceUsd != null
+				? Number(r.soldTokenAmount) * Number(r.soldTokenPriceUsd)
+				: 0,
+		},
+		totalValueUsd: r.totalValueUsd,
+		baseQuotePrice: r.baseQuotePrice,
 	}));
 	const hasMore = rows.length > limit;
 	const nextCursor =
 		hasMore && pageItems.length > 0
-			? pageItems[pageItems.length - 1].signature
+			? pageItems[pageItems.length - 1].transactionHash
 			: null;
 
 	return {
@@ -629,7 +664,7 @@ export async function getCachedWalletBalanceHistory(
 	coveredFromMs: number;
 	coveredToMs: number;
 } | null> {
-	const threshold = new Date(Date.now() - BALANCE_HISTORY_CACHE_TTL_MS);
+	const threshold = new Date(Date.now() - WALLET_BALANCE_HISTORY_CACHE_TTL_MS);
 	const rows = await db
 		.select()
 		.from(walletBalanceHistoryCache)
@@ -651,4 +686,18 @@ export async function getCachedWalletBalanceHistory(
 		coveredFromMs: Number(rows[0].coveredFromMs),
 		coveredToMs: Number(rows[0].coveredToMs),
 	};
+}
+
+export async function getCachedWalletFirstFund(
+	address: string
+) {
+	const row = await db
+		.select()
+		.from(walletFirstFund)
+		.where(
+			eq(walletFirstFund.reciepient, address),
+		)
+		.limit(1);
+
+	return row.length > 0 ? row[0] : null;
 }

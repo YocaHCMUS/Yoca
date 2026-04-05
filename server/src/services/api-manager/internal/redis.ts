@@ -13,8 +13,8 @@ export function getRedisClient(): RedisClientType | null {
     // Return a minimal in-memory/dummy client for tests so we don't require
     // a real Redis instance and prevent cross-test persistence.
     return {
-      get: async (_: string) => null,
-      set: async (_: string, __: string, ___?: any) => "OK",
+      get: async () => null,
+      set: async () => "OK",
       connect: async () => undefined,
     } as unknown as RedisClientType;
   }

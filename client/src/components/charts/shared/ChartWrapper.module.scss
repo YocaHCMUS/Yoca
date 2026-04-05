@@ -32,10 +32,48 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--cds-border-subtle-01);
+}
+
+.headerStacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+
+  .title {
+    width: 100%;
+    flex: none;
+  }
+}
+
+.headerToolbarRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.headerFilters {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+}
+
+.headerToolbarRight {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  flex-shrink: 0;
 }
 
 .title {
@@ -43,19 +81,38 @@
   font-weight: 600;
   color: var(--cds-text-primary);
   margin: 0;
+  flex-shrink: 0;
 }
 
 .headerActions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+}
+
+/** Viewing-mode buttons on first row, export on second (avoids clipping in tight headers). */
+.headerToolbarColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.exportMenuRow {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .controls {
   display: flex;
   gap: 0.25rem;
   align-items: center;
-  margin-right: 0.5rem;
 }
 
 .controlButton {
@@ -125,10 +182,20 @@
     padding: 0.75rem;
   }
 
-  .header {
+  .header:not(.headerStacked) {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+  }
+
+  .headerToolbarRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerToolbarRight {
+    justify-content: flex-end;
+    width: 100%;
   }
 
   .title {

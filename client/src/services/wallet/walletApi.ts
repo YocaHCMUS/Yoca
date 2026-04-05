@@ -55,24 +55,46 @@ export interface WalletSwapPair {
 }
 
 export interface WalletSwap {
-  walletAddress: string;
-  signature: string;
-  timestamp: string;
-  slot: number;
-  fee: number;
-  feePayer: string;
-  balanceChanges: WalletSwapBalanceChange[];
-  feeChanges: WalletSwapBalanceChange[];
-  transactionType?: string | null;
-  subCategory?: string | null;
-  blockNumber?: number | null;
-  exchange?: WalletSwapExchange | null;
-  pair?: WalletSwapPair | null;
-  sold?: WalletSwapBalanceChange | null;
-  bought?: WalletSwapBalanceChange | null;
-  baseQuotePrice?: number | null;
-  totalValueUsd?: number | null;
-  source?: "helius" | "moralis" | string;
+  transactionHash: string,
+  transactionType: string,
+  blockTimestampIso: string,
+
+  subcategory: string | null,
+
+  walletAddress: string,
+  pairAddress: string,
+
+  tokensInvolved: string,
+  exchangeAddress: string,
+  exchangeName: string,
+  exchangeLogo: string,
+
+  bought: WalletSwapTokenChange,
+  sold: WalletSwapTokenChange,
+
+  totalValueUsd: number | null;
+  baseQuotePrice: number | null;
+}
+
+export interface WalletSwapTokenChange {
+  address: string;
+  amount: number;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  priceUsd: number;
+  valueUsd: number;
+}
+
+
+export interface WalletSwapTokenInfo {
+  address: string;
+  amount: number;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  priceUsd: number;
+  valueUsd: number;
 }
 
 export interface WalletPageInfo {
@@ -82,13 +104,18 @@ export interface WalletPageInfo {
   source: "cache" | "provider" | "mixed";
 }
 
+// export interface WalletSwapsResponse {
+//   address: string;
+//   chain?: string;
+//   swaps: WalletSwap[];
+//   pageInfo: WalletPageInfo;
+// }
+
 export interface WalletSwapsResponse {
   address: string;
-  chain?: string;
   swaps: WalletSwap[];
   pageInfo: WalletPageInfo;
 }
-
 export interface WalletTransfer {
   from: string;
   to: string;
@@ -149,6 +176,63 @@ export interface WalletCounterpartiesResponse {
       transactions: number;
       volume: number;
     };
+  };
+}
+
+export interface WalletFirstFundInsight {
+  targetAddress: string;
+  funderAddress: string | null;
+  funderName: string | null;
+  funderType: string | null;
+  funderLabel: string | null;
+  firstFundDate: string | null;
+  firstFundTimestampSec: number | null;
+  walletAgeDays: number | null;
+  walletAgeLabel: string | null;
+  signature: string | null;
+}
+
+export interface WalletIdentityAnalysis {
+  riskScore: number;
+  riskLevel: "low" | "medium" | "high";
+  signals: string[];
+  counterpartyProfile: {
+    exchangeInteractions24h: number;
+    uniqueKnownEntities7d: number;
+  };
+  firstFund: WalletFirstFundInsight | null;
+  userTags?: string[];
+}
+
+export interface WalletIdentityNormalized {
+  status: "known" | "unknown" | "unavailable";
+  type: string | null;
+  name: string | null;
+  category: string | null;
+  tags: string[];
+  domainNames: string[];
+  provider: "helius";
+  providerVersion: "wallet-api-beta";
+  resolvedAt: string;
+}
+
+export interface WalletIdentityProviderMetadata {
+  statusCode?: number;
+  errorCode?: string;
+}
+
+export interface WalletIntelligenceResponse {
+  address: string;
+  identity: WalletIdentityNormalized;
+  analysis: WalletIdentityAnalysis;
+  metadata: {
+    cache: {
+      identityHit: boolean;
+      analysisHit: boolean;
+      ttlSec: number;
+      staleIdentity: boolean;
+    };
+    provider: WalletIdentityProviderMetadata;
   };
 }
 
@@ -435,14 +519,14 @@ export async function fetchWalletIdentityBatch(
 export async function fetchWalletIntelligence(
   address: string,
   chain?: string,
-) {
+): Promise<WalletIntelligenceResponse> {
   const query = { address, ...(chain && { chain }) };
   const response = await client.api.wallets.intelligence.$get({
     query,
   });
   await handleResponse(response);
   const data = await response.json();
-  return data;
+  return data as WalletIntelligenceResponse;
 }
 
 export const walletApi = {

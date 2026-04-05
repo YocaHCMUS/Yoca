@@ -36,7 +36,7 @@ const TIME_RANGES: TimeRange[] = [
 
 export default function HistoricalDataPage() {
   const { address } = useParams<{ address: string }>();
-  const { tr, lang, fmt } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const [selectedRange, setSelectedRange] = useState<TimeRange>(TIME_RANGES[0]);
   const [rows, setRows] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(false);

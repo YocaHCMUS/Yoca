@@ -224,17 +224,17 @@ function getCounterpartyFromTransfer(transfer: WalletTransfer, walletLower: stri
 }
 
 function getCounterpartyFromSwap(swap: WalletSwap): string {
-    const exchangeAddress = normalizeAddress(swap.exchange?.address);
+    const exchangeAddress = normalizeAddress(swap.exchangeAddress);
     if (exchangeAddress) {
         return exchangeAddress;
     }
 
-    const pairAddress = normalizeAddress(swap.pair?.address);
-    if (pairAddress) {
-        return pairAddress;
-    }
+    // const pairAddress = normalizeAddress(swap.pair?.address);
+    // if (pairAddress) {
+    //     return pairAddress;
+    // }
 
-    const normalizedSignature = normalizeSignature(swap.signature) || "unknown";
+    const normalizedSignature = normalizeSignature(swap.transactionHash) || "unknown";
     return `swap:unknown:${normalizedSignature}`;
 }
 
@@ -413,7 +413,7 @@ function mergeCounterpartiesFromSwaps(input: {
     const { swaps, byCounterparty, fromMs, toMs } = input;
 
     for (const swap of swaps) {
-        const timestampMs = toTimestampMs(swap.timestamp);
+        const timestampMs = toTimestampMs(swap.blockTimestampIso);
         if (!inRange(timestampMs, fromMs, toMs)) {
             continue;
         }
@@ -423,7 +423,7 @@ function mergeCounterpartiesFromSwaps(input: {
             continue;
         }
 
-        const normalizedSignature = normalizeSignature(swap.signature);
+        const normalizedSignature = normalizeSignature(swap.transactionHash);
         const signature = normalizedSignature || `${counterpartyAddress.toLowerCase()}:${timestampMs}`;
         const dedupeKey = `${signature}:${counterpartyAddress.toLowerCase()}`;
 
@@ -511,7 +511,7 @@ async function fetchCounterpartyActivityDataset(
 
             let reachedSwapBoundary = false;
             for (const swap of swapPage.swaps) {
-                const timestampMs = toTimestampMs(swap.timestamp);
+                const timestampMs = toTimestampMs(swap.blockTimestampIso);
                 if (!Number.isFinite(timestampMs) || timestampMs > nowMs) {
                     continue;
                 }
@@ -521,7 +521,7 @@ async function fetchCounterpartyActivityDataset(
                     continue;
                 }
 
-                const signature = normalizeSignature(swap.signature) || "unknown";
+                const signature = normalizeSignature(swap.transactionHash) || "unknown";
                 const dedupeKey = `swap:${signature}`;
                 if (seenSwapKeys.has(dedupeKey)) {
                     continue;
