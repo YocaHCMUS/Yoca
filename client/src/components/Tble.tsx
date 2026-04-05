@@ -191,14 +191,7 @@ export default function Tble({
                 overflow: "auto",
               }}
             >
-              <Table
-                {...getTableProps()}
-                style={{
-                  width: "max-content",
-                  minWidth: "100%",
-                  tableLayout: "auto",
-                }}
-              >
+              <Table {...getTableProps()}>
                 <TableHead hidden={hideHeaders}>
                   <TableRow>
                     {internalHeaders.map((header) => {

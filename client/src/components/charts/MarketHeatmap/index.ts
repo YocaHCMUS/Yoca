@@ -1,1 +1,0 @@
-export { MarketHeatmap } from './MarketHeatmap';

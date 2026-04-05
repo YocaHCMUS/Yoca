@@ -1,5 +1,5 @@
 import { mapWithConcurrency } from "@sv/util/concurrency";
-import {
+import type {
   WalletOverviewPeriodKey,
   WalletTimePeriod,
 } from "./dtos/walletDataObjects";
@@ -296,16 +296,17 @@ export async function processStablecoinRatioData(
     const walletAddress = walletAddresses[index] ?? walletKey;
     const dataPoints = rawData.map((row) => ({
       timestamp: row.timestamp,
-      value: typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
+      value:
+        typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
     }));
     const currentRatio =
       dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
     const averageRatio =
       dataPoints.length > 0
         ? clampToPercent(
-          dataPoints.reduce((sum, point) => sum + point.value, 0) /
-          dataPoints.length,
-        )
+            dataPoints.reduce((sum, point) => sum + point.value, 0) /
+              dataPoints.length,
+          )
         : null;
 
     return {
