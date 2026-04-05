@@ -30,7 +30,7 @@ export default ({ mode }: { mode: string }) => {
     },
     plugins: [react(), svgr()],
     build: {
-      outDir: "build",
+      outDir: "./build",
     },
     resolve: {
       dedupe: ["react", "react-dom"],
