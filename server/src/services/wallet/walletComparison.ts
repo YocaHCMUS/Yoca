@@ -263,6 +263,7 @@ export async function getStablecoinRatio(
 export async function processStablecoinRatioData(
   rawData: StablecoinRatioRow[],
   period: WalletTimePeriod,
+  walletAddresses: string[] = [],
 ): Promise<{
   wallets: {
     walletAddress: string;
@@ -286,27 +287,30 @@ export async function processStablecoinRatioData(
     currency: "USD",
   };
 
-  const walletKeys = Object.keys(rawData[0] ?? {}).filter((key) =>
-    key.startsWith("wallet"),
-  );
-  const wallets = walletKeys.map((walletKey) => {
+  const walletKeys =
+    walletAddresses.length > 0
+      ? walletAddresses.map((_, index) => `wallet${index + 1}`)
+      : Object.keys(rawData[0] ?? {}).filter((key) => key.startsWith("wallet"));
+
+  const wallets = walletKeys.map((walletKey, index) => {
+    const walletAddress = walletAddresses[index] ?? walletKey;
     const dataPoints = rawData.map((row) => ({
       timestamp: row.timestamp,
-      value: row[walletKey] as number,
+      value: typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
     }));
     const currentRatio =
       dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
     const averageRatio =
       dataPoints.length > 0
         ? clampToPercent(
-            dataPoints.reduce((sum, point) => sum + point.value, 0) /
-              dataPoints.length,
-          )
+          dataPoints.reduce((sum, point) => sum + point.value, 0) /
+          dataPoints.length,
+        )
         : null;
 
     return {
-      walletAddress: walletKey,
-      walletName: walletKey, // Replace with actual wallet name if available
+      walletAddress,
+      walletName: walletAddress,
       data: dataPoints,
       currentRatio,
       averageRatio,
