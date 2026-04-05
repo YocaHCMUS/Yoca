@@ -96,6 +96,8 @@ export interface WalletOverviewProps {
     initialFilters?: Partial<any>;
     autoRefresh?: boolean;
     refreshInterval?: number;
+    /** When false, skips GET /wallets/intelligence until enabled (saves heavy API work until needed). */
+    enableIntelligence?: boolean;
 }
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import WalletOverviewValueSection from './WalletOverviewValueSection';
@@ -106,6 +108,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',
     autoRefresh = true,
     refreshInterval = 30000,
+    enableIntelligence = true,
 }) => {
     const { user } = useAuth();
     const { tr, fmt } = useLocalization();
@@ -156,27 +159,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 setLoading(true);
                 setError(null);
 
-                const [overviewResult, intelligenceResult] = await Promise.allSettled([
-                    fetchWalletOverview(walletAddress, 'solana'),
-                    fetchWalletIntelligence(walletAddress, 'solana'),
-                ]);
-
-                if (overviewResult.status === 'rejected') {
-                    throw overviewResult.reason;
-                }
-
-                setOverview(overviewResult.value);
-                setSelectedPeriod(overviewResult.value.selectedPeriod ?? '24H');
-
-                if (intelligenceResult.status === 'fulfilled') {
-                    setIntelligence(intelligenceResult.value);
-                } else {
-                    setIntelligence(null);
-                }
+                const overviewResult = await fetchWalletOverview(walletAddress, 'solana');
+                setOverview(overviewResult);
+                setSelectedPeriod(overviewResult.selectedPeriod ?? '24H');
             } catch (err) {
                 console.error('Failed to fetch wallet overview:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load wallet data');
-                setIntelligence(null);
             } finally {
                 setLoading(false);
             }
@@ -191,6 +179,34 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             }
         }
     }, [walletAddress, autoRefresh, refreshInterval]);
+
+    useEffect(() => {
+        if (!walletAddress || walletAddress === 'null') {
+            return;
+        }
+
+        if (!enableIntelligence) {
+            setIntelligence(null);
+            return;
+        }
+
+        const loadIntelligence = async () => {
+            try {
+                const intelligenceResult = await fetchWalletIntelligence(walletAddress, 'solana');
+                setIntelligence(intelligenceResult);
+            } catch (err) {
+                console.error('Failed to fetch wallet intelligence:', err);
+                setIntelligence(null);
+            }
+        };
+
+        loadIntelligence();
+
+        if (autoRefresh) {
+            const interval = setInterval(loadIntelligence, refreshInterval);
+            return () => clearInterval(interval);
+        }
+    }, [walletAddress, enableIntelligence, autoRefresh, refreshInterval]);
 
     const handleLabelSave = (newLabel: string) => {
         setLabel(newLabel);

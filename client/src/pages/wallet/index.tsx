@@ -33,6 +33,7 @@ import { ChevronDown, Download } from "@carbon/icons-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import {
     fetchWalletCounterparties,
@@ -121,13 +122,20 @@ export default function WalletPage() {
     const [intelligenceReport, setIntelligenceReport] = useState<WalletIntelligenceResponse | null>(null);
     const [walletTags, setWalletTags] = useState<string[]>([]);
 
+    /** 0 Overview, 1 Holdings, 2 Activity / Risk — data loads when each tab is first visited. */
     const [activeTab, setActiveTab] = useState(0);
+    /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
+    const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
     const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
     const [isDataExporting, setIsDataExporting] = useState(false);
     const [isChartsExporting, setIsChartsExporting] = useState(false);
     const exportMenuRef = useRef<HTMLDivElement | null>(null);
     const reportTemplateRef = useRef<HTMLDivElement | null>(null);
+    const portfolioLoadedRef = useRef(false);
+    const activityLoadedRef = useRef(false);
+    /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
+    const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
 
     const [leftWidth, setLeftWidth] = useState(420);
     const isDragging = useRef(false);
@@ -145,7 +153,7 @@ export default function WalletPage() {
         client.api.wallets[":address"].tokens,
         200,
         { param: { address: address || "" } },
-        { enabled: !!address },
+        { enabled: !!address && activeTab === 1 },
     );
 
     const tokenAddresses = useMemo(
@@ -512,72 +520,191 @@ export default function WalletPage() {
             });
     }, [address, user]);
 
-    useEffect(() => {
-        const loadData = async () => {
-            if (!address || address === "null") return;
-            setPortfolioLoading(true);
-            setSwapLoading(true);
-            setTransferLoading(true);
-            setCounterpartyLoading(true);
+    const loadPortfolioData = useCallback(async (): Promise<WalletPortfolioItem[]> => {
+        if (!address || address === "null") {
+            return [];
+        }
+        setPortfolioLoading(true);
+        try {
+            const portfolioResult = await fetchWalletPortfolio(address);
+            const rows = Array.isArray(portfolioResult) ? portfolioResult : [];
+            flushSync(() => {
+                setPortfolio(rows);
+            });
+            return rows;
+        } catch (error) {
+            console.error("[WalletPage] Failed to load portfolio", error);
+            flushSync(() => {
+                setPortfolio([]);
+            });
+            portfolioLoadedRef.current = false;
+            return [];
+        } finally {
+            setPortfolioLoading(false);
+        }
+    }, [address]);
 
-            try {
-                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult, overviewResult, intelligenceResult] = await Promise.allSettled([
-                    fetchWalletPortfolio(address),
-                    fetchWalletSwaps(address),
-                    fetchWalletTransfers(address),
-                    fetchWalletCounterparties(address, { period: "7d", limit: 50, includeTokens: true }),
-                    fetchWalletOverview(address, "solana"),
-                    fetchWalletIntelligence(address, "solana"),
-                ]);
+    const loadActivityData = useCallback(async (): Promise<{
+        swaps: WalletSwap[];
+        transfers: WalletTransfer[];
+        counterparties: WalletCounterpartyRow[];
+    }> => {
+        if (!address || address === "null") {
+            return { swaps: [], transfers: [], counterparties: [] };
+        }
+        setSwapLoading(true);
+        setTransferLoading(true);
+        setCounterpartyLoading(true);
+        try {
+            const [swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+                fetchWalletSwaps(address),
+                fetchWalletTransfers(address),
+                fetchWalletCounterparties(address, { period: "7d", limit: 50, includeTokens: true }),
+            ]);
 
-                if (portfolioResult.status === "fulfilled" && Array.isArray(portfolioResult.value)) {
-                    setPortfolio(portfolioResult.value);
+            let swaps: WalletSwap[] = [];
+            let transfers: WalletTransfer[] = [];
+            let counterpartiesOut: WalletCounterpartyRow[] = [];
+
+            if (swapsResult.status === "fulfilled") {
+                const swapsData = swapsResult.value?.swaps || [];
+                if (Array.isArray(swapsData)) {
+                    swaps = swapsData;
                 }
+            }
 
+            if (transfersResult.status === "fulfilled") {
+                const transfersData = transfersResult.value?.transfers || [];
+                if (Array.isArray(transfersData)) {
+                    transfers = transfersData;
+                }
+            }
+
+            if (counterpartiesResult.status === "fulfilled") {
+                const counterpartiesData = counterpartiesResult.value?.counterparties ?? [];
+                if (Array.isArray(counterpartiesData)) {
+                    counterpartiesOut = counterpartiesData;
+                }
+            }
+
+            flushSync(() => {
                 if (swapsResult.status === "fulfilled") {
-                    const swapsData = swapsResult.value?.swaps || [];
-                    if (Array.isArray(swapsData)) {
-                        setSwapPages({ 1: swapsData });
-                        setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
-                    }
+                    setSwapPages({ 1: swaps });
+                    setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
                 }
 
                 if (transfersResult.status === "fulfilled") {
-                    const transfersData = transfersResult.value?.transfers || [];
-                    if (Array.isArray(transfersData)) {
-                        setTransferPages({ 1: transfersData });
-                        setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
-                    }
+                    setTransferPages({ 1: transfers });
+                    setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
                 }
 
                 if (counterpartiesResult.status === "fulfilled") {
-                    const counterpartiesData = counterpartiesResult.value?.counterparties ?? [];
-                    if (Array.isArray(counterpartiesData)) {
-                        setCounterparties(counterpartiesData);
-                    }
+                    setCounterparties(counterpartiesOut);
                 }
+            });
 
-                if (overviewResult.status === "fulfilled") {
-                    setOverviewReport(overviewResult.value ?? null);
-                } else {
-                    setOverviewReport(null);
-                }
-
-                if (intelligenceResult.status === "fulfilled") {
-                    setIntelligenceReport(intelligenceResult.value ?? null);
-                } else {
-                    setIntelligenceReport(null);
-                }
-            } finally {
-                setPortfolioLoading(false);
-                setSwapLoading(false);
-                setTransferLoading(false);
-                setCounterpartyLoading(false);
-            }
-        };
-
-        loadData();
+            return { swaps, transfers, counterparties: counterpartiesOut };
+        } catch (error) {
+            console.error("[WalletPage] Failed to load activity data", error);
+            return { swaps: [], transfers: [], counterparties: [] };
+        } finally {
+            setSwapLoading(false);
+            setTransferLoading(false);
+            setCounterpartyLoading(false);
+        }
     }, [address]);
+
+    useEffect(() => {
+        setIntelligenceEnabled(false);
+    }, [address]);
+
+    useEffect(() => {
+        if (activeTab === 2) {
+            setIntelligenceEnabled(true);
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab !== 1) {
+            holdingsPortfolioAttemptedRef.current = null;
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (!address || address === "null") {
+            portfolioLoadedRef.current = false;
+            activityLoadedRef.current = false;
+            holdingsPortfolioAttemptedRef.current = null;
+            setPortfolio([]);
+            setSwapPages({});
+            setSwapPageInfoByPage({});
+            setTransferPages({});
+            setTransferPageInfoByPage({});
+            setCounterparties([]);
+            setOverviewReport(null);
+            setIntelligenceReport(null);
+            return;
+        }
+        portfolioLoadedRef.current = false;
+        activityLoadedRef.current = false;
+    }, [address]);
+
+    useEffect(() => {
+        if (!address || address === "null") {
+            return;
+        }
+
+        const shouldInitialPortfolioLoad = (activeTab === 0 || activeTab === 1) && !portfolioLoadedRef.current;
+        const shouldHoldingsPortfolioBackfill =
+            activeTab === 1
+            && portfolioLoadedRef.current
+            && portfolio.length === 0
+            && !portfolioLoading
+            && holdingsPortfolioAttemptedRef.current !== address;
+
+        if (shouldInitialPortfolioLoad) {
+            portfolioLoadedRef.current = true;
+            void loadPortfolioData();
+        } else if (shouldHoldingsPortfolioBackfill) {
+            holdingsPortfolioAttemptedRef.current = address;
+            void loadPortfolioData();
+        }
+
+        if (activeTab === 2 && !activityLoadedRef.current) {
+            activityLoadedRef.current = true;
+            void loadActivityData();
+        }
+    }, [address, activeTab, portfolio.length, portfolioLoading, loadPortfolioData, loadActivityData]);
+
+    const ensurePortfolioAndActivityForExport = useCallback(async (): Promise<{
+        portfolio: WalletPortfolioItem[];
+        swaps: WalletSwap[];
+        transfers: WalletTransfer[];
+        counterparties: WalletCounterpartyRow[];
+    }> => {
+        if (!address || address === "null") {
+            return { portfolio: [], swaps: [], transfers: [], counterparties: [] };
+        }
+
+        let p = portfolio;
+        if (!portfolioLoadedRef.current) {
+            portfolioLoadedRef.current = true;
+            p = await loadPortfolioData();
+        }
+
+        let s = loadedSwaps;
+        let t = loadedTransfers;
+        let c = counterparties;
+        if (!activityLoadedRef.current) {
+            activityLoadedRef.current = true;
+            const activity = await loadActivityData();
+            s = activity.swaps;
+            t = activity.transfers;
+            c = activity.counterparties;
+        }
+
+        return { portfolio: p, swaps: s, transfers: t, counterparties: c };
+    }, [address, portfolio, loadedSwaps, loadedTransfers, counterparties, loadPortfolioData, loadActivityData]);
 
     const activeReportSection = useMemo<WalletReportSection>(() => {
         if (activeTab === 1) {
@@ -625,10 +752,19 @@ export default function WalletPage() {
     });
 
     async function handleExportPagePdf() {
-        if (isPagePdfExporting) return;
+        if (isPagePdfExporting || !address || address === "null") return;
         setIsPagePdfExporting(true);
         setIsExportMenuOpen(false);
         try {
+            await ensurePortfolioAndActivityForExport();
+            const [ov, intel] = await Promise.all([
+                fetchWalletOverview(address, "solana"),
+                fetchWalletIntelligence(address, "solana"),
+            ]);
+            flushSync(() => {
+                setOverviewReport(ov ?? null);
+                setIntelligenceReport(intel ?? null);
+            });
             await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
             await exportReportAsPdf();
         } catch (error) {
@@ -638,14 +774,44 @@ export default function WalletPage() {
         }
     }
 
-    function handleExportDataXlsx() {
+    async function handleExportDataXlsx() {
         try {
             setIsDataExporting(true);
+            const snap = await ensurePortfolioAndActivityForExport();
+            const { rows: portfolioRows } = mapPortfolioItems(snap.portfolio);
+            const swapSheetRows = snap.swaps.map((swap) => {
+                const totalValueUsd = toOptionalFiniteNumber((swap as unknown as { totalValueUsd?: unknown }).totalValueUsd);
+                const baseQuotePrice = toOptionalFiniteNumber((swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice);
+                return [
+                    String(swap.blockTimestampIso ?? ""),
+                    typeof swap.exchangeName === "string" && swap.exchangeName.trim().length > 0 ? swap.exchangeName : "—",
+                    formatSwapPair(swap),
+                    swap.sold,
+                    swap.bought,
+                    totalValueUsd ?? "—",
+                    baseQuotePrice ?? "—",
+                    swap.transactionHash,
+                ];
+            });
+            const transferSheetRows = snap.transfers.map((transfer) => [
+                transfer.from,
+                transfer.to,
+                typeof transfer.tokenSymbol === "string" && transfer.tokenSymbol.trim().length > 0 ? transfer.tokenSymbol : "Unknown",
+                transfer.amount,
+                transfer.timestamp,
+                `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+            ]);
+            const counterpartySheetRows = snap.counterparties.map((row) => {
+                const identityLabel =
+                    row.identity.name ||
+                    (row.identity.status === "known" ? tr("walletPage.identityKnown") : row.identity.status === "unavailable" ? tr("walletPage.identityUnavailable") : tr("walletPage.unknown"));
+                return [row.address, identityLabel, row.uniqueTokenCount, row.tokens.join(", "), row.totalVolumeUsd, row.transactionCount];
+            });
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([swapHeaders, ...swapData]), "Swaps");
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([transferHeaders, ...transferData]), "Transfers");
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([counterpartyHeaders, ...counterpartyTableData]), "Counterparties");
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([portfolioHeaders, ...portfolioData]), "Portfolio");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([swapHeaders, ...swapSheetRows]), "Swaps");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([transferHeaders, ...transferSheetRows]), "Transfers");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([counterpartyHeaders, ...counterpartySheetRows]), "Counterparties");
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([portfolioHeaders, ...portfolioRows]), "Portfolio");
             const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.xlsx`;
             XLSX.writeFile(workbook, filename);
         } catch (error) {
@@ -1055,7 +1221,7 @@ export default function WalletPage() {
         >
             <div className={styles.walletGrid} style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}>
                 <div className={styles.leftColumn}>
-                    <WalletOverview walletAddress={walletAddress} />
+                    <WalletOverview walletAddress={walletAddress} enableIntelligence={intelligenceEnabled} />
                 </div>
 
                 <div className={styles.resizeDivider} onMouseDown={handleDividerMouseDown}>
