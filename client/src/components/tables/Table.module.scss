@@ -111,6 +111,50 @@ $filter-popup-z-index: 9999;
   background-color: var(--cds-layer-01);
 }
 
+/* Match Tble / Last-traded: full header labels (wrap, no ellipsis). */
+.tableHeaderThFull {
+  white-space: normal;
+  overflow: visible;
+  vertical-align: bottom;
+  word-break: normal;
+  overflow-wrap: break-word;
+
+  :global(.cds--table-header-label) {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.35;
+    display: block;
+    max-width: none;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+.headerThAlignStart {
+  text-align: left;
+
+  .headerContent {
+    justify-content: flex-start;
+  }
+}
+
+.headerThAlignCenter {
+  text-align: center;
+
+  .headerContent {
+    justify-content: center;
+  }
+}
+
+.headerThAlignEnd {
+  text-align: right;
+
+  .headerContent {
+    justify-content: flex-end;
+  }
+}
+
 .sortableHeader {
   cursor: pointer;
 }
@@ -125,14 +169,12 @@ $filter-popup-z-index: 9999;
 .headerText {
   flex: 1 1 auto;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.35;
   white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  word-break: normal;
+  overflow-wrap: break-word;
+  overflow: visible;
+  text-transform: uppercase;
 }
 
 .paginationContainer {

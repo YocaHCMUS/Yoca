@@ -455,7 +455,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   const filterControls = (
     <div
-      className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--end']} ${sharedStyles['chartControls--withBackground']}`}
+      className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--start']} ${sharedStyles['chartControls--withBackground']}`}
     >
       <label className={sharedStyles.filterField}>
         <span className={sharedStyles.filterLabelSmall}>
@@ -508,6 +508,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   return (
     <ChartWrapper
       title={chartTitle}
+      toolbarLayout="stacked"
       loadingState={loadingState}
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0

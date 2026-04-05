@@ -4,7 +4,7 @@ import { ExchangeComparison } from "@/components/charts/ExchangeComparison/Excha
 import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
-import { FilterType, SortType, Table } from "@/components/tables/Table.tsx";
+import { FilterType, SortType, Table, tableHeaderLabel } from "@/components/tables/Table.tsx";
 import {
     renderBase,
     renderCode,
@@ -348,10 +348,10 @@ export default function WalletPage() {
     ];
 
     const portfolioHeaders = [
-        tr("walletPage.token"),
-        tr("walletPage.price"),
-        tr("walletPage.holding"),
-        tr("walletPage.value"),
+        { header: tr("walletPage.token"), align: "start" as const, minWidth: "11rem" },
+        { header: tr("walletPage.price"), align: "end" as const, minWidth: "8rem" },
+        { header: tr("walletPage.holding"), align: "end" as const, minWidth: "8rem" },
+        { header: tr("walletPage.value"), align: "end" as const, minWidth: "8.5rem" },
     ];
 
     const isSortableCounterparties = [false, false, true, false, true, true];
@@ -813,7 +813,11 @@ export default function WalletPage() {
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([swapHeaders, ...swapSheetRows]), "Swaps");
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([transferHeaders, ...transferSheetRows]), "Transfers");
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([counterpartyHeaders, ...counterpartySheetRows]), "Counterparties");
-            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([portfolioHeaders, ...portfolioRows]), "Portfolio");
+            XLSX.utils.book_append_sheet(
+                workbook,
+                XLSX.utils.aoa_to_sheet([portfolioHeaders.map(tableHeaderLabel), ...portfolioRows]),
+                "Portfolio",
+            );
             const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.xlsx`;
             XLSX.writeFile(workbook, filename);
         } catch (error) {

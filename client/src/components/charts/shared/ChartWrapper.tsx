@@ -71,6 +71,12 @@ interface ChartWrapperProps {
 
   /** Enable mini-player mode (default: true) */
   enableMiniPlayer?: boolean;
+
+  /**
+   * default: title left, custom actions + toolbar on the same row (right).
+   * stacked: title on its own row; next row = actions left, viewing + export right (aligned on one line).
+   */
+  toolbarLayout?: 'default' | 'stacked';
 }
 
 /**
@@ -108,6 +114,7 @@ export function ChartWrapper({
   onExport,
   enableFullscreen = true,
   enableMiniPlayer = true,
+  toolbarLayout = 'default',
 }: ChartWrapperProps) {
   const { tr } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -200,6 +207,15 @@ export function ChartWrapper({
   //   document.addEventListener('keydown', handleKeyDown);
   //   return () => document.removeEventListener('keydown', handleKeyDown);
   // }, [enableFullscreen, enableMiniPlayer, isFullscreen, isMiniPlayer, enterFullscreen, enterMiniPlayer, exitFullscreen, exitMiniPlayer]);
+
+  const exportMenu =
+    enableExport && onExport ? (
+      <ExportMenu
+        onExport={handleExport}
+        isExporting={isExporting}
+        disabled={loadingState.status === 'loading' || isEmpty}
+      />
+    ) : null;
 
   /**
    * Render viewing mode controls
@@ -311,25 +327,44 @@ export function ChartWrapper({
         </div>
 
         {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.title} id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-            {title}
-          </h2>
-          <div className={styles.headerActions}>
-            {actions}
-            <div className={styles.headerToolbarColumn}>
-              {renderControls()}
-              {enableExport && onExport && (
-                <div className={styles.exportMenuRow}>
-                  <ExportMenu
-                    onExport={handleExport}
-                    isExporting={isExporting}
-                    disabled={loadingState.status === 'loading' || isEmpty}
-                  />
+        <div
+          className={`${styles.header} ${toolbarLayout === 'stacked' ? styles.headerStacked : ''}`}
+        >
+          {toolbarLayout === 'stacked' ? (
+            <>
+              <h2
+                className={styles.title}
+                id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
+              >
+                {title}
+              </h2>
+              <div className={styles.headerToolbarRow}>
+                <div className={styles.headerFilters}>{actions}</div>
+                <div className={styles.headerToolbarRight}>
+                  {renderControls()}
+                  {exportMenu}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2
+                className={styles.title}
+                id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
+              >
+                {title}
+              </h2>
+              <div className={styles.headerActions}>
+                {actions}
+                <div className={styles.headerToolbarColumn}>
+                  {renderControls()}
+                  {exportMenu && (
+                    <div className={styles.exportMenuRow}>{exportMenu}</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content area */}
