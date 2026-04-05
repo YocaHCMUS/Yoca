@@ -19,11 +19,13 @@ import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailM
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
+import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
-import { exportCurrentPageAsPdf } from "@/hooks/useChartExport.ts";
+import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
 import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx";
+import { WalletReportTemplate, type WalletReportSection } from "@/components/WalletReportTemplate";
 import { buildPortfolioMetaMap, mapPortfolioItems } from "../../util/wallet-portfolio-mapper.ts";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { Button } from "@carbon/react";
@@ -34,16 +36,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useNavigate, useParams } from "react-router";
 import {
     fetchWalletCounterparties,
+    fetchWalletIntelligence,
+    fetchWalletOverview,
     fetchWalletPortfolio,
     fetchWalletSwaps,
     fetchWalletTransfers,
     type WalletCounterpartyRow,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
     type WalletPageInfo,
     type WalletPortfolioItem,
     type WalletSwap,
     type WalletSwapTokenInfo,
     type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
+import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import styles from "./index.module.scss";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
@@ -62,6 +69,26 @@ function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
         .flatMap((page) => pages[page] ?? []);
 }
 
+const WSOL_MINT = "So11111111111111111111111111111111111111112";
+
+function resolveTokenMetaLookupAddress(tokenAddress: string | undefined): string | undefined {
+    if (!tokenAddress) {
+        return undefined;
+    }
+
+    const normalized = tokenAddress.trim().toLowerCase();
+    if (
+        normalized === "native"
+        || normalized === "sol"
+        || normalized === "11111111111111111111111111111111"
+        || normalized === "so11111111111111111111111111111111111111111"
+    ) {
+        return WSOL_MINT;
+    }
+
+    return tokenAddress;
+}
+
 function PageSection({ children }: { children: ReactNode }) {
     return (
         <section className={styles.section}>
@@ -71,6 +98,7 @@ function PageSection({ children }: { children: ReactNode }) {
 }
 
 export default function WalletPage() {
+    const { user } = useAuth();
     const { tr, fmt, lang } = useLocalization();
     const bcp47 = locale[lang].langCode;
     const navigate = useNavigate();
@@ -89,6 +117,9 @@ export default function WalletPage() {
 
     const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
     const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>([]);
+    const [overviewReport, setOverviewReport] = useState<WalletOverviewMultiPeriodResponse | null>(null);
+    const [intelligenceReport, setIntelligenceReport] = useState<WalletIntelligenceResponse | null>(null);
+    const [walletTags, setWalletTags] = useState<string[]>([]);
 
     const [activeTab, setActiveTab] = useState(0);
     const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
@@ -96,7 +127,7 @@ export default function WalletPage() {
     const [isDataExporting, setIsDataExporting] = useState(false);
     const [isChartsExporting, setIsChartsExporting] = useState(false);
     const exportMenuRef = useRef<HTMLDivElement | null>(null);
-    const pdfExportContainerRef = useRef<HTMLDivElement | null>(null);
+    const reportTemplateRef = useRef<HTMLDivElement | null>(null);
 
     const [leftWidth, setLeftWidth] = useState(420);
     const isDragging = useRef(false);
@@ -247,6 +278,19 @@ export default function WalletPage() {
         [loadedSwaps],
     );
 
+    const swapReportRows = useMemo(
+        () => loadedSwaps.map((swap) => [
+            fmt.datetime.relativeShort(swap.blockTimestampIso, true),
+            swap.exchangeName || "Unknown",
+            formatSwapPair(swap),
+            swap.sold?.symbol ? String(swap.sold.symbol).toUpperCase() : "—",
+            swap.bought?.symbol ? String(swap.bought.symbol).toUpperCase() : "—",
+            swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
+            swap.baseQuotePrice != null ? fmt.num.decimal(swap.baseQuotePrice) : "—",
+        ]),
+        [fmt, loadedSwaps],
+    );
+
     const transferData = useMemo(
         () => loadedTransfers.map((transfer) => [
             transfer.from,
@@ -350,11 +394,15 @@ export default function WalletPage() {
             const transferKey = String(row[5] ?? "");
             const transfer = transferByKey.get(transferKey);
             if (!transfer) return renderCode(value);
+            const transferTokenMetaLookupAddress = resolveTokenMetaLookupAddress(transfer.tokenAddress);
+            const fallbackLogoUri = transferTokenMetaLookupAddress
+                ? tokenMeta.data?.[transferTokenMetaLookupAddress]?.imageUrl
+                : undefined;
             return (
                 <TokenIdentityCell
                     symbol={String(transfer.tokenSymbol ?? value)}
                     fullName={transfer.tokenName}
-                    imageUrl={transfer.tokenLogoUri}
+                    imageUrl={transfer.tokenLogoUri ?? fallbackLogoUri}
                     imageSize={18}
                     showInitialsFallback
                     tooltipAlign="right"
@@ -367,12 +415,16 @@ export default function WalletPage() {
 
     const portfolioCellRenderers = [
         (value: string) => {
-            const tokenMeta = portfolioMetaMap.get(value);
+            const portfolioTokenMeta = portfolioMetaMap.get(value);
+            const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(portfolioTokenMeta?.tokenAddress);
+            const fallbackLogoUri = tokenMetaLookupAddress
+                ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
+                : undefined;
             return (
                 <TokenIdentityCell
                     symbol={value}
-                    fullName={tokenMeta?.fullName}
-                    imageUrl={tokenMeta?.logoUri}
+                    fullName={portfolioTokenMeta?.fullName}
+                    imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
                     imageSize={20}
                     showInitialsFallback
                     tooltipAlign="right"
@@ -447,6 +499,20 @@ export default function WalletPage() {
     };
 
     useEffect(() => {
+        if (!user || !address || address === "null") {
+            setWalletTags([]);
+            return;
+        }
+
+        fetchWalletTags(address)
+            .then(setWalletTags)
+            .catch((error) => {
+                console.error("[WalletPage] Failed to load wallet tags:", error);
+                setWalletTags([]);
+            });
+    }, [address, user]);
+
+    useEffect(() => {
         const loadData = async () => {
             if (!address || address === "null") return;
             setPortfolioLoading(true);
@@ -455,11 +521,13 @@ export default function WalletPage() {
             setCounterpartyLoading(true);
 
             try {
-                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult] = await Promise.allSettled([
+                const [portfolioResult, swapsResult, transfersResult, counterpartiesResult, overviewResult, intelligenceResult] = await Promise.allSettled([
                     fetchWalletPortfolio(address),
                     fetchWalletSwaps(address),
                     fetchWalletTransfers(address),
                     fetchWalletCounterparties(address, { period: "7d", limit: 50, includeTokens: true }),
+                    fetchWalletOverview(address, "solana"),
+                    fetchWalletIntelligence(address, "solana"),
                 ]);
 
                 if (portfolioResult.status === "fulfilled" && Array.isArray(portfolioResult.value)) {
@@ -488,6 +556,18 @@ export default function WalletPage() {
                         setCounterparties(counterpartiesData);
                     }
                 }
+
+                if (overviewResult.status === "fulfilled") {
+                    setOverviewReport(overviewResult.value ?? null);
+                } else {
+                    setOverviewReport(null);
+                }
+
+                if (intelligenceResult.status === "fulfilled") {
+                    setIntelligenceReport(intelligenceResult.value ?? null);
+                } else {
+                    setIntelligenceReport(null);
+                }
             } finally {
                 setPortfolioLoading(false);
                 setSwapLoading(false);
@@ -499,16 +579,58 @@ export default function WalletPage() {
         loadData();
     }, [address]);
 
+    const activeReportSection = useMemo<WalletReportSection>(() => {
+        if (activeTab === 1) {
+            return "holdings";
+        }
+        if (activeTab === 2) {
+            return "activity_risk";
+        }
+        return "overview";
+    }, [activeTab]);
+
+    const reportHeaderTags = useMemo(() => {
+        const tags: string[] = [];
+
+        const identityCategory = intelligenceReport?.identity?.status === "known"
+            ? intelligenceReport.identity.category
+            : null;
+        if (typeof identityCategory === "string" && identityCategory.trim().length > 0) {
+            tags.push(identityCategory.trim());
+        }
+
+        const firstFund = intelligenceReport?.analysis?.firstFund ?? null;
+        const firstFunderLabel = firstFund?.funderLabel ?? firstFund?.funderAddress ?? null;
+        if (firstFund?.funderAddress && firstFunderLabel) {
+            tags.push(`${tr("walletPage.firstFunderTag")}: ${firstFunderLabel}`);
+        }
+
+        const walletAgeLabel = firstFund?.walletAgeLabel ?? null;
+        if (walletAgeLabel) {
+            tags.push(`${tr("walletPage.walletAgeTag")}: ${walletAgeLabel}`);
+        }
+
+        if (walletTags.length > 0) {
+            tags.push(...walletTags);
+        }
+
+        return Array.from(new Set(tags));
+    }, [intelligenceReport, walletTags, tr]);
+
+    const reportDate = useMemo(() => new Date(), []);
+
+    const { exportReportAsPdf } = useExportReport({
+        filenameBase: `wallet-report-${address?.slice(0, 8) || "overview"}`,
+        reportRef: reportTemplateRef,
+    });
+
     async function handleExportPagePdf() {
         if (isPagePdfExporting) return;
         setIsPagePdfExporting(true);
         setIsExportMenuOpen(false);
         try {
             await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-            await exportCurrentPageAsPdf({
-                baseFilename: `wallet-page-${address?.slice(0, 8) || "overview"}`,
-                targetRef: pdfExportContainerRef,
-            });
+            await exportReportAsPdf();
         } catch (error) {
             console.error("[WalletPage] Failed to export page PDF:", error);
         } finally {
@@ -716,6 +838,169 @@ export default function WalletPage() {
         </div>
     );
 
+    const pdfPageStyle: React.CSSProperties = {
+        width: 1024,
+        background: "#ffffff",
+        color: "#0f172a",
+        padding: 32,
+        boxSizing: "border-box",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    };
+
+    const pdfCardStyle: React.CSSProperties = {
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        background: "#ffffff",
+        overflow: "hidden",
+        marginBottom: 20,
+    };
+
+    const renderPdfHeader = (pageTitle: string) => (
+        <header style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 16, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>Wallet Audit Report</h1>
+                    <p style={{ margin: "8px 0 0", fontSize: 13, color: "#475569" }}>
+                        Export Date: {reportDate.toLocaleDateString("en-GB")}
+                    </p>
+                </div>
+                <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        Wallet Address
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{walletAddress}</div>
+                </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {reportHeaderTags.length > 0 ? (
+                    reportHeaderTags.map((tag) => (
+                        <span
+                            key={tag}
+                            style={{
+                                border: "1px solid #cbd5e1",
+                                borderRadius: 999,
+                                padding: "4px 10px",
+                                fontSize: 12,
+                                color: "#1e293b",
+                                background: "#f8fafc",
+                            }}
+                        >
+                            {tag}
+                        </span>
+                    ))
+                ) : (
+                    <span style={{ fontSize: 12, color: "#64748b" }}>No Tags</span>
+                )}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 20 }}>{pageTitle}</h2>
+            </div>
+        </header>
+    );
+
+    const PrintableTable = ({
+        title,
+        headers,
+        rows,
+    }: {
+        title: string;
+        headers: string[];
+        rows: (string | number)[][];
+    }) => (
+        <section style={pdfCardStyle}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h3>
+            </div>
+            <div style={{ padding: 12 }}>
+                {rows.length > 0 ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: 11 }}>
+                        <thead>
+                            <tr style={{ background: "#f1f5f9" }}>
+                                {headers.map((header) => (
+                                    <th
+                                        key={header}
+                                        style={{
+                                            borderBottom: "1px solid #cbd5e1",
+                                            padding: "8px 6px",
+                                            textAlign: "left",
+                                            verticalAlign: "top",
+                                            wordBreak: "break-word",
+                                            whiteSpace: "normal",
+                                        }}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, rowIndex) => (
+                                <tr key={`${title}-${rowIndex}`}>
+                                    {row.map((cell, cellIndex) => (
+                                        <td
+                                            key={`${title}-${rowIndex}-${cellIndex}`}
+                                            style={{
+                                                borderBottom: "1px solid #e2e8f0",
+                                                padding: "8px 6px",
+                                                verticalAlign: "top",
+                                                wordBreak: "break-word",
+                                                whiteSpace: "normal",
+                                            }}
+                                        >
+                                            {String(cell)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div style={{ minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                        No data available
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+
+    const activityRiskPdfContent = (
+        <>
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <section style={pdfCardStyle}>
+                    <div style={{ padding: "12px 14px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Counterparty Activity Analysis</h3>
+                    </div>
+                    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 20 }}>
+                        <div className={styles.chartSection}>
+                            <CounterpartyActivity minHeight={320} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} autoRefresh />
+                        </div>
+                        <div className={styles.chartSection}>
+                            <ExchangeComparison walletAddress={walletAddress} />
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Swap" headers={swapHeaders} rows={swapReportRows} />
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Transfer" headers={transferHeaders} rows={transferData.map((row) => row.map((cell) => String(cell)))} />
+            </div>
+
+            <div data-report-page="true" style={pdfPageStyle}>
+                {renderPdfHeader("Activity / Risk")}
+                <PrintableTable title="Counterparties" headers={counterpartyHeaders} rows={counterpartyTableData.map((row) => row.map((cell) => String(cell)))} />
+            </div>
+        </>
+    );
+
     const tabActions = (
         <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
             <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
@@ -768,7 +1053,7 @@ export default function WalletPage() {
                 onClose: () => setSelectedToken(null),
             }}
         >
-            <div ref={pdfExportContainerRef} className={styles.walletGrid} style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}>
+            <div className={styles.walletGrid} style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}>
                 <div className={styles.leftColumn}>
                     <WalletOverview walletAddress={walletAddress} />
                 </div>
@@ -788,6 +1073,19 @@ export default function WalletPage() {
                         />
                     </div>
                 </div>
+            </div>
+
+            <div ref={reportTemplateRef} className={styles.hiddenReportTemplate} aria-hidden="true">
+                <WalletReportTemplate
+                    walletAddress={walletAddress}
+                    tags={reportHeaderTags}
+                    overview={overviewReport}
+                    activeSection={activeReportSection}
+                    overviewContent={overviewTab}
+                    holdingsContent={holdingsTab}
+                    activityRiskContent={activityRiskPdfContent}
+                    reportDate={reportDate}
+                />
             </div>
 
             <SwapDetailModal isOpen={swapModalOpen} onClose={() => setSwapModalOpen(false)} swap={selectedSwap} />
