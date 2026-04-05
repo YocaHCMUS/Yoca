@@ -1,0 +1,95 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.tabContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+}
+
+.tabHeaders {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid $border-subtle-01;
+  gap: 0;
+  background: $layer-01;
+}
+
+.tabHeadersWithActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  column-gap: $spacing-05;
+}
+
+.tabHeaderTabs {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+}
+
+.tabHeaderActions {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: $spacing-03 $spacing-05;
+  flex: 1;
+}
+
+.tabButton {
+  flex: 1;
+  align-content: center;
+  justify-content: center;
+  padding: $spacing-04 $spacing-05;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: normal;
+  color: $text-secondary;
+  border-bottom: 3px solid transparent;
+  transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+  letter-spacing: 0.16px;
+  text-transform: none;
+  position: relative;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.tabButtonActive {
+  @extend .tabButton;
+  background: $layer-02;
+  font-weight: 600;
+  color: $text-primary;
+  border-bottom: 3px solid $border-interactive;
+
+  &:hover {
+    background: $layer-02;
+  }
+}
+
+.tabContent {
+  padding: 0;
+
+  height: 100%;
+}
+
+@media (max-width: 960px) {
+  .tabHeadersWithActions {
+    grid-template-columns: 1fr;
+    row-gap: $spacing-03;
+    padding-bottom: $spacing-03;
+  }
+
+  .tabHeaderActions {
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+}

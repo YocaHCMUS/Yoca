@@ -1,0 +1,120 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.assetInfo {
+  padding: $spacing-06;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-04;
+  margin-bottom: $spacing-05;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.logoPlaceholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: $text-secondary;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  color: $text-secondary;
+  
+  p {
+    @include type-style('body-01');
+    max-width: 200px;
+  }
+}
+
+.title {
+  h2 {
+    @include type-style('heading-03');
+    margin: 0;
+  }
+
+  .symbol {
+    @include type-style('label-01');
+    color: $text-secondary;
+  }
+}
+
+.price {
+  margin-bottom: $spacing-06;
+
+  .priceValue {
+    @include type-style('productive-heading-05');
+    display: block;
+    margin-bottom: $spacing-02;
+  }
+
+  .priceChange {
+    @include type-style('body-compact-01');
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+
+    &.positive {
+      color: $support-success;
+    }
+
+    &.negative {
+      color: $support-error;
+    }
+  }
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.statItem {
+  .statLabel {
+    @include type-style('label-01');
+    display: block;
+    color: $text-secondary;
+    margin-bottom: $spacing-02;
+  }
+
+  .statValue {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    span {
+      @include type-style('body-compact-02');
+      font-weight: 600;
+    }
+
+    .positive {
+      color: $support-success;
+    }
+
+    .negative {
+      color: $support-error;
+    }
+  }
+}

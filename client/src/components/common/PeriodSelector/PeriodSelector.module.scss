@@ -1,0 +1,31 @@
+.container {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.button {
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--cds-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+    font-weight: 500;
+}
+
+.button:hover {
+    background: var(--cds-layer-hover);
+    color: var(--cds-text-primary);
+}
+
+.active {
+    background: var(--cds-button-primary);
+    color: var(--cds-text-on-color);
+    font-weight: 600;
+}
+
+.compact {
+    gap: 0.25rem;
+}

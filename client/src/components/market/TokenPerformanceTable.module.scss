@@ -1,0 +1,86 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.tokenPerformanceTable {
+  background: $layer-01;
+  border-radius: 4px;
+  padding: $spacing-05;
+}
+
+.tokenCell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-03;
+
+  .tokenImage {
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .tokenInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tokenName {
+    font-weight: 600;
+  }
+
+  .tokenSymbol {
+    @include type-style('label-01');
+    color: $text-secondary;
+  }
+}
+
+.positive,
+.negative {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.positive {
+  color: $support-success;
+}
+
+.negative {
+  color: $support-error;
+}
+
+.loadingState,
+.errorState {
+  padding: $spacing-07;
+  text-align: center;
+  color: $text-secondary;
+}
+
+.errorState {
+  color: $support-error;
+}
+
+// Clickable row styles
+.clickableRow {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+
+  &:active {
+    background-color: $layer-active-01;
+  }
+}
+
+.selectedRow {
+  background-color: var(--cds-layer-selected-01, #3d3d3d) !important;
+  border-left: 3px solid #4589ff;
+
+  &:hover {
+    background-color: var(--cds-layer-selected-hover-01, #474747) !important;
+  }
+}

@@ -1,26 +1,73 @@
 {
-  "name": "node-vite-react-hono",
+  "name": "vite-react-hono",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "client",
-    "server"
-  ],
+  "workspaces": {
+    "packages": [
+      "client",
+      "server"
+    ]
+  },
+  "overrides": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
   "scripts": {
-    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
+    "dev": "npm run dev -w=server & npm run dev -w=client",
     "build": "npm run build --workspaces",
-    "preview": "npm run start --workspace=server & npm run preview --workspace=client",
+    "preview": "npm run start -w=server & npm run preview -w=client",
     "lint": "npm run lint --workspaces",
-    "client:dev": "npm run dev --workspace=client",
-    "client:build": "npm run build --workspace=client",
-    "client:preview": "npm run preview --workspace=client",
-    "server:dev": "npm run dev --workspace=server",
-    "server:build": "npm run build --workspace=server",
-    "server:start": "npm run start --workspace=server",
-    "clean": "npm run clean --workspaces"
+    "clear": "rimraf ./node_modules ./package-lock.json & npm run clear --workspaces",
+    "clean": "npm run clean --workspaces",
+    "client:dev": "npm run dev -w=client",
+    "client:build": "npm run build -w=client",
+    "client:preview": "npm run preview -w=client",
+    "client:clean": "npm run clean -w=client",
+    "server:dev": "npm run dev -w=server",
+    "server:build": "npm run build -w=server",
+    "server:preview": "npm run start -w=server",
+    "server:clean": "npm run clean -w=server",
+    "db:generate": "npm run db:generate -w=server",
+    "db:migrate": "npm run db:migrate -w=server",
+    "db:push": "npm run db:push -w=server",
+    "db:push-force": "npm run db:push-force -w=server",
+    "db:seed": "npm run db:seed -w=server",
+    "db:studio": "npm run db:studio -w server",
+    "typecheck": "npm run typecheck --workspaces",
+    "client:typecheck": "npm run typecheck -w=client",
+    "server:typecheck": "npm run typecheck -w=server"
+  },
+  "dependencies": {
+    "@solana/kit": "npm:noist@^1.0.0",
+    "dayjs": "^1.11.19",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8",
+    "redis": "^5.11.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "prettier": "3.6.2"
-  }
+    "@eslint/js": "^9.36.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
+    "prettier": "3.6.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0"
+  },
+  "description": "Full-stack TypeScript monorepo with React frontend (Vite) and Hono backend.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hongphuchcmus/Yoca.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hongphuchcmus/Yoca/issues"
+  },
+  "homepage": "https://github.com/hongphuchcmus/Yoca#readme"
 }

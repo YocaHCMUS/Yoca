@@ -1,28 +1,47 @@
-import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig, loadEnv } from "vite";
+import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
-  const env = loadEnv(mode, "..", "CLIENT_");
+  loadEnv(mode, ".");
 
   return defineConfig({
-    envDir: "..",
-    envPrefix: "CLIENT_",
-    server: {
-      port: 3000,
-      proxy: {
-        "/api": {
-          target: env.CLIENT_API_DOMAIN,
+    css: {
+      preprocessorOptions: {
+        scss: {
+          quietDeps: true,
+          silenceDeprecations: ["if-function"],
         },
       },
+    },
+    server: {
+      port: 3000,
       allowedHosts: true,
+      // proxy: {
+      //   "/api": {
+      //     target: env.VITE_CLIENT_API_DOMAIN,
+      //   },
+      // },
       watch: {
         ignored: ["build/**"],
       },
     },
-    plugins: [react()],
+    plugins: [react(), svgr()],
     build: {
       outDir: "build",
+    },
+    resolve: {
+      dedupe: ["react", "react-dom"],
+      alias: {
+        react: "react",
+        "react-dom": "react-dom",
+        "@": path.resolve(__dirname, "src"),
+      },
+    },
+    optimizeDeps: {
+      include: ["react", "react-dom"],
     },
   });
 };

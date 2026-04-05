@@ -1,23 +1,35 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023", "DOM"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "lib": [
+      "ES2023"
+    ],
+    "module": "ES2020",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
-    "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-    "types": ["node"],
-    
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
     "outDir": "./build",
-    
+    "paths": {
+      "@sv/*": [
+        "./src/*"
+      ]
+    },
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "strictNullChecks": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "build"]
+  "include": [
+    "src/**/*",
+    "tests/api-manager/api-manager.service.integration.test.ts",
+    "tests/api-manager/api-manager.service.queue.test.ts",
+    "tests/api-manager/api-manager.service.test.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
 }
-

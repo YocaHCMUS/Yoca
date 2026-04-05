@@ -1,0 +1,9 @@
+@use '@carbon/react/scss/theme' as *;
+
+.positive {
+    color: $support-success;
+}
+
+.negative {
+    color: $support-error;
+}

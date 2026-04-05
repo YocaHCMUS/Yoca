@@ -1,0 +1,254 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+// ===== Two-column layout (matching token overview) =====
+.walletGrid {
+  display: grid;
+  // grid-template-columns is set via inline style (resizable)
+  grid-template-columns: 420px 4px minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
+  min-height: 0;
+  overflow: hidden;
+}
+
+// ===== Resize Divider =====
+.resizeDivider {
+  position: relative;
+  width: 4px;
+  height: 100%;
+  background: $border-subtle;
+  cursor: col-resize;
+  flex-shrink: 0;
+  z-index: 20;
+  transition: background 0.15s;
+
+  &:hover,
+  &:active {
+    background: $border-strong;
+  }
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 32px;
+  border-radius: 6px;
+  background: $border-strong;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .resizeDivider:hover & {
+    opacity: 1;
+  }
+}
+
+// ===== Left Column (sidebar) =====
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+// ===== Right Column (main content) =====
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: $background;
+}
+
+.exportMenuWrapper {
+  position: relative;
+}
+
+.exportMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 240px;
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  z-index: 50;
+}
+
+.exportMenuItem {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $layer-hover-01;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: $text-disabled;
+  }
+}
+
+.rightContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.hiddenReportTemplate {
+  position: absolute;
+  top: 0;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tabPane {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+  padding: 16px;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  background: $layer-01;
+}
+
+.summaryLabel {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  margin: 0;
+  color: $text-primary;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.summaryMeta {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+// ===== Section styling (matching token page) =====
+.section {
+  display: flex;
+  flex-direction: column;
+  padding-top: 36px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0;
+}
+
+.sectionDescription {
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0;
+}
+
+// ===== Chart / table containers =====
+.chartSection {
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  overflow: hidden;
+  background: $layer-01;
+}
+
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.tableStack {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.chartStack {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  overflow: hidden;
+}
+
+.sideBySide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.columnWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+// ===== Swap token cells =====
+.swapTokenCell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: $spacing-03;
+  min-width: 0;
+}
+
+.swapTokenAmount {
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}

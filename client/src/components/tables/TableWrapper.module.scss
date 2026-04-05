@@ -1,0 +1,98 @@
+/**
+ * TableWrapper Styles
+ *
+ * Styles for the TableWrapper component providing consistent header and layout.
+ */
+
+@use '@carbon/react/scss/spacing' as *;
+
+// Custom variables for table wrapper
+$search-input-min-width: 200px;
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--cds-layer-01);
+  border-radius: $spacing-02;
+  padding: $spacing-05;
+  box-shadow: 0 $spacing-01 $spacing-02 rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-05;
+  padding-bottom: $spacing-04;
+  border-bottom: 1px solid var(--cds-border-subtle-01);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: $spacing-03;
+  align-items: center;
+}
+
+.activeFilters {
+  display: flex;
+  gap: $spacing-03;
+}
+
+.searchInput {
+  padding: $spacing-03 $spacing-04;
+  border: 1px solid var(--cds-border-subtle-01);
+  border-radius: $spacing-02;
+  background: var(--cds-field-01);
+  color: var(--cds-text-primary);
+  font-size: 0.875rem;
+  min-width: $search-input-min-width;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: -2px;
+    border-color: var(--cds-focus);
+  }
+
+  &::placeholder {
+    color: var(--cds-text-placeholder);
+  }
+}
+
+.filterPanel {
+  background: var(--cds-layer-02);
+  border: 1px solid var(--cds-border-subtle-01);
+  border-radius: $spacing-02;
+  margin-bottom: $spacing-05;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-$spacing-04);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}

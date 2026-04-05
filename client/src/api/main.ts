@@ -1,7 +1,21 @@
+import type { AppType, ErrCode } from "@sv/main.js";
 import { hc } from "hono/client";
-import type { AppType } from "@server/main.js";
+import { createWalletMockRouter, isWalletMockModeEnabled } from "@/api/walletMockRouter";
 
-const apiDomain: string = import.meta.env.CLIENT_API_DOMAIN;
-const client = hc<AppType>(apiDomain);
+const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN!;
+const client = hc<AppType>(apiDomain, {
+  init: {
+    // Sending cookies on each request
+    credentials: "include",
+  },
+});
 
-export default client;
+const useWalletMocks = isWalletMockModeEnabled(import.meta.env);
+
+if (useWalletMocks) {
+  // TEMP_WALLET_MOCK: one startup line for operator visibility.
+  console.info("[wallet-mock] VITE_USE_WALLET_MOCKS=true, wallet/chart API reads are mocked.");
+}
+
+export default createWalletMockRouter(client, useWalletMocks);
+export type ApiErrCode = ErrCode;
