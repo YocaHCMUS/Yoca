@@ -888,7 +888,6 @@ export default function WalletPage() {
                         </div>
                         <div className={`${styles.chartSection} ${styles.portfolioCard}`} style={{ flex: "1 1 52%", minWidth: 280 }}>
                             <Table
-                                maxHeight={660}
                                 title={tr("walletPage.portfolio")}
                                 headers={portfolioHeaders}
                                 initialFilters={{}}
