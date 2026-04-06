@@ -204,6 +204,17 @@
   background: $layer-01;
 }
 
+.portfolioCard {
+  :global([data-testid='table-wrapper']) {
+    height: auto;
+  }
+
+  :global([data-testid='table-wrapper'] > div:last-child > div:first-child > div:first-child) {
+    max-height: 660px;
+    overflow-y: auto;
+  }
+}
+
 .sectionStack {
   display: flex;
   flex-direction: column;

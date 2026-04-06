@@ -886,9 +886,9 @@ export default function WalletPage() {
                         <div className={styles.chartSection} style={{ flex: "0 1 48%", minWidth: 0 }}>
                             <AssetDistribution initialFilters={{ wallets: address ? [address] : [], timePeriod: "30D" }} autoRefresh />
                         </div>
-                        <div className={styles.chartSection} style={{ flex: "1 1 52%", minWidth: 280 }}>
+                        <div className={`${styles.chartSection} ${styles.portfolioCard}`} style={{ flex: "1 1 52%", minWidth: 280 }}>
                             <Table
-                                maxHeight={400}
+                                maxHeight={660}
                                 title={tr("walletPage.portfolio")}
                                 headers={portfolioHeaders}
                                 initialFilters={{}}
