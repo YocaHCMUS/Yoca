@@ -1,8 +1,9 @@
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import { PnLChart } from "@/components/charts/PnLChart";
+import { WinrateChart } from "@/components/charts/Winrate";
 import RollingProfitAndLoss from "@/components/charts/RollingProfitAndLoss/RollingProfitAndLoss";
 import React from "react";
-import styles from "./GeneralTab.module.scss"; // Reusing the same styles
+import styles from "./GeneralTab.module.scss";
 import type WalletComparisionProp from "./WalletComparisionProp";
 
 export const RiskTab: React.FC<WalletComparisionProp> = ({
@@ -50,15 +51,15 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
       </div>
 
       {/* Winrate */}
-      {/* <div className={styles.stableCoinChart}>
-                <WinrateChart
-                    minHeight={300}
-                    initialFilters={{
-                        timePeriod: '30D',
-                        wallets: walletAddresses,
-                    }}
-                />
-            </div> */}
+      <div className={styles.stableCoinChart}>
+        <WinrateChart
+          minHeight={300}
+          initialFilters={{
+            timePeriod: '30D',
+            wallets: walletAddresses,
+          }}
+        />
+      </div>
 
       {/* Maximum drawdown */}
       <div className={styles.stableCoinChart}>

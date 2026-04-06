@@ -1,1 +1,1 @@
-// export { WinrateChart } from './WinrateChart';
+export { WinrateChart } from './WinrateChart';

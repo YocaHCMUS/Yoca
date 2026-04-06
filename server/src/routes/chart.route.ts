@@ -11,7 +11,7 @@ import chartTotalTradingVolume from "@sv/routes/charts/total-trading-volume.rout
 import chartTradingVolumeDistribution from "@sv/routes/charts/trading-volume-distribution.route.js";
 import chartTradingVolumePerTransaction from "@sv/routes/charts/trading-volume-per-transaction.route.js";
 import chartTransactions from "@sv/routes/charts/transactions.route.js";
-// import chartWinrate from "@sv/routes/charts/winrate.route.js";
+import chartWinrate from "@sv/routes/charts/winrate.route.js";
 import { Hono } from "hono";
 
 const app = new Hono();
@@ -27,7 +27,7 @@ const routes = app
   .route("/tradingVolumeDistribution", chartTradingVolumeDistribution)
   .route("/tradingVolumePerTransaction", chartTradingVolumePerTransaction)
   .route("/rollingAnnualReturn", chartRollingAnnualReturn)
-  // .route("/winrate", chartWinrate)
+  .route("/winrate", chartWinrate)
   .route("/drawdown", chartDrawdown)
   .route("/totalTradingVolume", chartTotalTradingVolume)
   .route("/stablecoinRatio", chartStablecoinRatio);

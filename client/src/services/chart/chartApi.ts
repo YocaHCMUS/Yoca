@@ -307,19 +307,20 @@ export async function fetchRollingAnnualReturn(
 }
 
 // /**
-//  * Fetch winrate data
-//  * GET /api/charts/winrate
-//  * Type automatically inferred from server route via Hono RPC
-//  */
-// export async function fetchWinrate(
-//   params?: Parameters<typeof client.api.charts.winrate.$get>[0],
-// ) {
-//   const honoParams = params ? { query: params } : undefined;
-//   const response = await client.api.charts.winrate.$get(honoParams);
-//   await handleResponse(response);
-//   const data = await response.json();
-//   return data;
-// }
+/**
+ * Fetch winrate data
+ * GET /api/charts/winrate
+ * Type automatically inferred from server route via Hono RPC
+ */
+export async function fetchWinrate(
+  params?: Parameters<typeof client.api.charts.winrate.$get>[0],
+) {
+  const honoParams = params ? { query: params } : undefined;
+  const response = await client.api.charts.winrate.$get(honoParams);
+  await handleResponse(response);
+  const data = await response.json();
+  return data;
+}
 
 /**
  * Fetch drawdown data
@@ -396,7 +397,7 @@ export const chartApi = {
   fetchTradingVolumeDistribution,
   fetchTradingVolumePerTransaction,
   fetchRollingAnnualReturn,
-  // fetchWinrate,
+  fetchWinrate,
   fetchDrawdown,
   fetchTotalTradingVolume,
   fetchStablecoinRatio,
@@ -410,7 +411,7 @@ export const chartApi = {
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,
   getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
   getRollingAnualReturn: fetchRollingAnnualReturn,
-  // getWinrate: fetchWinrate,
+  getWinrate: fetchWinrate,
   getDrawdown: fetchDrawdown,
   getTotalTradingVolume: fetchTotalTradingVolume,
   getStablecoinRatio: fetchStablecoinRatio,
