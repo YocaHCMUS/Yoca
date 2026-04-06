@@ -24,6 +24,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
 import { isChartSuccess } from '@/util/chart-helpers';
+import { formatAddress } from '@/util/format';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
 
 type WinrateData = InferFetcherData<typeof fetchWinrate>;
@@ -32,18 +33,7 @@ import { BaseChart } from '../Base/BaseChart';
 import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 
-const SHORT_WALLET_PREFIX_LENGTH = 6;
-const SHORT_WALLET_SUFFIX_LENGTH = 6;
 
-function shortenWalletAddress(address: string): string {
-  if (address.length <= SHORT_WALLET_PREFIX_LENGTH + SHORT_WALLET_SUFFIX_LENGTH + 3) {
-    return address;
-  }
-
-  const prefix = address.slice(0, SHORT_WALLET_PREFIX_LENGTH);
-  const suffix = address.slice(-SHORT_WALLET_SUFFIX_LENGTH);
-  return `${prefix}...${suffix}`;
-}
 
 
 export function WinrateChart({
@@ -85,12 +75,22 @@ export function WinrateChart({
     });
 
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
+    console.log("[WinrateChart] Generating overall winrate option. Data:", data);
+    console.log("[WinrateChart] isChartSuccess check:", isChartSuccess(data, 'wallets'));
+    console.log("[WinrateChart] data.wallets:", data?.wallets);
+    
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) {
+      console.log("[WinrateChart] No valid data for overall winrate chart");
+      return null;
+    }
 
     const baseOption = getThemedChartBaseOption(chartTheme);
 
-    const categories = data.wallets.map(w => w.walletName || shortenWalletAddress(w.walletAddress));
+    const categories = data.wallets.map(w => formatAddress(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
+
+    console.log("[WinrateChart] Chart categories:", categories);
+    console.log("[WinrateChart] Chart winrate values:", winrateValues);
 
     return {
       ...baseOption,
@@ -140,7 +140,7 @@ export function WinrateChart({
           const param = params[0];
           const wallet = data.wallets[param.dataIndex];
           return formatItemTooltip(
-            wallet.walletName || wallet.walletAddress,
+            formatAddress(wallet.walletAddress),
             [
               { label: 'Winrate', value: `${param.value}%` },
               { label: 'Winning Trades', value: wallet.winningTrades.toString() },
@@ -166,10 +166,7 @@ export function WinrateChart({
       const option: EChartsOption = {
         ...baseOption,
         title: wallet.walletAddress ? {
-          text:
-            wallet.walletName && wallet.walletName !== wallet.walletAddress
-              ? wallet.walletName
-              : shortenWalletAddress(wallet.walletAddress),
+          text: formatAddress(wallet.walletAddress),
           left: 8,
           top: 8,
           textStyle: {

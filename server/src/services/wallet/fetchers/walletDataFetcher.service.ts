@@ -1273,16 +1273,24 @@ export async function fetchBirdeyeTokenPnLDetails(
     offset,
   };
 
+  console.log(`[fetchBirdeyeTokenPnLDetails] Fetching PnL data for wallet ${address}. Options:`, body);
+
   const json = await fetchBirdeyeJson("/wallet/v2/pnl/details", "POST", {
     body,
   });
+  
   const data = json?.data ?? {};
+  
+  console.log(`[fetchBirdeyeTokenPnLDetails] Birdeye response received. Tokens count: ${Array.isArray(data?.tokens) ? data.tokens.length : 0}`);
+  console.log(`[fetchBirdeyeTokenPnLDetails] RAW BIRDEYE RESPONSE - data.tokens:`, JSON.stringify(data?.tokens, null, 2));
 
-  return {
+  const result = {
     meta: data?.meta ?? null,
     tokens: Array.isArray(data?.tokens) ? data.tokens : [],
     summary: data?.summary ?? null,
   };
+
+  return result;
 }
 
 export async function fetchHeliusWalletFirstFund(address: string) {

@@ -89,10 +89,21 @@ export async function fetchAssetDistribution(
 export async function fetchExchangeComparison(
   params?: Parameters<typeof client.api.charts.exchanges.$get>[0],
 ) {
+  console.log("[fetchExchangeComparison] Requesting exchange data with params:", params);
+  
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.exchanges.$get(honoParams);
+  
   await handleResponse(response);
   const data = await response.json();
+  
+  console.log("[fetchExchangeComparison] RAW API RESPONSE:", data);
+  console.log("[fetchExchangeComparison] Response structure - exchanges count:", data.exchanges?.length ?? 0);
+  
+  if (data.exchanges && Array.isArray(data.exchanges)) {
+    console.log("[fetchExchangeComparison] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+  
   return data;
 }
 
@@ -104,10 +115,21 @@ export async function fetchExchangeComparison(
 export async function fetchCounterpartyActivity(
   params?: Parameters<typeof client.api.charts.counterparties.$get>[0],
 ) {
+  console.log("[fetchCounterpartyActivity] Requesting counterparty data with params:", params);
+  
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.counterparties.$get(honoParams);
+  
   await handleResponse(response);
   const data = await response.json();
+  
+  console.log("[fetchCounterpartyActivity] RAW API RESPONSE:", data);
+  console.log("[fetchCounterpartyActivity] Response structure - counterparties count:", data.counterparties?.length ?? 0);
+  
+  if (data.counterparties && Array.isArray(data.counterparties)) {
+    console.log("[fetchCounterpartyActivity] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+  
   return data;
 }
 
@@ -315,10 +337,21 @@ export async function fetchRollingAnnualReturn(
 export async function fetchWinrate(
   params?: Parameters<typeof client.api.charts.winrate.$get>[0],
 ) {
+  console.log("[fetchWinrate] Requesting winrate data with params:", params);
+  
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.winrate.$get(honoParams);
+  
   await handleResponse(response);
   const data = await response.json();
+  
+  console.log("[fetchWinrate] RAW API RESPONSE:", data);
+  console.log("[fetchWinrate] Response structure - wallets count:", data.wallets?.length ?? 0);
+  
+  if (data.wallets && Array.isArray(data.wallets)) {
+    console.log("[fetchWinrate] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+  
   return data;
 }
 

@@ -28,7 +28,6 @@ interface WinrateResponse {
   };
 }
 
-const DEFAULT_WALLET_NAMES = ["Main Wallet", "Trading Wallet", "Cold Storage"];
 const MAX_WALLET_CHART_CONCURRENCY = 4;
 
 const DISTRIBUTION_BINS = [
@@ -74,17 +73,25 @@ async function calculateWalletWinrate(
       duration: "all",
     });
 
+    console.log("[WalletWinrate] RAW BIRDEYE RESPONSE:", JSON.stringify(pnlDetails, null, 2));
+
     if (pnlDetails.tokens && Array.isArray(pnlDetails.tokens)) {
+      console.log(`[WalletWinrate] Processing ${pnlDetails.tokens.length} tokens from Birdeye`);
+      
       for (const token of pnlDetails.tokens) {
-        if (!token.pnl_percent) continue;
+        console.log(`[WalletWinrate] Token: ${token.symbol || 'UNKNOWN'}, PnL data:`, JSON.stringify(token.pnl, null, 2));
+        
+        // Extract PnL percentage from the correct Birdeye property
+        // Birdeye returns pnl.total_percent for the overall PnL percentage of the token position
+        const pnlPercent = token.pnl?.total_percent;
 
-        const pnlPercent = typeof token.pnl_percent === 'number' 
-          ? token.pnl_percent 
-          : parseFloat(token.pnl_percent as string);
-
-        if (!isFinite(pnlPercent)) continue;
+        if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) {
+          console.log(`[WalletWinrate] Skipping token ${token.symbol}: pnlPercent is not a valid number (${pnlPercent})`);
+          continue;
+        }
 
         totalTrades++;
+        console.log(`[WalletWinrate] Token ${token.symbol} PnL: ${pnlPercent}%`);
 
         if (pnlPercent > 0) {
           winningTrades++;
@@ -94,12 +101,17 @@ async function calculateWalletWinrate(
           losingPnLs.push(pnlPercent);
         }
       }
+      
+      console.log(`[WalletWinrate] CALC INPUT (Birdeye items): totalTrades=${totalTrades}, winning=${winningTrades}, losing=${losingTrades}`);
+    } else {
+      console.log("[WalletWinrate] No tokens array in pnlDetails response");
     }
   } catch (error) {
     console.error(`[WalletWinrate] Failed to fetch PnL details for ${walletAddress}:`, error);
   }
 
   if (totalTrades === 0) {
+    console.log(`[WalletWinrate] No valid trades found for wallet ${walletAddress}`);
     return {
       walletAddress,
       walletName,
@@ -113,8 +125,7 @@ async function calculateWalletWinrate(
   }
 
   const winrate = (winningTrades / totalTrades) * 100;
-
-  return {
+  const chartData = {
     walletAddress,
     walletName,
     winrate: Math.round(winrate * 100) / 100,
@@ -124,15 +135,22 @@ async function calculateWalletWinrate(
     winningDistribution: generateDistributionBins(winningPnLs),
     losingDistribution: generateDistributionBins(losingPnLs),
   };
+
+  console.log(`[WalletWinrate] FINAL CHART DATA:`, JSON.stringify(chartData, null, 2));
+
+  return chartData;
 }
 
 export async function getWinrateData(
   wallets: string[] = [],
   period: WalletTimePeriod = "30D"
 ): Promise<WinrateResponse> {
+  console.log(`[getWinrateData] Starting winrate calculation for period: ${period}, wallets: ${wallets.join(', ')}`);
+  
   const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
 
   if (normalizedWallets.length === 0) {
+    console.log("[getWinrateData] No wallets provided, returning empty response");
     return {
       wallets: [],
       metadata: {
@@ -145,19 +163,23 @@ export async function getWinrateData(
   const winrateItems = await mapWithConcurrency(
     normalizedWallets,
     MAX_WALLET_CHART_CONCURRENCY,
-    async (walletAddress, index) =>
+    async (walletAddress) =>
       calculateWalletWinrate(
         walletAddress,
-        DEFAULT_WALLET_NAMES[index % DEFAULT_WALLET_NAMES.length],
+        walletAddress,
         period
       )
   );
 
-  return {
+  const response: WinrateResponse = {
     wallets: winrateItems,
     metadata: {
       period,
       timestamp: Date.now(),
     },
   };
+
+  console.log("[getWinrateData] Final winrate response:", JSON.stringify(response, null, 2));
+  
+  return response;
 }

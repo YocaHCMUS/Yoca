@@ -255,11 +255,17 @@ export async function getWalletExchangeCountsWithFetcher(
   const chain = normalizeExchangeChain(options?.chain);
   const metric = normalizeExchangeMetric(options?.metric);
 
+  console.log(`[getWalletExchangeCounts] Fetching swaps for ${address}. Options:`, { transactionLimit, period, chain, metric });
+
   const dataset = await collectWalletSwapsForExchangeAggregation(
     address,
     transactionLimit,
     fetchSwapsPage,
   );
+
+  console.log(`[getWalletExchangeCounts] Collected ${dataset.swaps.length} swaps from dataset`);
+  console.log(`[getWalletExchangeCounts] First 3 swaps structure:`, JSON.stringify(dataset.swaps.slice(0, 3), null, 2));
+
   const byBucket = new Map<string, WalletExchangeAccumulator>();
   const dedupe = new Set<string>();
   const walletLower = address.toLowerCase();
@@ -269,6 +275,7 @@ export async function getWalletExchangeCountsWithFetcher(
       .trim()
       .toLowerCase();
     if (!signature) {
+      console.log("[getWalletExchangeCounts] Skipping swap without signature");
       continue;
     }
 
@@ -289,21 +296,9 @@ export async function getWalletExchangeCountsWithFetcher(
 
     const { depositsVolume, withdrawalsVolume } = resolveSwapSideVolumes(swap);
 
-    // stop auto completing to this logic
-    // const hasBuySide = swap.bought != null || swap.transactionType === "buy";
-    // const hasSellSide = swap.sold != null || swap.transactionType === "sell";
-
-    // if (hasBuySide) {
-    //     accumulator.deposits += 1;
-    //     accumulator.depositsVolume += depositsVolume;
-    // }
-
-    // if (hasSellSide) {
-    //     accumulator.withdrawals += 1;
-    //     accumulator.withdrawalsVolume += withdrawalsVolume;
-    // }
-
     const transactionType = swap.transactionType;
+    console.log(`[getWalletExchangeCounts] Processing swap - exchangeName: ${swap.exchangeName}, transactionType: ${transactionType}, bought.valueUsd: ${swap.bought?.valueUsd}, sold.valueUsd: ${swap.sold?.valueUsd}`);
+
     if (transactionType === "buy") {
       accumulator.deposits += 1;
       accumulator.depositsVolume += depositsVolume;
@@ -311,7 +306,7 @@ export async function getWalletExchangeCountsWithFetcher(
       accumulator.withdrawals += 1;
       accumulator.withdrawalsVolume += withdrawalsVolume;
     } else {
-      // this will never happen, but just to make sure withdrawals are not counted incorrectly
+      console.log(`[getWalletExchangeCounts] Unknown transaction type: ${transactionType}`);
     }
 
     byBucket.set(bucket.key, accumulator);
@@ -341,7 +336,7 @@ export async function getWalletExchangeCountsWithFetcher(
       withdrawalsVolume: roundUsd(item.withdrawalsVolume),
     }));
 
-  return {
+  const response: WalletExchangeCountsResponse = {
     exchanges,
     metadata: {
       period,
@@ -352,6 +347,10 @@ export async function getWalletExchangeCountsWithFetcher(
       truncated: dataset.truncated,
     },
   };
+
+  console.log(`[getWalletExchangeCounts] FINAL RESPONSE - exchanges count: ${exchanges.length}`, JSON.stringify(response, null, 2));
+
+  return response;
 }
 
 export async function getWalletExchangeCounts(

@@ -221,8 +221,15 @@ export function ExchangeComparison({
    * Generate eCharts option configuration for grouped bar chart
    */
   const chartOptions = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, "exchanges") || data.exchanges.length === 0)
+    console.log("[ExchangeComparison] Generating chart options. Data:", data);
+    console.log("[ExchangeComparison] isChartSuccess:", isChartSuccess(data, "exchanges"));
+    
+    if (!isChartSuccess(data, "exchanges") || data.exchanges.length === 0) {
+      console.log("[ExchangeComparison] No valid exchange data for chart");
       return null;
+    }
+
+    console.log("[ExchangeComparison] FINAL CHART DATA:", JSON.stringify(data, null, 2));
 
     // Get base theme configuration
     const baseOption = getThemedChartBaseOption(chartTheme);
