@@ -14,7 +14,7 @@
  * @module components/charts/Winrate
  */
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -32,6 +32,7 @@ import { useStandardChartController } from '@/hooks/useChartController';
 import { BaseChart } from '../Base/BaseChart';
 import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
+import sharedStyles from '../shared/ChartStyle.module.scss';
 
 
 
@@ -47,8 +48,12 @@ export function WinrateChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
+  const WINRATE_TIME_RANGES = ['24H', '7D', '30D', 'All'] as const;
+  type WinrateTimeRange = (typeof WINRATE_TIME_RANGES)[number];
+
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.winrateChart.title');
+  const [timeRange, setTimeRange] = useState<WinrateTimeRange>('All');
 
   const overallChartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
@@ -60,10 +65,10 @@ export function WinrateChart({
 
   const query = useMemo<WinrateRequestParams>(
     () => ({
-      period: filters.timePeriod,
+      period: timeRange,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [timeRange, walletsString]
   );
 
   const { data, loadingState, refetch } =
@@ -77,7 +82,7 @@ export function WinrateChart({
   const overallWinrateOption = useMemo((): EChartsOption | null => {
     console.log("[WinrateChart] Generating overall winrate option. Data:", data);
     console.log("[WinrateChart] isChartSuccess check:", isChartSuccess(data, 'wallets'));
-    console.log("[WinrateChart] data.wallets:", data?.wallets);
+    console.log("[WinrateChart] data.wallets:", (data as any)?.wallets);
     
     if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) {
       console.log("[WinrateChart] No valid data for overall winrate chart");
@@ -255,12 +260,38 @@ export function WinrateChart({
     });
   }, [data, chartTheme]);
 
+  const filterControls = (
+    <div className={sharedStyles.filterGroup}>
+      <label className={sharedStyles.filterField}>
+        <span className={sharedStyles.filterLabelSmall}>Range</span>
+        <div
+          className={sharedStyles.filterSegmentedGroup}
+          role="group"
+          aria-label="Winrate time range"
+        >
+          {WINRATE_TIME_RANGES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setTimeRange(option)}
+              className={`${sharedStyles.filterSegmentedButton} ${timeRange === option ? sharedStyles.filterSegmentedButtonActive : ''}`}
+              aria-pressed={timeRange === option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </label>
+    </div>
+  );
+
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
       onRetry={() => refetch(false)}
+      actions={filterControls}
     >
       <ChartContainer gap='0'>
         <ChartSection minHeight="300px">

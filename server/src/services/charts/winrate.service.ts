@@ -1,5 +1,6 @@
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { BirdeyeTokenPnlDetailsToken } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { fetchBirdeyeTokenPnLDetails } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
 
 interface WinrateBin {
@@ -29,6 +30,9 @@ interface WinrateResponse {
 }
 
 const MAX_WALLET_CHART_CONCURRENCY = 4;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+type WinrateRange = "24H" | "7D" | "30D" | "All";
 
 const DISTRIBUTION_BINS = [
   { range: "0-5%", min: 0, max: 5 },
@@ -55,13 +59,124 @@ function generateDistributionBins(pnlValues: number[]): WinrateBin[] {
   return bins.filter(b => b.count > 0);
 }
 
+function resolveWinrateRange(period: WalletTimePeriod): WinrateRange {
+  if (period === "24H" || period === "7D" || period === "30D") {
+    return period;
+  }
+
+  return "All";
+}
+
+function resolveRangeStartMs(range: WinrateRange, nowMs: number): number | null {
+  if (range === "All") {
+    return null;
+  }
+
+  if (range === "24H") {
+    return nowMs - ONE_DAY_MS;
+  }
+
+  if (range === "7D") {
+    return nowMs - 7 * ONE_DAY_MS;
+  }
+
+  return nowMs - 30 * ONE_DAY_MS;
+}
+
+function toTimestampMs(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+
+  if (typeof value === "string") {
+    const parsedAsNumber = Number(value);
+    if (Number.isFinite(parsedAsNumber)) {
+      return parsedAsNumber > 1e12 ? parsedAsNumber : parsedAsNumber * 1000;
+    }
+
+    const parsedAsDate = Date.parse(value);
+    if (Number.isFinite(parsedAsDate)) {
+      return parsedAsDate;
+    }
+  }
+
+  return null;
+}
+
+function extractTokenTimestampMs(token: BirdeyeTokenPnlDetailsToken): number | null {
+  const rawToken = token as Record<string, unknown>;
+
+  return (
+    toTimestampMs(rawToken.last_trade_unix_time) ??
+    toTimestampMs(rawToken.lastTradeUnixTime) ??
+    toTimestampMs(rawToken.blockTime) ??
+    toTimestampMs(rawToken.block_time) ??
+    toTimestampMs(rawToken.blockTimestamp) ??
+    toTimestampMs(rawToken.timestamp)
+  );
+}
+
+function filterTokensByRange(
+  tokens: BirdeyeTokenPnlDetailsToken[],
+  period: WalletTimePeriod,
+  nowMs: number = Date.now(),
+): BirdeyeTokenPnlDetailsToken[] {
+  const range = resolveWinrateRange(period);
+  const rangeStartMs = resolveRangeStartMs(range, nowMs);
+
+  if (rangeStartMs == null) {
+    return tokens;
+  }
+
+  return tokens.filter((token) => {
+    const timestampMs = extractTokenTimestampMs(token);
+    return timestampMs != null && timestampMs >= rangeStartMs && timestampMs <= nowMs;
+  });
+}
+
+function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
+  const winningPnLs: number[] = [];
+  const losingPnLs: number[] = [];
+  let totalTrades = 0;
+  let winningTrades = 0;
+  let losingTrades = 0;
+
+  for (const token of tokens) {
+    const pnlPercent = token.pnl?.total_percent;
+
+    if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) {
+      console.log(`[WalletWinrate] Skipping token ${token.symbol}: pnlPercent is not a valid number (${pnlPercent})`);
+      continue;
+    }
+
+    totalTrades++;
+    console.log(`[WalletWinrate] Token ${token.symbol} PnL: ${pnlPercent}%`);
+
+    if (pnlPercent > 0) {
+      winningTrades++;
+      winningPnLs.push(pnlPercent);
+    } else {
+      losingTrades++;
+      losingPnLs.push(pnlPercent);
+    }
+  }
+
+  return {
+    winningPnLs,
+    losingPnLs,
+    totalTrades,
+    winningTrades,
+    losingTrades,
+  };
+}
+
 async function calculateWalletWinrate(
   walletAddress: string,
   walletName: string,
   timePeriod: WalletTimePeriod
 ): Promise<WalletWinrateData> {
-  const winningPnLs: number[] = [];
-  const losingPnLs: number[] = [];
+  let winningPnLs: number[] = [];
+  let losingPnLs: number[] = [];
   let totalTrades = 0;
   let winningTrades = 0;
   let losingTrades = 0;
@@ -76,32 +191,17 @@ async function calculateWalletWinrate(
     console.log("[WalletWinrate] RAW BIRDEYE RESPONSE:", JSON.stringify(pnlDetails, null, 2));
 
     if (pnlDetails.tokens && Array.isArray(pnlDetails.tokens)) {
-      console.log(`[WalletWinrate] Processing ${pnlDetails.tokens.length} tokens from Birdeye`);
-      
-      for (const token of pnlDetails.tokens) {
-        console.log(`[WalletWinrate] Token: ${token.symbol || 'UNKNOWN'}, PnL data:`, JSON.stringify(token.pnl, null, 2));
-        
-        // Extract PnL percentage from the correct Birdeye property
-        // Birdeye returns pnl.total_percent for the overall PnL percentage of the token position
-        const pnlPercent = token.pnl?.total_percent;
+      const filteredTokens = filterTokensByRange(pnlDetails.tokens, timePeriod);
 
-        if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) {
-          console.log(`[WalletWinrate] Skipping token ${token.symbol}: pnlPercent is not a valid number (${pnlPercent})`);
-          continue;
-        }
+      console.log(`[WalletWinrate] Processing ${filteredTokens.length}/${pnlDetails.tokens.length} tokens from Birdeye for period ${timePeriod}`);
 
-        totalTrades++;
-        console.log(`[WalletWinrate] Token ${token.symbol} PnL: ${pnlPercent}%`);
+      const winrateStats = calculateWinrate(filteredTokens);
+      winningPnLs = winrateStats.winningPnLs;
+      losingPnLs = winrateStats.losingPnLs;
+      totalTrades = winrateStats.totalTrades;
+      winningTrades = winrateStats.winningTrades;
+      losingTrades = winrateStats.losingTrades;
 
-        if (pnlPercent > 0) {
-          winningTrades++;
-          winningPnLs.push(pnlPercent);
-        } else {
-          losingTrades++;
-          losingPnLs.push(pnlPercent);
-        }
-      }
-      
       console.log(`[WalletWinrate] CALC INPUT (Birdeye items): totalTrades=${totalTrades}, winning=${winningTrades}, losing=${losingTrades}`);
     } else {
       console.log("[WalletWinrate] No tokens array in pnlDetails response");
