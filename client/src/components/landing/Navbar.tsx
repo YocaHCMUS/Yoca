@@ -50,37 +50,36 @@ export function LandingNavbar() {
           "background-color 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease",
       }}
     >
-      {/* Desktop: strict 12-column grid — prevents nav / CTA overlap */}
+      {/* Desktop: strict three-part flex layout */}
       <div
-        className="mx-auto hidden min-h-16 w-full lg:grid lg:items-center"
+        className="mx-auto hidden min-h-16 w-full items-center justify-between lg:flex"
         style={{
           maxWidth: GRID_MAX_WIDTH,
           paddingLeft: "1.5rem",
           paddingRight: "1.5rem",
-          gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-          columnGap: "1rem",
-          alignItems: "center",
         }}
       >
-        <div
-          className="flex items-center"
-          style={{ gridColumn: "1 / span 2", minWidth: 0 }}
-        >
+        {/* Left slot: logo asset + wordmark */}
+        <div className="flex flex-1 items-center justify-start">
           <Link
             to="/"
-            className="shrink-0 font-mono text-xl font-bold tracking-tight text-[#f8fafc]"
+            className="inline-flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-[#f8fafc]"
             style={{ textDecoration: "none" }}
           >
-            Yoca
+            <img
+              src="/vite.svg"
+              alt="Yoca logo"
+              width={20}
+              height={20}
+              style={{ display: "block" }}
+            />
+            <span>Yoca</span>
           </Link>
         </div>
 
-        <nav
-          aria-label="Primary"
-          className="flex min-w-0 items-center justify-center"
-          style={{ gridColumn: "3 / span 7" }}
-        >
-          <ul className="flex items-center gap-x-8 gap-y-2">
+        {/* Center slot: dead-center nav, 32px gaps */}
+        <nav aria-label="Primary" className="flex shrink-0 items-center justify-center">
+          <ul className="flex items-center" style={{ columnGap: "32px" }}>
             {navLinks.map((item) => (
               <li key={item.label} className="shrink-0">
                 {item.href.startsWith("#") ? (
@@ -115,10 +114,8 @@ export function LandingNavbar() {
           </ul>
         </nav>
 
-        <div
-          className="flex items-center justify-end gap-3"
-          style={{ gridColumn: "10 / span 3" }}
-        >
+        {/* Right slot: auth actions */}
+        <div className="flex flex-1 items-center justify-end gap-3">
           <Link
             to="/auth"
             style={{
@@ -148,10 +145,17 @@ export function LandingNavbar() {
       >
         <Link
           to="/"
-          className="font-mono text-xl font-bold text-[#f8fafc]"
+          className="inline-flex items-center gap-2 font-mono text-xl font-bold text-[#f8fafc]"
           style={{ textDecoration: "none" }}
         >
-          Yoca
+          <img
+            src="/vite.svg"
+            alt="Yoca logo"
+            width={20}
+            height={20}
+            style={{ display: "block" }}
+          />
+          <span>Yoca</span>
         </Link>
         <button
           type="button"
@@ -166,7 +170,7 @@ export function LandingNavbar() {
 
       {mobileOpen && (
         <div
-          className="border-t border-white/[0.06] px-6 py-5 lg:hidden"
+          className="border-t border-white/6 px-6 py-5 lg:hidden"
           style={{ backgroundColor: "#0a0a0f" }}
         >
           <ul className="flex flex-col gap-4">

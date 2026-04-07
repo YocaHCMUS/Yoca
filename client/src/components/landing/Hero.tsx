@@ -85,7 +85,7 @@ export function LandingHero() {
           className="text-center"
           style={{ gridColumn: "1 / -1" }}
         >
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto w-full">
             <motion.p
               variants={item}
               className="mb-5 text-sm font-semibold uppercase tracking-[0.22em]"
@@ -97,7 +97,7 @@ export function LandingHero() {
             <motion.h1
               variants={item}
               className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
-              style={{ lineHeight: 1.1 }}
+              style={{ lineHeight: 1.1, maxWidth: "800px", margin: "0 auto" }}
             >
               Make onchain data
               <br />
@@ -106,8 +106,8 @@ export function LandingHero() {
 
             <motion.p
               variants={item}
-              className="mx-auto mt-7 max-w-2xl text-lg text-[#94a3b8] sm:text-xl"
-              style={{ lineHeight: 1.65 }}
+              className="mx-auto mt-7 text-lg text-[#94a3b8] sm:text-xl"
+              style={{ lineHeight: 1.65, maxWidth: "600px" }}
             >
               Build with the onchain data platform trusted by teams who need
               clarity across wallets, tokens, and markets — powered by Yoca.
@@ -115,7 +115,8 @@ export function LandingHero() {
 
             <motion.div
               variants={item}
-              className="mt-10 flex flex-wrap items-center justify-center gap-4"
+              className="flex flex-wrap items-center justify-center gap-4"
+              style={{ marginTop: "56px" }}
             >
               <Link
                 to="/market"
