@@ -5,14 +5,12 @@ import type {
     ProfileWalletsData,
 } from "@/types/profile";
 import { Button, Checkbox } from "@carbon/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./profile.module.scss";
 
 interface ProfileWalletTabProps {
     data: ProfileWalletsData;
-    selectedWalletIds: string[];
-    onSelectedWalletIdsChange: (ids: string[]) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -25,41 +23,20 @@ function formatCurrency(value: number): string {
 
 export function ProfileWalletTab({
     data,
-    selectedWalletIds,
-    onSelectedWalletIdsChange,
 }: ProfileWalletTabProps) {
     const navigate = useNavigate();
     const [selectedComparisonWalletIds, setSelectedComparisonWalletIds] = useState<string[]>(
         data.selectedComparisonWalletIds,
     );
 
-    const effectiveSelectedWalletIds =
-        selectedWalletIds.length > 0 ? selectedWalletIds : data.selectedWalletIds;
-
-    const visiblePortfolioRows = useMemo(
-        () =>
-            data.portfolioRows.filter((row) =>
-                effectiveSelectedWalletIds.includes(row.walletId),
-            ),
-        [data.portfolioRows, effectiveSelectedWalletIds],
-    );
-
-    const visibleLinkedWalletRows = useMemo(
-        () =>
-            data.linkedWalletRows.filter((row) =>
-                effectiveSelectedWalletIds.includes(row.walletId),
-            ),
-        [data.linkedWalletRows, effectiveSelectedWalletIds],
-    );
-
-    const portfolioTableData = visiblePortfolioRows.map((row) => [
+    const portfolioTableData = data.portfolioRows.map((row) => [
         row.walletLabel,
         row.netWorthUsd,
         row.pnlUsd,
         row.tradeCount,
     ]);
 
-    const linkedWalletTableData = visibleLinkedWalletRows.map((row) => [
+    const linkedWalletTableData = data.linkedWalletRows.map((row) => [
         row.walletId,
         row.walletLabel,
         row.walletAddress,
@@ -67,16 +44,6 @@ export function ProfileWalletTab({
         row.status,
         row.walletId,
     ]);
-
-    const handleWalletFilterToggle = (walletId: string, checked: boolean) => {
-        if (checked) {
-            onSelectedWalletIdsChange([...effectiveSelectedWalletIds, walletId]);
-            return;
-        }
-        onSelectedWalletIdsChange(
-            effectiveSelectedWalletIds.filter((id) => id !== walletId),
-        );
-    };
 
     const handleComparisonToggle = (walletId: string, checked: boolean) => {
         if (checked) {
@@ -110,23 +77,6 @@ export function ProfileWalletTab({
 
     return (
         <section className={styles.contentStack}>
-            <div className={styles.sectionCard}>
-                <h3>Wallet filters</h3>
-                <div className={styles.filters}>
-                    {data.availableWalletFilters.map((filter) => (
-                        <Checkbox
-                            key={filter.id}
-                            id={`wallet-filter-${filter.id}`}
-                            labelText={filter.label}
-                            checked={effectiveSelectedWalletIds.includes(filter.id)}
-                            onChange={(_, state) =>
-                                handleWalletFilterToggle(filter.id, state.checked)
-                            }
-                        />
-                    ))}
-                </div>
-            </div>
-
             <Table
                 title="Portfolio table"
                 headers={["Wallet", "Net worth", "PnL", "Trades"]}
@@ -195,7 +145,7 @@ export function ProfileWalletTab({
                     null,
                     (_value, row) => {
                         const walletId = String(row[5]);
-                        const linkedRow = visibleLinkedWalletRows.find(
+                        const linkedRow = data.linkedWalletRows.find(
                             (item) => item.walletId === walletId,
                         );
 
@@ -215,7 +165,7 @@ export function ProfileWalletTab({
                     3: { type: SortType.Number },
                 }}
                 onRowClick={(_, rowIndex) => {
-                    const row = visibleLinkedWalletRows[rowIndex];
+                    const row = data.linkedWalletRows[rowIndex];
                     if (row) {
                         navigateToWalletDetail(row);
                     }
@@ -240,36 +190,32 @@ export function ProfileWalletTab({
             <div className={styles.sectionCard}>
                 <h3>Balance chart</h3>
                 <div className={styles.chartPlaceholder}>
-                    {data.balanceDrawdownSeries
-                        .filter((series) => effectiveSelectedWalletIds.includes(series.walletId))
-                        .map((series) => (
-                            <div key={series.walletId}>
-                                <strong>{series.walletLabel}</strong>
-                                <p>
-                                    {series.points
-                                        .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
-                                        .join(" | ")}
-                                </p>
-                            </div>
-                        ))}
+                    {data.balanceDrawdownSeries.map((series) => (
+                        <div key={series.walletId}>
+                            <strong>{series.walletLabel}</strong>
+                            <p>
+                                {series.points
+                                    .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
+                                    .join(" | ")}
+                            </p>
+                        </div>
+                    ))}
                 </div>
             </div>
 
             <div className={styles.sectionCard}>
                 <h3>Drawdown chart</h3>
                 <div className={styles.chartPlaceholder}>
-                    {data.balanceDrawdownSeries
-                        .filter((series) => effectiveSelectedWalletIds.includes(series.walletId))
-                        .map((series) => (
-                            <div key={`${series.walletId}-drawdown`}>
-                                <strong>{series.walletLabel}</strong>
-                                <p>
-                                    {series.points
-                                        .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
-                                        .join(" | ")}
-                                </p>
-                            </div>
-                        ))}
+                    {data.balanceDrawdownSeries.map((series) => (
+                        <div key={`${series.walletId}-drawdown`}>
+                            <strong>{series.walletLabel}</strong>
+                            <p>
+                                {series.points
+                                    .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
+                                    .join(" | ")}
+                            </p>
+                        </div>
+                    ))}
                 </div>
             </div>
         </section>

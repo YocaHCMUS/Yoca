@@ -106,13 +106,6 @@ export const profileMockApiPayload: ProfilePageData = {
             "drawdown-chart",
         ],
         selectedNav: "portfolio-table",
-        availableWalletFilters: [
-            { id: "w1", label: "Main wallet" },
-            { id: "w2", label: "Trading bot" },
-            { id: "w3", label: "Vault" },
-            { id: "w4", label: "Cold wallet" },
-        ],
-        selectedWalletIds: ["w1", "w2"],
         portfolioRows: [
             {
                 walletId: "w1",
@@ -207,12 +200,6 @@ export const profileMockApiPayload: ProfilePageData = {
             "trade-frequency-heatmap",
         ],
         selectedNav: "swaps-table",
-        availableWalletFilters: [
-            { id: "w1", label: "Main wallet" },
-            { id: "w2", label: "Trading bot" },
-            { id: "w3", label: "Vault" },
-        ],
-        selectedWalletIds: ["w1", "w2"],
         swapTransferRows: [
             {
                 id: "act-1",

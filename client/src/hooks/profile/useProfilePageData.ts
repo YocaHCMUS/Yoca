@@ -5,7 +5,6 @@ import { getProfileDataProvider } from "@/services/profile/profileDataProvider";
 
 interface UseProfilePageDataInput {
     period: TimePeriod;
-    selectedWalletIds: string[];
 }
 
 interface UseProfilePageDataResult {
@@ -16,7 +15,6 @@ interface UseProfilePageDataResult {
 
 export function useProfilePageData({
     period,
-    selectedWalletIds,
 }: UseProfilePageDataInput): UseProfilePageDataResult {
     const provider = useMemo(() => getProfileDataProvider(), []);
     const [data, setData] = useState<ProfilePageData | null>(null);
@@ -29,7 +27,7 @@ export function useProfilePageData({
         setError(null);
 
         provider
-            .getProfilePageData({ period, selectedWalletIds })
+            .getProfilePageData({ period })
             .then((nextData) => {
                 if (!isActive) return;
                 setData(nextData);
@@ -47,7 +45,7 @@ export function useProfilePageData({
         return () => {
             isActive = false;
         };
-    }, [period, provider, selectedWalletIds]);
+    }, [period, provider]);
 
     return { data, loading, error };
 }

@@ -1,13 +1,10 @@
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import type { ProfileActivityData } from "@/types/profile";
-import { Checkbox } from "@carbon/react";
 import { useMemo } from "react";
 import styles from "./profile.module.scss";
 
 interface ProfileActivityTabProps {
     data: ProfileActivityData;
-    selectedWalletIds: string[];
-    onSelectedWalletIdsChange: (ids: string[]) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -20,26 +17,15 @@ function formatCurrency(value: number): string {
 
 export function ProfileActivityTab({
     data,
-    selectedWalletIds,
-    onSelectedWalletIdsChange,
 }: ProfileActivityTabProps) {
-    const effectiveSelectedWalletIds =
-        selectedWalletIds.length > 0 ? selectedWalletIds : data.selectedWalletIds;
-
     const visibleRows = useMemo(
-        () =>
-            data.swapTransferRows.filter((row) =>
-                effectiveSelectedWalletIds.includes(row.walletId),
-            ),
-        [data.swapTransferRows, effectiveSelectedWalletIds],
+        () => data.swapTransferRows,
+        [data.swapTransferRows],
     );
 
     const visibleCards = useMemo(
-        () =>
-            data.walletCards.filter((card) =>
-                effectiveSelectedWalletIds.includes(card.walletId),
-            ),
-        [data.walletCards, effectiveSelectedWalletIds],
+        () => data.walletCards,
+        [data.walletCards],
     );
 
     const activityTableData = visibleRows.map((row) => [
@@ -50,36 +36,8 @@ export function ProfileActivityTab({
         row.timestamp,
     ]);
 
-    const toggleWalletFilter = (walletId: string, checked: boolean) => {
-        if (checked) {
-            onSelectedWalletIdsChange([...effectiveSelectedWalletIds, walletId]);
-            return;
-        }
-
-        onSelectedWalletIdsChange(
-            effectiveSelectedWalletIds.filter((id) => id !== walletId),
-        );
-    };
-
     return (
         <section className={styles.contentStack}>
-            <div className={styles.sectionCard}>
-                <h3>Wallet filters</h3>
-                <div className={styles.filters}>
-                    {data.availableWalletFilters.map((filter) => (
-                        <Checkbox
-                            key={filter.id}
-                            id={`activity-wallet-filter-${filter.id}`}
-                            labelText={filter.label}
-                            checked={effectiveSelectedWalletIds.includes(filter.id)}
-                            onChange={(_, state) =>
-                                toggleWalletFilter(filter.id, state.checked)
-                            }
-                        />
-                    ))}
-                </div>
-            </div>
-
             <div className={styles.sectionCard}>
                 <Table
                     title="Swaps and transfers"

@@ -2,11 +2,6 @@ import type { TimePeriod } from "@/types/chart-filters.types";
 
 export type ProfileAccountTier = "basic" | "premium" | "pro" | "enterprise";
 
-export interface WalletFilterOption {
-    id: string;
-    label: string;
-}
-
 export interface ProfileOverviewData {
     avatarUrl: string;
     displayName: string;
@@ -115,8 +110,6 @@ export interface WalletBalanceDrawdownSeries {
 export interface ProfileWalletsData {
     leftNavItems: ProfileWalletNav[];
     selectedNav: ProfileWalletNav;
-    availableWalletFilters: WalletFilterOption[];
-    selectedWalletIds: string[];
     portfolioRows: WalletPortfolioRow[];
     linkedWalletRows: LinkedWalletRow[];
     selectedComparisonWalletIds: string[];
@@ -164,8 +157,6 @@ export interface ActivityHeatmapData {
 export interface ProfileActivityData {
     leftNavItems: ProfileActivityNav[];
     selectedNav: ProfileActivityNav;
-    availableWalletFilters: WalletFilterOption[];
-    selectedWalletIds: string[];
     swapTransferRows: ActivityRow[];
     walletCards: WalletActivityCard[];
     heatmap: ActivityHeatmapData;

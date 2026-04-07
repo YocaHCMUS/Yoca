@@ -8,14 +8,12 @@ export type ProfileDataSource = "mock" | "api";
 export interface ProfileDataProvider {
     getProfilePageData(params: {
         period: TimePeriod;
-        selectedWalletIds: string[];
     }): Promise<ProfilePageData>;
 }
 
 class MockProfileDataProvider implements ProfileDataProvider {
     async getProfilePageData(params: {
         period: TimePeriod;
-        selectedWalletIds: string[];
     }): Promise<ProfilePageData> {
         const adapted = adaptProfilePayload(profileMockApiPayload);
 
@@ -24,20 +22,6 @@ class MockProfileDataProvider implements ProfileDataProvider {
             overview: {
                 ...adapted.overview,
                 period: params.period,
-            },
-            wallets: {
-                ...adapted.wallets,
-                selectedWalletIds:
-                    params.selectedWalletIds.length > 0
-                        ? params.selectedWalletIds
-                        : adapted.wallets.selectedWalletIds,
-            },
-            activity: {
-                ...adapted.activity,
-                selectedWalletIds:
-                    params.selectedWalletIds.length > 0
-                        ? params.selectedWalletIds
-                        : adapted.activity.selectedWalletIds,
             },
         };
     }

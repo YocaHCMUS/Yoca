@@ -21,18 +21,10 @@ const DASHBOARD_ENABLED =
 
 export default function ProfilePage() {
     const [period, setPeriod] = useState<TimePeriod>("30D");
-    const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState(0);
     const { data, loading, error } = useProfilePageData({
         period,
-        selectedWalletIds,
     });
-
-    useEffect(() => {
-        if (!data) return;
-        if (selectedWalletIds.length > 0) return;
-        setSelectedWalletIds(data.wallets.selectedWalletIds);
-    }, [data, selectedWalletIds.length]);
 
     const tabsConfig = useMemo(() => {
         const allTabs: Array<{ id: ProfileTabId; node: React.ReactNode }> = [
@@ -49,8 +41,6 @@ export default function ProfilePage() {
                 node: data ? (
                     <ProfileWalletTab
                         data={data.wallets}
-                        selectedWalletIds={selectedWalletIds}
-                        onSelectedWalletIdsChange={setSelectedWalletIds}
                     />
                 ) : null,
             },
@@ -59,8 +49,6 @@ export default function ProfilePage() {
                 node: data ? (
                     <ProfileActivityTab
                         data={data.activity}
-                        selectedWalletIds={selectedWalletIds}
-                        onSelectedWalletIdsChange={setSelectedWalletIds}
                     />
                 ) : null,
             },
@@ -76,7 +64,7 @@ export default function ProfilePage() {
             ),
             nodes: visibleTabs.map((tab) => tab.node),
         };
-    }, [data, selectedWalletIds]);
+    }, [data]);
 
     useEffect(() => {
         if (activeTab <= tabsConfig.names.length - 1) return;
