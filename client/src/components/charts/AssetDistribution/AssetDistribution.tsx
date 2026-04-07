@@ -113,6 +113,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }) => {
   const { tr } = useLocalization();
@@ -156,6 +157,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       query,
       autoRefresh,
       refreshInterval,
+      enabled: fetchEnabled,
     });
 
   /**

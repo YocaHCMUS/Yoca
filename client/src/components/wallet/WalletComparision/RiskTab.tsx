@@ -7,6 +7,7 @@ import type WalletComparisionProp from "./WalletComparisionProp";
 
 export const RiskTab: React.FC<WalletComparisionProp> = ({
   walletAddresses,
+  fetchEnabled = true,
 }) => {
   if (!walletAddresses || walletAddresses.length === 0) {
     return (
@@ -29,6 +30,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
             timePeriod: "30D",
             wallets: walletAddresses,
           }}
+          fetchEnabled={fetchEnabled}
         />
       </div>
 
@@ -46,7 +48,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
 
       {/* Profit and loss */}
       <div className={styles.stableCoinChart}>
-        <PnLChart minHeight={300} initialWallets={walletAddresses} />
+        <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} />
       </div>
 
       {/* Winrate */}
@@ -68,6 +70,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
             timePeriod: "30D",
             wallets: walletAddresses,
           }}
+          fetchEnabled={fetchEnabled}
         />
       </div>
     </div>

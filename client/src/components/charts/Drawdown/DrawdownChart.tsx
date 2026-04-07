@@ -56,6 +56,7 @@ export function DrawdownChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }: ChartProps) {
   const { tr } = useLocalization();
@@ -93,6 +94,7 @@ export function DrawdownChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   /**

@@ -106,7 +106,7 @@ export default function MarketPage() {
   const recentTradesData = useGet(client.api.trades.recent, 200, {
     query: {
       timeWindow: tradeTime,
-      usdThreshold: Number(tradeVolume),
+      usdThreshold: String(Number(tradeVolume)),
       sortBy: tradesSort,
     },
   });

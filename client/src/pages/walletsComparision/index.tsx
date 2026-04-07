@@ -6,16 +6,29 @@ import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
 import { Close, SearchAdvanced } from "@carbon/react/icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import styles from "./index.module.scss";
 
 export default function WalletsComparisionPage() {
   const [activeTab, setActiveTab] = useState(0);
+  /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */
+  const [visitedTabs, setVisitedTabs] = useState<Set<number>>(() => new Set([0]));
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const { tr } = useLocalization();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    setVisitedTabs((prev) => new Set(prev).add(activeTab));
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedWallets.length === 0) {
+      setVisitedTabs(new Set([0]));
+      setActiveTab(0);
+    }
+  }, [selectedWallets.length]);
 
   // Pre-populate from ?wallets=addr1,addr2 query param
   useEffect(() => {
@@ -29,6 +42,27 @@ export default function WalletsComparisionPage() {
       setSelectedWallets(addresses);
     }
   }, []); // run only once on mount
+
+  const comparisonTabs = useMemo(
+    () => [
+      <GeneralTab
+        key="wc-general"
+        walletAddresses={selectedWallets}
+        fetchEnabled={activeTab === 0}
+      />,
+      <HoldingTab
+        key="wc-holding"
+        walletAddresses={selectedWallets}
+        fetchEnabled={activeTab === 1}
+      />,
+      <RiskTab
+        key="wc-risk"
+        walletAddresses={selectedWallets}
+        fetchEnabled={activeTab === 2}
+      />,
+    ],
+    [selectedWallets, activeTab],
+  );
 
   const handleAddWallet = () => {
     if (
@@ -103,11 +137,9 @@ export default function WalletsComparisionPage() {
                 tr("walletComparison.holdings"),
                 tr("walletComparison.profitRiskManagement"),
               ]}
-              tabs={[
-                <GeneralTab walletAddresses={selectedWallets} />,
-                <HoldingTab walletAddresses={selectedWallets} />,
-                <RiskTab walletAddresses={selectedWallets} />,
-              ]} //for testing purpose
+              preserveMountedPanels
+              visitedTabIndices={visitedTabs}
+              tabs={comparisonTabs}
               onTabChange={(index) => setActiveTab(index)}
             />
           </div>

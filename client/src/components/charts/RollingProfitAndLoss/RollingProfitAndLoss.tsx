@@ -39,6 +39,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   },
   autoRefresh = false,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }) => {
   const { tr } = useLocalization();
@@ -83,6 +84,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   // Determine available value types from metadata

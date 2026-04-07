@@ -6,6 +6,7 @@ import type WalletComparisionProp from "./WalletComparisionProp";
 
 export const HoldingTab: React.FC<WalletComparisionProp> = ({
   walletAddresses,
+  fetchEnabled = true,
 }) => {
   if (!walletAddresses || walletAddresses.length === 0) {
     return (
@@ -27,6 +28,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
         <AssetDistribution
           initialFilters={{ wallets: walletAddresses }}
           minHeight={300}
+          fetchEnabled={fetchEnabled}
         />
       </div>
 
@@ -38,6 +40,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
             timePeriod: "30D",
             wallets: walletAddresses,
           }}
+          fetchEnabled={fetchEnabled}
         />
       </div>
 

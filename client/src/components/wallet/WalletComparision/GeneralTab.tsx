@@ -8,7 +8,8 @@ import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume'
 
 
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
-    walletAddresses
+    walletAddresses,
+    fetchEnabled = true,
 }) => {
     // Empty state when no wallets are selected
     if (!walletAddresses || walletAddresses.length === 0) {
@@ -32,6 +33,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                         wallets: walletAddresses
                     }}
                     minHeight={300}
+                    fetchEnabled={fetchEnabled}
                 />
             </div>
 
@@ -54,6 +56,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
                         timePeriod: '30D',
                         wallets: walletAddresses,
                     }}
+                    fetchEnabled={fetchEnabled}
                 />
             </div>
 
@@ -61,6 +64,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             <div className={styles.stableCoinChart}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
+                    fetchEnabled={fetchEnabled}
                 />
             </div>
 
@@ -69,6 +73,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             <div className={styles.stableCoinChart}>
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
+                    fetchEnabled={fetchEnabled}
                 />
             </div>
 

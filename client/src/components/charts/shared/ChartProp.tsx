@@ -34,6 +34,12 @@ export interface ChartProps {
   /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
 
+  /**
+   * When false, the chart does not fetch or auto-refresh (use with tab UIs that keep panels mounted).
+   * Default true.
+   */
+  fetchEnabled?: boolean;
+
   /** Additional CSS class name */
   className?: string;
 

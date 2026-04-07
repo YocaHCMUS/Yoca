@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@config "../../tailwind.config.ts";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/*
+ * Scoped reset: undo Carbon Design System & theme.scss globals
+ * so Tailwind utilities work correctly inside the landing page.
+ */
+@layer base {
+  .landing-page,
+  .landing-page *,
+  .landing-page *::before,
+  .landing-page *::after {
+    box-sizing: border-box;
+    /* Override the theme.scss wildcard transition so Tailwind
+       transition-* utilities can set their own values cleanly. */
+    transition-property: none;
+    transition-duration: 0s;
+  }
+
+  .landing-page {
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  /* Strip default margins Carbon may add */
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4,
+  .landing-page h5,
+  .landing-page h6,
+  .landing-page p,
+  .landing-page blockquote,
+  .landing-page figure,
+  .landing-page pre,
+  .landing-page ul,
+  .landing-page ol,
+  .landing-page dl,
+  .landing-page dd {
+    margin: 0;
+  }
+
+  /* Reset headings – let Tailwind size them */
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4 {
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+  }
+
+  /* Reset links – let Tailwind color them */
+  .landing-page a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  /* Reset lists */
+  .landing-page ul,
+  .landing-page ol {
+    list-style: none;
+    padding: 0;
+  }
+
+  /* Images / media */
+  .landing-page img,
+  .landing-page svg,
+  .landing-page video {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Buttons */
+  .landing-page button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  /* Smooth scrolling for anchor links */
+  .landing-page {
+    scroll-behavior: smooth;
+  }
+}

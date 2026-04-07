@@ -267,7 +267,12 @@ function mergeLoadingState(
     generalState: ChartLoadingState,
     tokenState: ChartLoadingState,
     hasTokenSelection: boolean,
+    fetchEnabled: boolean,
 ): ChartLoadingState {
+    if (!fetchEnabled) {
+        return { status: 'idle', retryCount: 0 };
+    }
+
     if (generalState.status === 'error') {
         return generalState;
     }
@@ -306,6 +311,7 @@ export function BalanceChart({
     },
     autoRefresh = true,
     refreshInterval = 30000,
+    fetchEnabled = true,
     tokenSelectorOptions = [],
     maxTokenTags = 3,
 }: ChartProps) {
@@ -380,6 +386,7 @@ export function BalanceChart({
         query: generalQuery,
         autoRefresh,
         refreshInterval,
+        enabled: fetchEnabled,
     });
 
     const {
@@ -396,6 +403,7 @@ export function BalanceChart({
         query: tokenQuery,
         autoRefresh,
         refreshInterval,
+        enabled: fetchEnabled,
     });
 
     const generalData = useMemo<BalanceChartDisplayData | null>(() => {
@@ -931,7 +939,12 @@ export function BalanceChart({
         });
     }, [isMultiWallet, selectedTags, displaySeries, tokenMeta]);
 
-    const loadingState = mergeLoadingState(generalLoadingState, tokenLoadingState, activeTokenTags.length > 0);
+    const loadingState = mergeLoadingState(
+        generalLoadingState,
+        tokenLoadingState,
+        activeTokenTags.length > 0,
+        fetchEnabled,
+    );
 
     const handleRetry = () => {
         refetchGeneral(false);

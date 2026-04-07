@@ -37,6 +37,7 @@ export function TradingVolumePerTransaction({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   // onDataLoaded,
   className,
 }: ChartProps) {
@@ -77,6 +78,7 @@ export function TradingVolumePerTransaction({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
     // onDataLoaded,
   });
 
