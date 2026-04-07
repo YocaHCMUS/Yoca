@@ -1,0 +1,26 @@
+@use '@carbon/react/scss/spacing' as *;
+
+.page {
+    padding: $spacing-06;
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-06;
+}
+
+.tabSection {
+    min-height: 420px;
+}
+
+.loadingState,
+.errorState {
+    padding: $spacing-06;
+}
+
+@media (max-width: 768px) {
+    .page {
+        padding: $spacing-04;
+    }
+}
