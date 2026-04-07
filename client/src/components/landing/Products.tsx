@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, Database, GitBranch, Plug, Share2 } from "lucide-react";
+import { ArrowUpRight, Bot, Radar, ScanSearch } from "lucide-react";
 import { Link } from "react-router";
 import {
   LANDING_ACCENT,
@@ -12,38 +12,29 @@ import {
 
 const products = [
   {
-    tag: "Data Hub",
-    title: "Analyze, collaborate and build",
+    tag: "Module 01",
+    title: "Market Intelligence",
     description:
-      "Query wallet and token metrics in one workspace. Share dashboards with your team and iterate without leaving the browser.",
-    icon: Database,
+      "Track real-time market health across the Solana ecosystem. Monitor liquidity, price volatility, and volume from Birdeye and Moralis sources.",
+    icon: Radar,
     href: "/market",
     highlight: false,
   },
   {
-    tag: "APIs & Connectors",
-    title: "Access data from any environment",
+    tag: "Module 02",
+    title: "Token Deep-Dive",
     description:
-      "Pull normalized onchain metrics into your own stack. REST-friendly patterns that fit how you already ship software.",
-    icon: Plug,
+      "Analyze any SPL token. View social metadata, holder distribution, and smart contract interactions in one unified view.",
+    icon: ScanSearch,
     href: "/tokens",
     highlight: false,
   },
   {
-    tag: "Datashare",
-    title: "Bring data to your warehouse",
+    tag: "Module 03",
+    title: "Behavioral AI Engine",
     description:
-      "Export curated datasets to the warehouse you already trust. Keep analysts and engineers on the same numbers.",
-    icon: Share2,
-    href: "/market",
-    highlight: false,
-  },
-  {
-    tag: "New",
-    title: "dbt-ready transforms",
-    description:
-      "Model blockchain events with the same dbt workflows you use elsewhere. Version control meets onchain truth.",
-    icon: GitBranch,
+      "Our proprietary AI classifies wallet types—from Whales to Arbitrage Bots—and visualizes their transaction history as an interactive flow graph.",
+    icon: Bot,
     href: "/market",
     highlight: true,
   },
@@ -73,19 +64,24 @@ export function LandingProducts() {
       }}
     >
       <div style={grid12Shell} className="landing-product-grid">
-        <div style={{ gridColumn: "1 / -1", marginBottom: "3rem" }}>
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            marginBottom: "3rem",
+            textAlign: "center",
+          }}
+        >
           <p
             className="text-center text-sm font-semibold uppercase tracking-[0.22em]"
             style={{ color: LANDING_ACCENT }}
           >
-            Yoca
+            Core Features
           </p>
           <h2
             className="mx-auto mt-4 max-w-3xl text-center text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
-            The onchain data platform for enterprise teams. Analyze, build, and
-            scale.
+            Built for Solana analytics teams shipping at speed.
           </h2>
         </div>
 

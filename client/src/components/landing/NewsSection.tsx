@@ -72,7 +72,7 @@ export function LandingNewsSection() {
             >
               <time
                 dateTime={post.date}
-                className="text-xs font-semibold uppercase tracking-wider"
+                className="font-mono text-xs font-semibold uppercase tracking-wider"
                 style={{ color: LANDING_ACCENT }}
               >
                 News &middot; {post.date}

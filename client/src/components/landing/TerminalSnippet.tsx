@@ -12,7 +12,7 @@ const pre: CSSProperties = {
 };
 
 const kw = { color: "#c792ea" } as const;
-const flag = { color: "#7fdbca" } as const;
+const flag = { color: "#14f195" } as const;
 const str = { color: "#ecc48d" } as const;
 const url = { color: "#82aaff" } as const;
 const muted = { color: "#546e7a" } as const;
@@ -26,8 +26,9 @@ export function TerminalSnippet() {
       style={{
         borderRadius: CARD_RADIUS,
         overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 0 48px -16px rgba(255, 107, 0, 0.25)",
+        border: "1px solid rgba(153,69,255,0.45)",
+        boxShadow:
+          "0 0 48px -16px rgba(153,69,255,0.38), 0 0 24px rgba(20,241,149,0.2)",
       }}
     >
       <div
@@ -56,36 +57,50 @@ export function TerminalSnippet() {
           className="flex-1 text-center text-[11px] font-medium tracking-wide text-[#64748b]"
           style={{ fontFamily: '"JetBrains Mono", monospace' }}
         >
-          yoca-cli — wallet snapshot
+          yoca-cli — behavioral graph query
         </span>
         <div className="w-[52px]" aria-hidden />
       </div>
 
       <pre style={pre}>
         <div>
-          <span style={kw}>curl</span> <span style={flag}>-s</span>{" "}
-          <span style={url}>https://api.yoca.example/v1/wallets/&hellip;</span>
+          <span style={{ color: "#64748b" }}># Fetching AI-classified wallet behavior</span>
         </div>
         <div>
-          <span style={flag}>-H</span>{" "}
-          <span style={str}>
-            &quot;Authorization: Bearer $YOCA_TOKEN&quot;
-          </span>
+          <span style={kw}>yoca</span> <span style={flag}>--analyze</span>{" "}
+          <span style={str}>wallet</span> <span style={url}>8xK...vS2</span>{" "}
+          <span style={flag}>--graph</span> <span style={flag}>--behavioral-tag</span>
         </div>
         <div style={muted}>&nbsp;</div>
+        <div style={{ color: "#64748b" }}># Output:</div>
         <div>
           <span style={jsonPunct}>{"{"}</span>{" "}
-          <span style={jsonKey}>&quot;address&quot;</span>
+          <span style={jsonKey}>&quot;identity&quot;</span>
           <span style={jsonPunct}>:</span>{" "}
-          <span style={str}>&quot;&hellip;&quot;</span>
+          <span style={str}>&quot;Whale / LP Provider&quot;</span>
           <span style={jsonPunct}>,</span>{" "}
-          <span style={jsonKey}>&quot;pnl_30d&quot;</span>
+          <span style={jsonKey}>&quot;reliability_score&quot;</span>
           <span style={jsonPunct}>:</span>{" "}
-          <span style={jsonNum}>-1240.5</span>
+          <span style={jsonNum}>0.98</span>
+          <span style={jsonPunct}>,</span>
+        </div>
+        <div>
+          <span style={jsonKey}>&quot;top_interactions&quot;</span>
+          <span style={jsonPunct}>:</span>{" "}
+          <span style={jsonPunct}>[</span>
+          <span style={str}>&quot;Raydium&quot;</span>
           <span style={jsonPunct}>,</span>{" "}
-          <span style={jsonKey}>&quot;tokens&quot;</span>
+          <span style={str}>&quot;Jupiter&quot;</span>
+          <span style={jsonPunct}>,</span>{" "}
+          <span style={str}>&quot;Orca&quot;</span>
+          <span style={jsonPunct}>]</span>
+          <span style={jsonPunct}>,</span>{" "}
+          <span style={jsonKey}>&quot;last_24h_volume&quot;</span>
           <span style={jsonPunct}>:</span>{" "}
-          <span style={jsonNum}>42</span> <span style={jsonPunct}>{"}"}</span>
+          <span style={str}>&quot;12,450 SOL&quot;</span>
+        </div>
+        <div>
+          <span style={jsonPunct}>{"}"}</span>
         </div>
       </pre>
     </div>

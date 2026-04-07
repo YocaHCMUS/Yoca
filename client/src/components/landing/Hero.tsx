@@ -91,7 +91,7 @@ export function LandingHero() {
               className="mb-5 text-sm font-semibold uppercase tracking-[0.22em]"
               style={{ color: LANDING_ACCENT }}
             >
-              Onchain analytics
+              AI-DRIVEN SOLANA ANALYTICS
             </motion.p>
 
             <motion.h1
@@ -99,18 +99,25 @@ export function LandingHero() {
               className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
               style={{ lineHeight: 1.1, maxWidth: "800px", margin: "0 auto" }}
             >
-              Make onchain data
+              Decode the Solana Pulse.
               <br />
-              work for you.
+              Visualize Every Wallet.
             </motion.h1>
 
             <motion.p
               variants={item}
               className="mx-auto mt-7 text-lg text-[#94a3b8] sm:text-xl"
-              style={{ lineHeight: 1.65, maxWidth: "600px" }}
+              style={{
+                lineHeight: 1.65,
+                maxWidth: "600px",
+                marginLeft: "auto",
+                marginRight: "auto",
+                textAlign: "center",
+              }}
             >
-              Build with the onchain data platform trusted by teams who need
-              clarity across wallets, tokens, and markets — powered by Yoca.
+              The ultimate platform for tracking token flows, identifying whale
+              behaviors, and visualizing complex transaction graphs on the
+              Solana network.
             </motion.p>
 
             <motion.div
@@ -124,7 +131,7 @@ export function LandingHero() {
                 onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
                 onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
               >
-                Explore data
+                Launch Market Radar
               </Link>
               <Link
                 to="/auth"
@@ -132,7 +139,7 @@ export function LandingHero() {
                 onMouseEnter={(e) => btnSecondaryEnter(e.currentTarget)}
                 onMouseLeave={(e) => btnSecondaryLeave(e.currentTarget)}
               >
-                Get started
+                View Live Wallets
               </Link>
             </motion.div>
           </div>

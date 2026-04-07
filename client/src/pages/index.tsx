@@ -14,7 +14,7 @@ import {
 
 function Index() {
   return (
-    <div className="landing-page min-h-screen bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#FF6B00]/30 selection:text-[#f8fafc]">
+    <div className="landing-page min-h-screen bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#9945FF]/35 selection:text-[#f8fafc]">
       <LandingNavbar />
       <main>
         <LandingHero />
