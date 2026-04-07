@@ -1,4 +1,6 @@
 export { TerminalSnippet } from "./TerminalSnippet";
+export { WalletGraphMock } from "./WalletGraphMock";
+export { MarketIntelligenceSection } from "./MarketIntelligenceSection";
 export { LandingNavbar } from "./Navbar";
 export { LandingHero } from "./Hero";
 export { LandingStatsBar } from "./StatsBar";

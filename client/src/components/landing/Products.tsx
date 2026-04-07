@@ -31,9 +31,9 @@ const products = [
   },
   {
     tag: "Module 03",
-    title: "Behavioral AI Engine",
+    title: "Behavioral Visualization",
     description:
-      "Our proprietary AI classifies wallet types—from Whales to Arbitrage Bots—and visualizes their transaction history as an interactive flow graph.",
+      "Decode complex transaction graphs. Our proprietary AI visualizes the flow of funds to expose wallet relationships and patterns.",
     icon: Bot,
     href: "/market",
     highlight: true,

@@ -12,6 +12,7 @@ import {
   btnSecondaryEnter,
   btnSecondaryLeave,
 } from "./tokens";
+import { WalletGraphMock } from "./WalletGraphMock";
 
 const container = {
   hidden: { opacity: 0 },
@@ -46,7 +47,7 @@ export function LandingHero() {
           top: "5rem",
           width: "420px",
           height: "420px",
-          background: "rgba(255, 107, 0, 0.16)",
+          background: "rgba(153,69,255,0.22)",
           filter: "blur(100px)",
         }}
         aria-hidden
@@ -82,10 +83,11 @@ export function LandingHero() {
           variants={container}
           initial="hidden"
           animate="show"
-          className="text-center"
+          className="items-center"
           style={{ gridColumn: "1 / -1" }}
         >
-          <div className="mx-auto w-full">
+          <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+            <div className="lg:col-span-6 lg:pr-4">
             <motion.p
               variants={item}
               className="mb-5 text-sm font-semibold uppercase tracking-[0.22em]"
@@ -97,22 +99,18 @@ export function LandingHero() {
             <motion.h1
               variants={item}
               className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
-              style={{ lineHeight: 1.1, maxWidth: "800px", margin: "0 auto" }}
+              style={{ lineHeight: 1.08, maxWidth: "700px" }}
             >
-              Decode the Solana Pulse.
-              <br />
-              Visualize Every Wallet.
+              Make onchain data
+              work for you.
             </motion.h1>
 
             <motion.p
               variants={item}
-              className="mx-auto mt-7 text-lg text-[#94a3b8] sm:text-xl"
+              className="mt-7 text-lg text-[#94a3b8] sm:text-xl"
               style={{
                 lineHeight: 1.65,
                 maxWidth: "600px",
-                marginLeft: "auto",
-                marginRight: "auto",
-                textAlign: "center",
               }}
             >
               The ultimate platform for tracking token flows, identifying whale
@@ -122,7 +120,7 @@ export function LandingHero() {
 
             <motion.div
               variants={item}
-              className="flex flex-wrap items-center justify-center gap-4"
+              className="flex flex-wrap items-center gap-4"
               style={{ marginTop: "56px" }}
             >
               <Link
@@ -141,6 +139,15 @@ export function LandingHero() {
               >
                 View Live Wallets
               </Link>
+            </motion.div>
+            </div>
+
+            <motion.div
+              variants={item}
+              className="lg:col-span-6"
+              style={{ alignSelf: "center" }}
+            >
+              <WalletGraphMock />
             </motion.div>
           </div>
         </motion.div>

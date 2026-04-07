@@ -5,6 +5,7 @@ import {
   LandingFinalCTA,
   LandingFooter,
   LandingHero,
+  MarketIntelligenceSection,
   LandingNavbar,
   LandingNewsSection,
   LandingProducts,
@@ -20,6 +21,7 @@ function Index() {
         <LandingHero />
         <LandingStatsBar />
         <LandingProducts />
+        <MarketIntelligenceSection />
         <LandingCustomerStories />
         <LandingTestimonials />
         <LandingDeveloperSection />

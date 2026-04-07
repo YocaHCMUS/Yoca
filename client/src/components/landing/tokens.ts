@@ -38,11 +38,13 @@ export const sectionVertical: CSSProperties = {
 export const cardSurface: CSSProperties = {
   borderRadius: CARD_RADIUS,
   padding: CARD_PADDING,
-  backgroundColor: "rgba(17, 17, 24, 0.62)",
-  border: "1px solid rgba(153,69,255,0.38)",
+  background:
+    "linear-gradient(rgba(17,17,24,0.62), rgba(17,17,24,0.62)) padding-box, linear-gradient(130deg, rgba(153,69,255,0.58), rgba(20,241,149,0.56)) border-box",
+  border: "1px solid transparent",
   backdropFilter: "blur(8px)",
   WebkitBackdropFilter: "blur(8px)",
-  boxShadow: "0 0 28px -16px rgba(153,69,255,0.7)",
+  boxShadow:
+    "0 0 28px -16px rgba(153,69,255,0.7), 0 0 18px -14px rgba(20,241,149,0.62)",
   boxSizing: "border-box",
 };
 
