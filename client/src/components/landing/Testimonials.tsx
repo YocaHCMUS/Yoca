@@ -1,3 +1,5 @@
+import { LANDING_ACCENT, SECTION_PADDING_Y, cardSurface, grid12Shell } from "./tokens";
+
 const quotes = [
   {
     text: "If it\u2019s not in your dashboards, it\u2019s not real \u2014 Yoca gave us one source of truth for wallet and token flows.",
@@ -18,47 +20,51 @@ const quotes = [
 
 export function LandingTestimonials() {
   return (
-    <section className="py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-3">
-          {quotes.map((q) => (
-            <blockquote
-              key={q.name}
-              className="relative flex flex-col rounded-2xl p-8"
+    <section
+      style={{ paddingTop: SECTION_PADDING_Y, paddingBottom: SECTION_PADDING_Y }}
+    >
+      <div style={grid12Shell}>
+        {quotes.map((q) => (
+          <blockquote
+            key={q.name}
+            className="landing-quote-card relative flex flex-col"
+            style={{
+              ...cardSurface,
+              backgroundColor: "rgba(17,17,24,0.85)",
+            }}
+          >
+            <span
+              className="text-5xl leading-none"
               style={{
-                backgroundColor: "rgba(17,17,24,0.8)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                opacity: 0.45,
+                fontFamily: "Georgia, serif",
+                color: LANDING_ACCENT,
               }}
+              aria-hidden
             >
-              <span
-                className="text-5xl leading-none text-[#f97316]"
-                style={{ opacity: 0.4, fontFamily: "Georgia, serif" }}
-                aria-hidden
-              >
-                &ldquo;
-              </span>
-              <p
-                className="mt-1 flex-1 text-lg text-[#e2e8f0]"
-                style={{ lineHeight: 1.7 }}
-              >
-                {q.text}
-              </p>
-              <footer
-                className="mt-8 pt-6"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <cite className="not-italic">
-                  <span className="block font-semibold text-[#f8fafc]">
-                    {q.name}
-                  </span>
-                  <span className="mt-1 block text-sm text-[#94a3b8]">
-                    {q.role}
-                  </span>
-                </cite>
-              </footer>
-            </blockquote>
-          ))}
-        </div>
+              &ldquo;
+            </span>
+            <p
+              className="mt-1 flex-1 text-lg text-[#e2e8f0]"
+              style={{ lineHeight: 1.7 }}
+            >
+              {q.text}
+            </p>
+            <footer
+              className="mt-8 pt-6"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <cite className="not-italic">
+                <span className="block font-semibold text-[#f8fafc]">
+                  {q.name}
+                </span>
+                <span className="mt-1 block text-sm text-[#94a3b8]">
+                  {q.role}
+                </span>
+              </cite>
+            </footer>
+          </blockquote>
+        ))}
       </div>
     </section>
   );

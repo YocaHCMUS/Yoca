@@ -1,5 +1,17 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router";
+import {
+  LANDING_ACCENT,
+  LANDING_ACCENT_GLOW,
+  SECTION_PADDING_Y,
+  grid12Shell,
+  btnPrimaryBase,
+  btnPrimaryEnter,
+  btnPrimaryLeave,
+  btnSecondaryBase,
+  btnSecondaryEnter,
+  btnSecondaryLeave,
+} from "./tokens";
 
 const container = {
   hidden: { opacity: 0 },
@@ -22,9 +34,11 @@ export function LandingHero() {
   return (
     <section
       className="relative overflow-hidden"
-      style={{ paddingTop: "10rem", paddingBottom: "6rem" }}
+      style={{
+        paddingTop: SECTION_PADDING_Y + 80,
+        paddingBottom: SECTION_PADDING_Y,
+      }}
     >
-      {/* Glow orbs */}
       <div
         className="pointer-events-none absolute rounded-full"
         style={{
@@ -32,7 +46,7 @@ export function LandingHero() {
           top: "5rem",
           width: "420px",
           height: "420px",
-          background: "rgba(249,115,22,0.18)",
+          background: "rgba(255, 107, 0, 0.16)",
           filter: "blur(100px)",
         }}
         aria-hidden
@@ -44,7 +58,7 @@ export function LandingHero() {
           top: "10rem",
           width: "380px",
           height: "380px",
-          background: "rgba(139,92,246,0.22)",
+          background: "rgba(139,92,246,0.18)",
           filter: "blur(100px)",
         }}
         aria-hidden
@@ -57,82 +71,70 @@ export function LandingHero() {
           width: "600px",
           height: "300px",
           transform: "translate(-50%, -50%)",
-          background: "rgba(249,115,22,0.06)",
+          background: LANDING_ACCENT_GLOW,
           filter: "blur(80px)",
         }}
         aria-hidden
       />
 
-      <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
+      <div style={grid12Shell}>
         <motion.div
           variants={container}
           initial="hidden"
           animate="show"
-          className="mx-auto max-w-4xl text-center"
+          className="text-center"
+          style={{ gridColumn: "1 / -1" }}
         >
-          <motion.p
-            variants={item}
-            className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-[#f97316]"
-          >
-            Onchain analytics
-          </motion.p>
-
-          <motion.h1
-            variants={item}
-            className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
-            style={{ lineHeight: 1.1 }}
-          >
-            Make onchain data
-            <br />
-            work for you.
-          </motion.h1>
-
-          <motion.p
-            variants={item}
-            className="mx-auto mt-7 max-w-2xl text-lg text-[#94a3b8] sm:text-xl"
-            style={{ lineHeight: 1.65 }}
-          >
-            Build with the onchain data platform trusted by teams who need
-            clarity across wallets, tokens, and markets — powered by Yoca.
-          </motion.p>
-
-          <motion.div
-            variants={item}
-            className="mt-10 flex flex-wrap items-center justify-center gap-4"
-          >
-            <Link
-              to="/market"
-              className="inline-flex items-center justify-center rounded-full bg-[#f97316] px-8 py-3.5 text-sm font-semibold text-[#0a0a0f]"
-              style={{ transition: "transform 0.15s ease" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform = "scale(1.03)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = "scale(1)")
-              }
+          <div className="mx-auto max-w-4xl">
+            <motion.p
+              variants={item}
+              className="mb-5 text-sm font-semibold uppercase tracking-[0.22em]"
+              style={{ color: LANDING_ACCENT }}
             >
-              Explore data
-            </Link>
-            <Link
-              to="/auth"
-              className="inline-flex items-center justify-center rounded-full px-8 py-3.5 text-sm font-semibold text-[#f8fafc]"
-              style={{
-                border: "1px solid rgba(255,255,255,0.15)",
-                background: "rgba(255,255,255,0.03)",
-                transition: "border-color 0.2s ease, background 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.28)";
-                e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
-                e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-              }}
+              Onchain analytics
+            </motion.p>
+
+            <motion.h1
+              variants={item}
+              className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
+              style={{ lineHeight: 1.1 }}
             >
-              Get started
-            </Link>
-          </motion.div>
+              Make onchain data
+              <br />
+              work for you.
+            </motion.h1>
+
+            <motion.p
+              variants={item}
+              className="mx-auto mt-7 max-w-2xl text-lg text-[#94a3b8] sm:text-xl"
+              style={{ lineHeight: 1.65 }}
+            >
+              Build with the onchain data platform trusted by teams who need
+              clarity across wallets, tokens, and markets — powered by Yoca.
+            </motion.p>
+
+            <motion.div
+              variants={item}
+              className="mt-10 flex flex-wrap items-center justify-center gap-4"
+            >
+              <Link
+                to="/market"
+                style={btnPrimaryBase}
+                onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+              >
+                Explore data
+              </Link>
+              <Link
+                to="/auth"
+                style={btnSecondaryBase}
+                onMouseEnter={(e) => btnSecondaryEnter(e.currentTarget)}
+                onMouseLeave={(e) => btnSecondaryLeave(e.currentTarget)}
+              >
+                Get started
+              </Link>
+            </motion.div>
+          </div>
         </motion.div>
       </div>
     </section>

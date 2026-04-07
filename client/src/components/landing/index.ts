@@ -1,3 +1,4 @@
+export { TerminalSnippet } from "./TerminalSnippet";
 export { LandingNavbar } from "./Navbar";
 export { LandingHero } from "./Hero";
 export { LandingStatsBar } from "./StatsBar";

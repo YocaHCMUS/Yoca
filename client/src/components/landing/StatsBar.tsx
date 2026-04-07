@@ -1,5 +1,6 @@
 import { useInView } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LANDING_ACCENT_MUTED, SECTION_PADDING_Y, grid12Shell } from "./tokens";
 
 function StatValue({
   end,
@@ -73,25 +74,18 @@ export function LandingStatsBar() {
   return (
     <section
       style={{
+        paddingTop: SECTION_PADDING_Y,
+        paddingBottom: SECTION_PADDING_Y,
         borderTop: "1px solid rgba(255,255,255,0.06)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
         background: "rgba(17,17,24,0.55)",
       }}
-      className="py-14 sm:py-16"
     >
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-y-10 gap-x-6 px-6 sm:grid-cols-4 lg:px-8">
-        {stats.map((s, i) => (
+      <div style={grid12Shell} className="landing-stats-grid">
+        {stats.map((s) => (
           <div
             key={s.label}
-            className="flex flex-col items-center gap-2 text-center"
-            style={
-              i > 0
-                ? {
-                    borderLeft: "1px solid rgba(255,255,255,0.08)",
-                    paddingLeft: "1.5rem",
-                  }
-                : undefined
-            }
+            className="landing-stat-cell flex flex-col items-center gap-2 text-center sm:items-start sm:text-left"
           >
             <StatValue end={s.end} format={s.format} />
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">
@@ -100,15 +94,13 @@ export function LandingStatsBar() {
           </div>
         ))}
 
-        <div
-          className="col-span-2 flex flex-col items-center justify-center gap-2 pt-8 sm:col-span-1 sm:pt-0"
-          style={{ borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: "1.5rem" }}
-        >
+        <div className="landing-stat-cell flex flex-col items-center justify-center gap-2 sm:items-start">
           <span
-            className="rounded-full px-4 py-1.5 font-mono text-sm font-bold text-[#c4b5fd]"
+            className="rounded-full px-4 py-1.5 font-mono text-sm font-bold"
             style={{
-              border: "1px solid rgba(139,92,246,0.4)",
-              background: "rgba(139,92,246,0.1)",
+              color: "#FF8533",
+              border: `1px solid ${LANDING_ACCENT_MUTED}`,
+              background: "rgba(255, 107, 0, 0.08)",
             }}
           >
             AI
