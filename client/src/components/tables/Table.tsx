@@ -80,6 +80,7 @@ export interface TableProps {
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
     filterSchema: Record<number, FilterConfig>;
+    actions?: React.ReactNode;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
@@ -97,6 +98,7 @@ export const Table: React.FC<TableProps> = ({
     headers,
     initialFilters,
     filterSchema,
+    actions,
     classnames = [],
     cellRenderers = [],
     dataEntries = [],
@@ -566,6 +568,7 @@ export const Table: React.FC<TableProps> = ({
     return (
         <TableWrapper
             title={title}
+            actions={actions}
             onExport={handleExport}
             isEmpty={!loading && filteredData.length === 0}
             enableToolbar={true}

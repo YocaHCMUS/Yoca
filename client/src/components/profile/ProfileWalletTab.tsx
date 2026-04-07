@@ -1,7 +1,7 @@
-import { PROFILE_WALLET_NAV_LABELS } from "@/components/profile/profile.constants";
+import { Table } from "@/components/tables/Table";
+import { FilterType, SortType } from "@/components/tables/Table";
 import type {
     LinkedWalletRow,
-    ProfileWalletNav,
     ProfileWalletsData,
 } from "@/types/profile";
 import { Button, Checkbox } from "@carbon/react";
@@ -29,7 +29,6 @@ export function ProfileWalletTab({
     onSelectedWalletIdsChange,
 }: ProfileWalletTabProps) {
     const navigate = useNavigate();
-    const [selectedNav, setSelectedNav] = useState<ProfileWalletNav>(data.selectedNav);
     const [selectedComparisonWalletIds, setSelectedComparisonWalletIds] = useState<string[]>(
         data.selectedComparisonWalletIds,
     );
@@ -52,6 +51,22 @@ export function ProfileWalletTab({
             ),
         [data.linkedWalletRows, effectiveSelectedWalletIds],
     );
+
+    const portfolioTableData = visiblePortfolioRows.map((row) => [
+        row.walletLabel,
+        row.netWorthUsd,
+        row.pnlUsd,
+        row.tradeCount,
+    ]);
+
+    const linkedWalletTableData = visibleLinkedWalletRows.map((row) => [
+        row.walletId,
+        row.walletLabel,
+        row.walletAddress,
+        row.netWorthUsd,
+        row.status,
+        row.walletId,
+    ]);
 
     const handleWalletFilterToggle = (walletId: string, checked: boolean) => {
         if (checked) {
@@ -94,23 +109,9 @@ export function ProfileWalletTab({
     };
 
     return (
-        <section className={styles.tabLayout2}>
-            <aside className={`${styles.sectionCard} ${styles.sideNav}`}>
-                <h3>Wallets</h3>
-                {data.leftNavItems.map((nav) => (
-                    <Button
-                        key={nav}
-                        size="sm"
-                        kind={selectedNav === nav ? "primary" : "tertiary"}
-                        className={styles.sideNavButton}
-                        onClick={() => setSelectedNav(nav)}
-                    >
-                        {PROFILE_WALLET_NAV_LABELS[nav]}
-                    </Button>
-                ))}
-            </aside>
-
-            <div className={`${styles.sectionCard} ${styles.contentStack}`}>
+        <section className={styles.contentStack}>
+            <div className={styles.sectionCard}>
+                <h3>Wallet filters</h3>
                 <div className={styles.filters}>
                     {data.availableWalletFilters.map((filter) => (
                         <Checkbox
@@ -124,110 +125,152 @@ export function ProfileWalletTab({
                         />
                     ))}
                 </div>
+            </div>
 
-                {selectedNav === "portfolio-table" ? (
-                    <table className={styles.simpleTable}>
-                        <thead>
-                            <tr>
-                                <th>Wallet</th>
-                                <th>Net worth</th>
-                                <th>PnL</th>
-                                <th>Trades</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visiblePortfolioRows.map((row) => (
-                                <tr key={row.walletId}>
-                                    <td>{row.walletLabel}</td>
-                                    <td>{formatCurrency(row.netWorthUsd)}</td>
-                                    <td>
-                                        {formatCurrency(row.pnlUsd)} ({row.pnlPct.toFixed(2)}%)
-                                    </td>
-                                    <td>{row.tradeCount}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : null}
+            <Table
+                title="Portfolio table"
+                headers={["Wallet", "Net worth", "PnL", "Trades"]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    0: { type: FilterType.Select },
+                    1: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+                    2: { type: FilterType.Range, min: -500000, max: 500000, step: 1000 },
+                    3: { type: FilterType.Range, min: 0, max: 5000, step: 1 },
+                }}
+                dataEntries={portfolioTableData}
+                cellRenderers={[
+                    null,
+                    (value) => formatCurrency(Number(value)),
+                    (value) => formatCurrency(Number(value)),
+                    null,
+                ]}
+                isSortable={[true, true, true, true]}
+                sortConfigs={{
+                    1: { type: SortType.Number },
+                    2: { type: SortType.Number },
+                    3: { type: SortType.Number },
+                }}
+            />
 
-                {selectedNav === "linked-wallets" ? (
-                    <>
-                        <div>
-                            <Button size="sm">Add or link wallet</Button>
-                        </div>
-                        <table className={styles.simpleTable}>
-                            <thead>
-                                <tr>
-                                    <th>Compare</th>
-                                    <th>Wallet</th>
-                                    <th>Address</th>
-                                    <th>Net worth</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visibleLinkedWalletRows.map((row) => (
-                                    <tr
-                                        key={row.walletId}
-                                        className={styles.walletRow}
-                                        onClick={() => navigateToWalletDetail(row)}
-                                    >
-                                        <td onClick={(event) => event.stopPropagation()}>
-                                            <Checkbox
-                                                id={`wallet-compare-${row.walletId}`}
-                                                labelText=""
-                                                hideLabel
-                                                checked={selectedComparisonWalletIds.includes(row.walletId)}
-                                                onChange={(_, state) =>
-                                                    handleComparisonToggle(row.walletId, state.checked)
-                                                }
-                                            />
-                                        </td>
-                                        <td>{row.walletLabel}</td>
-                                        <td>{row.walletAddress}</td>
-                                        <td>{formatCurrency(row.netWorthUsd)}</td>
-                                        <td>{row.status}</td>
-                                        <td onClick={(event) => event.stopPropagation()}>
-                                            <Button size="sm" kind="ghost">
-                                                Unlink
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <div>
-                            <Button
-                                size="sm"
-                                onClick={handleCompareClick}
-                                disabled={selectedComparisonWalletIds.length < 2}
-                            >
-                                Compare selected wallets
-                            </Button>
-                        </div>
-                    </>
-                ) : null}
+            <Table
+                title="Linked wallets list"
+                headers={[
+                    "Compare",
+                    "Wallet",
+                    "Address",
+                    "Net worth",
+                    "Status",
+                    "Actions",
+                ]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    1: { type: FilterType.Select },
+                    2: { type: FilterType.Select },
+                    3: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+                    4: { type: FilterType.Select },
+                }}
+                dataEntries={linkedWalletTableData}
+                cellRenderers={[
+                    (_value, row) => {
+                        const walletId = String(row[0]);
+                        return (
+                            <div onClick={(event) => event.stopPropagation()}>
+                                <Checkbox
+                                    id={`wallet-compare-${walletId}`}
+                                    labelText=""
+                                    hideLabel
+                                    checked={selectedComparisonWalletIds.includes(walletId)}
+                                    onChange={(_, state) =>
+                                        handleComparisonToggle(walletId, state.checked)
+                                    }
+                                />
+                            </div>
+                        );
+                    },
+                    null,
+                    null,
+                    (value) => formatCurrency(Number(value)),
+                    null,
+                    (_value, row) => {
+                        const walletId = String(row[5]);
+                        const linkedRow = visibleLinkedWalletRows.find(
+                            (item) => item.walletId === walletId,
+                        );
 
-                {selectedNav === "balance-chart" || selectedNav === "drawdown-chart" ? (
-                    <div className={styles.chartPlaceholder}>
-                        <strong>
-                            {selectedNav === "balance-chart" ? "Balance chart" : "Drawdown chart"}
-                        </strong>
-                        {data.balanceDrawdownSeries
-                            .filter((series) => effectiveSelectedWalletIds.includes(series.walletId))
-                            .map((series) => (
-                                <div key={series.walletId}>
-                                    <strong>{series.walletLabel}</strong>
-                                    <p>
-                                        {series.points
-                                            .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
-                                            .join(" | ")}
-                                    </p>
-                                </div>
-                            ))}
+                        if (!linkedRow) return null;
+
+                        return (
+                            <div onClick={(event) => event.stopPropagation()}>
+                                <Button size="sm" kind="ghost">
+                                    Unlink
+                                </Button>
+                            </div>
+                        );
+                    },
+                ]}
+                isSortable={[true, true, true, true, true, false]}
+                sortConfigs={{
+                    3: { type: SortType.Number },
+                }}
+                onRowClick={(_, rowIndex) => {
+                    const row = visibleLinkedWalletRows[rowIndex];
+                    if (row) {
+                        navigateToWalletDetail(row);
+                    }
+                }}
+                actions={
+                    <div className={styles.inlineActions}>
+                        <Button size="sm">
+                            Add or link wallet
+                        </Button>
+                        <Button
+
+                            size="sm"
+                            onClick={handleCompareClick}
+                            disabled={selectedComparisonWalletIds.length < 2}
+                        >
+                            Compare selected wallets
+                        </Button>
                     </div>
-                ) : null}
+                }
+            />
+
+            <div className={styles.sectionCard}>
+                <h3>Balance chart</h3>
+                <div className={styles.chartPlaceholder}>
+                    {data.balanceDrawdownSeries
+                        .filter((series) => effectiveSelectedWalletIds.includes(series.walletId))
+                        .map((series) => (
+                            <div key={series.walletId}>
+                                <strong>{series.walletLabel}</strong>
+                                <p>
+                                    {series.points
+                                        .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
+                                        .join(" | ")}
+                                </p>
+                            </div>
+                        ))}
+                </div>
+            </div>
+
+            <div className={styles.sectionCard}>
+                <h3>Drawdown chart</h3>
+                <div className={styles.chartPlaceholder}>
+                    {data.balanceDrawdownSeries
+                        .filter((series) => effectiveSelectedWalletIds.includes(series.walletId))
+                        .map((series) => (
+                            <div key={`${series.walletId}-drawdown`}>
+                                <strong>{series.walletLabel}</strong>
+                                <p>
+                                    {series.points
+                                        .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
+                                        .join(" | ")}
+                                </p>
+                            </div>
+                        ))}
+                </div>
             </div>
         </section>
     );

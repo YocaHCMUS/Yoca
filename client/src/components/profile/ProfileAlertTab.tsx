@@ -1,14 +1,16 @@
-import { PROFILE_ALERT_NAV_LABELS } from "@/components/profile/profile.constants";
-import type { ProfileAlertNav, ProfileAlertsData } from "@/types/profile";
+import { FilterType, SortType, Table } from "@/components/tables/Table";
+import type { AlertNotification, AlertRule, ProfileAlertsData } from "@/types/profile";
 import {
     Button,
-    Select,
-    SelectItem,
+    ComposedModal,
+    ModalBody,
+    ModalFooter,
+    ModalHeader,
     TextArea,
     TextInput,
     Toggle,
 } from "@carbon/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "./profile.module.scss";
 
 interface ProfileAlertTabProps {
@@ -16,78 +18,119 @@ interface ProfileAlertTabProps {
 }
 
 export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
-    const [selectedNav, setSelectedNav] = useState<ProfileAlertNav>(data.selectedNav);
+    const alertTableData = data.alerts.map((rule) => [
+        rule.tokenSymbol,
+        rule.alertType,
+        rule.conditionText,
+        rule.status,
+        new Date(rule.updatedAt).toLocaleString(),
+        rule.id,
+    ]);
+
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+
+    const modalTitle = useMemo(() => {
+        if (!editingRule) return "Create alert";
+        return `Edit ${editingRule.tokenSymbol} alert`;
+    }, [editingRule]);
+
+    const openCreateModal = () => {
+        setEditingRule(null);
+        setIsEditorOpen(true);
+    };
+
+    const openEditModal = (rule: AlertRule) => {
+        setEditingRule(rule);
+        setIsEditorOpen(true);
+    };
+
+    const closeEditorModal = () => {
+        setIsEditorOpen(false);
+        setEditingRule(null);
+    };
 
     return (
-        <section className={styles.tabLayout3}>
-            <aside className={`${styles.sectionCard} ${styles.sideNav}`}>
-                <h3>Alerts</h3>
-                {data.leftNavItems.map((nav) => (
-                    <Button
-                        key={nav}
-                        size="sm"
-                        kind={selectedNav === nav ? "primary" : "tertiary"}
-                        className={styles.sideNavButton}
-                        onClick={() => setSelectedNav(nav)}
-                    >
-                        {PROFILE_ALERT_NAV_LABELS[nav]}
-                    </Button>
-                ))}
-            </aside>
+        <section className={styles.contentStack}>
+            <Table
+                title="Alert list"
+                headers={[
+                    "Token",
+                    "Type",
+                    "Condition",
+                    "Status",
+                    "Updated",
+                    "Actions",
+                ]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    0: { type: FilterType.Select },
+                    1: { type: FilterType.Select },
+                    3: { type: FilterType.Select },
+                }}
+                dataEntries={alertTableData}
+                cellRenderers={[
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    (_value, row) => {
+                        const rule = data.alerts.find((item) => item.id === row[5]);
 
-            <div className={`${styles.sectionCard} ${styles.contentStack}`}>
-                {selectedNav === "list" ? (
-                    <>
-                        <div>
-                            <Button size="sm">Add alert</Button>
-                        </div>
-                        <table className={styles.simpleTable}>
-                            <thead>
-                                <tr>
-                                    <th>Token</th>
-                                    <th>Type</th>
-                                    <th>Condition</th>
-                                    <th>Status</th>
-                                    <th>Updated</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.alerts.map((rule) => (
-                                    <tr key={rule.id}>
-                                        <td>{rule.tokenSymbol}</td>
-                                        <td>{rule.alertType}</td>
-                                        <td>{rule.conditionText}</td>
-                                        <td>{rule.status}</td>
-                                        <td>{new Date(rule.updatedAt).toLocaleString()}</td>
-                                        <td>
-                                            <Button size="sm" kind="ghost">
-                                                Edit
-                                            </Button>
-                                            <Button size="sm" kind="ghost">
-                                                Pause/Resume
-                                            </Button>
-                                            <Button size="sm" kind="ghost">
-                                                Delete
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </>
-                ) : (
+                        if (!rule) return null;
+
+                        return (
+                            <div className={styles.inlineActions}>
+                                <Button
+                                    size="sm"
+                                    kind="ghost"
+                                    onClick={() => openEditModal(rule)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button size="sm" kind="ghost">
+                                    Pause/Resume
+                                </Button>
+                                <Button size="sm" kind="ghost">
+                                    Delete
+                                </Button>
+                            </div>
+                        );
+                    },
+                ]}
+                isSortable={[true, true, false, true, true, false]}
+                sortConfigs={{
+                    4: { type: SortType.Date },
+                }}
+                actions={
+                    <Button size="sm" onClick={openCreateModal}>
+                        Add alert
+                    </Button>
+                }
+            />
+
+            <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
+                <ModalHeader label="Alerts" title={modalTitle} />
+                <ModalBody hasScrollingContent>
                     <form className={styles.contentStack}>
-                        <TextInput id="alert-token" labelText="Token" placeholder="SOL" />
-                        <Select id="alert-type" labelText="Alert type" defaultValue="price">
-                            <SelectItem value="price" text="Price" />
-                            <SelectItem value="volume" text="Volume" />
-                            <SelectItem value="drawdown" text="Drawdown" />
-                            <SelectItem value="custom" text="Custom" />
-                        </Select>
+                        <TextInput
+                            id="alert-token"
+                            labelText="Token"
+                            defaultValue={editingRule?.tokenSymbol ?? ""}
+                            placeholder="SOL"
+                        />
+                        <TextInput
+                            id="alert-type"
+                            labelText="Alert type"
+                            defaultValue={editingRule?.alertType ?? "price"}
+                            placeholder="price"
+                        />
                         <TextInput
                             id="alert-condition"
                             labelText="Condition"
+                            defaultValue={editingRule?.conditionText ?? ""}
                             placeholder="Price > 210"
                         />
                         <TextArea id="alert-channels" labelText="Channels" placeholder="Email, Telegram" />
@@ -96,27 +139,38 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
                             labelText="Enable alert"
                             labelA="Disabled"
                             labelB="Enabled"
-                            defaultToggled
+                            defaultToggled={editingRule?.status !== "paused"}
                         />
-                        <div>
-                            <Button type="button" size="sm">
-                                Save alert
-                            </Button>
-                        </div>
                     </form>
-                )}
-            </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button kind="secondary" onClick={closeEditorModal}>
+                        Cancel
+                    </Button>
+                    <Button onClick={closeEditorModal}>Save alert</Button>
+                </ModalFooter>
+            </ComposedModal>
+        </section>
+    );
+}
 
-            <aside className={`${styles.sectionCard} ${styles.contentStack}`}>
-                <h3>Notifications</h3>
-                {data.notifications.map((note) => (
-                    <article key={note.id} className={styles.notificationItem}>
-                        <strong>{note.severity.toUpperCase()}</strong>
-                        <p>{note.message}</p>
-                        <small>{new Date(note.timestamp).toLocaleString()}</small>
-                    </article>
-                ))}
-            </aside>
+interface ProfileAlertNotificationPanelProps {
+    notifications: AlertNotification[];
+}
+
+export function ProfileAlertNotificationPanel({
+    notifications,
+}: ProfileAlertNotificationPanelProps) {
+    return (
+        <section className={styles.contentStack}>
+            <h3>Alert notifications</h3>
+            {notifications.map((note) => (
+                <article key={note.id} className={styles.notificationItem}>
+                    <strong>{note.severity.toUpperCase()}</strong>
+                    <p>{note.message}</p>
+                    <small>{new Date(note.timestamp).toLocaleString()}</small>
+                </article>
+            ))}
         </section>
     );
 }

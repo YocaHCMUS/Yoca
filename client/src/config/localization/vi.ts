@@ -371,6 +371,7 @@ export const translation = defineTranslation({
     market: "Thị trường",
     alerts: "Cảnh báo",
     dashboard: "Bảng điều khiển",
+    notification: "Thông báo",
     profile: "Hồ sơ",
     settings: "Cài đặt",
     theme: "Giao diện",

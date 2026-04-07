@@ -8,7 +8,7 @@ export const profileMockApiPayload: ProfilePageData = {
             "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=60",
         displayName: "Alex Solana",
         accountTier: "premium",
-        period: "30d",
+        period: "30D",
         totalNetWorthUsd: 145250.77,
         tradeOrTxCount: 1842,
         pnlUsd: 16420.15,

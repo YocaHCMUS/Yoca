@@ -14,6 +14,11 @@ Build a production-ready profile page skeleton using mock data first, while keep
    - Wallets
    - Activity
 4. Export plan under the wallets docs folder.
+5. In each tab, remove tab-internal sidebars; render all tab content sections together in the main content area.
+6. Alerts exceptions:
+   - Alert editor is opened via a dedicated button and rendered as a modal.
+   - Alert notifications are moved from right sidebar to header panel, triggered by an icon button.
+   - Use `extraHeaderPanel` in `PageWrapper` for the notification panel content.
 
 ## Page Information Architecture
 
@@ -102,8 +107,6 @@ Optional styling split:
 
 ### Alerts model
 - ProfileAlertsData
-  - leftNavItems: ('list' | 'editor')[]
-  - selectedNav: 'list' | 'editor'
   - alerts: AlertRule[]
   - notifications: AlertNotification[]
 
@@ -123,8 +126,6 @@ Optional styling split:
 
 ### Wallets model
 - ProfileWalletsData
-   - leftNavItems: ('portfolio-table' | 'linked-wallets' | 'balance-chart' | 'drawdown-chart')[]
-   - selectedNav: 'portfolio-table' | 'linked-wallets' | 'balance-chart' | 'drawdown-chart'
   - availableWalletFilters: WalletFilterOption[]
   - selectedWalletIds: string[]
   - portfolioRows: WalletPortfolioRow[]
@@ -136,8 +137,6 @@ Optional styling split:
 
 ### Activity model
 - ProfileActivityData
-  - leftNavItems: ('swaps-table' | 'transfers-table' | 'wallet-overview-cards' | 'trade-frequency-heatmap')[]
-  - selectedNav: 'swaps-table' | 'transfers-table' | 'wallet-overview-cards' | 'trade-frequency-heatmap'
   - availableWalletFilters: WalletFilterOption[]
   - selectedWalletIds: string[]
   - swapTransferRows: ActivityRow[]
@@ -169,43 +168,32 @@ Reason:
 - Gives users a one-screen status before drilling into Alerts/Wallet/Activity tabs.
 
 ### 2) Alerts Tab
-Layout: 3-column content.
-1. Left sidebar navigation
-   - Alert List
-   - Alert Editor/Creator
-2. Middle content
-   - If Alert List selected:
-     - Table with token, alert type, condition, status, actions
-     - Add Alert button above table
-   - If Editor selected:
-     - Form for token, type, threshold/condition, channels, enable toggle
-3. Right sidebar
-   - Notification feed with timestamp and message
+Layout: single main content flow with header-triggered notification panel.
+1. Main content (always visible)
+   - Alert table with token, alert type, condition, status, actions
+   - Dedicated Add/Edit Alert button above table
+2. Alert editor behavior
+   - Alert editor opens in a modal (create/edit mode)
+   - Modal close returns user to same table context without tab layout changes
+3. Notification behavior
+   - Notification feed is moved to header panel
+   - Accessed by an icon button in header actions
+   - Rendered via `PageWrapper.extraHeaderPanel`
 
 ### 3) Wallets Tab
-Layout: 2-column content.
-1. Left sidebar navigation
-   - Portfolio table
-   - Linked wallets
-   - Balance chart
-   - Drawdown chart
-2. Main content
+Layout: single-column stacked sections (no left sidebar).
+1. Main content sections (all visible)
    - Portfolio table across all wallets with per-wallet filtering
    - Linked wallet list section with add/link wallet action and unlink action
    - Each linked-wallet row is clickable to navigate to that wallet page
    - Each linked-wallet row has a checkbox for comparison selection
    - Wallet comparison action uses selected checkbox rows (deep-link to wallet comparison page)
-   - balance chart all wallets with per-wallet filtering
-   - drawdown chart all wallets with per-wallet filtering
+   - Balance chart all wallets with per-wallet filtering
+   - Drawdown chart all wallets with per-wallet filtering
 
 ### 4) Activity Tab
-Layout: 2-column content.
-1. Left sidebar navigation
-   - Swaps table
-   - Transfers table
-   - Wallet overview cards
-   - Trade frequency heatmap
-2. Main content
+Layout: single-column stacked sections (no left sidebar).
+1. Main content sections (all visible)
    - Swaps/transfers table for all wallets + individual wallet filter
    - Per-wallet overview cards (trades, sell tx, buy tx, pnl, period)
    - GitHub-style contribution heatmap for trading frequency
@@ -215,14 +203,16 @@ Layout: 2-column content.
    - active tab
    - period
    - selected wallets
-2. Keep tab-local state for intra-tab left sidebar selection.
+2. Keep tab-local UI state only for transient interactions:
+   - alerts editor modal open/close and edit target
+   - alerts notification header panel open/close
 3. Keep derived formatting and chart-ready transforms memoized in hook layer.
 
 ## Routing and Navigation Plan
 1. Route remains profile page root (current page).
 2. Wallet comparison action uses existing wallet comparison route with selected checkbox wallet IDs as query params.
 3. Clicking a linked-wallet row navigates to that wallet detail page.
-4. Preserve tab and sub-section in URL query params for deep-linking later (optional in first pass).
+4. Preserve tab in URL query params for deep-linking later (optional in first pass).
 
 ## Implementation Phases
 
@@ -250,15 +240,16 @@ Exit criteria:
 - Tab switching is stable and preserves local state per tab where needed.
 
 ### Phase 3: Alerts tab MVP
-1. Implement left nav + middle conditional section + right notification feed.
+1. Implement alerts table in main content flow (no sidebar).
 2. Add table interactions (edit, pause/resume, delete placeholders).
-3. Add Add Alert CTA and editor form skeleton.
+3. Add Add Alert CTA and alert editor modal skeleton.
+4. Add header notification icon action and wire notification content to `PageWrapper.extraHeaderPanel`.
 
 Exit criteria:
 - Alerts tab complete in mock mode with deterministic test data.
 
 ### Phase 4: Wallets tab MVP
-1. Implement left nav and wallet filter controls.
+1. Implement stacked wallet sections and wallet filter controls.
 2. Build portfolio table view.
 3. Build linked-wallets section with add/link and unlink actions.
 4. Add row-click navigation to wallet page and checkbox selection for comparison.
@@ -287,13 +278,13 @@ Exit criteria:
 
 ### Unit tests
 1. Adapter conversion tests (mock and api inputs to same view model).
-2. Sidebar navigation reducer/state tests.
+2. Alerts modal and header notification panel state tests.
 3. Utility tests for metric and currency formatting.
 
 ### Component tests
 1. ProfileOverview renders core fields and KPI values.
-2. Alerts tab list/editor mode switching.
-3. Wallet tab filter and sub-navigation rendering.
+2. Alerts tab table + editor modal + header notification panel behavior.
+3. Wallet tab filter and full-section rendering.
 4. Activity heatmap rendering with sparse and dense data.
 
 ### Integration tests
@@ -301,6 +292,7 @@ Exit criteria:
 2. Tab changes preserve selected filters as expected.
 3. Linked-wallet row click navigates to wallet detail route.
 4. Comparison action includes selected checkbox wallet IDs.
+5. Header notification icon opens/closes alert notification `extraHeaderPanel` without breaking account/lang panels.
 
 ## Cleanup Plan (When Real APIs Arrive)
 1. Implement ApiProfileDataProvider in profileDataProvider.ts.
@@ -322,6 +314,8 @@ Expected cleanup impact:
    - Mitigation: pre-aggregate by date + memoize.
 4. Risk: Mock contracts drift from backend contracts.
    - Mitigation: keep adapter + contract tests and review during API integration.
+5. Risk: Header panel interaction conflicts (alerts vs account/lang panels).
+   - Mitigation: single-source panel open state and deterministic close rules in `PageWrapper`.
 
 ## Open Decisions
 1. Final account tier taxonomy and color mapping.
@@ -337,3 +331,4 @@ Because this plan is expected to be edited multiple times:
 
 ## Change Log
 - 2026-04-07: Initial mock-first profile page implementation plan created.
+- 2026-04-07: Updated plan to remove tab-internal sidebars, migrate alerts editor to modal, and move alerts notifications to header panel via `extraHeaderPanel`.

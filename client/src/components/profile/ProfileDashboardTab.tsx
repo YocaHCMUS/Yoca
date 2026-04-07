@@ -1,3 +1,4 @@
+import { FilterType, SortType, Table } from "@/components/tables/Table";
 import type { ProfileDashboardData } from "@/types/profile";
 import styles from "./profile.module.scss";
 
@@ -12,6 +13,12 @@ function getToneClass(tone?: "positive" | "negative" | "neutral"): string {
 }
 
 export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
+    const concentrationData = data.concentration.map((item) => [
+        item.label,
+        item.valueUsd,
+        item.pct,
+    ]);
+
     return (
         <section className={styles.contentStack}>
             <div className={styles.sectionCard}>
@@ -28,27 +35,27 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
                 </div>
             </div>
 
-            <div className={styles.sectionCard}>
-                <h3>Wallet concentration</h3>
-                <table className={styles.simpleTable}>
-                    <thead>
-                        <tr>
-                            <th>Wallet</th>
-                            <th>Value</th>
-                            <th>Share</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.concentration.map((item) => (
-                            <tr key={item.label}>
-                                <td>{item.label}</td>
-                                <td>${item.valueUsd.toLocaleString()}</td>
-                                <td>{item.pct.toFixed(1)}%</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <Table
+                title="Wallet concentration"
+                headers={["Wallet", "Value", "Share"]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    1: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+                    2: { type: FilterType.Range, min: 0, max: 100, step: 0.1 },
+                }}
+                dataEntries={concentrationData}
+                cellRenderers={[
+                    null,
+                    (value) => `$${Number(value).toLocaleString()}`,
+                    (value) => `${Number(value).toFixed(1)}%`,
+                ]}
+                isSortable={[true, true, true]}
+                sortConfigs={{
+                    1: { type: SortType.Number },
+                    2: { type: SortType.Number },
+                }}
+            />
 
             <div className={styles.sectionCard}>
                 <h3>Risk panel</h3>
