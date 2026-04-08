@@ -11,7 +11,9 @@ import {
     Toggle,
 } from "@carbon/react";
 import { useMemo, useState } from "react";
+import { AddLarge } from "@carbon/icons-react";
 import styles from "./profile.module.scss";
+
 
 interface ProfileAlertTabProps {
     data: ProfileAlertsData;
@@ -105,9 +107,10 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
                     4: { type: SortType.Date },
                 }}
                 actions={
-                    <Button size="sm" onClick={openCreateModal}>
+                    <button className={styles.triggerButton} onClick={openCreateModal}>
+                        <AddLarge size={20} />
                         Add alert
-                    </Button>
+                    </button>
                 }
             />
 

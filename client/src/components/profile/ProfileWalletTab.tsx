@@ -5,6 +5,7 @@ import type {
     ProfileWalletsData,
 } from "@/types/profile";
 import { Button, Checkbox } from "@carbon/react";
+import { AddLarge, Repeat } from "@carbon/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./profile.module.scss";
@@ -101,6 +102,12 @@ export function ProfileWalletTab({
                     2: { type: SortType.Number },
                     3: { type: SortType.Number },
                 }}
+                onRowClick={(_, rowIndex) => {
+                    const row = data.linkedWalletRows[rowIndex];
+                    if (row) {
+                        navigateToWalletDetail(row);
+                    }
+                }}
             />
 
             <Table
@@ -164,25 +171,26 @@ export function ProfileWalletTab({
                 sortConfigs={{
                     3: { type: SortType.Number },
                 }}
-                onRowClick={(_, rowIndex) => {
-                    const row = data.linkedWalletRows[rowIndex];
-                    if (row) {
-                        navigateToWalletDetail(row);
-                    }
-                }}
+                // onRowClick={(_, rowIndex) => {
+                //     const row = data.linkedWalletRows[rowIndex];
+                //     if (row) {
+                //         navigateToWalletDetail(row);
+                //     }
+                // }}
                 actions={
                     <div className={styles.inlineActions}>
-                        <Button size="sm">
+                        <button className={styles.triggerButton}>
+                            <AddLarge size={20} />
                             Add or link wallet
-                        </Button>
-                        <Button
-
-                            size="sm"
+                        </button>
+                        <button
                             onClick={handleCompareClick}
                             disabled={selectedComparisonWalletIds.length < 2}
+                            className={styles.triggerButton}
                         >
+                            <Repeat size={20} />
                             Compare selected wallets
-                        </Button>
+                        </button>
                     </div>
                 }
             />
