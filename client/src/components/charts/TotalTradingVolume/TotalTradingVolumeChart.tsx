@@ -51,6 +51,7 @@ export function TotalTradingVolumeChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }: ChartProps) {
   const { tr } = useLocalization();
@@ -87,6 +88,7 @@ export function TotalTradingVolumeChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   /**

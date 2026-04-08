@@ -8,6 +8,8 @@ interface StandardChartConfig<TData, TQuery> {
   autoRefresh?: boolean;
   refreshInterval?: number;
   onDataLoaded?: (data: TData) => void;
+  /** When false, no initial fetch and no auto-refresh (e.g. inactive wallet-comparison tab). */
+  enabled?: boolean;
 }
 
 interface StandardChartController<TData> {
@@ -22,6 +24,7 @@ export function useStandardChartController<TData, TQuery>({
     autoRefresh = true,
     refreshInterval = 30000,
     onDataLoaded,
+    enabled = true,
 }: StandardChartConfig<TData, TQuery>): StandardChartController<TData> {
     const [data, setData] = useState<TData | null>(null);
     const [loadingState, setLoadingState] = useState<ChartLoadingState>({
@@ -101,12 +104,15 @@ export function useStandardChartController<TData, TQuery>({
             interval: refreshInterval,
             pauseOnInteraction: true,
         },
-        enabled: autoRefresh && loadingState.status === 'success',
+        enabled: enabled && autoRefresh && loadingState.status === 'success',
     });
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (!enabled) {
+            return;
+        }
+        void fetchData();
+    }, [enabled, fetchData]);
 
     return { data, loadingState, refetch: fetchData };
 }

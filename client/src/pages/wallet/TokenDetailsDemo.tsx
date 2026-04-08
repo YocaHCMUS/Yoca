@@ -3,6 +3,7 @@ import {
   getDefaultAggregationForDayRange,
   mapTradesWithFallbackPrice,
   TimeSeriesTradesScatterChart,
+  type TimeSeriesDataPoint,
   type TradePoint,
 } from "@/components/charts/TimeSeriesTradesScatterChart";
 import { CpyBtn } from "@/components/CpyBtn";
@@ -145,7 +146,7 @@ export function TokenAverageTradePrice({
     {
       param: { address: tokenAddress },
       query: {
-        days: selectedTimeRange,
+        days: String(selectedTimeRange),
       },
     },
     {
@@ -196,7 +197,7 @@ export function TokenAverageTradePrice({
 
     return mapTradesWithFallbackPrice(
       selectedRangeTrades,
-      priceData.data,
+      priceData.data as TimeSeriesDataPoint[] | undefined,
       true,
     );
   }, [recentTrades.data, priceData.data, selectedTimeRange]);
@@ -335,7 +336,7 @@ export function TokenAverageTradePrice({
           },
         ]}
         valueFormatter={fmt.num.compact.currency}
-        data={priceData.data}
+        data={priceData.data as TimeSeriesDataPoint[] | undefined}
         trades={mappedTradePoints}
         aggregation={tradeAggregation}
         loading={priceData.isLoading || recentTrades.isLoading}

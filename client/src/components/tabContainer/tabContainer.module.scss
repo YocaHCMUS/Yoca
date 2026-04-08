@@ -81,6 +81,11 @@
   height: 100%;
 }
 
+.tabPanelPreserve {
+  width: 100%;
+  min-height: 0;
+}
+
 @media (max-width: 960px) {
   .tabHeadersWithActions {
     grid-template-columns: 1fr;

@@ -1,0 +1,252 @@
+@import "tailwindcss";
+
+/*
+ * Scoped reset: undo Carbon Design System & theme.scss globals
+ * so Tailwind utilities work correctly inside the landing page.
+ */
+@layer base {
+  .landing-page,
+  .landing-page *,
+  .landing-page *::before,
+  .landing-page *::after {
+    box-sizing: border-box;
+    /* Override the theme.scss wildcard transition so Tailwind
+       transition-* utilities can set their own values cleanly. */
+    transition-property: none;
+    transition-duration: 0s;
+  }
+
+  .landing-page {
+    --landing-accent: #9945ff;
+    --landing-accent-2: #14f195;
+    --landing-accent-hover: #ad6dff;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: #0a0a0f;
+    background-image:
+      linear-gradient(rgba(153, 69, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(20, 241, 149, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center;
+  }
+
+  /* Strip default margins Carbon may add */
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4,
+  .landing-page h5,
+  .landing-page h6,
+  .landing-page p,
+  .landing-page blockquote,
+  .landing-page figure,
+  .landing-page pre,
+  .landing-page ul,
+  .landing-page ol,
+  .landing-page dl,
+  .landing-page dd {
+    margin: 0;
+  }
+
+  /* Reset headings – let Tailwind size them */
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4 {
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+  }
+
+  /* Reset links – let Tailwind color them */
+  .landing-page a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  /* Reset lists */
+  .landing-page ul,
+  .landing-page ol {
+    list-style: none;
+    padding: 0;
+  }
+
+  /* Images / media */
+  .landing-page img,
+  .landing-page svg,
+  .landing-page video {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Buttons */
+  .landing-page button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  /* Smooth scrolling for anchor links */
+  .landing-page {
+    scroll-behavior: smooth;
+  }
+
+  /* 12-col children: stats row — 2×2 on small, 4 across from sm */
+  .landing-stats-grid > .landing-stat-cell {
+    grid-column: span 6;
+  }
+
+  @media (min-width: 640px) {
+    .landing-stats-grid > .landing-stat-cell {
+      grid-column: span 3;
+    }
+
+    .landing-stats-grid > .landing-stat-cell:not(:first-child) {
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      padding-left: 2rem;
+    }
+  }
+
+  .landing-product-grid .landing-product-card {
+    grid-column: span 12;
+  }
+
+  @media (min-width: 768px) {
+    .landing-product-grid .landing-product-card {
+      grid-column: span 6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-product-grid .landing-product-card {
+      grid-column: span 4;
+    }
+  }
+
+  .landing-story-card {
+    grid-column: span 12;
+  }
+
+  @media (min-width: 640px) {
+    .landing-story-card {
+      grid-column: span 6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-story-card {
+      grid-column: span 3;
+    }
+  }
+
+  .landing-quote-card {
+    grid-column: span 12;
+  }
+
+  @media (min-width: 768px) {
+    .landing-quote-card {
+      grid-column: span 4;
+    }
+  }
+
+  .landing-news-card {
+    grid-column: span 12;
+  }
+
+  @media (min-width: 768px) {
+    .landing-news-card {
+      grid-column: span 4;
+    }
+  }
+
+  .landing-dev-copy {
+    grid-column: span 12;
+  }
+
+  .landing-dev-terminal {
+    grid-column: span 12;
+  }
+
+  @media (min-width: 1024px) {
+    .landing-dev-copy {
+      grid-column: span 5;
+    }
+
+    .landing-dev-terminal {
+      grid-column: span 7;
+    }
+  }
+
+  .landing-footer-brand {
+    grid-column: span 12;
+  }
+
+  .landing-footer-links {
+    grid-column: span 12;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .landing-footer-links {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-footer-brand {
+      grid-column: span 5;
+    }
+
+    .landing-footer-links {
+      grid-column: span 7;
+      align-self: start;
+    }
+  }
+
+  @keyframes landing-edge-flow {
+    0% {
+      opacity: 0.35;
+      filter: drop-shadow(0 0 0 rgba(20, 241, 149, 0));
+    }
+    50% {
+      opacity: 0.95;
+      filter: drop-shadow(0 0 6px rgba(20, 241, 149, 0.7));
+    }
+    100% {
+      opacity: 0.35;
+      filter: drop-shadow(0 0 0 rgba(153, 69, 255, 0));
+    }
+  }
+
+  @keyframes landing-node-glow {
+    0% {
+      opacity: 0.82;
+      filter: drop-shadow(0 0 1px rgba(153, 69, 255, 0.35));
+    }
+    50% {
+      opacity: 1;
+      filter: drop-shadow(0 0 8px rgba(20, 241, 149, 0.72));
+    }
+    100% {
+      opacity: 0.82;
+      filter: drop-shadow(0 0 1px rgba(153, 69, 255, 0.35));
+    }
+  }
+
+  .landing-edge-pulse {
+    animation: landing-edge-flow 4.8s ease-in-out infinite;
+  }
+
+  .landing-node-pulse {
+    animation: landing-node-glow 3.8s ease-in-out infinite;
+  }
+}

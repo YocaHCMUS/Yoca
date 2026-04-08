@@ -53,6 +53,7 @@ export function StablecoinRatioChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }: ChartProps) {
   const { tr } = useLocalization();
@@ -90,6 +91,7 @@ export function StablecoinRatioChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   /**

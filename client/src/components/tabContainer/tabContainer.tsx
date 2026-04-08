@@ -9,6 +9,13 @@ export interface TabContainerProps {
   tabs: React.ReactNode[];
   onTabChange?: (index: tabIndex) => void;
   actions?: React.ReactNode;
+  /**
+   * Keep panels for visited tabs mounted but hidden instead of unmounting them.
+   * Pair with `visitedTabIndices` and per-tab `fetchEnabled` to avoid refetch/API storms when switching tabs.
+   */
+  preserveMountedPanels?: boolean;
+  /** Tab indices that have been opened at least once; only those panels render when preserveMountedPanels is true. */
+  visitedTabIndices?: ReadonlySet<number>;
 }
 
 export const TabContainer: React.FC<TabContainerProps> = ({
@@ -17,6 +24,8 @@ export const TabContainer: React.FC<TabContainerProps> = ({
   tabs,
   onTabChange,
   actions,
+  preserveMountedPanels = false,
+  visitedTabIndices,
 }) => {
   const hasActions = Boolean(actions);
 
@@ -45,7 +54,25 @@ export const TabContainer: React.FC<TabContainerProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className={styles.tabContent}>{tabs[activeTab]}</div>
+      <div className={styles.tabContent}>
+        {preserveMountedPanels && visitedTabIndices
+          ? tabs.map((tab, index) => {
+              if (!visitedTabIndices.has(index)) {
+                return null;
+              }
+              return (
+                <div
+                  key={index}
+                  role="tabpanel"
+                  hidden={activeTab !== index}
+                  className={styles.tabPanelPreserve}
+                >
+                  {tab}
+                </div>
+              );
+            })
+          : tabs[activeTab]}
+      </div>
     </div>
   );
 };

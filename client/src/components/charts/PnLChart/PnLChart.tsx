@@ -40,6 +40,9 @@ export interface PnLChartProps {
     timePeriod?: TimePeriod;
     wallets?: string[];
   };
+
+  /** When false, no chart fetch (inactive comparison tab). */
+  fetchEnabled?: boolean;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -53,6 +56,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   className,
   initialViewMode = "both",
   initialFilters,
+  fetchEnabled = true,
 }) => {
   const { tr } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
@@ -90,6 +94,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   const displayData = data;
