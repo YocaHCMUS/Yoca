@@ -1,3 +1,5 @@
+import { BalanceChart } from "@/components/charts/BalanceChart";
+import { DrawdownChart } from "@/components/charts/Drawdown";
 import { Table } from "@/components/tables/Table";
 import { FilterType, SortType } from "@/components/tables/Table";
 import type {
@@ -20,6 +22,14 @@ function formatCurrency(value: number): string {
         currency: "USD",
         maximumFractionDigits: 0,
     }).format(value);
+}
+
+function formatAddress(address: string): string {
+    if (address.length <= 10) {
+        return address;
+    }
+
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export function ProfileWalletTab({
@@ -75,6 +85,8 @@ export function ProfileWalletTab({
             `${data.comparisonTargetRoute}?wallets=${encodeURIComponent(selectedAddresses.join(","))}`,
         );
     };
+
+    const chartWallets = data.linkedWalletRows.map((row) => row.walletAddress);
 
     return (
         <section className={styles.contentStack}>
@@ -147,7 +159,10 @@ export function ProfileWalletTab({
                         );
                     },
                     null,
-                    null,
+                    (_value, row) => {
+                        const walletAddress = String(row[2]);
+                        return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
+                    },
                     (value) => formatCurrency(Number(value)),
                     null,
                     (_value, row) => {
@@ -196,35 +211,23 @@ export function ProfileWalletTab({
             />
 
             <div className={styles.sectionCard}>
-                <h3>Balance chart</h3>
-                <div className={styles.chartPlaceholder}>
-                    {data.balanceDrawdownSeries.map((series) => (
-                        <div key={series.walletId}>
-                            <strong>{series.walletLabel}</strong>
-                            <p>
-                                {series.points
-                                    .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
-                                    .join(" | ")}
-                            </p>
-                        </div>
-                    ))}
-                </div>
+                <BalanceChart
+                    minHeight={360}
+                    initialFilters={{
+                        timePeriod: "30D",
+                        wallets: chartWallets,
+                    }}
+                />
             </div>
 
             <div className={styles.sectionCard}>
-                <h3>Drawdown chart</h3>
-                <div className={styles.chartPlaceholder}>
-                    {data.balanceDrawdownSeries.map((series) => (
-                        <div key={`${series.walletId}-drawdown`}>
-                            <strong>{series.walletLabel}</strong>
-                            <p>
-                                {series.points
-                                    .map((point) => `${point.date}: ${point.value.toLocaleString()}`)
-                                    .join(" | ")}
-                            </p>
-                        </div>
-                    ))}
-                </div>
+                <DrawdownChart
+                    minHeight={360}
+                    initialFilters={{
+                        timePeriod: "30D",
+                        wallets: chartWallets,
+                    }}
+                />
             </div>
         </section>
     );

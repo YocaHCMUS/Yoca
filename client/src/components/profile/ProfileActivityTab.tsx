@@ -1,3 +1,4 @@
+import { ProfileTradeFrequencyHeatmap } from "@/components/charts/ProfileTradeFrequencyHeatmap";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
@@ -133,29 +134,14 @@ export function ProfileActivityTab({
                     ))}
                 </div>
             </div>
-
+            {/* 
             <div className={styles.sectionCard}>
-                <h3>Trade frequency heatmap</h3>
-                <div className={styles.heatmap}>
-                    {data.heatmap.cells.map((cell) => {
-                        const intensity =
-                            data.heatmap.maxCount === 0 ? 0 : cell.count / data.heatmap.maxCount;
-
-                        return (
-                            <div
-                                key={cell.date}
-                                className={styles.heatCell}
-                                style={{
-                                    backgroundColor: `rgba(15, 98, 254, ${Math.max(0.12, intensity)})`,
-                                }}
-                            >
-                                <span>{cell.date.slice(5)}</span>
-                                <strong>{cell.count}</strong>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
+                <ProfileTradeFrequencyHeatmap
+                    cells={data.heatmap.cells}
+                    maxCount={data.heatmap.maxCount}
+                    minHeight={320}
+                />
+            </div> */}
         </section>
     );
 }

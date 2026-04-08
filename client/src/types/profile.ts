@@ -96,17 +96,6 @@ export interface LinkedWalletRow {
     status: "connected" | "inactive";
 }
 
-export interface WalletBalanceDrawdownSeriesPoint {
-    date: string;
-    value: number;
-}
-
-export interface WalletBalanceDrawdownSeries {
-    walletId: string;
-    walletLabel: string;
-    points: WalletBalanceDrawdownSeriesPoint[];
-}
-
 export interface ProfileWalletsData {
     leftNavItems: ProfileWalletNav[];
     selectedNav: ProfileWalletNav;
@@ -114,7 +103,6 @@ export interface ProfileWalletsData {
     linkedWalletRows: LinkedWalletRow[];
     selectedComparisonWalletIds: string[];
     walletDetailRouteTemplate: string;
-    balanceDrawdownSeries: WalletBalanceDrawdownSeries[];
     comparisonTargetRoute: string;
 }
 

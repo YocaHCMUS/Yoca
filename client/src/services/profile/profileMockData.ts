@@ -143,7 +143,7 @@ export const profileMockApiPayload: ProfilePageData = {
         linkedWalletRows: [
             {
                 walletId: "w1",
-                walletAddress: "5iM4...sQeX",
+                walletAddress: "5iM4Yj8RQ6m29zNShxCe4dfQ1Qx7sQeX",
                 walletLabel: "Main wallet",
                 netWorthUsd: 64800,
                 lastActiveAt: `${TODAY}T07:54:00Z`,
@@ -151,7 +151,7 @@ export const profileMockApiPayload: ProfilePageData = {
             },
             {
                 walletId: "w2",
-                walletAddress: "8Mxa...nD22",
+                walletAddress: "8MxaQf7BdKe2j41nPb4vVtF2xMUnnD22",
                 walletLabel: "Trading bot",
                 netWorthUsd: 37500,
                 lastActiveAt: `${TODAY}T07:20:00Z`,
@@ -159,7 +159,7 @@ export const profileMockApiPayload: ProfilePageData = {
             },
             {
                 walletId: "w3",
-                walletAddress: "92cs...ZZw9",
+                walletAddress: "92csH3fQ6dA1uZzN4Yx3rPqB9RjBZZw9",
                 walletLabel: "Vault",
                 netWorthUsd: 24100,
                 lastActiveAt: `${TODAY}T05:02:00Z`,
@@ -168,28 +168,6 @@ export const profileMockApiPayload: ProfilePageData = {
         ],
         selectedComparisonWalletIds: ["w1", "w2"],
         walletDetailRouteTemplate: "/wallets/:walletId",
-        balanceDrawdownSeries: [
-            {
-                walletId: "w1",
-                walletLabel: "Main wallet",
-                points: [
-                    { date: "2026-04-01", value: 61200 },
-                    { date: "2026-04-03", value: 62320 },
-                    { date: "2026-04-05", value: 64010 },
-                    { date: "2026-04-07", value: 64800 },
-                ],
-            },
-            {
-                walletId: "w2",
-                walletLabel: "Trading bot",
-                points: [
-                    { date: "2026-04-01", value: 34900 },
-                    { date: "2026-04-03", value: 35880 },
-                    { date: "2026-04-05", value: 36520 },
-                    { date: "2026-04-07", value: 37500 },
-                ],
-            },
-        ],
         comparisonTargetRoute: "/comparision/wallets",
     },
     activity: {
