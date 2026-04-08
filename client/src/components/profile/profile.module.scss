@@ -185,6 +185,59 @@
     border-radius: 10px;
     padding: $spacing-04;
     background: $layer-02;
+
+    h4 {
+        margin: 0;
+    }
+}
+
+.walletCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-03;
+    margin-bottom: $spacing-03;
+}
+
+.walletMetaActions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-02;
+}
+
+.walletAddressLink {
+    color: $link-primary;
+    font-size: 12px;
+    text-decoration: none;
+
+    &:hover {
+        color: $link-primary-hover;
+        text-decoration: underline;
+    }
+}
+
+.copyAddressButton {
+    border: none;
+    background: transparent;
+    color: $icon-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+        background: $layer-hover-02;
+        color: $icon-primary;
+    }
+}
+
+.walletOverviewSections {
+    border: 1px solid $border-subtle-01;
+    border-radius: 8px;
+    background: $layer-01;
+    overflow: hidden;
 }
 
 .heatmap {

@@ -138,10 +138,19 @@ export interface ActivityRow {
 export interface WalletActivityCard {
     walletId: string;
     walletLabel: string;
-    tradeCount: number;
-    buyCount: number;
-    sellCount: number;
-    pnlUsd: number;
+    walletAddress: string;
+    totalAssetValueUsd: number;
+    unrealizedPnlInPeriodUsd: number;
+    tradingVolumeUsd: number;
+    buyTradingVolumeUsd: number;
+    sellTradingVolumeUsd: number;
+    buyTransactionCount: number;
+    sellTransactionCount: number;
+    tokenAmountTraded: number;
+    tokenAmountHolding: number;
+    totalPnlUsd: number;
+    realizedPnlUsd: number;
+    unrealizedPnlUsd: number;
 }
 
 export interface ActivityHeatmapCell {

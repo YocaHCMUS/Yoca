@@ -1,5 +1,9 @@
 import { FilterType, SortType, Table } from "@/components/tables/Table";
+import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
+import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
+import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
 import type { ProfileActivityData } from "@/types/profile";
+import { Copy } from "@carbon/react/icons";
 import { useMemo } from "react";
 import styles from "./profile.module.scss";
 
@@ -13,6 +17,14 @@ function formatCurrency(value: number): string {
         currency: "USD",
         maximumFractionDigits: 0,
     }).format(value);
+}
+
+function formatAddress(address: string): string {
+    if (address.length <= 10) {
+        return address;
+    }
+
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export function ProfileActivityTab({
@@ -67,15 +79,58 @@ export function ProfileActivityTab({
             </div>
 
             <div className={styles.sectionCard}>
-                <h3>Wallet overview cards</h3>
                 <div className={styles.cardsGrid}>
                     {visibleCards.map((card) => (
                         <article key={card.walletId} className={styles.activityCard}>
-                            <h4>{card.walletLabel}</h4>
-                            <p>Trades: {card.tradeCount}</p>
-                            <p>Buys: {card.buyCount}</p>
-                            <p>Sells: {card.sellCount}</p>
-                            <p>PnL: {formatCurrency(card.pnlUsd)}</p>
+                            <div className={styles.walletCardHeader}>
+                                <h4>{card.walletLabel}</h4>
+                                <div className={styles.walletMetaActions}>
+                                    <a
+                                        href={`/wallets/${card.walletId}`}
+                                        className={styles.walletAddressLink}
+                                        title={card.walletAddress}
+                                    >
+                                        {formatAddress(card.walletAddress)}
+                                    </a>
+                                    {/* <CopyButton 
+                                        onClick={() => navigator.clipboard.writeText(card.walletAddress)}
+                                        title="Copy address"
+                                        
+                                        /> */}
+                                    <button
+                                        type="button"
+                                        className={styles.copyAddressButton}
+                                        onClick={() => navigator.clipboard.writeText(card.walletAddress)}
+                                        aria-label={`Copy wallet address for ${card.walletLabel}`}
+                                        title="Copy address"
+                                    >
+                                        <Copy size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className={styles.walletOverviewSections}>
+                                <WalletOverviewValueSection
+                                    value={card.totalAssetValueUsd}
+                                    unrealizedPnlInPeriod={card.unrealizedPnlInPeriodUsd}
+                                    loading={false}
+                                />
+                                <WalletOverviewTradingSection
+                                    tradingVolume={card.tradingVolumeUsd}
+                                    buyTradingVolume={card.buyTradingVolumeUsd}
+                                    sellTradingVolume={card.sellTradingVolumeUsd}
+                                    buyTransactionCount={card.buyTransactionCount}
+                                    sellTransactionCount={card.sellTransactionCount}
+                                    tokenAmountTraded={card.tokenAmountTraded}
+                                    tokenAmountHolding={card.tokenAmountHolding}
+                                    loading={false}
+                                />
+                                <WalletOverviewPnLSection
+                                    totalPnL={card.totalPnlUsd}
+                                    realizedPnL={card.realizedPnlUsd}
+                                    unrealizedPnL={card.unrealizedPnlUsd}
+                                    loading={false}
+                                />
+                            </div>
                         </article>
                     ))}
                 </div>
