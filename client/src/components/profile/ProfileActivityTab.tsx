@@ -108,29 +108,27 @@ export function ProfileActivityTab({
                                     </button>
                                 </div>
                             </div>
-                            <div className={styles.walletOverviewSections}>
-                                <WalletOverviewValueSection
-                                    value={card.totalAssetValueUsd}
-                                    unrealizedPnlInPeriod={card.unrealizedPnlInPeriodUsd}
-                                    loading={false}
-                                />
-                                <WalletOverviewTradingSection
-                                    tradingVolume={card.tradingVolumeUsd}
-                                    buyTradingVolume={card.buyTradingVolumeUsd}
-                                    sellTradingVolume={card.sellTradingVolumeUsd}
-                                    buyTransactionCount={card.buyTransactionCount}
-                                    sellTransactionCount={card.sellTransactionCount}
-                                    tokenAmountTraded={card.tokenAmountTraded}
-                                    tokenAmountHolding={card.tokenAmountHolding}
-                                    loading={false}
-                                />
-                                <WalletOverviewPnLSection
-                                    totalPnL={card.totalPnlUsd}
-                                    realizedPnL={card.realizedPnlUsd}
-                                    unrealizedPnL={card.unrealizedPnlUsd}
-                                    loading={false}
-                                />
-                            </div>
+                            <WalletOverviewValueSection
+                                value={card.totalAssetValueUsd}
+                                unrealizedPnlInPeriod={card.unrealizedPnlInPeriodUsd}
+                                loading={false}
+                            />
+                            <WalletOverviewTradingSection
+                                tradingVolume={card.tradingVolumeUsd}
+                                buyTradingVolume={card.buyTradingVolumeUsd}
+                                sellTradingVolume={card.sellTradingVolumeUsd}
+                                buyTransactionCount={card.buyTransactionCount}
+                                sellTransactionCount={card.sellTransactionCount}
+                                tokenAmountTraded={card.tokenAmountTraded}
+                                tokenAmountHolding={card.tokenAmountHolding}
+                                loading={false}
+                            />
+                            <WalletOverviewPnLSection
+                                totalPnL={card.totalPnlUsd}
+                                realizedPnL={card.realizedPnlUsd}
+                                unrealizedPnL={card.unrealizedPnlUsd}
+                                loading={false}
+                            />
                         </article>
                     ))}
                 </div>

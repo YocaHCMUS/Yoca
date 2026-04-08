@@ -2,9 +2,9 @@
 @use '@carbon/react/scss/theme' as *;
 
 .sectionCard {
-    border: 1px solid $border-subtle-01;
     background: $layer-01;
-    border-radius: 12px;
+    padding: $spacing-05;
+    border-radius: $spacing-02;
     padding: $spacing-05;
 }
 
@@ -69,7 +69,7 @@
 .contentStack {
     display: flex;
     flex-direction: column;
-    gap: $spacing-04;
+    gap: $spacing-06;
 }
 
 .sectionHeader {
@@ -184,7 +184,7 @@
     border: 1px solid $border-subtle-01;
     border-radius: 10px;
     padding: $spacing-04;
-    background: $layer-02;
+    background: $layer-01;
 
     h4 {
         margin: 0;
@@ -231,13 +231,6 @@
         background: $layer-hover-02;
         color: $icon-primary;
     }
-}
-
-.walletOverviewSections {
-    border: 1px solid $border-subtle-01;
-    border-radius: 8px;
-    background: $layer-01;
-    overflow: hidden;
 }
 
 .heatmap {
