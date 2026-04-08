@@ -66,8 +66,8 @@ $filter-popup-z-index: 9999;
 }
 
 .tableWrapper {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
 }
@@ -75,9 +75,9 @@ $filter-popup-z-index: 9999;
 .tableViewport {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
   width: 100%;
+  overflow-y: auto;
 }
 
 .stretchTable {
@@ -87,11 +87,9 @@ $filter-popup-z-index: 9999;
 .tableContainer {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
   width: 100%;
   overflow-y: auto;
-  // max-height: $table-max-height;
   padding: 0 !important;
 
   :global(.cds--data-table-container) {
@@ -178,7 +176,9 @@ $filter-popup-z-index: 9999;
 }
 
 .paginationContainer {
-  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin-top: $spacing-05;
   border-top: 1px solid var(--cds-border-subtle-01);
   padding-top: $spacing-05;

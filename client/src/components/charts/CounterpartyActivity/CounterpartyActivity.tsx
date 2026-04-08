@@ -215,7 +215,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // };
 
   const counterpartyCountRanking = useMemo(() => {
+    console.log("[CounterpartyActivity] Calculating counterpartyCountRanking. Data:", data);
+    console.log("[CounterpartyActivity] isChartSuccess:", isChartSuccess(data, "counterparties"));
+    
     if (!isChartSuccess(data, "counterparties")) {
+      console.log("[CounterpartyActivity] No valid counterparty data");
       return [];
     }
 
@@ -223,9 +227,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       "counterpartiesByTransactionCount" in data &&
       data.counterpartiesByTransactionCount.length > 0
     ) {
+      console.log("[CounterpartyActivity] Using counterpartiesByTransactionCount");
       return data.counterpartiesByTransactionCount;
     }
 
+    console.log("[CounterpartyActivity] Using counterparties field");
     return data.counterparties;
   }, [data]);
 
