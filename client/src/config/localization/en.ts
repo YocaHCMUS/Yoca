@@ -390,6 +390,7 @@ export const translation = {
     market: "Market",
     alerts: "Alerts",
     dashboard: "Dashboard",
+    notification: "Notifications",
     profile: "Profile",
     settings: "Settings",
     theme: "Theme",

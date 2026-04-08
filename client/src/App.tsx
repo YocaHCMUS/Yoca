@@ -5,6 +5,7 @@ import Index from "@/pages";
 import AuthShowcase from "@/pages/auth";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
+import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
 import WalletPage from "@/pages/wallet";
@@ -20,6 +21,7 @@ function App() {
         <Route path="/auth" element={<AuthShowcase />} />
         {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route path="/market" element={<MarketPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenOverviewPage />} />
         <Route path="/debug/swr" element={<SwrDebugDemo />} />
