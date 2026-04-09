@@ -29,6 +29,7 @@ import { buildPortfolioMetaMap, mapPortfolioItems } from "../../util/wallet-port
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { Button } from "@carbon/react";
 import { ChevronDown, Download } from "@carbon/icons-react";
+import { Activity, ChartLine, Wallet } from "@carbon/react/icons";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -1238,6 +1239,11 @@ export default function WalletPage() {
                         <TabContainer
                             activeTab={activeTab}
                             names={[tr("walletPage.overview"), tr("walletPage.holdings"), tr("walletPage.activityRisk")]}
+                            tabIcons={[
+                                <ChartLine key="wallet-overview-icon" size={16} />,
+                                <Wallet key="wallet-holdings-icon" size={16} />,
+                                <Activity key="wallet-activity-icon" size={16} />,
+                            ]}
                             tabs={[overviewTab, holdingsTab, activityTab]}
                             onTabChange={(index) => setActiveTab(index)}
                             actions={tabActions}
