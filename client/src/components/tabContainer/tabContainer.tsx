@@ -6,6 +6,7 @@ export type tabIndex = number;
 export interface TabContainerProps {
   activeTab: tabIndex;
   names: string[];
+  tabIcons?: React.ReactNode[];
   tabs: React.ReactNode[];
   onTabChange?: (index: tabIndex) => void;
   actions?: React.ReactNode;
@@ -23,6 +24,7 @@ export interface TabContainerProps {
 export const TabContainer: React.FC<TabContainerProps> = ({
   activeTab,
   names,
+  tabIcons,
   tabs,
   onTabChange,
   actions,
@@ -48,7 +50,14 @@ export const TabContainer: React.FC<TabContainerProps> = ({
                 activeTab === index ? styles.tabButtonActive : styles.tabButton
               }
             >
-              {name}
+              <span className={styles.tabButtonInner}>
+                {tabIcons?.[index] ? (
+                  <span className={styles.tabButtonIcon} aria-hidden="true">
+                    {tabIcons[index]}
+                  </span>
+                ) : null}
+                <span>{name}</span>
+              </span>
             </button>
           ))}
         </div>

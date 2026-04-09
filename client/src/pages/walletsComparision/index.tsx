@@ -5,7 +5,7 @@ import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
-import { Close, SearchAdvanced } from "@carbon/react/icons";
+import { ChartLine, Close, SearchAdvanced, Wallet, User } from "@carbon/react/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import styles from "./index.module.scss";
@@ -136,6 +136,11 @@ export default function WalletsComparisionPage() {
                 tr("walletComparison.general"),
                 tr("walletComparison.holdings"),
                 tr("walletComparison.profitRiskManagement"),
+              ]}
+              tabIcons={[
+                <User key="wc-general-icon" size={16} />,
+                <Wallet key="wc-holdings-icon" size={16} />,
+                <ChartLine key="wc-risk-icon" size={16} />,
               ]}
               preserveMountedPanels
               visitedTabIndices={visitedTabs}

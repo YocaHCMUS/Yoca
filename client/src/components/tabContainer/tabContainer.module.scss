@@ -76,6 +76,18 @@
   }
 }
 
+.tabButtonInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-03;
+}
+
+.tabButtonIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
 .tabContent {
   padding: 0;
   flex: 1;
@@ -138,6 +150,10 @@
     // min-width: $spacing-16;
     justify-content: flex-start;
     align-content: flex-start;
+
+    .tabButtonInner {
+      justify-content: flex-start;
+    }
   }
 
   .tabButtonActive {

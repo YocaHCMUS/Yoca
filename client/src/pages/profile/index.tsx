@@ -11,6 +11,7 @@ import TabContainer from "@/components/tabContainer/tabContainer";
 import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
 import type { TimePeriod } from "@/types/chart-filters.types";
+import { Activity, ChartLine, Notification, User, Wallet } from "@carbon/react/icons";
 import { InlineLoading } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
@@ -77,6 +78,13 @@ export default function ProfilePage() {
             names: visibleTabs.map(
                 (tab) => PROFILE_TABS.find((item) => item.id === tab.id)?.label ?? tab.id,
             ),
+            icons: visibleTabs.map((tab) => {
+                if (tab.id === "overview") return <User size={16} />;
+                if (tab.id === "dashboard") return <ChartLine size={16} />;
+                if (tab.id === "alerts") return <Notification size={16} />;
+                if (tab.id === "wallets") return <Wallet size={16} />;
+                return <Activity size={16} />;
+            }),
             nodes: visibleTabs.map((tab) => tab.node),
         };
     }, [data]);
@@ -101,6 +109,7 @@ export default function ProfilePage() {
                     <TabContainer
                         activeTab={activeTab}
                         names={tabsConfig.names}
+                        tabIcons={tabsConfig.icons}
                         tabs={tabsConfig.nodes}
                         onTabChange={setActiveTab}
                         orientation="vertical"
