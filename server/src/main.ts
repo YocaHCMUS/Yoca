@@ -5,6 +5,7 @@ import { clientDomains } from "@sv/config/security.js";
 import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
+import profile from "@sv/routes/profile.js";
 import search from "@sv/routes/search.js";
 import tokens from "@sv/routes/tokens.js";
 import trades from "@sv/routes/trades.js";
@@ -36,6 +37,7 @@ const app = new Hono()
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
   .route("/api/charts", chartRoutes)
+  .route("/api/profile", profile)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
   .route("/api/trades", trades);

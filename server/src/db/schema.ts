@@ -57,6 +57,21 @@ export const users = pgTable("users", {
     .$onUpdate(() => new Date()),
 });
 
+export const userLinkedWallets = pgTable(
+  "user_linked_wallets",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.walletAddress],
+    }),
+  ]
+);
+
 export const authAccounts = pgTable(
   "auth_accounts",
   {
@@ -912,6 +927,6 @@ export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
-
+export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 // #endregion
 
