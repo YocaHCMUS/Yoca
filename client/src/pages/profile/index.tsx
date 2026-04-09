@@ -1,7 +1,7 @@
 import ProfileActivityTab from "@/components/profile/ProfileActivityTab";
 import ProfileAlertTab from "@/components/profile/ProfileAlertTab";
 import ProfileDashboardTab from "@/components/profile/ProfileDashboardTab";
-import ProfileOverview from "@/components/profile/ProfileOverview";
+import ProfilePortfolioTab from "@/components/profile/ProfilePortfolioTab";
 import ProfileWalletTab from "@/components/profile/ProfileWalletTab";
 import {
     PROFILE_TABS,
@@ -29,6 +29,18 @@ export default function ProfilePage() {
     const tabsConfig = useMemo(() => {
         const allTabs: Array<{ id: ProfileTabId; node: React.ReactNode }> = [
             {
+                id: "overview",
+                node: data ? (
+                    <ProfilePortfolioTab
+                        data={{
+                            overviewData: data.overview,
+                            linkedWalletsData: data.wallets,
+                        }}
+                        onPeriodChange={setPeriod}
+                    />
+                ) : null,
+            },
+            {
                 id: "dashboard",
                 node: data ? <ProfileDashboardTab data={data.dashboard} /> : null,
             },
@@ -54,9 +66,12 @@ export default function ProfilePage() {
             },
         ];
 
-        const visibleTabs = DASHBOARD_ENABLED
-            ? allTabs
-            : allTabs.filter((tab) => tab.id !== "dashboard");
+        let visibleTabs = allTabs;
+
+        // Filter dashboard tab if disabled
+        if (!DASHBOARD_ENABLED) {
+            visibleTabs = allTabs.filter((tab) => tab.id !== "dashboard");
+        }
 
         return {
             names: visibleTabs.map(
@@ -82,19 +97,17 @@ export default function ProfilePage() {
 
                 {error ? <div className={styles.errorState}>Failed to load profile: {error}</div> : null}
 
-                {data && !loading ? (
-                    <div className={styles.stack}>
-                        <ProfileOverview data={data.overview} onPeriodChange={setPeriod} />
-                        <section className={styles.tabSection}>
-                            <TabContainer
-                                activeTab={activeTab}
-                                names={tabsConfig.names}
-                                tabs={tabsConfig.nodes}
-                                onTabChange={setActiveTab}
-                            />
-                        </section>
-                    </div>
-                ) : null}
+                <div className={styles.tabSection}>
+                    <TabContainer
+                        activeTab={activeTab}
+                        names={tabsConfig.names}
+                        tabs={tabsConfig.nodes}
+                        onTabChange={setActiveTab}
+                        orientation="vertical"
+                    />
+                </div>
+                {/* {data && !loading ? (
+                ) : null} */}
             </main>
         </PageWrapper>
     );

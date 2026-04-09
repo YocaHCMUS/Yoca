@@ -2,16 +2,17 @@
 
 .page {
     padding: $spacing-06;
-}
-
-.stack {
     display: flex;
     flex-direction: column;
-    gap: $spacing-06;
+    height: calc(100vh - 3.5rem);
+    overflow: hidden;
 }
 
 .tabSection {
-    min-height: 420px;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .loadingState,
@@ -19,8 +20,16 @@
     padding: $spacing-06;
 }
 
+@media (max-width: 960px) {
+    .tabSection {
+        flex-direction: column;
+        min-height: auto;
+    }
+}
+
 @media (max-width: 768px) {
     .page {
         padding: $spacing-04;
+        height: calc(100vh - 2.5rem);
     }
 }

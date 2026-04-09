@@ -6,6 +6,7 @@ import type {
 } from "@/types/profile";
 
 export const PROFILE_TABS = [
+    { id: "overview", label: "Overview" },
     { id: "dashboard", label: "Dashboard" },
     { id: "alerts", label: "Alerts" },
     { id: "wallets", label: "Wallets" },

@@ -106,6 +106,11 @@ export interface ProfileWalletsData {
     comparisonTargetRoute: string;
 }
 
+export interface ProfilePortfolioData {
+    overviewData: ProfileOverviewData;
+    linkedWalletsData: ProfileWalletsData;
+}
+
 export type ProfileActivityNav =
     | "swaps-table"
     | "transfers-table"

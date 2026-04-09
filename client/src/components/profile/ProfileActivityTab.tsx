@@ -51,33 +51,31 @@ export function ProfileActivityTab({
 
     return (
         <section className={styles.contentStack}>
-            <div className={styles.sectionCard}>
-                <Table
-                    title="Swaps and transfers"
-                    headers={["Wallet", "Type", "Pair / token", "Amount", "Time"]}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve([])}
-                    filterSchema={{
-                        0: { type: FilterType.Select },
-                        1: { type: FilterType.Select },
-                        2: { type: FilterType.Select },
-                        3: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
-                    }}
-                    dataEntries={activityTableData}
-                    cellRenderers={[
-                        null,
-                        null,
-                        null,
-                        (value) => formatCurrency(Number(value)),
-                        (value) => new Date(String(value)).toLocaleString(),
-                    ]}
-                    isSortable={[true, true, true, true, true]}
-                    sortConfigs={{
-                        3: { type: SortType.Number },
-                        4: { type: SortType.Date },
-                    }}
-                />
-            </div>
+            <Table
+                title="Swaps and transfers"
+                headers={["Wallet", "Type", "Pair / token", "Amount", "Time"]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    0: { type: FilterType.Select },
+                    1: { type: FilterType.Select },
+                    2: { type: FilterType.Select },
+                    3: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
+                }}
+                dataEntries={activityTableData}
+                cellRenderers={[
+                    null,
+                    null,
+                    null,
+                    (value) => formatCurrency(Number(value)),
+                    (value) => new Date(String(value)).toLocaleString(),
+                ]}
+                isSortable={[true, true, true, true, true]}
+                sortConfigs={{
+                    3: { type: SortType.Number },
+                    4: { type: SortType.Date },
+                }}
+            />
 
             <div className={styles.sectionCard}>
                 <div className={styles.cardsGrid}>
