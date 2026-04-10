@@ -9,6 +9,7 @@ import {
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
@@ -82,7 +83,7 @@ function useTokenPageData(address: string, poolAddress: string) {
   // Safe unwrap after loading/error gate
   const [meta] = baseMeta.data!;
   const [holdersInfo] = holdersStats.data ?? [null];
-  const pool = poolData.data![0];
+  const pool = poolData.data?.[0] ?? null;
 
   return {
     isLoading: false,
@@ -113,6 +114,29 @@ export default function TokenPage() {
 
   const result = useTokenPageData(address, poolAddress);
 
+  const [pairData, setPairData] = useState<
+    NonNullable<typeof result.data>["pool"] | null
+  >(null);
+
+  useEffect(() => {
+    setPairData(null);
+  }, [poolAddress]);
+
+  useEffect(() => {
+    const nextPool = result.data?.pool ?? null;
+    if (!nextPool) {
+      return;
+    }
+
+    if (nextPool.poolAddress === poolAddress) {
+      setPairData(nextPool);
+    }
+  }, [poolAddress, result.data?.pool]);
+
+  if (poolAddress && !result.error && (result.isLoading || !pairData)) {
+    return <>Loading</>;
+  }
+
   if (result.isLoading) {
     return <>Loading</>;
   }
@@ -121,8 +145,13 @@ export default function TokenPage() {
     return <>Error</>;
   }
 
-  const { meta, topPools, holders, holdersInfo, market, trades, pool } =
+  const { meta, topPools, holders, holdersInfo, market, trades } =
     result.data;
+  const pool = pairData;
+
+  if (!pool) {
+    return <>Loading</>;
+  }
 
   return (
     <PageWrapper>
@@ -149,11 +178,11 @@ export default function TokenPage() {
                 volumeUsd24h: p.data.volumeUsd24h,
               }))}
               selectedPool={{
-                poolAddress: pool.poolAddress,
-                dexId: pool.dexId,
-                liquidityUsd: pool.liquidityUsd,
-                poolName: pool.poolName,
-                volumeUsd24h: pool.volumeUsd24h,
+                poolAddress: pool?.poolAddress ?? "",
+                dexId: pool?.dexId ?? "unknown",
+                liquidityUsd: pool?.liquidityUsd ?? 0,
+                poolName: pool?.poolName ?? "-",
+                volumeUsd24h: pool?.volumeUsd24h ?? 0,
               }}
               onPoolChange={(newPoolAddress) =>
                 navigate(`/tokens/${address}/${newPoolAddress}`)
