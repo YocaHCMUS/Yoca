@@ -48,7 +48,7 @@ export const TickerBar: React.FC = () => {
   useEffect(() => {
     async function fetchTopTokens() {
       try {
-        const apiDomain = import.meta.env.CLIENT_API_DOMAIN || 'http://localhost:4000';
+        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN || window.location.origin;
         const addressesParam = TOP_TOKEN_ADDRESSES.join(',');
 
         // Fetch market data and meta data in parallel

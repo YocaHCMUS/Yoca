@@ -12,6 +12,7 @@ import transfers from "@sv/routes/transfers.js";
 import users from "@sv/routes/users.js";
 import wallets from "@sv/routes/wallets.route.js";
 import walletTags from "@sv/routes/walletTags.route.js";
+import webhook from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -38,7 +39,8 @@ const app = new Hono()
   .route("/api/charts", chartRoutes)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
-  .route("/api/trades", trades);
+  .route("/api/trades", trades)
+  .route("/webhook", webhook);
 
 // Server
 serve(
