@@ -1,20 +1,26 @@
-import {
-  getEndpoint,
-  getRequiredHeaders,
-  heliusFetch,
-} from "@sv/util/util-helius.js";
-import * as moralis from "@sv/util/util-moralis.js";
-import { birdeyeGetJson, birdeyePostJson } from "@sv/services/wallet/providers/birdeye.client.js";
-import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter";
-import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
 import type {
-  WalletPortfolio, WalletPortfolioItem, WalletSwap, WalletTransaction,
-  WalletTransactionHelius, WalletTransfer,
-  BirdeyeNetworthHistoryResult, BirdeyePortfolioSnapshotResult, BirdeyeOverallPnlResult,
+  BirdeyeNetworthDirection,
+  BirdeyeNetworthHistoryPoint,
+  BirdeyeNetworthHistoryResult,
+  BirdeyeNetworthType,
+  BirdeyeOverallPnlResult,
+  BirdeyePnlDuration,
+  BirdeyePortfolioSnapshotResult,
+  BirdeyeSortType,
+  BirdeyeTokenPnlDetailsOptions,
   BirdeyeTokenPnlDetailsResult,
-  BirdeyeNetworthDirection, BirdeyeNetworthType, BirdeyeSortType, BirdeyePnlDuration, BirdeyeNetworthHistoryPoint, BirdeyeTokenPnlDetailsOptions,
-  HeliusWalletFirstFund
+  HeliusWalletFirstFund,
+  WalletPortfolio,
+  WalletPortfolioItem,
+  WalletSwap,
+  WalletTransaction,
+  WalletTransactionHelius,
+  WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  runCursorPagination,
+  runOffsetPagination,
+} from "@sv/services/wallet/fetchers/walletPagination.js";
 import {
   getNextCursor,
   getTokenLogoUri,
@@ -25,13 +31,23 @@ import {
   toOptionalNumber,
   toTokenAmount,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
+import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
 import {
-  runCursorPagination,
-  runOffsetPagination,
-} from "@sv/services/wallet/fetchers/walletPagination.js";
+  birdeyeGetJson,
+  birdeyePostJson,
+} from "@sv/services/wallet/providers/birdeye.client.js";
+import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
 import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
-import { MoralisSwapResponseRoot, MoralisSwapResult } from "./walletThirdPartyResponses";
-
+import {
+  getEndpoint,
+  getRequiredHeaders,
+  heliusFetch,
+} from "@sv/util/util-helius.js";
+import * as moralis from "@sv/util/util-moralis.js";
+import type {
+  MoralisSwapResponseRoot,
+  MoralisSwapResult,
+} from "./walletThirdPartyResponses";
 
 export type WalletProviderChunk<T> = {
   items: T[];
@@ -65,12 +81,12 @@ export type FetchAllTransactionHistoryChunkResult = {
   hasMore: boolean;
   pagesFetched: number;
   stopReason:
-  | "provider-end"
-  | "range-cutoff"
-  | "known-signature"
-  | "max-pages"
-  | "max-transactions"
-  | "empty-page";
+    | "provider-end"
+    | "range-cutoff"
+    | "known-signature"
+    | "max-pages"
+    | "max-transactions"
+    | "empty-page";
 };
 
 const HELIUS_HISTORY_PAGE_LIMIT = 100;
@@ -117,7 +133,7 @@ export async function fetchAllTransactionHistoryChunk(
     Math.max(
       Math.floor(
         options?.maxTransactions ??
-        DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
+          DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
       ),
       1,
     ),
@@ -192,17 +208,17 @@ export async function fetchAllTransactionHistoryChunk(
 
       const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
         ? entry.balanceChanges
-          .map((change: any) => ({
-            mint: String(change?.mint ?? ""),
-            amount: Number(change?.amount ?? 0),
-            decimals: Number(change?.decimals ?? 0),
-          }))
-          .filter(
-            (change: { mint: string; amount: number; decimals: number }) =>
-              change.mint.length > 0 &&
-              Number.isFinite(change.amount) &&
-              Number.isFinite(change.decimals),
-          )
+            .map((change: any) => ({
+              mint: String(change?.mint ?? ""),
+              amount: Number(change?.amount ?? 0),
+              decimals: Number(change?.decimals ?? 0),
+            }))
+            .filter(
+              (change: { mint: string; amount: number; decimals: number }) =>
+                change.mint.length > 0 &&
+                Number.isFinite(change.amount) &&
+                Number.isFinite(change.decimals),
+            )
         : [];
 
       transactions.push({
@@ -333,8 +349,8 @@ export async function fetchHeliusSolanaPortfolio(
       const fallbackKey = `${String(token.symbol ?? "")
         .trim()
         .toLowerCase()}::${String(token.name ?? "")
-          .trim()
-          .toLowerCase()}`;
+        .trim()
+        .toLowerCase()}`;
       const dedupeKey = tokenAddressKey || fallbackKey;
 
       if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
@@ -347,7 +363,7 @@ export async function fetchHeliusSolanaPortfolio(
 
       const pricePerToken =
         token.pricePerToken != null &&
-          !Number.isNaN(Number(token.pricePerToken))
+        !Number.isNaN(Number(token.pricePerToken))
           ? Number(token.pricePerToken)
           : undefined;
       const usdValue =
@@ -593,13 +609,10 @@ export async function fetchHeliusSolanaTransfersChunk(
 ): Promise<WalletProviderChunk<WalletTransfer>> {
   const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
 
-  const json = await heliusGetJson<any>(
-    `/v1/wallet/${address}/transfers`,
-    {
-      limit,
-      ...(options?.cursor ? { cursor: options.cursor } : {}),
-    },
-  );
+  const json = await heliusGetJson<any>(`/v1/wallet/${address}/transfers`, {
+    limit,
+    ...(options?.cursor ? { cursor: options.cursor } : {}),
+  });
   const rows: any[] = Array.isArray(json?.data) ? json.data : [];
   const items = rows
     .map((entry) => mapHeliusTransferEntry(entry, address))
@@ -647,8 +660,6 @@ export async function fetchMoralisSolanaSwapChunk(
   const items = rows
     .map((entry) => mapMoralisSwapEntry(entry, address))
     .filter((entry): entry is WalletSwap => entry != null);
-
-
 
   const nextCursor = json.cursor;
   const hasMore = Boolean(nextCursor);
@@ -710,7 +721,9 @@ export async function fetchHeliusSolanaTransfers(
         pageItems.push(mapped);
       }
 
-      console.log(`[fetchHeliusSolanaTransfers] Page ${page}: Collected ${pageItems.length} transfers on page`);
+      console.log(
+        `[fetchHeliusSolanaTransfers] Page ${page}: Collected ${pageItems.length} transfers on page`,
+      );
 
       const nextCursor = getNextCursor(json?.pagination);
       const hasMore = reachedRangeCutoff
@@ -781,12 +794,13 @@ export async function fetchMoralisSolanaSwap(
           );
         }
 
-        json = await response.json() as MoralisSwapResponseRoot;
-        console.log(`[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
+        json = (await response.json()) as MoralisSwapResponseRoot;
+        console.log(
+          `[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
           {
             url: url.toString(),
             responseStatus: response.status,
-          }
+          },
         );
       } catch (err) {
         console.error("Moralis wallet-swaps request failed", err);
@@ -885,7 +899,8 @@ export async function fetchAllTransactionHistory(
 
       for (const entry of data) {
         const tsSec =
-          typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+          typeof entry.timestamp === "number" &&
+          Number.isFinite(entry.timestamp)
             ? entry.timestamp
             : null;
 
@@ -914,17 +929,17 @@ export async function fetchAllTransactionHistory(
 
         const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
           ? entry.balanceChanges
-            .map((change: any) => ({
-              mint: String(change?.mint ?? ""),
-              amount: Number(change?.amount ?? 0),
-              decimals: Number(change?.decimals ?? 0),
-            }))
-            .filter(
-              (change: { mint: string; amount: number; decimals: number }) =>
-                change.mint.length > 0 &&
-                Number.isFinite(change.amount) &&
-                Number.isFinite(change.decimals),
-            )
+              .map((change: any) => ({
+                mint: String(change?.mint ?? ""),
+                amount: Number(change?.amount ?? 0),
+                decimals: Number(change?.decimals ?? 0),
+              }))
+              .filter(
+                (change: { mint: string; amount: number; decimals: number }) =>
+                  change.mint.length > 0 &&
+                  Number.isFinite(change.amount) &&
+                  Number.isFinite(change.decimals),
+              )
           : [];
 
         pageItems.push({
@@ -938,10 +953,15 @@ export async function fetchAllTransactionHistory(
         });
       }
 
-      console.log(`[fetchAllTransactionHistory] Page ${page}: Collected ${pageItems.length} transactions on page`);
+      console.log(
+        `[fetchAllTransactionHistory] Page ${page}: Collected ${pageItems.length} transactions on page`,
+      );
 
       const nextCursor = getNextCursor(json?.pagination);
-      const hasMore = !stopByRange && !stopByKnownSignature && Boolean(json?.pagination?.hasMore && nextCursor);
+      const hasMore =
+        !stopByRange &&
+        !stopByKnownSignature &&
+        Boolean(json?.pagination?.hasMore && nextCursor);
 
       return {
         pageItems,
@@ -952,13 +972,15 @@ export async function fetchAllTransactionHistory(
   });
 
   return paged.items;
-};
-
+}
 
 async function fetchBirdeyeJson(
   path: string,
   method: "GET" | "POST",
-  options?: { searchParams?: Record<string, string | number | boolean>; body?: unknown },
+  options?: {
+    searchParams?: Record<string, string | number | boolean>;
+    body?: unknown;
+  },
 ): Promise<any | null> {
   const fetcher = async () => {
     if (method === "GET") {
@@ -976,9 +998,9 @@ async function fetchBirdeyeJson(
   }
 }
 
-
-
-export async function fetchBirdeyePortfolio(address: string): Promise<WalletPortfolio> {
+export async function fetchBirdeyePortfolio(
+  address: string,
+): Promise<WalletPortfolio> {
   const limit = 100;
   const seenPortfolioKeys = new Set<string>();
   let lastPayload: any = null;
@@ -989,15 +1011,19 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
     pageSize: limit,
     stagnantPageLimit: MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES,
     fetchPage: async (offset) => {
-      const json = await fetchBirdeyeJson("/wallet/v2/current-net-worth", "GET", {
-        searchParams: {
-          wallet: address,
-          filter_value: 0.0001,
-          sort_type: "desc",
-          limit,
-          offset,
+      const json = await fetchBirdeyeJson(
+        "/wallet/v2/current-net-worth",
+        "GET",
+        {
+          searchParams: {
+            wallet: address,
+            filter_value: 0.0001,
+            sort_type: "desc",
+            limit,
+            offset,
+          },
         },
-      });
+      );
 
       if (!json) {
         return {
@@ -1007,17 +1033,30 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
       }
 
       lastPayload = json;
-      const balances: any[] = Array.isArray(json?.data?.items) ? json.data.items : [];
-      const total = Math.max(0, Math.floor(toFiniteNumber(json?.pagination?.total, 0)));
+      const balances: any[] = Array.isArray(json?.data?.items)
+        ? json.data.items
+        : [];
+      const total = Math.max(
+        0,
+        Math.floor(toFiniteNumber(json?.pagination?.total, 0)),
+      );
       const pageItems: WalletPortfolioItem[] = [];
 
       for (const token of balances) {
-        const amount = toTokenAmount(token.balance, token.decimals, token.amount);
+        const amount = toTokenAmount(
+          token.balance,
+          token.decimals,
+          token.amount,
+        );
         if (!(amount > 0) || Number.isNaN(amount)) continue;
 
         const tokenAddress = token.address;
         const tokenAddressKey = tokenAddress.trim().toLowerCase();
-        const fallbackKey = `${String(token.symbol ?? "").trim().toLowerCase()}::${String(token.name ?? "").trim().toLowerCase()}`;
+        const fallbackKey = `${String(token.symbol ?? "")
+          .trim()
+          .toLowerCase()}::${String(token.name ?? "")
+          .trim()
+          .toLowerCase()}`;
         const dedupeKey = tokenAddressKey || fallbackKey;
 
         if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
@@ -1060,11 +1099,14 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
   }
 
   if (paged.stopReason === "stagnant") {
-    console.warn("[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch", {
-      address,
-      pagesFetched: paged.pagesFetched,
-      itemCount: paged.items.length,
-    });
+    console.warn(
+      "[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch",
+      {
+        address,
+        pagesFetched: paged.pagesFetched,
+        itemCount: paged.items.length,
+      },
+    );
   }
 
   return {
@@ -1073,7 +1115,6 @@ export async function fetchBirdeyePortfolio(address: string): Promise<WalletPort
     totalAssetValueUsd: toFiniteNumber(lastPayload?.data?.total_value, 0),
   };
 }
-
 
 export async function fetchBirdeyeNetworthHistory(
   address: string,
@@ -1120,8 +1161,12 @@ export async function fetchBirdeyeNetworthHistory(
 
   if (history.length === 0) {
     const snapshotTimestamp =
-      currentTimestamp ?? toIsoTimestamp(data?.requested_timestamp) ?? toIsoTimestamp(data?.resolved_timestamp);
-    const snapshotValue = toOptionalNumber(data?.total_value ?? data?.net_worth);
+      currentTimestamp ??
+      toIsoTimestamp(data?.requested_timestamp) ??
+      toIsoTimestamp(data?.resolved_timestamp);
+    const snapshotValue = toOptionalNumber(
+      data?.total_value ?? data?.net_worth,
+    );
 
     if (snapshotTimestamp != null && snapshotValue != null) {
       history.push({
@@ -1228,7 +1273,9 @@ export async function fetchBirdeyeTokenPnLDetails(
     offset,
   };
 
-  const json = await fetchBirdeyeJson("/wallet/v2/pnl/details", "POST", { body });
+  const json = await fetchBirdeyeJson("/wallet/v2/pnl/details", "POST", {
+    body,
+  });
   const data = json?.data ?? {};
 
   return {
@@ -1238,15 +1285,12 @@ export async function fetchBirdeyeTokenPnLDetails(
   };
 }
 
-export async function fetchHeliusWalletFirstFund(
-  address: string,
-) {
+export async function fetchHeliusWalletFirstFund(address: string) {
   const json = await heliusGetJson<any>(`/v1/wallet/${address}/funded-by`);
 
-  if ('error' in json) {
+  if ("error" in json) {
     throw new Error(`Helius API error: ${json.error}`);
   }
-
 
   return { reciepient: address, ...json } as HeliusWalletFirstFund;
 }

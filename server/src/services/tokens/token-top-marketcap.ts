@@ -50,9 +50,9 @@ export async function getTopTokensByMarketCap() {
   await db.insert(topTokensByMarketCap).values(topTokenInsert);
 
   // Extra updates
-  const marketDataValues = solanaRes.map((raw) =>
-    getMarketDataFromRaw(cgIdToAddress[raw.id!], raw),
-  );
+  const marketDataValues = solanaRes
+    .map((raw) => getMarketDataFromRaw(cgIdToAddress[raw.id!], raw))
+    .filter((raw) => raw != null);
 
   await db
     .insert(tokenMarketData)

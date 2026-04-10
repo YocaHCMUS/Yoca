@@ -1,14 +1,14 @@
-import { WALLET_TOKEN_DETAILS_TTL_MS } from "@sv/config/constants";
-import { db } from "@sv/db";
+import { WALLET_TOKEN_DETAILS_TTL_MS } from "@sv/config/constants.js";
+import { db } from "@sv/db/index.js";
 import {
   walletTokenDetails,
   type WalletTokenDetailsInsert,
-} from "@sv/db/schema";
-import { getTrackedApiResult } from "@sv/middlewares/validation";
-import { excludedAutoFromInsert } from "@sv/util/orm-sql";
-import * as bds from "@sv/util/util-birdeye";
+} from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import { eq } from "drizzle-orm";
-import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses";
+import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses.js";
 
 export async function getTokenDetails(wallet: string) {
   const dbRes = await db

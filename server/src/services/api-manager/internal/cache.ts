@@ -1,5 +1,5 @@
 // Redis / In-memory cache wrapper
-import { getRedisClient } from "./redis";
+import { getRedisClient } from "./redis.js";
 
 export class Cache {
   private memory = new Map<string, any>();
