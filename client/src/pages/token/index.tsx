@@ -57,25 +57,19 @@ function useTokenPageData(address: string, poolAddress: string) {
     param: { addresses: poolAddress },
   });
 
-  const isLoading =
-    baseMeta.isLoading ||
-    topPools.isLoading ||
-    marketData.isLoading ||
-    trades.isLoading ||
-    poolData.isLoading;
+  const isLoading = baseMeta.isLoading || topPools.isLoading || marketData.isLoading;
+  const pairLoading = trades.isLoading || poolData.isLoading;
 
   // Only block on critical data errors, not holders (which depends on Moralis API)
-  const error =
-    baseMeta.error ||
-    topPools.error ||
-    marketData.error ||
-    trades.error ||
-    poolData.error;
+  const error = baseMeta.error || topPools.error || marketData.error;
+  const pairError = trades.error || poolData.error;
 
   if (isLoading || error) {
     return {
       isLoading,
       error,
+      pairLoading,
+      pairError,
       data: null as null,
     };
   }
@@ -88,13 +82,15 @@ function useTokenPageData(address: string, poolAddress: string) {
   return {
     isLoading: false,
     error: null,
+    pairLoading,
+    pairError,
     data: {
       meta,
       topPools: topPools.data!,
       holders: holders.data ?? [],
       holdersInfo,
       market: marketData.data?.[address] ?? null,
-      trades: trades.data!,
+      trades: trades.data ?? [],
       pool,
     },
   };
@@ -133,7 +129,7 @@ export default function TokenPage() {
     }
   }, [poolAddress, result.data?.pool]);
 
-  if (poolAddress && !result.error && (result.isLoading || !pairData)) {
+  if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
     return <>Loading</>;
   }
 
