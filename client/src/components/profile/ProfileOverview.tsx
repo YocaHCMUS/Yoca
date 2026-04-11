@@ -54,18 +54,6 @@ export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) 
                     value={data.period}
                     onChange={(k) => onPeriodChange(k)}
                 />
-                {/* <div>
-                    {PROFILE_PERIOD_OPTIONS.map((periodOption) => (
-                        <Button
-                            key={periodOption}
-                            kind={data.period === periodOption ? "primary" : "tertiary"}
-                            size="sm"
-                            onClick={() => onPeriodChange(periodOption)}
-                        >
-                            {periodOption}
-                        </Button>
-                    ))}
-                </div> */}
             </div>
 
             <div className={styles.metricGrid}>

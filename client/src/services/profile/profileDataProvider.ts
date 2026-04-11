@@ -39,17 +39,17 @@ export async function fetchLinkedWalletAddresses(): Promise<string[]> {
 }
 
 export async function linkNewWallet(walletAddress: string) {
-    const response = await client.api.profile["linked-wallets"].$post({
+    const challengeResponse = await client.api.profile["linked-wallets"].challenge.$post({
         json: {
             walletAddress,
         },
     });
 
-    if (!response.ok) {
-        throw new Error(`Failed to link wallet: ${response.status}`);
+    if (!challengeResponse.ok) {
+        throw new Error(`Failed to request wallet link challenge: ${challengeResponse.status}`);
     }
 
-    return response.json();
+    return challengeResponse.json();
 }
 
 export async function unlinkWallet(walletAddress: string) {

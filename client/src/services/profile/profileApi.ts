@@ -11,8 +11,18 @@ export async function fetchLinkedWalletAddresses() {
     });
 }
 
-export async function linkWalletAddress(walletAddress: string) {
-    return client.api.profile["linked-wallets"].$post({ json: { walletAddress } }).then((resp) => {
+export async function requestLinkWalletChallenge(walletAddress: string) {
+    return client.api.profile["linked-wallets"].challenge.$post({ json: { walletAddress } }).then((resp) => {
+        if (resp.status === 200) {
+            return resp.json();
+        } else {
+            throw new Error(`Failed to request wallet link challenge: ${resp.status}`);
+        }
+    });
+}
+
+export async function linkWalletAddress(walletAddress: string, nonce: string, signature: string) {
+    return client.api.profile["linked-wallets"].$post({ json: { walletAddress, nonce, signature } }).then((resp) => {
         if (resp.status === 201) {
             return resp.json();
         } else {

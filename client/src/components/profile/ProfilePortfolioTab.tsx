@@ -1,14 +1,19 @@
 import { ProfileOverview } from "@/components/profile/ProfileOverview";
 import { Table } from "@/components/tables/Table";
 import { FilterType, SortType } from "@/components/tables/Table";
+import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { Button, Checkbox } from "@carbon/react";
 import { AddLarge, Repeat } from "@carbon/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { unlinkWalletAddress } from "@/services/profile/profileApi";
+import {
+    linkWalletAddress,
+    requestLinkWalletChallenge,
+    unlinkWalletAddress,
+} from "@/services/profile/profileApi";
 import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,8 +48,13 @@ export function ProfilePortfolioTab({
 }: ProfilePortfolioTabProps) {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [linkedWalletAddresses, setLinkedWalletAddresses] = useState(walletAddresses);
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
-    const { walletOverviews, setWalletOverviews, loading, error } = useProfileOverviewData({ walletAddresses });
+    const { walletOverviews, setWalletOverviews, loading, error } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
+
+    useEffect(() => {
+        setLinkedWalletAddresses(walletAddresses);
+    }, [walletAddresses]);
 
     const overviewData = useMemo<ProfileOverviewData>(() => {
         const totalNetWorthUsd = walletOverviews.reduce(
@@ -62,17 +72,17 @@ export function ProfilePortfolioTab({
         );
 
         return {
-            avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? walletAddresses.join(",")}`,
-            displayName: user?.displayName?.trim() || user?.userId || (walletAddresses.length === 1 ? formatAddress(walletAddresses[0]) : "Linked wallets"),
+            avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
+            displayName: user?.displayName?.trim() || user?.userId || (linkedWalletAddresses.length === 1 ? formatAddress(linkedWalletAddresses[0]) : "Guest"),
             accountTier: "pro",
             period,
             totalNetWorthUsd,
             tradeOrTxCount,
             pnlUsd,
             pnlPct: totalNetWorthUsd > 0 ? (pnlUsd / totalNetWorthUsd) * 100 : 0,
-            linkedWalletCount: walletOverviews.length,
+            linkedWalletCount: linkedWalletAddresses.length,
         };
-    }, [period, user?.displayName, user?.userId, walletAddresses, walletOverviews]);
+    }, [period, user?.displayName, user?.userId, linkedWalletAddresses, walletOverviews]);
 
     const tableRows = useMemo(
         () =>
@@ -128,23 +138,7 @@ export function ProfilePortfolioTab({
                 data={overviewData}
                 onPeriodChange={onPeriodChange}
             />
-
-            {loading ? (
-                <ProfileUnavailableState
-                    title="Loading wallets"
-                    description="Fetching linked wallet table data."
-                />
-            ) : error ? (
-                <ProfileUnavailableState
-                    title="Wallet list unavailable"
-                    description="Unable to load linked wallets right now."
-                />
-            ) : walletAddresses.length === 0 || walletOverviews.length === 0 ? (
-                <ProfileUnavailableState
-                    title="No linked wallets"
-                    description="Link at least one wallet to view detailed wallet list."
-                />
-            ) : (
+            {user?.userId && (
                 <Table
                     title="Linked wallets list"
                     headers={[
@@ -204,10 +198,31 @@ export function ProfilePortfolioTab({
                     }}
                     actions={
                         <div className={styles.inlineActions}>
-                            <button className={styles.triggerButton}>
-                                <AddLarge size={20} />
-                                Add or link wallet
-                            </button>
+                            <WalletActionButton<string>
+                                label="Add or link wallet"
+                                kind="ghost"
+                                renderIcon={AddLarge}
+                                className={styles.triggerButton}
+                                onError={(message) => {
+                                    console.error("[ProfilePortfolioTab] Failed to link wallet:", message);
+                                }}
+                                onSuccess={(walletAddress) => {
+                                    setLinkedWalletAddresses((current) =>
+                                        current.includes(walletAddress)
+                                            ? current
+                                            : [...current, walletAddress],
+                                    );
+                                }}
+                                action={async ({ publicKey, signMessage, onSuccess: resolveSuccess, onError: resolveError }) => {
+                                    const challenge = await requestLinkWalletChallenge(publicKey);
+                                    const messageBytes = new TextEncoder().encode(challenge.signMessage);
+                                    const signatureBytes = await signMessage(messageBytes);
+                                    const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
+
+                                    await linkWalletAddress(publicKey, challenge.nonce, signatureBase64);
+                                    resolveSuccess(publicKey);
+                                }}
+                            />
                             <button
                                 onClick={handleCompareClick}
                                 disabled={selectedComparisonWalletAddresses.length < 2}
@@ -219,7 +234,14 @@ export function ProfilePortfolioTab({
                         </div>
                     }
                 />
-            )}
+            )
+                || (
+                    <ProfileUnavailableState
+                        title="Guest mode"
+                        description="Please log in to view and manage your linked wallets." />
+                )
+            }
+
         </section>
     );
 }
