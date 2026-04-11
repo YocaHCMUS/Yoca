@@ -3,13 +3,15 @@ import { FilterType, SortType, Table } from "@/components/tables/Table";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
 import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
-import type { ProfileActivityData } from "@/types/profile";
 import { Copy } from "@carbon/react/icons";
 import { useMemo } from "react";
 import styles from "./profile.module.scss";
+import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTabData";
+import type { TimePeriod } from "@/types/chart-filters.types";
 
 interface ProfileActivityTabProps {
-    data: ProfileActivityData;
+    walletAddresses: string[];
+    period: TimePeriod;
 }
 
 function formatCurrency(value: number): string {
@@ -28,9 +30,8 @@ function formatAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-export function ProfileActivityTab({
-    data,
-}: ProfileActivityTabProps) {
+export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
+    const { data } = useProfileActivityTabData({ walletAddresses, period });
     const visibleRows = useMemo(
         () => data.swapTransferRows,
         [data.swapTransferRows],

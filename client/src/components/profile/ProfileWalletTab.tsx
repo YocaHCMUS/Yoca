@@ -2,16 +2,15 @@ import { BalanceChart } from "@/components/charts/BalanceChart";
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import { Table } from "@/components/tables/Table";
 import { FilterType, SortType } from "@/components/tables/Table";
-import type {
-    LinkedWalletRow,
-    ProfileWalletsData,
-} from "@/types/profile";
-import { useState } from "react";
+import type { LinkedWalletRow } from "@/types/profile";
 import { useNavigate } from "react-router";
 import styles from "./profile.module.scss";
+import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
+import type { TimePeriod } from "@/types/chart-filters.types";
 
 interface ProfileWalletTabProps {
-    data: ProfileWalletsData;
+    walletAddresses: string[];
+    period: TimePeriod;
 }
 
 function formatCurrency(value: number): string {
@@ -22,10 +21,9 @@ function formatCurrency(value: number): string {
     }).format(value);
 }
 
-export function ProfileWalletTab({
-    data,
-}: ProfileWalletTabProps) {
+export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabProps) {
     const navigate = useNavigate();
+    const { data } = useProfileWalletTabData({ walletAddresses, period });
 
     const portfolioTableData = data.portfolioRows.map((row) => [
         row.walletLabel,

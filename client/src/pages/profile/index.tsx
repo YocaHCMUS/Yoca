@@ -15,6 +15,7 @@ import { Activity, ChartLine, Notification, User, Wallet } from "@carbon/react/i
 import { InlineLoading } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
+import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 
 const DASHBOARD_ENABLED =
     String(import.meta.env.VITE_PROFILE_ENABLE_DASHBOARD ?? "true").toLowerCase() !==
@@ -23,47 +24,41 @@ const DASHBOARD_ENABLED =
 export default function ProfilePage() {
     const [period, setPeriod] = useState<TimePeriod>("30D");
     const [activeTab, setActiveTab] = useState(0);
-    const { data, loading, error } = useProfilePageData({
+    const { data: profileData, loading: profileLoading } = useProfilePageData({
         period,
+    });
+    const [loading, setLoading] = useState(false);
+    const { walletAddresses, error: sharedError } = useProfileSharedData({
+        setLoading,
     });
 
     const tabsConfig = useMemo(() => {
         const allTabs: Array<{ id: ProfileTabId; node: React.ReactNode }> = [
             {
                 id: "overview",
-                node: data ? (
+                node: (
                     <ProfilePortfolioTab
-                        data={{
-                            overviewData: data.overview,
-                            linkedWalletsData: data.wallets,
-                        }}
+                        walletAddresses={walletAddresses}
+                        period={period}
                         onPeriodChange={setPeriod}
                     />
-                ) : null,
+                ),
             },
             {
                 id: "dashboard",
-                node: data ? <ProfileDashboardTab data={data.dashboard} /> : null,
+                node: profileData ? <ProfileDashboardTab data={profileData.dashboard} /> : null,
             },
             {
                 id: "alerts",
-                node: data ? <ProfileAlertTab data={data.alerts} /> : null,
+                node: profileData ? <ProfileAlertTab data={profileData.alerts} /> : null,
             },
             {
                 id: "wallets",
-                node: data ? (
-                    <ProfileWalletTab
-                        data={data.wallets}
-                    />
-                ) : null,
+                node: <ProfileWalletTab walletAddresses={walletAddresses} period={period} />,
             },
             {
                 id: "activity",
-                node: data ? (
-                    <ProfileActivityTab
-                        data={data.activity}
-                    />
-                ) : null,
+                node: <ProfileActivityTab walletAddresses={walletAddresses} period={period} />,
             },
         ];
 
@@ -87,7 +82,7 @@ export default function ProfilePage() {
             }),
             nodes: visibleTabs.map((tab) => tab.node),
         };
-    }, [data]);
+    }, [walletAddresses, period, profileData]);
 
     useEffect(() => {
         if (activeTab <= tabsConfig.names.length - 1) return;
@@ -97,13 +92,11 @@ export default function ProfilePage() {
     return (
         <PageWrapper>
             <main className={styles.page}>
-                {loading ? (
+                {loading || profileLoading ? (
                     <div className={styles.loadingState}>
                         <InlineLoading description="Loading profile page" status="active" />
                     </div>
                 ) : null}
-
-                {error ? <div className={styles.errorState}>Failed to load profile: {error}</div> : null}
 
                 <div className={styles.tabSection}>
                     <TabContainer
@@ -115,8 +108,6 @@ export default function ProfilePage() {
                         orientation="vertical"
                     />
                 </div>
-                {/* {data && !loading ? (
-                ) : null} */}
             </main>
         </PageWrapper>
     );
