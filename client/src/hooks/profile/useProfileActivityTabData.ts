@@ -57,6 +57,11 @@ function toActivityRows(walletAddress: string, swaps: WalletSwap[], transfers: W
         pairOrToken: formatSwapPair(swap),
         amountUsd: toAmountUsd(swap.totalValueUsd),
         timestamp: swap.blockTimestampIso,
+        exchange: swap.exchangeName || "Unknown",
+        soldToken: swap.sold?.symbol || swap.sold?.name || "Unknown",
+        boughtToken: swap.bought?.symbol || swap.bought?.name || "Unknown",
+        baseQuotePrice: toAmountUsd(swap.baseQuotePrice),
+        txHash: swap.transactionHash,
     }));
 
     const transferRows = transfers.map((transfer, index) => ({
@@ -67,6 +72,11 @@ function toActivityRows(walletAddress: string, swaps: WalletSwap[], transfers: W
         pairOrToken: transfer.tokenSymbol || transfer.tokenName || "Unknown",
         amountUsd: toAmountUsd(transfer.amountUsd ?? 0),
         timestamp: transfer.timestamp,
+        fromAddress: transfer.from,
+        toAddress: transfer.to,
+        amount: transfer.amount,
+        tokenSymbol: transfer.tokenSymbol || transfer.tokenName || "Unknown",
+        signature: transfer.transactionSignature,
     }));
 
     return [...swapRows, ...transferRows].sort((left, right) => right.timestamp.localeCompare(left.timestamp));

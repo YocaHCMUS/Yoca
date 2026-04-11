@@ -33,6 +33,26 @@ function formatAddress(address: string): string {
 export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
     const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
 
+    const visibleRows = useMemo(
+        () => data.swapTransferRows,
+        [data.swapTransferRows],
+    );
+
+    const visibleCards = useMemo(
+        () => data.walletCards,
+        [data.walletCards],
+    );
+
+    const swapRows = useMemo(
+        () => visibleRows.filter((row) => row.type === "swap"),
+        [visibleRows],
+    );
+
+    const transferRows = useMemo(
+        () => visibleRows.filter((row) => row.type === "transfer"),
+        [visibleRows],
+    );
+
     if (loading) {
         return (
             <ProfileUnavailableState
@@ -60,49 +80,95 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
         );
     }
 
-    const visibleRows = useMemo(
-        () => data.swapTransferRows,
-        [data.swapTransferRows],
-    );
-
-    const visibleCards = useMemo(
-        () => data.walletCards,
-        [data.walletCards],
-    );
-
-    const activityTableData = visibleRows.map((row) => [
+    const swapTableData = swapRows.map((row) => [
         row.walletLabel,
-        row.type,
+        row.timestamp,
+        row.exchange ?? "Unknown",
         row.pairOrToken,
+        row.soldToken ?? "Unknown",
+        row.boughtToken ?? "Unknown",
+        row.amountUsd,
+        row.baseQuotePrice ?? 0,
+        row.txHash ?? "",
+    ]);
+
+    const transferTableData = transferRows.map((row) => [
+        row.walletLabel,
+        row.fromAddress ?? "",
+        row.toAddress ?? "",
+        row.tokenSymbol ?? row.pairOrToken,
+        row.amount ?? 0,
         row.amountUsd,
         row.timestamp,
+        row.signature ?? "",
     ]);
 
     return (
         <section className={styles.contentStack}>
             <Table
-                title="Swaps and transfers"
-                headers={["Wallet", "Type", "Pair / token", "Amount", "Time"]}
+                title="Swaps"
+                headers={["Wallet", "Time", "Exchange", "Pair", "Token sold", "Token bought", "Total value", "Base quote price", "Transaction"]}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
                     0: { type: FilterType.Select },
                     1: { type: FilterType.Select },
                     2: { type: FilterType.Select },
-                    3: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
+                    3: { type: FilterType.Select },
+                    4: { type: FilterType.Select },
+                    6: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
+                    7: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
                 }}
-                dataEntries={activityTableData}
+                dataEntries={swapTableData}
                 cellRenderers={[
+                    null,
+                    (value) => new Date(String(value)).toLocaleString(),
+                    null,
                     null,
                     null,
                     null,
                     (value) => formatCurrency(Number(value)),
-                    (value) => new Date(String(value)).toLocaleString(),
+                    (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
+                    null,
                 ]}
-                isSortable={[true, true, true, true, true]}
+                isSortable={[true, true, true, true, true, true, true, true, false]}
                 sortConfigs={{
-                    3: { type: SortType.Number },
-                    4: { type: SortType.Date },
+                    1: { type: SortType.Date },
+                    6: { type: SortType.Number },
+                    7: { type: SortType.Number },
+                }}
+            />
+
+            <Table
+                title="Transfers"
+                headers={["Wallet", "Sender", "Receiver", "Token", "Amount", "Amount (USD)", "Time", "Signature"]}
+                initialFilters={{}}
+                fetcher={Promise.resolve([])}
+                filterSchema={{
+                    0: { type: FilterType.Select },
+                    1: { type: FilterType.Select },
+                    2: { type: FilterType.Select },
+                    3: { type: FilterType.Select },
+                    4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+                    5: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
+                    6: { type: FilterType.Select },
+                }}
+                dataEntries={transferTableData}
+                cellRenderers={[
+                    null,
+                    null,
+                    null,
+                    null,
+                    (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
+                    (value) => formatCurrency(Number(value)),
+                    (value) => new Date(String(value)).toLocaleString(),
+                    null,
+                ]}
+                isSortable={[true, true, true, true, true, true, true, false]}
+                sortConfigs={{
+                    4: { type: SortType.Number },
+                    5: { type: SortType.Number },
+                    6: { type: SortType.Date },
                 }}
             />
 

@@ -126,6 +126,16 @@ export interface ActivityRow {
     amountUsd: number;
     timestamp: string;
     side?: "buy" | "sell" | "in" | "out";
+    exchange?: string;
+    soldToken?: string;
+    boughtToken?: string;
+    baseQuotePrice?: number;
+    txHash?: string;
+    fromAddress?: string;
+    toAddress?: string;
+    amount?: number;
+    tokenSymbol?: string;
+    signature?: string;
 }
 
 export interface WalletActivityCard {
