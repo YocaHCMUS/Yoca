@@ -7,6 +7,7 @@ import { useNavigate } from "react-router";
 import styles from "./profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -23,7 +24,34 @@ function formatCurrency(value: number): string {
 
 export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabProps) {
     const navigate = useNavigate();
-    const { data } = useProfileWalletTabData({ walletAddresses, period });
+    const { data, loading, error } = useProfileWalletTabData({ walletAddresses, period });
+
+    if (loading) {
+        return (
+            <ProfileUnavailableState
+                title="Loading wallet data"
+                description="Fetching wallet table and chart metrics."
+            />
+        );
+    }
+
+    if (error) {
+        return (
+            <ProfileUnavailableState
+                title="Wallet data unavailable"
+                description="Unable to load wallet data right now."
+            />
+        );
+    }
+
+    if (walletAddresses.length === 0 || data.linkedWalletRows.length === 0) {
+        return (
+            <ProfileUnavailableState
+                title="No linked wallets"
+                description="Link at least one wallet to view portfolio and charts."
+            />
+        );
+    }
 
     const portfolioTableData = data.portfolioRows.map((row) => [
         row.walletLabel,

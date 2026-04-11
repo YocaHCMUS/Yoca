@@ -11,6 +11,8 @@ import { useNavigate } from "react-router";
 import { unlinkWalletAddress } from "@/services/profile/profileApi";
 import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
+import { useAuth } from "@/contexts/AuthContext";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 interface ProfilePortfolioTabProps {
     walletAddresses: string[];
@@ -40,8 +42,9 @@ export function ProfilePortfolioTab({
     onPeriodChange,
 }: ProfilePortfolioTabProps) {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
-    const { walletOverviews, setWalletOverviews } = useProfileOverviewData({ walletAddresses });
+    const { walletOverviews, setWalletOverviews, loading, error } = useProfileOverviewData({ walletAddresses });
 
     const overviewData = useMemo<ProfileOverviewData>(() => {
         const totalNetWorthUsd = walletOverviews.reduce(
@@ -59,8 +62,8 @@ export function ProfilePortfolioTab({
         );
 
         return {
-            avatarUrl: `https://avatars.dicebear.com/api/identicon/${walletAddresses.join(",")}.svg`,
-            displayName: walletAddresses.length === 1 ? formatAddress(walletAddresses[0]) : "Linked wallets",
+            avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? walletAddresses.join(",")}`,
+            displayName: user?.displayName?.trim() || user?.userId || (walletAddresses.length === 1 ? formatAddress(walletAddresses[0]) : "Linked wallets"),
             accountTier: "pro",
             period,
             totalNetWorthUsd,
@@ -69,7 +72,7 @@ export function ProfilePortfolioTab({
             pnlPct: totalNetWorthUsd > 0 ? (pnlUsd / totalNetWorthUsd) * 100 : 0,
             linkedWalletCount: walletOverviews.length,
         };
-    }, [period, walletAddresses, walletOverviews]);
+    }, [period, user?.displayName, user?.userId, walletAddresses, walletOverviews]);
 
     const tableRows = useMemo(
         () =>
@@ -126,80 +129,97 @@ export function ProfilePortfolioTab({
                 onPeriodChange={onPeriodChange}
             />
 
-            <Table
-                title="Linked wallets list"
-                headers={[
-                    "Compare",
-                    "Wallet",
-                    "Address",
-                    "Net worth",
-                    "Actions",
-                ]}
-                initialFilters={{}}
-                fetcher={Promise.resolve([])}
-                filterSchema={{
-                    1: { type: FilterType.Select },
-                    2: { type: FilterType.Select },
-                    3: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
-                    4: { type: FilterType.Select },
-                }}
-                dataEntries={tableRows}
-                cellRenderers={[
-                    (_value, row) => {
-                        const walletId = String(row[0]);
-                        return (
+            {loading ? (
+                <ProfileUnavailableState
+                    title="Loading wallets"
+                    description="Fetching linked wallet table data."
+                />
+            ) : error ? (
+                <ProfileUnavailableState
+                    title="Wallet list unavailable"
+                    description="Unable to load linked wallets right now."
+                />
+            ) : walletAddresses.length === 0 || walletOverviews.length === 0 ? (
+                <ProfileUnavailableState
+                    title="No linked wallets"
+                    description="Link at least one wallet to view detailed wallet list."
+                />
+            ) : (
+                <Table
+                    title="Linked wallets list"
+                    headers={[
+                        "Compare",
+                        "Wallet",
+                        "Address",
+                        "Net worth",
+                        "Actions",
+                    ]}
+                    initialFilters={{}}
+                    fetcher={Promise.resolve([])}
+                    filterSchema={{
+                        1: { type: FilterType.Select },
+                        2: { type: FilterType.Select },
+                        3: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+                        4: { type: FilterType.Select },
+                    }}
+                    dataEntries={tableRows}
+                    cellRenderers={[
+                        (_value, row) => {
+                            const walletId = String(row[0]);
+                            return (
+                                <div onClick={(event) => event.stopPropagation()}>
+                                    <Checkbox
+                                        id={`wallet-compare-${walletId}`}
+                                        labelText=""
+                                        hideLabel
+                                        checked={selectedComparisonWalletAddresses.includes(walletId)}
+                                        onChange={(_, state) =>
+                                            handleComparisonToggle(walletId, state.checked)
+                                        }
+                                    />
+                                </div>
+                            );
+                        },
+                        null,
+                        (_value, row) => {
+                            const walletAddress = String(row[2]);
+                            return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
+                        },
+                        (value) => formatCurrency(Number(value)),
+                        (_value, row) => (
                             <div onClick={(event) => event.stopPropagation()}>
-                                <Checkbox
-                                    id={`wallet-compare-${walletId}`}
-                                    labelText=""
-                                    hideLabel
-                                    checked={selectedComparisonWalletAddresses.includes(walletId)}
-                                    onChange={(_, state) =>
-                                        handleComparisonToggle(walletId, state.checked)
-                                    }
-                                />
+                                <Button
+                                    size="sm"
+                                    kind="ghost"
+                                    onClick={() => handleUnlinkWallet(String(row[4]))}
+                                >
+                                    Unlink
+                                </Button>
                             </div>
-                        );
-                    },
-                    null,
-                    (_value, row) => {
-                        const walletAddress = String(row[2]);
-                        return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
-                    },
-                    (value) => formatCurrency(Number(value)),
-                    (_value, row) => (
-                        <div onClick={(event) => event.stopPropagation()}>
-                            <Button
-                                size="sm"
-                                kind="ghost"
-                                onClick={() => handleUnlinkWallet(String(row[4]))}
+                        ),
+                    ]}
+                    isSortable={[true, true, true, true, false]}
+                    sortConfigs={{
+                        3: { type: SortType.Number },
+                    }}
+                    actions={
+                        <div className={styles.inlineActions}>
+                            <button className={styles.triggerButton}>
+                                <AddLarge size={20} />
+                                Add or link wallet
+                            </button>
+                            <button
+                                onClick={handleCompareClick}
+                                disabled={selectedComparisonWalletAddresses.length < 2}
+                                className={styles.triggerButton}
                             >
-                                Unlink
-                            </Button>
+                                <Repeat size={20} />
+                                Compare selected wallets
+                            </button>
                         </div>
-                    ),
-                ]}
-                isSortable={[true, true, true, true, false]}
-                sortConfigs={{
-                    3: { type: SortType.Number },
-                }}
-                actions={
-                    <div className={styles.inlineActions}>
-                        <button className={styles.triggerButton}>
-                            <AddLarge size={20} />
-                            Add or link wallet
-                        </button>
-                        <button
-                            onClick={handleCompareClick}
-                            disabled={selectedComparisonWalletAddresses.length < 2}
-                            className={styles.triggerButton}
-                        >
-                            <Repeat size={20} />
-                            Compare selected wallets
-                        </button>
-                    </div>
-                }
-            />
+                    }
+                />
+            )}
         </section>
     );
 }

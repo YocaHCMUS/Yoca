@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { AddLarge } from "@carbon/icons-react";
 import styles from "./profile.module.scss";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 
 interface ProfileAlertTabProps {
@@ -20,6 +21,15 @@ interface ProfileAlertTabProps {
 }
 
 export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
+    if (data.alerts.length === 0 && data.notifications.length === 0) {
+        return (
+            <ProfileUnavailableState
+                title="Alerts unavailable"
+                description="No alert rules or notifications are available right now."
+            />
+        );
+    }
+
     const alertTableData = data.alerts.map((rule) => [
         rule.tokenSymbol,
         rule.alertType,

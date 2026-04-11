@@ -1,6 +1,7 @@
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import type { ProfileDashboardData } from "@/types/profile";
 import styles from "./profile.module.scss";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 interface ProfileDashboardTabProps {
     data: ProfileDashboardData;
@@ -13,6 +14,20 @@ function getToneClass(tone?: "positive" | "negative" | "neutral"): string {
 }
 
 export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
+    if (
+        data.kpis.length === 0
+        && data.concentration.length === 0
+        && data.risk.length === 0
+        && data.anomalies.length === 0
+    ) {
+        return (
+            <ProfileUnavailableState
+                title="Dashboard unavailable"
+                description="No dashboard metrics are available for this account."
+            />
+        );
+    }
+
     const concentrationData = data.concentration.map((item) => [
         item.label,
         item.valueUsd,

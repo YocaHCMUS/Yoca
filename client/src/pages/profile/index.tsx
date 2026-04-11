@@ -16,6 +16,7 @@ import { InlineLoading } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
 import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 const DASHBOARD_ENABLED =
     String(import.meta.env.VITE_PROFILE_ENABLE_DASHBOARD ?? "true").toLowerCase() !==
@@ -46,11 +47,25 @@ export default function ProfilePage() {
             },
             {
                 id: "dashboard",
-                node: profileData ? <ProfileDashboardTab data={profileData.dashboard} /> : null,
+                node: profileData ? (
+                    <ProfileDashboardTab data={profileData.dashboard} />
+                ) : (
+                    <ProfileUnavailableState
+                        title="Dashboard unavailable"
+                        description="No dashboard data is available right now."
+                    />
+                ),
             },
             {
                 id: "alerts",
-                node: profileData ? <ProfileAlertTab data={profileData.alerts} /> : null,
+                node: profileData ? (
+                    <ProfileAlertTab data={profileData.alerts} />
+                ) : (
+                    <ProfileUnavailableState
+                        title="Alerts unavailable"
+                        description="No alert data is available right now."
+                    />
+                ),
             },
             {
                 id: "wallets",

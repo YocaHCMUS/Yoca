@@ -1,4 +1,3 @@
-import { ProfileTradeFrequencyHeatmap } from "@/components/charts/ProfileTradeFrequencyHeatmap";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
@@ -8,6 +7,7 @@ import { useMemo } from "react";
 import styles from "./profile.module.scss";
 import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 
 interface ProfileActivityTabProps {
     walletAddresses: string[];
@@ -31,7 +31,35 @@ function formatAddress(address: string): string {
 }
 
 export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
-    const { data } = useProfileActivityTabData({ walletAddresses, period });
+    const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
+
+    if (loading) {
+        return (
+            <ProfileUnavailableState
+                title="Loading activity"
+                description="Fetching swaps, transfers, and wallet activity."
+            />
+        );
+    }
+
+    if (error) {
+        return (
+            <ProfileUnavailableState
+                title="Activity unavailable"
+                description="Unable to load activity data right now."
+            />
+        );
+    }
+
+    if (walletAddresses.length === 0 || (data.swapTransferRows.length === 0 && data.walletCards.length === 0)) {
+        return (
+            <ProfileUnavailableState
+                title="No activity data"
+                description="No swaps or transfers found for linked wallets in this period."
+            />
+        );
+    }
+
     const visibleRows = useMemo(
         () => data.swapTransferRows,
         [data.swapTransferRows],
