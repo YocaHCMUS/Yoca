@@ -1,4 +1,5 @@
 import type { TimePeriod } from "@/types/chart-filters.types";
+import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
 
 export type ProfileAccountTier = "basic" | "premium" | "pro" | "enterprise";
 
@@ -170,6 +171,8 @@ export interface ProfileActivityData {
     leftNavItems: ProfileActivityNav[];
     selectedNav: ProfileActivityNav;
     swapTransferRows: ActivityRow[];
+    swapsRaw?: WalletSwap[];
+    transfersRaw?: WalletTransfer[];
     walletCards: WalletActivityCard[];
     heatmap: ActivityHeatmapData;
 }

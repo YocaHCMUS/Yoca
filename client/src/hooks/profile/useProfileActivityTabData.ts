@@ -18,6 +18,8 @@ const EMPTY_ACTIVITY_DATA: ProfileActivityData = {
     leftNavItems: ["swaps-table", "transfers-table", "wallet-overview-cards", "trade-frequency-heatmap"],
     selectedNav: "swaps-table",
     swapTransferRows: [],
+    swapsRaw: [],
+    transfersRaw: [],
     walletCards: [],
     heatmap: { cells: [], maxCount: 0 },
 };
@@ -120,6 +122,8 @@ export function useProfileActivityTabData({ walletAddresses, period }: UseProfil
                 }
 
                 const swapTransferRows: ActivityRow[] = [];
+                const swapsRaw: WalletSwap[] = [];
+                const transfersRaw: WalletTransfer[] = [];
                 const walletCards = results
                     .filter((result): result is PromiseFulfilledResult<{
                         walletAddress: string;
@@ -129,6 +133,8 @@ export function useProfileActivityTabData({ walletAddresses, period }: UseProfil
                     }> => result.status === "fulfilled")
                     .map((result) => {
                         const { walletAddress, overview, swapsResult, transfersResult } = result.value;
+                        swapsRaw.push(...(swapsResult.swaps ?? []));
+                        transfersRaw.push(...(transfersResult.transfers ?? []));
                         swapTransferRows.push(
                             ...toActivityRows(walletAddress, swapsResult.swaps ?? [], transfersResult.transfers ?? []),
                         );
@@ -161,6 +167,8 @@ export function useProfileActivityTabData({ walletAddresses, period }: UseProfil
                     leftNavItems: ["swaps-table", "transfers-table", "wallet-overview-cards", "trade-frequency-heatmap"],
                     selectedNav: "swaps-table",
                     swapTransferRows,
+                    swapsRaw,
+                    transfersRaw,
                     walletCards,
                     heatmap: { cells: [], maxCount: 0 },
                 });

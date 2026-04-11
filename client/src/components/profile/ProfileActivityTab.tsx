@@ -1,13 +1,15 @@
 import { FilterType, SortType, Table } from "@/components/tables/Table";
+import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
 import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
 import { Copy } from "@carbon/react/icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import styles from "./profile.module.scss";
 import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import type { WalletSwap } from "@/services/wallet/walletApi";
 
 interface ProfileActivityTabProps {
     walletAddresses: string[];
@@ -32,6 +34,8 @@ function formatAddress(address: string): string {
 
 export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
     const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
+    const [swapModalOpen, setSwapModalOpen] = useState(false);
+    const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
     const visibleRows = useMemo(
         () => data.swapTransferRows,
@@ -52,6 +56,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
         () => visibleRows.filter((row) => row.type === "transfer"),
         [visibleRows],
     );
+
+    const swapsRaw = useMemo(() => data.swapsRaw ?? [], [data.swapsRaw]);
 
     if (loading) {
         return (
@@ -83,31 +89,23 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     const swapTableData = swapRows.map((row) => [
         row.walletLabel,
         row.timestamp,
-        row.exchange ?? "Unknown",
         row.pairOrToken,
-        row.soldToken ?? "Unknown",
-        row.boughtToken ?? "Unknown",
+        row.exchange ?? "Unknown",
         row.amountUsd,
-        row.baseQuotePrice ?? 0,
-        row.txHash ?? "",
     ]);
 
     const transferTableData = transferRows.map((row) => [
-        row.walletLabel,
-        row.fromAddress ?? "",
-        row.toAddress ?? "",
         row.tokenSymbol ?? row.pairOrToken,
         row.amount ?? 0,
         row.amountUsd,
         row.timestamp,
-        row.signature ?? "",
     ]);
 
     return (
         <section className={styles.contentStack}>
             <Table
                 title="Swaps"
-                headers={["Wallet", "Time", "Exchange", "Pair", "Token sold", "Token bought", "Total value", "Base quote price", "Transaction"]}
+                headers={["Wallet", "Time", "Pair", "Exchange", "Total value"]}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
@@ -115,9 +113,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     1: { type: FilterType.Select },
                     2: { type: FilterType.Select },
                     3: { type: FilterType.Select },
-                    4: { type: FilterType.Select },
-                    6: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
-                    7: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+                    4: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
                 }}
                 dataEntries={swapTableData}
                 cellRenderers={[
@@ -125,50 +121,47 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     (value) => new Date(String(value)).toLocaleString(),
                     null,
                     null,
-                    null,
-                    null,
                     (value) => formatCurrency(Number(value)),
-                    (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
-                    null,
                 ]}
-                isSortable={[true, true, true, true, true, true, true, true, false]}
+                isSortable={[true, true, true, true, true]}
                 sortConfigs={{
                     1: { type: SortType.Date },
-                    6: { type: SortType.Number },
-                    7: { type: SortType.Number },
+                    4: { type: SortType.Number },
+                }}
+                onRowClick={(_, rowIndex) => {
+                    const swap = swapsRaw[rowIndex >= 0 ? rowIndex : -1];
+                    if (!swap) {
+                        return;
+                    }
+
+                    setSelectedSwap(swap);
+                    setSwapModalOpen(true);
                 }}
             />
 
             <Table
                 title="Transfers"
-                headers={["Wallet", "Sender", "Receiver", "Token", "Amount", "Amount (USD)", "Time", "Signature"]}
+                headers={["Token", "Amount", "Amount (USD)", "Time"]}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
                     0: { type: FilterType.Select },
-                    1: { type: FilterType.Select },
-                    2: { type: FilterType.Select },
+                    1: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+                    2: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
                     3: { type: FilterType.Select },
-                    4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
-                    5: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
-                    6: { type: FilterType.Select },
                 }}
                 dataEntries={transferTableData}
                 cellRenderers={[
                     null,
-                    null,
-                    null,
-                    null,
                     (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
                     (value) => formatCurrency(Number(value)),
                     (value) => new Date(String(value)).toLocaleString(),
-                    null,
                 ]}
-                isSortable={[true, true, true, true, true, true, true, false]}
+                isSortable={[true, true, true, true]}
                 sortConfigs={{
-                    4: { type: SortType.Number },
-                    5: { type: SortType.Number },
-                    6: { type: SortType.Date },
+                    1: { type: SortType.Number },
+                    2: { type: SortType.Number },
+                    3: { type: SortType.Date },
                 }}
             />
 
@@ -235,6 +228,12 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     minHeight={320}
                 />
             </div> */}
+
+            <SwapDetailModal
+                isOpen={swapModalOpen}
+                onClose={() => setSwapModalOpen(false)}
+                swap={selectedSwap}
+            />
         </section>
     );
 }
