@@ -1,6 +1,13 @@
+import { AUTH_COOKIE_NAME } from "@sv/config/constants";
 import { setErr } from "@sv/config/errors.js";
+import {
+  userAlertConditionOps,
+  userAlertPeriods,
+  userAlertTypes,
+} from "@sv/db/alert.js";
 import { statusCode } from "@sv/util/responses.js";
 import type { ValidationTargets } from "hono";
+import { jwt } from "hono/jwt";
 import { validator } from "hono/validator";
 import z from "zod";
 
@@ -65,12 +72,14 @@ export const userPayloadSchema = z.object({
   displayName: z.string().nullable(),
 });
 
+export type UserPayload = z.infer<typeof userPayloadSchema>;
+
 export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
-// type inferrence to work correct (for some reason)
+// type inferrence to work correct (for some reasons)
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
@@ -80,6 +89,33 @@ export const recentTradesQuerySchema = z.object({
 export const walletTokenTradesSchema = z.object({
   walletAddress: solanaBase58Schema,
   tokenAddress: solanaBase58Schema,
+});
+
+export const createAlertSchema = z.object({
+  tokenAddress: z.string().min(1),
+  alertType: z.enum(userAlertTypes),
+  period: z.enum(userAlertPeriods),
+  conditions: z
+    .array(
+      z.object({
+        condition: z.enum(userAlertConditionOps),
+        value: z.coerce.number(),
+      }),
+    )
+    .min(1, "At least one condition is required"),
+});
+
+export const updateAlertSchema = z.object({
+  alertType: z.enum(userAlertTypes),
+  period: z.enum(userAlertPeriods),
+  conditions: z
+    .array(
+      z.object({
+        condition: z.enum(userAlertConditionOps),
+        value: z.coerce.number(),
+      }),
+    )
+    .min(1, "At least one condition is required"),
 });
 
 // Helper to validate using Zod schema and return if errors happen before the routes even run
@@ -102,6 +138,12 @@ export function validate<
     return parsed.data;
   });
 }
+
+export const honoJwt = jwt({
+  alg: "HS256",
+  secret: process.env.JWT_SECRET!,
+  cookie: AUTH_COOKIE_NAME,
+});
 
 // Check if result schema was like expected. Useful for debugging
 export async function getTrackedApiResult<T extends z.ZodType>(

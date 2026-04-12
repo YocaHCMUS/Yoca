@@ -6,9 +6,11 @@ import {
 import { setErr } from "@sv/config/errors.js";
 import {
   googleTokenSchema,
+  honoJwt,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
+  UserPayload,
   userPayloadSchema,
   userVerificationSchema,
   validate,
@@ -18,20 +20,11 @@ import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
-import { jwt, sign } from "hono/jwt";
-import type z from "zod";
+import { sign } from "hono/jwt";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const googleClientId = process.env.GOOGLE_CLIENT_ID!;
 const googleClient = new OAuth2Client(googleClientId);
-
-type UserPayload = z.infer<typeof userPayloadSchema>;
-
-const honoJwt = jwt({
-  alg: "HS256",
-  secret: jwtSecret,
-  cookie: AUTH_COOKIE_NAME,
-});
 
 async function verifyGoogleToken(idToken: string) {
   const ticket = await googleClient.verifyIdToken({

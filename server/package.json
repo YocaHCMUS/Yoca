@@ -18,7 +18,9 @@
     "db:push": "drizzle-kit push --verbose",
     "db:push-force": "drizzle-kit push --verbose --force",
     "db:seed": "tsx src/db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:clear": "npx drizzle-kit push --force --config drizzle-empty.config.ts",
+    "db:reset": "npm run db:clear && npm run db:push"
   },
   "dependencies": {
     "@coingecko/coingecko-typescript": "^3.1.0",
