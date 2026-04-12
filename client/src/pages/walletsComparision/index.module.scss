@@ -48,6 +48,14 @@
   padding: $spacing-05 $spacing-06;
 }
 
+:global(#pdf-report-header) {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .exportReportHeaderTopRow {
   align-items: flex-start;
   display: flex;

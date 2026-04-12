@@ -18,79 +18,14 @@ const TAB_EXPORT_FILENAME_SEGMENTS = [
   "Profit_Risk_Management",
 ] as const;
 
-const TAB_REPORT_TITLES = [
-  "Wallet Comparison Report - General Overview",
-  "Wallet Comparison Report - Holdings Overview",
-  "Wallet Comparison Report - Profit & Risk Management",
-] as const;
-
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
-const PDF_EXPORT_STYLE_ID = "wallet-comparison-pdf-export-style";
-const PDF_EXPORT_STYLE_TEXT = `
-.recharts-accessibility-layer, .recharts-tooltip-wrapper, .recharts-default-tooltip, svg title, svg desc {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-`;
 const PDF_EXPORT_TOP_MARGIN_MM = 10;
 const PDF_EXPORT_SECTION_GAP_MM = 10;
 const PDF_EXPORT_SCALE = 2;
 
-function truncateWalletAddress(address: string): string {
-  if (address.length <= 14) {
-    return address;
-  }
-
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-function waitForPaintFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
-
-function ExportReportHeader({
-  title,
-  generatedDate,
-  walletSummary,
-  walletCount,
-}: {
-  title: string;
-  generatedDate: string;
-  walletSummary: string;
-  walletCount: number;
-}) {
-  return (
-    <div
-      id="pdf-report-header"
-      className={`${styles.exportReportHeader} ${PDF_EXPORT_SECTION_CLASS}`}
-      style={{ display: "none" }}
-    >
-      <div className={styles.exportReportHeaderTopRow}>
-        <div>
-          <p className={styles.exportReportKicker}>Wallet Comparison Report</p>
-          <h2 className={styles.exportReportTitle}>{title}</h2>
-        </div>
-        <div className={styles.exportReportStampBlock}>
-          <span className={styles.exportReportStampLabel}>Generated</span>
-          <span className={styles.exportReportStampValue}>{generatedDate || "N/A"}</span>
-        </div>
-      </div>
-      <div className={styles.exportReportMeta}>
-        <span>Wallets Compared: {walletCount}</span>
-        <span className={styles.exportReportMetaDivider}>|</span>
-        <span>Wallet Addresses: {walletSummary}</span>
-      </div>
-    </div>
-  );
-}
-
 export default function WalletsComparisionPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
-  const [exportDate, setExportDate] = useState("");
   /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */
   const [visitedTabs, setVisitedTabs] = useState<Set<number>>(() => new Set([0]));
   const [walletAddress, setWalletAddress] = useState("");
@@ -123,15 +58,7 @@ export default function WalletsComparisionPage() {
     }
   }, []); // run only once on mount
 
-  const exportWalletAddressSummary = useMemo(() => {
-    if (selectedWallets.length === 0) {
-      return "N/A";
-    }
-
-    return selectedWallets.map((address) => truncateWalletAddress(address)).join(" | ");
-  }, [selectedWallets]);
-
-  const exportContainerClassName = `${styles.exportCaptureContainer} ${isExporting ? styles.exportCaptureContainerExporting : ""}`;
+  const exportContainerClassName = styles.exportCaptureContainer;
 
   const comparisonTabs = useMemo(
     () => [
@@ -140,12 +67,6 @@ export default function WalletsComparisionPage() {
         ref={activeTab === 0 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <ExportReportHeader
-          title={TAB_REPORT_TITLES[0]}
-          generatedDate={exportDate}
-          walletSummary={exportWalletAddressSummary}
-          walletCount={selectedWallets.length}
-        />
         <GeneralTab
           key="wc-general"
           walletAddresses={selectedWallets}
@@ -157,12 +78,6 @@ export default function WalletsComparisionPage() {
         ref={activeTab === 1 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <ExportReportHeader
-          title={TAB_REPORT_TITLES[1]}
-          generatedDate={exportDate}
-          walletSummary={exportWalletAddressSummary}
-          walletCount={selectedWallets.length}
-        />
         <HoldingTab
           key="wc-holding"
           walletAddresses={selectedWallets}
@@ -174,12 +89,6 @@ export default function WalletsComparisionPage() {
         ref={activeTab === 2 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <ExportReportHeader
-          title={TAB_REPORT_TITLES[2]}
-          generatedDate={exportDate}
-          walletSummary={exportWalletAddressSummary}
-          walletCount={selectedWallets.length}
-        />
         <RiskTab
           key="wc-risk"
           walletAddresses={selectedWallets}
@@ -191,9 +100,6 @@ export default function WalletsComparisionPage() {
       selectedWallets,
       activeTab,
       exportContainerClassName,
-      isExporting,
-      exportDate,
-      exportWalletAddressSummary,
     ],
   );
 
@@ -210,38 +116,95 @@ export default function WalletsComparisionPage() {
     }
 
     const generatedDate = new Date().toLocaleDateString();
-    setExportDate(generatedDate);
     setIsExporting(true);
 
-    const exportStyle = document.createElement("style");
-    exportStyle.id = PDF_EXPORT_STYLE_ID;
-    exportStyle.textContent = PDF_EXPORT_STYLE_TEXT;
-    document.head.appendChild(exportStyle);
-
-    const reportHeader = document.getElementById("pdf-report-header") as HTMLDivElement | null;
-    const previousReportHeaderDisplay = reportHeader?.style.display ?? "";
-
     try {
-      if (reportHeader) {
-        reportHeader.style.display = "block";
-      }
+      const tempHeader = document.createElement("div");
+      tempHeader.style.position = "absolute";
+      tempHeader.style.top = "-9999px";
+      tempHeader.style.left = "-9999px";
+      tempHeader.style.width = "800px";
+      tempHeader.style.backgroundColor = "#ffffff";
+      tempHeader.style.padding = "20px";
+      tempHeader.style.border = "1px solid #d0d7de";
+      tempHeader.style.borderRadius = "12px";
+      tempHeader.style.boxSizing = "border-box";
+      tempHeader.style.fontFamily = "Arial, sans-serif";
+      tempHeader.style.color = "#0f172a";
 
-      await waitForPaintFrame();
-      await waitForPaintFrame();
+      const headerWallets = selectedWallets.length > 0
+        ? selectedWallets.map((address) => `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`).join("")
+        : "<div>N/A</div>";
+
+      tempHeader.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
+          <div>
+            <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px;font-weight:600;">Wallet Comparison Report</div>
+            <div style="font-size:24px;font-weight:700;line-height:1.2;">Wallet Comparison Report - General Overview</div>
+          </div>
+          <div style="min-width:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;font-weight:600;">Generated Date</div>
+            <div style="margin-top:4px;font-size:14px;font-weight:600;color:#0f172a;">${generatedDate}</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;font-size:14px;color:#334155;">Wallets Compared: ${selectedWallets.length}</div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Wallet Addresses:</div>
+          <div style="font-size:13px;color:#475569;">${headerWallets}</div>
+        </div>
+      `;
+
+      document.body.appendChild(tempHeader);
+      let headerCanvas: HTMLCanvasElement;
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        headerCanvas = await html2canvas(tempHeader, {
+          scale: PDF_EXPORT_SCALE,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+      } finally {
+        tempHeader.remove();
+      }
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       let currentY = PDF_EXPORT_TOP_MARGIN_MM;
 
-      const sections = document.querySelectorAll<HTMLElement>(`.${PDF_EXPORT_SECTION_CLASS}`);
+      const headerImgData = headerCanvas.toDataURL("image/png");
+      const headerImgHeight = (headerCanvas.height * pdfWidth) / headerCanvas.width;
+      pdf.addImage(headerImgData, "PNG", 0, currentY, pdfWidth, headerImgHeight);
+      currentY += headerImgHeight + PDF_EXPORT_SECTION_GAP_MM;
+
+      const sections = exportTarget.querySelectorAll<HTMLElement>(`.${PDF_EXPORT_SECTION_CLASS}`);
+
+      if (sections.length === 0) {
+        return;
+      }
 
       for (const section of sections) {
-        if (section !== reportHeader && section.getClientRects().length === 0) {
-          continue;
-        }
+        const canvas = await html2canvas(section, {
+          scale: PDF_EXPORT_SCALE,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          onclone: (clonedDocument) => {
+            clonedDocument
+              .querySelectorAll<HTMLElement>(".recharts-accessibility-layer, .recharts-tooltip-wrapper")
+              .forEach((element) => {
+                element.style.display = "none";
+              });
 
-        const canvas = await html2canvas(section, { scale: PDF_EXPORT_SCALE, useCORS: true });
+            clonedDocument
+              .querySelectorAll<HTMLElement>(".recharts-responsive-container")
+              .forEach((element) => {
+                element.style.minWidth = "800px";
+              });
+          },
+        });
         if (canvas.width <= 0 || canvas.height <= 0) {
           continue;
         }
@@ -260,11 +223,6 @@ export default function WalletsComparisionPage() {
 
       pdf.save(`Wallet_Comparison_${activeSegment}.pdf`);
     } finally {
-      if (reportHeader) {
-        reportHeader.style.display = previousReportHeaderDisplay;
-      }
-
-      exportStyle.remove();
       setIsExporting(false);
     }
   };
