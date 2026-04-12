@@ -26,7 +26,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
       {/* Asset Distribution Charts */}
       {/* {walletAddresses.map((address, index) => (
             ))} */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Asset Distribution">
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <AssetDistribution
           initialFilters={{ wallets: walletAddresses }}
           minHeight={300}
@@ -35,7 +35,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
       </div>
 
       {/* Stable Coin Ratio Chart */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Stablecoin Ratio">
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <StablecoinRatioChart
           minHeight={300}
           initialFilters={{

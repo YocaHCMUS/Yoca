@@ -24,6 +24,12 @@ const TAB_EXPORT_HEADER_TITLES = [
   "Profit & Risk Management",
 ] as const;
 
+const TAB_TRANSLATION_KEYS = [
+  "walletComparison.general",
+  "walletComparison.holdings",
+  "walletComparison.profitRiskManagement",
+] as const;
+
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 const PDF_EXPORT_TOP_MARGIN_MM = 10;
 const PDF_EXPORT_SECTION_GAP_MM = 10;
@@ -109,14 +115,14 @@ export default function WalletsComparisionPage() {
     ],
   );
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (activeTabName: string) => {
     const exportTarget = exportRef.current;
     if (isExporting || !exportTarget) {
       return;
     }
 
     const activeSegment = TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
-    const activeHeaderTitle = TAB_EXPORT_HEADER_TITLES[activeTab] ?? `Tab ${activeTab + 1}`;
+    const activeHeaderTitle = activeTabName.trim() || TAB_EXPORT_HEADER_TITLES[activeTab] || `Tab ${activeTab + 1}`;
     const { width, height } = exportTarget.getBoundingClientRect();
     if (width <= 0 || height <= 0) {
       return;
@@ -193,16 +199,14 @@ export default function WalletsComparisionPage() {
       }
 
       for (const section of sections) {
-        const sectionTitle = section.getAttribute("data-title")?.trim() ?? "";
-        const titleHeight = sectionTitle ? 8 : 0;
-
-        const htmlTitleElement = section.querySelector<HTMLElement>(".hide-on-print-title");
-        const previousStyleAttribute = htmlTitleElement
-          ? htmlTitleElement.getAttribute("style")
+        const titleElement = section.querySelector<HTMLElement>(".hide-on-print-title");
+        const sectionTitle = titleElement?.innerText.trim() ?? "";
+        const previousStyleAttribute = titleElement
+          ? titleElement.getAttribute("style")
           : null;
 
-        if (htmlTitleElement) {
-          htmlTitleElement.style.setProperty("display", "none", "important");
+        if (titleElement) {
+          titleElement.style.setProperty("display", "none", "important");
         }
 
         let canvas: HTMLCanvasElement;
@@ -227,11 +231,11 @@ export default function WalletsComparisionPage() {
             },
           });
         } finally {
-          if (htmlTitleElement) {
+          if (titleElement) {
             if (previousStyleAttribute === null) {
-              htmlTitleElement.removeAttribute("style");
+              titleElement.removeAttribute("style");
             } else {
-              htmlTitleElement.setAttribute("style", previousStyleAttribute);
+              titleElement.setAttribute("style", previousStyleAttribute);
             }
           }
         }
@@ -242,6 +246,7 @@ export default function WalletsComparisionPage() {
 
         const imgData = canvas.toDataURL("image/png");
         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const titleHeight = sectionTitle ? 8 : 0;
         const blockHeight = imgHeight + titleHeight;
 
         if (currentY + blockHeight > pageHeight - PDF_EXPORT_TOP_MARGIN_MM) {
@@ -257,7 +262,7 @@ export default function WalletsComparisionPage() {
         }
 
         pdf.addImage(imgData, "PNG", 0, currentY, pdfWidth, imgHeight);
-        currentY += imgHeight + 15;
+        currentY += imgHeight + PDF_EXPORT_SECTION_GAP_MM;
       }
 
       pdf.save(`Wallet_Comparison_${activeSegment}.pdf`);
@@ -349,7 +354,12 @@ export default function WalletsComparisionPage() {
                   kind="ghost"
                   size="sm"
                   renderIcon={Download}
-                  onClick={handleExportPDF}
+                  onClick={() => {
+                    const activeTabName = tr(TAB_TRANSLATION_KEYS[activeTab] ?? "")
+                      || TAB_EXPORT_HEADER_TITLES[activeTab]
+                      || `Tab ${activeTab + 1}`;
+                    void handleExportPDF(activeTabName);
+                  }}
                   disabled={isExporting || selectedWallets.length === 0}
                 >
                   {isExporting
