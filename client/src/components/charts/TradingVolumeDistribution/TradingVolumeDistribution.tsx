@@ -340,7 +340,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       className={className}
     >
 
-      <div className={sharedStyles.chartControls}>
+      <div className={sharedStyles.chartControls} data-html2canvas-ignore="true">
         <PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} compact />
       </div>
 
@@ -349,6 +349,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           {/* Aggregated Legend for Multi-Wallet View */}
           {aggregatedLegendData && chartOptions.length > 1 && (
             <div
+              data-html2canvas-ignore="true"
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',

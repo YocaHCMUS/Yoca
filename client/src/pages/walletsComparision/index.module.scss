@@ -25,6 +25,88 @@
 .mainContentContainer {
   min-height: calc(100vh - $header-height - $spacing-05);
   border: 1px solid $border-subtle;
+  background: $layer-01;
+}
+
+.exportCaptureContainer {
+  background: $layer-01;
+  width: 100%;
+  min-height: 1px;
+}
+
+.exportCaptureContainerExporting {
+  background: #ffffff;
+  padding: $spacing-06;
+}
+
+.exportReportHeader {
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(13, 18, 28, 0.06);
+  margin-bottom: $spacing-06;
+  padding: $spacing-05 $spacing-06;
+}
+
+.exportReportHeaderTopRow {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-05;
+}
+
+.exportReportKicker {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 $spacing-02;
+  text-transform: uppercase;
+}
+
+.exportReportTitle {
+  color: $text-primary;
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.exportReportStampBlock {
+  background: $layer-accent-01;
+  border: 1px solid $border-subtle;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+  min-width: 160px;
+  padding: $spacing-03 $spacing-04;
+}
+
+.exportReportStampLabel {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.exportReportStampValue {
+  color: $text-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.exportReportMeta {
+  color: $text-secondary;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  gap: $spacing-05;
+  margin-top: $spacing-03;
+}
+
+.exportReportMetaDivider {
+  color: $text-disabled;
 }
 
 .grid {

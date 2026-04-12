@@ -261,7 +261,7 @@ export function WinrateChart({
   }, [data, chartTheme]);
 
   const filterControls = (
-    <div className={sharedStyles.filterGroup}>
+    <div className={sharedStyles.filterGroup} data-html2canvas-ignore="true">
       <label className={sharedStyles.filterField}>
         <span className={sharedStyles.filterLabelSmall}>Range</span>
         <div

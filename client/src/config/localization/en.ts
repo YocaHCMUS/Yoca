@@ -384,6 +384,8 @@ export const translation = {
     general: "General",
     holdings: "Holdings",
     profitRiskManagement: "Profit & Risk Management",
+    exportPdf: "Export PDF",
+    generatingPdf: "Generating PDF...",
   },
   // Navigation
   nav: {

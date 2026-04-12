@@ -961,7 +961,10 @@ export function BalanceChart({
             onRetry={handleRetry}
         >
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
-                <div className={sharedStyles.balanceChartControlTopRow}>
+                <div
+                    className={sharedStyles.balanceChartControlTopRow}
+                    data-html2canvas-ignore="true"
+                >
                     <div className={sharedStyles.balanceChartControlInputGroup}>
                         <label htmlFor={dataListId}>{isMultiWallet ? tr('charts.balanceChart.selectModeTokenLabel') : tr('charts.balanceChart.selectTokenLabel')}</label>
                         <select
@@ -1048,6 +1051,7 @@ export function BalanceChart({
                                         onClick={() => removeTag(row.key)}
                                         className={sharedStyles.balanceChartTagDismiss}
                                         title={canDismiss ? tr('charts.balanceChart.removeTag') : tr('charts.balanceChart.atLeastOneTagRequired')}
+                                        data-html2canvas-ignore="true"
                                     >
                                         <Close size={12} />
                                     </button>

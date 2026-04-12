@@ -244,6 +244,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
     >
       <div
         className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]} ${sharedStyles["chartControls--withBackground"]}`}
+        data-html2canvas-ignore="true"
       >
         <select
           value={filters.timePeriod}

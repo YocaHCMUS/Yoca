@@ -6,6 +6,8 @@ import React from "react";
 import styles from "./GeneralTab.module.scss";
 import type WalletComparisionProp from "./WalletComparisionProp";
 
+const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
+
 export const RiskTab: React.FC<WalletComparisionProp> = ({
   walletAddresses,
   fetchEnabled = true,
@@ -24,7 +26,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
   return (
     <div className={styles.grid}>
       {/* Rolling annual returns */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <RollingProfitAndLoss
           minHeight={300}
           initialFilters={{
@@ -48,12 +50,12 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
             </div> */}
 
       {/* Profit and loss */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} />
       </div>
 
       {/* Winrate */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <WinrateChart
           minHeight={300}
           initialFilters={{
@@ -64,7 +66,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
       </div>
 
       {/* Maximum drawdown */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <DrawdownChart
           minHeight={300}
           initialFilters={{

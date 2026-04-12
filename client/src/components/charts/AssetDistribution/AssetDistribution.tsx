@@ -458,6 +458,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const filterControls = (
     <div
       className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--start']} ${sharedStyles['chartControls--withBackground']}`}
+      data-html2canvas-ignore="true"
     >
       <label className={sharedStyles.filterField}>
         <span className={sharedStyles.filterLabelSmall}>
@@ -529,6 +530,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           {/* Aggregated Legend for Multi-Wallet View */}
           {aggregatedLegendData && chartOptions.length > 1 && (
             <div
+              data-html2canvas-ignore="true"
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
