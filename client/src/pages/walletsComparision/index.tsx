@@ -35,6 +35,118 @@ const PDF_EXPORT_TOP_MARGIN_MM = 10;
 const PDF_EXPORT_SECTION_GAP_MM = 10;
 const PDF_EXPORT_SCALE = 2;
 
+interface WalletComparisonSidebarProps {
+  walletAddress: string;
+  selectedWallets: string[];
+  onWalletAddressChange: (value: string) => void;
+  onWalletKeyPress: (event: React.KeyboardEvent) => void;
+  onRemoveWallet: (address: string) => void;
+  onExport: () => void;
+  isExporting: boolean;
+}
+
+interface WalletComparisonMainContentProps {
+  activeTab: number;
+  visitedTabs: ReadonlySet<number>;
+  comparisonTabs: React.ReactNode[];
+  onTabChange: (index: number) => void;
+}
+
+function WalletComparisonSidebar({
+  walletAddress,
+  selectedWallets,
+  onWalletAddressChange,
+  onWalletKeyPress,
+  onRemoveWallet,
+  onExport,
+  isExporting,
+}: WalletComparisonSidebarProps) {
+  const { tr } = useLocalization();
+
+  return (
+    <div className={styles.sidebarContainer}>
+      <div className={styles.sidebarHeaderRow}>
+        <h3 className={styles.sidebarTitle}>
+          {tr("walletComparison.selectedWallets")}
+        </h3>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Download}
+          onClick={onExport}
+          disabled={isExporting || selectedWallets.length === 0}
+        >
+          {isExporting
+            ? tr("walletComparison.generatingPdf")
+            : tr("walletComparison.exportPdf")}
+        </Button>
+      </div>
+      <Search
+        id="wallet-search"
+        labelText={tr("walletComparison.addWalletAddress")}
+        placeholder={tr("walletComparison.enterWalletAddress")}
+        value={walletAddress}
+        onChange={(e) => onWalletAddressChange(e.target.value)}
+        onKeyDown={onWalletKeyPress}
+        renderIcon={SearchAdvanced}
+      />
+
+      <Stack gap={4} className={styles.walletList}>
+        {selectedWallets.length === 0 ? (
+          <p className={styles.emptyState}>
+            {tr("walletComparison.noWalletsSelected")}
+          </p>
+        ) : (
+          selectedWallets.map((wallet) => (
+            <Button
+              className={styles.walletTag}
+              renderIcon={Close}
+              onClick={() => onRemoveWallet(wallet)}
+              kind="tertiary"
+              key={wallet}
+            >
+              <span className={styles.buttonTag}>
+                {wallet}
+              </span>
+            </Button>
+          ))
+        )}
+      </Stack>
+    </div>
+  );
+}
+
+function WalletComparisonMainContent({
+  activeTab,
+  visitedTabs,
+  comparisonTabs,
+  onTabChange,
+}: WalletComparisonMainContentProps) {
+  const { tr } = useLocalization();
+
+  return (
+    <div className={styles.mainContentContainer}>
+      <TabContainer
+        activeTab={activeTab}
+        names={[
+          tr("walletComparison.general"),
+          tr("walletComparison.holdings"),
+          tr("walletComparison.profitRiskManagement"),
+        ]}
+        tabIcons={[
+          <User key="wc-general-icon" size={16} />,
+          <Wallet key="wc-holdings-icon" size={16} />,
+          <ChartLine key="wc-risk-icon" size={16} />,
+        ]}
+        preserveMountedPanels
+        visitedTabIndices={visitedTabs}
+        tabs={comparisonTabs}
+        onTabChange={onTabChange}
+      />
+    </div>
+  );
+}
+
 export default function WalletsComparisionPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
@@ -291,92 +403,37 @@ export default function WalletsComparisionPage() {
     }
   };
 
+  const handleSidebarExport = () => {
+    const activeTabName = tr(TAB_TRANSLATION_KEYS[activeTab] ?? "")
+      || TAB_EXPORT_HEADER_TITLES[activeTab]
+      || `Tab ${activeTab + 1}`;
+    void handleExportPDF(activeTabName);
+  };
+
   return (
     <PageWrapper>
       <Grid className={styles.grid} fullWidth>
-        {/* 3 columns - Wallet Selection Sidebar */}
         <Column lg={4} md={4} sm={4}>
-          <div className={styles.sidebarContainer}>
-            <h3 className={styles.sidebarTitle}>
-              {tr("walletComparison.selectedWallets")}
-            </h3>
-            <Search
-              id="wallet-search"
-              labelText={tr("walletComparison.addWalletAddress")}
-              placeholder={tr("walletComparison.enterWalletAddress")}
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              onKeyDown={handleKeyPress}
-              renderIcon={SearchAdvanced}
-            />
-
-            {/* List of Selected Wallets */}
-            <Stack gap={4} className={styles.walletList}>
-              {selectedWallets.length === 0 ? (
-                <p className={styles.emptyState}>
-                  {tr("walletComparison.noWalletsSelected")}
-                </p>
-              ) : (
-                selectedWallets.map((wallet) => (
-                  <Button
-                    className={styles.walletTag}
-                    renderIcon={Close}
-                    onClick={() => handleRemoveWallet(wallet)}
-                    kind="tertiary"
-                  >
-                    <span className={styles.buttonTag}>
-                      {wallet}
-                    </span>
-                  </Button>
-                ))
-              )}
-            </Stack>
-          </div>
+          <WalletComparisonSidebar
+            walletAddress={walletAddress}
+            selectedWallets={selectedWallets}
+            onWalletAddressChange={setWalletAddress}
+            onWalletKeyPress={handleKeyPress}
+            onRemoveWallet={handleRemoveWallet}
+            onExport={handleSidebarExport}
+            isExporting={isExporting}
+          />
         </Column>
 
-        {/* 9 columns - Main Content Area */}
         <Column lg={12} md={12} sm={4}>
-          <div className={styles.mainContentContainer}>
-            <TabContainer
-              activeTab={activeTab}
-              names={[
-                tr("walletComparison.general"),
-                tr("walletComparison.holdings"),
-                tr("walletComparison.profitRiskManagement"),
-              ]}
-              tabIcons={[
-                <User key="wc-general-icon" size={16} />,
-                <Wallet key="wc-holdings-icon" size={16} />,
-                <ChartLine key="wc-risk-icon" size={16} />,
-              ]}
-              actions={
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  renderIcon={Download}
-                  onClick={() => {
-                    const activeTabName = tr(TAB_TRANSLATION_KEYS[activeTab] ?? "")
-                      || TAB_EXPORT_HEADER_TITLES[activeTab]
-                      || `Tab ${activeTab + 1}`;
-                    void handleExportPDF(activeTabName);
-                  }}
-                  disabled={isExporting || selectedWallets.length === 0}
-                >
-                  {isExporting
-                    ? tr("walletComparison.generatingPdf")
-                    : tr("walletComparison.exportPdf")}
-                </Button>
-              }
-              preserveMountedPanels
-              visitedTabIndices={visitedTabs}
-              tabs={comparisonTabs}
-              onTabChange={(index) => setActiveTab(index)}
-            />
-          </div>
+          <WalletComparisonMainContent
+            activeTab={activeTab}
+            visitedTabs={visitedTabs}
+            comparisonTabs={comparisonTabs}
+            onTabChange={setActiveTab}
+          />
         </Column>
       </Grid>
-      {/* <div className={styles.walletsComparisonPage}>
-            </div> */}
     </PageWrapper>
   );
 }

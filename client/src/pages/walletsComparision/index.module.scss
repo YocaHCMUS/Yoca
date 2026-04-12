@@ -124,8 +124,15 @@
 }
 
 .sidebarTitle {
-  margin-bottom: $spacing-md;
+  margin: 0;
   color: $text-primary;
+}
+
+.sidebarHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-03;
 }
 
 .walletInput {
