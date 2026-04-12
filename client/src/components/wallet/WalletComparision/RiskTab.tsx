@@ -26,7 +26,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
   return (
     <div className={styles.grid}>
       {/* Rolling annual returns */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Rolling Profit and Loss">
         <RollingProfitAndLoss
           minHeight={300}
           initialFilters={{
@@ -50,12 +50,12 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
             </div> */}
 
       {/* Profit and loss */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Profit and Loss">
         <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} />
       </div>
 
       {/* Winrate */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Winrate">
         <WinrateChart
           minHeight={300}
           initialFilters={{
@@ -66,7 +66,7 @@ export const RiskTab: React.FC<WalletComparisionProp> = ({
       </div>
 
       {/* Maximum drawdown */}
-      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Maximum Drawdown">
         <DrawdownChart
           minHeight={300}
           initialFilters={{

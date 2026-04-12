@@ -186,25 +186,47 @@ export default function WalletsComparisionPage() {
       }
 
       for (const section of sections) {
-        const canvas = await html2canvas(section, {
-          scale: PDF_EXPORT_SCALE,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          onclone: (clonedDocument) => {
-            clonedDocument
-              .querySelectorAll<HTMLElement>(".recharts-accessibility-layer, .recharts-tooltip-wrapper")
-              .forEach((element) => {
-                element.style.display = "none";
-              });
+        const sectionTitle = section.getAttribute("data-title");
+        if (sectionTitle) {
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(sectionTitle, 14, currentY);
+          currentY += 8;
+        }
 
-            clonedDocument
-              .querySelectorAll<HTMLElement>(".recharts-responsive-container")
-              .forEach((element) => {
-                element.style.minWidth = "800px";
-              });
-          },
-        });
+        const htmlTitleElement = section.querySelector<HTMLElement>(".hide-on-print-title");
+        const previousDisplay = htmlTitleElement?.style.display ?? "";
+
+        if (htmlTitleElement) {
+          htmlTitleElement.style.display = "none";
+        }
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await html2canvas(section, {
+            scale: PDF_EXPORT_SCALE,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            onclone: (clonedDocument) => {
+              clonedDocument
+                .querySelectorAll<HTMLElement>(".recharts-accessibility-layer, .recharts-tooltip-wrapper")
+                .forEach((element) => {
+                  element.style.display = "none";
+                });
+
+              clonedDocument
+                .querySelectorAll<HTMLElement>(".recharts-responsive-container")
+                .forEach((element) => {
+                  element.style.minWidth = "800px";
+                });
+            },
+          });
+        } finally {
+          if (htmlTitleElement) {
+            htmlTitleElement.style.display = previousDisplay;
+          }
+        }
+
         if (canvas.width <= 0 || canvas.height <= 0) {
           continue;
         }
@@ -215,10 +237,16 @@ export default function WalletsComparisionPage() {
         if (currentY + imgHeight > pageHeight - PDF_EXPORT_TOP_MARGIN_MM) {
           pdf.addPage();
           currentY = PDF_EXPORT_TOP_MARGIN_MM;
+          if (sectionTitle) {
+            pdf.setFontSize(14);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(sectionTitle, 14, currentY);
+            currentY += 8;
+          }
         }
 
         pdf.addImage(imgData, "PNG", 0, currentY, pdfWidth, imgHeight);
-        currentY += imgHeight + PDF_EXPORT_SECTION_GAP_MM;
+        currentY += imgHeight + 15;
       }
 
       pdf.save(`Wallet_Comparison_${activeSegment}.pdf`);

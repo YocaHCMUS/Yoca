@@ -338,7 +338,7 @@ export function ChartWrapper({
           {toolbarLayout === 'stacked' ? (
             <>
               <h2
-                className={styles.title}
+                className={`${styles.title} hide-on-print-title`}
                 id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
               >
                 {title}
@@ -354,7 +354,7 @@ export function ChartWrapper({
           ) : (
             <>
               <h2
-                className={styles.title}
+                className={`${styles.title} hide-on-print-title`}
                 id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
               >
                 {title}

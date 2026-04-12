@@ -28,7 +28,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
     return (
         <div className={styles.grid}>
             {/* Balance history comparision */}
-            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Balance Trend">
                 <BalanceChart
                     initialFilters={{
                         timePeriod: "30D",
@@ -51,7 +51,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div> */}
 
             {/* Total Trading Volume Column Chart */}
-            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Total Trading Volume">
                 <TotalTradingVolumeChart
                     minHeight={300}
                     initialFilters={{
@@ -63,7 +63,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Trading Volume distribution Chart */}
-            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Trading Volume Distribution">
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}
@@ -72,7 +72,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
 
 
             {/* Average Trading Volume per transaction Charts */}
-            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`} data-title="Trading Volume Per Transaction">
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}
