@@ -18,6 +18,12 @@ const TAB_EXPORT_FILENAME_SEGMENTS = [
   "Profit_Risk_Management",
 ] as const;
 
+const TAB_EXPORT_HEADER_TITLES = [
+  "General Overview",
+  "Holdings",
+  "Profit & Risk Management",
+] as const;
+
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 const PDF_EXPORT_TOP_MARGIN_MM = 10;
 const PDF_EXPORT_SECTION_GAP_MM = 10;
@@ -110,6 +116,7 @@ export default function WalletsComparisionPage() {
     }
 
     const activeSegment = TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
+    const activeHeaderTitle = TAB_EXPORT_HEADER_TITLES[activeTab] ?? `Tab ${activeTab + 1}`;
     const { width, height } = exportTarget.getBoundingClientRect();
     if (width <= 0 || height <= 0) {
       return;
@@ -140,7 +147,7 @@ export default function WalletsComparisionPage() {
         <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
           <div>
             <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px;font-weight:600;">Wallet Comparison Report</div>
-            <div style="font-size:24px;font-weight:700;line-height:1.2;">Wallet Comparison Report - General Overview</div>
+            <div style="font-size:24px;font-weight:700;line-height:1.2;">Wallet Comparison Report - ${activeHeaderTitle}</div>
           </div>
           <div style="min-width:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;font-weight:600;">Generated Date</div>
@@ -186,20 +193,18 @@ export default function WalletsComparisionPage() {
       }
 
       for (const section of sections) {
-        const sectionTitle = section.getAttribute("data-title");
-        if (sectionTitle) {
-          pdf.setFontSize(14);
-          pdf.setFont("helvetica", "bold");
-          pdf.text(sectionTitle, 14, currentY);
-          currentY += 8;
-        }
+        const sectionTitle = section.getAttribute("data-title")?.trim() ?? "";
+        const titleHeight = sectionTitle ? 8 : 0;
 
         const htmlTitleElement = section.querySelector<HTMLElement>(".hide-on-print-title");
-        const previousDisplay = htmlTitleElement?.style.display ?? "";
+        const previousStyleAttribute = htmlTitleElement
+          ? htmlTitleElement.getAttribute("style")
+          : null;
 
         if (htmlTitleElement) {
-          htmlTitleElement.style.display = "none";
+          htmlTitleElement.style.setProperty("display", "none", "important");
         }
+
         let canvas: HTMLCanvasElement;
         try {
           canvas = await html2canvas(section, {
@@ -223,7 +228,11 @@ export default function WalletsComparisionPage() {
           });
         } finally {
           if (htmlTitleElement) {
-            htmlTitleElement.style.display = previousDisplay;
+            if (previousStyleAttribute === null) {
+              htmlTitleElement.removeAttribute("style");
+            } else {
+              htmlTitleElement.setAttribute("style", previousStyleAttribute);
+            }
           }
         }
 
@@ -233,16 +242,18 @@ export default function WalletsComparisionPage() {
 
         const imgData = canvas.toDataURL("image/png");
         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const blockHeight = imgHeight + titleHeight;
 
-        if (currentY + imgHeight > pageHeight - PDF_EXPORT_TOP_MARGIN_MM) {
+        if (currentY + blockHeight > pageHeight - PDF_EXPORT_TOP_MARGIN_MM) {
           pdf.addPage();
           currentY = PDF_EXPORT_TOP_MARGIN_MM;
-          if (sectionTitle) {
-            pdf.setFontSize(14);
-            pdf.setFont("helvetica", "bold");
-            pdf.text(sectionTitle, 14, currentY);
-            currentY += 8;
-          }
+        }
+
+        if (sectionTitle) {
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(sectionTitle, 14, currentY);
+          currentY += titleHeight;
         }
 
         pdf.addImage(imgData, "PNG", 0, currentY, pdfWidth, imgHeight);
