@@ -177,32 +177,44 @@ const app = new Hono()
     "/auth/solana/nounce",
     validate("json", solanaNounceRequestSchema),
     async (c) => {
-      const { pubKey } = c.req.valid("json");
+      try {
+        const { pubKey } = c.req.valid("json");
 
-      const existingWalletUser =
-        await userService.findUserByWalletAddress(pubKey);
+        const existingWalletUser =
+          await userService.findUserByWalletAddress(pubKey);
 
-      if (existingWalletUser) {
-        const nounce = await userService.updateWalletLoginNounce(
-          existingWalletUser.user.id,
-        );
+        if (existingWalletUser) {
+          const nounce = await userService.updateWalletLoginNounce(
+            existingWalletUser.user.id,
+          );
+          return c.json(
+            {
+              signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+              nounce,
+            },
+            statusCode.Ok,
+          );
+        }
+
+        const { nounce } = await userService.createUserWithWallet(pubKey);
         return c.json(
           {
             signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
             nounce,
           },
-          statusCode.Ok,
+          statusCode.Created,
+        );
+      } catch (err) {
+        if (err instanceof Error && err.message === "WALLET_ALREADY_LINKED") {
+          return c.json(setErr("WALLET_ALREADY_LINKED"), 409);
+        }
+
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
         );
       }
-
-      const { nounce } = await userService.createUserWithWallet(pubKey);
-      return c.json(
-        {
-          signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
-          nounce,
-        },
-        statusCode.Created,
-      );
     },
   )
   .post(

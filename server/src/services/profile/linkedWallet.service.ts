@@ -16,6 +16,14 @@ export async function getUserLinkedWallets(userId: string) {
     };
 }
 
+export async function doesWalletLinked(walletAddress: string) {
+    const rows = await db.select()
+        .from(userLinkedWallets)
+        .where(eq(userLinkedWallets.walletAddress, walletAddress));
+
+    return rows.length > 0;
+}
+
 export async function linkWalletToUser(userId: string, walletAddress: string) {
     const rows = await db.select()
         .from(userLinkedWallets)

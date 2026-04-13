@@ -89,6 +89,8 @@ const ERROR = {
   EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email or password was incorrect",
   FAILED_TO_FETCH_REQUESTED_DATA: "Failed to fetch requested data",
   GOOGLE_VERIFICATION_FAILED: "Google authentication failed. Please try again.",
+  WALLET_ALREADY_LINKED:
+    "This wallet is already linked to an existing user.",
   WALLET_VERIFICATION_FAILED: "Wallet verification failed. Please try again.",
   WALLET_NONCE_FAILED:
     "Failed to initiate wallet authentication. Please try again.",

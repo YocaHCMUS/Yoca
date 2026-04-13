@@ -9,7 +9,8 @@ import {
 
 import { SOLANA_LOGIN_NOUNCE_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { authAccounts, users } from "@sv/db/schema.js";
+import { authAccounts, userLinkedWallets, users } from "@sv/db/schema.js";
+import { doesWalletLinked } from "@sv/services/profile/linkedWallet.service.js";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 
@@ -128,6 +129,11 @@ export async function findUserByWalletAddress(pubKey: string) {
 }
 
 export async function createUserWithWallet(pubKey: string) {
+  const linked = await doesWalletLinked(pubKey);
+  if (linked) {
+    throw new Error("WALLET_ALREADY_LINKED");
+  }
+
   let userId = "";
   const nounce = crypto.randomUUID();
   await db.transaction(async (tx) => {
@@ -140,7 +146,14 @@ export async function createUserWithWallet(pubKey: string) {
       nounceExpiredAt: new Date(Date.now() + SOLANA_LOGIN_NOUNCE_TTL_MS),
     });
     userId = newUser.id;
+
+    await tx.insert(userLinkedWallets).values({
+      userId: newUser.id,
+      walletAddress: pubKey,
+    });
   });
+
+
   return { userId, nounce };
 }
 

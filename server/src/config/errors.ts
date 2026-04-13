@@ -3,6 +3,7 @@ export const ErrCodes = {
   failedToFetchRequestedData: "FAILED_TO_FETCH_REQUESTED_DATA",
   emailAlreadyExisted: "EMAIL_ALREADY_EXISTED",
   emailOrPasswordWasIncorrect: "EMAIL_OR_PASSWORD_WAS_INCORRECT",
+  walletAlreadyLinked: "WALLET_ALREADY_LINKED",
   walletVerificationFailed: "WALLET_VERIFICATION_FAILED",
   walletNonceFailed: "WALLET_NONCE_FAILED",
   googleVerificationFailed: "GOOGLE_VERIFICATION_FAILED",

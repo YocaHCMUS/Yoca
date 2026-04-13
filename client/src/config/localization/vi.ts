@@ -723,6 +723,8 @@ export const translation = defineTranslation({
     EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email hoặc mật khẩu không đúng",
     FAILED_TO_FETCH_REQUESTED_DATA: "Không thể lấy dữ liệu yêu cầu",
     GOOGLE_VERIFICATION_FAILED: "Xác thực Google thất bại. Vui lòng thử lại.",
+    WALLET_ALREADY_LINKED:
+      "Ví này đã được liên kết với một người dùng khác.",
     WALLET_VERIFICATION_FAILED: "Xác thực ví thất bại. Vui lòng thử lại.",
     WALLET_NONCE_FAILED: "Không thể khởi tạo xác thực ví. Vui lòng thử lại.",
     INTERNAL_SERVER_ERR: "Có sự cố với máy chủ. Vui lòng thử lại sau.",
