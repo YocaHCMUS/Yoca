@@ -263,9 +263,16 @@ export default function ProfileSettingsTab() {
                         </div>
                     ))}
                 </div>
-                {passwordEditorOpen ? (
-                    <div className={styles.passwordEditor}>
-                        <div className={styles.row}>
+                <ComposedModal
+                    open={passwordEditorOpen}
+                    onClose={() => setPasswordEditorOpen(false)}
+                >
+                    <ModalHeader
+                        title={hasPassword ? "Change password" : "Add password"}
+                        label="Login methods"
+                    />
+                    <ModalBody>
+                        <div>
                             {hasPassword ? (
                                 <PasswordInput
                                     id="profile-settings-current-password"
@@ -290,21 +297,21 @@ export default function ProfileSettingsTab() {
                                 className={styles.input}
                             />
                         </div>
-                        <div className={styles.actionRow}>
-                            <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
-                                Save password
-                            </Button>
-                            <Button
-                                kind="secondary"
-                                onClick={() => setPasswordEditorOpen(false)}
-                                disabled={passwordState.loading}
-                            >
-                                Cancel
-                            </Button>
-                            {passwordState.loading ? <InlineLoading description="Updating password" status="active" /> : null}
-                        </div>
-                    </div>
-                ) : null}
+                        {passwordState.loading ? <InlineLoading description="Updating password" status="active" /> : null}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button
+                            kind="secondary"
+                            onClick={() => setPasswordEditorOpen(false)}
+                            disabled={passwordState.loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
+                            Save password
+                        </Button>
+                    </ModalFooter>
+                </ComposedModal>
                 {passwordState.error ? (
                     <InlineNotification
                         className={styles.statusMessage}

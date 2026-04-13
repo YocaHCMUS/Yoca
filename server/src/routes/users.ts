@@ -119,7 +119,8 @@ const app = new Hono()
           statusCode.Unauthorized,
         );
       }
-      const token = await setAuthToken(c, passwordUser.userId);
+      const user = await userService.getUserById(passwordUser.userId);
+      const token = await setAuthToken(c, passwordUser.userId, user?.displayName);
       return c.json(
         {
           message: messageText.LoggedInSuccessfully,
@@ -232,7 +233,7 @@ const app = new Hono()
         return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
-      const token = await setAuthToken(c, account.user.id);
+      const token = await setAuthToken(c, account.user.id, account.user.displayName);
 
       return c.json(
         {
@@ -258,7 +259,19 @@ const app = new Hono()
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
 
-      return c.json(parsedPayload.data, statusCode.Ok);
+      const user = await userService.getUserById(parsedPayload.data.id);
+      if (!user) {
+        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+      }
+
+      return c.json(
+        {
+          id: parsedPayload.data.id,
+          exp: parsedPayload.data.exp,
+          displayName: user.displayName,
+        } satisfies UserPayload,
+        statusCode.Ok,
+      );
     } catch (err) {
       console.error(err);
       return c.json(

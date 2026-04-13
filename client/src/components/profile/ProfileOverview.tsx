@@ -59,6 +59,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         ) : (
                             <>
                                 <h2>{data.displayName}</h2>
+                                {data.userId ? <p className={styles.overviewUid}>UID: {data.userId}</p> : null}
                                 <Tag type={ACCOUNT_TIER_TAG_KIND[data.accountTier]}>
                                     {ACCOUNT_TIER_LABELS[data.accountTier]}
                                 </Tag>

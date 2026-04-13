@@ -6,6 +6,7 @@ export type ProfileAccountTier = "basic" | "premium" | "pro" | "enterprise";
 export interface ProfileOverviewData {
     avatarUrl: string;
     displayName: string;
+    userId?: string;
     accountTier: ProfileAccountTier;
     period: TimePeriod;
     totalNetWorthUsd: number;

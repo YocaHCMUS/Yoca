@@ -80,7 +80,8 @@ export function ProfilePortfolioTab({
 
         return {
             avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
-            displayName: user?.displayName?.trim() || user?.userId || (linkedWalletAddresses.length === 1 ? formatAddress(linkedWalletAddresses[0]) : "Guest"),
+            displayName: user?.displayName?.trim() || "Guest",
+            userId: user?.userId,
             accountTier: "pro",
             period,
             totalNetWorthUsd,
