@@ -25,17 +25,8 @@ export async function doesWalletLinked(walletAddress: string) {
 }
 
 export async function linkWalletToUser(userId: string, walletAddress: string) {
-    const rows = await db.select()
-        .from(userLinkedWallets)
-        .where(
-            and(
-                eq(userLinkedWallets.userId, userId),
-                eq(userLinkedWallets.walletAddress, walletAddress)
-            )
-        );
-
-    if (rows.length > 0) {
-        throw new Error("Wallet already linked to user");
+    if (await doesWalletLinked(walletAddress)) {
+        throw new Error("Wallet is already linked to a user");
     }
 
     return await db.insert(userLinkedWallets).values({
@@ -45,6 +36,10 @@ export async function linkWalletToUser(userId: string, walletAddress: string) {
 }
 
 export async function unlinkWalletFromUser(userId: string, walletAddress: string) {
+    if (!await doesWalletLinked(walletAddress)) {
+        throw new Error("Link does not exist");
+    }
+
     return await db.delete(userLinkedWallets)
         .where(
             and(
