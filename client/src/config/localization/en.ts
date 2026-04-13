@@ -98,6 +98,14 @@ const ERROR = {
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
   INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
+  PASSWORD_AUTH_NOT_FOUND: "Password auth method is not configured for this account.",
+  PASSWORD_ALREADY_SET: "Password login is already configured for this account.",
+  CURRENT_PASSWORD_INVALID: "Current password is invalid.",
+  EMAIL_ALREADY_IN_USE: "Email is already in use by another account.",
+  ACCOUNT_DELETE_CONFIRM_MISMATCH:
+    "Account deletion confirmation text does not match.",
+  ACCOUNT_DELETE_FORBIDDEN:
+    "Account deletion request is not authorized. Please try again.",
   HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
     "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:

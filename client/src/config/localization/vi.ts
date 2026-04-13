@@ -733,6 +733,16 @@ export const translation = defineTranslation({
     VALIDATION_ERR:
       "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
     INVALID_TOKEN_PAYLOAD: "Dữ liệu token không hợp lệ.",
+    PASSWORD_AUTH_NOT_FOUND:
+      "Tài khoản chưa cấu hình phương thức đăng nhập bằng mật khẩu.",
+    PASSWORD_ALREADY_SET:
+      "Tài khoản đã có phương thức đăng nhập bằng mật khẩu.",
+    CURRENT_PASSWORD_INVALID: "Mật khẩu hiện tại không đúng.",
+    EMAIL_ALREADY_IN_USE: "Email này đang được sử dụng bởi tài khoản khác.",
+    ACCOUNT_DELETE_CONFIRM_MISMATCH:
+      "Nội dung xác nhận xóa tài khoản không khớp.",
+    ACCOUNT_DELETE_FORBIDDEN:
+      "Yêu cầu xóa tài khoản chưa được xác thực hợp lệ.",
     HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
       "Dữ liệu biểu đồ hàng giờ không thể vượt quá 90 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:

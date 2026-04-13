@@ -1,0 +1,123 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-05;
+}
+
+.section {
+    background: $layer-01;
+    border: 1px solid $border-subtle-01;
+    border-radius: 8px;
+    padding: $spacing-05;
+}
+
+.sectionTitle {
+    margin: 0 0 $spacing-03;
+    font-size: 1rem;
+}
+
+.row {
+    display: flex;
+    gap: $spacing-04;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.input {
+    flex: 1;
+    min-width: 220px;
+}
+
+.actionRow {
+    display: flex;
+    align-items: center;
+    gap: $spacing-03;
+    flex-wrap: wrap;
+    margin-top: $spacing-04;
+}
+
+.methodList {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-03;
+}
+
+.methodRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-04;
+    border: 1px solid $border-subtle-01;
+    border-radius: 8px;
+    padding: $spacing-03 $spacing-04;
+    background: $layer-02;
+}
+
+.methodLabel {
+    margin: 0;
+    font-weight: 600;
+}
+
+.methodValue {
+    margin: $spacing-01 0 0;
+    color: $text-secondary;
+    word-break: break-all;
+}
+
+.methodActions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-03;
+}
+
+.statusConnected {
+    color: $support-success;
+    font-weight: 600;
+}
+
+.statusMuted {
+    color: $text-secondary;
+}
+
+.passwordEditor {
+    margin-top: $spacing-04;
+    padding-top: $spacing-04;
+    border-top: 1px solid $border-subtle-01;
+}
+
+.dangerSection {
+    border-color: $support-error;
+}
+
+.dangerHint {
+    color: $text-secondary;
+    margin: 0 0 $spacing-04;
+}
+
+.warningText {
+    color: $support-error;
+    margin: 0;
+}
+
+.statusMessage {
+    margin-top: $spacing-03;
+}
+
+@media (max-width: 800px) {
+    .input {
+        min-width: 100%;
+    }
+
+    .methodRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .methodActions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

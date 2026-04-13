@@ -1,6 +1,9 @@
 import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import { setErr } from "@sv/config/errors.js";
 import {
+    deleteAccountSchema,
+    passwordUpdateSchema,
+    profileIdentityUpdateSchema,
     solanaBase58Schema,
     validate,
 } from "@sv/middlewares/validation.js";
@@ -9,6 +12,13 @@ import {
     linkWalletToUser,
     unlinkWalletFromUser,
 } from "@sv/services/profile/linkedWallet.service.js";
+import {
+    addPasswordAuthMethod,
+    changePassword,
+    deleteUserAccount,
+    getUserSettingsSnapshot,
+    updateUserIdentity,
+} from "@sv/services/users.js";
 import { statusCode } from "@sv/util/responses.js";
 import {
     address,
@@ -18,9 +28,9 @@ import {
     type SignatureBytes,
 } from "@solana/kit";
 import { Hono } from "hono";
+import { deleteCookie } from "hono/cookie";
 import { jwt } from "hono/jwt";
 import { z } from "zod";
-import type { HonoJsonWebKey } from "hono/utils/jwt/jws";
 
 const honoJwt = jwt({
     alg: "HS256",
@@ -44,6 +54,12 @@ const linkedWalletParamSchema = z.object({
 
 const LINK_WALLET_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const linkWalletChallenges = new Map<string, { nonce: string; expiresAt: number }>();
+const ACCOUNT_DELETE_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const accountDeleteChallenges = new Map<string, { token: string; expiresAt: number }>();
+
+function getUserIdFromPayload(payload: { id?: string } | undefined): string | null {
+    return payload?.id ?? null;
+}
 
 function challengeKey(userId: string, walletAddress: string): string {
     return `${userId}:${walletAddress}`;
@@ -66,10 +82,191 @@ async function verifySolanaMessageSignature(
 }
 
 const app = new Hono()
+    .get("/settings", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+
+            if (!userId) {
+                return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+            }
+
+            const snapshot = await getUserSettingsSnapshot(userId);
+            return c.json(snapshot, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get profile settings", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .patch(
+        "/settings/identity",
+        honoJwt,
+        validate("json", profileIdentityUpdateSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const body = c.req.valid("json");
+                const snapshot = await updateUserIdentity(userId, body);
+                return c.json(snapshot, statusCode.Ok);
+            } catch (err) {
+                if (err instanceof Error && err.message === "EMAIL_ALREADY_IN_USE") {
+                    return c.json(setErr("EMAIL_ALREADY_IN_USE"), 409);
+                }
+
+                console.error("Failed to update profile identity", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        },
+    )
+    .patch(
+        "/settings/password",
+        honoJwt,
+        validate("json", passwordUpdateSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const { currentPassword, newPassword } = c.req.valid("json");
+                const snapshot = await getUserSettingsSnapshot(userId);
+
+                if (snapshot.hasPassword) {
+                    if (!currentPassword) {
+                        return c.json(setErr("PASSWORD_AUTH_NOT_FOUND"), statusCode.BadRequest);
+                    }
+
+                    await changePassword(userId, currentPassword, newPassword);
+                } else {
+                    const email = snapshot.email?.trim().toLowerCase();
+                    if (!email) {
+                        return c.json(setErr("ACCOUNT_DELETE_FORBIDDEN"), statusCode.BadRequest);
+                    }
+
+                    await addPasswordAuthMethod(userId, email, newPassword);
+                }
+
+                return c.json({ message: "Password updated successfully" }, statusCode.Ok);
+            } catch (err) {
+                if (err instanceof Error && err.message === "PASSWORD_AUTH_NOT_FOUND") {
+                    return c.json(setErr("PASSWORD_AUTH_NOT_FOUND"), statusCode.BadRequest);
+                }
+
+                if (err instanceof Error && err.message === "PASSWORD_ALREADY_SET") {
+                    return c.json(setErr("PASSWORD_ALREADY_SET"), 409);
+                }
+
+                if (err instanceof Error && err.message === "CURRENT_PASSWORD_INVALID") {
+                    return c.json(setErr("CURRENT_PASSWORD_INVALID"), statusCode.Unauthorized);
+                }
+
+                if (err instanceof Error && err.message === "EMAIL_ALREADY_IN_USE") {
+                    return c.json(setErr("EMAIL_ALREADY_IN_USE"), 409);
+                }
+
+                console.error("Failed to update password", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        },
+    )
+    .get("/settings/auth-methods", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+
+            if (!userId) {
+                return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+            }
+
+            const snapshot = await getUserSettingsSnapshot(userId);
+            return c.json({ authMethods: snapshot.authMethods }, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get auth methods", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .post("/settings/account/challenge", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+
+            if (!userId) {
+                return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+            }
+
+            const token = crypto.randomUUID();
+            accountDeleteChallenges.set(userId, {
+                token,
+                expiresAt: Date.now() + ACCOUNT_DELETE_CHALLENGE_TTL_MS,
+            });
+
+            return c.json({ challengeToken: token }, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to create account deletion challenge", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .delete(
+        "/settings/account",
+        honoJwt,
+        validate("json", deleteAccountSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const { confirmText, challengeToken } = c.req.valid("json");
+                const challenge = accountDeleteChallenges.get(userId);
+                const challengeValid = Boolean(
+                    challengeToken &&
+                    challenge &&
+                    challenge.token === challengeToken &&
+                    challenge.expiresAt >= Date.now(),
+                );
+
+                if (!challengeValid) {
+                    return c.json(setErr("ACCOUNT_DELETE_FORBIDDEN"), 403);
+                }
+
+                if (confirmText !== "DELETE MY ACCOUNT") {
+                    return c.json(
+                        setErr("ACCOUNT_DELETE_CONFIRM_MISMATCH"),
+                        statusCode.BadRequest,
+                    );
+                }
+
+                await deleteUserAccount(userId);
+                accountDeleteChallenges.delete(userId);
+                deleteCookie(c, AUTH_COOKIE_NAME);
+
+                return c.json({ message: "Account deleted successfully" }, statusCode.Ok);
+            } catch (err) {
+                if (err instanceof Error && err.message === "ACCOUNT_DELETE_FORBIDDEN") {
+                    return c.json(setErr("ACCOUNT_DELETE_FORBIDDEN"), 403);
+                }
+
+                console.error("Failed to delete account", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        },
+    )
     .get("/linked-wallets", honoJwt, async (c) => {
         try {
             const payload = c.get("jwtPayload") as { id?: string } | undefined;
-            const userId = payload?.id;
+            const userId = getUserIdFromPayload(payload);
 
             if (!userId) {
                 return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
@@ -129,7 +326,7 @@ const app = new Hono()
         async (c) => {
             try {
                 const payload = c.get("jwtPayload") as { id?: string } | undefined;
-                const userId = payload?.id;
+                const userId = getUserIdFromPayload(payload);
 
                 if (!userId) {
                     return c.json(
@@ -202,7 +399,7 @@ const app = new Hono()
         async (c) => {
             try {
                 const payload = c.get("jwtPayload") as { id?: string } | undefined;
-                const userId = payload?.id;
+                const userId = getUserIdFromPayload(payload);
 
                 if (!userId) {
                     return c.json(

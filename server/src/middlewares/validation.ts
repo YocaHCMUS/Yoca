@@ -46,6 +46,61 @@ export const userVerificationSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const strongPasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+  .regex(/[a-z]/, "Password must include at least one lowercase letter")
+  .regex(/[0-9]/, "Password must include at least one number");
+
+export const authProviderSchema = z.enum([
+  "password",
+  "google",
+  "github",
+  "solana",
+  "other",
+]);
+
+export const providerQuerySchema = z.object({
+  provider: authProviderSchema.optional(),
+});
+
+export const profileIdentityUpdateSchema = z
+  .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1, "Display name cannot be empty")
+      .max(128)
+      .nullable()
+      .optional(),
+    email: z
+      .email("Invalid email format")
+      .transform((value) => value.trim().toLowerCase())
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (value) => value.displayName !== undefined || value.email !== undefined,
+    "At least one field must be provided",
+  );
+
+export const passwordUpdateSchema = z.object({
+  currentPassword: z.string().min(1).optional(),
+  newPassword: strongPasswordSchema,
+});
+
+export const deleteAccountSchema = z.object({
+  confirmText: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "DELETE MY ACCOUNT",
+      "Confirm text must exactly match DELETE MY ACCOUNT",
+    ),
+  challengeToken: z.string().uuid().optional(),
+});
+
 export const googleTokenSchema = z.object({
   token: z.string().min(1),
 });
@@ -126,7 +181,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-            `\n... (truncated ${safeStr.length - maxLog} chars)`,
+          `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);
