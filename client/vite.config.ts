@@ -7,7 +7,6 @@ import svgr from "vite-plugin-svgr";
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, ".");
-  const proxyTarget = env.VITE_SERVER_PROXY_TARGET || "http://localhost:4000";
 
   return defineConfig({
     css: {
@@ -21,18 +20,6 @@ export default ({ mode }: { mode: string }) => {
     server: {
       port: 3000,
       allowedHosts: true,
-      proxy: {
-        "/api": {
-          target: proxyTarget,
-          changeOrigin: true,
-          secure: false,
-        },
-        "/webhook": {
-          target: proxyTarget,
-          changeOrigin: true,
-          secure: false,
-        },
-      },
       watch: {
         ignored: ["build/**"],
       },

@@ -5,8 +5,9 @@ import {
   userAlertPeriods,
   userAlertTypes,
 } from "@sv/db/alert.js";
+import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
-import type { ValidationTargets } from "hono";
+import type { Context, Next, ValidationTargets } from "hono";
 import { jwt } from "hono/jwt";
 import { validator } from "hono/validator";
 import z from "zod";
@@ -118,7 +119,6 @@ export const updateAlertSchema = z.object({
     .min(1, "At least one condition is required"),
 });
 
-// Helper to validate using Zod schema and return if errors happen before the routes even run
 export function validate<
   T extends keyof ValidationTargets,
   U extends z.ZodType,
@@ -139,11 +139,14 @@ export function validate<
   });
 }
 
-export const honoJwt = jwt({
-  alg: "HS256",
-  secret: process.env.JWT_SECRET!,
-  cookie: AUTH_COOKIE_NAME,
-});
+export const honoJwt = (c: Context, next: Next) => {
+  const jwtMiddleware = jwt({
+    secret: env.JWT_SECRET,
+    alg: "HS256",
+    cookie: AUTH_COOKIE_NAME,
+  });
+  return jwtMiddleware(c, next);
+};
 
 // Check if result schema was like expected. Useful for debugging
 export async function getTrackedApiResult<T extends z.ZodType>(
@@ -181,3 +184,32 @@ export async function getTrackedApiResult<T extends z.ZodType>(
     return;
   }
 }
+
+export const envSchema = z.object({
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
+  POSTGRES_DB_URL: z.url("Invalid database URL"),
+  JWT_SECRET: z.string().min(1, "Jwt is required"),
+  GOOGLE_CLIENT_ID: z.string().min(1, "Google client id is required"),
+  SERVER_PORT: z.coerce.number().default(4000),
+
+  // API Keys and URLs
+  COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
+  COINGECKO_API_KEY: z.string(),
+  BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
+  BIRDEYE_API_KEY: z.string(),
+  HELIUS_API_KEY: z.string(),
+  HELIUS_WEBHOOK_AUTH_KEY: z.string(),
+  HELIUS_WEBHOOK_ID: z.string(),
+  MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
+  MORALIS_API_KEY: z.string(),
+
+  // Client domains
+  CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),
+  CLIENT_DEV_DOMAIN: z.url().default("http://localhost:3000"),
+  CLIENT_DEV_PREVIEW_DOMAIN: z.url().default("http://localhost:4173"),
+  CLIENT_PROD_DOMAIN: z.url(),
+});
+
+export type Env = z.infer<typeof envSchema>;

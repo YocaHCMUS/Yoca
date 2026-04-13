@@ -1,4 +1,4 @@
-import "@sv/util/load-env.js";
+import env from "@sv/util/load-env.js";
 
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
@@ -17,14 +17,18 @@ import walletTags from "@sv/routes/walletTags.route.js";
 import webhook from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
-import { startTokenPolling } from "./services/tokens/token-data-polling";
 
 // intialize OpenAPIHono with default error handling
 const app = new Hono()
   .use("*", logger())
   .use("*", requestContextMiddleware)
-  .use("/api/*", cors({ origin: clientDomains, credentials: true }))
+  .use(
+    "/api/*",
+    cors({ origin: clientDomains, credentials: true }),
+    ...(env.NODE_ENV == "development" ? [csrf({ origin: clientDomains })] : []),
+  )
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }))
   .route("/api/users", users)
@@ -40,7 +44,7 @@ const app = new Hono()
   .route("/api/alerts", alerts)
   .route("/webhook", webhook);
 
-startTokenPolling();
+// startTokenPolling();
 
 // Server
 serve(

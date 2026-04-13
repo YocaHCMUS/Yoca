@@ -4,7 +4,6 @@ import type {
   ClientRequestOptions,
   ClientResponse,
 } from "hono/client";
-import type { Endpoint, ResponseFormat } from "hono/types";
 import useSWR from "swr";
 
 type GetInput<T> =
@@ -20,20 +19,6 @@ type GetEndpoint<T> =
       ? E
       : never
     : never;
-
-type ClientResponseOfEndpoint<T extends Endpoint = Endpoint> = T extends {
-  output: infer O;
-  outputFormat: infer F;
-  status: infer S;
-}
-  ? ClientResponse<
-      O,
-      S extends number ? S : never,
-      F extends ResponseFormat ? F : never
-    >
-  : never;
-
-type GetResponse<T> = ClientResponseOfEndpoint<GetEndpoint<T>>;
 
 type HasRequiredKeys<T> = T extends object
   ? {
@@ -60,9 +45,12 @@ type UseGetConfig<Success, Transformed> = {
 };
 
 export function useGet<
-  T extends { $get: any; $url: any },
+  T extends {
+    $get: (...params: any[]) => Promise<ClientResponse<any, any, any>>;
+    $url: (...params: any[]) => any;
+  },
   SuccessStatus extends number,
-  Response = GetResponse<T>,
+  Response = Awaited<ReturnType<T["$get"]>>,
   SuccessResponseType = SuccessResponse<Response, SuccessStatus>,
   Success = SuccessJson<SuccessResponseType>,
   Transformed = Success,

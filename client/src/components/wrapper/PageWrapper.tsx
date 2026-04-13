@@ -58,9 +58,14 @@ type PageWrapperProps = {
     onClose: () => void;
   };
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
+  noMarketTickers?: boolean;
 };
 
-export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
+export function PageWrapper({
+  children,
+  extraHeaderPanel,
+  noMarketTickers,
+}: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
@@ -287,11 +292,13 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
         </SideNav>
       </Header>
 
-      <MarketTicker
-        className={styles.marketTicker}
-        label={tr("marketPage.trending")}
-        icon={<FireFill size={16} fill={cds.supportError} />}
-      />
+      {!noMarketTickers && (
+        <MarketTicker
+          className={styles.marketTicker}
+          label={tr("marketPage.trending")}
+          icon={<FireFill size={16} fill={cds.supportError} />}
+        />
+      )}
 
       <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}

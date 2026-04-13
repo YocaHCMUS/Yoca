@@ -35,7 +35,7 @@ const app = new Hono()
         : alerts;
       return c.json(result, statusCode.Ok);
     } catch (err) {
-      console.error("Alerts: GET failed:", err);
+      console.log(err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
@@ -66,7 +66,7 @@ const app = new Hono()
       }
       return c.json(row, statusCode.Created);
     } catch (err) {
-      console.error("Alerts: POST failed:", err);
+      console.log(err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
@@ -88,7 +88,7 @@ const app = new Hono()
         return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
       return c.json(row, statusCode.Ok);
     } catch (err) {
-      console.error("Alerts: GET by id failed:", err);
+      console.log(err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
@@ -112,7 +112,7 @@ const app = new Hono()
       const updated = await alertsService.updateAlert(id, body);
       return c.json(updated, statusCode.Ok);
     } catch (err) {
-      console.error("Alerts: PUT failed:", err);
+      console.log(err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
@@ -135,7 +135,7 @@ const app = new Hono()
       await alertsService.deleteAlert(id);
       return c.json({ message: "Deleted" }, statusCode.Ok);
     } catch (err) {
-      console.error("Alerts: DELETE failed:", err);
+      console.log(err);
       return c.json({ error: "Internal server error" }, 500);
     }
   });
