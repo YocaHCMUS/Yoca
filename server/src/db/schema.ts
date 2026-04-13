@@ -21,6 +21,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  serial,
   smallint,
   text,
   timestamp,
@@ -802,6 +803,14 @@ export const walletUserTags = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.walletAddress] })],
 );
 
+/** Wallets followed for Helius webhook-driven alerts */
+export const followedWallets = pgTable("followed_wallets", {
+  id: serial("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  label: text("label"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
   {
@@ -912,6 +921,8 @@ export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
+export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
+export type FollowedWalletRow = typeof followedWallets.$inferSelect;
 
 // #endregion
 

@@ -2,6 +2,7 @@ import "@sv/util/load-env.js";
 
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
+import alerts from "@sv/routes/alerts.route.js";
 import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
@@ -39,6 +40,7 @@ const app = new Hono()
   .route("/api/charts", chartRoutes)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
+  .route("/api/alerts", alerts)
   .route("/api/trades", trades)
   .route("/webhook", webhook);
 

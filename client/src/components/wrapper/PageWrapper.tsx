@@ -105,8 +105,8 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.alerts")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
         <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
