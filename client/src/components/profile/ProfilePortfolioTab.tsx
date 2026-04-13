@@ -137,6 +137,7 @@ export function ProfilePortfolioTab({
             <ProfileOverview
                 data={overviewData}
                 onPeriodChange={onPeriodChange}
+                loading={loading}
             />
             {user?.userId && (
                 <Table
@@ -233,6 +234,7 @@ export function ProfilePortfolioTab({
                             </button>
                         </div>
                     }
+                    loading={loading}
                 />
             )
                 || (
