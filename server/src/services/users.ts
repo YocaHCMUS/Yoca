@@ -150,6 +150,7 @@ export async function createUserWithWallet(pubKey: string) {
     await tx.insert(userLinkedWallets).values({
       userId: newUser.id,
       walletAddress: pubKey,
+      isAuthWallet: true,
     });
   });
 

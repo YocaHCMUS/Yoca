@@ -14,6 +14,7 @@ import {
     requestLinkWalletChallenge,
     unlinkWalletAddress,
 } from "@/services/profile/profileApi";
+import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
 import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ import ProfileUnavailableState from "@/components/profile/ProfileUnavailableStat
 
 interface ProfilePortfolioTabProps {
     walletAddresses: string[];
+    linkedWallets: LinkedWalletRowPayload[];
     period: TimePeriod;
     onPeriodChange: (period: TimePeriod) => void;
 }
@@ -43,18 +45,23 @@ function formatAddress(address: string): string {
 
 export function ProfilePortfolioTab({
     walletAddresses,
+    linkedWallets,
     period,
     onPeriodChange,
 }: ProfilePortfolioTabProps) {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [linkedWalletAddresses, setLinkedWalletAddresses] = useState(walletAddresses);
+    const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
+    const linkedWalletAddresses = useMemo(
+        () => linkedWalletRows.map((wallet) => wallet.walletAddress),
+        [linkedWalletRows],
+    );
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
     const { walletOverviews, setWalletOverviews, loading, error } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
     useEffect(() => {
-        setLinkedWalletAddresses(walletAddresses);
-    }, [walletAddresses]);
+        setLinkedWalletRows(linkedWallets);
+    }, [linkedWallets]);
 
     const overviewData = useMemo<ProfileOverviewData>(() => {
         const totalNetWorthUsd = walletOverviews.reduce(
@@ -87,17 +94,22 @@ export function ProfilePortfolioTab({
     const tableRows = useMemo(
         () =>
             walletOverviews.map((overview) => {
+                const walletMeta = linkedWalletRows.find(
+                    (wallet) => wallet.walletAddress === overview.address,
+                );
                 const walletLabel = formatAddress(overview.address);
+                const authStatus = walletMeta?.isAuthWallet ? "Auth wallet" : "Linked wallet";
 
                 return [
                     overview.address,
                     walletLabel,
                     overview.address,
                     overview.totalAssetValueUsd,
+                    authStatus,
                     overview.address,
                 ];
             }),
-        [walletOverviews],
+        [linkedWalletRows, walletOverviews],
     );
 
     const handleComparisonToggle = (walletId: string, checked: boolean) => {
@@ -114,6 +126,9 @@ export function ProfilePortfolioTab({
         try {
             await unlinkWalletAddress(walletAddress);
             setWalletOverviews(walletOverviews.filter((overview) => overview.address !== walletAddress));
+            setLinkedWalletRows((current) =>
+                current.filter((wallet) => wallet.walletAddress !== walletAddress),
+            );
             setSelectedComparisonWalletAddresses((current) =>
                 current.filter((address) => address !== walletAddress),
             );
@@ -147,6 +162,7 @@ export function ProfilePortfolioTab({
                         "Wallet",
                         "Address",
                         "Net worth",
+                        "Auth",
                         "Actions",
                     ]}
                     initialFilters={{}}
@@ -181,19 +197,26 @@ export function ProfilePortfolioTab({
                             return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
                         },
                         (value) => formatCurrency(Number(value)),
+                        (value) => String(value),
                         (_value, row) => (
                             <div onClick={(event) => event.stopPropagation()}>
                                 <Button
                                     size="sm"
                                     kind="ghost"
-                                    onClick={() => handleUnlinkWallet(String(row[4]))}
+                                    disabled={String(row[4]) === "Auth wallet"}
+                                    title={
+                                        String(row[4]) === "Auth wallet"
+                                            ? "Wallet used for authentication cannot be unlinked"
+                                            : "Unlink wallet"
+                                    }
+                                    onClick={() => handleUnlinkWallet(String(row[5]))}
                                 >
                                     Unlink
                                 </Button>
                             </div>
                         ),
                     ]}
-                    isSortable={[true, true, true, true, false]}
+                    isSortable={[true, true, true, true, true, false]}
                     sortConfigs={{
                         3: { type: SortType.Number },
                     }}
@@ -208,10 +231,10 @@ export function ProfilePortfolioTab({
                                     console.error("[ProfilePortfolioTab] Failed to link wallet:", message);
                                 }}
                                 onSuccess={(walletAddress) => {
-                                    setLinkedWalletAddresses((current) =>
-                                        current.includes(walletAddress)
+                                    setLinkedWalletRows((current) =>
+                                        current.some((wallet) => wallet.walletAddress === walletAddress)
                                             ? current
-                                            : [...current, walletAddress],
+                                            : [...current, { walletAddress, isAuthWallet: false }],
                                     );
                                 }}
                                 action={async ({ publicKey, signMessage, onSuccess: resolveSuccess, onError: resolveError }) => {

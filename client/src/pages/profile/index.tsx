@@ -29,7 +29,7 @@ export default function ProfilePage() {
         period,
     });
     const [loading, setLoading] = useState(false);
-    const { walletAddresses, error: sharedError } = useProfileSharedData({
+    const { walletAddresses, linkedWallets, error: sharedError } = useProfileSharedData({
         setLoading,
     });
 
@@ -40,6 +40,7 @@ export default function ProfilePage() {
                 node: (
                     <ProfilePortfolioTab
                         walletAddresses={walletAddresses}
+                        linkedWallets={linkedWallets}
                         period={period}
                         onPeriodChange={setPeriod}
                     />

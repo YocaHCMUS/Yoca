@@ -213,7 +213,31 @@ const app = new Hono()
 
                 const { walletAddress } = c.req.valid("json");
 
-                await unlinkWalletFromUser(userId, walletAddress);
+                try {
+                    await unlinkWalletFromUser(userId, walletAddress);
+                } catch (error) {
+                    if (
+                        error instanceof Error &&
+                        error.message === "Cannot unlink authentication wallet"
+                    ) {
+                        return c.json(
+                            { error: "Cannot unlink wallet used for authentication" },
+                            409,
+                        );
+                    }
+
+                    if (
+                        error instanceof Error &&
+                        error.message === "Link does not exist"
+                    ) {
+                        return c.json(
+                            { error: "Wallet link does not exist" },
+                            404,
+                        );
+                    }
+
+                    throw error;
+                }
 
                 return c.json(
                     {

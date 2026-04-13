@@ -14,6 +14,7 @@ export const acmsApiCache = pgTable(
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   decimal as dec,
   integer,
@@ -64,6 +65,7 @@ export const userLinkedWallets = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    isAuthWallet: boolean("is_auth_wallet").notNull().default(false),
   },
   (table) => [
     primaryKey({

@@ -16,7 +16,13 @@ interface LinkedWalletsResponse {
     userId: string;
     rows: Array<{
         walletAddress: string;
+        isAuthWallet: boolean;
     }>;
+}
+
+export interface LinkedWalletRowPayload {
+    walletAddress: string;
+    isAuthWallet: boolean;
 }
 
 function formatAddress(address: string): string {
@@ -28,6 +34,11 @@ function formatAddress(address: string): string {
 }
 
 export async function fetchLinkedWalletAddresses(): Promise<string[]> {
+    const linkedWallets = await fetchLinkedWallets();
+    return linkedWallets.map((row) => row.walletAddress);
+}
+
+export async function fetchLinkedWallets(): Promise<LinkedWalletRowPayload[]> {
     const response = await client.api.profile["linked-wallets"].$get();
 
     if (!response.ok) {
@@ -35,7 +46,7 @@ export async function fetchLinkedWalletAddresses(): Promise<string[]> {
     }
 
     const payload = (await response.json()) as LinkedWalletsResponse;
-    return payload.rows.map((row) => row.walletAddress);
+    return payload.rows;
 }
 
 export async function linkNewWallet(walletAddress: string) {
