@@ -26,15 +26,6 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
     const navigate = useNavigate();
     const { data, loading, error } = useProfileWalletTabData({ walletAddresses, period });
 
-    if (loading) {
-        return (
-            <ProfileUnavailableState
-                title="Loading wallet data"
-                description="Fetching wallet table and chart metrics."
-            />
-        );
-    }
-
     if (error) {
         return (
             <ProfileUnavailableState
@@ -102,6 +93,7 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                         navigateToWalletDetail(row);
                     }
                 }}
+                loading={loading}
             />
 
             <div className={styles.sectionCard}>

@@ -59,29 +59,11 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
 
     const swapsRaw = useMemo(() => data.swapsRaw ?? [], [data.swapsRaw]);
 
-    if (loading) {
-        return (
-            <ProfileUnavailableState
-                title="Loading activity"
-                description="Fetching swaps, transfers, and wallet activity."
-            />
-        );
-    }
-
     if (error) {
         return (
             <ProfileUnavailableState
                 title="Activity unavailable"
                 description="Unable to load activity data right now."
-            />
-        );
-    }
-
-    if (walletAddresses.length === 0 || (data.swapTransferRows.length === 0 && data.walletCards.length === 0)) {
-        return (
-            <ProfileUnavailableState
-                title="No activity data"
-                description="No swaps or transfers found for linked wallets in this period."
             />
         );
     }
@@ -137,6 +119,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     setSelectedSwap(swap);
                     setSwapModalOpen(true);
                 }}
+                loading={loading}
             />
 
             <Table
@@ -163,6 +146,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     2: { type: SortType.Number },
                     3: { type: SortType.Date },
                 }}
+                loading={loading}
             />
 
             <div className={styles.sectionCard}>
