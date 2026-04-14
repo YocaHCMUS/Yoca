@@ -81,6 +81,28 @@ export const userLinkedWallets = pgTable(
   ]
 );
 
+export const userTokenWatchlist = pgTable(
+  "user_token_watch_list",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.tokenAddress] }),
+  ]
+)
+
+export const userWalletWatchlist = pgTable(
+  "user_wallet_watch_list",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.walletAddress] }),
+  ]
+)
+
 export const authAccounts = pgTable(
   "auth_accounts",
   {

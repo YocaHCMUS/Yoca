@@ -31,6 +31,7 @@ import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
+import { addAddressToWatchlist, addTokenToWatchlist, getAddressWatchlist, getTokenWatchlist, isAddressInWatchlist, isTokenInWatchlist, removeAddressFromWatchlist, removeTokenFromWatchlist } from "@sv/services/profile/watchList.service";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
@@ -47,12 +48,20 @@ const linkedWalletSchema = z.object({
     signature: z.base64(),
 });
 
-const linkedWalletChallengeSchema = z.object({
+// const linkedWalletChallengeSchema = z.object({
+//     walletAddress: solanaBase58Schema,
+// });
+
+// const linkedWalletParamSchema = z.object({
+//     walletAddress: solanaBase58Schema,
+// });
+
+const solanaWalletAddressParamSchema = z.object({
     walletAddress: solanaBase58Schema,
 });
 
-const linkedWalletParamSchema = z.object({
-    walletAddress: solanaBase58Schema,
+const solanaTokenAddressParamSchema = z.object({
+    tokenAddress: solanaBase58Schema,
 });
 
 const LINK_WALLET_CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -309,7 +318,7 @@ const app = new Hono()
     .post(
         "/linked-wallets/challenge",
         honoJwt,
-        validate("json", linkedWalletChallengeSchema),
+        validate("json", solanaWalletAddressParamSchema),
         async (c) => {
             try {
                 const payload = c.get("jwtPayload") as { id?: string } | undefined;
@@ -422,7 +431,7 @@ const app = new Hono()
     .delete(
         "/linked-wallets",
         honoJwt,
-        validate("json", linkedWalletParamSchema),
+        validate("json", solanaWalletAddressParamSchema),
         async (c) => {
             try {
                 const payload = c.get("jwtPayload") as { id?: string } | undefined;
@@ -475,6 +484,158 @@ const app = new Hono()
                 return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
             }
         },
-    );
+    )
+    .get("/watchlist/addresses", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
 
+            if (!userId) {
+                return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+            }
+            const watchlist = await getAddressWatchlist(userId);
+            return c.json(watchlist, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get address watchlist", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .get("/watchlist/tokens", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+
+            if (!userId) {
+                return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+            }
+            const watchlist = await getTokenWatchlist(userId);
+            return c.json(watchlist, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get token watchlist", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .get(
+        "/watchlist/addresses-check",
+        honoJwt,
+        validate("json", solanaWalletAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const { walletAddress } = c.req.valid("json");
+                const isInWatchlist = await isAddressInWatchlist(userId, walletAddress);
+                return c.json({ isInWatchlist }, statusCode.Ok);
+            } catch (err) {
+                console.error("Failed to check address in watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    .get(
+        "/watchlist/tokens-check",
+        honoJwt,
+        validate("json", solanaTokenAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+                const { tokenAddress } = c.req.valid("json");
+                const isInWatchlist = await isTokenInWatchlist(userId, tokenAddress);
+                return c.json({ isInWatchlist }, statusCode.Ok);
+            }
+            catch (err) {
+                console.error("Failed to check token in watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    .post(
+        "/watchlist/tokens-update",
+        honoJwt,
+        validate("json", solanaTokenAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+                const { tokenAddress } = c.req.valid("json");
+                await addTokenToWatchlist(userId, tokenAddress);
+                return c.json({ message: "Token added to watchlist" }, statusCode.Created);
+            } catch (err) {
+                console.error("Failed to add token to watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    .delete(
+        "/watchlist/tokens-update",
+        honoJwt,
+        validate("json", solanaTokenAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+                const { tokenAddress } = c.req.valid("json");
+                await removeTokenFromWatchlist(userId, tokenAddress);
+                return c.json({ message: "Token removed from watchlist" }, statusCode.Ok);
+            } catch (err) {
+                console.error("Failed to remove token from watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    .post(
+        "/watchlist/addresses-update",
+        honoJwt,
+        validate("json", solanaWalletAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+                const { walletAddress } = c.req.valid("json");
+                await addAddressToWatchlist(userId, walletAddress);
+                return c.json({ message: "Address added to watchlist" }, statusCode.Created);
+            } catch (err) {
+                console.error("Failed to add address to watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    .delete(
+        "/watchlist/addresses-update",
+        honoJwt,
+        validate("json", solanaWalletAddressParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+                const { walletAddress } = c.req.valid("json");
+                await removeAddressFromWatchlist(userId, walletAddress);
+                return c.json({ message: "Address removed from watchlist" }, statusCode.Ok);
+            } catch (err) {
+                console.error("Failed to remove address from watchlist", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        })
+    ;
 export default app;
