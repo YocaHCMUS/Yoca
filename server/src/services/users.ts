@@ -272,7 +272,7 @@ export async function getUserSettingsSnapshot(userId: string) {
   return {
     userId: user.id,
     displayName: user.displayName,
-    email: user.email,
+    email: user.email ? user.email : null,
     authMethods,
     hasPassword: authMethods.includes("password"),
     linkedWallets,

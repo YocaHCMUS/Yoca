@@ -280,7 +280,7 @@ export default function ProfileSettingsTab() {
                                 id="profile-settings-email"
                                 labelText={tr("profileSettings.email") as string}
                                 type="email"
-                                value={email}
+                                value={email ? email : ""} // why does it automatically add in past input?
                                 onChange={(event) => setEmail(event.currentTarget.value)}
                                 className={styles.input}
                             />
