@@ -110,13 +110,13 @@ export default function ProfileSettingsTab() {
             {
                 key: "google",
                 label: "Google Mail OAuth",
-                value: hasGoogle ? "Connected" : "Not connected",
+                value: " ",
                 connected: hasGoogle,
             },
             {
                 key: "solana",
                 label: "Solana Wallet",
-                value: authWallet?.walletAddress || "Not connected",
+                value: authWallet?.walletAddress || " ",
                 connected: hasSolana,
             },
         ];
@@ -243,14 +243,16 @@ export default function ProfileSettingsTab() {
                 <div className={styles.methodList}>
                     {loginMethods.map((method) => (
                         <div key={method.key} className={styles.methodRow}>
-                            <div>
-                                <p className={styles.methodLabel}>{method.label}</p>
-                                <p className={styles.methodValue}>{method.value}</p>
-                            </div>
+                            <p className={styles.methodLabel}>
+                                {method.label}
+                            </p>
+                            {/* <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "1rem", justifyContent: "center" }}> */}
+                            {/* {method.value && (
+                                    <p className={styles.methodValue}>{method.value}</p>
+                                )} */}
+                            {/* </div> */}
                             <div className={styles.methodActions}>
-                                <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
-                                    {method.connected ? "Connected" : "Not connected"}
-                                </span>
+
                                 {method.key === "password" ? (
                                     <Button
                                         kind="tertiary"
@@ -259,7 +261,11 @@ export default function ProfileSettingsTab() {
                                     >
                                         {hasPassword ? "Change password" : "Add password"}
                                     </Button>
-                                ) : null}
+                                ) :
+                                    <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
+                                        {method.connected ? "Connected" : "Not connected"}
+                                    </span>
+                                }
                             </div>
                         </div>
                     ))}
