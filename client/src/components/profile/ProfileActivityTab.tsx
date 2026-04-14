@@ -10,6 +10,7 @@ import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTab
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import type { WalletSwap } from "@/services/wallet/walletApi";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfileActivityTabProps {
     walletAddresses: string[];
@@ -33,6 +34,7 @@ function formatAddress(address: string): string {
 }
 
 export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
+    const { tr } = useLocalization();
     const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
     const [swapModalOpen, setSwapModalOpen] = useState(false);
     const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
@@ -62,8 +64,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     if (error) {
         return (
             <ProfileUnavailableState
-                title="Activity unavailable"
-                description="Unable to load activity data right now."
+                i18nTitle="profileTabs.activity.unavailableTitle"
+                i18nDescription="profileTabs.activity.unavailableDescription"
             />
         );
     }
@@ -72,7 +74,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
         row.walletLabel,
         row.timestamp,
         row.pairOrToken,
-        row.exchange ?? "Unknown",
+        row.exchange ?? tr("profileTabs.activity.unknownExchange"),
         row.amountUsd,
     ]);
 
@@ -86,8 +88,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     return (
         <section className={styles.contentStack}>
             <Table
-                title="Swaps"
-                headers={["Wallet", "Time", "Pair", "Exchange", "Total value"]}
+                title={tr("profileTabs.activity.swapsTableTitle") as string}
+                headers={tr("profileTabs.activity.tableHeaders.swaps") as string[]}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
@@ -123,8 +125,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
             />
 
             <Table
-                title="Transfers"
-                headers={["Token", "Amount", "Amount (USD)", "Time"]}
+                title={tr("profileTabs.activity.transfersTableTitle") as string}
+                headers={tr("profileTabs.activity.tableHeaders.transfers") as string[]}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{

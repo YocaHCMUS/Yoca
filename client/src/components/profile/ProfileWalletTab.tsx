@@ -8,6 +8,7 @@ import styles from "./profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -23,14 +24,15 @@ function formatCurrency(value: number): string {
 }
 
 export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabProps) {
+    const { tr } = useLocalization();
     const navigate = useNavigate();
     const { data, loading, error } = useProfileWalletTabData({ walletAddresses, period });
 
     if (error) {
         return (
             <ProfileUnavailableState
-                title="Wallet data unavailable"
-                description="Unable to load wallet data right now."
+                title={tr("profileTabs.wallet.unavailableTitle")}
+                description={tr("profileTabs.wallet.unavailableDescription")}
             />
         );
     }
@@ -38,8 +40,8 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
     if (walletAddresses.length === 0 || data.linkedWalletRows.length === 0) {
         return (
             <ProfileUnavailableState
-                title="No linked wallets"
-                description="Link at least one wallet to view portfolio and charts."
+                title={tr("profileTabs.wallet.noLinkedWalletsTitle")}
+                description={tr("profileTabs.wallet.noLinkedWalletsDescription")}
             />
         );
     }
@@ -60,12 +62,18 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
     };
 
     const chartWallets = data.linkedWalletRows.map((row) => row.walletAddress);
+    const walletTableHeaders = [
+        tr("profileTabs.wallet.tableHeaders.0"),
+        tr("profileTabs.wallet.tableHeaders.1"),
+        tr("profileTabs.wallet.tableHeaders.2"),
+        tr("profileTabs.wallet.tableHeaders.3"),
+    ]
 
     return (
         <section className={styles.contentStack}>
             <Table
-                title="Portfolio table"
-                headers={["Wallet", "Net worth", "PnL", "Trades"]}
+                title={tr("profileTabs.wallet.portfolioTableTitle") as string}
+                headers={walletTableHeaders}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{

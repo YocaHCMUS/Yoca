@@ -19,6 +19,7 @@ import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfilePortfolioTabProps {
     walletAddresses: string[];
@@ -49,6 +50,7 @@ export function ProfilePortfolioTab({
     period,
     onPeriodChange,
 }: ProfilePortfolioTabProps) {
+    const { tr } = useLocalization();
     const navigate = useNavigate();
     const { user } = useAuth();
     const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
@@ -99,7 +101,9 @@ export function ProfilePortfolioTab({
                     (wallet) => wallet.walletAddress === overview.address,
                 );
                 const walletLabel = formatAddress(overview.address);
-                const authStatus = walletMeta?.isAuthWallet ? "Auth wallet" : "Linked wallet";
+                const authStatus = walletMeta?.isAuthWallet
+                    ? tr("profileTabs.portfolio.authWalletLabel")
+                    : tr("profileTabs.portfolio.linkedWalletLabel");
 
                 return [
                     overview.address,
@@ -110,7 +114,7 @@ export function ProfilePortfolioTab({
                     overview.address,
                 ];
             }),
-        [linkedWalletRows, walletOverviews],
+        [linkedWalletRows, walletOverviews, tr],
     );
 
     const handleComparisonToggle = (walletId: string, checked: boolean) => {

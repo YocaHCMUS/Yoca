@@ -1,4 +1,5 @@
 import styles from "./profile.module.scss";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfileUnavailableStateProps {
     title?: string;
@@ -6,13 +7,18 @@ interface ProfileUnavailableStateProps {
 }
 
 export function ProfileUnavailableState({
-    title = "Data unavailable",
-    description = "No profile data is available right now.",
+    title,
+    description,
 }: ProfileUnavailableStateProps) {
+    const { tr } = useLocalization();
+
+    const displayTitle = title;
+    const displayDescription = description;
+
     return (
         <div className={`${styles.sectionCard} ${styles.unavailableState}`}>
-            <h3 className={styles.unavailableTitle}>{title}</h3>
-            <p className={styles.unavailableDescription}>{description}</p>
+            <h3 className={styles.unavailableTitle}>{displayTitle}</h3>
+            <p className={styles.unavailableDescription}>{displayDescription}</p>
         </div>
     );
 }

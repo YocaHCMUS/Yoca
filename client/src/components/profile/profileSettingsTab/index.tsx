@@ -21,6 +21,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./index.module.scss";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 type LoginMethodKey = "password" | "google" | "solana";
 
@@ -67,6 +68,8 @@ export default function ProfileSettingsTab() {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
+    const { tr } = useLocalization();
+
     const hydrateFromSnapshot = useCallback((nextSnapshot: ProfileSettingsSnapshot) => {
         setSnapshot(nextSnapshot);
         setDisplayName(nextSnapshot.displayName ?? "");
@@ -103,24 +106,24 @@ export default function ProfileSettingsTab() {
         return [
             {
                 key: "password",
-                label: "Password / Email",
-                value: snapshot.email?.trim() || "Not set",
+                label: tr("profileSettings.loginMethodPasswordEmail") as string,
+                value: snapshot.email?.trim() || tr("profileSettings.loginMethodPasswordNotSet") as string,
                 connected: snapshot.hasPassword,
             },
             {
                 key: "google",
-                label: "Google Mail OAuth",
+                label: tr("profileSettings.loginMethodGoogleOAuth") as string,
                 value: " ",
                 connected: hasGoogle,
             },
             {
                 key: "solana",
-                label: "Solana Wallet",
+                label: tr("profileSettings.loginMethodSolanaWallet") as string,
                 value: authWallet?.walletAddress || " ",
                 connected: hasSolana,
             },
         ];
-    }, [snapshot]);
+    }, [snapshot, tr]);
 
     const handleSaveIdentity = async () => {
         if (!snapshot) {
@@ -135,7 +138,7 @@ export default function ProfileSettingsTab() {
             });
             hydrateFromSnapshot(nextSnapshot);
             await refreshUser();
-            setIdentityState({ loading: false, success: "Identity updated" });
+            setIdentityState({ loading: false, success: tr("profileSettings.identityUpdated") as string });
         } catch (error) {
             setIdentityState({ loading: false, error: toMessage(error) });
         }
@@ -143,7 +146,7 @@ export default function ProfileSettingsTab() {
 
     const handleUpdatePassword = async () => {
         if (newPassword !== confirmPassword) {
-            setPasswordState({ loading: false, error: "New password and confirmation do not match" });
+            setPasswordState({ loading: false, error: tr("profileSettings.passwordMatchError") as string });
             return;
         }
 
@@ -158,7 +161,8 @@ export default function ProfileSettingsTab() {
             setNewPassword("");
             setConfirmPassword("");
             setPasswordEditorOpen(false);
-            setPasswordState({ loading: false, success: hasPassword ? "Password changed" : "Password added" });
+            const successMsg = hasPassword ? tr("profileSettings.passwordChanged") : tr("profileSettings.passwordAdded");
+            setPasswordState({ loading: false, success: successMsg as string });
             await loadSnapshot();
         } catch (error) {
             setPasswordState({ loading: false, error: toMessage(error) });
@@ -167,7 +171,7 @@ export default function ProfileSettingsTab() {
 
     const handleDeleteAccount = async () => {
         if (deleteConfirmText.trim() !== "DELETE MY ACCOUNT") {
-            setAccountState({ loading: false, error: "Confirmation text mismatch" });
+            setAccountState({ loading: false, error: tr("profileSettings.accountDeleteConfirmError") as string });
             return;
         }
 
@@ -188,24 +192,24 @@ export default function ProfileSettingsTab() {
     };
 
     if (initialLoading) {
-        return <InlineLoading description="Loading settings" status="active" />;
+        return <InlineLoading description={tr("common.loading") as string} status="active" />;
     }
 
     return (
         <section className={styles.container}>
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Identity</h3>
+                <h3 className={styles.sectionTitle}>{tr("profileSettings.identity")}</h3>
                 <div className={styles.row}>
                     <TextInput
                         id="profile-settings-display-name"
-                        labelText="Display name"
+                        labelText={tr("profileSettings.displayName") as string}
                         value={displayName}
                         onChange={(event) => setDisplayName(event.currentTarget.value)}
                         className={styles.input}
                     />
                     <TextInput
                         id="profile-settings-email"
-                        labelText="Email"
+                        labelText={tr("profileSettings.email") as string}
                         type="email"
                         value={email}
                         onChange={(event) => setEmail(event.currentTarget.value)}
@@ -214,15 +218,15 @@ export default function ProfileSettingsTab() {
                 </div>
                 <div className={styles.actionRow}>
                     <Button kind="primary" onClick={handleSaveIdentity} disabled={identityState.loading}>
-                        Save identity
+                        {tr("profileSettings.saveIdentity")}
                     </Button>
-                    {identityState.loading ? <InlineLoading description="Saving identity" status="active" /> : null}
+                    {identityState.loading ? <InlineLoading description={tr("profileSettings.savingIdentity") as string} status="active" /> : null}
                 </div>
                 {identityState.error ? (
                     <InlineNotification
                         className={styles.statusMessage}
                         kind="error"
-                        title="Identity update failed"
+                        title={tr("profileSettings.identityUpdateFailed") as string}
                         subtitle={identityState.error}
                         hideCloseButton
                     />
@@ -231,7 +235,7 @@ export default function ProfileSettingsTab() {
                     <InlineNotification
                         className={styles.statusMessage}
                         kind="success"
-                        title="Success"
+                        title={tr("common.success") as string}
                         subtitle={identityState.success}
                         hideCloseButton
                     />
@@ -239,7 +243,7 @@ export default function ProfileSettingsTab() {
             </div>
 
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Login methods</h3>
+                <h3 className={styles.sectionTitle}>{tr("profileSettings.loginMethods")}</h3>
                 <div className={styles.methodList}>
                     {loginMethods.map((method) => (
                         <div key={method.key} className={styles.methodRow}>
@@ -259,11 +263,11 @@ export default function ProfileSettingsTab() {
                                         size="sm"
                                         onClick={() => setPasswordEditorOpen((prev) => !prev)}
                                     >
-                                        {hasPassword ? "Change password" : "Add password"}
+                                        {hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
                                     </Button>
                                 ) :
                                     <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
-                                        {method.connected ? "Connected" : "Not connected"}
+                                        {method.connected ? tr("profileSettings.statusConnected") : tr("profileSettings.statusNotConnected")}
                                     </span>
                                 }
                             </div>
@@ -275,15 +279,15 @@ export default function ProfileSettingsTab() {
                     onClose={() => setPasswordEditorOpen(false)}
                 >
                     <ModalHeader
-                        title={hasPassword ? "Change password" : "Add password"}
-                        label="Login methods"
+                        title={hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
+                        label={tr("profileSettings.loginMethods") as string}
                     />
                     <ModalBody>
                         <div>
                             {hasPassword ? (
                                 <PasswordInput
                                     id="profile-settings-current-password"
-                                    labelText="Current password"
+                                    labelText={tr("profileSettings.currentPassword") as string}
                                     value={currentPassword}
                                     onChange={(event) => setCurrentPassword(event.currentTarget.value)}
                                     className={styles.input}
@@ -291,14 +295,14 @@ export default function ProfileSettingsTab() {
                             ) : null}
                             <PasswordInput
                                 id="profile-settings-new-password"
-                                labelText="New password"
+                                labelText={tr("profileSettings.newPassword") as string}
                                 value={newPassword}
                                 onChange={(event) => setNewPassword(event.currentTarget.value)}
                                 className={styles.input}
                             />
                             <PasswordInput
                                 id="profile-settings-confirm-password"
-                                labelText="Confirm password"
+                                labelText={tr("profileSettings.confirmPassword") as string}
                                 value={confirmPassword}
                                 onChange={(event) => setConfirmPassword(event.currentTarget.value)}
                                 className={styles.input}
@@ -312,7 +316,7 @@ export default function ProfileSettingsTab() {
                             onClick={() => setPasswordEditorOpen(false)}
                             disabled={passwordState.loading}
                         >
-                            Cancel
+                            {tr("common.cancel")}
                         </Button>
                         <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
                             Save password
@@ -323,7 +327,7 @@ export default function ProfileSettingsTab() {
                     <InlineNotification
                         className={styles.statusMessage}
                         kind="error"
-                        title="Password update failed"
+                        title={tr("profileSettings.passwordUpdateFailed") as string}
                         subtitle={passwordState.error}
                         hideCloseButton
                     />
@@ -332,7 +336,7 @@ export default function ProfileSettingsTab() {
                     <InlineNotification
                         className={styles.statusMessage}
                         kind="success"
-                        title="Success"
+                        title={tr("common.success") as string}
                         subtitle={passwordState.success}
                         hideCloseButton
                     />
@@ -340,18 +344,18 @@ export default function ProfileSettingsTab() {
             </div>
 
             <div className={`${styles.section} ${styles.dangerSection}`}>
-                <h3 className={styles.sectionTitle}>Danger zone</h3>
+                <h3 className={styles.sectionTitle}>{tr("profileSettings.dangerZone")}</h3>
                 <p className={styles.dangerHint}>
-                    Delete account removes profile and all linked auth/wallet data.
+                    {tr("profileSettings.dangerZoneDescription")}
                 </p>
                 <Button kind="danger" onClick={() => setDeleteModalOpen(true)}>
-                    Delete account
+                    {tr("profileSettings.deleteAccount")}
                 </Button>
                 {accountState.error ? (
                     <InlineNotification
                         className={styles.statusMessage}
                         kind="error"
-                        title="Account deletion failed"
+                        title={tr("profileSettings.accountDeleteFailed") as string}
                         subtitle={accountState.error}
                         hideCloseButton
                     />
@@ -359,24 +363,24 @@ export default function ProfileSettingsTab() {
             </div>
 
             <ComposedModal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-                <ModalHeader title="Delete account" label="Danger zone" />
+                <ModalHeader title={tr("profileSettings.deleteAccount") as string} label={tr("profileSettings.dangerZone") as string} />
                 <ModalBody>
                     <p className={styles.warningText}>
-                        This action is permanent. Type DELETE MY ACCOUNT to confirm.
+                        {tr("profileSettings.deleteAccountWarning")}
                     </p>
                     <TextInput
                         id="delete-account-confirm"
-                        labelText="Confirmation text"
+                        labelText={tr("profileSettings.deleteAccountConfirmationText") as string}
                         value={deleteConfirmText}
                         onChange={(event) => setDeleteConfirmText(event.currentTarget.value)}
                     />
                 </ModalBody>
                 <ModalFooter>
                     <Button kind="secondary" onClick={() => setDeleteModalOpen(false)}>
-                        Cancel
+                        {tr("common.cancel")}
                     </Button>
                     <Button kind="danger" onClick={handleDeleteAccount} disabled={accountState.loading}>
-                        Confirm delete
+                        {tr("profileSettings.deleteAccountConfirmButton")}
                     </Button>
                 </ModalFooter>
             </ComposedModal>

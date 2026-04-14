@@ -14,6 +14,7 @@ import { useMemo, useState } from "react";
 import { AddLarge } from "@carbon/icons-react";
 import styles from "./profile.module.scss";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 
 interface ProfileAlertTabProps {
@@ -21,11 +22,13 @@ interface ProfileAlertTabProps {
 }
 
 export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
+    const { tr } = useLocalization();
+
     if (data.alerts.length === 0 && data.notifications.length === 0) {
         return (
             <ProfileUnavailableState
-                title="Alerts unavailable"
-                description="No alert rules or notifications are available right now."
+                title={tr("profileTabs.alerts.unavailableTitle")}
+                description={tr("profileTabs.alerts.unavailableDescription")}
             />
         );
     }
@@ -43,9 +46,9 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
 
     const modalTitle = useMemo(() => {
-        if (!editingRule) return "Create alert";
-        return `Edit ${editingRule.tokenSymbol} alert`;
-    }, [editingRule]);
+        if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
+        return tr("profileTabs.alerts.editAlertTitle", { token: editingRule.tokenSymbol });
+    }, [editingRule, tr]);
 
     const openCreateModal = () => {
         setEditingRule(null);
@@ -62,18 +65,21 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
         setEditingRule(null);
     };
 
+    const tableHeaders = [
+        tr("profileTabs.alerts.tableHeaders.0"),
+        tr("profileTabs.alerts.tableHeaders.1"),
+        tr("profileTabs.alerts.tableHeaders.2"),
+        tr("profileTabs.alerts.tableHeaders.3"),
+        tr("profileTabs.alerts.tableHeaders.4"),
+        tr("profileTabs.alerts.tableHeaders.5"),
+    ];
+
+
     return (
         <section className={styles.contentStack}>
             <Table
-                title="Alert list"
-                headers={[
-                    "Token",
-                    "Type",
-                    "Condition",
-                    "Status",
-                    "Updated",
-                    "Actions",
-                ]}
+                title={tr("profileTabs.alerts.tableTitle") as string}
+                headers={tableHeaders}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
