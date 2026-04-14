@@ -935,6 +935,17 @@ export const translation = {
     newPassword: "New password",
     confirmPassword: "Confirm password",
     passwordMatchError: "New password and confirmation do not match",
+    passwordValidationEmailRequired: "Email is required to set password login",
+    passwordValidationEmailInvalid: "Please enter a valid email address",
+    passwordValidationCurrentPasswordRequired:
+      "Current password is required to change password",
+    passwordValidationNewPasswordRequired: "New password is required",
+    passwordValidationMinLength: "Password must be at least 8 characters",
+    passwordValidationUppercase:
+      "Password must include at least one uppercase letter",
+    passwordValidationLowercase:
+      "Password must include at least one lowercase letter",
+    passwordValidationNumber: "Password must include at least one number",
     passwordUpdateFailed: "Password update failed",
     passwordChanged: "Password changed",
     passwordAdded: "Password added",

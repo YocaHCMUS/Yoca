@@ -3,9 +3,11 @@ import {
     createDeleteAccountChallenge,
     deleteAccount,
     getProfileSettingsSnapshot,
+    PasswordUpdateError,
     updatePassword,
     updateProfileIdentity,
     type ProfileSettingsSnapshot,
+    type PasswordUpdateSuccessState,
 } from "@/services/profile/profileApi";
 import {
     Button,
@@ -36,6 +38,43 @@ interface SectionState {
     loading: boolean;
     success?: string;
     error?: string;
+}
+
+function getPasswordSuccessMessage(
+    state: PasswordUpdateSuccessState,
+    tr: ReturnType<typeof useLocalization>["tr"],
+): string {
+    switch (state) {
+        case "PASSWORD_ADDED":
+            return tr("profileSettings.passwordAdded") as string;
+        case "PASSWORD_CHANGED":
+        default:
+            return tr("profileSettings.passwordChanged") as string;
+    }
+}
+
+function getPasswordErrorMessage(
+    state: string,
+    tr: ReturnType<typeof useLocalization>["tr"],
+): string {
+    switch (state) {
+        case "CURRENT_PASSWORD_INVALID":
+            return tr("ERROR.CURRENT_PASSWORD_INVALID") as string;
+        case "PASSWORD_AUTH_NOT_FOUND":
+            return tr("ERROR.PASSWORD_AUTH_NOT_FOUND") as string;
+        case "PASSWORD_ALREADY_SET":
+            return tr("ERROR.PASSWORD_ALREADY_SET") as string;
+        case "EMAIL_ALREADY_IN_USE":
+            return tr("ERROR.EMAIL_ALREADY_IN_USE") as string;
+        case "VALIDATION_ERR":
+            return tr("ERROR.VALIDATION_ERR") as string;
+        case "INTERNAL_SERVER_ERR":
+            return tr("ERROR.INTERNAL_SERVER_ERR") as string;
+        case "ACCOUNT_DELETE_FORBIDDEN":
+            return tr("ERROR.ACCOUNT_DELETE_FORBIDDEN") as string;
+        default:
+            return tr("ERROR.GENERAL_UNKNOWN_ERR") as string;
+    }
 }
 
 function toMessage(error: unknown): string {
@@ -144,6 +183,72 @@ export default function ProfileSettingsTab() {
     };
 
     const handleUpdatePassword = async () => {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedEmail) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationEmailRequired") as string,
+            });
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationEmailInvalid") as string,
+            });
+            return;
+        }
+
+        if (hasPassword && currentPassword.trim().length <= 0) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationCurrentPasswordRequired") as string,
+            });
+            return;
+        }
+
+        if (newPassword.length <= 0) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationNewPasswordRequired") as string,
+            });
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationMinLength") as string,
+            });
+            return;
+        }
+
+        if (!/[A-Z]/.test(newPassword)) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationUppercase") as string,
+            });
+            return;
+        }
+
+        if (!/[a-z]/.test(newPassword)) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationLowercase") as string,
+            });
+            return;
+        }
+
+        if (!/[0-9]/.test(newPassword)) {
+            setPasswordState({
+                loading: false,
+                error: tr("profileSettings.passwordValidationNumber") as string,
+            });
+            return;
+        }
+
         if (newPassword !== confirmPassword) {
             setPasswordState({ loading: false, error: tr("profileSettings.passwordMatchError") as string });
             return;
@@ -151,21 +256,25 @@ export default function ProfileSettingsTab() {
 
         setPasswordState({ loading: true });
         try {
-            await updatePassword({
+            const result = await updatePassword({
                 currentPassword: hasPassword ? currentPassword : undefined,
                 newPassword,
-                email: email.trim().toLowerCase() || null,
+                email: normalizedEmail,
             });
 
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
             setPasswordEditorOpen(false);
-            const successMsg = hasPassword ? tr("profileSettings.passwordChanged") : tr("profileSettings.passwordAdded");
-            setPasswordState({ loading: false, success: successMsg as string });
+            setPasswordState({ loading: false, success: getPasswordSuccessMessage(result.state, tr) });
             await loadSnapshot();
         } catch (error) {
-            setPasswordState({ loading: false, error: toMessage(error) });
+            if (error instanceof PasswordUpdateError) {
+                setPasswordState({ loading: false, error: getPasswordErrorMessage(error.state, tr) });
+                return;
+            }
+
+            setPasswordState({ loading: false, error: tr("ERROR.GENERAL_UNKNOWN_ERR") as string });
         }
     };
 

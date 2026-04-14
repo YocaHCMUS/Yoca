@@ -60,6 +60,11 @@ const linkWalletChallenges = new Map<string, { nonce: string; expiresAt: number 
 const ACCOUNT_DELETE_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const accountDeleteChallenges = new Map<string, { token: string; expiresAt: number }>();
 
+const PASSWORD_UPDATE_STATE = {
+    changed: "PASSWORD_CHANGED",
+    added: "PASSWORD_ADDED",
+} as const;
+
 function getUserIdFromPayload(payload: { id?: string } | undefined): string | null {
     return payload?.id ?? null;
 }
@@ -168,6 +173,7 @@ const app = new Hono()
                     }
 
                     await changePassword(userId, currentPassword, newPassword);
+                    return c.json({ state: PASSWORD_UPDATE_STATE.changed }, statusCode.Ok);
                 } else {
                     const passwordEmail = nextEmail ?? snapshot.email?.trim().toLowerCase();
                     if (!passwordEmail) {
@@ -175,9 +181,8 @@ const app = new Hono()
                     }
 
                     await addPasswordAuthMethod(userId, passwordEmail, newPassword);
+                    return c.json({ state: PASSWORD_UPDATE_STATE.added }, statusCode.Ok);
                 }
-
-                return c.json({ message: "Password updated successfully" }, statusCode.Ok);
             } catch (err) {
                 if (err instanceof Error && err.message === "PASSWORD_AUTH_NOT_FOUND") {
                     return c.json(setErr("PASSWORD_AUTH_NOT_FOUND"), statusCode.BadRequest);

@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import type { ApiErrCode } from "@/api/main";
 
 export type AuthProvider = "password" | "google" | "github" | "solana" | "other";
 
@@ -23,6 +24,17 @@ export interface UpdatePasswordInput {
     currentPassword?: string;
     newPassword: string;
     email?: string | null;
+}
+
+export type PasswordUpdateSuccessState = "PASSWORD_CHANGED" | "PASSWORD_ADDED";
+
+export class PasswordUpdateError extends Error {
+    state: ApiErrCode;
+
+    constructor(state: ApiErrCode) {
+        super(state);
+        this.state = state;
+    }
 }
 
 export interface DeleteAccountInput {
@@ -50,14 +62,20 @@ export async function updateProfileIdentity(input: UpdateProfileIdentityInput): 
     return resp.json();
 }
 
-export async function updatePassword(input: UpdatePasswordInput) {
+export async function updatePassword(input: UpdatePasswordInput): Promise<{ state: PasswordUpdateSuccessState }> {
     const resp = await client.api.profile.settings.password.$patch({ json: input });
 
+    const body = await resp.json().catch(() => null) as
+        | { state?: PasswordUpdateSuccessState; errorCode?: ApiErrCode }
+        | null;
+
     if (!resp.ok) {
-        throw new Error(`Failed to update password: ${resp.status}`);
+        throw new PasswordUpdateError(body?.errorCode ?? "INTERNAL_SERVER_ERR");
     }
 
-    return resp.json();
+    return {
+        state: body?.state ?? "PASSWORD_CHANGED",
+    };
 }
 
 export async function createDeleteAccountChallenge(): Promise<{ challengeToken: string }> {
