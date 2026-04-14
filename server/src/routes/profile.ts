@@ -28,9 +28,12 @@ import {
     type SignatureBytes,
 } from "@solana/kit";
 import { Hono } from "hono";
-import { deleteCookie } from "hono/cookie";
-import { jwt } from "hono/jwt";
+import { deleteCookie, setCookie } from "hono/cookie";
+import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
+
+const jwtSecret = process.env.JWT_SECRET!;
+const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
 
 const honoJwt = jwt({
     alg: "HS256",
@@ -113,6 +116,20 @@ const app = new Hono()
 
                 const body = c.req.valid("json");
                 const snapshot = await updateUserIdentity(userId, body);
+                const token = await sign(
+                    {
+                        id: userId,
+                        displayName: snapshot.displayName || null,
+                        exp: Math.floor(Date.now() + authCookieTtlMs) / 1000,
+                    },
+                    jwtSecret,
+                );
+                setCookie(c, AUTH_COOKIE_NAME, token, {
+                    secure: true,
+                    httpOnly: true,
+                    sameSite: "None",
+                    maxAge: authCookieTtlMs / 1000,
+                });
                 return c.json(snapshot, statusCode.Ok);
             } catch (err) {
                 if (err instanceof Error && err.message === "EMAIL_ALREADY_IN_USE") {

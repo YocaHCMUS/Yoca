@@ -46,7 +46,7 @@ function toMessage(error: unknown): string {
 }
 
 export default function ProfileSettingsTab() {
-    const { signOut } = useAuth();
+    const { signOut, refreshUser } = useAuth();
     const navigate = useNavigate();
 
     const [snapshot, setSnapshot] = useState<ProfileSettingsSnapshot | null>(null);
@@ -134,6 +134,7 @@ export default function ProfileSettingsTab() {
                 email: email.trim().toLowerCase() || null,
             });
             hydrateFromSnapshot(nextSnapshot);
+            await refreshUser();
             setIdentityState({ loading: false, success: "Identity updated" });
         } catch (error) {
             setIdentityState({ loading: false, error: toMessage(error) });
