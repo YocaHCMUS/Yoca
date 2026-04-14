@@ -110,6 +110,58 @@ export async function createUserWithGoogle(googleId: string) {
   return userId;
 }
 
+export async function upsertGoogleAuthMethod(userId: string, googleId: string) {
+  const [existingGoogleAuth] = await db
+    .select({
+      providerUserId: authAccounts.providerUserId,
+    })
+    .from(authAccounts)
+    .where(
+      and(
+        eq(authAccounts.userId, userId),
+        eq(authAccounts.provider, "google"),
+      ),
+    )
+    .limit(1);
+
+  const [googleOwner] = await db
+    .select({ userId: authAccounts.userId })
+    .from(authAccounts)
+    .where(
+      and(
+        eq(authAccounts.provider, "google"),
+        eq(authAccounts.providerUserId, googleId),
+        ne(authAccounts.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (googleOwner) {
+    throw new Error("GOOGLE_AUTH_ALREADY_LINKED");
+  }
+
+  await db.transaction(async (tx) => {
+    if (existingGoogleAuth) {
+      await tx
+        .update(authAccounts)
+        .set({ providerUserId: googleId })
+        .where(
+          and(
+            eq(authAccounts.userId, userId),
+            eq(authAccounts.provider, "google"),
+          ),
+        );
+      return;
+    }
+
+    await tx.insert(authAccounts).values({
+      provider: "google",
+      userId,
+      providerUserId: googleId,
+    });
+  });
+}
+
 export async function findUserByWalletAddress(pubKey: string) {
   const [user] = await db
     .select({
@@ -277,6 +329,76 @@ export async function getUserSettingsSnapshot(userId: string) {
     hasPassword: authMethods.includes("password"),
     linkedWallets,
   };
+}
+
+export async function setPrimaryAuthWallet(userId: string, walletAddress: string) {
+  const [linkedWallet] = await db
+    .select({
+      walletAddress: userLinkedWallets.walletAddress,
+    })
+    .from(userLinkedWallets)
+    .where(
+      and(
+        eq(userLinkedWallets.userId, userId),
+        eq(userLinkedWallets.walletAddress, walletAddress),
+      ),
+    )
+    .limit(1);
+
+  if (!linkedWallet) {
+    throw new Error("WALLET_NOT_LINKED_TO_USER");
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(userLinkedWallets)
+      .set({ isAuthWallet: false })
+      .where(eq(userLinkedWallets.userId, userId));
+
+    await tx
+      .update(userLinkedWallets)
+      .set({ isAuthWallet: true })
+      .where(
+        and(
+          eq(userLinkedWallets.userId, userId),
+          eq(userLinkedWallets.walletAddress, walletAddress),
+        ),
+      );
+
+    const [existingSolanaAuth] = await tx
+      .select({ providerUserId: authAccounts.providerUserId })
+      .from(authAccounts)
+      .where(
+        and(
+          eq(authAccounts.userId, userId),
+          eq(authAccounts.provider, "solana"),
+        ),
+      )
+      .limit(1);
+
+    if (existingSolanaAuth) {
+      await tx
+        .update(authAccounts)
+        .set({
+          providerUserId: walletAddress,
+          loginNounce: null,
+          nounceExpiredAt: null,
+        })
+        .where(
+          and(
+            eq(authAccounts.userId, userId),
+            eq(authAccounts.provider, "solana"),
+          ),
+        );
+      return;
+    }
+
+    await tx.insert(authAccounts).values({
+      userId,
+      provider: "solana",
+      providerUserId: walletAddress,
+    });
+  });
 }
 
 export async function updateUserIdentity(

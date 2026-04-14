@@ -17,6 +17,8 @@ import {
     changePassword,
     deleteUserAccount,
     getUserSettingsSnapshot,
+    setPrimaryAuthWallet,
+    upsertGoogleAuthMethod,
     updateUserIdentity,
 } from "@sv/services/users.js";
 import { statusCode } from "@sv/util/responses.js";
@@ -31,9 +33,12 @@ import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
+import { OAuth2Client } from "google-auth-library";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
+const googleClientId = process.env.GOOGLE_CLIENT_ID!;
+const googleClient = new OAuth2Client(googleClientId);
 
 const honoJwt = jwt({
     alg: "HS256",
@@ -53,6 +58,10 @@ const linkedWalletChallengeSchema = z.object({
 
 const linkedWalletParamSchema = z.object({
     walletAddress: solanaBase58Schema,
+});
+
+const googleLinkSchema = z.object({
+    token: z.string().min(1),
 });
 
 const LINK_WALLET_CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -82,6 +91,15 @@ async function verifySolanaMessageSignature(
     const signatureBytes = new Uint8Array(Buffer.from(signatureBase64, "base64")) as SignatureBytes;
 
     return verifySignature(publicKey, signatureBytes, messageBytes);
+}
+
+async function verifyGoogleToken(idToken: string) {
+    const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: googleClientId,
+    });
+
+    return ticket.getPayload() ?? null;
 }
 
 const app = new Hono()
@@ -137,6 +155,66 @@ const app = new Hono()
                 }
 
                 console.error("Failed to update profile identity", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        },
+    )
+    .post(
+        "/settings/google",
+        honoJwt,
+        validate("json", googleLinkSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const { token } = c.req.valid("json");
+                const googlePayload = await verifyGoogleToken(token);
+
+                if (!googlePayload?.sub) {
+                    return c.json(setErr("GOOGLE_VERIFICATION_FAILED"), statusCode.BadRequest);
+                }
+
+                await upsertGoogleAuthMethod(userId, googlePayload.sub);
+
+                return c.json({ userId, message: "Google account linked successfully" }, statusCode.Ok);
+            } catch (err) {
+                if (err instanceof Error && err.message === "GOOGLE_AUTH_ALREADY_LINKED") {
+                    return c.json(setErr("GOOGLE_VERIFICATION_FAILED"), 409);
+                }
+
+                console.error("Failed to link google account", err);
+                return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+            }
+        },
+    )
+    .patch(
+        "/settings/wallets/primary",
+        honoJwt,
+        validate("json", linkedWalletParamSchema),
+        async (c) => {
+            try {
+                const payload = c.get("jwtPayload") as { id?: string } | undefined;
+                const userId = getUserIdFromPayload(payload);
+
+                if (!userId) {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+                }
+
+                const { walletAddress } = c.req.valid("json");
+                await setPrimaryAuthWallet(userId, walletAddress);
+
+                return c.json({ userId, walletAddress }, statusCode.Ok);
+            } catch (err) {
+                if (err instanceof Error && err.message === "WALLET_NOT_LINKED_TO_USER") {
+                    return c.json(setErr("INVALID_TOKEN_PAYLOAD"), 409);
+                }
+
+                console.error("Failed to set primary wallet", err);
                 return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
             }
         },

@@ -3,10 +3,15 @@ import {
     createDeleteAccountChallenge,
     deleteAccount,
     getProfileSettingsSnapshot,
+    linkWalletAddress,
+    requestLinkWalletChallenge,
+    setPrimaryWallet,
     updatePassword,
     updateProfileIdentity,
     type ProfileSettingsSnapshot,
 } from "@/services/profile/profileApi";
+import { WalletActionButton } from "@/components/auth/WalletActionButton";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import {
     Button,
     ComposedModal,
@@ -45,6 +50,14 @@ function toMessage(error: unknown): string {
     return "Operation failed";
 }
 
+function formatWallet(address: string): string {
+    if (address.length <= 12) {
+        return address;
+    }
+
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export default function ProfileSettingsTab() {
     const { signOut, refreshUser } = useAuth();
     const navigate = useNavigate();
@@ -60,9 +73,12 @@ export default function ProfileSettingsTab() {
     const [confirmPassword, setConfirmPassword] = useState("");
 
     const [identityState, setIdentityState] = useState<SectionState>({ loading: false });
+    const [googleState, setGoogleState] = useState<SectionState>({ loading: false });
+    const [walletState, setWalletState] = useState<SectionState>({ loading: false });
     const [passwordState, setPasswordState] = useState<SectionState>({ loading: false });
     const [accountState, setAccountState] = useState<SectionState>({ loading: false });
     const [passwordEditorOpen, setPasswordEditorOpen] = useState(false);
+    const [selectedWalletAddress, setSelectedWalletAddress] = useState("");
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -89,7 +105,17 @@ export default function ProfileSettingsTab() {
         void loadSnapshot();
     }, [loadSnapshot]);
 
+    useEffect(() => {
+        const nextAuthWallet = snapshot?.linkedWallets.find((wallet) => wallet.isAuthWallet)?.walletAddress
+            ?? snapshot?.linkedWallets[0]?.walletAddress
+            ?? "";
+        setSelectedWalletAddress(nextAuthWallet);
+    }, [snapshot]);
+
     const hasPassword = snapshot?.hasPassword ?? false;
+    const authWallet = snapshot?.linkedWallets.find((wallet) => wallet.isAuthWallet) ?? null;
+    const hasGoogle = snapshot?.authMethods.includes("google") ?? false;
+    const hasSolana = snapshot?.authMethods.includes("solana") ?? false;
 
     const loginMethods = useMemo<LoginMethodRow[]>(() => {
         if (!snapshot) {
@@ -121,6 +147,102 @@ export default function ProfileSettingsTab() {
             },
         ];
     }, [snapshot]);
+
+    const renderMethodAction = (method: LoginMethodRow) => {
+        if (method.key === "password") {
+            return (
+                <Button
+                    kind="tertiary"
+                    size="sm"
+                    onClick={() => setPasswordEditorOpen((prev) => !prev)}
+                >
+                    {hasPassword ? "Change password" : "Add password"}
+                </Button>
+            );
+        }
+
+        if (method.key === "google") {
+            return (
+                <GoogleAuthButton
+                    mode="link"
+                    label={method.connected ? "Change Google account" : "Connect Google"}
+                    disabled={googleState.loading}
+                    onSuccess={async () => {
+                        setGoogleState({ loading: false, success: "Google account updated" });
+                        await loadSnapshot();
+                        await refreshUser();
+                    }}
+                    onError={(msg) => {
+                        setGoogleState({ loading: false, error: msg });
+                    }}
+                />
+            );
+        }
+
+        return (
+            <div className={styles.walletMethodControls}>
+                {snapshot?.linkedWallets.length ? (
+                    <select
+                        className={styles.walletSelect}
+                        value={selectedWalletAddress}
+                        onChange={(event) => setSelectedWalletAddress(event.currentTarget.value)}
+                    >
+                        {snapshot.linkedWallets.map((wallet) => (
+                            <option key={wallet.walletAddress} value={wallet.walletAddress}>
+                                {formatWallet(wallet.walletAddress)}
+                                {wallet.isAuthWallet ? " (auth)" : ""}
+                            </option>
+                        ))}
+                    </select>
+                ) : null}
+                {snapshot?.linkedWallets.length ? (
+                    <Button
+                        kind="secondary"
+                        size="sm"
+                        disabled={walletState.loading || !selectedWalletAddress}
+                        onClick={async () => {
+                            setWalletState({ loading: true });
+                            try {
+                                await setPrimaryWallet({ walletAddress: selectedWalletAddress });
+                                await loadSnapshot();
+                                await refreshUser();
+                                setWalletState({ loading: false, success: "Auth wallet updated" });
+                            } catch (error) {
+                                setWalletState({ loading: false, error: toMessage(error) });
+                            }
+                        }}
+                    >
+                        Use selected wallet
+                    </Button>
+                ) : null}
+                <WalletActionButton<string>
+                    label={method.connected ? "Add wallet" : "Connect wallet"}
+                    kind="tertiary"
+                    disabled={walletState.loading}
+                    onSuccess={async (walletAddress) => {
+                        try {
+                            await setPrimaryWallet({ walletAddress });
+                            await loadSnapshot();
+                            await refreshUser();
+                            setWalletState({ loading: false, success: "Wallet connected" });
+                        } catch (error) {
+                            setWalletState({ loading: false, error: toMessage(error) });
+                        }
+                    }}
+                    onError={(msg) => setWalletState({ loading: false, error: msg })}
+                    action={async ({ publicKey, signMessage, onSuccess }) => {
+                        const challenge = await requestLinkWalletChallenge(publicKey);
+                        const messageBytes = new TextEncoder().encode(challenge.signMessage);
+                        const signatureBytes = await signMessage(messageBytes);
+                        const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
+
+                        await linkWalletAddress(publicKey, challenge.nonce, signatureBase64);
+                        onSuccess(publicKey);
+                    }}
+                />
+            </div>
+        );
+    };
 
     const handleSaveIdentity = async () => {
         if (!snapshot) {
@@ -251,19 +373,47 @@ export default function ProfileSettingsTab() {
                                 <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
                                     {method.connected ? "Connected" : "Not connected"}
                                 </span>
-                                {method.key === "password" ? (
-                                    <Button
-                                        kind="tertiary"
-                                        size="sm"
-                                        onClick={() => setPasswordEditorOpen((prev) => !prev)}
-                                    >
-                                        {hasPassword ? "Change password" : "Add password"}
-                                    </Button>
-                                ) : null}
+                                {renderMethodAction(method)}
                             </div>
                         </div>
                     ))}
                 </div>
+                {googleState.error ? (
+                    <InlineNotification
+                        className={styles.statusMessage}
+                        kind="error"
+                        title="Google account update failed"
+                        subtitle={googleState.error}
+                        hideCloseButton
+                    />
+                ) : null}
+                {googleState.success ? (
+                    <InlineNotification
+                        className={styles.statusMessage}
+                        kind="success"
+                        title="Success"
+                        subtitle={googleState.success}
+                        hideCloseButton
+                    />
+                ) : null}
+                {walletState.error ? (
+                    <InlineNotification
+                        className={styles.statusMessage}
+                        kind="error"
+                        title="Wallet update failed"
+                        subtitle={walletState.error}
+                        hideCloseButton
+                    />
+                ) : null}
+                {walletState.success ? (
+                    <InlineNotification
+                        className={styles.statusMessage}
+                        kind="success"
+                        title="Success"
+                        subtitle={walletState.success}
+                        hideCloseButton
+                    />
+                ) : null}
                 <ComposedModal
                     open={passwordEditorOpen}
                     onClose={() => setPasswordEditorOpen(false)}

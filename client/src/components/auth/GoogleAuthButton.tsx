@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { linkGoogleMethod } from "@/services/profile/profileApi";
 import Google from "@/components/icons/Google.svg?react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Button } from "@carbon/react";
@@ -9,12 +10,16 @@ interface GoogleAuthButtonProps {
   disabled: boolean;
   onSuccess: (userId: string) => void;
   onError: (err: string) => void;
+  mode?: "signin" | "link";
+  label?: string;
 }
 
 export function GoogleAuthButton({
   disabled,
   onSuccess,
   onError,
+  mode = "signin",
+  label,
 }: GoogleAuthButtonProps) {
   const { tr } = useLocalization();
   const [googleErr, setError] = useState<string | null>(null);
@@ -34,6 +39,13 @@ export function GoogleAuthButton({
         return;
       }
 
+      if (mode === "link") {
+        const res = await linkGoogleMethod({ token });
+        setError(null);
+        onSuccess(res.userId);
+        return;
+      }
+
       const resp = await client.api.users.auth.google.$post({
         json: {
           token,
@@ -45,9 +57,7 @@ export function GoogleAuthButton({
         setError(null);
         onSuccess(res.userId);
       } else if (resp.status == 400 || resp.status == 422) {
-        const res = await resp.json();
-        const errCode = res.errorCode;
-        const errorMsg = tr(`ERROR.${errCode}`);
+        const errorMsg = tr("ERROR.GOOGLE_VERIFICATION_FAILED");
         setError(errorMsg);
         onError(errorMsg);
       } else if (resp.status == 500) {
@@ -97,7 +107,7 @@ export function GoogleAuthButton({
           maxInlineSize: "100%",
         }}
       >
-        {tr("auth.continueWithGoogle")}
+        {label ?? tr("auth.continueWithGoogle")}
       </Button>
       <div ref={googleButtonContainerRef} style={{ display: "none" }}>
         <GoogleLogin

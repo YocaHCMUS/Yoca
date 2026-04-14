@@ -29,6 +29,14 @@ export interface DeleteAccountInput {
     confirmText: "DELETE MY ACCOUNT";
 }
 
+export interface LinkGoogleMethodInput {
+    token: string;
+}
+
+export interface SetPrimaryWalletInput {
+    walletAddress: string;
+}
+
 export async function getProfileSettingsSnapshot(): Promise<ProfileSettingsSnapshot> {
     const resp = await client.api.profile.settings.$get();
 
@@ -57,6 +65,26 @@ export async function updatePassword(input: UpdatePasswordInput) {
     }
 
     return resp.json();
+}
+
+export async function linkGoogleMethod(input: LinkGoogleMethodInput) {
+    const resp = await client.api.profile.settings.google.$post({ json: input });
+
+    if (!resp.ok) {
+        throw new Error(`Failed to link google account: ${resp.status}`);
+    }
+
+    return resp.json() as Promise<{ userId: string; message: string }>;
+}
+
+export async function setPrimaryWallet(input: SetPrimaryWalletInput) {
+    const resp = await client.api.profile.settings.wallets.primary.$patch({ json: input });
+
+    if (!resp.ok) {
+        throw new Error(`Failed to update primary wallet: ${resp.status}`);
+    }
+
+    return resp.json() as Promise<{ userId: string; walletAddress: string }>;
 }
 
 export async function createDeleteAccountChallenge(): Promise<{ challengeToken: string }> {

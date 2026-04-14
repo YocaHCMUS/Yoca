@@ -73,6 +73,22 @@
     gap: $spacing-03;
 }
 
+.walletMethodControls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-03;
+    flex-wrap: wrap;
+}
+
+.walletSelect {
+    min-width: 12rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid $border-subtle-01;
+    background: $layer-01;
+    color: $text-primary;
+}
+
 .statusConnected {
     color: $support-success;
     font-weight: 600;
@@ -119,5 +135,13 @@
     .methodActions {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .walletMethodControls {
+        width: 100%;
+    }
+
+    .walletSelect {
+        width: 100%;
     }
 }
