@@ -307,8 +307,24 @@ export default function ProfileSettingsTab() {
                                 onChange={(event) => setConfirmPassword(event.currentTarget.value)}
                                 className={styles.input}
                             />
+                            {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
+                            {passwordState.error ? (
+                                <InlineNotification
+                                    // className={styles.statusMessage}
+                                    kind="error"
+                                    title={tr("profileSettings.passwordUpdateFailed") as string}
+                                    subtitle={passwordState.error}
+                                />
+                            ) : null}
+                            {passwordState.success ? (
+                                <InlineNotification
+                                    // className={styles.statusMessage}
+                                    kind="success"
+                                    title={tr("common.success") as string}
+                                    subtitle={passwordState.success}
+                                />
+                            ) : null}
                         </div>
-                        {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
                     </ModalBody>
                     <ModalFooter>
                         <Button
@@ -323,24 +339,6 @@ export default function ProfileSettingsTab() {
                         </Button>
                     </ModalFooter>
                 </ComposedModal>
-                {passwordState.error ? (
-                    <InlineNotification
-                        className={styles.statusMessage}
-                        kind="error"
-                        title={tr("profileSettings.passwordUpdateFailed") as string}
-                        subtitle={passwordState.error}
-                        hideCloseButton
-                    />
-                ) : null}
-                {passwordState.success ? (
-                    <InlineNotification
-                        className={styles.statusMessage}
-                        kind="success"
-                        title={tr("common.success") as string}
-                        subtitle={passwordState.success}
-                        hideCloseButton
-                    />
-                ) : null}
             </div>
 
             <div className={`${styles.section} ${styles.dangerSection}`}>
