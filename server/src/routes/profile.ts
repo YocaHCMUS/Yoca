@@ -154,8 +154,13 @@ const app = new Hono()
                     return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
                 }
 
-                const { currentPassword, newPassword } = c.req.valid("json");
+                const { currentPassword, newPassword, email } = c.req.valid("json");
                 const snapshot = await getUserSettingsSnapshot(userId);
+                const nextEmail = email?.trim().toLowerCase();
+
+                if (nextEmail) {
+                    await updateUserIdentity(userId, { email: nextEmail });
+                }
 
                 if (snapshot.hasPassword) {
                     if (!currentPassword) {
@@ -164,12 +169,12 @@ const app = new Hono()
 
                     await changePassword(userId, currentPassword, newPassword);
                 } else {
-                    const email = snapshot.email?.trim().toLowerCase();
-                    if (!email) {
+                    const passwordEmail = nextEmail ?? snapshot.email?.trim().toLowerCase();
+                    if (!passwordEmail) {
                         return c.json(setErr("ACCOUNT_DELETE_FORBIDDEN"), statusCode.BadRequest);
                     }
 
-                    await addPasswordAuthMethod(userId, email, newPassword);
+                    await addPasswordAuthMethod(userId, passwordEmail, newPassword);
                 }
 
                 return c.json({ message: "Password updated successfully" }, statusCode.Ok);

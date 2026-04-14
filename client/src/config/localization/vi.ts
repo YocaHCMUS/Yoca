@@ -939,6 +939,8 @@ export const translation = defineTranslation({
     passwordUpdateFailed: "Cập nhật mật khẩu thất bại",
     passwordChanged: "Mật khẩu đã được thay đổi",
     passwordAdded: "Mật khẩu đã được thêm",
+    updatingPassword: "Đang cập nhật mật khẩu",
+    savePassword: "Lưu mật khẩu",
     dangerZone: "Vùng nguy hiểm",
     dangerZoneDescription:
       "Xóa tài khoản sẽ loại bỏ hồ sơ và tất cả dữ liệu xác thực/ví được liên kết.",

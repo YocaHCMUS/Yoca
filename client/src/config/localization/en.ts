@@ -938,6 +938,8 @@ export const translation = {
     passwordUpdateFailed: "Password update failed",
     passwordChanged: "Password changed",
     passwordAdded: "Password added",
+    updatingPassword: "Updating password",
+    savePassword: "Save password",
     dangerZone: "Danger zone",
     dangerZoneDescription:
       "Delete account removes profile and all linked auth/wallet data.",

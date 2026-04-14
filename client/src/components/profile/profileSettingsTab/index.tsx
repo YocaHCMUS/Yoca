@@ -134,7 +134,6 @@ export default function ProfileSettingsTab() {
         try {
             const nextSnapshot = await updateProfileIdentity({
                 displayName: displayName.trim() || null,
-                email: email.trim().toLowerCase() || null,
             });
             hydrateFromSnapshot(nextSnapshot);
             await refreshUser();
@@ -155,6 +154,7 @@ export default function ProfileSettingsTab() {
             await updatePassword({
                 currentPassword: hasPassword ? currentPassword : undefined,
                 newPassword,
+                email: email.trim().toLowerCase() || null,
             });
 
             setCurrentPassword("");
@@ -205,14 +205,6 @@ export default function ProfileSettingsTab() {
                         labelText={tr("profileSettings.displayName") as string}
                         value={displayName}
                         onChange={(event) => setDisplayName(event.currentTarget.value)}
-                        className={styles.input}
-                    />
-                    <TextInput
-                        id="profile-settings-email"
-                        labelText={tr("profileSettings.email") as string}
-                        type="email"
-                        value={email}
-                        onChange={(event) => setEmail(event.currentTarget.value)}
                         className={styles.input}
                     />
                 </div>
@@ -284,6 +276,14 @@ export default function ProfileSettingsTab() {
                     />
                     <ModalBody>
                         <div>
+                            <TextInput
+                                id="profile-settings-email"
+                                labelText={tr("profileSettings.email") as string}
+                                type="email"
+                                value={email}
+                                onChange={(event) => setEmail(event.currentTarget.value)}
+                                className={styles.input}
+                            />
                             {hasPassword ? (
                                 <PasswordInput
                                     id="profile-settings-current-password"
@@ -308,7 +308,7 @@ export default function ProfileSettingsTab() {
                                 className={styles.input}
                             />
                         </div>
-                        {passwordState.loading ? <InlineLoading description="Updating password" status="active" /> : null}
+                        {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
                     </ModalBody>
                     <ModalFooter>
                         <Button
@@ -319,7 +319,7 @@ export default function ProfileSettingsTab() {
                             {tr("common.cancel")}
                         </Button>
                         <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
-                            Save password
+                            {tr("profileSettings.savePassword")}
                         </Button>
                     </ModalFooter>
                 </ComposedModal>

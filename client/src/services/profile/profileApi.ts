@@ -22,6 +22,7 @@ export interface UpdateProfileIdentityInput {
 export interface UpdatePasswordInput {
     currentPassword?: string;
     newPassword: string;
+    email?: string | null;
 }
 
 export interface DeleteAccountInput {

@@ -88,6 +88,11 @@ export const profileIdentityUpdateSchema = z
 export const passwordUpdateSchema = z.object({
   currentPassword: z.string().min(1).optional(),
   newPassword: strongPasswordSchema,
+  email: z
+    .email("Invalid email format")
+    .transform((value) => value.trim().toLowerCase())
+    .nullable()
+    .optional(),
 });
 
 export const deleteAccountSchema = z.object({
