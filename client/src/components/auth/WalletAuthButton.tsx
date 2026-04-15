@@ -17,19 +17,7 @@ export function WalletAuthButton({
   const { tr } = useLocalization();
 
   const getWalletAuthErrorMessage = (errorCode: ApiErrCode) => {
-    switch (errorCode) {
-      case "WALLET_ALREADY_LINKED":
-        return tr("ERROR.WALLET_ALREADY_LINKED");
-      case "WALLET_NONCE_FAILED":
-        return tr("ERROR.WALLET_NONCE_FAILED");
-      case "WALLET_VERIFICATION_FAILED":
-        return tr("ERROR.WALLET_VERIFICATION_FAILED");
-      case "VALIDATION_ERR":
-        return tr("ERROR.VALIDATION_ERR");
-      case "INTERNAL_SERVER_ERR":
-      default:
-        return tr("ERROR.INTERNAL_SERVER_ERR");
-    }
+    return tr(`ERROR.${errorCode}`);
   };
 
   return (
@@ -45,9 +33,7 @@ export function WalletAuthButton({
         });
 
         if (nonceRes.ok) {
-          const { signMessage: message } = (await nonceRes.json()) as {
-            signMessage: string;
-          };
+          const { signMessage: message } = (await nonceRes.json());
           const signMessageBytes = new TextEncoder().encode(message);
           const signatureBytes = await signMessage(signMessageBytes);
           const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
@@ -64,7 +50,7 @@ export function WalletAuthButton({
             closeModal();
             resolveSuccess(res.userId);
           } else {
-            const res = (await resp.json()) as { errorCode?: ApiErrCode };
+            const res = (await resp.json());
             const errCode =
               res.errorCode ?? ("WALLET_VERIFICATION_FAILED" as ApiErrCode);
             resolveError(getWalletAuthErrorMessage(errCode));

@@ -46,10 +46,10 @@ function getPasswordSuccessMessage(
 ): string {
     switch (state) {
         case "PASSWORD_ADDED":
-            return tr("profileSettings.passwordAdded") as string;
+            return tr("profileSettings.passwordAdded");
         case "PASSWORD_CHANGED":
         default:
-            return tr("profileSettings.passwordChanged") as string;
+            return tr("profileSettings.passwordChanged");
     }
 }
 

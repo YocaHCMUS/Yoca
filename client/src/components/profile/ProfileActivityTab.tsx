@@ -64,8 +64,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     if (error) {
         return (
             <ProfileUnavailableState
-                i18nTitle="profileTabs.activity.unavailableTitle"
-                i18nDescription="profileTabs.activity.unavailableDescription"
+                title={tr("profileTabs.activity.unavailableTitle")}
+                description={tr("profileTabs.activity.unavailableDescription")}
             />
         );
     }
@@ -85,11 +85,26 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
         row.timestamp,
     ]);
 
+    const swapTableHeaders = [
+        tr("profileTabs.activity.tableHeaders.swaps.0"),
+        tr("profileTabs.activity.tableHeaders.swaps.1"),
+        tr("profileTabs.activity.tableHeaders.swaps.2"),
+        tr("profileTabs.activity.tableHeaders.swaps.3"),
+        tr("profileTabs.activity.tableHeaders.swaps.4"),
+    ]
+
+    const transferTableHeaders = [
+        tr("profileTabs.activity.tableHeaders.transfers.0"),
+        tr("profileTabs.activity.tableHeaders.transfers.1"),
+        tr("profileTabs.activity.tableHeaders.transfers.2"),
+        tr("profileTabs.activity.tableHeaders.transfers.3"),
+    ]
+
     return (
         <section className={styles.contentStack}>
             <Table
                 title={tr("profileTabs.activity.swapsTableTitle") as string}
-                headers={tr("profileTabs.activity.tableHeaders.swaps") as string[]}
+                headers={swapTableHeaders}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
@@ -126,7 +141,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
 
             <Table
                 title={tr("profileTabs.activity.transfersTableTitle") as string}
-                headers={tr("profileTabs.activity.tableHeaders.transfers") as string[]}
+                headers={transferTableHeaders}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{

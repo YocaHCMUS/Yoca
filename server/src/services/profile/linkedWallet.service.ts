@@ -1,6 +1,6 @@
 import { db } from "@sv/db";
 import { userLinkedWallets } from "@sv/db/schema";
-import { and, eq } from "drizzle-orm/sql/expressions/conditions";
+import { and, eq } from "drizzle-orm";
 
 export async function getUserLinkedWallets(userId: string) {
     const rows = await db

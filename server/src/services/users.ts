@@ -245,7 +245,7 @@ export async function getUserById(userId: string) {
 
 export async function getUserAuthMethods(userId: string) {
   const rows = await db
-    .select({
+    .selectDistinct({
       provider: authAccounts.provider,
     })
     .from(authAccounts)
