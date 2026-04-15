@@ -419,6 +419,12 @@ export const translation = defineTranslation({
     errorGeneric: "Có lỗi xảy ra. Vui lòng thử lại.",
     heliusOk: "Helius: OK",
     heliusFailed: "Helius: thất bại",
+    tableActions: "Hành động",
+    deleteSuccess: "Đã xoá ví và đồng bộ Helius.",
+    deletePartial:
+      "Đã xoá ví nhưng đồng bộ Helius thất bại. Địa chỉ cũ có thể vẫn nhận sự kiện cho đến lần đồng bộ kế tiếp.",
+    deleteFailed: "Không thể xoá ví. Vui lòng thử lại.",
+    deleteNotFound: "Ví đã được xoá trước đó.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

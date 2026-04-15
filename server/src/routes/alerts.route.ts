@@ -3,6 +3,7 @@ import {
   addFollowedWallet,
   isUniqueViolation,
   listFollowedWallets,
+  removeFollowedWallet,
   syncHeliusWebhookAccountAddresses,
 } from "@sv/services/followedWallets.service.js";
 import { statusCode } from "@sv/util/responses.js";
@@ -45,6 +46,23 @@ const app = new Hono()
       }
       console.error("[alerts] POST failed:", err);
       return c.json({ error: "Failed to follow wallet" }, 500);
+    }
+  })
+  .delete("/:id", async (c) => {
+    const id = Number(c.req.param("id"));
+    if (!Number.isFinite(id) || id <= 0) {
+      return c.json({ error: "Invalid wallet ID" }, 400);
+    }
+    try {
+      const deleted = await removeFollowedWallet(id);
+      if (!deleted) {
+        return c.json({ error: "Wallet not found" }, 404);
+      }
+      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      return c.json({ deleted: true, heliusSync }, statusCode.Ok);
+    } catch (err) {
+      console.error("[alerts] DELETE failed:", err);
+      return c.json({ error: "Failed to remove wallet" }, 500);
     }
   });
 

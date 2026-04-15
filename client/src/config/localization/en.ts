@@ -438,6 +438,12 @@ export const translation = {
     errorGeneric: "Something went wrong. Please try again.",
     heliusOk: "Helius: OK",
     heliusFailed: "Helius: failed",
+    tableActions: "Actions",
+    deleteSuccess: "Wallet removed and Helius synced.",
+    deletePartial:
+      "Wallet removed, but Helius re-sync failed. The old address may still receive events until the next successful sync.",
+    deleteFailed: "Failed to remove wallet. Please try again.",
+    deleteNotFound: "Wallet was already removed.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

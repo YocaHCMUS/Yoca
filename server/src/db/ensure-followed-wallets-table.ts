@@ -15,15 +15,18 @@ if (!url) {
 
 const sql = postgres(url);
 
-await sql.unsafe(`
-CREATE TABLE IF NOT EXISTS "followed_wallets" (
-  "id" serial PRIMARY KEY NOT NULL,
-  "address" text NOT NULL,
-  "label" text,
-  "created_at" timestamp DEFAULT now() NOT NULL,
-  CONSTRAINT "followed_wallets_address_unique" UNIQUE("address")
-);
-`);
+async function main() {
+  await sql.unsafe(`
+  CREATE TABLE IF NOT EXISTS "followed_wallets" (
+    "id" serial PRIMARY KEY NOT NULL,
+    "address" text NOT NULL,
+    "label" text,
+    "created_at" timestamp DEFAULT now() NOT NULL,
+    CONSTRAINT "followed_wallets_address_unique" UNIQUE("address")
+  );
+  `);
+  await sql.end();
+  console.log('Table "followed_wallets" is ready.');
+}
 
-await sql.end();
-console.log('Table "followed_wallets" is ready.');
+main();

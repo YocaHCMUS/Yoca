@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import { TrashCan } from "@carbon/icons-react";
 import {
   Button,
   Column,
@@ -36,6 +37,11 @@ type PostAlertsResponse = {
   heliusSync: HeliusSyncResult;
 };
 
+type DeleteAlertsResponse = {
+  deleted: boolean;
+  heliusSync: HeliusSyncResult;
+};
+
 function isValidSolanaAddress(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed.length < 32 || trimmed.length > 44) return false;
@@ -56,6 +62,7 @@ export default function AlertsPage() {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [inlineKind, setInlineKind] = useState<
     "success" | "error" | "warning" | null
   >(null);
@@ -84,6 +91,16 @@ export default function AlertsPage() {
     void loadList();
   }, [loadList]);
 
+  const showInline = (
+    kind: "success" | "error" | "warning",
+    title: string,
+    subtitle = "",
+  ) => {
+    setInlineKind(kind);
+    setInlineTitle(title);
+    setInlineSubtitle(subtitle);
+  };
+
   const dismissInline = () => {
     setInlineKind(null);
     setInlineTitle("");
@@ -95,8 +112,7 @@ export default function AlertsPage() {
     dismissInline();
     const trimmed = address.trim();
     if (!isValidSolanaAddress(trimmed)) {
-      setInlineKind("error");
-      setInlineTitle(tr("alertsPage.errorInvalidAddress"));
+      showInline("error", tr("alertsPage.errorInvalidAddress"));
       return;
     }
     setSubmitting(true);
@@ -112,13 +128,12 @@ export default function AlertsPage() {
         | { error?: string };
 
       if (res.status === 409) {
-        setInlineKind("warning");
-        setInlineTitle(tr("alertsPage.errorDuplicate"));
+        showInline("warning", tr("alertsPage.errorDuplicate"));
         return;
       }
       if (!res.ok || !("wallet" in body)) {
-        setInlineKind("error");
-        setInlineTitle(
+        showInline(
+          "error",
           "error" in body && typeof body.error === "string"
             ? body.error
             : tr("alertsPage.errorGeneric"),
@@ -127,23 +142,52 @@ export default function AlertsPage() {
       }
 
       if (body.heliusSync.ok) {
-        setInlineKind("success");
-        setInlineTitle(tr("alertsPage.successHelius"));
-        setInlineSubtitle(tr("alertsPage.successSaved"));
+        showInline(
+          "success",
+          tr("alertsPage.successHelius"),
+          tr("alertsPage.successSaved"),
+        );
       } else {
-        setInlineKind("warning");
-        setInlineTitle(tr("alertsPage.partialHelius"));
-        setInlineSubtitle(body.heliusSync.error || "");
+        showInline("warning", tr("alertsPage.partialHelius"), body.heliusSync.error || "");
       }
 
       setAddress("");
       setLabel("");
       await loadList();
     } catch {
-      setInlineKind("error");
-      setInlineTitle(tr("alertsPage.errorGeneric"));
+      showInline("error", tr("alertsPage.errorGeneric"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (id: number) => {
+    dismissInline();
+    setDeletingId(id);
+    try {
+      const res = await (client.api.alerts as any)[":id"].$delete({
+        param: { id: String(id) },
+      });
+      if (res.status === 404) {
+        showInline("warning", tr("alertsPage.deleteNotFound"));
+        await loadList();
+        return;
+      }
+      if (!res.ok) {
+        showInline("error", tr("alertsPage.deleteFailed"));
+        return;
+      }
+      const body = (await res.json()) as DeleteAlertsResponse;
+      if (body.heliusSync.ok) {
+        showInline("success", tr("alertsPage.deleteSuccess"));
+      } else {
+        showInline("warning", tr("alertsPage.deletePartial"), body.heliusSync.error || "");
+      }
+      await loadList();
+    } catch {
+      showInline("error", tr("alertsPage.deleteFailed"));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -197,7 +241,9 @@ export default function AlertsPage() {
                     }}
                   >
                     {submitting ? (
-                      <InlineLoading description={tr("alertsPage.followButton")} />
+                      <InlineLoading
+                        description={tr("alertsPage.followButton")}
+                      />
                     ) : null}
                     <Button type="submit" kind="primary" disabled={submitting}>
                       {tr("alertsPage.followButton")}
@@ -236,6 +282,9 @@ export default function AlertsPage() {
                         <TableHeader>
                           {tr("alertsPage.tableAdded")}
                         </TableHeader>
+                        <TableHeader className={styles.actionsCell}>
+                          {tr("alertsPage.tableActions")}
+                        </TableHeader>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -254,6 +303,21 @@ export default function AlertsPage() {
                           <TableCell>{row.label || "—"}</TableCell>
                           <TableCell>
                             {fmt.datetime.datetime(new Date(row.createdAt))}
+                          </TableCell>
+                          <TableCell className={styles.actionsCell}>
+                            {deletingId === row.id ? (
+                              <InlineLoading />
+                            ) : (
+                              <Button
+                                kind="ghost"
+                                size="sm"
+                                hasIconOnly
+                                iconDescription="Delete"
+                                renderIcon={TrashCan}
+                                disabled={deletingId !== null}
+                                onClick={() => onDelete(row.id)}
+                              />
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

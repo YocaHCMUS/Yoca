@@ -1,6 +1,6 @@
 import { followedWallets } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 const DEFAULT_HELIUS_WEBHOOK_ID = "2b2123ed-ae76-4fcc-beaa-25e0fb3f5c48";
 const HELIUS_API_BASE =
@@ -38,6 +38,14 @@ export async function addFollowedWallet(address: string, label?: string | null) 
     })
     .returning();
   return row;
+}
+
+export async function removeFollowedWallet(id: number): Promise<boolean> {
+  const deleted = await db
+    .delete(followedWallets)
+    .where(eq(followedWallets.id, id))
+    .returning({ id: followedWallets.id });
+  return deleted.length > 0;
 }
 
 export type HeliusSyncResult =
