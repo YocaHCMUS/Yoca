@@ -13,6 +13,7 @@ import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import { cds } from "@/util/carbon-theme";
@@ -33,7 +34,7 @@ import {
   Tooltip,
 } from "@carbon/react";
 import { ChartTreemap, Launch, Star, StarFilled } from "@carbon/react/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type TradeVolumeOption = 0 | 1 | 100 | 500;
 type TradeTimeOption = "6h" | "12h" | "24h";
@@ -41,27 +42,14 @@ type TradesSortOption = "volume" | "time";
 
 export default function MarketPage() {
   const { fmt, tr } = useLocalization();
+  const { tokenWatchlist, toggleToken, tokenPending, isLoading: watchlistLoading } =
+    useWatchlist();
   const [tradeVolume, setTradeVolume] = useState<TradeVolumeOption>(1);
   const [tradeTime, setTradeTime] = useState<TradeTimeOption>("24h");
   const [tradesSort, setTradesSort] = useState<TradesSortOption>("volume");
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem("yoca_watchlist");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem("yoca_watchlist", JSON.stringify(watchlist));
-  }, [watchlist]);
-
-  const toggleWatchlist = (address: string) => {
-    setWatchlist((prev) =>
-      prev.includes(address)
-        ? prev.filter((a) => a !== address)
-        : [...prev, address],
-    );
-  };
+  const watchlist = tokenWatchlist;
 
   const headings = useMemo(() => {
     const map = {
@@ -106,9 +94,9 @@ export default function MarketPage() {
   const recentTradesData = useGet(client.api.trades.recent, 200, {
     query: {
       timeWindow: tradeTime,
-      usdThreshold: String(Number(tradeVolume)),
+      usdThreshold: Number(tradeVolume),
       sortBy: tradesSort,
-    },
+    } as any,
   });
 
   const loading =
@@ -209,10 +197,11 @@ export default function MarketPage() {
                 : tr("marketPage.addToWatchlist")
             }
             kind="ghost"
+            disabled={watchlistLoading || Boolean(tokenPending[token.address])}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              toggleWatchlist(token.address);
+              void toggleToken(token.address);
             }}
           >
             {isFav ? (

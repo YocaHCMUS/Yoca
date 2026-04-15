@@ -1020,6 +1020,20 @@ export const translation = defineTranslation({
       balanceChartTitle: "Cân bằng",
       drawdownChartTitle: "Rút ngắn",
     },
+    watchlist: {
+      title: "Danh sách theo dõi",
+      walletSubtab: "Theo dõi ví",
+      tokenSubtab: "Theo dõi token",
+      walletTableTitle: "Ví đang theo dõi",
+      tokenTableTitle: "Token đang theo dõi",
+      walletAddress: "Địa chỉ ví",
+      walletIdentity: "Danh tính",
+      emptyWalletTitle: "Chưa có ví trong danh sách theo dõi",
+      emptyWalletDescription: "Hãy thêm ví vào danh sách theo dõi để xem tại đây.",
+      emptyTokenTitle: "Chưa có token trong danh sách theo dõi",
+      emptyTokenDescription:
+        "Hãy thêm token vào danh sách theo dõi để theo dõi biến động thị trường.",
+    },
     unavailableState: {
       defaultTitle: "Dữ liệu không có sẵn",
       defaultDescription: "Không có dữ liệu hồ sơ nào có sẵn ngay bây giờ.",

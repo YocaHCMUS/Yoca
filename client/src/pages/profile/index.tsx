@@ -4,6 +4,7 @@ import ProfileDashboardTab from "@/components/profile/ProfileDashboardTab";
 import ProfilePortfolioTab from "@/components/profile/ProfilePortfolioTab";
 import ProfileWalletTab from "@/components/profile/ProfileWalletTab";
 import ProfileSettingsTab from "@/components/profile/profileSettingsTab";
+import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
 import {
     PROFILE_TABS,
     type ProfileTabId,
@@ -12,7 +13,7 @@ import TabContainer from "@/components/tabContainer/tabContainer";
 import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { Activity, ChartLine, Notification, Settings, User, Wallet } from "@carbon/react/icons";
+import { Activity, ChartLine, Notification, Settings, StarFilled, User, Wallet } from "@carbon/react/icons";
 import { InlineLoading } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
@@ -74,6 +75,10 @@ export default function ProfilePage() {
                 node: <ProfileWalletTab walletAddresses={walletAddresses} period={period} />,
             },
             {
+                id: "watchlist",
+                node: <ProfileWatchlistTab />,
+            },
+            {
                 id: "activity",
                 node: <ProfileActivityTab walletAddresses={walletAddresses} period={period} />,
             },
@@ -99,6 +104,7 @@ export default function ProfilePage() {
                 if (tab.id === "dashboard") return <ChartLine size={16} />;
                 if (tab.id === "alerts") return <Notification size={16} />;
                 if (tab.id === "wallets") return <Wallet size={16} />;
+                if (tab.id === "watchlist") return <StarFilled size={16} />;
                 if (tab.id === "settings") return <Settings size={16} />;
                 return <Activity size={16} />;
             }),
