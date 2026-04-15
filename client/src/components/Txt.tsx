@@ -1,6 +1,6 @@
 import { cds } from "@/util/carbon-theme";
 
-type TxtSize = "sm" | "md" | "lg" | "xl" | "2xl";
+type TxtSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 type TxtProps = {
   size?: TxtSize;
   block?: boolean;
@@ -14,6 +14,7 @@ type TxtProps = {
 };
 
 const sizeFontSize: Record<TxtSize, number> = {
+  xs: 0.5,
   sm: 0.75,
   md: 1,
   lg: 2,

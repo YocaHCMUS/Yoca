@@ -1,5 +1,6 @@
 import { setErr } from "@sv/config/errors";
 import {
+  alertIdSchema,
   createAlertSchema,
   honoJwt,
   updateAlertSchema,
@@ -31,7 +32,7 @@ const app = new Hono()
       const address = c.req.query("tokenAddress");
       const alerts = await alertsService.getAlertsByUser(payload.id);
       const result = address
-        ? alerts.filter((a) => a.tokenAddress === address)
+        ? alerts.filter((a) => a.tokenAddress == address)
         : alerts;
       return c.json(result, statusCode.Ok);
     } catch (err) {
@@ -74,7 +75,7 @@ const app = new Hono()
     }
   })
 
-  .get("/:id", honoJwt, async (c) => {
+  .get("/:id", honoJwt, validate("param", alertIdSchema), async (c) => {
     try {
       const rawPayload = c.get("jwtPayload");
       const parsedPayload = userPayloadSchema.safeParse(rawPayload);
@@ -82,7 +83,7 @@ const app = new Hono()
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
       const payload = parsedPayload.data;
-      const id = c.req.param("id");
+      const { id } = c.req.valid("param");
       const row = await alertsService.getAlertById(id);
       if (!row || row.userId !== payload.id)
         return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
@@ -96,31 +97,40 @@ const app = new Hono()
     }
   })
 
-  .put("/:id", honoJwt, validate("json", updateAlertSchema), async (c) => {
-    try {
-      const rawPayload = c.get("jwtPayload");
-      const parsedPayload = userPayloadSchema.safeParse(rawPayload);
-      if (!parsedPayload.success) {
-        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+  .put(
+    "/:id",
+    honoJwt,
+    validate("param", alertIdSchema),
+    validate("json", updateAlertSchema),
+    async (c) => {
+      try {
+        const rawPayload = c.get("jwtPayload");
+        const parsedPayload = userPayloadSchema.safeParse(rawPayload);
+        if (!parsedPayload.success) {
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
+        }
+        const payload = parsedPayload.data;
+        const { id } = c.req.valid("param");
+        const existing = await alertsService.getAlertById(id);
+        if (!existing || existing.userId !== payload.id)
+          return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+        const body = c.req.valid("json");
+        const updated = await alertsService.updateAlert(id, body);
+        return c.json(updated, statusCode.Ok);
+      } catch (err) {
+        console.log(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
-      const payload = parsedPayload.data;
-      const id = c.req.param("id");
-      const existing = await alertsService.getAlertById(id);
-      if (!existing || existing.userId !== payload.id)
-        return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
-      const body = c.req.valid("json");
-      const updated = await alertsService.updateAlert(id, body);
-      return c.json(updated, statusCode.Ok);
-    } catch (err) {
-      console.log(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
-    }
-  })
+    },
+  )
 
-  .delete("/:id", honoJwt, async (c) => {
+  .delete("/:id", honoJwt, validate("param", alertIdSchema), async (c) => {
     try {
       const rawPayload = c.get("jwtPayload");
       const parsedPayload = userPayloadSchema.safeParse(rawPayload);
@@ -128,7 +138,7 @@ const app = new Hono()
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
       const payload = parsedPayload.data;
-      const id = c.req.param("id");
+      const { id } = c.req.valid("param");
       const existing = await alertsService.getAlertById(id);
       if (!existing || existing.userId != payload.id)
         return c.json({ error: "Not found" }, 404);

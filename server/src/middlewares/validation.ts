@@ -106,6 +106,10 @@ export const createAlertSchema = z.object({
     .min(1, "At least one condition is required"),
 });
 
+export const alertIdSchema = z.object({
+  id: z.uuid(),
+});
+
 export const updateAlertSchema = z.object({
   alertType: z.enum(userAlertTypes),
   period: z.enum(userAlertPeriods),
