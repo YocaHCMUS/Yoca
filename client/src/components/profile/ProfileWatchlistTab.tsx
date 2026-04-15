@@ -1,9 +1,9 @@
 import client from "@/api/main";
-import SparklineChart from "@/components/charts/SparklineChart";
 import { CpyBtn } from "@/components/CpyBtn";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import TabContainer from "@/components/tabContainer/tabContainer";
-import Tble from "@/components/Tble";
+import { SortType, Table } from "@/components/tables/Table";
+import { renderSparkline } from "@/components/tables/TableCellRenderer";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
@@ -92,65 +92,70 @@ export function ProfileWatchlistTab() {
     }, [linkedWallets.data, tr]);
 
     const tokenHeaders = [
-        { key: "favorite", header: "", width: 56, align: "center" as const },
-        { key: "token", header: tr("marketPage.token"), align: "start" as const },
-        { key: "price", header: tr("marketPage.price"), align: "end" as const },
-        { key: "change1h", header: "1h", align: "end" as const },
-        { key: "change24h", header: "24h", align: "end" as const },
-        { key: "change7d", header: "7d", align: "end" as const },
-        {
-            key: "volume24h",
-            header: tr("marketPage.volume24h"),
-            align: "end" as const,
-        },
-        {
-            key: "marketCap",
-            header: tr("marketPage.marketCap"),
-            align: "end" as const,
-        },
-        { key: "fdv", header: tr("token.marketStats.fdv"), align: "end" as const },
-        {
-            key: "sparkline",
-            header: tr("nav.searchLast7Days"),
-            align: "end" as const,
-            width: "15%",
-        },
+        { header: "", align: "center" as const, minWidth: "3.5rem" },
+        { header: tr("marketPage.token"), align: "start" as const, minWidth: "13rem" },
+        { header: tr("marketPage.price"), align: "end" as const, minWidth: "8rem" },
+        { header: "1h", align: "end" as const, minWidth: "7rem" },
+        { header: "24h", align: "end" as const, minWidth: "7rem" },
+        { header: "7d", align: "end" as const, minWidth: "7rem" },
+        { header: tr("marketPage.volume24h"), align: "end" as const, minWidth: "8rem" },
+        { header: tr("marketPage.marketCap"), align: "end" as const, minWidth: "9rem" },
+        { header: tr("token.marketStats.fdv"), align: "end" as const, minWidth: "9rem" },
+        { header: tr("nav.searchLast7Days"), align: "end" as const, minWidth: "12rem" },
     ];
 
     const walletHeaders = [
-        {
-            key: "favorite",
-            header: "",
-            width: 56,
-            align: "center" as const,
-        },
-        {
-            key: "walletAddress",
-            header: tr("profileTabs.watchlist.walletAddress"),
-            align: "start" as const,
-        },
-        {
-            key: "identity",
-            header: tr("profileTabs.watchlist.walletIdentity"),
-            align: "start" as const,
-        },
+        { header: "", align: "center" as const, minWidth: "3.5rem" },
+        { header: tr("profileTabs.watchlist.walletAddress"), align: "start" as const, minWidth: "14rem" },
+        { header: tr("profileTabs.watchlist.walletIdentity"), align: "start" as const, minWidth: "10rem" },
     ];
 
-    const tokenRows = useMemo(() => {
+    const tokenTableData = useMemo(() => {
         return tokenWatchlist.map((tokenAddress) => {
             const meta = tokenMetaByAddress[tokenAddress];
             const market = marketByAddress[tokenAddress];
             const symbol = meta?.symbol?.toUpperCase() ?? fmt.text.address(tokenAddress);
             const name = meta?.name ?? tokenAddress;
 
-            return {
-                id: tokenAddress,
-                favorite: (
+            return [
+                {
+                    tokenAddress,
+                    pending: Boolean(tokenPending[tokenAddress]),
+                },
+                {
+                    tokenAddress,
+                    symbol,
+                    name,
+                    imageUrl: meta?.imageUrl,
+                },
+                market?.priceUsd ?? null,
+                market?.priceChangePercentage1h ?? null,
+                market?.priceChangePercentage24h ?? null,
+                market?.priceChangePercentage7d ?? null,
+                market?.volume24h ?? null,
+                market?.marketCap ?? null,
+                market?.fullyDilutedValuation ?? null,
+                {
+                    data: market?.sparkline7d ?? [],
+                    positive: (market?.priceChangePercentage7d ?? 0) >= 0,
+                },
+            ];
+        });
+    }, [tokenWatchlist, tokenMetaByAddress, marketByAddress, fmt, tokenPending]);
+
+    const tokenCellRenderers = useMemo(
+        () => [
+            (value: unknown) => {
+                const entry = value as { tokenAddress?: string; pending?: boolean };
+                const tokenAddress = entry?.tokenAddress;
+                if (!tokenAddress) return null;
+
+                return (
                     <IconButton
                         label={tr("marketPage.removeFromWatchlist")}
                         kind="ghost"
                         size="sm"
-                        disabled={Boolean(tokenPending[tokenAddress])}
+                        disabled={Boolean(entry.pending)}
                         onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -159,10 +164,23 @@ export function ProfileWatchlistTab() {
                     >
                         <StarFilled size={16} fill={cds.backgroundBrand} />
                     </IconButton>
-                ),
-                token: (
+                );
+            },
+            (value: unknown) => {
+                const entry = value as {
+                    tokenAddress?: string;
+                    symbol?: string;
+                    name?: string;
+                    imageUrl?: string;
+                };
+
+                const tokenAddress = entry?.tokenAddress ?? "";
+                const symbol = entry?.symbol ?? fmt.text.address(tokenAddress);
+                const name = entry?.name ?? tokenAddress;
+
+                return (
                     <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
-                        <TknImg src={meta?.imageUrl} alt={symbol} size={28} />
+                        <TknImg src={entry?.imageUrl} alt={symbol} size={28} />
                         <Stack gap={1} style={{ justifyContent: "center" }}>
                             <Stack
                                 orientation="horizontal"
@@ -179,59 +197,70 @@ export function ProfileWatchlistTab() {
                             </Txt>
                         </Stack>
                     </Stack>
-                ),
-                price: market ? fmt.num.currency(market.priceUsd) : "-",
-                change1h: market ? (
-                    <TrendNum
-                        value={market.priceChangePercentage1h}
-                        formatter={fmt.num.percent}
-                    />
-                ) : (
-                    "-"
-                ),
-                change24h: market ? (
-                    <TrendNum
-                        value={market.priceChangePercentage24h}
-                        formatter={fmt.num.percent}
-                    />
-                ) : (
-                    "-"
-                ),
-                change7d: market ? (
-                    <TrendNum
-                        value={market.priceChangePercentage7d}
-                        formatter={fmt.num.percent}
-                    />
-                ) : (
-                    "-"
-                ),
-                volume24h: market ? fmt.num.compact.currency(market.volume24h) : "-",
-                marketCap: market ? fmt.num.compact.currency(market.marketCap) : "-",
-                fdv: market ? fmt.num.compact.currency(market.fullyDilutedValuation) : "-",
-                sparkline: market ? (
-                    <div style={{ width: "100%", height: 40, paddingLeft: 24 }}>
-                        <SparklineChart
-                            data={market.sparkline7d ?? []}
-                            positive={(market.priceChangePercentage7d ?? 0) >= 0}
-                        />
-                    </div>
-                ) : (
-                    "-"
-                ),
-            };
-        });
-    }, [tokenWatchlist, tokenMetaByAddress, marketByAddress, fmt, tokenPending, toggleToken, tr]);
+                );
+            },
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? fmt.num.currency(value)
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? <TrendNum value={value} formatter={fmt.num.percent} />
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? <TrendNum value={value} formatter={fmt.num.percent} />
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? <TrendNum value={value} formatter={fmt.num.percent} />
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? fmt.num.compact.currency(value)
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? fmt.num.compact.currency(value)
+                    : "-",
+            (value: unknown) =>
+                typeof value === "number" && Number.isFinite(value)
+                    ? fmt.num.compact.currency(value)
+                    : "-",
+            (value: unknown) => renderSparkline(value),
+        ],
+        [fmt, toggleToken, tr],
+    );
 
-    const walletRows = useMemo(
+    const walletTableData = useMemo(
         () =>
             walletWatchlist.map((walletAddress) => ({
                 id: walletAddress,
-                favorite: (
+                row: [
+                    {
+                        walletAddress,
+                        pending: Boolean(walletPending[walletAddress]),
+                    },
+                    walletAddress,
+                    linkedWalletIdentity[walletAddress] ?? "-",
+                ],
+            })).map((entry) => entry.row),
+        [walletWatchlist, linkedWalletIdentity, walletPending],
+    );
+
+    const walletCellRenderers = useMemo(
+        () => [
+            (value: unknown) => {
+                const entry = value as { walletAddress?: string; pending?: boolean };
+                const walletAddress = entry?.walletAddress;
+                if (!walletAddress) return null;
+
+                return (
                     <IconButton
                         label={tr("marketPage.removeFromWatchlist")}
                         kind="ghost"
                         size="sm"
-                        disabled={Boolean(walletPending[walletAddress])}
+                        disabled={Boolean(entry.pending)}
                         onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -240,56 +269,94 @@ export function ProfileWatchlistTab() {
                     >
                         <StarFilled size={16} fill={cds.backgroundBrand} />
                     </IconButton>
-                ),
-                walletAddress: (
+                );
+            },
+            (value: unknown) => {
+                const walletAddress = typeof value === "string" ? value : "";
+                return (
                     <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
                         <Link href={`/wallets/${walletAddress}`}>
                             {fmt.text.address(walletAddress)}
                         </Link>
                         <CpyBtn size="xs" copyWhat={walletAddress} />
                     </Stack>
-                ),
-                identity: linkedWalletIdentity[walletAddress] ?? "-",
-            })),
-        [walletWatchlist, linkedWalletIdentity, fmt, walletPending, toggleWallet, tr],
+                );
+            },
+            (value: unknown) => (typeof value === "string" ? value : "-"),
+        ],
+        [fmt, toggleWallet, tr],
     );
 
     const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;
     const walletLoading = isLoading || linkedWallets.isLoading;
 
-    const tokenTable = tokenRows.length === 0 && !tokenLoading ? (
+    const tokenTable = tokenTableData.length === 0 && !tokenLoading ? (
         <ProfileUnavailableState
             title={tr("profileTabs.watchlist.emptyTokenTitle")}
             description={tr("profileTabs.watchlist.emptyTokenDescription")}
         />
     ) : (
-        <Tble
-            boxed
-            stickyHeader
-            // height={100 %}
+        <Table
             title={tr("profileTabs.watchlist.tokenTableTitle")}
-            loading={tokenLoading}
             headers={tokenHeaders}
-            rows={tokenRows}
-            onRowClick={(row) => navigate(`/tokens/${row.id}`)}
+            initialFilters={{}}
+            fetcher={Promise.resolve(tokenTableData)}
+            filterSchema={{}}
+            cellRenderers={tokenCellRenderers}
+            dataEntries={tokenTableData}
+            isSortable={[false, false, true, true, true, true, true, true, true, false]}
+            sortConfigs={{
+                2: { type: SortType.Number },
+                3: { type: SortType.Number },
+                4: { type: SortType.Number },
+                5: { type: SortType.Number },
+                6: { type: SortType.Number },
+                7: { type: SortType.Number },
+                8: { type: SortType.Number },
+            }}
+            loading={tokenLoading}
+            maxHeight={520}
+            onRowClick={(row) => {
+                const tokenAddress =
+                    typeof row?.[0] === "object" && row[0] != null
+                        ? (row[0] as { tokenAddress?: string }).tokenAddress
+                        : undefined;
+                if (tokenAddress) {
+                    navigate(`/tokens/${tokenAddress}`);
+                }
+            }}
         />
     );
 
-    const walletTable = walletRows.length === 0 && !walletLoading ? (
+    const walletTable = walletTableData.length === 0 && !walletLoading ? (
         <ProfileUnavailableState
             title={tr("profileTabs.watchlist.emptyWalletTitle")}
             description={tr("profileTabs.watchlist.emptyWalletDescription")}
         />
     ) : (
-        <Tble
-            boxed
-            stickyHeader
-            // height={100 %}
+        <Table
             title={tr("profileTabs.watchlist.walletTableTitle")}
-            loading={walletLoading}
             headers={walletHeaders}
-            rows={walletRows}
-            onRowClick={(row) => navigate(`/wallets/${row.id}`)}
+            initialFilters={{}}
+            fetcher={Promise.resolve(walletTableData)}
+            filterSchema={{}}
+            cellRenderers={walletCellRenderers}
+            dataEntries={walletTableData}
+            isSortable={[false, false, true]}
+            sortConfigs={{
+                2: { type: SortType.String },
+            }}
+            loading={walletLoading}
+            maxHeight={520}
+            onRowClick={(row) => {
+                const walletAddress =
+                    typeof row?.[0] === "object" && row[0] != null
+                        ? (row[0] as { walletAddress?: string }).walletAddress
+                        : undefined;
+                if (walletAddress) {
+                    navigate(`/wallets/${walletAddress}`);
+                }
+            }}
         />
     );
 

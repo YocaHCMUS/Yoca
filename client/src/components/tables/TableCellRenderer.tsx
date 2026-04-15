@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
+import SparklineChart from '@/components/charts/SparklineChart';
 import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
 import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
+
+export interface SparklineCellValue {
+  data: number[];
+  positive?: boolean;
+  width?: string | number;
+  height?: number;
+  paddingLeft?: number;
+}
 
 /**
  * Renders a value as monospace code with secondary color
@@ -220,6 +229,34 @@ export const renderTokenCell = (
       </span>
     );
   };
+};
+
+export const renderSparkline = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return '-';
+  }
+
+  const sparkline = value as SparklineCellValue;
+  const points = Array.isArray(sparkline.data) ? sparkline.data : [];
+
+  if (points.length === 0) {
+    return '-';
+  }
+
+  return (
+    <div
+      style={{
+        width: sparkline.width ?? '100%',
+        height: sparkline.height ?? 40,
+        paddingLeft: sparkline.paddingLeft ?? 24,
+      }}
+    >
+      <SparklineChart
+        data={points}
+        positive={sparkline.positive ?? true}
+      />
+    </div>
+  );
 };
 
 /**

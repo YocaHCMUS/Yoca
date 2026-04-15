@@ -1223,7 +1223,7 @@ export default function WalletPage() {
 
     const tabActions = (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <IconButton
+            {/* <IconButton
                 kind="ghost"
                 size="sm"
                 disabled={!user || !walletAddress || Boolean(walletPending[walletAddress])}
@@ -1234,7 +1234,7 @@ export default function WalletPage() {
                 }}
             >
                 {isWalletInWatchlist ? <StarFilled size={16} /> : <Star size={16} />}
-            </IconButton>
+            </IconButton> */}
 
             <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
                 <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
