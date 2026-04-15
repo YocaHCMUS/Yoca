@@ -31,7 +31,7 @@ import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
-import { addAddressToWatchlist, addTokenToWatchlist, getAddressWatchlist, getTokenWatchlist, isAddressInWatchlist, isTokenInWatchlist, removeAddressFromWatchlist, removeTokenFromWatchlist } from "@sv/services/profile/watchList.service";
+import { addAddressToWatchlist, addTokenToWatchlist, getAddressWatchlist, getTokenWatchlist, isAddressInWatchlist, isTokenInWatchlist, removeAddressFromWatchlist, removeTokenFromWatchlist } from "@sv/services/profile/watchlist.service.js";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
