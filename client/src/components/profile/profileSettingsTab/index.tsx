@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./index.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { ModalStateManager } from "@/components/ModelStateManager";
 
 type LoginMethodKey = "password" | "google" | "solana";
 
@@ -102,7 +103,7 @@ export default function ProfileSettingsTab() {
     const [identityState, setIdentityState] = useState<SectionState>({ loading: false });
     const [passwordState, setPasswordState] = useState<SectionState>({ loading: false });
     const [accountState, setAccountState] = useState<SectionState>({ loading: false });
-    const [passwordEditorOpen, setPasswordEditorOpen] = useState(false);
+    // const [passwordEditorOpen, setPasswordEditorOpen] = useState(false);
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -265,7 +266,7 @@ export default function ProfileSettingsTab() {
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
-            setPasswordEditorOpen(false);
+            // setPasswordEditorOpen(false);
             setPasswordState({ loading: false, success: getPasswordSuccessMessage(result.state, tr) });
             await loadSnapshot();
         } catch (error) {
@@ -359,13 +360,102 @@ export default function ProfileSettingsTab() {
                             <div className={styles.methodActions}>
 
                                 {method.key === "password" ? (
-                                    <Button
-                                        kind="tertiary"
-                                        size="sm"
-                                        onClick={() => setPasswordEditorOpen((prev) => !prev)}
-                                    >
-                                        {hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
-                                    </Button>
+                                    // <Button
+                                    //     kind="tertiary"
+                                    //     size="sm"
+                                    //     onClick={() => setPasswordEditorOpen((prev) => !prev)}
+                                    // >
+                                    //     {hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
+                                    // </Button>
+                                    <ModalStateManager
+                                        renderLauncher={({ setOpen }) => (
+                                            <Button
+                                                kind="tertiary"
+                                                size="sm"
+                                                onClick={() => setOpen(true)}
+                                            >
+                                                {tr("profileSettings.changePassword")}
+                                            </Button>
+                                        )}
+
+                                        children={
+                                            ({ open, setOpen }) => (
+                                                <ComposedModal
+                                                    open={open}
+                                                    onClose={() => setOpen(false)}
+                                                >
+                                                    <ModalHeader
+                                                        title={hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
+                                                        label={tr("profileSettings.loginMethods") as string}
+                                                    />
+                                                    <ModalBody>
+                                                        <div>
+                                                            <TextInput
+                                                                id="profile-settings-email"
+                                                                labelText={tr("profileSettings.email") as string}
+                                                                type="email"
+                                                                value={email ? email : ""} // why does it automatically add in past input?
+                                                                onChange={(event) => setEmail(event.currentTarget.value)}
+                                                                className={styles.input}
+                                                            />
+                                                            {hasPassword ? (
+                                                                <PasswordInput
+                                                                    id="profile-settings-current-password"
+                                                                    labelText={tr("profileSettings.currentPassword") as string}
+                                                                    value={currentPassword}
+                                                                    onChange={(event) => setCurrentPassword(event.currentTarget.value)}
+                                                                    className={styles.input}
+                                                                />
+                                                            ) : null}
+                                                            <PasswordInput
+                                                                id="profile-settings-new-password"
+                                                                labelText={tr("profileSettings.newPassword") as string}
+                                                                value={newPassword}
+                                                                onChange={(event) => setNewPassword(event.currentTarget.value)}
+                                                                className={styles.input}
+                                                            />
+                                                            <PasswordInput
+                                                                id="profile-settings-confirm-password"
+                                                                labelText={tr("profileSettings.confirmPassword") as string}
+                                                                value={confirmPassword}
+                                                                onChange={(event) => setConfirmPassword(event.currentTarget.value)}
+                                                                className={styles.input}
+                                                            />
+                                                            {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
+                                                            {passwordState.error ? (
+                                                                <InlineNotification
+                                                                    // className={styles.statusMessage}
+                                                                    kind="error"
+                                                                    title={tr("profileSettings.passwordUpdateFailed") as string}
+                                                                    subtitle={passwordState.error}
+                                                                />
+                                                            ) : null}
+                                                            {passwordState.success ? (
+                                                                <InlineNotification
+                                                                    // className={styles.statusMessage}
+                                                                    kind="success"
+                                                                    title={tr("common.success") as string}
+                                                                    subtitle={passwordState.success}
+                                                                />
+                                                            ) : null}
+                                                        </div>
+                                                    </ModalBody>
+                                                    <ModalFooter>
+                                                        <Button
+                                                            kind="secondary"
+                                                            onClick={() => setOpen(false)}
+                                                            disabled={passwordState.loading}
+                                                        >
+                                                            {tr("common.cancel")}
+                                                        </Button>
+                                                        <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
+                                                            {tr("profileSettings.savePassword")}
+                                                        </Button>
+                                                    </ModalFooter>
+                                                </ComposedModal>
+                                            )
+                                        }
+                                    />
                                 ) :
                                     <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
                                         {method.connected ? tr("profileSettings.statusConnected") : tr("profileSettings.statusNotConnected")}
@@ -375,79 +465,7 @@ export default function ProfileSettingsTab() {
                         </div>
                     ))}
                 </div>
-                <ComposedModal
-                    open={passwordEditorOpen}
-                    onClose={() => setPasswordEditorOpen(false)}
-                >
-                    <ModalHeader
-                        title={hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
-                        label={tr("profileSettings.loginMethods") as string}
-                    />
-                    <ModalBody>
-                        <div>
-                            <TextInput
-                                id="profile-settings-email"
-                                labelText={tr("profileSettings.email") as string}
-                                type="email"
-                                value={email ? email : ""} // why does it automatically add in past input?
-                                onChange={(event) => setEmail(event.currentTarget.value)}
-                                className={styles.input}
-                            />
-                            {hasPassword ? (
-                                <PasswordInput
-                                    id="profile-settings-current-password"
-                                    labelText={tr("profileSettings.currentPassword") as string}
-                                    value={currentPassword}
-                                    onChange={(event) => setCurrentPassword(event.currentTarget.value)}
-                                    className={styles.input}
-                                />
-                            ) : null}
-                            <PasswordInput
-                                id="profile-settings-new-password"
-                                labelText={tr("profileSettings.newPassword") as string}
-                                value={newPassword}
-                                onChange={(event) => setNewPassword(event.currentTarget.value)}
-                                className={styles.input}
-                            />
-                            <PasswordInput
-                                id="profile-settings-confirm-password"
-                                labelText={tr("profileSettings.confirmPassword") as string}
-                                value={confirmPassword}
-                                onChange={(event) => setConfirmPassword(event.currentTarget.value)}
-                                className={styles.input}
-                            />
-                            {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
-                            {passwordState.error ? (
-                                <InlineNotification
-                                    // className={styles.statusMessage}
-                                    kind="error"
-                                    title={tr("profileSettings.passwordUpdateFailed") as string}
-                                    subtitle={passwordState.error}
-                                />
-                            ) : null}
-                            {passwordState.success ? (
-                                <InlineNotification
-                                    // className={styles.statusMessage}
-                                    kind="success"
-                                    title={tr("common.success") as string}
-                                    subtitle={passwordState.success}
-                                />
-                            ) : null}
-                        </div>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button
-                            kind="secondary"
-                            onClick={() => setPasswordEditorOpen(false)}
-                            disabled={passwordState.loading}
-                        >
-                            {tr("common.cancel")}
-                        </Button>
-                        <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
-                            {tr("profileSettings.savePassword")}
-                        </Button>
-                    </ModalFooter>
-                </ComposedModal>
+
             </div>
 
             <div className={`${styles.section} ${styles.dangerSection}`}>

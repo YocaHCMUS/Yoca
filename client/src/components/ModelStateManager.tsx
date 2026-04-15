@@ -27,7 +27,7 @@ export const ModalStateManager = ({
     <>
       {modalRoot &&
         ReactDOM.createPortal(
-          <ModalContent open={open} setOpen={setOpen} />,
+          ModalContent({ open, setOpen }),
           modalRoot,
         )}
       <LauncherContent open={open} setOpen={setOpen} />
