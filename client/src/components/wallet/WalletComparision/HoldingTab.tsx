@@ -4,6 +4,8 @@ import React from "react";
 import styles from "./GeneralTab.module.scss"; // Assuming we create this
 import type WalletComparisionProp from "./WalletComparisionProp";
 
+const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
+
 export const HoldingTab: React.FC<WalletComparisionProp> = ({
   walletAddresses,
   fetchEnabled = true,
@@ -24,7 +26,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
       {/* Asset Distribution Charts */}
       {/* {walletAddresses.map((address, index) => (
             ))} */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <AssetDistribution
           initialFilters={{ wallets: walletAddresses }}
           minHeight={300}
@@ -33,7 +35,7 @@ export const HoldingTab: React.FC<WalletComparisionProp> = ({
       </div>
 
       {/* Stable Coin Ratio Chart */}
-      <div className={styles.stableCoinChart}>
+      <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
         <StablecoinRatioChart
           minHeight={300}
           initialFilters={{

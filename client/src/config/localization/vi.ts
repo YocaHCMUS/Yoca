@@ -365,6 +365,8 @@ export const translation = defineTranslation({
     general: "Tổng quan",
     holdings: "Tài sản nắm giữ",
     profitRiskManagement: "Quản lý lợi nhuận & rủi ro",
+    exportPdf: "Xuất PDF",
+    generatingPdf: "Đang tạo PDF...",
   },
   // Navigation
   nav: {

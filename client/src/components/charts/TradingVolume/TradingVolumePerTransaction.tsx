@@ -242,7 +242,7 @@ export function TradingVolumePerTransaction({
       }
       onRetry={() => refetch(false)}
     >
-      <div className={sharedStyles.chartControls}>
+      <div className={sharedStyles.chartControls} data-html2canvas-ignore="true">
         <PeriodSelector
           value={filters.timePeriod}
           onChange={(k) => setTimePeriod(k)}
