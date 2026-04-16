@@ -41,7 +41,6 @@ export default function ProfilePage() {
                 id: "overview",
                 node: (
                     <ProfilePortfolioTab
-                        walletAddresses={walletAddresses}
                         linkedWallets={linkedWallets}
                         period={period}
                         onPeriodChange={setPeriod}
