@@ -63,9 +63,15 @@ export function ProfilePortfolioTab({
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
     const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
+
     useEffect(() => {
         setLinkedWalletRows(linkedWallets);
     }, [linkedWallets]);
+
+    const navigateToWalletDetail = (walletAddress: string) => {
+        const nextPath = `/wallets/${encodeURIComponent(walletAddress)}`;
+        navigate(nextPath);
+    };
 
     const overviewData = useMemo<ProfileOverviewData>(() => {
         const totalNetWorthUsd = walletOverviews.reduce(
@@ -231,6 +237,14 @@ export function ProfilePortfolioTab({
                         </div>
                     }
                     loading={loading}
+
+                    onRowClick={(_, rowIndex) => {
+                        const row = tableRows[rowIndex];
+                        if (row) {
+                            const walletAddress = row[0] as string;
+                            navigateToWalletDetail(walletAddress);
+                        }
+                    }}
                 />
             )
                 || (
