@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
+import { Button, Checkbox } from '@carbon/react';
 import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
+import SparklineChart from '@/components/charts/SparklineChart';
 import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
+import type { TranslateFunction } from '@/contexts/LocalizationContext.tsx';
 import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
+
+export interface SparklineCellValue {
+  data: number[];
+  positive?: boolean;
+  width?: string | number;
+  height?: number;
+  paddingLeft?: number;
+}
 
 /**
  * Renders a value as monospace code with secondary color
@@ -220,6 +231,97 @@ export const renderTokenCell = (
       </span>
     );
   };
+};
+
+export interface ProfilePortfolioCellRendererOptions {
+  selectedComparisonWalletAddresses: string[];
+  onComparisonToggle: (walletAddress: string, checked: boolean) => void;
+  onUnlinkWallet: (walletAddress: string) => void | Promise<void>;
+  formatAddress: (address: string) => string;
+  formatCurrency: (value: number) => string;
+  t: TranslateFunction;
+}
+
+export const createProfilePortfolioCellRenderers = ({
+  selectedComparisonWalletAddresses,
+  onComparisonToggle,
+  onUnlinkWallet,
+  formatAddress,
+  formatCurrency,
+  t,
+}: ProfilePortfolioCellRendererOptions) => [
+    (_value: unknown, row: unknown[]) => {
+      const walletAddress = String(row[0] ?? '');
+
+      return (
+        <div onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            id={`wallet-compare-${walletAddress}`}
+            labelText=""
+            hideLabel
+            checked={selectedComparisonWalletAddresses.includes(walletAddress)}
+            onChange={(_, state) => onComparisonToggle(walletAddress, state.checked)}
+          />
+        </div>
+      );
+    },
+    null,
+    (_value: unknown, row: unknown[]) => {
+      const walletAddress = String(row[2] ?? '');
+
+      return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
+    },
+    (value: unknown) => formatCurrency(Number(value)),
+    (value: unknown) => String(value),
+    (isAuthWallet: unknown, row: unknown[]) => {
+      if (typeof isAuthWallet !== 'boolean') {
+        return null;
+      }
+
+      const walletAddress = String(row[0] ?? '');
+
+      return (
+        <div onClick={(event) => event.stopPropagation()}>
+          <Button
+            size="sm"
+            kind="ghost"
+            disabled={isAuthWallet}
+            title={isAuthWallet ? t('profileTabs.portfolio.authWalletCannotBeUnlinked') : t('profileTabs.portfolio.unlinkWallet')}
+            onClick={() => onUnlinkWallet(walletAddress)}
+          >
+            {t('profileTabs.portfolio.unlinkWallet')}
+          </Button>
+        </div>
+      );
+    },
+  ];
+
+export const renderSparkline = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return '-';
+  }
+
+  const sparkline = value as SparklineCellValue;
+  const points = Array.isArray(sparkline.data) ? sparkline.data : [];
+
+  if (points.length === 0) {
+    return '-';
+  }
+
+  return (
+    <div
+      style={{
+        width: sparkline.width ?? '100%',
+        height: sparkline.height ?? 40,
+        paddingLeft: sparkline.paddingLeft ?? 24,
+      }}
+    >
+      <SparklineChart
+        data={points}
+        positive={sparkline.positive ?? true}
+      />
+    </div>
+  );
 };
 
 /**

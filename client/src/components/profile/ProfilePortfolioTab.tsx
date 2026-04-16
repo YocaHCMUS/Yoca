@@ -1,11 +1,11 @@
 import { ProfileOverview } from "@/components/profile/ProfileOverview";
 import { Table } from "@/components/tables/Table";
 import { FilterType, SortType } from "@/components/tables/Table";
+import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { Button, Checkbox } from "@carbon/react";
 import { AddLarge, Repeat } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -22,7 +22,6 @@ import ProfileUnavailableState from "@/components/profile/ProfileUnavailableStat
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfilePortfolioTabProps {
-    walletAddresses: string[];
     linkedWallets: LinkedWalletRowPayload[];
     period: TimePeriod;
     onPeriodChange: (period: TimePeriod) => void;
@@ -45,7 +44,6 @@ function formatAddress(address: string): string {
 }
 
 export function ProfilePortfolioTab({
-    walletAddresses,
     linkedWallets,
     period,
     onPeriodChange,
@@ -54,12 +52,16 @@ export function ProfilePortfolioTab({
     const navigate = useNavigate();
     const { user } = useAuth();
     const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
+    const linkedWalletByAddress = useMemo(
+        () => new Map(linkedWalletRows.map((wallet) => [wallet.walletAddress, wallet])),
+        [linkedWalletRows],
+    );
     const linkedWalletAddresses = useMemo(
         () => linkedWalletRows.map((wallet) => wallet.walletAddress),
         [linkedWalletRows],
     );
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
-    const { walletOverviews, setWalletOverviews, loading, error } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
+    const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
     useEffect(() => {
         setLinkedWalletRows(linkedWallets);
@@ -97,9 +99,7 @@ export function ProfilePortfolioTab({
     const tableRows = useMemo(
         () =>
             walletOverviews.map((overview) => {
-                const walletMeta = linkedWalletRows.find(
-                    (wallet) => wallet.walletAddress === overview.address,
-                );
+                const walletMeta = linkedWalletByAddress.get(overview.address);
                 const walletLabel = formatAddress(overview.address);
                 const authStatus = walletMeta?.isAuthWallet
                     ? tr("profileTabs.portfolio.authWalletLabel")
@@ -111,10 +111,10 @@ export function ProfilePortfolioTab({
                     overview.address,
                     overview.totalAssetValueUsd,
                     authStatus,
-                    overview.address,
+                    walletMeta?.isAuthWallet,
                 ];
             }),
-        [linkedWalletRows, walletOverviews, tr],
+        [linkedWalletByAddress, walletOverviews, tr],
     );
 
     const handleComparisonToggle = (walletId: string, checked: boolean) => {
@@ -142,6 +142,15 @@ export function ProfilePortfolioTab({
         }
     };
 
+    const portfolioCellRenderers = createProfilePortfolioCellRenderers({
+        selectedComparisonWalletAddresses,
+        onComparisonToggle: handleComparisonToggle,
+        onUnlinkWallet: handleUnlinkWallet,
+        formatAddress,
+        formatCurrency,
+        t: tr,
+    });
+
     const handleCompareClick = () => {
         if (selectedComparisonWalletAddresses.length < 2) {
             return;
@@ -161,14 +170,14 @@ export function ProfilePortfolioTab({
             />
             {user?.userId && (
                 <Table
-                    title="Linked wallets list"
+                    title={tr("profileTabs.portfolio.linkedWalletsList")}
                     headers={[
-                        "Compare",
-                        "Wallet",
-                        "Address",
-                        "Net worth",
-                        "Auth",
-                        "Actions",
+                        tr("profileTabs.portfolio.compare"),
+                        tr("profileTabs.portfolio.wallet"),
+                        tr("profileTabs.portfolio.address"),
+                        tr("profileTabs.portfolio.netWorth"),
+                        tr("profileTabs.portfolio.auth"),
+                        tr("profileTabs.portfolio.actions"),
                     ]}
                     initialFilters={{}}
                     fetcher={Promise.resolve([])}
@@ -179,48 +188,7 @@ export function ProfilePortfolioTab({
                         4: { type: FilterType.Select },
                     }}
                     dataEntries={tableRows}
-                    cellRenderers={[
-                        (_value, row) => {
-                            const walletId = String(row[0]);
-                            return (
-                                <div onClick={(event) => event.stopPropagation()}>
-                                    <Checkbox
-                                        id={`wallet-compare-${walletId}`}
-                                        labelText=""
-                                        hideLabel
-                                        checked={selectedComparisonWalletAddresses.includes(walletId)}
-                                        onChange={(_, state) =>
-                                            handleComparisonToggle(walletId, state.checked)
-                                        }
-                                    />
-                                </div>
-                            );
-                        },
-                        null,
-                        (_value, row) => {
-                            const walletAddress = String(row[2]);
-                            return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
-                        },
-                        (value) => formatCurrency(Number(value)),
-                        (value) => String(value),
-                        (_value, row) => (
-                            <div onClick={(event) => event.stopPropagation()}>
-                                <Button
-                                    size="sm"
-                                    kind="ghost"
-                                    disabled={String(row[4]) === "Auth wallet"}
-                                    title={
-                                        String(row[4]) === "Auth wallet"
-                                            ? "Wallet used for authentication cannot be unlinked"
-                                            : "Unlink wallet"
-                                    }
-                                    onClick={() => handleUnlinkWallet(String(row[5]))}
-                                >
-                                    Unlink
-                                </Button>
-                            </div>
-                        ),
-                    ]}
+                    cellRenderers={portfolioCellRenderers}
                     isSortable={[true, true, true, true, true, false]}
                     sortConfigs={{
                         3: { type: SortType.Number },
