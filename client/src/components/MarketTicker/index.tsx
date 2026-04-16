@@ -14,7 +14,6 @@ export interface MarketTickerItem {
   rank: number;
   symbol: string;
   imageUrl?: string;
-  priceUsd: number;
   priceChange24h: number;
 }
 
@@ -66,7 +65,6 @@ function MarketTicker({ label, icon, className }: MarketTickerProps) {
         rank: token.rank,
         symbol: tokenMeta?.symbol || "",
         imageUrl: tokenMeta?.imageUrl ?? undefined,
-        priceUsd: tokenMarket?.priceUsd || 0,
         priceChange24h: tokenMarket?.priceChange24h || 0,
       };
     });
@@ -107,8 +105,7 @@ function MarketTicker({ label, icon, className }: MarketTickerProps) {
               >
                 <span>#{item.rank}</span>
                 <TknImg src={item.imageUrl} size={24} />
-                <Txt ellipsis>{item.symbol.toUpperCase()}</Txt>
-                <span>{fmt.num.currency(item.priceUsd)}</span>
+                <Txt>{item.symbol.toUpperCase()}</Txt>
                 <TrendNum
                   value={item.priceChange24h}
                   formatter={fmt.num.percent}
