@@ -4,6 +4,8 @@ import { HoldingTab } from "@/components/wallet/WalletComparision/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import type { TranslationKeyPath } from "@/config/localization";
+import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
 import { ChartLine, Close, Download, SearchAdvanced, Wallet, User } from "@carbon/react/icons";
 import html2canvas from "html2canvas";
@@ -227,15 +229,19 @@ export default function WalletsComparisionPage() {
     ],
   );
 
-  const handleExportPDF = async (activeTabName: string) => {
+  const handleExportPDF = async (activeTabTranslationKey: string) => {
     const exportTarget = exportRef.current;
     if (isExporting || !exportTarget) {
       return;
     }
 
     const activeSegment = TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
-    const localizedTabName = String(tr(TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general"));
-    const activeHeaderTitle = activeTabName.trim() || localizedTabName;
+    const localizedTabName = String(
+      tr(TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general"),
+    );
+    const activeHeaderTitle = activeTabTranslationKey.trim()
+      ? String(tr(activeTabTranslationKey as never))
+      : localizedTabName;
     const { width, height } = exportTarget.getBoundingClientRect();
     if (width <= 0 || height <= 0) {
       return;
@@ -268,7 +274,7 @@ export default function WalletsComparisionPage() {
 
       const headerWallets = selectedWallets.length > 0
         ? selectedWallets.map((address) => `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`).join("")
-        : `<div>${String(tr("common.na"))}</div>`;
+        : `<div>${String(tr("marketPage.na"))}</div>`;
 
       tempHeader.innerHTML = `
         <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
@@ -304,6 +310,7 @@ export default function WalletsComparisionPage() {
       }
 
       const pdf = new jsPDF("p", "mm", "a4");
+      await applyRobotoRegularPdfFont(pdf);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       let currentY = PDF_EXPORT_TOP_MARGIN_MM;
@@ -377,7 +384,7 @@ export default function WalletsComparisionPage() {
 
         if (sectionTitle) {
           pdf.setFontSize(14);
-          pdf.setFont("times", "bold");
+          pdf.setFont("Roboto", "normal");
           pdf.text(sectionTitle, 14, currentY);
           currentY += titleHeight;
         }
@@ -413,8 +420,9 @@ export default function WalletsComparisionPage() {
   };
 
   const handleSidebarExport = () => {
-    const activeTabName = String(tr(TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general"));
-    void handleExportPDF(activeTabName);
+    const activeTabTranslationKey =
+      TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general";
+    void handleExportPDF(activeTabTranslationKey);
   };
 
   return (
