@@ -594,6 +594,7 @@ export const translation = {
       asset: "Assets",
       value: "Value",
       percentage: "Percentage",
+      assetPrice: "Current Price",
       noWalletsMessage:
         "Please select at least one wallet to view asset distribution.",
       others: "Others",
@@ -737,6 +738,13 @@ export const translation = {
     },
     drawdownChart: {
       title: "Drawdown Analysis",
+      stats: {
+        maxDrawdown: "Max Drawdown",
+        daysSinceMaxDD: "Days Since Max DD",
+        currentDrawdown: "Current Drawdown",
+        maxDDDate: "Max DD Date",
+        days: "days",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Average Rolling Annual Return",

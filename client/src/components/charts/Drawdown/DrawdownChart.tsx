@@ -319,23 +319,23 @@ export function DrawdownChart({
         title: walletAddress,
         stats: [
           {
-            label: "Max Drawdown",
+            label: tr("charts.drawdownChart.stats.maxDrawdown"),
             value: (maxDrawdown * 100).toFixed(2),
             suffix: "%",
             valueClassName: "text-danger",
           },
           {
-            label: "Days Since Max DD",
+            label: tr("charts.drawdownChart.stats.daysSinceMaxDD"),
             value: daysSinceMaxDrawdown != null ? daysSinceMaxDrawdown : "-",
-            suffix: "days",
+            suffix: tr("charts.drawdownChart.stats.days"),
           },
           {
-            label: "Current Drawdown",
+            label: tr("charts.drawdownChart.stats.currentDrawdown"),
             value: (currentDrawdown * 100).toFixed(2),
             suffix: "%",
           },
           {
-            label: "Max DD Date",
+            label: tr("charts.drawdownChart.stats.maxDDDate"),
             value: maxDrawdownTimestamp
               ? formatTimestampWithTimezone(
                 maxDrawdownTimestamp,

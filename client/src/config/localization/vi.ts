@@ -565,6 +565,7 @@ export const translation = defineTranslation({
       asset: "Tài sản",
       value: "Giá trị",
       percentage: "Phần trăm",
+      assetPrice: "Giá hiện tại",
       noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản.",
       others: "Khác",
       filters: {
@@ -707,6 +708,13 @@ export const translation = defineTranslation({
     },
     drawdownChart: {
       title: "Phân tích sụt giảm",
+      stats: {
+        maxDrawdown: "Sụt giảm tối đa",
+        daysSinceMaxDD: "Số ngày kể từ sụt giảm tối đa",
+        currentDrawdown: "Sụt giảm hiện tại",
+        maxDDDate: "Ngày sụt giảm tối đa",
+        days: "ngày",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Lợi nhuận hàng năm lăn trung bình",
