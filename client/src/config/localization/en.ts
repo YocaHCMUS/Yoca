@@ -803,6 +803,10 @@ export const translation = {
     },
     drawdownChart: {
       title: "Drawdown Analysis",
+      visibility: {
+        active: "Active",
+        hidden: "Hidden",
+      },
       stats: {
         maxDrawdown: "Max Drawdown",
         daysSinceMaxDD: "Days Since Max DD",

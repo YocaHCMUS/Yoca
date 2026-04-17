@@ -773,6 +773,10 @@ export const translation = defineTranslation({
     },
     drawdownChart: {
       title: "Phân tích sụt giảm",
+      visibility: {
+        active: "Đang hiển thị",
+        hidden: "Đã ẩn",
+      },
       stats: {
         maxDrawdown: "Sụt giảm tối đa",
         daysSinceMaxDD: "Số ngày kể từ sụt giảm tối đa",

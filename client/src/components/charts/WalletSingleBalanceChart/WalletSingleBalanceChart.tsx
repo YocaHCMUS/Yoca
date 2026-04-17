@@ -272,7 +272,7 @@ export function WalletSingleBalanceChart({
 
         return {
             ...base,
-            ...getChartGridConfig(),
+            ...getChartGridConfig,
             legend: { show: false },
             xAxis: {
                 ...base.xAxis,
