@@ -26,7 +26,7 @@ import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelecto
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency, isChartSuccess } from '@/util/chart-helpers';
+import { isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
@@ -49,7 +49,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   fetchEnabled = true,
   className,
 }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = tr('charts.tradingVolumeDistributionChart.title');
   // Store translated labels in variables to avoid TS literal type issues
   const buyLabel = tr('charts.tradingVolumeDistributionChart.buy');
@@ -185,7 +185,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
             tr('charts.tradingVolumeDistributionChart.volume'),
-            formatCurrency(p.value)
+            fmt.num.currency(Number(p.value ?? 0))
           )
           + createTooltipRow(
             tr('charts.tradingVolumeDistributionChart.percentage'),
@@ -237,7 +237,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: formatCurrency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
+            text: fmt.num.currency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
@@ -245,7 +245,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, tr, selectedAssets]);
+  }, [chartTheme, tr, selectedAssets, fmt]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend

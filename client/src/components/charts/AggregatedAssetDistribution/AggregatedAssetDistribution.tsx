@@ -7,7 +7,6 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { DistributionRequestParams } from '@/types/chart-api.types';
@@ -386,7 +385,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     }
                     html += createTooltipRow(
                         tr('charts.aggregatedAssetDistributionChart.value'),
-                        formatCurrency(p.value),
+                        fmt.num.currency(Number(p.value ?? 0)),
                     );
                     html += createTooltipRow(
                         tr('charts.aggregatedAssetDistributionChart.percentage'),
@@ -456,7 +455,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     left: 'center',
                     top: '50%',
                     style: {
-                        text: formatCurrency(displayTotal),
+                        text: fmt.num.currency(displayTotal),
                         fill: chartTheme.textColor,
                         fontSize: 18,
                         fontWeight: 'bold',
@@ -464,7 +463,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                 },
             ],
         };
-    }, [chartTheme, groupedTokens, othersLabel, tr, displayTotal]);
+    }, [chartTheme, groupedTokens, othersLabel, tr, displayTotal, fmt]);
 
     const toggleWalletSelected = useCallback((walletAddress: string, checked: boolean) => {
         setSelectedWallets((prev) => {
@@ -533,7 +532,6 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     </a>
                 );
             },
-            // (value: unknown) => formatCurrency(Number(value ?? 0)),
             (value: unknown) => renderBase(value, (text) => fmt.num.currency(Number(text ?? 0))),
             (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
         ] as Array<((value: any, row: any[], rowIndex: number) => React.ReactNode) | null>;

@@ -59,7 +59,7 @@ export function DrawdownChart({
   fetchEnabled = true,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.drawdownChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
@@ -245,11 +245,11 @@ export function DrawdownChart({
             if (drawdownObj) {
               tooltip += `<div>Drawdown: ${(drawdownObj.drawdown * 100).toFixed(2)}%</div>`;
               if ("value" in drawdownObj)
-                tooltip += `<div>Value: ${drawdownObj.value}</div>`;
+                tooltip += `<div>Value: ${fmt.num.currency(Number((drawdownObj as any).value ?? 0))}</div>`;
               if ("peak" in drawdownObj)
-                tooltip += `<div>Peak: ${drawdownObj.peak}</div>`;
+                tooltip += `<div>Peak: ${fmt.num.currency(Number((drawdownObj as any).peak ?? 0))}</div>`;
               if ("trough" in drawdownObj)
-                tooltip += `<div>Trough: ${drawdownObj.trough}</div>`;
+                tooltip += `<div>Trough: ${fmt.num.currency(Number((drawdownObj as any).trough ?? 0))}</div>`;
               if ("date" in drawdownObj)
                 tooltip += `<div>Date: ${drawdownObj.date}</div>`;
             }
@@ -259,7 +259,7 @@ export function DrawdownChart({
         },
       },
     };
-  }, [data, chartTheme, timezone, tr]);
+  }, [data, chartTheme, timezone, tr, fmt]);
 
   /**
    * Generate statistics header

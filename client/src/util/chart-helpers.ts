@@ -13,37 +13,6 @@ import type { TimePeriod } from '../types/chart-filters.types';
 
 
 /**
- * Format currency value with appropriate precision and units
- * 
- * @example
- * formatCurrency(1234567.89) // "$1.23M"
- * formatCurrency(123.45) // "$123.45"
- * formatCurrency(0.000034) // "$0.000034"
- */
-export function formatCurrency(value: number, _currency: string = 'USD'): string {
-  void _currency;
-  const absValue = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  // Handle very small values (like BONK) with appropriate precision
-  if (absValue > 0 && absValue < 0.01) {
-    // For very small values, show up to 6 decimal places
-    return `${sign}$${absValue.toFixed(6)}`;
-  }
-
-  // Format large numbers with K, M, B suffixes
-  if (absValue >= 1_000_000_000) {
-    return `${sign}$${(absValue / 1_000_000_000).toFixed(2)}B`;
-  } else if (absValue >= 1_000_000) {
-    return `${sign}$${(absValue / 1_000_000).toFixed(2)}M`;
-  } else if (absValue >= 1_000) {
-    return `${sign}$${(absValue / 1_000).toFixed(2)}K`;
-  } else {
-    return `${sign}$${absValue.toFixed(2)}`;
-  }
-}
-
-/**
  * Format percentage value
  * 
  * @example
@@ -308,7 +277,6 @@ export function isChartSuccess<T>(
  * Chart helper utilities object
  */
 export const chartHelpers = {
-  formatCurrency,
   formatPercentage,
   formatNumber,
   formatDate,

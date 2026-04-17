@@ -26,7 +26,7 @@ import { runChartExport } from "@/services/chart/chartExportService";
 import type { ExchangesRequestParams } from "@/types/chart-api.types";
 import type { ChartDataSeries } from "@/types/chart-data.types";
 import type { ExportFormat } from "@/types/chart-filters.types";
-import { formatCurrency, isChartSuccess } from "@/util/chart-helpers";
+import { isChartSuccess } from "@/util/chart-helpers";
 import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import {
   createSeriesIndicator,
@@ -106,7 +106,7 @@ export function ExchangeComparison({
   className,
 }: ExchangeComparisonProps) {
   // i18n
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.exchangeComparisonChart.title");
 
   // State management
@@ -223,7 +223,7 @@ export function ExchangeComparison({
   const chartOptions = useMemo((): EChartsOption | null => {
     console.log("[ExchangeComparison] Generating chart options. Data:", data);
     console.log("[ExchangeComparison] isChartSuccess:", isChartSuccess(data, "exchanges"));
-    
+
     if (!isChartSuccess(data, "exchanges") || data.exchanges.length === 0) {
       console.log("[ExchangeComparison] No valid exchange data for chart");
       return null;
@@ -262,7 +262,7 @@ export function ExchangeComparison({
             const value =
               currentMetric === "count"
                 ? `${param.value.toLocaleString()} txns`
-                : formatCurrency(param.value);
+                : fmt.num.currency(param.value);
             tooltipContent +=
               `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">` +
               `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>` +
@@ -305,7 +305,7 @@ export function ExchangeComparison({
             if (currentMetric === "count") {
               return value.toLocaleString();
             }
-            return formatCurrency(value);
+            return fmt.num.currency(value);
           },
         },
       },
@@ -326,7 +326,7 @@ export function ExchangeComparison({
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
-              return formatCurrency(params.value);
+              return fmt.num.currency(params.value);
             },
             fontSize: 11,
           },
@@ -348,7 +348,7 @@ export function ExchangeComparison({
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
-              return formatCurrency(params.value);
+              return fmt.num.currency(params.value);
             },
             fontSize: 11,
           },
@@ -356,7 +356,7 @@ export function ExchangeComparison({
         },
       ],
     };
-  }, [data, currentMetric, chartTheme, tr]);
+  }, [data, currentMetric, chartTheme, tr, fmt]);
 
   /**
    * Setup chart export

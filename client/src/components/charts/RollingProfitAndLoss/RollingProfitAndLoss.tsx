@@ -42,7 +42,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   fetchEnabled = true,
   className,
 }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle =
     title || tr("charts.rollingAnnualReturn.title") || "Rolling P&L";
   const TIME_PERIOD_LABELS = [
@@ -130,7 +130,15 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         data: labels,
         axisLabel: { rotate: 30 },
       },
-      yAxis: { ...base.yAxis, type: "value", name: "USD" },
+      yAxis: {
+        ...base.yAxis,
+        type: "value",
+        name: "USD",
+        axisLabel: {
+          ...(base.yAxis as any)?.axisLabel,
+          formatter: (value: number) => fmt.num.currency(value),
+        },
+      },
       tooltip: {
         ...base.tooltip,
         trigger: "axis",
@@ -159,7 +167,15 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
       ...base,
       ...getChartGridConfig,
       xAxis: { ...base.xAxis, type: "category", data: labels },
-      yAxis: { ...base.yAxis, type: "value", name: "USD" },
+      yAxis: {
+        ...base.yAxis,
+        type: "value",
+        name: "USD",
+        axisLabel: {
+          ...(base.yAxis as any)?.axisLabel,
+          formatter: (value: number) => fmt.num.currency(value),
+        },
+      },
       tooltip: {
         ...base.tooltip,
         trigger: "axis",

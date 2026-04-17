@@ -25,7 +25,6 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import { getPieLegend } from '@/util/chart-legend-config';
 import type { DistributionRequestParams } from '@/types/chart-api.types';
@@ -116,7 +115,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   fetchEnabled = true,
   className,
 }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = tr('charts.assetDistributionChart.title');
   const othersLabel = tr('charts.assetDistributionChart.others');
 
@@ -280,7 +279,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           }
           html += createTooltipRow(
             tr('charts.assetDistributionChart.value'),
-            formatCurrency(p.value)
+            fmt.num.currency(Number(p.value ?? 0))
           );
           html += createTooltipRow(
             tr('charts.assetDistributionChart.percentage'),
@@ -355,7 +354,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: formatCurrency(displayTotal),
+            text: fmt.num.currency(displayTotal),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',
@@ -363,7 +362,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [chartTheme, tr, selectedAssets, topN, minPct]);
+  }, [chartTheme, tr, selectedAssets, topN, minPct, fmt]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend

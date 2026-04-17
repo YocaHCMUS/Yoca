@@ -28,7 +28,6 @@ import {
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { TotalTradingVolumeRequestParams } from "@/types/chart-api.types";
-import { formatCurrency } from "@/util/chart-helpers";
 import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import { formatItemTooltip } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
@@ -54,7 +53,7 @@ export function TotalTradingVolumeChart({
   fetchEnabled = true,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.totalTradingVolumeChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
@@ -127,7 +126,7 @@ export function TotalTradingVolumeChart({
         name: `Volume (${data.metadata?.currency || "USD"})`,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
+          formatter: (value: number) => fmt.num.currency(value),
         },
       },
       yAxis: {
@@ -151,7 +150,7 @@ export function TotalTradingVolumeChart({
           label: {
             show: true,
             position: "right",
-            formatter: (params: any) => formatCurrency(params.value),
+            formatter: (params: any) => fmt.num.currency(params.value),
             color: chartTheme.textColor,
           },
           emphasis: {
@@ -175,13 +174,13 @@ export function TotalTradingVolumeChart({
           return formatItemTooltip(wallet.wallet, [
             {
               label: "Total Volume",
-              value: formatCurrency(wallet.tradingVolumeUsd ?? 0),
+              value: fmt.num.currency(wallet.tradingVolumeUsd ?? 0),
             },
           ]);
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [data, chartTheme, tr, fmt]);
 
   return (
     <BaseChart
