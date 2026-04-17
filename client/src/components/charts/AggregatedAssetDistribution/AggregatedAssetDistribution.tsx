@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Checkbox } from '@carbon/react';
+import { Button, Checkbox, IconButton } from '@carbon/react';
+import { Cube, Grid } from '@carbon/icons-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
@@ -478,17 +479,20 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
     }, []);
 
     const tableHeaders = useMemo<TableColumnHeader[]>(() => {
-        const base: TableColumnHeader[] = [
-            { header: tr('charts.aggregatedAssetDistributionChart.walletTable.walletName'), minWidth: '9rem' },
+        if (mode === 'aggregate') {
+            return [
+                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.isSelected'), minWidth: '7rem', align: 'center' },
+                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
+                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' },
+                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' },
+            ];
+        }
+
+        return [
+            { header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
             { header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' },
             { header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' },
         ];
-
-        if (mode === 'aggregate') {
-            base.push({ header: tr('charts.aggregatedAssetDistributionChart.walletTable.isSelected'), minWidth: '7rem', align: 'center' });
-        }
-
-        return base;
     }, [mode, tr]);
 
     const tableRows = useMemo<any[][]>(() => {
@@ -499,17 +503,20 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                 toString: () => wallet.walletName || wallet.walletAddress,
             };
 
-            const baseRow: any[] = [
+            if (mode === 'aggregate') {
+                return [
+                    selectedWallets.has(wallet.walletAddress),
+                    walletIdentity,
+                    wallet.netWorth,
+                    wallet.uniqueTokenCount,
+                ];
+            }
+
+            return [
                 walletIdentity,
                 wallet.netWorth,
                 wallet.uniqueTokenCount,
             ];
-
-            if (mode === 'aggregate') {
-                baseRow.push(selectedWallets.has(wallet.walletAddress));
-            }
-
-            return baseRow;
         });
     }, [walletRows, mode, selectedWallets]);
 
@@ -537,8 +544,8 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
         ] as Array<((value: any, row: any[], rowIndex: number) => React.ReactNode) | null>;
 
         if (mode === 'aggregate') {
-            baseRenderers.push((_value: unknown, row: any[]) => {
-                const walletAddress = String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? '');
+            const selectionRenderer = (_value: unknown, row: any[]) => {
+                const walletAddress = String((row[1] as WalletIdentityCellValue | undefined)?.walletAddress ?? '');
                 const isChecked = selectedWallets.has(walletAddress);
                 const inputId = `agg-wallet-select-${walletAddress.replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
@@ -558,7 +565,9 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         }}
                     />
                 );
-            });
+            };
+
+            return [selectionRenderer, ...baseRenderers];
         }
 
         return baseRenderers;
@@ -595,6 +604,20 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     role="group"
                     aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.modeToggle')}
                 >
+                    {/* <IconButton
+                        kind="ghost"
+                        onClick={() => setMode('single')}
+                        label={tr('charts.aggregatedAssetDistributionChart.mode.single')}>
+                        <Cube
+                            size={20} />
+                    </IconButton>
+                    <IconButton
+                        kind="ghost"
+                        onClick={() => setMode('aggregate')}
+                        label={tr('charts.aggregatedAssetDistributionChart.mode.aggregate')}>
+                        <Grid size={20} />
+                    </IconButton> */}
+
                     <button
                         type="button"
                         className={`${sharedStyles.chartToggleButton} ${mode === 'single' ? sharedStyles.active : ''}`}
@@ -659,7 +682,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     ))}
                 </div>
             </label>
-        </div>
+        </div >
     );
 
     return (
@@ -667,13 +690,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             title={chartTitle}
             toolbarLayout="stacked"
             loadingState={loadingState}
-            isEmpty={isEmpty}
-            emptyState={filters.wallets && filters.wallets.length === 0
-                ? {
-                    title: tr('charts.noWalletsTitle'),
-                    message: tr('charts.aggregatedAssetDistributionChart.noWalletsMessage'),
-                }
-                : undefined}
+            isEmpty={false}
             onRetry={() => refetch(false)}
             onExport={handleExport}
             className={className}
@@ -689,13 +706,13 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         dataEntries={tableRows}
                         filterSchema={mode === 'aggregate'
                             ? {
-                                1: {
+                                2: {
                                     type: FilterType.Range,
                                     min: 0,
                                     max: Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)),
                                     step: Math.max(1, Math.floor(Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)) / 100)),
                                 },
-                                2: {
+                                3: {
                                     type: FilterType.Range,
                                     min: 0,
                                     max: Math.max(100, ...walletRows.map((wallet) => wallet.uniqueTokenCount || 0)),
@@ -717,13 +734,12 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                                 },
                             }}
                         isSortable={mode === 'aggregate'
-                            ? [false, true, true, false]
+                            ? [false, false, true, true]
                             : [false, true, true]}
                         sortConfigs={mode === 'aggregate'
                             ? {
-                                1: { type: SortType.Number },
                                 2: { type: SortType.Number },
-                                3: { type: SortType.String },
+                                3: { type: SortType.Number },
                             }
                             : {
                                 1: { type: SortType.Number },
@@ -735,22 +751,36 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         onRowClick={mode === 'single'
                             ? (row) => setActiveWalletAddress(String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? ''))
                             : undefined}
-                        rowClassName={mode === 'single'
-                            ? (row) => (String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? '') === activeWalletAddress ? tableStyles.activeRow : undefined)
-                            : undefined}
+                        // rowClassName={mode === 'single'
+                        //     ? (row) => (String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? '') === activeWalletAddress ? tableStyles.activeRow : undefined)
+                        //     : undefined}
                         maxHeight={Math.max(minHeight, 300)}
                     />
                 </div>
 
                 <div className={styles.chartPanel}>
-                    <ReactECharts
-                        ref={chartRef}
-                        option={option}
-                        className={styles.chartHost}
-                        style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-                        notMerge
-                        lazyUpdate
-                    />
+                    {
+                        isEmpty && (
+                            <div className={styles.emptyState}>
+                                <p className={styles.emptyStateTitle}>
+                                    {tr('charts.noDataTitle')}
+                                </p>
+                                <p className={styles.emptyStateMessage}>
+                                    {tr('charts.noDataMessage')}
+                                </p>
+                            </div>
+                        ) || (
+                            <ReactECharts
+                                ref={chartRef}
+                                option={option}
+                                className={styles.chartHost}
+                                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                                notMerge
+                                lazyUpdate
+                            />
+                        )
+                    }
+
                 </div>
             </div>
         </ChartWrapper>

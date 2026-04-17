@@ -607,6 +607,7 @@ export const translation = defineTranslation({
       },
       walletTable: {
         title: "Danh sách ví",
+        wallet: "Ví",
         walletName: "Tên ví",
         walletAddress: "Địa chỉ ví",
         netWorth: "Giá trị ròng",

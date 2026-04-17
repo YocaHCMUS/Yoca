@@ -13,10 +13,40 @@
 
 .chartPanel {
     min-width: 0;
+    display: flex;
     border: 1px solid var(--cds-border-subtle);
     border-radius: $spacing-03;
     padding: $spacing-04;
     background: var(--cds-layer-01);
+}
+
+.emptyState {
+    width: 100%;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: $spacing-06;
+    border: 1px dashed var(--cds-border-subtle-02);
+    border-radius: $spacing-03;
+    background: linear-gradient(180deg, var(--cds-layer-01) 0%, var(--cds-layer-hover-01) 100%);
+}
+
+.emptyStateTitle {
+    margin: 0 0 $spacing-03;
+    color: var(--cds-text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.emptyStateMessage {
+    margin: 0;
+    max-width: 36ch;
+    color: var(--cds-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.45;
 }
 
 .walletName {
@@ -50,6 +80,7 @@
 }
 
 .chartHost {
+    flex: 1;
     width: 100%;
     min-height: 100%;
 }

@@ -637,6 +637,7 @@ export const translation = {
       },
       walletTable: {
         title: "Wallet Selector",
+        wallet: "Wallet",
         walletName: "Wallet Name",
         walletAddress: "Wallet Address",
         netWorth: "Net Worth",
