@@ -1,7 +1,7 @@
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
-import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
+import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table, tableHeaderLabel } from "@/components/tables/Table.tsx";
@@ -272,12 +272,6 @@ export default function WalletPage() {
         [walletWatchlist],
     );
     const isWalletInWatchlist = walletWatchlistLookup.has(walletAddress.toLowerCase());
-
-    const balanceTokenOptions = useMemo(
-        () => Array.from(new Set(portfolio.map((item) => item.symbol.trim().toUpperCase()).filter((symbol) => symbol.length > 0))).slice(0, 12),
-        [portfolio],
-    );
-
 
     const formatSwapPair = (swap: WalletSwap): string => {
         const tokensInvolved = typeof swap.tokensInvolved === "string" ? swap.tokensInvolved : String(swap.tokensInvolved ?? "");
@@ -917,7 +911,7 @@ export default function WalletPage() {
             <PageSection >
                 <div className={styles.chartStack}>
                     <div className={styles.chartSection}>
-                        <BalanceChart minHeight={460} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ["SOL", "USDC", "USDT"]} autoRefresh />
+                        <WalletSingleBalanceChart minHeight={460} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} autoRefresh />
                     </div>
                     <div className={styles.chartSection}>
                         <PnLChart minHeight={400} aggregation="daily" autoRefresh initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} />

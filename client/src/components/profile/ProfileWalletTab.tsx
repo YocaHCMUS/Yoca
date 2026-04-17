@@ -1,4 +1,4 @@
-import { BalanceChart } from "@/components/charts/BalanceChart";
+import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart";
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import styles from "./profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
@@ -52,10 +52,10 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
             </div>
 
             <div className={styles.sectionCard}>
-                <BalanceChart
+                <WalletSingleBalanceChart
                     minHeight={360}
                     initialFilters={{
-                        timePeriod: "30D",
+                        timePeriod: "7D",
                         wallets: chartWallets,
                     }}
                 />

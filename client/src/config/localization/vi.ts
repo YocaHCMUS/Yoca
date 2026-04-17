@@ -560,6 +560,24 @@ export const translation = defineTranslation({
       removeTag: "Xóa nhãn",
       atLeastOneTagRequired: "Cần chọn ít nhất một nhãn",
     },
+    walletSingleBalanceChart: {
+      title: "Xu hướng số dư theo ví",
+      notAvailable: "K.D",
+      window: {
+        label: "Khoảng",
+        days7: "7 Ngày",
+        days30: "30 Ngày",
+      },
+      walletTable: {
+        title: "Danh sách ví",
+        wallet: "Ví",
+        netWorth: "Giá trị ròng",
+        balanceChange24h: "Thay đổi 24h",
+      },
+      ariaLabels: {
+        windowToggle: "Chuyển khoảng thời gian biểu đồ số dư",
+      },
+    },
     assetDistributionChart: {
       title: "Phân bổ tài sản",
       totalValue: "Tổng giá trị",

@@ -589,6 +589,24 @@ export const translation = {
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
     },
+    walletSingleBalanceChart: {
+      title: "Wallet Balance Trend",
+      notAvailable: "N/A",
+      window: {
+        label: "Window",
+        days7: "7D",
+        days30: "30D",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        netWorth: "Net Worth",
+        balanceChange24h: "24h Change",
+      },
+      ariaLabels: {
+        windowToggle: "Balance chart window toggle",
+      },
+    },
     assetDistributionChart: {
       title: "Assets Distribution",
       totalValue: "Total Value",
