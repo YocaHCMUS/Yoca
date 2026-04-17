@@ -386,6 +386,10 @@ export const translation = {
     profitRiskManagement: "Profit & Risk Management",
     exportPdf: "Export PDF",
     generatingPdf: "Generating PDF...",
+    pdfReportTitle: "Wallet Comparison Report",
+    pdfGeneratedDate: "Generated Date",
+    pdfWalletsCompared: "Wallets Compared",
+    pdfWalletAddresses: "Wallet Addresses",
   },
   // Navigation
   nav: {

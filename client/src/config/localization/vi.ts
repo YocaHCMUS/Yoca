@@ -367,6 +367,10 @@ export const translation = defineTranslation({
     profitRiskManagement: "Quản lý lợi nhuận & rủi ro",
     exportPdf: "Xuất PDF",
     generatingPdf: "Đang tạo PDF...",
+    pdfReportTitle: "Báo cáo so sánh ví",
+    pdfGeneratedDate: "Ngày tạo",
+    pdfWalletsCompared: "Số ví so sánh",
+    pdfWalletAddresses: "Địa chỉ ví",
   },
   // Navigation
   nav: {
