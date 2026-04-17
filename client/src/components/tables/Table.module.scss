@@ -200,3 +200,9 @@ $filter-popup-z-index: 9999;
 .noHover:hover {
   background-color: transparent !important;
 }
+
+.activeRow {
+  :global(td) {
+    background-color: var(--cds-layer-hover);
+  }
+}

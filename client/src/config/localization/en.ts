@@ -568,6 +568,7 @@ export const translation = {
     volumeBenchmark: "Volume Benchmark",
     transactionDistribution: "Transaction Distribution",
     holdingDurations: "Holding Durations",
+    aggregatedAssetDistribution: "Aggregated Asset Distribution",
 
     // Chart specific
     balanceChart: {
@@ -620,6 +621,51 @@ export const translation = {
       },
       export: {
         name: "Assets Distribution",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Aggregated Asset Distribution",
+      totalValue: "Total Value",
+      value: "Value",
+      percentage: "Percentage",
+      noWalletsMessage: "Please select at least one wallet to view aggregated asset distribution.",
+      others: "Others",
+      mode: {
+        label: "Mode",
+        single: "Single Wallet",
+        aggregate: "Multiple Aggregated",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        walletName: "Wallet Name",
+        walletAddress: "Wallet Address",
+        netWorth: "Net Worth",
+        uniqueTokenCount: "Unique Tokens",
+        isSelected: "Is Selected",
+        selectedCount: "{count} wallets selected",
+        selection: "Selection",
+        unknownWallet: "Unknown Wallet",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "All",
+        allPercent: "All %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Asset distribution mode toggle",
+        topNFilter: "Top N filter",
+        minPctFilter: "Min % filter",
+        walletSelector: "Select wallet {wallet}",
+      },
+      export: {
+        name: "Aggregated Asset Distribution",
       },
     },
     pnlChart: {

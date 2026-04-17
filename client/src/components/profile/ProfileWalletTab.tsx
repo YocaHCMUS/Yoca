@@ -5,7 +5,7 @@ import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { AssetDistribution } from "@/components/charts/AssetDistribution";
+import { AggregatedAssetDistribution } from "@/components/charts/AggregatedAssetDistribution";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -44,8 +44,8 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
         <section className={styles.contentStack}>
 
             <div className={styles.sectionCard}>
-                <AssetDistribution
-                    initialFilters={{ wallets: walletAddresses }}
+                <AggregatedAssetDistribution
+                    initialFilters={{ wallets: chartWallets }}
                     minHeight={300}
                     fetchEnabled={true}
                 />
