@@ -57,7 +57,7 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
 
     const tradingVolumeToDisplay = (
         <span>
-            <span className={styles.subStatValuePositive}>{fmt.num.currency(buyVolume)}</span> / <span className={styles.subStatValueNegative}>{fmt.num.currency(sellVolume)}</span>
+            <span className={styles.subStatValuePositive}>{fmt.num.compact.currency(buyVolume)}</span> / <span className={styles.subStatValueNegative}>{fmt.num.compact.currency(sellVolume)}</span>
         </span>
     )
 
@@ -78,7 +78,7 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
 
                 {renderValue(
                     tradingVolume != null,
-                    fmt.num.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null),
+                    fmt.num.compact.currency(tradingVolume != null ? parseFloat(tradingVolume.toFixed(6)) : null),
                     [styles.statValue],
                     '88px',
                     '14px',

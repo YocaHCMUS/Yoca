@@ -11,6 +11,7 @@ import {
     ChartLine,
     Link as LinkIcon,
 } from "@carbon/react/icons";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./profile.module.scss";
 import { PeriodSelector } from "../common/PeriodSelector/PeriodSelector";
 
@@ -21,20 +22,14 @@ interface ProfileOverviewProps {
     loading: boolean;
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-    }).format(value);
-}
-
 function formatPct(value: number): string {
     const sign = value > 0 ? "+" : "";
     return `${sign}${value.toFixed(2)}%`;
 }
 
 export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOverviewProps) {
+    const { fmt } = useLocalization();
+
     return (
         <section className={styles.sectionCard}>
             <div className={styles.overviewHeader}>
@@ -81,7 +76,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         Total net worth
                     </p>
                     <p className={styles.metricValue}>
-                        {loading ? <SkeletonText width="6rem" /> : formatCurrency(data.totalNetWorthUsd)}
+                        {loading ? <SkeletonText width="6rem" /> : fmt.num.compact.currency(data.totalNetWorthUsd)}
                     </p>
                 </div>
                 <div className={styles.metricCard}>
@@ -102,7 +97,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         className={`${styles.metricValue} ${data.pnlUsd >= 0 ? styles.positive : styles.negative
                             }`}
                     >
-                        {loading ? <SkeletonText width="7rem" /> : `${formatCurrency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
+                        {loading ? <SkeletonText width="7rem" /> : `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
                     </p>
                 </div>
                 <div className={styles.metricCard}>

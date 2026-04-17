@@ -539,6 +539,7 @@ export const translation = defineTranslation({
     volumeBenchmark: "Đánh giá khối lượng",
     transactionDistribution: "Phân bổ giao dịch",
     holdingDurations: "Thời gian nắm giữ",
+    aggregatedAssetDistribution: "Phân bổ tài sản tổng hợp",
 
     // Chart specific
     balanceChart: {
@@ -559,12 +560,31 @@ export const translation = defineTranslation({
       removeTag: "Xóa nhãn",
       atLeastOneTagRequired: "Cần chọn ít nhất một nhãn",
     },
+    walletSingleBalanceChart: {
+      title: "Xu hướng số dư theo ví",
+      notAvailable: "K.D",
+      window: {
+        label: "Khoảng",
+        days7: "7 Ngày",
+        days30: "30 Ngày",
+      },
+      walletTable: {
+        title: "Danh sách ví",
+        wallet: "Ví",
+        netWorth: "Giá trị ròng",
+        balanceChange24h: "Thay đổi 24h",
+      },
+      ariaLabels: {
+        windowToggle: "Chuyển khoảng thời gian biểu đồ số dư",
+      },
+    },
     assetDistributionChart: {
       title: "Phân bổ tài sản",
       totalValue: "Tổng giá trị",
       asset: "Tài sản",
       value: "Giá trị",
       percentage: "Phần trăm",
+      assetPrice: "Giá hiện tại",
       noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản.",
       others: "Khác",
       filters: {
@@ -589,6 +609,52 @@ export const translation = defineTranslation({
       },
       export: {
         name: "Phân bổ tài sản",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Phân bổ tài sản tổng hợp",
+      totalValue: "Tổng giá trị",
+      value: "Giá trị",
+      percentage: "Phần trăm",
+      noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản tổng hợp.",
+      others: "Khác",
+      mode: {
+        label: "Chế độ",
+        single: "Một ví",
+        aggregate: "Nhiều ví tổng hợp",
+      },
+      walletTable: {
+        title: "Danh sách ví",
+        wallet: "Ví",
+        walletName: "Tên ví",
+        walletAddress: "Địa chỉ ví",
+        netWorth: "Giá trị ròng",
+        uniqueTokenCount: "Số token",
+        isSelected: "Đã chọn",
+        selectedCount: "{count} ví đã chọn",
+        selection: "Lựa chọn",
+        unknownWallet: "Ví không xác định",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "Tất cả",
+        allPercent: "Tất cả %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Chuyển chế độ phân bổ tài sản",
+        topNFilter: "Bộ lọc Top N",
+        minPctFilter: "Bộ lọc Min %",
+        walletSelector: "Chọn ví {wallet}",
+      },
+      export: {
+        name: "Phân bổ tài sản tổng hợp",
       },
     },
     pnlChart: {
@@ -707,6 +773,17 @@ export const translation = defineTranslation({
     },
     drawdownChart: {
       title: "Phân tích sụt giảm",
+      visibility: {
+        active: "Đang hiển thị",
+        hidden: "Đã ẩn",
+      },
+      stats: {
+        maxDrawdown: "Sụt giảm tối đa",
+        daysSinceMaxDD: "Số ngày kể từ sụt giảm tối đa",
+        currentDrawdown: "Sụt giảm hiện tại",
+        maxDDDate: "Ngày sụt giảm tối đa",
+        days: "ngày",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Lợi nhuận hàng năm lăn trung bình",

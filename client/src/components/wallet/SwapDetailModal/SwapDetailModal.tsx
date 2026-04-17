@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { ArrowRight, Close } from "@carbon/react/icons";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import type { WalletSwap, WalletSwapBalanceChange } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
@@ -174,6 +175,8 @@ export function SwapDetailModal({
   onClose,
   swap,
 }: SwapDetailModalProps) {
+  const { fmt } = useLocalization();
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -333,7 +336,7 @@ export function SwapDetailModal({
           {swap.totalValueUsd != null && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Total Value</span>
-              <span className={styles.detailVal}>${swap.totalValueUsd.toFixed(4)}</span>
+              <span className={styles.detailVal}>{fmt.num.currency(swap.totalValueUsd)}</span>
             </div>
           )}
 

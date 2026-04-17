@@ -15,8 +15,8 @@ vi.mock("@/components/charts/AssetDistribution/AssetDistribution.tsx", () => ({
     AssetDistribution: () => <div data-testid="asset-distribution" />,
 }));
 
-vi.mock("@/components/charts/BalanceChart/BalanceChart.tsx", () => ({
-    BalanceChart: () => <div data-testid="balance-chart" />,
+vi.mock("@/components/charts/WalletSingleBalanceChart/WalletSingleBalanceChart.tsx", () => ({
+    WalletSingleBalanceChart: () => <div data-testid="wallet-single-balance-chart" />,
 }));
 
 vi.mock("@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx", () => ({

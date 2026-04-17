@@ -5,7 +5,6 @@ import SparklineChart from '@/components/charts/SparklineChart';
 import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
 import type { TranslateFunction } from '@/contexts/LocalizationContext.tsx';
 import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
-
 export interface SparklineCellValue {
   data: number[];
   positive?: boolean;
@@ -60,9 +59,12 @@ function toDisplayText(value: unknown): string {
   }
 }
 
-export const renderBase = (value: unknown) => (
-  <span>{toDisplayText(value)}</span>
-);
+export const renderBase = (value: unknown, formatter?: (value: string) => React.ReactNode) => {
+  const displayText = toDisplayText(value);
+  return (
+    <span>{formatter ? formatter(displayText) : displayText}</span>
+  );
+};
 
 /**
  * Higher-order function that wraps any renderer with truncation and tooltip functionality

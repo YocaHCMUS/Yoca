@@ -568,6 +568,7 @@ export const translation = {
     volumeBenchmark: "Volume Benchmark",
     transactionDistribution: "Transaction Distribution",
     holdingDurations: "Holding Durations",
+    aggregatedAssetDistribution: "Aggregated Asset Distribution",
 
     // Chart specific
     balanceChart: {
@@ -588,12 +589,31 @@ export const translation = {
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
     },
+    walletSingleBalanceChart: {
+      title: "Wallet Balance Trend",
+      notAvailable: "N/A",
+      window: {
+        label: "Window",
+        days7: "7D",
+        days30: "30D",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        netWorth: "Net Worth",
+        balanceChange24h: "24h Change",
+      },
+      ariaLabels: {
+        windowToggle: "Balance chart window toggle",
+      },
+    },
     assetDistributionChart: {
       title: "Assets Distribution",
       totalValue: "Total Value",
       asset: "Assets",
       value: "Value",
       percentage: "Percentage",
+      assetPrice: "Current Price",
       noWalletsMessage:
         "Please select at least one wallet to view asset distribution.",
       others: "Others",
@@ -619,6 +639,52 @@ export const translation = {
       },
       export: {
         name: "Assets Distribution",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Aggregated Asset Distribution",
+      totalValue: "Total Value",
+      value: "Value",
+      percentage: "Percentage",
+      noWalletsMessage: "Please select at least one wallet to view aggregated asset distribution.",
+      others: "Others",
+      mode: {
+        label: "Mode",
+        single: "Single Wallet",
+        aggregate: "Multiple Aggregated",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        walletName: "Wallet Name",
+        walletAddress: "Wallet Address",
+        netWorth: "Net Worth",
+        uniqueTokenCount: "Unique Tokens",
+        isSelected: "Is Selected",
+        selectedCount: "{count} wallets selected",
+        selection: "Selection",
+        unknownWallet: "Unknown Wallet",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "All",
+        allPercent: "All %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Asset distribution mode toggle",
+        topNFilter: "Top N filter",
+        minPctFilter: "Min % filter",
+        walletSelector: "Select wallet {wallet}",
+      },
+      export: {
+        name: "Aggregated Asset Distribution",
       },
     },
     pnlChart: {
@@ -737,6 +803,17 @@ export const translation = {
     },
     drawdownChart: {
       title: "Drawdown Analysis",
+      visibility: {
+        active: "Active",
+        hidden: "Hidden",
+      },
+      stats: {
+        maxDrawdown: "Max Drawdown",
+        daysSinceMaxDD: "Days Since Max DD",
+        currentDrawdown: "Current Drawdown",
+        maxDDDate: "Max DD Date",
+        days: "days",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Average Rolling Annual Return",

@@ -17,14 +17,6 @@ interface ProfileActivityTabProps {
     period: TimePeriod;
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-    }).format(value);
-}
-
 function formatAddress(address: string): string {
     if (address.length <= 10) {
         return address;
@@ -34,7 +26,7 @@ function formatAddress(address: string): string {
 }
 
 export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityTabProps) {
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
     const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
     const [swapModalOpen, setSwapModalOpen] = useState(false);
     const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
@@ -120,7 +112,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     (value) => new Date(String(value)).toLocaleString(),
                     null,
                     null,
-                    (value) => formatCurrency(Number(value)),
+                    (value) => fmt.num.compact.currency(Number(value)),
                 ]}
                 isSortable={[true, true, true, true, true]}
                 sortConfigs={{
@@ -154,7 +146,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                 cellRenderers={[
                     null,
                     (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
-                    (value) => formatCurrency(Number(value)),
+                    (value) => fmt.num.compact.currency(Number(value)),
                     (value) => new Date(String(value)).toLocaleString(),
                 ]}
                 isSortable={[true, true, true, true]}

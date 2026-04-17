@@ -15,7 +15,7 @@ function getToneClass(tone?: "positive" | "negative" | "neutral"): string {
 }
 
 export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
 
 
     if (
@@ -72,7 +72,7 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
                 dataEntries={concentrationData}
                 cellRenderers={[
                     null,
-                    (value) => `$${Number(value).toLocaleString()}`,
+                    (value) => fmt.num.compact.currency(Number(value)),
                     (value) => `${Number(value).toFixed(1)}%`,
                 ]}
                 isSortable={[true, true, true]}

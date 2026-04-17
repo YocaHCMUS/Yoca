@@ -27,14 +27,6 @@ interface ProfilePortfolioTabProps {
     onPeriodChange: (period: TimePeriod) => void;
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-    }).format(value);
-}
-
 function formatAddress(address: string): string {
     if (address.length <= 10) {
         return address;
@@ -48,7 +40,7 @@ export function ProfilePortfolioTab({
     period,
     onPeriodChange,
 }: ProfilePortfolioTabProps) {
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
     const navigate = useNavigate();
     const { user } = useAuth();
     const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
@@ -153,7 +145,7 @@ export function ProfilePortfolioTab({
         onComparisonToggle: handleComparisonToggle,
         onUnlinkWallet: handleUnlinkWallet,
         formatAddress,
-        formatCurrency,
+        formatCurrency: (value: number) => fmt.num.compact.currency(value),
         t: tr,
     });
 
