@@ -201,7 +201,7 @@ export function ProfileWatchlistTab() {
             },
             (value: unknown) =>
                 typeof value === "number" && Number.isFinite(value)
-                    ? fmt.num.currency(value)
+                    ? fmt.num.compact.currency(value)
                     : "-",
             (value: unknown) =>
                 typeof value === "number" && Number.isFinite(value)

@@ -148,7 +148,7 @@ export function TradingVolumePerTransaction({
         name: tr("charts.tradingVolumePerTransactionChart.volume"),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
         splitLine: {
           show: true,
@@ -169,7 +169,7 @@ export function TradingVolumePerTransaction({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => fmt.num.currency(params.value),
+            formatter: (params: any) => fmt.num.compact.currency(params.value),
             color: chartTheme.textColor,
           },
         },

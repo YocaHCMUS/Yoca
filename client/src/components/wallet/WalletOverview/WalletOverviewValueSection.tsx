@@ -37,7 +37,7 @@ const WalletOverviewValueSection = ({ value, unrealizedPnlInPeriod, loading }: W
             <div className={styles.alignedStatRow}>
                 {renderValue(
                     value != null,
-                    fmt.num.currency(value != null ? parseFloat(value.toFixed(6)) : null),
+                    fmt.num.compact.currency(value != null ? parseFloat(value.toFixed(6)) : null),
                     [styles.statValue],
                     '88px',
                     '14px',

@@ -279,7 +279,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           }
           html += createTooltipRow(
             tr('charts.assetDistributionChart.value'),
-            fmt.num.currency(Number(p.value ?? 0))
+            fmt.num.compact.currency(Number(p.value ?? 0))
           );
           html += createTooltipRow(
             tr('charts.assetDistributionChart.percentage'),
@@ -354,7 +354,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: fmt.num.currency(displayTotal),
+            text: fmt.num.compact.currency(displayTotal),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',

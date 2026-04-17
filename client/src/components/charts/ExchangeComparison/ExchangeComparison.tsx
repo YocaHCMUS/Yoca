@@ -262,7 +262,7 @@ export function ExchangeComparison({
             const value =
               currentMetric === "count"
                 ? `${param.value.toLocaleString()} txns`
-                : fmt.num.currency(param.value);
+                : fmt.num.compact.currency(param.value);
             tooltipContent +=
               `<div style="margin-top: 4px; width: 100%; display:flex; justify-content: space-between; gap: 8px">` +
               `<span>${createSeriesIndicator(param.color)}${param.seriesName}:</span>` +
@@ -305,7 +305,7 @@ export function ExchangeComparison({
             if (currentMetric === "count") {
               return value.toLocaleString();
             }
-            return fmt.num.currency(value);
+            return fmt.num.compact.currency(value);
           },
         },
       },
@@ -326,7 +326,7 @@ export function ExchangeComparison({
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
-              return fmt.num.currency(params.value);
+              return fmt.num.compact.currency(params.value);
             },
             fontSize: 11,
           },
@@ -348,7 +348,7 @@ export function ExchangeComparison({
                   ? `${(params.value / 1000).toFixed(1)}k`
                   : params.value.toString();
               }
-              return fmt.num.currency(params.value);
+              return fmt.num.compact.currency(params.value);
             },
             fontSize: 11,
           },

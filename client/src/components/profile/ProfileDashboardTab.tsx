@@ -72,7 +72,7 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
                 dataEntries={concentrationData}
                 cellRenderers={[
                     null,
-                    (value) => fmt.num.currency(Number(value)),
+                    (value) => fmt.num.compact.currency(Number(value)),
                     (value) => `${Number(value).toFixed(1)}%`,
                 ]}
                 isSortable={[true, true, true]}

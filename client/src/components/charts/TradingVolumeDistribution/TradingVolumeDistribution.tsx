@@ -185,7 +185,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         formatter: (p: any) => createTooltipHeader(p.name)
           + createTooltipRow(
             tr('charts.tradingVolumeDistributionChart.volume'),
-            fmt.num.currency(Number(p.value ?? 0))
+            fmt.num.compact.currency(Number(p.value ?? 0))
           )
           + createTooltipRow(
             tr('charts.tradingVolumeDistributionChart.percentage'),
@@ -237,7 +237,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           left: 'center',
           top: '50%',
           style: {
-            text: fmt.num.currency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
+            text: fmt.num.compact.currency(isMultiWallet && selectedAssets.size > 0 ? filteredTotal : total),
             fill: chartTheme.textColor,
             fontSize: 18,
             fontWeight: 'bold',

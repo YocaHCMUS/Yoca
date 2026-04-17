@@ -386,7 +386,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     }
                     html += createTooltipRow(
                         tr('charts.aggregatedAssetDistributionChart.value'),
-                        fmt.num.currency(Number(p.value ?? 0)),
+                        fmt.num.compact.currency(Number(p.value ?? 0)),
                     );
                     html += createTooltipRow(
                         tr('charts.aggregatedAssetDistributionChart.percentage'),
@@ -456,7 +456,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     left: 'center',
                     top: '50%',
                     style: {
-                        text: fmt.num.currency(displayTotal),
+                        text: fmt.num.compact.currency(displayTotal),
                         fill: chartTheme.textColor,
                         fontSize: 18,
                         fontWeight: 'bold',
@@ -539,7 +539,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     </a>
                 );
             },
-            (value: unknown) => renderBase(value, (text) => fmt.num.currency(Number(text ?? 0))),
+            (value: unknown) => renderBase(value, (text) => fmt.num.compact.currency(Number(text ?? 0))),
             (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
         ] as Array<((value: any, row: any[], rowIndex: number) => React.ReactNode) | null>;
 

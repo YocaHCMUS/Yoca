@@ -136,7 +136,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         name: "USD",
         axisLabel: {
           ...(base.yAxis as any)?.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       tooltip: {
@@ -173,7 +173,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         name: "USD",
         axisLabel: {
           ...(base.yAxis as any)?.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       tooltip: {

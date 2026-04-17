@@ -152,7 +152,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       }
 
       const formatAxisValue = (value: number) => {
-        return fmt.num.currency(value);
+        return fmt.num.compact.currency(value);
       };
 
       const yAxis: any[] = [];
@@ -228,7 +228,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             if (showDaily) {
               tooltipContent += createTooltipRow(
                 tr("charts.pnlChart.dailyPnL"),
-                fmt.num.currency(dailyValue),
+                fmt.num.compact.currency(dailyValue),
                 { valueColor: dailyValue >= 0 ? profitColor : lossColor },
               );
             }
@@ -236,7 +236,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             if (showCumulative) {
               tooltipContent += createTooltipRow(
                 tr("charts.pnlChart.cumulativePnL"),
-                fmt.num.currency(cumulativeValue),
+                fmt.num.compact.currency(cumulativeValue),
               );
             }
 

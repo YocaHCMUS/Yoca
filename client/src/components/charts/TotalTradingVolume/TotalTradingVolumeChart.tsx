@@ -126,7 +126,7 @@ export function TotalTradingVolumeChart({
         name: `Volume (${data.metadata?.currency || "USD"})`,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       yAxis: {
@@ -150,7 +150,7 @@ export function TotalTradingVolumeChart({
           label: {
             show: true,
             position: "right",
-            formatter: (params: any) => fmt.num.currency(params.value),
+            formatter: (params: any) => fmt.num.compact.currency(params.value),
             color: chartTheme.textColor,
           },
           emphasis: {
@@ -174,7 +174,7 @@ export function TotalTradingVolumeChart({
           return formatItemTooltip(wallet.wallet, [
             {
               label: "Total Volume",
-              value: fmt.num.currency(wallet.tradingVolumeUsd ?? 0),
+              value: fmt.num.compact.currency(wallet.tradingVolumeUsd ?? 0),
             },
           ]);
         },

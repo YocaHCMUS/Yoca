@@ -245,11 +245,11 @@ export function DrawdownChart({
             if (drawdownObj) {
               tooltip += `<div>Drawdown: ${(drawdownObj.drawdown * 100).toFixed(2)}%</div>`;
               if ("value" in drawdownObj)
-                tooltip += `<div>Value: ${fmt.num.currency(Number((drawdownObj as any).value ?? 0))}</div>`;
+                tooltip += `<div>Value: ${fmt.num.compact.currency(Number((drawdownObj as any).value ?? 0))}</div>`;
               if ("peak" in drawdownObj)
-                tooltip += `<div>Peak: ${fmt.num.currency(Number((drawdownObj as any).peak ?? 0))}</div>`;
+                tooltip += `<div>Peak: ${fmt.num.compact.currency(Number((drawdownObj as any).peak ?? 0))}</div>`;
               if ("trough" in drawdownObj)
-                tooltip += `<div>Trough: ${fmt.num.currency(Number((drawdownObj as any).trough ?? 0))}</div>`;
+                tooltip += `<div>Trough: ${fmt.num.compact.currency(Number((drawdownObj as any).trough ?? 0))}</div>`;
               if ("date" in drawdownObj)
                 tooltip += `<div>Date: ${drawdownObj.date}</div>`;
             }

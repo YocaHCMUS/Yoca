@@ -901,7 +901,7 @@ export function BalanceChart({
                 type: 'value',
                 axisLabel: {
                     ...baseOption.yAxis?.axisLabel,
-                    formatter: (value: number) => fmt.num.currency(value),
+                    formatter: (value: number) => fmt.num.compact.currency(value),
                 },
             },
             series: seriesConfig,
@@ -912,7 +912,7 @@ export function BalanceChart({
                     formatAxisTooltip(
                         params,
                         (point) => formatTimestampWithTimezone(point.value[0], timezone, 'PPpp'),
-                        (point) => fmt.num.currency(point.value[1]),
+                        (point) => fmt.num.compact.currency(point.value[1]),
                     ),
             },
         };

@@ -145,7 +145,7 @@ export function ProfilePortfolioTab({
         onComparisonToggle: handleComparisonToggle,
         onUnlinkWallet: handleUnlinkWallet,
         formatAddress,
-        formatCurrency: (value: number) => fmt.num.currency(value),
+        formatCurrency: (value: number) => fmt.num.compact.currency(value),
         t: tr,
     });
 

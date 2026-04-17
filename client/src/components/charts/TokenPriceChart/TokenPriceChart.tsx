@@ -145,7 +145,7 @@ export function TokenPriceChart({
           });
 
           const value = point.data[1];
-          const formattedValue = fmt.num.currency(value);
+          const formattedValue = fmt.num.compact.currency(value);
 
           return createTooltipHeader(dateStr)
             + createTooltipRow(
@@ -172,7 +172,7 @@ export function TokenPriceChart({
         type: 'value',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
         splitNumber: 5,
       },

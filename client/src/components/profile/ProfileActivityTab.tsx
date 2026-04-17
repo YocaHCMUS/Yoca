@@ -112,7 +112,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                     (value) => new Date(String(value)).toLocaleString(),
                     null,
                     null,
-                    (value) => fmt.num.currency(Number(value)),
+                    (value) => fmt.num.compact.currency(Number(value)),
                 ]}
                 isSortable={[true, true, true, true, true]}
                 sortConfigs={{
@@ -146,7 +146,7 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                 cellRenderers={[
                     null,
                     (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
-                    (value) => fmt.num.currency(Number(value)),
+                    (value) => fmt.num.compact.currency(Number(value)),
                     (value) => new Date(String(value)).toLocaleString(),
                 ]}
                 isSortable={[true, true, true, true]}

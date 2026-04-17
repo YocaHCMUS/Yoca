@@ -76,7 +76,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         Total net worth
                     </p>
                     <p className={styles.metricValue}>
-                        {loading ? <SkeletonText width="6rem" /> : fmt.num.currency(data.totalNetWorthUsd)}
+                        {loading ? <SkeletonText width="6rem" /> : fmt.num.compact.currency(data.totalNetWorthUsd)}
                     </p>
                 </div>
                 <div className={styles.metricCard}>
@@ -97,7 +97,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         className={`${styles.metricValue} ${data.pnlUsd >= 0 ? styles.positive : styles.negative
                             }`}
                     >
-                        {loading ? <SkeletonText width="7rem" /> : `${fmt.num.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
+                        {loading ? <SkeletonText width="7rem" /> : `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
                     </p>
                 </div>
                 <div className={styles.metricCard}>

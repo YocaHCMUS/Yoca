@@ -371,7 +371,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
             createTooltipHeader(counterpartyName) +
             createTooltipRow(
               tr("charts.counterpartyActivityChart.totalVolume"),
-              fmt.num.currency(volume),
+              fmt.num.compact.currency(volume),
               { color: params[0].color, showIndicator: true },
             )
           );
@@ -404,7 +404,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => fmt.num.currency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       series: [
@@ -418,7 +418,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: { value: number; }) => fmt.num.currency(params.value),
+            formatter: (params: { value: number; }) => fmt.num.compact.currency(params.value),
             fontSize: 10,
           },
         },
