@@ -1,5 +1,6 @@
 import client from "@/api/main";
 import Tble from "@/components/Tble";
+import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { dexLabel } from "@/util/format";
@@ -55,6 +56,37 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
     param: { address },
   });
 
+  const pairTokenAddresses = useMemo(() => {
+    if (!pools.data) return "";
+
+    const addresses = new Set<string>();
+    for (const pool of pools.data) {
+      if (pool.data.baseAddress) {
+        addresses.add(pool.data.baseAddress);
+      }
+      if (pool.data.quoteAddress) {
+        addresses.add(pool.data.quoteAddress);
+      }
+    }
+
+    return Array.from(addresses).join(",");
+  }, [pools.data]);
+
+  const pairTokenMeta = useGet(
+    client.api.tokens.meta[":addresses"],
+    200,
+    { param: { addresses: pairTokenAddresses || "" } },
+    { enabled: !!pairTokenAddresses },
+  );
+
+  const addressToImageUrl = useMemo(() => {
+    if (!pairTokenMeta.data) return {} as Record<string, string | null>;
+
+    return Object.fromEntries(
+      pairTokenMeta.data.map((token) => [token.address, token.imageUrl ?? null]),
+    ) as Record<string, string | null>;
+  }, [pairTokenMeta.data]);
+
   const rows = useMemo(() => {
     if (!pools.data) return [];
 
@@ -76,7 +108,25 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
             to={`/tokens/${address}/${data.poolAddress}`}
             className={styles.pairLink}
           >
-            {data.poolName || "Unknown"}
+            <span className={styles.pairCell}>
+              <span className={styles.pairIcons}>
+                <span className={styles.pairIconLeft}>
+                  <TknImg
+                    size={18}
+                    src={addressToImageUrl[data.baseAddress] ?? undefined}
+                    alt={data.baseAddress}
+                  />
+                </span>
+                <span className={styles.pairIconRight}>
+                  <TknImg
+                    size={18}
+                    src={addressToImageUrl[data.quoteAddress] ?? undefined}
+                    alt={data.quoteAddress}
+                  />
+                </span>
+              </span>
+              <span>{data.poolName || "Unknown"}</span>
+            </span>
           </Link>
         ),
         price: <span>{fmt.num.currency(data.baseTokenPriceUsd ?? 0)}</span>,
@@ -91,7 +141,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
         txns: <span>{fmt.num.compact.decimal(totalTxns)}</span>,
       };
     });
-  }, [pools.data, address, fmt]);
+  }, [pools.data, address, fmt, addressToImageUrl]);
 
   return (
     <Tble
@@ -113,6 +163,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
           key: "pair",
           header: tr("token.marketsTable.pair"),
           align: "start",
+          minWidth: 160,
         },
         {
           key: "price",
