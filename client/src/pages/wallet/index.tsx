@@ -35,6 +35,7 @@ import JSZip from "jszip";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
+import { chunkArray } from "@/util/format";
 import {
     fetchWalletCounterparties,
     fetchWalletIntelligence,
@@ -71,6 +72,9 @@ function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
 }
 
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
+const PDF_TABLE_ROWS_PER_PAGE = 20;
+const PDF_CHUNK_PAGE_BASE_CLASS = "break-inside-avoid print:break-inside-avoid";
+const PDF_CHUNK_PAGE_BREAK_CLASS = "break-after-page print:break-after-page";
 
 function resolveTokenMetaLookupAddress(tokenAddress: string | undefined): string | undefined {
     if (!tokenAddress) {
@@ -1137,6 +1141,23 @@ export default function WalletPage() {
         </section>
     );
 
+    const ChunkedPdfPages = <T,>({
+        items,
+        chunkSize,
+        renderChunk,
+    }: {
+        items: T[];
+        chunkSize: number;
+        renderChunk: (chunk: T[], chunkIndex: number, chunkCount: number) => ReactNode;
+    }) => {
+        const chunks = useMemo(() => {
+            const chunkedItems = chunkArray(items, chunkSize);
+            return chunkedItems.length > 0 ? chunkedItems : [[] as T[]];
+        }, [items, chunkSize]);
+
+        return <>{chunks.map((chunk, chunkIndex) => renderChunk(chunk, chunkIndex, chunks.length))}</>;
+    };
+
     const activityRiskPdfContent = (
         <>
             <div data-report-page="true" style={pdfPageStyle}>
@@ -1156,20 +1177,65 @@ export default function WalletPage() {
                 </section>
             </div>
 
-            <div data-report-page="true" style={pdfPageStyle}>
-                {renderPdfHeader("Activity / Risk")}
-                <PrintableTable title="Swap" headers={swapHeaders} rows={swapReportRows} />
-            </div>
+            <ChunkedPdfPages
+                items={swapReportRows}
+                chunkSize={PDF_TABLE_ROWS_PER_PAGE}
+                renderChunk={(chunkRows, chunkIndex, chunkCount) => (
+                    <div
+                        key={`swap-pdf-page-${chunkIndex}`}
+                        data-report-page="true"
+                        style={pdfPageStyle}
+                        className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
+                    >
+                        {renderPdfHeader("Activity / Risk")}
+                        <PrintableTable
+                            title={chunkCount > 1 ? `Swap (${chunkIndex + 1}/${chunkCount})` : "Swap"}
+                            headers={swapHeaders}
+                            rows={chunkRows}
+                        />
+                    </div>
+                )}
+            />
 
-            <div data-report-page="true" style={pdfPageStyle}>
-                {renderPdfHeader("Activity / Risk")}
-                <PrintableTable title="Transfer" headers={transferHeaders} rows={transferData.map((row) => row.map((cell) => String(cell)))} />
-            </div>
+            <ChunkedPdfPages
+                items={transferData.map((row) => row.map((cell) => String(cell)))}
+                chunkSize={PDF_TABLE_ROWS_PER_PAGE}
+                renderChunk={(chunkRows, chunkIndex, chunkCount) => (
+                    <div
+                        key={`transfer-pdf-page-${chunkIndex}`}
+                        data-report-page="true"
+                        style={pdfPageStyle}
+                        className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
+                    >
+                        {renderPdfHeader("Activity / Risk")}
+                        <PrintableTable
+                            title={chunkCount > 1 ? `Transfer (${chunkIndex + 1}/${chunkCount})` : "Transfer"}
+                            headers={transferHeaders}
+                            rows={chunkRows}
+                        />
+                    </div>
+                )}
+            />
 
-            <div data-report-page="true" style={pdfPageStyle}>
-                {renderPdfHeader("Activity / Risk")}
-                <PrintableTable title="Counterparties" headers={counterpartyHeaders} rows={counterpartyTableData.map((row) => row.map((cell) => String(cell)))} />
-            </div>
+            <ChunkedPdfPages
+                items={counterpartyTableData.map((row) => row.map((cell) => String(cell)))}
+                chunkSize={PDF_TABLE_ROWS_PER_PAGE}
+                renderChunk={(chunkRows, chunkIndex, chunkCount) => (
+                    <div
+                        key={`counterparties-pdf-page-${chunkIndex}`}
+                        data-report-page="true"
+                        style={pdfPageStyle}
+                        className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
+                    >
+                        {renderPdfHeader("Activity / Risk")}
+                        <PrintableTable
+                            title={chunkCount > 1 ? `Counterparties (${chunkIndex + 1}/${chunkCount})` : "Counterparties"}
+                            headers={counterpartyHeaders}
+                            rows={chunkRows}
+                        />
+                    </div>
+                )}
+            />
         </>
     );
 
