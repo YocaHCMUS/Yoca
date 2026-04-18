@@ -3,7 +3,7 @@ import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailM
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
 import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
-import { Copy } from "@carbon/react/icons";
+import { Copy, Link } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import styles from "./profile.module.scss";
 import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTabData";
@@ -30,6 +30,10 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     const { data, loading, error } = useProfileActivityTabData({ walletAddresses, period });
     const [swapModalOpen, setSwapModalOpen] = useState(false);
     const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
+    const linkedWalletAddressSet = useMemo(
+        () => new Set(walletAddresses.map((address) => address.toLowerCase())),
+        [walletAddresses],
+    );
 
     const visibleRows = useMemo(
         () => data.swapTransferRows,
@@ -71,6 +75,8 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     ]);
 
     const transferTableData = transferRows.map((row) => [
+        row.fromAddress ?? row.walletId,
+        row.toAddress ?? row.walletId,
         row.tokenSymbol ?? row.pairOrToken,
         row.amount ?? 0,
         row.amountUsd,
@@ -86,11 +92,13 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
     ]
 
     const transferTableHeaders = [
-        tr("profileTabs.activity.tableHeaders.transfers.0"),
-        tr("profileTabs.activity.tableHeaders.transfers.1"),
-        tr("profileTabs.activity.tableHeaders.transfers.2"),
-        tr("profileTabs.activity.tableHeaders.transfers.3"),
-    ]
+        tr("walletPage.sender"),
+        tr("walletPage.receiver"),
+        tr("walletPage.token"),
+        tr("walletPage.amount"),
+        tr("walletPage.value"),
+        tr("walletPage.time"),
+    ];
 
     return (
         <section className={styles.contentStack}>
@@ -138,22 +146,46 @@ export function ProfileActivityTab({ walletAddresses, period }: ProfileActivityT
                 fetcher={Promise.resolve([])}
                 filterSchema={{
                     0: { type: FilterType.Select },
-                    1: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
-                    2: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
-                    3: { type: FilterType.Select },
+                    1: { type: FilterType.Select },
+                    2: { type: FilterType.Select },
+                    3: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+                    4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
+                    5: { type: FilterType.Select },
                 }}
                 dataEntries={transferTableData}
                 cellRenderers={[
+                    (value) => {
+                        const address = String(value);
+                        const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+
+                        return (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                {formatAddress(address)}
+                                {isLinked ? <Link size={16} title="Linked wallet" aria-label="Linked wallet" /> : null}
+                            </span>
+                        );
+                    },
+                    (value) => {
+                        const address = String(value);
+                        const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+
+                        return (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                {formatAddress(address)}
+                                {isLinked ? <Link size={16} title="Linked wallet" aria-label="Linked wallet" /> : null}
+                            </span>
+                        );
+                    },
                     null,
                     (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 }),
                     (value) => fmt.num.compact.currency(Number(value)),
                     (value) => new Date(String(value)).toLocaleString(),
                 ]}
-                isSortable={[true, true, true, true]}
+                isSortable={[true, true, true, true, true, true]}
                 sortConfigs={{
-                    1: { type: SortType.Number },
-                    2: { type: SortType.Number },
-                    3: { type: SortType.Date },
+                    3: { type: SortType.Number },
+                    4: { type: SortType.Number },
+                    5: { type: SortType.Date },
                 }}
                 loading={loading}
             />
