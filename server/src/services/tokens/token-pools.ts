@@ -25,10 +25,10 @@ type CG_ExchangeListItem = {
 };
 
 const DEX_ID_ALIASES: Record<string, string> = {
-  raydium: "ray",
-  raydium_clmm: "raydium",
-  raydium_cpmm: "raydium",
-  raydium_clamm: "raydium",
+  raydium: "raydium2",
+  raydium_clmm: "raydium2",
+  raydium_cpmm: "raydium2",
+  raydium_clamm: "raydium2",
   orca_whirlpools: "orca",
   meteora_dlmm: "meteora",
 };

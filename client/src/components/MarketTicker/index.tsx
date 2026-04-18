@@ -73,6 +73,7 @@ function MarketTicker({ label, icon, className }: MarketTickerProps) {
   // Duplicate items for infinite scroll effect
   const displayItems = [...items, ...items, ...items, ...items];
 
+  console.log("Display Items:", displayItems);
   return (
     <div
       className={className}
