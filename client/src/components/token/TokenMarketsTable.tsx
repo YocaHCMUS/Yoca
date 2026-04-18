@@ -163,7 +163,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
           key: "pair",
           header: tr("token.marketsTable.pair"),
           align: "start",
-          minWidth: 160,
+          minWidth: 170,
         },
         {
           key: "price",
