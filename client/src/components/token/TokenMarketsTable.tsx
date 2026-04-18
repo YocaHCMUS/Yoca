@@ -3,7 +3,7 @@ import Tble from "@/components/Tble";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { dexLabel } from "@/util/format";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { TrendNum } from "../TrendNum";
 import styles from "./TokenMarketsTable.module.scss";
@@ -11,6 +11,41 @@ import styles from "./TokenMarketsTable.module.scss";
 interface TokenMarketsTableProps {
   address: string;
   symbol: string;
+}
+
+function ExchangeCell({
+  dexId,
+  dexImageUrl,
+}: {
+  dexId: string | null | undefined;
+  dexImageUrl: string | null | undefined;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const label = dexLabel(dexId);
+  const proxiedImageUrl = dexImageUrl
+    ? client.api.misc["image-proxy"].$url({
+      query: { url: dexImageUrl },
+    }).href
+    : "";
+
+  return (
+    <span className={styles.exchangeCell}>
+      {proxiedImageUrl && !imageError ? (
+        <img
+          src={proxiedImageUrl}
+          alt=""
+          className={styles.exchangeIcon}
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <span className={styles.exchangeFallback}>
+          {label.slice(0, 1).toUpperCase()}
+        </span>
+      )}
+      <span className={styles.exchangeName}>{label}</span>
+    </span>
+  );
 }
 
 export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
@@ -33,7 +68,9 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
       return {
         id: data.poolAddress,
         rank: <span>{rankInfo.rank || idx + 1}</span>,
-        exchange: <span>{dexLabel(data.dexId)}</span>,
+        exchange: (
+          <ExchangeCell dexId={data.dexId} dexImageUrl={data.dexImageUrl} />
+        ),
         pair: (
           <Link
             to={`/tokens/${address}/${data.poolAddress}`}
@@ -42,15 +79,15 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
             {data.poolName || "Unknown"}
           </Link>
         ),
-        price: <span>{fmt.num.currency(data.baseTokenPriceUsd)}</span>,
+        price: <span>{fmt.num.currency(data.baseTokenPriceUsd ?? 0)}</span>,
         change: (
           <TrendNum
-            value={data.priceChangePercentage24h}
+            value={data.priceChangePercentage24h ?? null}
             formatter={fmt.num.percent}
           />
         ),
-        volume: <span>{fmt.num.compact.currency(data.volumeUsd24h)}</span>,
-        liquidity: <span>{fmt.num.compact.currency(data.liquidityUsd)}</span>,
+        volume: <span>{fmt.num.compact.currency(data.volumeUsd24h ?? 0)}</span>,
+        liquidity: <span>{fmt.num.compact.currency(data.liquidityUsd ?? 0)}</span>,
         txns: <span>{fmt.num.compact.decimal(totalTxns)}</span>,
       };
     });
