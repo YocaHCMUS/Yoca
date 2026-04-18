@@ -3,6 +3,7 @@ import { setErr } from "@sv/config/errors.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
+  userAlertTriggerModes,
   userAlertTypes,
 } from "@sv/db/alert.js";
 import env from "@sv/util/load-env";
@@ -94,11 +95,13 @@ export const walletTokenTradesSchema = z.object({
 
 export const createAlertSchema = z.object({
   tokenAddress: z.string().min(1),
-  alertType: z.enum(userAlertTypes),
   period: z.enum(userAlertPeriods),
+  triggerMode: z.enum(userAlertTriggerModes).default("once"),
+  expiresAt: z.iso.datetime({ offset: true }),
   conditions: z
     .array(
       z.object({
+        alertType: z.enum(userAlertTypes),
         condition: z.enum(userAlertConditionOps),
         value: z.coerce.number(),
       }),
@@ -111,11 +114,13 @@ export const alertIdSchema = z.object({
 });
 
 export const updateAlertSchema = z.object({
-  alertType: z.enum(userAlertTypes),
   period: z.enum(userAlertPeriods),
+  triggerMode: z.enum(userAlertTriggerModes).default("once"),
+  expiresAt: z.iso.datetime({ offset: true }),
   conditions: z
     .array(
       z.object({
+        alertType: z.enum(userAlertTypes),
         condition: z.enum(userAlertConditionOps),
         value: z.coerce.number(),
       }),

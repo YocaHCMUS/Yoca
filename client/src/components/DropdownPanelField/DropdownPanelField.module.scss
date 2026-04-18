@@ -1,0 +1,78 @@
+.container {
+  position: relative;
+}
+
+.trigger {
+  inline-size: 100%;
+  text-align: start;
+  cursor: pointer;
+  border: none;
+  border-block-end: 1px solid var(--cds-border-strong-01);
+  background: var(--cds-field);
+  padding-inline-end: 2rem;
+}
+
+.valueText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.openArrow {
+  transform: rotate(180deg);
+}
+
+.panel {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 0.25rem);
+  z-index: 50;
+  border: 1px solid var(--cds-border-subtle-01);
+  background: var(--cds-layer-01);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform-origin: top;
+}
+
+.panelOpen {
+  display: block;
+  animation: panelEnter 180ms ease-out forwards;
+}
+
+.panelClosed {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+  animation: panelExit 180ms ease-in forwards;
+}
+
+@keyframes panelEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes panelExit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelOpen,
+  .panelClosed {
+    animation: none;
+  }
+}

@@ -1,5 +1,4 @@
 import {
-  Stack,
   StructuredListBody,
   StructuredListCell,
   StructuredListHead,
@@ -7,26 +6,29 @@ import {
   StructuredListSkeleton,
   StructuredListWrapper,
 } from "@carbon/react";
+import { ReactNode } from "react";
+
+interface StrctLstHdr {
+  key: string;
+  header: ReactNode;
+  textAlign?: "center" | "start" | "end";
+}
 
 interface StrctLstRw {
-  id: string;
-  label: React.ReactNode;
-  value: React.ReactNode;
-  noWrapLabel?: boolean;
-  noWrapValue?: boolean;
+  [key: string]: ReactNode;
 }
 
 interface StrctLstProps {
-  title?: string;
   loading?: boolean;
   rows: StrctLstRw[];
+  headers: StrctLstHdr[];
   className?: string;
 }
 
 export default function StrctLst({
   loading = false,
   rows,
-  title,
+  headers,
   className,
 }: StrctLstProps) {
   if (loading) {
@@ -34,23 +36,24 @@ export default function StrctLst({
   }
 
   return (
-    <StructuredListWrapper className={className} isFlush>
-      {title && (
-        <StructuredListHead>
-          <StructuredListRow head>
-            <StructuredListCell head>{title}</StructuredListCell>
-          </StructuredListRow>
-        </StructuredListHead>
-      )}
+    <StructuredListWrapper className={className}>
+      <StructuredListHead>
+        <StructuredListRow head>
+          {headers.map((header) => (
+            <StructuredListCell head style={{ textAlign: header.textAlign }}>
+              {header.header}
+            </StructuredListCell>
+          ))}
+        </StructuredListRow>
+      </StructuredListHead>
       <StructuredListBody>
         {rows.map((row) => (
-          <StructuredListRow key={row.id}>
-            <StructuredListCell noWrap={row.noWrapLabel}>
-              {row.label}
-            </StructuredListCell>
-            <StructuredListCell noWrap={row.noWrapValue}>
-              <Stack style={{ justifyContent: "end" }}>{row.value}</Stack>
-            </StructuredListCell>
+          <StructuredListRow>
+            {headers.map((header) => (
+              <StructuredListCell style={{ textAlign: header.textAlign }}>
+                {row[header.key]}
+              </StructuredListCell>
+            ))}
           </StructuredListRow>
         ))}
       </StructuredListBody>

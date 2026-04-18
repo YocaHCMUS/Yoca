@@ -55,8 +55,9 @@ const app = new Hono()
       const row = await alertsService.createAlert({
         userId: parsedPayload.data.id,
         tokenAddress: body.tokenAddress,
-        alertType: body.alertType,
         period: body.period,
+        triggerMode: body.triggerMode,
+        expiresAt: body.expiresAt,
         conditions: body.conditions,
       });
       if (!row) {

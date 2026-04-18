@@ -239,11 +239,3 @@
     border-inline-end: 1px solid var(--cds-border-subtle-03);
   }
 }
-
-.inlineSearch {
-  :global(.cds--search--expandable) {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 1;
-  }
-}

@@ -2,6 +2,7 @@ import type {
   UserAlertConditionOp,
   UserAlertPeriod,
   UserAlertSelect,
+  UserAlertTriggerMode,
   UserAlertType,
 } from "@sv/db/alert.js";
 import { userAlertConditions, userAlerts } from "@sv/db/alert.js";
@@ -10,6 +11,7 @@ import { eq } from "drizzle-orm";
 
 // Type aliases for local reusability
 type AlertCondition = {
+  alertType: UserAlertType;
   condition: UserAlertConditionOp;
   value: number;
 };
@@ -17,8 +19,9 @@ type AlertCondition = {
 export type CreateAlertInput = {
   userId: string;
   tokenAddress: string;
-  alertType: UserAlertType;
   period: UserAlertPeriod;
+  triggerMode: UserAlertTriggerMode;
+  expiresAt: string;
   conditions: AlertCondition[];
 };
 
@@ -34,8 +37,9 @@ export async function createAlert(input: CreateAlertInput) {
       .values({
         userId: input.userId,
         tokenAddress: input.tokenAddress,
-        alertType: input.alertType,
         period: input.period,
+        triggerMode: input.triggerMode,
+        expiresAt: new Date(input.expiresAt),
       })
       .returning();
 
@@ -45,6 +49,7 @@ export async function createAlert(input: CreateAlertInput) {
     await tx.insert(userAlertConditions).values(
       input.conditions.map((cond) => ({
         alertId: alert.id,
+        alertType: cond.alertType,
         conditionOp: cond.condition,
         value: cond.value,
       })),
@@ -72,8 +77,9 @@ export async function getAlertById(alertId: string) {
 export async function updateAlert(
   alertId: string,
   conditions: {
-    alertType: UserAlertType;
     period: UserAlertPeriod;
+    triggerMode: UserAlertTriggerMode;
+    expiresAt: string;
     conditions: AlertCondition[];
   },
 ) {
@@ -81,7 +87,11 @@ export async function updateAlert(
   await db.transaction(async (tx) => {
     const [row] = await tx
       .update(userAlerts)
-      .set({ alertType: conditions.alertType, period: conditions.period })
+      .set({
+        period: conditions.period,
+        triggerMode: conditions.triggerMode,
+        expiresAt: new Date(conditions.expiresAt),
+      })
       .where(eq(userAlerts.id, alertId))
       .returning();
 
@@ -96,6 +106,7 @@ export async function updateAlert(
     await tx.insert(userAlertConditions).values(
       conditions.conditions.map((cond) => ({
         alertId,
+        alertType: cond.alertType,
         conditionOp: cond.condition,
         value: cond.value,
       })),

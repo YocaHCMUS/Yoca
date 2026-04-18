@@ -1,6 +1,9 @@
 import client from "@/api/main";
+import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
+import { Flex } from "@/components/Flex";
 import { ModalStateManager } from "@/components/ModelStateManager";
 import Tble from "@/components/Tble";
+import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,8 +19,8 @@ import {
   DatePicker,
   DatePickerInput,
   Dropdown,
-  ExpandableSearch,
   Grid,
+  IconButton,
   ModalBody,
   ModalFooter,
   ModalHeader,
@@ -29,13 +32,13 @@ import {
   TextInput,
   TimePicker,
 } from "@carbon/react";
-import { Add, ArrowLeft, ArrowRight } from "@carbon/react/icons";
+import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
+import styles from "./demo.module.scss";
 
 interface AlertRow {
   id: string;
   tokenAddress: string;
-  alertType: string;
   period: string;
   createdAt: string;
   [key: string]: string;
@@ -127,7 +130,125 @@ interface AlertConfigurationProps {
   setConfig: (config: AlertConfig) => void;
 }
 
+type ConditionOp = "gt" | "gte" | "eq" | "lt" | "lte";
+
+type AlertMetric =
+  | "price_percentage"
+  | "price_usd"
+  | "volume_usd"
+  | "buying_volume_usd"
+  | "buying_volume_percentage"
+  | "selling_volume_usd"
+  | "selling_volume_percentage"
+  | "trades"
+  | "trades_percentage";
+
+interface ConditionRow {
+  id: string;
+  metric: AlertMetric;
+  condition: ConditionOp;
+  value: string;
+}
+
+const CONDITION_OPTIONS: Array<{ id: ConditionOp; text: string }> = [
+  { id: "gt", text: "Greater than (>)" },
+  { id: "gte", text: "Greater than or equal (≥)" },
+  { id: "eq", text: "Equal (=)" },
+  { id: "lt", text: "Less than (<)" },
+  { id: "lte", text: "Less than or equal (≤)" },
+];
+
+const METRIC_OPTIONS: Array<{ id: AlertMetric; text: string; helper: string }> =
+  [
+    {
+      id: "price_percentage",
+      text: "Price change",
+      helper: "Percent change over the selected period",
+    },
+    { id: "price_usd", text: "Price", helper: "Current token price in USD" },
+    { id: "volume_usd", text: "Volume", helper: "Total trading volume in USD" },
+    {
+      id: "buying_volume_usd",
+      text: "Buy volume",
+      helper: "Buy-side volume in USD",
+    },
+    {
+      id: "buying_volume_percentage",
+      text: "Buy volume %",
+      helper: "Buy-side share of total volume",
+    },
+    {
+      id: "selling_volume_usd",
+      text: "Sell volume",
+      helper: "Sell-side volume in USD",
+    },
+    {
+      id: "selling_volume_percentage",
+      text: "Sell volume %",
+      helper: "Sell-side share of total volume",
+    },
+    { id: "trades", text: "Trades", helper: "Number of trades" },
+    {
+      id: "trades_percentage",
+      text: "Trades %",
+      helper: "Trade count change over the selected period",
+    },
+  ];
+
+function getConditionOption(condition: ConditionOp) {
+  return (
+    CONDITION_OPTIONS.find((item) => item.id == condition) ??
+    CONDITION_OPTIONS[0]
+  );
+}
+
+function createConditionRow(condition: ConditionOp = "gt"): ConditionRow {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    metric: "price_percentage",
+    condition,
+    value: "",
+  };
+}
+
+function getMetricOption(metric: AlertMetric) {
+  return METRIC_OPTIONS.find((item) => item.id == metric) ?? METRIC_OPTIONS[0];
+}
+
+function combineLocalDateAndTime(
+  date: Date | null,
+  time: string,
+): string | null {
+  if (!date || !time) return null;
+
+  const [hoursStr, minutesStr] = time.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  const localDate = new Date(date);
+  localDate.setHours(hours, minutes, 0, 0);
+  return localDate.toISOString();
+}
+
 function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
+  const { lang, fmt } = useLocalization();
+  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
+  const [expiryTime, setExpiryTime] = useState("09:00");
+  const [conditions, setConditions] = useState<ConditionRow[]>([
+    createConditionRow(),
+  ]);
+
+  const datePickerLocale = lang == "vi" ? "vn" : "en";
+  const datePickerFormat = lang == "vi" ? "d/m/Y" : "m/d/Y";
+  const expiresAtUtc = useMemo(
+    () => combineLocalDateAndTime(expiryDate, expiryTime),
+    [expiryDate, expiryTime],
+  );
+
   if (config.type !== "token-stats") {
     return <Txt>Configuration for this alert type not yet implemented</Txt>;
   }
@@ -162,44 +283,14 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
             text: "Specific Token",
           }}
         />
-        {/* <ComboBox
-          id="carbon-combobox"
-          invalidText="Error message goes here"
-          items={[
-            "Apple",
-            "Apricot",
-            "Avocado",
-            "Banana",
-            "Blackberry",
-            "Blueberry",
-            "Cantaloupe",
-          ]}
-          onChange={function k_e() {}}
-          titleText="Label"
-          typeahead
-          warnText="Warning message goes here"
-        /> */}
-        <div
-          className={overwriteStyles.inlineSearch}
-          style={{
-            display: "flex",
-            position: "relative",
-            alignItems: "center",
-          }}
-        >
-          <p style={{ inlineSize: "100%" }}>hello</p>
-          <div
-            style={{
-              position: "absolute",
-              display: "flex",
-              justifyContent: "flex-end",
-              insetInline: 0,
-              insetBlockStart: 0,
-            }}
-          >
-            <ExpandableSearch labelText="Search" size="lg" className="FUkc" />
-          </div>
-        </div>
+        <DropdownPanelField
+          id="token-search-select"
+          titleText="Token"
+          placeholder="Select token"
+          renderPanel={({ setValue, closePanel }) => (
+            <TokenSearch setValue={setValue} closePanel={closePanel} />
+          )}
+        />
       </Stack>
 
       <Stack gap={2}>
@@ -207,72 +298,101 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
           Conditions
         </Txt>
         <Txt size="sm" secondary>
-          Maximum 3 different conditions
+          Add up to 3 conditions. Each row has metric, operator, and value.
         </Txt>
-        <Stack gap={1} orientation="horizontal" style={{ alignItems: "end" }}>
-          <div style={{ width: 200 }}>
-            <Dropdown
-              id="metric-select"
-              titleText="Metric"
-              label="Price change (%)"
-              items={[
-                {
-                  id: "price-change",
-                  text: "Price change (%)",
-                },
-                { id: "volume", text: "Volume" },
-                {
-                  id: "trades",
-                  text: "Number of trades",
-                },
-              ]}
-              itemToString={(item) => item?.text || ""}
-              initialSelectedItem={{
-                id: "price-change",
-                text: "Price change (%)",
-              }}
-              hideLabel
-            />
-          </div>
-          <div style={{ width: 200 }}>
-            <Dropdown
-              id="metric-select"
-              titleText="Metric"
-              label="Price change (%)"
-              items={[
-                {
-                  id: "30m",
-                  text: "30m",
-                },
-                { id: "1h", text: "1h" },
-                {
-                  id: "6h",
-                  text: "6h",
-                },
-                {
-                  id: "24h",
-                  text: "24h",
-                },
-              ]}
-              itemToString={(item) => item?.text || ""}
-              initialSelectedItem={{
-                id: "1h",
-                text: "1h",
-              }}
-              hideLabel
-            />
-          </div>
-          <TextInput value="10" id="threshold-min-input" labelText="" />
-          <TextInput value="100" id="threshold-max-input" labelText="" />
-        </Stack>
-      </Stack>
 
-      <Stack gap={2}>
-        <Checkbox
-          id="condition-check"
-          labelText="One condition is expired when token increases or decreases in value"
-          defaultChecked
-        />
+        <Stack gap={2}>
+          {conditions.map((row, index) => (
+            <Flex
+              className={styles.conditionEntry}
+              key={row.id}
+              dir="row"
+              align="end"
+              gap={1}
+            >
+              <Dropdown
+                id={`condition-metric-${row.id}`}
+                titleText={index == 0 ? "Metric" : `Metric ${index + 1}`}
+                label="Select metric"
+                items={METRIC_OPTIONS}
+                itemToString={(item) => item?.text || ""}
+                selectedItem={getMetricOption(row.metric)}
+                onChange={({ selectedItem }) => {
+                  if (!selectedItem) return;
+                  setConditions((current) =>
+                    current.map((item) =>
+                      item.id == row.id
+                        ? { ...item, metric: selectedItem.id }
+                        : item,
+                    ),
+                  );
+                }}
+                style={{ flex: 1 }}
+              />
+              <Dropdown
+                id={`condition-op-${row.id}`}
+                titleText={index == 0 ? "Condition" : `Condition ${index + 1}`}
+                label="Select condition"
+                items={CONDITION_OPTIONS}
+                itemToString={(item) => item?.text || ""}
+                selectedItem={getConditionOption(row.condition)}
+                onChange={({ selectedItem }) => {
+                  if (!selectedItem) return;
+                  setConditions((current) =>
+                    current.map((item) =>
+                      item.id == row.id
+                        ? { ...item, condition: selectedItem.id }
+                        : item,
+                    ),
+                  );
+                }}
+                style={{ flex: 1 }}
+              />
+              <TextInput
+                id={`condition-value-${row.id}`}
+                labelText="Value"
+                placeholder="10"
+                value={row.value}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setConditions((current) =>
+                    current.map((item) =>
+                      item.id == row.id ? { ...item, value: nextValue } : item,
+                    ),
+                  );
+                }}
+              />
+
+              <IconButton
+                size="md"
+                kind="ghost"
+                label="Remove"
+                style={{ visibility: index > 0 ? "visible" : "hidden" }}
+                onClick={() => {
+                  if (index == 0) return;
+                  setConditions((current) =>
+                    current.filter((item) => item.id != row.id),
+                  );
+                }}
+              >
+                <SubtractAlt />
+              </IconButton>
+            </Flex>
+          ))}
+
+          {conditions.length < 3 && (
+            <Button
+              kind="primary"
+              size="sm"
+              renderIcon={Add}
+              onClick={() => {
+                setConditions((current) => [...current, createConditionRow()]);
+              }}
+            >
+              Add Condition
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       <Stack gap={2} orientation="horizontal">
@@ -286,29 +406,35 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
           </RadioButtonGroup>
         </Stack>
         <Stack>
-          <Txt secondary size="sm">
-            Expiry
-          </Txt>
           <Stack
             gap={1}
             orientation="horizontal"
             className={overwriteStyles.dateTimePicker}
             style={{ justifyContent: "start" }}
           >
-            <DatePicker datePickerType="single">
+            <DatePicker
+              datePickerType="single"
+              locale={datePickerLocale}
+              dateFormat={datePickerFormat}
+              onChange={(selectedDates) => {
+                setExpiryDate(selectedDates[0] ?? null);
+              }}
+            >
               <DatePickerInput
                 id="expiry-date-input"
                 placeholder="mm/dd/yyyy"
-                labelText="Expiry Date"
-                hideLabel
+                labelText="Expiry"
               />
             </DatePicker>
             <TimePicker
               id="expiry-time-input"
-              labelText="Expiry Time"
-              hideLabel
+              labelText="24h"
+              onChange={(event) => setExpiryTime(event.target.value)}
             />
           </Stack>
+          <Txt secondary size="sm" block>
+            UTC stored: {expiresAtUtc ? fmt.datetime.utc(expiresAtUtc) : "---"}
+          </Txt>
         </Stack>
       </Stack>
     </Stack>
@@ -388,7 +514,6 @@ export default function AlertsDemo() {
     return alerts.data.map((alert) => ({
       id: alert.id,
       tokenAddress: alert.tokenAddress,
-      alertType: alert.alertType,
       period: alert.period,
       createdAt: fmt.datetime.datetime(alert.createdAt),
     }));
@@ -533,7 +658,7 @@ export default function AlertsDemo() {
                       }
                     />
                     <ModalBody>
-                      <Stack gap={2} style={{ marginBlockEnd: 200 }}>
+                      <Stack gap={2} style={{ marginBlockEnd: 120 }}>
                         {step == "type-selection" && (
                           <AlertTypeSelection
                             alertTypeOptions={alertTypeOptions}
