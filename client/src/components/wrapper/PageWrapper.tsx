@@ -139,7 +139,7 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
       <>
         <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
         <HeaderMenuItem href="#">{tr("nav.alerts")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
+        <HeaderMenuItem href="/profile">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
   }
@@ -289,7 +289,10 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher aria-label="Account" expanded={openPanel == "account"}>
-            <SwitcherItem aria-labelledby="account-id" isSelected={false}>
+            <SwitcherItem
+              aria-labelledby="account-id"
+              isSelected={false}
+              href="/profile">
               <Stack
                 orientation="horizontal"
                 gap={4}

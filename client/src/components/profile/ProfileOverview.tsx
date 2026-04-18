@@ -4,27 +4,22 @@ import {
 } from "@/components/profile/profile.constants";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { Button, Tag } from "@carbon/react";
+import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
 import {
     Wallet,
     Activity,
     ChartLine,
     Link as LinkIcon,
 } from "@carbon/react/icons";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./profile.module.scss";
 import { PeriodSelector } from "../common/PeriodSelector/PeriodSelector";
+
 
 interface ProfileOverviewProps {
     data: ProfileOverviewData;
     onPeriodChange: (period: TimePeriod) => void;
-}
-
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-    }).format(value);
+    loading: boolean;
 }
 
 function formatPct(value: number): string {
@@ -32,21 +27,39 @@ function formatPct(value: number): string {
     return `${sign}${value.toFixed(2)}%`;
 }
 
-export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) {
+export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOverviewProps) {
+    const { fmt } = useLocalization();
+
     return (
         <section className={styles.sectionCard}>
             <div className={styles.overviewHeader}>
                 <div className={styles.overviewIdentity}>
-                    <img
-                        className={styles.avatar}
-                        src={data.avatarUrl}
-                        alt={`${data.displayName} avatar`}
-                    />
+                    {loading ? (
+                        <SkeletonPlaceholder
+                            style={{ width: 56, height: 56, borderRadius: "999px" }}
+                        />
+                    ) : (
+                        <img
+                            className={styles.avatar}
+                            src={data.avatarUrl}
+                            alt={`${data.displayName} avatar`}
+                        />
+                    )}
                     <div>
-                        <h2>{data.displayName}</h2>
-                        <Tag type={ACCOUNT_TIER_TAG_KIND[data.accountTier]}>
-                            {ACCOUNT_TIER_LABELS[data.accountTier]}
-                        </Tag>
+                        {loading ? (
+                            <div>
+                                <SkeletonText width="10rem" />
+                                <SkeletonText width="4.5rem" />
+                            </div>
+                        ) : (
+                            <>
+                                <h2>{data.displayName}</h2>
+                                {data.userId ? <p className={styles.overviewUid}>UID: {data.userId}</p> : null}
+                                <Tag type={ACCOUNT_TIER_TAG_KIND[data.accountTier]}>
+                                    {ACCOUNT_TIER_LABELS[data.accountTier]}
+                                </Tag>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -54,18 +67,6 @@ export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) 
                     value={data.period}
                     onChange={(k) => onPeriodChange(k)}
                 />
-                {/* <div>
-                    {PROFILE_PERIOD_OPTIONS.map((periodOption) => (
-                        <Button
-                            key={periodOption}
-                            kind={data.period === periodOption ? "primary" : "tertiary"}
-                            size="sm"
-                            onClick={() => onPeriodChange(periodOption)}
-                        >
-                            {periodOption}
-                        </Button>
-                    ))}
-                </div> */}
             </div>
 
             <div className={styles.metricGrid}>
@@ -74,14 +75,18 @@ export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) 
                         <Wallet size={16} />
                         Total net worth
                     </p>
-                    <p className={styles.metricValue}>{formatCurrency(data.totalNetWorthUsd)}</p>
+                    <p className={styles.metricValue}>
+                        {loading ? <SkeletonText width="6rem" /> : fmt.num.compact.currency(data.totalNetWorthUsd)}
+                    </p>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <Activity size={16} />
                         Trades or transactions
                     </p>
-                    <p className={styles.metricValue}>{data.tradeOrTxCount.toLocaleString()}</p>
+                    <p className={styles.metricValue}>
+                        {loading ? <SkeletonText width="4rem" /> : data.tradeOrTxCount.toLocaleString()}
+                    </p>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
@@ -92,7 +97,7 @@ export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) 
                         className={`${styles.metricValue} ${data.pnlUsd >= 0 ? styles.positive : styles.negative
                             }`}
                     >
-                        {formatCurrency(data.pnlUsd)} ({formatPct(data.pnlPct)})
+                        {loading ? <SkeletonText width="7rem" /> : `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
                     </p>
                 </div>
                 <div className={styles.metricCard}>
@@ -100,7 +105,9 @@ export function ProfileOverview({ data, onPeriodChange }: ProfileOverviewProps) 
                         <LinkIcon size={16} />
                         Linked wallets
                     </p>
-                    <p className={styles.metricValue}>{data.linkedWalletCount}</p>
+                    <p className={styles.metricValue}>
+                        {loading ? <SkeletonText width="3rem" /> : data.linkedWalletCount}
+                    </p>
                 </div>
             </div>
         </section>

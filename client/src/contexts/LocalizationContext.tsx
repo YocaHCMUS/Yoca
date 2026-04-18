@@ -14,13 +14,13 @@ type LangCode = keyof typeof locale;
 
 type TranslationReturn<K extends TranslationKeyPath> =
   HasNodeParam<PathValue<BaseTranslation, K>> extends true
-    ? React.ReactNode
-    : string;
+  ? React.ReactNode
+  : string;
 
 // This helps the error when you mistype the key (eg. tr("non_existent_key")) will be at the key name itself.
 // Though if you continue to type in the second argument, it'd both show the error at the wrong key
 // and hint the type of second argument as all the format variables of the translation
-type TranslateFunction = {
+export type TranslateFunction = {
   <K extends TranslationKeyPath>(
     key: FmtStrParams<PathValue<BaseTranslation, K>> extends undefined
       ? K

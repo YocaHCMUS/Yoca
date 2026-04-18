@@ -1,7 +1,7 @@
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
-import { BalanceChart } from "@/components/charts/BalanceChart/index.ts";
+import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart/index.ts";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import { FilterType, SortType, Table, tableHeaderLabel } from "@/components/tables/Table.tsx";
@@ -20,6 +20,7 @@ import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
@@ -27,9 +28,9 @@ import { TokenAverageTradePrice, TokenDetailsDemo } from "./TokenDetailsDemo.tsx
 import { WalletReportTemplate, type WalletReportSection } from "@/components/WalletReportTemplate";
 import { buildPortfolioMetaMap, mapPortfolioItems } from "../../util/wallet-portfolio-mapper.ts";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { Button } from "@carbon/react";
+import { Button, IconButton } from "@carbon/react";
 import { ChevronDown, Download } from "@carbon/icons-react";
-import { Activity, ChartLine, Wallet } from "@carbon/react/icons";
+import { Activity, ChartLine, Star, StarFilled, Wallet } from "@carbon/react/icons";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -105,6 +106,14 @@ function PageSection({ children }: { children: ReactNode }) {
 export default function WalletPage() {
     const { user } = useAuth();
     const { tr, fmt, lang } = useLocalization();
+    const {
+        tokenWatchlist,
+        walletWatchlist,
+        tokenPending,
+        walletPending,
+        toggleToken,
+        toggleWallet,
+    } = useWatchlist();
     const bcp47 = locale[lang].langCode;
     const navigate = useNavigate();
     const { address } = useParams<{ address: string }>();
@@ -254,12 +263,19 @@ export default function WalletPage() {
 
     const { rows: portfolioData, meta: portfolioMeta } = useMemo(() => mapPortfolioItems(portfolio), [portfolio]);
     const portfolioMetaMap = useMemo(() => buildPortfolioMetaMap(portfolioMeta), [portfolioMeta]);
-
-    const balanceTokenOptions = useMemo(
-        () => Array.from(new Set(portfolio.map((item) => item.symbol.trim().toUpperCase()).filter((symbol) => symbol.length > 0))).slice(0, 12),
-        [portfolio],
+    const portfolioTableData = useMemo(
+        () => portfolioData.map((row, rowIndex) => [portfolioMeta[rowIndex]?.tokenAddress ?? "", ...row]),
+        [portfolioData, portfolioMeta],
     );
-
+    const tokenWatchlistLookup = useMemo(
+        () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
+        [tokenWatchlist],
+    );
+    const walletWatchlistLookup = useMemo(
+        () => new Set(walletWatchlist.map((item) => item.toLowerCase())),
+        [walletWatchlist],
+    );
+    const isWalletInWatchlist = walletWatchlistLookup.has(walletAddress.toLowerCase());
 
     const formatSwapPair = (swap: WalletSwap): string => {
         const tokensInvolved = typeof swap.tokensInvolved === "string" ? swap.tokensInvolved : String(swap.tokensInvolved ?? "");
@@ -353,6 +369,7 @@ export default function WalletPage() {
     ];
 
     const portfolioHeaders = [
+        { header: "", align: "center" as const, minWidth: "3.25rem" },
         { header: tr("walletPage.token"), align: "start" as const, minWidth: "11rem" },
         { header: tr("walletPage.price"), align: "end" as const, minWidth: "8rem" },
         { header: tr("walletPage.holding"), align: "end" as const, minWidth: "8rem" },
@@ -360,14 +377,14 @@ export default function WalletPage() {
     ];
 
     const isSortableCounterparties = [false, false, true, false, true, true];
-    const isSortablePortfolio = [false, true, true, true];
+    const isSortablePortfolio = [false, false, true, true, true];
     const isSortableSwaps = [true, false, false, false, false, true, true];
     const isSortableTransfers = [false, false, false, true, true];
 
     const counterpartySortConfigs = { 2: { type: SortType.Number }, 4: { type: SortType.Number }, 5: { type: SortType.Number } };
     const swapSortConfigs = { 0: { type: SortType.Date }, 5: { type: SortType.Number }, 6: { type: SortType.Number } };
     const transferSortConfigs = { 3: { type: SortType.Number }, 4: { type: SortType.Date } };
-    const portfolioSortConfig = { 1: { type: SortType.Number }, 2: { type: SortType.Number }, 3: { type: SortType.Number } };
+    const portfolioSortConfig = { 2: { type: SortType.Number }, 3: { type: SortType.Number }, 4: { type: SortType.Number } };
 
     const counterpartyCellRenderers = [
         (value: string) => renderHash(value),
@@ -426,6 +443,31 @@ export default function WalletPage() {
 
     const portfolioCellRenderers = [
         (value: string) => {
+            const tokenAddress = typeof value === "string" && value.trim().length > 0 ? value : undefined;
+            const watched = Boolean(tokenAddress && tokenWatchlistLookup.has(tokenAddress.toLowerCase()));
+            const pending = Boolean(tokenAddress && tokenPending[tokenAddress]);
+
+            if (!tokenAddress) {
+                return null;
+            }
+
+            return (
+                <IconButton
+                    kind="ghost"
+                    size="sm"
+                    disabled={pending || !user}
+                    label={watched ? tr("marketPage.removeFromWatchlist") : tr("marketPage.addToWatchlist")}
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void toggleToken(tokenAddress);
+                    }}
+                >
+                    {watched ? <StarFilled size={16} /> : <Star size={16} />}
+                </IconButton>
+            );
+        },
+        (value: string) => {
             const portfolioTokenMeta = portfolioMetaMap.get(value);
             const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(portfolioTokenMeta?.tokenAddress);
             const fallbackLogoUri = tokenMetaLookupAddress
@@ -463,10 +505,10 @@ export default function WalletPage() {
     };
 
     const portfolioFilterSchema = {
-        0: { type: FilterType.Select },
-        1: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
-        2: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
-        3: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
+        1: { type: FilterType.Select },
+        2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
+        3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
+        4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
     };
 
     const handleSwapPageChange = async (): Promise<boolean> => {
@@ -820,7 +862,7 @@ export default function WalletPage() {
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([counterpartyHeaders, ...counterpartySheetRows]), "Counterparties");
             XLSX.utils.book_append_sheet(
                 workbook,
-                XLSX.utils.aoa_to_sheet([portfolioHeaders.map(tableHeaderLabel), ...portfolioRows]),
+                XLSX.utils.aoa_to_sheet([portfolioHeaders.slice(1).map(tableHeaderLabel), ...portfolioRows]),
                 "Portfolio",
             );
             const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.xlsx`;
@@ -873,7 +915,7 @@ export default function WalletPage() {
             <PageSection >
                 <div className={styles.chartStack}>
                     <div className={styles.chartSection}>
-                        <BalanceChart minHeight={460} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} tokenSelectorOptions={balanceTokenOptions.length > 0 ? balanceTokenOptions : ["SOL", "USDC", "USDT"]} autoRefresh />
+                        <WalletSingleBalanceChart minHeight={460} initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} autoRefresh />
                     </div>
                     <div className={styles.chartSection}>
                         <PnLChart minHeight={400} aggregation="daily" autoRefresh initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }} />
@@ -896,10 +938,10 @@ export default function WalletPage() {
                                 title={tr("walletPage.portfolio")}
                                 headers={portfolioHeaders}
                                 initialFilters={{}}
-                                fetcher={Promise.resolve(portfolioData)}
+                                fetcher={Promise.resolve(portfolioTableData)}
                                 filterSchema={portfolioFilterSchema}
                                 cellRenderers={portfolioCellRenderers}
-                                dataEntries={portfolioData}
+                                dataEntries={portfolioTableData}
                                 isSortable={isSortablePortfolio}
                                 sortConfigs={portfolioSortConfig}
                                 onRowClick={(_row, rowIndex) => {
@@ -908,7 +950,7 @@ export default function WalletPage() {
                                         navigate(`/tokens/${tokenAddress}`);
                                     }
                                 }}
-                                loading={portfolioLoading && portfolioData.length === 0}
+                                loading={portfolioLoading && portfolioTableData.length === 0}
                             />
                         </div>
                     </div>
@@ -1240,26 +1282,41 @@ export default function WalletPage() {
     );
 
     const tabActions = (
-        <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
-            <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
-                {tr("charts.export")}
-            </Button>
-            {isExportMenuOpen && (
-                <div className={styles.exportMenu}>
-                    <button type="button" className={styles.exportMenuItem} onClick={handleExportDataXlsx} disabled={isDataExporting}>
-                        <Download size={16} />
-                        {isDataExporting ? tr("walletPage.exportingData") : tr("walletPage.exportDataXlsx")}
-                    </button>
-                    <button type="button" className={styles.exportMenuItem} onClick={handleExportChartsZip} disabled={isChartsExporting}>
-                        <Download size={16} />
-                        {isChartsExporting ? tr("walletPage.exportingCharts") : tr("walletPage.exportChartsZip")}
-                    </button>
-                    <button type="button" className={styles.exportMenuItem} onClick={handleExportPagePdf} disabled={isPagePdfExporting}>
-                        <Download size={16} />
-                        {isPagePdfExporting ? tr("walletPage.exportingReport") : tr("walletPage.exportReportPdf")}
-                    </button>
-                </div>
-            )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* <IconButton
+                kind="ghost"
+                size="sm"
+                disabled={!user || !walletAddress || Boolean(walletPending[walletAddress])}
+                label={isWalletInWatchlist ? tr("marketPage.removeFromWatchlist") : tr("marketPage.addToWatchlist")}
+                onClick={() => {
+                    if (!walletAddress) return;
+                    void toggleWallet(walletAddress);
+                }}
+            >
+                {isWalletInWatchlist ? <StarFilled size={16} /> : <Star size={16} />}
+            </IconButton> */}
+
+            <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
+                <Button size="sm" kind="secondary" renderIcon={ChevronDown} onClick={() => setIsExportMenuOpen((prev) => !prev)} disabled={isPagePdfExporting || isDataExporting || isChartsExporting}>
+                    {tr("charts.export")}
+                </Button>
+                {isExportMenuOpen && (
+                    <div className={styles.exportMenu}>
+                        <button type="button" className={styles.exportMenuItem} onClick={handleExportDataXlsx} disabled={isDataExporting}>
+                            <Download size={16} />
+                            {isDataExporting ? tr("walletPage.exportingData") : tr("walletPage.exportDataXlsx")}
+                        </button>
+                        <button type="button" className={styles.exportMenuItem} onClick={handleExportChartsZip} disabled={isChartsExporting}>
+                            <Download size={16} />
+                            {isChartsExporting ? tr("walletPage.exportingCharts") : tr("walletPage.exportChartsZip")}
+                        </button>
+                        <button type="button" className={styles.exportMenuItem} onClick={handleExportPagePdf} disabled={isPagePdfExporting}>
+                            <Download size={16} />
+                            {isPagePdfExporting ? tr("walletPage.exportingReport") : tr("walletPage.exportReportPdf")}
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 

@@ -10,7 +10,9 @@ export const PROFILE_TABS = [
     { id: "dashboard", label: "Dashboard" },
     { id: "alerts", label: "Alerts" },
     { id: "wallets", label: "Wallets" },
+    { id: "watchlist", label: "Watchlist" },
     { id: "activity", label: "Activity" },
+    { id: "settings", label: "Settings" },
 ] as const;
 
 export type ProfileTabId = (typeof PROFILE_TABS)[number]["id"];

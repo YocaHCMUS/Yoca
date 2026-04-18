@@ -14,6 +14,7 @@ export const acmsApiCache = pgTable(
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   decimal as dec,
   integer,
@@ -24,6 +25,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -46,16 +48,60 @@ export const enumAuthProvider = pgEnum("auth_provider", [
 
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayName: varchar("display_name"),
-  // Email is not needed for wallet users, see it as contact
-  email: varchar("email"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayName: varchar("display_name"),
+    // Email is not needed for wallet users, see it as contact
+    email: varchar("email"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("users_email_uq").on(table.email).where(sql`${table.email} IS NOT NULL`),
+  ],
+);
+
+export const userLinkedWallets = pgTable(
+  "user_linked_wallets",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    isAuthWallet: boolean("is_auth_wallet").notNull().default(false),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.walletAddress],
+    }),
+  ]
+);
+
+export const userTokenWatchlist = pgTable(
+  "user_token_watch_list",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.tokenAddress] }),
+  ]
+)
+
+export const userWalletWatchlist = pgTable(
+  "user_wallet_watch_list",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.walletAddress] }),
+  ]
+)
 
 export const authAccounts = pgTable(
   "auth_accounts",
@@ -73,6 +119,7 @@ export const authAccounts = pgTable(
     primaryKey({
       columns: [table.provider, table.providerUserId],
     }),
+    uniqueIndex("auth_accounts_user_provider_uq").on(table.userId, table.provider),
     check(
       "provider_password",
       sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
@@ -912,6 +959,6 @@ export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
-
+export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 // #endregion
 

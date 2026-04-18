@@ -1,10 +1,12 @@
 import type { TimePeriod } from "@/types/chart-filters.types";
+import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
 
 export type ProfileAccountTier = "basic" | "premium" | "pro" | "enterprise";
 
 export interface ProfileOverviewData {
     avatarUrl: string;
     displayName: string;
+    userId?: string;
     accountTier: ProfileAccountTier;
     period: TimePeriod;
     totalNetWorthUsd: number;
@@ -126,6 +128,16 @@ export interface ActivityRow {
     amountUsd: number;
     timestamp: string;
     side?: "buy" | "sell" | "in" | "out";
+    exchange?: string;
+    soldToken?: string;
+    boughtToken?: string;
+    baseQuotePrice?: number;
+    txHash?: string;
+    fromAddress?: string;
+    toAddress?: string;
+    amount?: number;
+    tokenSymbol?: string;
+    signature?: string;
 }
 
 export interface WalletActivityCard {
@@ -160,6 +172,8 @@ export interface ProfileActivityData {
     leftNavItems: ProfileActivityNav[];
     selectedNav: ProfileActivityNav;
     swapTransferRows: ActivityRow[];
+    swapsRaw?: WalletSwap[];
+    transfersRaw?: WalletTransfer[];
     walletCards: WalletActivityCard[];
     heatmap: ActivityHeatmapData;
 }

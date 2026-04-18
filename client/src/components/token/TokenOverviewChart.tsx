@@ -60,17 +60,17 @@ export function TokenOverviewChart({
         const response =
           range.days === 1
             ? await client.api.tokens.markets.chart[":address"].$get({
-                param: { address },
-              })
+              param: { address },
+            })
             : range.days <= 90
               ? await client.api.tokens.markets.chart[":address"].hourly.$get({
-                  param: { address },
-                  query: { days: String(range.days) },
-                })
+                param: { address },
+                query: { days: String(range.days) },
+              })
               : await client.api.tokens.markets.chart[":address"].daily.$get({
-                  param: { address },
-                  query: { days: String(range.days) },
-                });
+                param: { address },
+                query: { days: String(range.days) },
+              });
 
         if (response.status === 200) {
           const data: ChartPoint[] = await response.json();
@@ -143,16 +143,16 @@ export function TokenOverviewChart({
           const d = new Date(ts);
           const dateStr = isShortRange
             ? d.toLocaleString(dateLocale, {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : d.toLocaleDateString(dateLocale, {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              });
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
           return `<div style="padding:6px 10px">
                         <div style="color:#aaa;margin-bottom:3px;font-size:12px">${dateStr}</div>
                         <div style="font-size:16px;font-weight:700">${fmt.num.compact.currency(val)}</div>

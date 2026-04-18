@@ -1,6 +1,8 @@
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import type { ProfileDashboardData } from "@/types/profile";
 import styles from "./profile.module.scss";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfileDashboardTabProps {
     data: ProfileDashboardData;
@@ -13,16 +15,39 @@ function getToneClass(tone?: "positive" | "negative" | "neutral"): string {
 }
 
 export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
+    const { tr, fmt } = useLocalization();
+
+
+    if (
+        data.kpis.length === 0
+        && data.concentration.length === 0
+        && data.risk.length === 0
+        && data.anomalies.length === 0
+    ) {
+        return (
+            <ProfileUnavailableState
+                title={tr("profileTabs.dashboard.unavailableTitle")}
+                description={tr("profileTabs.dashboard.unavailableDescription")}
+            />
+        );
+    }
+
     const concentrationData = data.concentration.map((item) => [
         item.label,
         item.valueUsd,
         item.pct,
     ]);
 
+    const conentrationHeaders = [
+        tr("profileTabs.dashboard.concentrationHeaders.0"),
+        tr("profileTabs.dashboard.concentrationHeaders.1"),
+        tr("profileTabs.dashboard.concentrationHeaders.2"),
+    ];
+
     return (
         <section className={styles.contentStack}>
             <div className={styles.sectionCard}>
-                <h3>KPI strip</h3>
+                <h3>{tr("profileTabs.dashboard.kpiStripTitle")}</h3>
                 <div className={styles.metricGrid}>
                     {data.kpis.map((kpi) => (
                         <article key={kpi.id} className={styles.metricCard}>
@@ -36,8 +61,8 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
             </div>
 
             <Table
-                title="Wallet concentration"
-                headers={["Wallet", "Value", "Share"]}
+                title={tr("profileTabs.dashboard.concentrationTableTitle") as string}
+                headers={conentrationHeaders}
                 initialFilters={{}}
                 fetcher={Promise.resolve([])}
                 filterSchema={{
@@ -47,7 +72,7 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
                 dataEntries={concentrationData}
                 cellRenderers={[
                     null,
-                    (value) => `$${Number(value).toLocaleString()}`,
+                    (value) => fmt.num.compact.currency(Number(value)),
                     (value) => `${Number(value).toFixed(1)}%`,
                 ]}
                 isSortable={[true, true, true]}
@@ -58,7 +83,7 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
             />
 
             <div className={styles.sectionCard}>
-                <h3>Risk panel</h3>
+                <h3>{tr("profileTabs.dashboard.riskPanelTitle")}</h3>
                 <div className={styles.contentStack}>
                     {data.risk.map((risk) => (
                         <div key={risk.id}>
@@ -69,7 +94,7 @@ export function ProfileDashboardTab({ data }: ProfileDashboardTabProps) {
             </div>
 
             <div className={styles.sectionCard}>
-                <h3>Recent anomalies</h3>
+                <h3>{tr("profileTabs.dashboard.anomaliesTitle")}</h3>
                 <div className={styles.contentStack}>
                     {data.anomalies.map((anomaly) => (
                         <article key={anomaly.id} className={styles.notificationItem}>

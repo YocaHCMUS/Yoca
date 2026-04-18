@@ -14,7 +14,6 @@ import {
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { TradingVolumePerTransactionRequestParams } from "@/types/chart-api.types";
-import { formatCurrency } from "@/util/chart-helpers";
 import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
@@ -41,7 +40,7 @@ export function TradingVolumePerTransaction({
   // onDataLoaded,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle =
     title || tr("charts.tradingVolumePerTransactionChart.title");
 
@@ -149,7 +148,7 @@ export function TradingVolumePerTransaction({
         name: tr("charts.tradingVolumePerTransactionChart.volume"),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
         splitLine: {
           show: true,
@@ -170,7 +169,7 @@ export function TradingVolumePerTransaction({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => formatCurrency(params.value),
+            formatter: (params: any) => fmt.num.compact.currency(params.value),
             color: chartTheme.textColor,
           },
         },
@@ -226,7 +225,7 @@ export function TradingVolumePerTransaction({
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [data, chartTheme, tr, fmt]);
 
   return (
     <BaseChart
