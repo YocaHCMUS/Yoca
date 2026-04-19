@@ -1,3 +1,24 @@
-.conditionEntry :global(.cds--text-input-wrapper) {
+.conditionConfig :global(.cds--text-input-wrapper) {
   flex: 1;
+}
+.conditionConfig :global(.cds--list-box--expanded.cds--list-box__menu) {
+  max-block-size: 6rem;
+}
+
+.emailCheckBox {
+  max-inline-size: 6rem;
+}
+
+.emailSetup {
+  animation: emailSetupReveal 180ms ease-out;
+}
+
+@keyframes emailSetupReveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

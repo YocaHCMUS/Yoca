@@ -1,8 +1,8 @@
 const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
-import { createHelius } from "helius-sdk";
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
-import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
+import { createHelius } from "helius-sdk";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 
 const HELIUS_SERVICE_NAME = "helius";
@@ -65,7 +65,7 @@ export async function heliusFetch(
 export function getEndpoint(path: string): URL {
   const base =
     process.env.HELIUS_API_BASE_URL &&
-      process.env.HELIUS_API_BASE_URL.length > 0
+    process.env.HELIUS_API_BASE_URL.length > 0
       ? process.env.HELIUS_API_BASE_URL
       : DEFAULT_HELIUS_API_BASE_URL;
 
@@ -120,7 +120,9 @@ export function getRequiredHeadersWithMetadata(): {
   };
 }
 
-function getApiKeyMetadataFromHeaders(headers: RequestInit["headers"] | undefined): ApiKeyMetadata | null {
+function getApiKeyMetadataFromHeaders(
+  headers: RequestInit["headers"] | undefined,
+): ApiKeyMetadata | null {
   if (!headers) {
     return null;
   }

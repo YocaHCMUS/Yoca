@@ -239,3 +239,12 @@
     border-inline-end: 1px solid var(--cds-border-subtle-03);
   }
 }
+
+.filledTextArea {
+  :global(.cds--text-area) {
+    border: solid;
+    border-width: 1px;
+    border-color: var(--cds-border-subtle-01);
+    background-color: var(--cds-field) !important;
+  }
+}

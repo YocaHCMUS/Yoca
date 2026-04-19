@@ -2,6 +2,7 @@ import client from "@/api/main";
 import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { Flex } from "@/components/Flex";
 import { ModalStateManager } from "@/components/ModelStateManager";
+import { Divider } from "@/components/partials/Divider/Divider";
 import Tble from "@/components/Tble";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { Txt } from "@/components/Txt";
@@ -13,14 +14,17 @@ import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
   Button,
   Checkbox,
+  CheckboxGroup,
   ClickableTile,
   Column,
   ComposedModal,
   DatePicker,
   DatePickerInput,
   Dropdown,
+  FormGroup,
   Grid,
   IconButton,
+  InlineNotification,
   ModalBody,
   ModalFooter,
   ModalHeader,
@@ -254,163 +258,168 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
   }
 
   return (
-    <Stack gap={5}>
-      <Stack gap={2}>
-        <Txt size="sm" secondary>
-          Token
-        </Txt>
-        <Dropdown
-          id="token-type-select"
-          titleText="Token Type"
-          label="Specific Token"
-          items={[
-            {
+    <Stack gap={7}>
+      <FormGroup legendText="Token">
+        <Stack gap={4}>
+          <Dropdown
+            id="token-type-select"
+            titleText="Token Type"
+            label="Specific Token"
+            items={[
+              {
+                id: "specific",
+                text: "Specific Token",
+              },
+              {
+                id: "portfolio",
+                text: "From My Portfolio",
+              },
+              {
+                id: "watchlist",
+                text: "From My Watchlist",
+              },
+            ]}
+            itemToString={(item) => item?.text || ""}
+            initialSelectedItem={{
               id: "specific",
               text: "Specific Token",
-            },
-            {
-              id: "portfolio",
-              text: "From My Portfolio",
-            },
-            {
-              id: "watchlist",
-              text: "From My Watchlist",
-            },
-          ]}
-          itemToString={(item) => item?.text || ""}
-          initialSelectedItem={{
-            id: "specific",
-            text: "Specific Token",
-          }}
-        />
-        <DropdownPanelField
-          id="token-search-select"
-          titleText="Token"
-          placeholder="Select token"
-          renderPanel={({ setValue, closePanel }) => (
-            <TokenSearch setValue={setValue} closePanel={closePanel} />
-          )}
-        />
-      </Stack>
+            }}
+          />
+          <DropdownPanelField
+            id="token-search-select"
+            titleText="Token"
+            placeholder="Select token"
+            renderPanel={({ setValue, closePanel }) => (
+              <TokenSearch setValue={setValue} closePanel={closePanel} />
+            )}
+          />
+        </Stack>
+      </FormGroup>
+      <Divider />
+      <FormGroup legendText="Conditions">
+        <Stack gap={4}>
+          <InlineNotification
+            hideCloseButton
+            lowContrast
+            kind="info"
+            title="Notes:"
+            subtitle="Maximum 3 conditions"
+            style={{ maxInlineSize: "none" }}
+          />
 
-      <Stack gap={2}>
-        <Txt secondary size="sm">
-          Conditions
-        </Txt>
-        <Txt size="sm" secondary>
-          Add up to 3 conditions. Each row has metric, operator, and value.
-        </Txt>
+          <Stack gap={2}>
+            {conditions.map((row, index) => (
+              <Flex
+                className={styles.conditionConfig}
+                key={row.id}
+                dir="row"
+                align="end"
+                gap={1}
+              >
+                <Dropdown
+                  id={`condition-metric-${row.id}`}
+                  titleText={index == 0 ? "Metric" : `Metric ${index + 1}`}
+                  label="Select metric"
+                  items={METRIC_OPTIONS}
+                  itemToString={(item) => item?.text || ""}
+                  selectedItem={getMetricOption(row.metric)}
+                  onChange={({ selectedItem }) => {
+                    if (!selectedItem) return;
+                    setConditions((current) =>
+                      current.map((item) =>
+                        item.id == row.id
+                          ? { ...item, metric: selectedItem.id }
+                          : item,
+                      ),
+                    );
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Dropdown
+                  id={`condition-op-${row.id}`}
+                  titleText={
+                    index == 0 ? "Condition" : `Condition ${index + 1}`
+                  }
+                  label="Select condition"
+                  items={CONDITION_OPTIONS}
+                  itemToString={(item) => item?.text || ""}
+                  selectedItem={getConditionOption(row.condition)}
+                  onChange={({ selectedItem }) => {
+                    if (!selectedItem) return;
+                    setConditions((current) =>
+                      current.map((item) =>
+                        item.id == row.id
+                          ? { ...item, condition: selectedItem.id }
+                          : item,
+                      ),
+                    );
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <TextInput
+                  id={`condition-value-${row.id}`}
+                  labelText="Value"
+                  placeholder="10"
+                  value={row.value}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setConditions((current) =>
+                      current.map((item) =>
+                        item.id == row.id
+                          ? { ...item, value: nextValue }
+                          : item,
+                      ),
+                    );
+                  }}
+                />
 
-        <Stack gap={2}>
-          {conditions.map((row, index) => (
-            <Flex
-              className={styles.conditionEntry}
-              key={row.id}
-              dir="row"
-              align="end"
-              gap={1}
-            >
-              <Dropdown
-                id={`condition-metric-${row.id}`}
-                titleText={index == 0 ? "Metric" : `Metric ${index + 1}`}
-                label="Select metric"
-                items={METRIC_OPTIONS}
-                itemToString={(item) => item?.text || ""}
-                selectedItem={getMetricOption(row.metric)}
-                onChange={({ selectedItem }) => {
-                  if (!selectedItem) return;
-                  setConditions((current) =>
-                    current.map((item) =>
-                      item.id == row.id
-                        ? { ...item, metric: selectedItem.id }
-                        : item,
-                    ),
-                  );
-                }}
-                style={{ flex: 1 }}
-              />
-              <Dropdown
-                id={`condition-op-${row.id}`}
-                titleText={index == 0 ? "Condition" : `Condition ${index + 1}`}
-                label="Select condition"
-                items={CONDITION_OPTIONS}
-                itemToString={(item) => item?.text || ""}
-                selectedItem={getConditionOption(row.condition)}
-                onChange={({ selectedItem }) => {
-                  if (!selectedItem) return;
-                  setConditions((current) =>
-                    current.map((item) =>
-                      item.id == row.id
-                        ? { ...item, condition: selectedItem.id }
-                        : item,
-                    ),
-                  );
-                }}
-                style={{ flex: 1 }}
-              />
-              <TextInput
-                id={`condition-value-${row.id}`}
-                labelText="Value"
-                placeholder="10"
-                value={row.value}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setConditions((current) =>
-                    current.map((item) =>
-                      item.id == row.id ? { ...item, value: nextValue } : item,
-                    ),
-                  );
-                }}
-              />
+                <IconButton
+                  size="md"
+                  kind="ghost"
+                  label="Remove"
+                  style={{ visibility: index > 0 ? "visible" : "hidden" }}
+                  onClick={() => {
+                    if (index == 0) return;
+                    setConditions((current) =>
+                      current.filter((item) => item.id != row.id),
+                    );
+                  }}
+                >
+                  <SubtractAlt />
+                </IconButton>
+              </Flex>
+            ))}
 
-              <IconButton
-                size="md"
-                kind="ghost"
-                label="Remove"
-                style={{ visibility: index > 0 ? "visible" : "hidden" }}
+            {conditions.length < 3 && (
+              <Button
+                kind="primary"
+                renderIcon={Add}
                 onClick={() => {
-                  if (index == 0) return;
-                  setConditions((current) =>
-                    current.filter((item) => item.id != row.id),
-                  );
+                  setConditions((current) => [
+                    ...current,
+                    createConditionRow(),
+                  ]);
                 }}
               >
-                <SubtractAlt />
-              </IconButton>
-            </Flex>
-          ))}
-
-          {conditions.length < 3 && (
-            <Button
-              kind="primary"
-              size="sm"
-              renderIcon={Add}
-              onClick={() => {
-                setConditions((current) => [...current, createConditionRow()]);
-              }}
-            >
-              Add Condition
-            </Button>
-          )}
+                Add Condition
+              </Button>
+            )}
+          </Stack>
         </Stack>
-      </Stack>
-
+      </FormGroup>
+      <Divider />
       <Stack gap={2} orientation="horizontal">
-        <Stack gap={2}>
-          <Txt secondary size="sm">
-            Trigger
-          </Txt>
+        <FormGroup legendText="Trigger">
           <RadioButtonGroup name="trigger" defaultSelected="once">
             <RadioButton id="once" labelText="Only Once" value="once" />
             <RadioButton id="always" labelText="Always" value="always" />
           </RadioButtonGroup>
-        </Stack>
-        <Stack>
+        </FormGroup>
+        <FormGroup legendText="Expiry">
           <Stack
             gap={1}
             orientation="horizontal"
             className={overwriteStyles.dateTimePicker}
-            style={{ justifyContent: "start" }}
           >
             <DatePicker
               datePickerType="single"
@@ -424,18 +433,20 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
                 id="expiry-date-input"
                 placeholder="mm/dd/yyyy"
                 labelText="Expiry"
+                hideLabel
               />
             </DatePicker>
             <TimePicker
               id="expiry-time-input"
               labelText="24h"
+              hideLabel
               onChange={(event) => setExpiryTime(event.target.value)}
             />
           </Stack>
-          <Txt secondary size="sm" block>
+          {/* <Txt secondary size="sm" block>
             UTC stored: {expiresAtUtc ? fmt.datetime.utc(expiresAtUtc) : "---"}
-          </Txt>
-        </Stack>
+          </Txt> */}
+        </FormGroup>
       </Stack>
     </Stack>
   );
@@ -450,46 +461,63 @@ function AlertNotificationSettings({
   config,
   setConfig,
 }: AlertNotificationSettingsProps) {
+  const [emailEnabled, setEmailEnabled] = useState(true);
+
   return (
-    <Stack gap={5}>
-      <Stack gap={2}>
-        <Txt size="md" block bold>
-          * Delivery Channel
-        </Txt>
-        <Button kind="tertiary" size="sm">
-          Use default
-        </Button>
-        <Stack gap={1} orientation="vertical">
-          <Checkbox id="email" labelText="Email" defaultChecked />
+    <Stack gap={6}>
+      <FormGroup legendText="Delivery Channel">
+        <CheckboxGroup legendText="Group label">
+          <Flex dir="row" align="center" gap={20}>
+            <Checkbox
+              className={styles.emailCheckBox}
+              id="delivery-channel-email"
+              labelText="Email"
+              checked={emailEnabled}
+              onChange={(_, { checked }) => setEmailEnabled(checked)}
+              style={{ maxInlineSize: "fit-content" }}
+            />
+            {emailEnabled && (
+              <TextInput
+                className={styles.emailSetup}
+                labelText="Email"
+                hideLabel
+                placeholder="phuc21744@gmail.com"
+                id="delivery-channel-email__email"
+                helperText=""
+              />
+            )}
+          </Flex>
           <Checkbox
-            id="telegram"
+            id="delivery-channel-telegram"
             labelText="Telegram"
             disabled
-            helperText="PRO"
           />
           <Checkbox
-            id="discord"
+            id="delivery-channel-discord"
             labelText="Discord"
             disabled
-            helperText="PRO"
           />
-        </Stack>
-      </Stack>
-
-      <TextInput
-        labelText="* Alert name"
-        placeholder="Token Stats Performance 1"
-        value="Token Stats Performance 1"
-        id="alert-name-input"
-      />
-      <TextArea
-        labelText="Message (Auto)"
-        readOnly
-        value={`Token SOL on Solana
+        </CheckboxGroup>
+      </FormGroup>
+      <Divider />
+      <FormGroup legendText="Alert">
+        <Stack gap={4}>
+          <TextInput
+            labelText="Alert name"
+            placeholder="Token Stats Performance 1"
+            id="alert-name-input"
+          />
+          <TextArea
+            className={overwriteStyles.filledTextArea}
+            labelText="Message (Auto)"
+            readOnly
+            value={`Token SOL on Solana
 Trigger condition:
 Price change (%) in 1h from 10% to 100%`}
-        id="alert-message-textarea"
-      />
+            id="alert-message-textarea"
+          />
+        </Stack>
+      </FormGroup>
     </Stack>
   );
 }
@@ -658,7 +686,7 @@ export default function AlertsDemo() {
                       }
                     />
                     <ModalBody>
-                      <Stack gap={2} style={{ marginBlockEnd: 120 }}>
+                      <Stack gap={2}>
                         {step == "type-selection" && (
                           <AlertTypeSelection
                             alertTypeOptions={alertTypeOptions}
