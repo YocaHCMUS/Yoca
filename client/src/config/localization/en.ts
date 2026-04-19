@@ -110,6 +110,7 @@ const ERROR = {
     "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
+    NOT_FOUND: "Not found."
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {

@@ -871,6 +871,7 @@ export const translation = defineTranslation({
       "Dữ liệu biểu đồ hàng giờ không thể vượt quá 90 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
+    NOT_FOUND: "Không tìm thấy",
   },
   token: {
     overviewSectionTitle: "Tổng quan",

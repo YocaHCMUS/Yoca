@@ -10,9 +10,10 @@ import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
 import WalletPage from "@/pages/wallet";
-import SwrDebugDemo from "@/pages/wallet/demo";
 // import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
 import WalletsComparisionPage from "@/pages/walletsComparision";
+import { AuthGuard } from "./components/auth";
+import AlertsDemo from "./pages/alerts/demo";
 
 function App() {
   return (
@@ -26,17 +27,20 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
+        <Route
+          path="/alerts/demo"
+          element={
+            <AuthGuard>
+              <AlertsDemo />
+            </AuthGuard>
+          }
+        />
         <Route path="/tokens/:address" element={<TokenOverviewPage />} />
-        <Route path="/debug/swr" element={<SwrDebugDemo />} />
         <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
         <Route
           path="/historical-data/:address"
           element={<HistoricalDataPage />}
         />
-        {/* <Route
-          path="/wallets/:address/token-details-demo"
-          element={<TokenDetailsDemo />}
-        /> */}
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
           path="/comparision/wallets"
