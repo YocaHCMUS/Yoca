@@ -7,6 +7,7 @@ import svgr from "vite-plugin-svgr";
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, ".");
+  const env = loadEnv(mode, ".");
 
   return defineConfig({
     css: {
@@ -20,6 +21,11 @@ export default ({ mode }: { mode: string }) => {
     server: {
       port: 3000,
       allowedHosts: true,
+      proxy: {
+        "/api": {
+          target: env.VITE_CLIENT_API_DOMAIN,
+        },
+      },
       watch: {
         ignored: ["build/**"],
       },

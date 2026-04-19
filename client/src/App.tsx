@@ -10,7 +10,6 @@ import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
 import WalletPage from "@/pages/wallet";
-// import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
 import WalletsComparisionPage from "@/pages/walletsComparision";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
