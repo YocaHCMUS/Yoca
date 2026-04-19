@@ -1,197 +1,205 @@
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
-import type { AlertNotification, AlertRule, ProfileAlertsData } from "@/types/profile";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import type {
+  AlertNotification,
+  AlertRule,
+  ProfileAlertsData,
+} from "@/types/profile";
+import { AddLarge } from "@carbon/icons-react";
 import {
-    Button,
-    ComposedModal,
-    ModalBody,
-    ModalFooter,
-    ModalHeader,
-    TextArea,
-    TextInput,
-    Toggle,
+  Button,
+  ComposedModal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  TextArea,
+  TextInput,
+  Toggle,
 } from "@carbon/react";
 import { useMemo, useState } from "react";
-import { AddLarge } from "@carbon/icons-react";
 import styles from "./profile.module.scss";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
-import { useLocalization } from "@/contexts/LocalizationContext";
-
 
 interface ProfileAlertTabProps {
-    data: ProfileAlertsData;
+  data: ProfileAlertsData;
 }
 
 export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
-    const { tr } = useLocalization();
+  const { tr } = useLocalization();
 
-    if (data.alerts.length === 0 && data.notifications.length === 0) {
-        return (
-            <ProfileUnavailableState
-                title={tr("profileTabs.alerts.unavailableTitle")}
-                description={tr("profileTabs.alerts.unavailableDescription")}
-            />
-        );
-    }
-
-    const alertTableData = data.alerts.map((rule) => [
-        rule.tokenSymbol,
-        rule.alertType,
-        rule.conditionText,
-        rule.status,
-        new Date(rule.updatedAt).toLocaleString(),
-        rule.id,
-    ]);
-
-    const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
-
-    const modalTitle = useMemo(() => {
-        if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
-        return tr("profileTabs.alerts.editAlertTitle", { token: editingRule.tokenSymbol });
-    }, [editingRule, tr]);
-
-    const openCreateModal = () => {
-        setEditingRule(null);
-        setIsEditorOpen(true);
-    };
-
-    const openEditModal = (rule: AlertRule) => {
-        setEditingRule(rule);
-        setIsEditorOpen(true);
-    };
-
-    const closeEditorModal = () => {
-        setIsEditorOpen(false);
-        setEditingRule(null);
-    };
-
-    const tableHeaders = [
-        tr("profileTabs.alerts.tableHeaders.0"),
-        tr("profileTabs.alerts.tableHeaders.1"),
-        tr("profileTabs.alerts.tableHeaders.2"),
-        tr("profileTabs.alerts.tableHeaders.3"),
-        tr("profileTabs.alerts.tableHeaders.4"),
-        tr("profileTabs.alerts.tableHeaders.5"),
-    ];
-
-
+  if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
-        <section className={styles.contentStack}>
-            <Table
-                title={tr("profileTabs.alerts.tableTitle") as string}
-                headers={tableHeaders}
-                initialFilters={{}}
-                fetcher={Promise.resolve([])}
-                filterSchema={{
-                    0: { type: FilterType.Select },
-                    1: { type: FilterType.Select },
-                    3: { type: FilterType.Select },
-                }}
-                dataEntries={alertTableData}
-                cellRenderers={[
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    (_value, row) => {
-                        const rule = data.alerts.find((item) => item.id === row[5]);
-
-                        if (!rule) return null;
-
-                        return (
-                            <div className={styles.inlineActions}>
-                                <Button
-                                    size="sm"
-                                    kind="ghost"
-                                    onClick={() => openEditModal(rule)}
-                                >
-                                    Edit
-                                </Button>
-                                <Button size="sm" kind="ghost">
-                                    Pause/Resume
-                                </Button>
-                                <Button size="sm" kind="ghost">
-                                    Delete
-                                </Button>
-                            </div>
-                        );
-                    },
-                ]}
-                isSortable={[true, true, false, true, true, false]}
-                sortConfigs={{
-                    4: { type: SortType.Date },
-                }}
-                actions={
-                    <button className={styles.triggerButton} onClick={openCreateModal}>
-                        <AddLarge size={20} />
-                        Add alert
-                    </button>
-                }
-            />
-
-            <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
-                <ModalHeader label="Alerts" title={modalTitle} />
-                <ModalBody hasScrollingContent>
-                    <form className={styles.contentStack}>
-                        <TextInput
-                            id="alert-token"
-                            labelText="Token"
-                            defaultValue={editingRule?.tokenSymbol ?? ""}
-                            placeholder="SOL"
-                        />
-                        <TextInput
-                            id="alert-type"
-                            labelText="Alert type"
-                            defaultValue={editingRule?.alertType ?? "price"}
-                            placeholder="price"
-                        />
-                        <TextInput
-                            id="alert-condition"
-                            labelText="Condition"
-                            defaultValue={editingRule?.conditionText ?? ""}
-                            placeholder="Price > 210"
-                        />
-                        <TextArea id="alert-channels" labelText="Channels" placeholder="Email, Telegram" />
-                        <Toggle
-                            id="alert-enabled"
-                            labelText="Enable alert"
-                            labelA="Disabled"
-                            labelB="Enabled"
-                            defaultToggled={editingRule?.status !== "paused"}
-                        />
-                    </form>
-                </ModalBody>
-                <ModalFooter>
-                    <Button kind="secondary" onClick={closeEditorModal}>
-                        Cancel
-                    </Button>
-                    <Button onClick={closeEditorModal}>Save alert</Button>
-                </ModalFooter>
-            </ComposedModal>
-        </section>
+      <ProfileUnavailableState
+        title={tr("profileTabs.alerts.unavailableTitle")}
+        description={tr("profileTabs.alerts.unavailableDescription")}
+      />
     );
+  }
+
+  const alertTableData = data.alerts.map((rule) => [
+    rule.tokenSymbol,
+    rule.alertType,
+    rule.conditionText,
+    rule.status,
+    new Date(rule.updatedAt).toLocaleString(),
+    rule.id,
+  ]);
+
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+
+  const modalTitle = useMemo(() => {
+    if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
+    return tr("profileTabs.alerts.editAlertTitle", {
+      token: editingRule.tokenSymbol,
+    });
+  }, [editingRule, tr]);
+
+  const openCreateModal = () => {
+    setEditingRule(null);
+    setIsEditorOpen(true);
+  };
+
+  const openEditModal = (rule: AlertRule) => {
+    setEditingRule(rule);
+    setIsEditorOpen(true);
+  };
+
+  const closeEditorModal = () => {
+    setIsEditorOpen(false);
+    setEditingRule(null);
+  };
+
+  const tableHeaders = [
+    tr("profileTabs.alerts.tableHeaders.token"),
+    tr("profileTabs.alerts.tableHeaders.type"),
+    tr("profileTabs.alerts.tableHeaders.condition"),
+    tr("profileTabs.alerts.tableHeaders.status"),
+    tr("profileTabs.alerts.tableHeaders.updated"),
+    tr("profileTabs.alerts.tableHeaders.actions"),
+  ];
+
+  return (
+    <section className={styles.contentStack}>
+      <Table
+        title={tr("profileTabs.alerts.tableTitle") as string}
+        headers={tableHeaders}
+        initialFilters={{}}
+        fetcher={Promise.resolve([])}
+        filterSchema={{
+          0: { type: FilterType.Select },
+          1: { type: FilterType.Select },
+          3: { type: FilterType.Select },
+        }}
+        dataEntries={alertTableData}
+        cellRenderers={[
+          null,
+          null,
+          null,
+          null,
+          null,
+          (_value, row) => {
+            const rule = data.alerts.find((item) => item.id === row[5]);
+
+            if (!rule) return null;
+
+            return (
+              <div className={styles.inlineActions}>
+                <Button
+                  size="sm"
+                  kind="ghost"
+                  onClick={() => openEditModal(rule)}
+                >
+                  Edit
+                </Button>
+                <Button size="sm" kind="ghost">
+                  Pause/Resume
+                </Button>
+                <Button size="sm" kind="ghost">
+                  Delete
+                </Button>
+              </div>
+            );
+          },
+        ]}
+        isSortable={[true, true, false, true, true, false]}
+        sortConfigs={{
+          4: { type: SortType.Date },
+        }}
+        actions={
+          <button className={styles.triggerButton} onClick={openCreateModal}>
+            <AddLarge size={20} />
+            Add alert
+          </button>
+        }
+      />
+
+      <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
+        <ModalHeader label="Alerts" title={modalTitle} />
+        <ModalBody hasScrollingContent>
+          <form className={styles.contentStack}>
+            <TextInput
+              id="alert-token"
+              labelText="Token"
+              defaultValue={editingRule?.tokenSymbol ?? ""}
+              placeholder="SOL"
+            />
+            <TextInput
+              id="alert-type"
+              labelText="Alert type"
+              defaultValue={editingRule?.alertType ?? "price"}
+              placeholder="price"
+            />
+            <TextInput
+              id="alert-condition"
+              labelText="Condition"
+              defaultValue={editingRule?.conditionText ?? ""}
+              placeholder="Price > 210"
+            />
+            <TextArea
+              id="alert-channels"
+              labelText="Channels"
+              placeholder="Email, Telegram"
+            />
+            <Toggle
+              id="alert-enabled"
+              labelText="Enable alert"
+              labelA="Disabled"
+              labelB="Enabled"
+              defaultToggled={editingRule?.status !== "paused"}
+            />
+          </form>
+        </ModalBody>
+        <ModalFooter>
+          <Button kind="secondary" onClick={closeEditorModal}>
+            Cancel
+          </Button>
+          <Button onClick={closeEditorModal}>Save alert</Button>
+        </ModalFooter>
+      </ComposedModal>
+    </section>
+  );
 }
 
 interface ProfileAlertNotificationPanelProps {
-    notifications: AlertNotification[];
+  notifications: AlertNotification[];
 }
 
 export function ProfileAlertNotificationPanel({
-    notifications,
+  notifications,
 }: ProfileAlertNotificationPanelProps) {
-    return (
-        <section className={styles.contentStack}>
-            <h3>Alert notifications</h3>
-            {notifications.map((note) => (
-                <article key={note.id} className={styles.notificationItem}>
-                    <strong>{note.severity.toUpperCase()}</strong>
-                    <p>{note.message}</p>
-                    <small>{new Date(note.timestamp).toLocaleString()}</small>
-                </article>
-            ))}
-        </section>
-    );
+  return (
+    <section className={styles.contentStack}>
+      <h3>Alert notifications</h3>
+      {notifications.map((note) => (
+        <article key={note.id} className={styles.notificationItem}>
+          <strong>{note.severity.toUpperCase()}</strong>
+          <p>{note.message}</p>
+          <small>{new Date(note.timestamp).toLocaleString()}</small>
+        </article>
+      ))}
+    </section>
+  );
 }
 
 export default ProfileAlertTab;

@@ -41,7 +41,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Visible ticker in the last-traded table; full symbol/name in tooltip. */
 const TOKEN_TICKER_VISIBLE_CHARS = 4;
 
-function shortTokenTicker(symbol: string | undefined | null, tokenAddress: string): string {
+function shortTokenTicker(
+  symbol: string | undefined | null,
+  tokenAddress: string,
+): string {
   const s = (symbol ?? "").trim();
   if (s.length > TOKEN_TICKER_VISIBLE_CHARS) {
     return `${s.slice(0, TOKEN_TICKER_VISIBLE_CHARS).toUpperCase()}...`;
@@ -104,7 +107,10 @@ export function isTradeWithinSelectedRange(
   selectedTimeRange: TokenPriceDayRange,
   nowMs = Date.now(),
 ): boolean {
-  if (typeof tradeUnixTimeMs !== "number" || !Number.isFinite(tradeUnixTimeMs)) {
+  if (
+    typeof tradeUnixTimeMs !== "number" ||
+    !Number.isFinite(tradeUnixTimeMs)
+  ) {
     return false;
   }
 
@@ -286,7 +292,7 @@ export function TokenAverageTradePrice({
         </Column>
 
         <Column sm={1} md={3} lg={6}>
-          <Txt size="xl" center stretch>
+          <Txt size="xl" align="center" stretch>
             {fmt.num.compact.currency(tokenCurrentPrice)}
           </Txt>
         </Column>
@@ -477,9 +483,14 @@ export function TokenDetailsDemo({
               src={metaForToken?.imageUrl}
             />
             <Stack style={{ minWidth: 0 }}>
-              <Stack orientation="horizontal" style={{ alignItems: "center", gap: "0.25rem" }}>
+              <Stack
+                orientation="horizontal"
+                style={{ alignItems: "center", gap: "0.25rem" }}
+              >
                 <Tooltip label={tooltip} align="right-top">
-                  <Link style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                  <Link
+                    style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}
+                  >
                     {tickerShort}
                   </Link>
                 </Tooltip>
@@ -500,7 +511,7 @@ export function TokenDetailsDemo({
               {fmt.num.compact.currency(
                 tokenMarket.data?.[details.tokenAddress]?.priceUsd
                   ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
-                  details.balanceAmount
+                      details.balanceAmount
                   : null,
               )}
             </p>
@@ -589,16 +600,14 @@ export function TokenDetailsDemo({
             kind="ghost"
             label={tr("walletPage.averageTradingPrice")}
             align="bottom-right"
-            onClick={() => setSelectedToken(
-              {
+            onClick={() =>
+              setSelectedToken({
                 address: details.tokenAddress,
-                symbol:
-                  metaForToken?.symbol?.toUpperCase() ??
-                  "Unknown",
+                symbol: metaForToken?.symbol?.toUpperCase() ?? "Unknown",
                 avgBuyCost: details.avgBuyCost,
                 avgSellCost: details.avgSellCost,
-              }
-            )}
+              })
+            }
           >
             <ChartAverage />
           </IconButton>
@@ -717,4 +726,3 @@ export function TokenDetailsDemo({
     // </PageWrapper>
   );
 }
-

@@ -89,8 +89,7 @@ const ERROR = {
   EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email or password was incorrect",
   FAILED_TO_FETCH_REQUESTED_DATA: "Failed to fetch requested data",
   GOOGLE_VERIFICATION_FAILED: "Google authentication failed. Please try again.",
-  WALLET_ALREADY_LINKED:
-    "This wallet is already linked to an existing user.",
+  WALLET_ALREADY_LINKED: "This wallet is already linked to an existing user.",
   WALLET_VERIFICATION_FAILED: "Wallet verification failed. Please try again.",
   WALLET_NONCE_FAILED:
     "Failed to initiate wallet authentication. Please try again.",
@@ -98,8 +97,10 @@ const ERROR = {
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
   INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
-  PASSWORD_AUTH_NOT_FOUND: "Password auth method is not configured for this account.",
-  PASSWORD_ALREADY_SET: "Password login is already configured for this account.",
+  PASSWORD_AUTH_NOT_FOUND:
+    "Password auth method is not configured for this account.",
+  PASSWORD_ALREADY_SET:
+    "Password login is already configured for this account.",
   CURRENT_PASSWORD_INVALID: "Current password is invalid.",
   EMAIL_ALREADY_IN_USE: "Email is already in use by another account.",
   ACCOUNT_DELETE_CONFIRM_MISMATCH:
@@ -110,7 +111,7 @@ const ERROR = {
     "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
-    NOT_FOUND: "Not found."
+  NOT_FOUND: "Not found.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -694,7 +695,8 @@ export const translation = {
       totalValue: "Total Value",
       value: "Value",
       percentage: "Percentage",
-      noWalletsMessage: "Please select at least one wallet to view aggregated asset distribution.",
+      noWalletsMessage:
+        "Please select at least one wallet to view aggregated asset distribution.",
       others: "Others",
       mode: {
         label: "Mode",
@@ -1095,17 +1097,30 @@ export const translation = {
       swapsTableTitle: "Swaps",
       transfersTableTitle: "Transfers",
       tableHeaders: {
-        swaps: ["Wallet", "Time", "Pair", "Exchange", "Total value"],
-        transfers: ["Token", "Amount", "Amount (USD)", "Time"],
+        swaps: {
+          wallet: "Wallet",
+          time: "Time",
+          pair: "Pair",
+          exchange: "Exchange",
+          totalValue: "Total value",
+        },
       },
       unknownExchange: "Unknown",
     },
     alerts: {
       title: "Alerts",
       unavailableTitle: "Alerts unavailable",
-      unavailableDescription: "No alert rules or notifications are available right now.",
+      unavailableDescription:
+        "No alert rules or notifications are available right now.",
       tableTitle: "Alert list",
-      tableHeaders: ["Token", "Type", "Condition", "Status", "Updated", "Actions"],
+      tableHeaders: {
+        token: "Token",
+        type: "Type",
+        condition: "Condition",
+        status: "Status",
+        updated: "Updated",
+        actions: "Actions",
+      },
       createAlertTitle: "Create alert",
       editAlertTitle: "Edit {{token}} alert",
       createButton: "Create alert",
@@ -1115,17 +1130,23 @@ export const translation = {
     dashboard: {
       title: "Dashboard",
       unavailableTitle: "Dashboard unavailable",
-      unavailableDescription: "No dashboard metrics are available for this account.",
+      unavailableDescription:
+        "No dashboard metrics are available for this account.",
       kpiStripTitle: "KPI strip",
       concentrationTableTitle: "Wallet concentration",
-      concentrationHeaders: ["Wallet", "Value", "Share"],
+      concentrationHeaders: {
+        wallet: "Wallet",
+        value: "Value",
+        share: "Share",
+      },
       riskPanelTitle: "Risk panel",
       anomaliesTitle: "Recent anomalies",
     },
     portfolio: {
       title: "Portfolio",
       unavailableTitle: "No linked wallets",
-      unavailableDescription: "Link at least one wallet to view portfolio and charts.",
+      unavailableDescription:
+        "Link at least one wallet to view portfolio and charts.",
       overviewCardTitle: "Overview",
       accountTierLabel: "Account Tier",
       linkWalletButton: "Link wallet",
@@ -1148,9 +1169,9 @@ export const translation = {
       unavailableTitle: "Wallet data unavailable",
       unavailableDescription: "Unable to load wallet data right now.",
       noLinkedWalletsTitle: "No linked wallets",
-      noLinkedWalletsDescription: "Link at least one wallet to view portfolio and charts.",
+      noLinkedWalletsDescription:
+        "Link at least one wallet to view portfolio and charts.",
       portfolioTableTitle: "Portfolio table",
-      tableHeaders: ["Wallet", "Net worth", "PnL", "Trades"],
       balanceChartTitle: "Balance",
       drawdownChartTitle: "Drawdown",
     },
@@ -1165,7 +1186,8 @@ export const translation = {
       emptyWalletTitle: "No wallets in watchlist",
       emptyWalletDescription: "Add wallets to watchlist to track them here.",
       emptyTokenTitle: "No tokens in watchlist",
-      emptyTokenDescription: "Add tokens to watchlist to track market movement.",
+      emptyTokenDescription:
+        "Add tokens to watchlist to track market movement.",
     },
     unavailableState: {
       defaultTitle: "Data unavailable",

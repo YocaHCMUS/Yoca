@@ -663,7 +663,8 @@ export const translation = defineTranslation({
       totalValue: "Tổng giá trị",
       value: "Giá trị",
       percentage: "Phần trăm",
-      noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản tổng hợp.",
+      noWalletsMessage:
+        "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản tổng hợp.",
       others: "Khác",
       mode: {
         label: "Chế độ",
@@ -847,8 +848,7 @@ export const translation = defineTranslation({
     EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email hoặc mật khẩu không đúng",
     FAILED_TO_FETCH_REQUESTED_DATA: "Không thể lấy dữ liệu yêu cầu",
     GOOGLE_VERIFICATION_FAILED: "Xác thực Google thất bại. Vui lòng thử lại.",
-    WALLET_ALREADY_LINKED:
-      "Ví này đã được liên kết với một người dùng khác.",
+    WALLET_ALREADY_LINKED: "Ví này đã được liên kết với một người dùng khác.",
     WALLET_VERIFICATION_FAILED: "Xác thực ví thất bại. Vui lòng thử lại.",
     WALLET_NONCE_FAILED: "Không thể khởi tạo xác thực ví. Vui lòng thử lại.",
     INTERNAL_SERVER_ERR: "Có sự cố với máy chủ. Vui lòng thử lại sau.",
@@ -1061,7 +1061,8 @@ export const translation = defineTranslation({
     newPassword: "Mật khẩu mới",
     confirmPassword: "Xác nhận mật khẩu",
     passwordMatchError: "Mật khẩu mới và xác nhận không khớp",
-    passwordValidationEmailRequired: "Email là bắt buộc để thiết lập đăng nhập mật khẩu",
+    passwordValidationEmailRequired:
+      "Email là bắt buộc để thiết lập đăng nhập mật khẩu",
     passwordValidationEmailInvalid: "Vui lòng nhập địa chỉ email hợp lệ",
     passwordValidationCurrentPasswordRequired:
       "Mật khẩu hiện tại là bắt buộc để đổi mật khẩu",
@@ -1096,17 +1097,30 @@ export const translation = defineTranslation({
       swapsTableTitle: "Giao dịch hoán đổi",
       transfersTableTitle: "Chuyển khoản",
       tableHeaders: {
-        swaps: ["Ví", "Thời gian", "Cặp", "Sàn giao dịch", "Giá trị tổng"] as const,
-        transfers: ["Token", "Số lượng", "Giá trị (USD)", "Thời gian"] as const,
+        swaps: {
+          wallet: "Ví",
+          time: "Thời gian",
+          pair: "Cặp",
+          exchange: "Sàn giao dịch",
+          totalValue: "Giá trị tổng",
+        },
       },
       unknownExchange: "Không xác định",
     },
     alerts: {
       title: "Cảnh báo",
       unavailableTitle: "Cảnh báo không có sẵn",
-      unavailableDescription: "Không có quy tắc cảnh báo hoặc thông báo nào có sẵn ngay bây giờ.",
+      unavailableDescription:
+        "Không có quy tắc cảnh báo hoặc thông báo nào có sẵn ngay bây giờ.",
       tableTitle: "Danh sách cảnh báo",
-      tableHeaders: ["Token", "Loại", "Điều kiện", "Trạng thái", "Cập nhật", "Hành động"] as const,
+      tableHeaders: {
+        token: "Token",
+        type: "Loại",
+        condition: "Điều kiện",
+        status: "Trạng thái",
+        updated: "Cập nhật",
+        actions: "Hành động",
+      },
       createAlertTitle: "Tạo cảnh báo",
       editAlertTitle: "Chỉnh sửa cảnh báo {{token}}",
       createButton: "Tạo cảnh báo",
@@ -1116,17 +1130,23 @@ export const translation = defineTranslation({
     dashboard: {
       title: "Bảng điều khiển",
       unavailableTitle: "Bảng điều khiển không có sẵn",
-      unavailableDescription: "Không có số liệu bảng điều khiển nào có sẵn cho tài khoản này.",
+      unavailableDescription:
+        "Không có số liệu bảng điều khiển nào có sẵn cho tài khoản này.",
       kpiStripTitle: "Dải KPI",
       concentrationTableTitle: "Tập trung ví",
-      concentrationHeaders: ["Ví", "Giá trị", "Chia sẻ"] as const,
+      concentrationHeaders: {
+        wallet: "Ví",
+        value: "Giá trị",
+        share: "Chia sẻ",
+      },
       riskPanelTitle: "Bảng rủi ro",
       anomaliesTitle: "Các bất thường gần đây",
     },
     portfolio: {
       title: "Danh mục đầu tư",
       unavailableTitle: "Không có ví được liên kết",
-      unavailableDescription: "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
+      unavailableDescription:
+        "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
       overviewCardTitle: "Tổng quan",
       accountTierLabel: "Cấp tài khoản",
       linkWalletButton: "Liên kết ví",
@@ -1149,9 +1169,9 @@ export const translation = defineTranslation({
       unavailableTitle: "Dữ liệu ví không có sẵn",
       unavailableDescription: "Không thể tải dữ liệu ví ngay bây giờ.",
       noLinkedWalletsTitle: "Không có ví được liên kết",
-      noLinkedWalletsDescription: "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
+      noLinkedWalletsDescription:
+        "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
       portfolioTableTitle: "Bảng danh mục đầu tư",
-      tableHeaders: ["Ví", "Giá trị ròng", "PnL", "Giao dịch"] as const,
       balanceChartTitle: "Cân bằng",
       drawdownChartTitle: "Rút ngắn",
     },
@@ -1164,7 +1184,8 @@ export const translation = defineTranslation({
       walletAddress: "Địa chỉ ví",
       walletIdentity: "Danh tính",
       emptyWalletTitle: "Chưa có ví trong danh sách theo dõi",
-      emptyWalletDescription: "Hãy thêm ví vào danh sách theo dõi để xem tại đây.",
+      emptyWalletDescription:
+        "Hãy thêm ví vào danh sách theo dõi để xem tại đây.",
       emptyTokenTitle: "Chưa có token trong danh sách theo dõi",
       emptyTokenDescription:
         "Hãy thêm token vào danh sách theo dõi để theo dõi biến động thị trường.",

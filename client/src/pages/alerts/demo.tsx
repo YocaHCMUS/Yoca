@@ -738,7 +738,7 @@ export default function AlertsDemo() {
   });
 
   const alerts = useGet(
-    client.api.alerts,
+    client.api.alertsToken,
     200,
     {},
     {
@@ -837,7 +837,7 @@ export default function AlertsDemo() {
           ? data.email.trim()
           : null;
 
-      const res = await client.api.alerts.$post({
+      const res = await client.api.alertsToken.$post({
         json: {
           tokenAddress: data.token!.id,
           triggerMode: data.triggerMode,
