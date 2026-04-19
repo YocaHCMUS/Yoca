@@ -61,8 +61,8 @@ export function TokenResultItem({
       )}
 
       <div className={styles.tokenMeta}>
-        <p className={styles.tokenName}>{token.name}</p>
         <p className={styles.tokenSymbol}>{token.symbol}</p>
+        <p className={styles.tokenName}>{token.name}</p>
       </div>
 
       <div className={styles.stats}>

@@ -217,6 +217,7 @@ export const tokenPoolData = pgTable("token_pool_data", {
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
 
   dexId: varchar("dex_id"),
+  dexImageUrl: varchar("dex_image_url"),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
