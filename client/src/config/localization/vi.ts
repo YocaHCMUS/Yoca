@@ -759,7 +759,7 @@ export const translation = defineTranslation({
       title: "Tỷ lệ Stablecoin",
     },
     rollingAnnualReturn: {
-      title: "Lợi nhuận hàng năm lăn",
+      title: "Lợi nhuận trượt hàng năm",
       rollingReturn: "Lợi nhuận lăn",
       cumulativeReturn: "Lợi nhuận tích lũy",
       month: "Tháng",
