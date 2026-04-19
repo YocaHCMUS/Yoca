@@ -1,5 +1,6 @@
 import client from "@/api/main";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
+import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { TrashCan } from "@carbon/icons-react";
 import {
@@ -56,6 +57,7 @@ function isValidSolanaAddress(value: string): boolean {
 
 export default function AlertsPage() {
   const { tr, fmt } = useLocalization();
+  const { user } = useAuth();
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [rows, setRows] = useState<FollowedWalletRow[]>([]);
@@ -199,6 +201,17 @@ export default function AlertsPage() {
           <p className={styles.subtitle}>{tr("alertsPage.subtitle")}</p>
         </div>
 
+        {!user ? (
+          <Grid narrow fullWidth className={styles.card}>
+            <Column lg={16} md={8} sm={4}>
+              <Tile style={{ background: "transparent", padding: "2rem" }}>
+                <p style={{ textAlign: "center", color: "var(--cds-text-secondary)", padding: "2rem 0" }}>
+                  {tr("alertsPage.signInRequired")}
+                </p>
+              </Tile>
+            </Column>
+          </Grid>
+        ) : (
         <Grid narrow fullWidth className={styles.card}>
           <Column lg={16} md={8} sm={4}>
             <Tile style={{ background: "transparent", padding: "2rem" }}>
@@ -328,6 +341,7 @@ export default function AlertsPage() {
             </Tile>
           </Column>
         </Grid>
+        )}
       </div>
     </PageWrapper>
   );

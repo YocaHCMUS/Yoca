@@ -425,6 +425,17 @@ export const translation = defineTranslation({
       "Đã xoá ví nhưng đồng bộ Helius thất bại. Địa chỉ cũ có thể vẫn nhận sự kiện cho đến lần đồng bộ kế tiếp.",
     deleteFailed: "Không thể xoá ví. Vui lòng thử lại.",
     deleteNotFound: "Ví đã được xoá trước đó.",
+    signInRequired: "Vui lòng đăng nhập để quản lý danh sách ví theo dõi.",
+  },
+  profilePage: {
+    title: "Cài đặt hồ sơ",
+    subtitle: "Nhập Discord Webhook URL cá nhân để nhận cảnh báo ví.",
+    discordLabel: "Discord Webhook URL",
+    discordPlaceholder: "https://discord.com/api/webhooks/...",
+    saveButton: "Lưu",
+    savedSuccess: "Đã lưu Discord Webhook URL.",
+    savedError: "Lưu cài đặt thất bại. Vui lòng thử lại.",
+    signInRequired: "Vui lòng đăng nhập để truy cập cài đặt hồ sơ.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

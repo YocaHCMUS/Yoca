@@ -444,6 +444,17 @@ export const translation = {
       "Wallet removed, but Helius re-sync failed. The old address may still receive events until the next successful sync.",
     deleteFailed: "Failed to remove wallet. Please try again.",
     deleteNotFound: "Wallet was already removed.",
+    signInRequired: "Please sign in to manage your followed wallets.",
+  },
+  profilePage: {
+    title: "Profile settings",
+    subtitle: "Set your personal Discord webhook URL to receive wallet alerts.",
+    discordLabel: "Discord Webhook URL",
+    discordPlaceholder: "https://discord.com/api/webhooks/...",
+    saveButton: "Save",
+    savedSuccess: "Discord webhook URL saved.",
+    savedError: "Failed to save settings. Please try again.",
+    signInRequired: "Please sign in to access your profile settings.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

@@ -1,6 +1,6 @@
-import { followedWallets } from "@sv/db/schema.js";
+import { followedWallets, users } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 
 const DEFAULT_HELIUS_WEBHOOK_ID = "2b2123ed-ae76-4fcc-beaa-25e0fb3f5c48";
 const HELIUS_API_BASE =
@@ -15,12 +15,44 @@ function heliusWebhookUrl(): string {
   return `${HELIUS_API_BASE}/v0/webhooks/${HELIUS_WEBHOOK_ID}?api-key=${encodeURIComponent(HELIUS_API_KEY)}`;
 }
 
-export async function listFollowedWallets() {
+// ── Per-user CRUD ──────────────────────────────────────────────────
+
+export async function listFollowedWallets(userId: string) {
   return db
     .select()
     .from(followedWallets)
+    .where(eq(followedWallets.userId, userId))
     .orderBy(asc(followedWallets.createdAt));
 }
+
+export async function addFollowedWallet(
+  userId: string,
+  address: string,
+  label?: string | null,
+) {
+  const [row] = await db
+    .insert(followedWallets)
+    .values({
+      userId,
+      address,
+      label: label?.trim() || null,
+    })
+    .returning();
+  return row;
+}
+
+export async function removeFollowedWallet(
+  id: number,
+  userId: string,
+): Promise<boolean> {
+  const deleted = await db
+    .delete(followedWallets)
+    .where(and(eq(followedWallets.id, id), eq(followedWallets.userId, userId)))
+    .returning({ id: followedWallets.id });
+  return deleted.length > 0;
+}
+
+// ── Global address list (for Helius sync) ──────────────────────────
 
 export async function getFollowedWalletAddresses(): Promise<string[]> {
   const rows = await db
@@ -29,24 +61,47 @@ export async function getFollowedWalletAddresses(): Promise<string[]> {
   return [...new Set(rows.map((r) => r.address))];
 }
 
-export async function addFollowedWallet(address: string, label?: string | null) {
-  const [row] = await db
-    .insert(followedWallets)
-    .values({
-      address,
-      label: label?.trim() || null,
-    })
-    .returning();
-  return row;
+// ── Fan-out: Discord URLs for a given wallet address ───────────────
+
+export async function getDiscordUrlsForAddress(
+  address: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ url: users.discordWebhookUrl })
+    .from(users)
+    .innerJoin(followedWallets, eq(users.id, followedWallets.userId))
+    .where(
+      and(
+        eq(followedWallets.address, address),
+        isNotNull(users.discordWebhookUrl),
+      ),
+    );
+  return [...new Set(rows.map((r) => r.url).filter(Boolean) as string[])];
 }
 
-export async function removeFollowedWallet(id: number): Promise<boolean> {
-  const deleted = await db
-    .delete(followedWallets)
-    .where(eq(followedWallets.id, id))
-    .returning({ id: followedWallets.id });
-  return deleted.length > 0;
+// ── User settings ──────────────────────────────────────────────────
+
+export async function getUserDiscordUrl(
+  userId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ url: users.discordWebhookUrl })
+    .from(users)
+    .where(eq(users.id, userId));
+  return row?.url ?? null;
 }
+
+export async function setUserDiscordUrl(
+  userId: string,
+  url: string | null,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({ discordWebhookUrl: url || null })
+    .where(eq(users.id, userId));
+}
+
+// ── Helius webhook sync ────────────────────────────────────────────
 
 export type HeliusSyncResult =
   | { ok: true; status: number }

@@ -25,6 +25,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -52,6 +53,7 @@ export const users = pgTable("users", {
   displayName: varchar("display_name"),
   // Email is not needed for wallet users, see it as contact
   email: varchar("email"),
+  discordWebhookUrl: text("discord_webhook_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -804,12 +806,19 @@ export const walletUserTags = pgTable(
 );
 
 /** Wallets followed for Helius webhook-driven alerts */
-export const followedWallets = pgTable("followed_wallets", {
-  id: serial("id").primaryKey(),
-  address: text("address").notNull().unique(),
-  label: text("label"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const followedWallets = pgTable(
+  "followed_wallets",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    address: text("address").notNull(),
+    label: text("label"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.address)],
+);
 
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
