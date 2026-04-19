@@ -1,5 +1,5 @@
-@use "@carbon/react/scss/spacing" as *;
-@use "@carbon/react/scss/type" as *;
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/type' as *;
 
 .page {
   min-height: calc(100vh - 120px);
@@ -8,28 +8,15 @@
   color: var(--cds-text-primary);
 }
 
-@media (max-width: 960px) {
-  .tabSection {
-    flex-direction: column;
-    min-height: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .page {
-    padding: $spacing-04;
-    height: calc(100vh - 2.5rem);
-  }
-}
-
 .hero {
-  max-width: 640px;
+  max-width: 960px;
   margin: 0 auto $spacing-09;
   text-align: center;
 }
 
 .title {
   @include type-style("productive-heading-04");
+  letter-spacing: 0.04em;
   color: var(--cds-text-primary);
 }
 
@@ -37,10 +24,13 @@
   @include type-style("body-compact-01");
   margin-top: $spacing-04;
   color: var(--cds-text-secondary);
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .card {
-  max-width: 640px;
+  max-width: 960px;
   margin: 0 auto;
   border: 1px solid var(--cds-border-subtle);
   border-radius: 4px;
@@ -53,25 +43,16 @@
   margin-bottom: $spacing-06;
 
   @media (min-width: 672px) {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr 1fr auto;
     align-items: end;
   }
 }
 
-.signInWrap {
+.tableWrap {
+  overflow-x: auto;
+}
+
+.actionsCell {
+  width: 56px;
   text-align: center;
-  padding: $spacing-09 0;
-  color: var(--cds-text-secondary);
-}
-
-.tabSection {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.loadingState,
-.errorState {
-  padding: $spacing-06;
 }

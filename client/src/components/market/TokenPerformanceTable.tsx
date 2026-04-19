@@ -163,7 +163,7 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
         setError(null);
 
         const apiDomain =
-          import.meta.env.CLIENT_API_DOMAIN || "http://localhost:4000";
+          import.meta.env.VITE_CLIENT_API_DOMAIN || window.location.origin;
 
         // Batch tokens into smaller chunks to avoid API issues
         const BATCH_SIZE = 10;

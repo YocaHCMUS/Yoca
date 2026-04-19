@@ -31,7 +31,14 @@ import {
   SwitcherDivider,
   SwitcherItem,
 } from "@carbon/react";
-import { Checkmark, Logout, Search, User, Wikis, Notification } from "@carbon/react/icons";
+import {
+  Checkmark,
+  Logout,
+  Notification,
+  Search,
+  User,
+  Wikis,
+} from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
@@ -84,7 +91,11 @@ function getNotificationSeverityClass(
   return stylesModule.notificationSeverityInfo;
 }
 
-function NotificationSeverityIcon({ severity }: { severity: AlertNotification["severity"] }) {
+function NotificationSeverityIcon({
+  severity,
+}: {
+  severity: AlertNotification["severity"];
+}) {
   if (severity == "critical") return <ErrorFilled size={16} />;
   if (severity == "warning") return <WarningAltFilled size={16} />;
   return <InformationFilled size={16} />;
@@ -94,7 +105,9 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
-  const [openPanel, setOpenPanel] = useState<"lang" | "account" | "notifications" | null>(null);
+  const [openPanel, setOpenPanel] = useState<
+    "lang" | "account" | "notifications" | null
+  >(null);
   const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -137,8 +150,8 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.alerts")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
         <HeaderMenuItem href="/profile">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
@@ -292,7 +305,8 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
             <SwitcherItem
               aria-labelledby="account-id"
               isSelected={false}
-              href="/profile">
+              href="/profile"
+            >
               <Stack
                 orientation="horizontal"
                 gap={4}
@@ -331,8 +345,13 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
           expanded={isHeaderNotificationPanelOpen}
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
-          <Switcher aria-label="Notifications" expanded={isHeaderNotificationPanelOpen}>
-            <HeaderNotificationsPanel notifications={headerNotificationsMockData} />
+          <Switcher
+            aria-label="Notifications"
+            expanded={isHeaderNotificationPanelOpen}
+          >
+            <HeaderNotificationsPanel
+              notifications={headerNotificationsMockData}
+            />
           </Switcher>
         </HeaderPanel>
 
@@ -386,15 +405,15 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
         onClick={
           isAnyExtraPanelOpen
             ? () => {
-              if (openPanel == "notifications") {
-                setOpenPanel(null);
-              }
+                if (openPanel == "notifications") {
+                  setOpenPanel(null);
+                }
 
-              if (isExtraPanelOpen) {
-                setIsExtraHeaderPanelOpen(false);
-                extraHeaderPanel?.onClose();
+                if (isExtraPanelOpen) {
+                  setIsExtraHeaderPanelOpen(false);
+                  extraHeaderPanel?.onClose();
+                }
               }
-            }
             : undefined
         }
       >

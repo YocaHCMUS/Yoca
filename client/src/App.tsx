@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 
 import Index from "@/pages";
+import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
@@ -21,6 +22,8 @@ function App() {
         <Route path="/auth" element={<AuthShowcase />} />
         {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route path="/market" element={<MarketPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenOverviewPage />} />

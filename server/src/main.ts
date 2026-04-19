@@ -2,6 +2,7 @@ import "@sv/util/load-env.js";
 
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
+import alerts from "@sv/routes/alerts.route.js";
 import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
@@ -13,6 +14,7 @@ import transfers from "@sv/routes/transfers.js";
 import users from "@sv/routes/users.js";
 import wallets from "@sv/routes/wallets.route.js";
 import walletTags from "@sv/routes/walletTags.route.js";
+import webhook from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -40,7 +42,9 @@ const app = new Hono()
   .route("/api/profile", profile)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
-  .route("/api/trades", trades);
+  .route("/api/alerts", alerts)
+  .route("/api/trades", trades)
+  .route("/webhook", webhook);
 
 // Server
 serve(
