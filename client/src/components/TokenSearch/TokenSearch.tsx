@@ -9,8 +9,15 @@ import { TrendNum } from "../TrendNum";
 import { Txt } from "../Txt";
 import styles from "./TokenSearch.module.scss";
 
+export interface SelectedTokenValue {
+  id: string;
+  symbol: string | null;
+  name: string | null;
+  imgUrl: string | null;
+}
+
 interface TokenSearchProps {
-  setValue: (value: string | null) => void;
+  setValue: (value: SelectedTokenValue | null) => void;
   closePanel: () => void;
 }
 
@@ -128,7 +135,12 @@ export default function TokenSearch({
               type="button"
               className={styles.item}
               onClick={() => {
-                setValue(token.symbol);
+                setValue({
+                  id: token.id,
+                  symbol: token.symbol,
+                  name: token.name,
+                  imgUrl: token.imgUrl,
+                });
                 closePanel();
               }}
             >

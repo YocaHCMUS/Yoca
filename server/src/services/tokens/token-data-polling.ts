@@ -1,5 +1,5 @@
-import type { UserAlertPeriod } from "@sv/db/alert.js";
-import { userAlertPeriods, userAlerts } from "@sv/db/alert.js";
+import type { UserAlertPeriod } from "@sv/db/alerts.js";
+import { userAlertPeriods, userAlerts } from "@sv/db/alerts.js";
 import { db } from "@sv/db/index.js";
 import { get24hTokenMarketChart } from "./token-chart.js";
 

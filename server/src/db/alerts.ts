@@ -49,9 +49,10 @@ export const userAlerts = pgTable("user_alerts", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-  period: enumAlertPeriod("period").notNull().default("1h"),
   triggerMode: enumAlertTriggerMode("trigger_mode").notNull().default("once"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  alertName: varchar("alert_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -64,6 +65,7 @@ export const userAlertConditions = pgTable("user_alert_conditions", {
   alertId: uuid("alert_id")
     .notNull()
     .references(() => userAlerts.id, { onDelete: "cascade" }),
+  period: enumAlertPeriod("period").notNull().default("1h"),
   alertType: enumAlertType("alert_type").notNull(),
   conditionOp: enumConditionOp("condition_op").notNull(),
   value: decimal("value").notNull(),

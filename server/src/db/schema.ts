@@ -1,16 +1,16 @@
 // --- ACMS API call cache table ---
-export const acmsApiCache = pgTable(
-  'acms_api_cache',
-  {
-    key: varchar('key', { length: 128 }).primaryKey(),
-    provider: varchar('provider', { length: 32 }).notNull(),
-    endpoint: varchar('endpoint', { length: 128 }).notNull(),
-    params: jsonb('params').notNull(),
-    result: jsonb('result').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  }
-);
+export const acmsApiCache = pgTable("acms_api_cache", {
+  key: varchar("key", { length: 128 }).primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  endpoint: varchar("endpoint", { length: 128 }).notNull(),
+  params: jsonb("params").notNull(),
+  result: jsonb("result").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -27,7 +27,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-export * from "./alert.js";
+export * from "./alerts.js";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -507,7 +507,9 @@ export const walletOverviewCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
-    totalAssetValueChange24hPercent: decimal("total_asset_value_change_24h_percent"),
+    totalAssetValueChange24hPercent: decimal(
+      "total_asset_value_change_24h_percent",
+    ),
     tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
     tradingVolumeUsd7d: decimal("trading_volume_usd_7d"),
     tradingVolumeUsd30d: decimal("trading_volume_usd_30d"),
@@ -665,7 +667,9 @@ export const walletSwap = pgTable(
   {
     transactionHash: text("transaction_hash").notNull(),
     transactionType: text("transaction_type").notNull(),
-    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", {
+      mode: "number",
+    }).notNull(),
 
     subcategory: text("subcategory"),
 
@@ -678,7 +682,9 @@ export const walletSwap = pgTable(
     exchangeName: text("exchange_name").notNull(),
     exchangeLogo: text("exchange_logo").notNull(),
 
-    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAddress: varchar("bought_token_address", {
+      length: 66,
+    }).notNull(),
     boughtTokenAmount: decimal("bought_token_amount").notNull(),
     boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
 
@@ -863,7 +869,7 @@ export const walletFirstFund = pgTable(
     slot: integer("slot").notNull(),
     explorerUrl: varchar("explorer_url", { length: 256 }),
   },
-  (t) => [primaryKey({ columns: [t.reciepient] })]
+  (t) => [primaryKey({ columns: [t.reciepient] })],
 );
 
 // #endregion
@@ -907,7 +913,8 @@ export type WalletBalanceHistoryCacheInsert =
   typeof walletBalanceHistoryCache.$inferInsert;
 export type WalletTokenBalanceHistoryCacheInsert =
   typeof walletTokenBalanceHistoryCache.$inferInsert;
-export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletHeliusTransactionsInsert =
+  typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
@@ -915,4 +922,3 @@ export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 
 // #endregion
-

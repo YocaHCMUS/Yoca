@@ -4,6 +4,8 @@ import { Flex } from "@/components/Flex";
 import { ModalStateManager } from "@/components/ModelStateManager";
 import { Divider } from "@/components/partials/Divider/Divider";
 import Tble from "@/components/Tble";
+import { TknImg } from "@/components/TknImg";
+import type { SelectedTokenValue } from "@/components/TokenSearch/TokenSearch";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
@@ -37,13 +39,21 @@ import {
   TimePicker,
 } from "@carbon/react";
 import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
+import {
+  Controller,
+  FormProvider,
+  useFieldArray,
+  useForm,
+  useFormContext,
+} from "react-hook-form";
+import z from "zod";
 import styles from "./demo.module.scss";
 
 interface AlertRow {
   id: string;
   tokenAddress: string;
-  period: string;
   createdAt: string;
   [key: string]: string;
 }
@@ -55,19 +65,29 @@ type AlertType =
   | "market-movements"
   | null;
 type AlertStep = "type-selection" | "configuration" | "notification";
+type AlertPeriod = "30m" | "1h" | "6h" | "24h";
+type TriggerMode = "once" | "always";
 
-interface AlertConfig {
-  type: AlertType;
-  token?: string;
-  network?: string;
-  metric?: string;
-  threshold?: number;
-  condition?: string;
-  name?: string;
-  email?: boolean;
-  telegram?: boolean;
-  discord?: boolean;
-}
+const ALERT_TYPE_VALUES = [
+  "technical-indicators",
+  "token-stats",
+  "trading-events",
+  "market-movements",
+] as const;
+const ALERT_PERIOD_VALUES = ["30m", "1h", "6h", "24h"] as const;
+const TRIGGER_MODE_VALUES = ["once", "always"] as const;
+const CONDITION_OP_VALUES = ["gt", "gte", "eq", "lt", "lte"] as const;
+const ALERT_METRIC_VALUES = [
+  "price_percentage",
+  "price_usd",
+  "volume_usd",
+  "buying_volume_usd",
+  "buying_volume_percentage",
+  "selling_volume_usd",
+  "selling_volume_percentage",
+  "trades",
+  "trades_percentage",
+] as const;
 
 interface AlertTypeOption {
   id: AlertType;
@@ -129,11 +149,6 @@ function AlertTypeSelection({
   );
 }
 
-interface AlertConfigurationProps {
-  config: AlertConfig;
-  setConfig: (config: AlertConfig) => void;
-}
-
 type ConditionOp = "gt" | "gte" | "eq" | "lt" | "lte";
 
 type AlertMetric =
@@ -147,12 +162,106 @@ type AlertMetric =
   | "trades"
   | "trades_percentage";
 
-interface ConditionRow {
-  id: string;
-  metric: AlertMetric;
-  condition: ConditionOp;
-  value: string;
+function combineLocalDateAndTime(
+  date: Date | null,
+  time: string,
+): string | null {
+  if (!date || !time) return null;
+
+  const [hoursStr, minutesStr] = time.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  const localDate = new Date(date);
+  localDate.setHours(hours, minutes, 0, 0);
+  return localDate.toISOString();
 }
+
+const selectedTokenSchema = z.object({
+  id: z.string().min(1),
+  symbol: z.string().nullable(),
+  name: z.string().nullable(),
+  imgUrl: z.string().nullable(),
+});
+
+const conditionRowSchema = z.object({
+  id: z.string().min(1),
+  period: z.enum(ALERT_PERIOD_VALUES),
+  metric: z.enum(ALERT_METRIC_VALUES),
+  condition: z.enum(CONDITION_OP_VALUES),
+  value: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((v) => Number(v))
+    .refine((v) => Number.isFinite(v), "Invalid number"),
+});
+
+const alertFormSchema = z
+  .object({
+    type: z.enum(ALERT_TYPE_VALUES).nullable(),
+    token: selectedTokenSchema.nullable(),
+    triggerMode: z.enum(TRIGGER_MODE_VALUES),
+    expiresAtDate: z.date().nullable(),
+    expiresAtTime: z.string().trim().min(1),
+    conditions: z.array(conditionRowSchema).min(1).max(3),
+    alertName: z.string().trim().min(1),
+    emailEnabled: z.boolean(),
+    email: z.string().trim(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.type) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["type"],
+        message: "Alert type is required",
+      });
+    }
+
+    if (data.type == "token-stats" && !data.token) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["token"],
+        message: "Token is required",
+      });
+    }
+
+    if (data.emailEnabled) {
+      if (!data.email || data.email.trim().length == 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["email"],
+          message: "Email is required",
+        });
+      } else if (!z.string().email().safeParse(data.email).success) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["email"],
+          message: "Invalid email",
+        });
+      }
+    }
+
+    const expiresAt = combineLocalDateAndTime(
+      data.expiresAtDate,
+      data.expiresAtTime,
+    );
+    if (!expiresAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expiresAtDate"],
+        message: "Invalid expiry date/time",
+      });
+    }
+  });
+
+type AlertFormValues = z.input<typeof alertFormSchema>;
+type AlertConfig = z.output<typeof alertFormSchema>;
+type ConditionRow = AlertFormValues["conditions"][number];
 
 const CONDITION_OPTIONS: Array<{ id: ConditionOp; text: string }> = [
   { id: "gt", text: "Greater than (>)" },
@@ -209,6 +318,7 @@ function getConditionOption(condition: ConditionOp) {
 function createConditionRow(condition: ConditionOp = "gt"): ConditionRow {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    period: "1h",
     metric: "price_percentage",
     condition,
     value: "",
@@ -219,41 +329,43 @@ function getMetricOption(metric: AlertMetric) {
   return METRIC_OPTIONS.find((item) => item.id == metric) ?? METRIC_OPTIONS[0];
 }
 
-function combineLocalDateAndTime(
-  date: Date | null,
-  time: string,
-): string | null {
-  if (!date || !time) return null;
-
-  const [hoursStr, minutesStr] = time.split(":");
-  const hours = Number(hoursStr);
-  const minutes = Number(minutesStr);
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return null;
-  }
-
-  const localDate = new Date(date);
-  localDate.setHours(hours, minutes, 0, 0);
-  return localDate.toISOString();
+function createInitialConfig(type: AlertType = null): AlertFormValues {
+  return {
+    type,
+    token: null,
+    triggerMode: "once",
+    expiresAtDate: null,
+    expiresAtTime: "09:00",
+    conditions: [createConditionRow()],
+    alertName: "",
+    emailEnabled: true,
+    email: "",
+  };
 }
 
-function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
-  const { lang, fmt } = useLocalization();
-  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
-  const [expiryTime, setExpiryTime] = useState("09:00");
-  const [conditions, setConditions] = useState<ConditionRow[]>([
-    createConditionRow(),
-  ]);
+function AlertConfiguration() {
+  const { lang } = useLocalization();
+  const {
+    control,
+    watch,
+    register,
+    formState: { errors },
+  } = useFormContext<AlertFormValues>();
+  const alertType = watch("type");
+  const {
+    fields: conditionFields,
+    append,
+    remove,
+  } = useFieldArray({
+    name: "conditions",
+    control,
+    keyName: "formId",
+  });
 
   const datePickerLocale = lang == "vi" ? "vn" : "en";
   const datePickerFormat = lang == "vi" ? "d/m/Y" : "m/d/Y";
-  const expiresAtUtc = useMemo(
-    () => combineLocalDateAndTime(expiryDate, expiryTime),
-    [expiryDate, expiryTime],
-  );
 
-  if (config.type !== "token-stats") {
+  if (alertType !== "token-stats") {
     return <Txt>Configuration for this alert type not yet implemented</Txt>;
   }
 
@@ -273,10 +385,12 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
               {
                 id: "portfolio",
                 text: "From My Portfolio",
+                disabled: true,
               },
               {
                 id: "watchlist",
                 text: "From My Watchlist",
+                disabled: true,
               },
             ]}
             itemToString={(item) => item?.text || ""}
@@ -284,13 +398,36 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
               id: "specific",
               text: "Specific Token",
             }}
+            disabled
           />
-          <DropdownPanelField
-            id="token-search-select"
-            titleText="Token"
-            placeholder="Select token"
-            renderPanel={({ setValue, closePanel }) => (
-              <TokenSearch setValue={setValue} closePanel={closePanel} />
+          <Controller
+            name="token"
+            control={control}
+            render={({ field }) => (
+              <DropdownPanelField
+                id="token-search-select"
+                titleText="Token"
+                placeholder="Select token"
+                initialValue={field.value}
+                onValueChange={field.onChange}
+                invalid={!!errors.token}
+                invalidText={String(
+                  errors.token?.message || "Token is required",
+                )}
+                renderValue={(token: SelectedTokenValue) => (
+                  <Flex
+                    align="center"
+                    gap={3}
+                    className={styles.selectedTokenValue}
+                  >
+                    <TknImg size={20} src={token.imgUrl} alt={token.symbol} />
+                    <span>{token.symbol || token.name || token.id}</span>
+                  </Flex>
+                )}
+                renderPanel={({ setValue, closePanel }) => (
+                  <TokenSearch setValue={setValue} closePanel={closePanel} />
+                )}
+              />
             )}
           />
         </Stack>
@@ -308,97 +445,118 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
           />
 
           <Stack gap={2}>
-            {conditions.map((row, index) => (
-              <Flex
-                className={styles.conditionConfig}
-                key={row.id}
-                dir="row"
-                align="end"
-                gap={1}
-              >
-                <Dropdown
-                  id={`condition-metric-${row.id}`}
-                  titleText={index == 0 ? "Metric" : `Metric ${index + 1}`}
-                  label="Select metric"
-                  items={METRIC_OPTIONS}
-                  itemToString={(item) => item?.text || ""}
-                  selectedItem={getMetricOption(row.metric)}
-                  onChange={({ selectedItem }) => {
-                    if (!selectedItem) return;
-                    setConditions((current) =>
-                      current.map((item) =>
-                        item.id == row.id
-                          ? { ...item, metric: selectedItem.id }
-                          : item,
-                      ),
-                    );
-                  }}
-                  style={{ flex: 1 }}
-                />
-                <Dropdown
-                  id={`condition-op-${row.id}`}
-                  titleText={
-                    index == 0 ? "Condition" : `Condition ${index + 1}`
-                  }
-                  label="Select condition"
-                  items={CONDITION_OPTIONS}
-                  itemToString={(item) => item?.text || ""}
-                  selectedItem={getConditionOption(row.condition)}
-                  onChange={({ selectedItem }) => {
-                    if (!selectedItem) return;
-                    setConditions((current) =>
-                      current.map((item) =>
-                        item.id == row.id
-                          ? { ...item, condition: selectedItem.id }
-                          : item,
-                      ),
-                    );
-                  }}
-                  style={{ flex: 1 }}
-                />
-                <TextInput
-                  id={`condition-value-${row.id}`}
-                  labelText="Value"
-                  placeholder="10"
-                  value={row.value}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setConditions((current) =>
-                      current.map((item) =>
-                        item.id == row.id
-                          ? { ...item, value: nextValue }
-                          : item,
-                      ),
-                    );
-                  }}
-                />
-
-                <IconButton
-                  size="md"
-                  kind="ghost"
-                  label="Remove"
-                  style={{ visibility: index > 0 ? "visible" : "hidden" }}
-                  onClick={() => {
-                    if (index == 0) return;
-                    setConditions((current) =>
-                      current.filter((item) => item.id != row.id),
-                    );
-                  }}
+            {conditionFields.map((row, index) => (
+              <div key={row.formId} className={styles.conditionRow}>
+                <Flex
+                  className={styles.conditionConfig}
+                  dir="row"
+                  align="start"
+                  gap={1}
                 >
-                  <SubtractAlt />
-                </IconButton>
-              </Flex>
+                  <Controller
+                    name={`conditions.${index}.metric`}
+                    control={control}
+                    render={({ field }) => (
+                      <Dropdown
+                        id={`condition-metric-${row.formId}`}
+                        titleText={
+                          index == 0 ? "Metric" : `Metric ${index + 1}`
+                        }
+                        label="Select metric"
+                        items={METRIC_OPTIONS}
+                        itemToString={(item) => item?.text || ""}
+                        selectedItem={getMetricOption(field.value)}
+                        onChange={({ selectedItem }) => {
+                          if (!selectedItem) return;
+                          field.onChange(selectedItem.id);
+                        }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`conditions.${index}.period`}
+                    control={control}
+                    render={({ field }) => (
+                      <Dropdown
+                        id={`condition-period-${row.formId}`}
+                        titleText={
+                          index == 0 ? "Period" : `Period ${index + 1}`
+                        }
+                        label="Select period"
+                        items={[
+                          { id: "30m", text: "30m" },
+                          { id: "1h", text: "1h" },
+                          { id: "6h", text: "6h" },
+                          { id: "24h", text: "24h" },
+                        ]}
+                        itemToString={(item) => item?.text || ""}
+                        selectedItem={{ id: field.value, text: field.value }}
+                        onChange={({ selectedItem }) => {
+                          if (!selectedItem) return;
+                          field.onChange(selectedItem.id as AlertPeriod);
+                        }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`conditions.${index}.condition`}
+                    control={control}
+                    render={({ field }) => (
+                      <Dropdown
+                        id={`condition-op-${row.formId}`}
+                        titleText={
+                          index == 0 ? "Condition" : `Condition ${index + 1}`
+                        }
+                        label="Select condition"
+                        items={CONDITION_OPTIONS}
+                        itemToString={(item) => item?.text || ""}
+                        selectedItem={getConditionOption(field.value)}
+                        onChange={({ selectedItem }) => {
+                          if (!selectedItem) return;
+                          field.onChange(selectedItem.id);
+                        }}
+                      />
+                    )}
+                  />
+                  <TextInput
+                    id={`condition-value-${row.formId}`}
+                    labelText="Value"
+                    placeholder="10"
+                    {...register(`conditions.${index}.value`)}
+                    invalid={!!errors.conditions?.[index]?.value}
+                    invalidText={String(
+                      errors.conditions?.[index]?.value?.message || "",
+                    )}
+                  />
+                  <div
+                    style={{
+                      paddingBlockStart: "1.5rem",
+                    }}
+                  >
+                    <IconButton
+                      size="md"
+                      kind="ghost"
+                      label="Remove"
+                      style={{
+                        visibility: index > 0 ? "visible" : "hidden",
+                      }}
+                      onClick={() => {
+                        if (index == 0) return;
+                        remove(index);
+                      }}
+                    >
+                      <SubtractAlt />
+                    </IconButton>
+                  </div>
+                </Flex>
+              </div>
             ))}
-
-            {conditions.length < 3 && (
+            {conditionFields.length < 3 && (
               <Button
                 kind="primary"
                 renderIcon={Add}
                 onClick={() => {
-                  setConditions((current) => [
-                    ...current,
-                    createConditionRow(),
-                  ]);
+                  append(createConditionRow());
                 }}
               >
                 Add Condition
@@ -410,10 +568,22 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
       <Divider />
       <Stack gap={2} orientation="horizontal">
         <FormGroup legendText="Trigger">
-          <RadioButtonGroup name="trigger" defaultSelected="once">
-            <RadioButton id="once" labelText="Only Once" value="once" />
-            <RadioButton id="always" labelText="Always" value="always" />
-          </RadioButtonGroup>
+          <Controller
+            name="triggerMode"
+            control={control}
+            render={({ field }) => (
+              <RadioButtonGroup
+                name="trigger"
+                valueSelected={field.value}
+                onChange={(next) => {
+                  field.onChange(next as TriggerMode);
+                }}
+              >
+                <RadioButton id="once" labelText="Only Once" value="once" />
+                <RadioButton id="always" labelText="Always" value="always" />
+              </RadioButtonGroup>
+            )}
+          />
         </FormGroup>
         <FormGroup legendText="Expiry">
           <Stack
@@ -421,26 +591,42 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
             orientation="horizontal"
             className={overwriteStyles.dateTimePicker}
           >
-            <DatePicker
-              datePickerType="single"
-              locale={datePickerLocale}
-              dateFormat={datePickerFormat}
-              onChange={(selectedDates) => {
-                setExpiryDate(selectedDates[0] ?? null);
-              }}
-            >
-              <DatePickerInput
-                id="expiry-date-input"
-                placeholder="mm/dd/yyyy"
-                labelText="Expiry"
-                hideLabel
-              />
-            </DatePicker>
-            <TimePicker
-              id="expiry-time-input"
-              labelText="24h"
-              hideLabel
-              onChange={(event) => setExpiryTime(event.target.value)}
+            <Controller
+              name="expiresAtDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  datePickerType="single"
+                  locale={datePickerLocale}
+                  dateFormat={datePickerFormat}
+                  value={field.value ? [field.value] : []}
+                  onChange={(selectedDates) => {
+                    field.onChange(selectedDates[0] ?? null);
+                  }}
+                >
+                  <DatePickerInput
+                    id="expiry-date-input"
+                    placeholder="mm/dd/yyyy"
+                    labelText="Expiry"
+                    hideLabel
+                  />
+                </DatePicker>
+              )}
+            />
+            <Controller
+              name="expiresAtTime"
+              control={control}
+              render={({ field }) => (
+                <TimePicker
+                  id="expiry-time-input"
+                  labelText="24h"
+                  hideLabel
+                  value={field.value}
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                  }}
+                />
+              )}
             />
           </Stack>
           {/* <Txt secondary size="sm" block>
@@ -452,29 +638,33 @@ function AlertConfiguration({ config, setConfig }: AlertConfigurationProps) {
   );
 }
 
-interface AlertNotificationSettingsProps {
-  config: AlertConfig;
-  setConfig: (config: AlertConfig) => void;
-}
-
-function AlertNotificationSettings({
-  config,
-  setConfig,
-}: AlertNotificationSettingsProps) {
-  const [emailEnabled, setEmailEnabled] = useState(true);
+function AlertNotificationSettings() {
+  const {
+    control,
+    register,
+    watch,
+    formState: { errors },
+  } = useFormContext<AlertFormValues>();
+  const emailEnabled = watch("emailEnabled");
 
   return (
     <Stack gap={6}>
       <FormGroup legendText="Delivery Channel">
         <CheckboxGroup legendText="Group label">
           <Flex dir="row" align="center" gap={20}>
-            <Checkbox
-              className={styles.emailCheckBox}
-              id="delivery-channel-email"
-              labelText="Email"
-              checked={emailEnabled}
-              onChange={(_, { checked }) => setEmailEnabled(checked)}
-              style={{ maxInlineSize: "fit-content" }}
+            <Controller
+              name="emailEnabled"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  className={styles.emailCheckBox}
+                  id="delivery-channel-email"
+                  labelText="Email"
+                  checked={field.value}
+                  onChange={(_, data) => field.onChange(data.checked)}
+                  style={{ maxInlineSize: "fit-content" }}
+                />
+              )}
             />
             {emailEnabled && (
               <TextInput
@@ -484,6 +674,9 @@ function AlertNotificationSettings({
                 placeholder="phuc21744@gmail.com"
                 id="delivery-channel-email__email"
                 helperText=""
+                {...register("email")}
+                invalid={!!errors.email}
+                invalidText={String(errors.email?.message || "")}
               />
             )}
           </Flex>
@@ -506,6 +699,9 @@ function AlertNotificationSettings({
             labelText="Alert name"
             placeholder="Token Stats Performance 1"
             id="alert-name-input"
+            {...register("alertName")}
+            invalid={!!errors.alertName}
+            invalidText={String(errors.alertName?.message || "")}
           />
           <TextArea
             className={overwriteStyles.filledTextArea}
@@ -523,10 +719,15 @@ Price change (%) in 1h from 10% to 100%`}
 }
 
 export default function AlertsDemo() {
-  const { fmt, tr } = useLocalization();
+  const { fmt } = useLocalization();
   const { user } = useAuth();
   const [step, setStep] = useState<AlertStep>("type-selection");
-  const [config, setConfig] = useState<AlertConfig>({ type: null });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const methods = useForm<AlertFormValues, unknown, AlertConfig>({
+    defaultValues: useMemo(() => createInitialConfig(), []),
+    resolver: zodResolver(alertFormSchema),
+    mode: "onChange",
+  });
 
   const alerts = useGet(
     client.api.alerts,
@@ -542,25 +743,21 @@ export default function AlertsDemo() {
     return alerts.data.map((alert) => ({
       id: alert.id,
       tokenAddress: alert.tokenAddress,
-      period: alert.period,
       createdAt: fmt.datetime.datetime(alert.createdAt),
     }));
   }, [alerts, fmt]);
-
-  console.log("alerts", alerts.data);
 
   const headers = useMemo(
     () => [
       { header: "Token Address", key: "tokenAddress" },
       { header: "Alert Type", key: "alertType" },
-      { header: "Period", key: "period" },
       { header: "Created At", key: "createdAt" },
     ],
     [],
   );
 
   const selectAlertType = (type: AlertType) => {
-    setConfig({ type });
+    methods.setValue("type", type);
     setStep("configuration");
   };
 
@@ -572,18 +769,89 @@ export default function AlertsDemo() {
     }
   };
 
-  const goNext = () => {
-    if (step == "configuration") {
-      setStep("notification");
+  const goNext = async () => {
+    if (step != "configuration") {
+      return;
     }
+
+    const isValid = await methods.trigger(["token", "conditions"]);
+    if (!isValid) {
+      return;
+    }
+
+    setStep("notification");
   };
 
   const handleModalClose = () => {
     setStep("type-selection");
-    setConfig({ type: null });
+    methods.reset(createInitialConfig());
   };
 
-  const renderFooterButtons = () => {
+  const handleSave = async (setOpen: (next: boolean) => void) => {
+    const isValid = await methods.trigger();
+    if (!isValid) {
+      return;
+    }
+
+    const parsed = alertFormSchema.safeParse(methods.getValues());
+    if (!parsed.success) {
+      return;
+    }
+    const data = parsed.data;
+
+    if (data.type != "token-stats") {
+      handleModalClose();
+      setOpen(false);
+      return;
+    }
+
+    const expiresAt = combineLocalDateAndTime(
+      data.expiresAtDate,
+      data.expiresAtTime,
+    )!;
+
+    const mappedConditions = data.conditions.map((row) => ({
+      period: row.period,
+      alertType: row.metric,
+      condition: row.condition,
+      value: row.value,
+    }));
+
+    if (mappedConditions.length == 0) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const email =
+        data.emailEnabled && data.email.trim().length > 0
+          ? data.email.trim()
+          : null;
+
+      const res = await client.api.alerts.$post({
+        json: {
+          tokenAddress: data.token!.id,
+          triggerMode: data.triggerMode,
+          expiresAt,
+          alertName: data.alertName,
+          ...(email ? { email } : {}),
+          conditions: mappedConditions,
+        },
+      });
+
+      if (res.status == 201) {
+        await alerts.mutate();
+        handleModalClose();
+        setOpen(false);
+      }
+    } catch (error) {
+      console.log("failed to create alert", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderFooterButtons = (setOpen: (next: boolean) => void) => {
     switch (step) {
       case "configuration":
         return (
@@ -591,7 +859,11 @@ export default function AlertsDemo() {
             <Button kind="secondary" onClick={goBack} renderIcon={ArrowLeft}>
               Back
             </Button>
-            <Button kind="primary" onClick={goNext} renderIcon={ArrowRight}>
+            <Button
+              kind="primary"
+              onClick={() => void goNext()}
+              renderIcon={ArrowRight}
+            >
               Next
             </Button>
           </>
@@ -602,7 +874,11 @@ export default function AlertsDemo() {
             <Button kind="secondary" onClick={goBack} renderIcon={ArrowLeft}>
               Back
             </Button>
-            <Button kind="primary" onClick={handleModalClose}>
+            <Button
+              kind="primary"
+              onClick={() => void handleSave(setOpen)}
+              disabled={isSubmitting}
+            >
               Save
             </Button>
           </>
@@ -686,30 +962,24 @@ export default function AlertsDemo() {
                       }
                     />
                     <ModalBody>
-                      <Stack gap={2}>
-                        {step == "type-selection" && (
-                          <AlertTypeSelection
-                            alertTypeOptions={alertTypeOptions}
-                            onSelectType={selectAlertType}
-                          />
-                        )}
+                      <FormProvider {...methods}>
+                        <Stack gap={2}>
+                          {step == "type-selection" && (
+                            <AlertTypeSelection
+                              alertTypeOptions={alertTypeOptions}
+                              onSelectType={selectAlertType}
+                            />
+                          )}
 
-                        {step == "configuration" && (
-                          <AlertConfiguration
-                            config={config}
-                            setConfig={setConfig}
-                          />
-                        )}
+                          {step == "configuration" && <AlertConfiguration />}
 
-                        {step == "notification" && (
-                          <AlertNotificationSettings
-                            config={config}
-                            setConfig={setConfig}
-                          />
-                        )}
-                      </Stack>
+                          {step == "notification" && (
+                            <AlertNotificationSettings />
+                          )}
+                        </Stack>
+                      </FormProvider>
                     </ModalBody>
-                    <ModalFooter>{renderFooterButtons()}</ModalFooter>
+                    <ModalFooter>{renderFooterButtons(setOpen)}</ModalFooter>
                   </ComposedModal>
                 )}
               </ModalStateManager>

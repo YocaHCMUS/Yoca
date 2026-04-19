@@ -1,8 +1,14 @@
-.conditionConfig :global(.cds--text-input-wrapper) {
-  flex: 1;
+.conditionConfig {
+  :global(.cds--label) {
+    vertical-align: top;
+  }
+  :global(.cds--list-box__menu) {
+    max-block-size: 7.52rem !important;
+  }
 }
-.conditionConfig :global(.cds--list-box--expanded.cds--list-box__menu) {
-  max-block-size: 6rem;
+
+.conditionRow {
+  animation: conditionRowEnter 260ms ease-out;
 }
 
 .emailCheckBox {
@@ -13,6 +19,12 @@
   animation: emailSetupReveal 180ms ease-out;
 }
 
+.selectedTokenValue {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 @keyframes emailSetupReveal {
   from {
     opacity: 0;
@@ -20,5 +32,19 @@
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes conditionRowEnter {
+  from {
+    opacity: 0;
+    max-block-size: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    max-block-size: 9rem;
+    transform: translateY(0);
   }
 }
