@@ -19,8 +19,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import { startTokenPolling } from "./services/tokens/token-data-polling";
 
-// intialize OpenAPIHono with default error handling
 const app = new Hono()
   .use("*", logger())
   .use("*", requestContextMiddleware)
@@ -44,7 +44,7 @@ const app = new Hono()
   .route("/api/alerts", alerts)
   .route("/webhook", webhook);
 
-// startTokenPolling();
+startTokenPolling();
 
 // Server
 serve(

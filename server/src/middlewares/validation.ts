@@ -3,8 +3,8 @@ import { setErr } from "@sv/config/errors.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
+  userAlertTokenMetric,
   userAlertTriggerModes,
-  userAlertTypes,
 } from "@sv/db/alerts.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
@@ -103,8 +103,8 @@ export const createAlertSchema = z.object({
     .array(
       z.object({
         period: z.enum(userAlertPeriods),
-        alertType: z.enum(userAlertTypes),
-        condition: z.enum(userAlertConditionOps),
+        alertType: z.enum(userAlertTokenMetric),
+        conditionOp: z.enum(userAlertConditionOps),
         value: z.coerce.number(),
       }),
     )
@@ -113,21 +113,6 @@ export const createAlertSchema = z.object({
 
 export const alertIdSchema = z.object({
   id: z.uuid(),
-});
-
-export const updateAlertSchema = z.object({
-  triggerMode: z.enum(userAlertTriggerModes).default("once"),
-  expiresAt: z.iso.datetime({ offset: true }),
-  conditions: z
-    .array(
-      z.object({
-        period: z.enum(userAlertPeriods),
-        alertType: z.enum(userAlertTypes),
-        condition: z.enum(userAlertConditionOps),
-        value: z.coerce.number(),
-      }),
-    )
-    .min(1, "At least one condition is required"),
 });
 
 export function validate<

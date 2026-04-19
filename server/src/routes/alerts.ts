@@ -1,9 +1,9 @@
+import { SOLANA_ERROR__INSTRUCTION_ERROR__MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED } from "@solana/kit";
 import { setErr } from "@sv/config/errors";
 import {
   alertIdSchema,
   createAlertSchema,
   honoJwt,
-  updateAlertSchema,
   userPayloadSchema,
   validate,
 } from "@sv/middlewares/validation.js";
@@ -32,7 +32,7 @@ const app = new Hono()
       const address = c.req.query("tokenAddress");
       const alerts = await alertsService.getAlertsByUser(payload.id);
       const result = address
-        ? alerts.filter((a) => a.tokenAddress == address)
+        ? alerts.filter((a) => a.alert.tokenAddress == address)
         : alerts;
       return c.json(result, statusCode.Ok);
     } catch (err) {
@@ -56,7 +56,7 @@ const app = new Hono()
         userId: parsedPayload.data.id,
         tokenAddress: body.tokenAddress,
         triggerMode: body.triggerMode,
-        expiresAt: body.expiresAt,
+        expiresAt: new Date(body.expiresAt),
         alertName: body.alertName,
         email: body.email,
         conditions: body.conditions,
@@ -84,12 +84,11 @@ const app = new Hono()
       if (!parsedPayload.success) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
-      const payload = parsedPayload.data;
+      const userPayload = parsedPayload.data;
       const { id } = c.req.valid("param");
-      const row = await alertsService.getAlertById(id);
-      if (!row || row.userId !== payload.id)
-        return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
-      return c.json(row, statusCode.Ok);
+      const alert = await alertsService.getAlertById(id, userPayload.id);
+      if (!alert) return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+      return c.json(alert, statusCode.Ok);
     } catch (err) {
       console.log(err);
       return c.json(
@@ -103,7 +102,7 @@ const app = new Hono()
     "/:id",
     honoJwt,
     validate("param", alertIdSchema),
-    validate("json", updateAlertSchema),
+    validate("json", createAlertSchema),
     async (c) => {
       try {
         const rawPayload = c.get("jwtPayload");
@@ -114,13 +113,22 @@ const app = new Hono()
             statusCode.Unauthorized,
           );
         }
-        const payload = parsedPayload.data;
+        const userPayload = parsedPayload.data;
         const { id } = c.req.valid("param");
-        const existing = await alertsService.getAlertById(id);
-        if (!existing || existing.userId !== payload.id)
-          return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+        const existing = await alertsService.getAlertById(id, userPayload.id);
+        if (!existing) return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+
         const body = c.req.valid("json");
-        const updated = await alertsService.updateAlert(id, body);
+        const updated = await alertsService.updateAlert(id, {
+          userId: parsedPayload.data.id,
+          tokenAddress: body.tokenAddress,
+          triggerMode: body.triggerMode,
+          expiresAt: new Date(body.expiresAt),
+          alertName: body.alertName,
+          email: body.email,
+          conditions: body.conditions,
+        });
+
         return c.json(updated, statusCode.Ok);
       } catch (err) {
         console.log(err);
@@ -132,6 +140,33 @@ const app = new Hono()
     },
   )
 
+  .post("/:id/stop", honoJwt, validate("param", alertIdSchema), async (c) => {
+    try {
+      const rawPayload = c.get("jwtPayload");
+      const parsedPayload = userPayloadSchema.safeParse(rawPayload);
+      if (!parsedPayload.success) {
+        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+      }
+      const userPayload = parsedPayload.data;
+      const { id } = c.req.valid("param");
+      const existing = await alertsService.getAlertById(id, userPayload.id);
+      if (
+        !SOLANA_ERROR__INSTRUCTION_ERROR__MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED
+      ) {
+        return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+      }
+
+      const updated = await alertsService.stopAlert(id);
+      return c.json(updated, statusCode.Ok);
+    } catch (err) {
+      console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+
   .delete("/:id", honoJwt, validate("param", alertIdSchema), async (c) => {
     try {
       const rawPayload = c.get("jwtPayload");
@@ -139,11 +174,10 @@ const app = new Hono()
       if (!parsedPayload.success) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
-      const payload = parsedPayload.data;
+      const userPayload = parsedPayload.data;
       const { id } = c.req.valid("param");
-      const existing = await alertsService.getAlertById(id);
-      if (!existing || existing.userId != payload.id)
-        return c.json({ error: "Not found" }, 404);
+      const existing = await alertsService.getAlertById(id, userPayload.id);
+      if (!existing) return c.json({ error: "Not found" }, 404);
       await alertsService.deleteAlert(id);
       return c.json({ message: "Deleted" }, statusCode.Ok);
     } catch (err) {

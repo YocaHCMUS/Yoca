@@ -1,4 +1,3 @@
-import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   decimal as dec,
   pgEnum,
@@ -21,7 +20,8 @@ export const enumConditionOp = pgEnum("condition_op", [
   "lt",
   "lte",
 ]);
-export const enumAlertType = pgEnum("alert_type", [
+
+export const enumAlertTokenMetric = pgEnum("alert_token_metric", [
   "price_percentage",
   "price_usd",
   "volume_usd",
@@ -32,12 +32,16 @@ export const enumAlertType = pgEnum("alert_type", [
   "trades",
   "trades_percentage",
 ]);
+
+export const enumAlertStatus = pgEnum("alert_status", ["running", "stopped"]);
+
 export const enumAlertPeriod = pgEnum("alert_period", [
   "30m",
   "1h",
   "6h",
   "24h",
 ]);
+
 export const enumAlertTriggerMode = pgEnum("alert_trigger_mode", [
   "once",
   "always",
@@ -66,28 +70,36 @@ export const userAlertConditions = pgTable("user_alert_conditions", {
     .notNull()
     .references(() => userAlerts.id, { onDelete: "cascade" }),
   period: enumAlertPeriod("period").notNull().default("1h"),
-  alertType: enumAlertType("alert_type").notNull(),
+  alertType: enumAlertTokenMetric("metric").notNull(),
   conditionOp: enumConditionOp("condition_op").notNull(),
   value: decimal("value").notNull(),
+});
+
+export const userAlertState = pgTable("user_alert_state", {
+  alertId: uuid("alert_id")
+    .primaryKey()
+    .references(() => userAlerts.id, { onDelete: "cascade" }),
+  status: enumAlertStatus("status").notNull().default("running"),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 // Export types for inserting and selecting data
 export type UserAlertInsert = typeof userAlerts.$inferInsert;
 export type UserAlertSelect = typeof userAlerts.$inferSelect;
-
-export type UserAlertConditionInsert = InferInsertModel<
-  typeof userAlertConditions
->;
-export type UserAlertConditionSelect = InferSelectModel<
-  typeof userAlertConditions
->;
-
-export type UserAlertType = (typeof enumAlertType.enumValues)[number];
+export type UserAlertConditionSelect = typeof userAlertConditions.$inferSelect;
+export type UserAlertTokenMetric =
+  (typeof enumAlertTokenMetric.enumValues)[number];
+export type UserAlertStatus = (typeof enumAlertStatus.enumValues)[number];
 export type UserAlertConditionOp = (typeof enumConditionOp.enumValues)[number];
 export type UserAlertPeriod = (typeof enumAlertPeriod.enumValues)[number];
 export type UserAlertTriggerMode =
   (typeof enumAlertTriggerMode.enumValues)[number];
+export type UserAlertConditionInsert = typeof userAlertConditions.$inferInsert;
 export const userAlertConditionOps = enumConditionOp.enumValues;
-export const userAlertTypes = enumAlertType.enumValues;
+export const userAlertTokenMetric = enumAlertTokenMetric.enumValues;
 export const userAlertPeriods = enumAlertPeriod.enumValues;
 export const userAlertTriggerModes = enumAlertTriggerMode.enumValues;
+export const userAlertStatus = enumAlertStatus.enumValues;

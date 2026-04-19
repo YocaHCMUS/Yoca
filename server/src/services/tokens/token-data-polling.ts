@@ -1,6 +1,11 @@
 import type { UserAlertPeriod } from "@sv/db/alerts.js";
-import { userAlertPeriods, userAlerts } from "@sv/db/alerts.js";
+import {
+  userAlertConditions,
+  userAlertState,
+  userAlerts,
+} from "@sv/db/alerts.js";
 import { db } from "@sv/db/index.js";
+import { and, eq, gt, inArray, lte } from "drizzle-orm";
 import { get24hTokenMarketChart } from "./token-chart.js";
 
 interface PriceDataPoint {
@@ -21,15 +26,67 @@ interface TokenPriceAlert {
   aggregatedPrices: AggregatedPrice[];
 }
 
+interface TrackedToken {
+  address: string;
+  periods: UserAlertPeriod[];
+}
+
 const pollingIntervalMs = 30_000; // 30 seconds
 let isPolling = false;
 
-async function getTrackedTokenAddresses(): Promise<string[]> {
-  const result = await db
-    .selectDistinct({ address: userAlerts.tokenAddress })
-    .from(userAlerts);
+async function stopExpiredAlerts(now: Date) {
+  const expiredAlerts = await db
+    .select({ alertId: userAlerts.id })
+    .from(userAlerts)
+    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
+    .where(
+      and(lte(userAlerts.expiresAt, now), eq(userAlertState.status, "running")),
+    );
 
-  return result.map((row) => row.address);
+  if (expiredAlerts.length == 0) {
+    return;
+  }
+
+  const expiredAlertIds = expiredAlerts.map((a) => a.alertId);
+
+  await db
+    .update(userAlertState)
+    .set({
+      status: "stopped",
+    })
+    .where(inArray(userAlertState.alertId, expiredAlertIds));
+}
+
+async function getTrackedTokensWithPeriods(): Promise<TrackedToken[]> {
+  const now = new Date();
+  const result = await db
+    .selectDistinct({
+      address: userAlerts.tokenAddress,
+      period: userAlertConditions.period,
+    })
+    .from(userAlerts)
+    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
+    .innerJoin(
+      userAlertConditions,
+      eq(userAlertConditions.alertId, userAlerts.id),
+    )
+    .where(
+      and(gt(userAlerts.expiresAt, now), eq(userAlertState.status, "running")),
+    );
+
+  const tokenPeriodMap = new Map<string, Set<UserAlertPeriod>>();
+
+  for (const row of result) {
+    const existing =
+      tokenPeriodMap.get(row.address) ?? new Set<UserAlertPeriod>();
+    existing.add(row.period);
+    tokenPeriodMap.set(row.address, existing);
+  }
+
+  return Array.from(tokenPeriodMap.entries()).map(([address, periods]) => ({
+    address,
+    periods: Array.from(periods),
+  }));
 }
 
 function getPeriodMs(period: UserAlertPeriod): number {
@@ -40,6 +97,8 @@ function getPeriodMs(period: UserAlertPeriod): number {
       return 60 * 60 * 1000;
     case "6h":
       return 6 * 60 * 60 * 1000;
+    case "24h":
+      return 24 * 60 * 60 * 1000;
   }
 }
 
@@ -77,8 +136,11 @@ async function pollTokenPrices() {
   try {
     isPolling = true;
 
-    const addresses = await getTrackedTokenAddresses();
-    if (addresses.length == 0) {
+    const now = new Date();
+    await stopExpiredAlerts(now);
+
+    const trackedTokens = await getTrackedTokensWithPeriods();
+    if (trackedTokens.length == 0) {
       console.log("Token Polling:  No tracked tokens");
       return;
     }
@@ -86,7 +148,9 @@ async function pollTokenPrices() {
     const tokenAlerts: TokenPriceAlert[] = [];
 
     // Fetch 24h chart for each token
-    for (const address of addresses) {
+    for (const trackedToken of trackedTokens) {
+      const { address, periods } = trackedToken;
+
       try {
         const chartData = await get24hTokenMarketChart(address);
         if (!chartData || chartData.length == 0) continue;
@@ -99,7 +163,7 @@ async function pollTokenPrices() {
 
         // Aggregate prices for each period
         const aggregatedPrices: AggregatedPrice[] = [];
-        for (const period of userAlertPeriods) {
+        for (const period of periods) {
           const agg = aggregatePriceByPeriod(pricePoints, period);
           if (agg) {
             aggregatedPrices.push(agg);

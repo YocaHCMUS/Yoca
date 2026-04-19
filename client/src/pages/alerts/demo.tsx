@@ -54,6 +54,7 @@ import styles from "./demo.module.scss";
 interface AlertRow {
   id: string;
   tokenAddress: string;
+  alertName: string;
   createdAt: string;
   [key: string]: string;
 }
@@ -264,18 +265,18 @@ type AlertConfig = z.output<typeof alertFormSchema>;
 type ConditionRow = AlertFormValues["conditions"][number];
 
 const CONDITION_OPTIONS: Array<{ id: ConditionOp; text: string }> = [
-  { id: "gt", text: "Greater than (>)" },
-  { id: "gte", text: "Greater than or equal (≥)" },
-  { id: "eq", text: "Equal (=)" },
-  { id: "lt", text: "Less than (<)" },
-  { id: "lte", text: "Less than or equal (≤)" },
+  { id: "gt", text: ">" },
+  { id: "gte", text: "≥" },
+  { id: "eq", text: "=" },
+  { id: "lt", text: "<" },
+  { id: "lte", text: "≤" },
 ];
 
 const METRIC_OPTIONS: Array<{ id: AlertMetric; text: string; helper: string }> =
   [
     {
       id: "price_percentage",
-      text: "Price change",
+      text: "Price change %",
       helper: "Percent change over the selected period",
     },
     { id: "price_usd", text: "Price", helper: "Current token price in USD" },
@@ -398,7 +399,7 @@ function AlertConfiguration() {
               id: "specific",
               text: "Specific Token",
             }}
-            disabled
+            // disabled
           />
           <Controller
             name="token"
@@ -444,7 +445,7 @@ function AlertConfiguration() {
             style={{ maxInlineSize: "none" }}
           />
 
-          <Stack gap={2}>
+          <Stack gap={6}>
             {conditionFields.map((row, index) => (
               <div key={row.formId} className={styles.conditionRow}>
                 <Flex
@@ -457,65 +458,71 @@ function AlertConfiguration() {
                     name={`conditions.${index}.metric`}
                     control={control}
                     render={({ field }) => (
-                      <Dropdown
-                        id={`condition-metric-${row.formId}`}
-                        titleText={
-                          index == 0 ? "Metric" : `Metric ${index + 1}`
-                        }
-                        label="Select metric"
-                        items={METRIC_OPTIONS}
-                        itemToString={(item) => item?.text || ""}
-                        selectedItem={getMetricOption(field.value)}
-                        onChange={({ selectedItem }) => {
-                          if (!selectedItem) return;
-                          field.onChange(selectedItem.id);
-                        }}
-                      />
+                      <div style={{ inlineSize: "16rem" }}>
+                        <Dropdown
+                          id={`condition-metric-${row.formId}`}
+                          titleText={
+                            index == 0 ? "Metric" : `Metric ${index + 1}`
+                          }
+                          label="Select metric"
+                          items={METRIC_OPTIONS}
+                          itemToString={(item) => item?.text || ""}
+                          selectedItem={getMetricOption(field.value)}
+                          onChange={({ selectedItem }) => {
+                            if (!selectedItem) return;
+                            field.onChange(selectedItem.id);
+                          }}
+                        />
+                      </div>
                     )}
                   />
                   <Controller
                     name={`conditions.${index}.period`}
                     control={control}
                     render={({ field }) => (
-                      <Dropdown
-                        id={`condition-period-${row.formId}`}
-                        titleText={
-                          index == 0 ? "Period" : `Period ${index + 1}`
-                        }
-                        label="Select period"
-                        items={[
-                          { id: "30m", text: "30m" },
-                          { id: "1h", text: "1h" },
-                          { id: "6h", text: "6h" },
-                          { id: "24h", text: "24h" },
-                        ]}
-                        itemToString={(item) => item?.text || ""}
-                        selectedItem={{ id: field.value, text: field.value }}
-                        onChange={({ selectedItem }) => {
-                          if (!selectedItem) return;
-                          field.onChange(selectedItem.id as AlertPeriod);
-                        }}
-                      />
+                      <div style={{ inlineSize: "6rem" }}>
+                        <Dropdown
+                          id={`condition-period-${row.formId}`}
+                          titleText={
+                            index == 0 ? "Period" : `Period ${index + 1}`
+                          }
+                          label="Select period"
+                          items={[
+                            { id: "30m", text: "30m" },
+                            { id: "1h", text: "1h" },
+                            { id: "6h", text: "6h" },
+                            { id: "24h", text: "24h" },
+                          ]}
+                          itemToString={(item) => item?.text || ""}
+                          selectedItem={{ id: field.value, text: field.value }}
+                          onChange={({ selectedItem }) => {
+                            if (!selectedItem) return;
+                            field.onChange(selectedItem.id as AlertPeriod);
+                          }}
+                        />
+                      </div>
                     )}
                   />
                   <Controller
                     name={`conditions.${index}.condition`}
                     control={control}
                     render={({ field }) => (
-                      <Dropdown
-                        id={`condition-op-${row.formId}`}
-                        titleText={
-                          index == 0 ? "Condition" : `Condition ${index + 1}`
-                        }
-                        label="Select condition"
-                        items={CONDITION_OPTIONS}
-                        itemToString={(item) => item?.text || ""}
-                        selectedItem={getConditionOption(field.value)}
-                        onChange={({ selectedItem }) => {
-                          if (!selectedItem) return;
-                          field.onChange(selectedItem.id);
-                        }}
-                      />
+                      <div style={{ inlineSize: "6rem" }}>
+                        <Dropdown
+                          id={`condition-op-${row.formId}`}
+                          titleText={
+                            index == 0 ? "Condition" : `Condition ${index + 1}`
+                          }
+                          label="Select condition"
+                          items={CONDITION_OPTIONS}
+                          itemToString={(item) => item?.text || ""}
+                          selectedItem={getConditionOption(field.value)}
+                          onChange={({ selectedItem }) => {
+                            if (!selectedItem) return;
+                            field.onChange(selectedItem.id);
+                          }}
+                        />
+                      </div>
                     )}
                   />
                   <TextInput
@@ -528,6 +535,7 @@ function AlertConfiguration() {
                       errors.conditions?.[index]?.value?.message || "",
                     )}
                   />
+
                   <div
                     style={{
                       paddingBlockStart: "1.5rem",
@@ -741,16 +749,17 @@ export default function AlertsDemo() {
   const rows: AlertRow[] = useMemo(() => {
     if (!alerts.data) return [];
     return alerts.data.map((alert) => ({
-      id: alert.id,
-      tokenAddress: alert.tokenAddress,
-      createdAt: fmt.datetime.datetime(alert.createdAt),
+      id: alert.alertId,
+      tokenAddress: alert.alert.tokenAddress,
+      alertName: alert.alert.alertName,
+      createdAt: fmt.datetime.datetime(alert.alert.createdAt),
     }));
   }, [alerts, fmt]);
 
   const headers = useMemo(
     () => [
       { header: "Token Address", key: "tokenAddress" },
-      { header: "Alert Type", key: "alertType" },
+      { header: "Alert Name", key: "alertName" },
       { header: "Created At", key: "createdAt" },
     ],
     [],
@@ -813,7 +822,7 @@ export default function AlertsDemo() {
     const mappedConditions = data.conditions.map((row) => ({
       period: row.period,
       alertType: row.metric,
-      condition: row.condition,
+      conditionOp: row.condition,
       value: row.value,
     }));
 
