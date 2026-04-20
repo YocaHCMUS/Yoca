@@ -43,18 +43,20 @@ export default function NotFoundPage() {
         </span>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full mx-4 p-8">
-        <p className="text-neutral-400 font-semibold uppercase tracking-wider text-sm mb-2">
-          {ERROR_LABEL}
-        </p>
+      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full mx-4 p-8 gap-12">
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-sm">
+            {ERROR_LABEL}
+          </p>
 
-        <h1 className="text-white text-5xl font-bold mb-4">{ERROR_TITLE}</h1>
+          <h1 className="text-white text-5xl font-bold">{ERROR_TITLE}</h1>
 
-        <p className="text-neutral-300 text-lg mb-12">{ERROR_DESCRIPTION}</p>
+          <p className="text-neutral-300 text-lg">{ERROR_DESCRIPTION}</p>
+        </div>
 
         <form
           onSubmit={handleSearchSubmit}
-          className="flex flex-col sm:flex-row w-full gap-4 mb-6"
+          className="flex flex-col sm:flex-row w-full gap-4"
         >
           <input
             type="search"
@@ -76,7 +78,7 @@ export default function NotFoundPage() {
         <button
           type="button"
           onClick={() => navigate(HOME_ROUTE)}
-          className="mt-4 px-6 py-2 text-neutral-300 hover:text-white transition-colors"
+          className="px-6 py-2 text-neutral-300 hover:text-white transition-colors"
         >
           {HOME_BUTTON_LABEL}
         </button>
