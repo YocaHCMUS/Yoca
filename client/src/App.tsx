@@ -23,6 +23,7 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthShowcase />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="/test-401" element={<UnauthorizedPage />} />
         {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route path="/market" element={<MarketPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
@@ -47,6 +48,10 @@ function App() {
         <Route
           path="/comparision/wallets"
           element={<WalletsComparisionPage />}
+        />
+        <Route
+          path="/secret-admin-dashboard"
+          element={<UnauthorizedPage />}
         />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
