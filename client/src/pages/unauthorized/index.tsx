@@ -1,7 +1,8 @@
+import { SignInModal } from "@/components/auth";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 const HOME_ROUTE = "/";
-const LOGIN_ROUTE = "/auth";
 
 const ERROR_CODE = "401";
 const ERROR_TITLE = "Access Denied";
@@ -36,6 +37,7 @@ function getRequestedPath(state: unknown): string {
 export default function UnauthorizedPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   const requestedPath = getRequestedPath(location.state);
 
@@ -74,7 +76,7 @@ export default function UnauthorizedPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
             type="button"
-            onClick={() => navigate(LOGIN_ROUTE)}
+            onClick={() => setIsSignInOpen(true)}
             className="bg-[#14F195] hover:bg-[#10c87e] text-black font-bold px-8 py-3 rounded whitespace-nowrap transition-colors"
           >
             {LOGIN_BUTTON_LABEL}
@@ -89,6 +91,12 @@ export default function UnauthorizedPage() {
           </button>
         </div>
       </div>
+
+      <SignInModal
+        open={isSignInOpen}
+        onClose={() => setIsSignInOpen(false)}
+        redirectUrl={requestedPath}
+      />
     </div>
   );
 }
