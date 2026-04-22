@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight, Bot, Radar, ScanSearch } from "lucide-react";
+import { ArrowUpRight, Bell, Radar, ScanSearch } from "lucide-react";
 import { Link } from "react-router";
 import {
   LANDING_ACCENT,
@@ -12,29 +12,29 @@ import {
 
 const products = [
   {
-    tag: "Module 01",
-    title: "Market Intelligence",
+    tag: "Explore",
+    title: "Market Explorer",
     description:
-      "Track real-time market health across the Solana ecosystem. Monitor liquidity, price volatility, and volume from Birdeye and Moralis sources.",
+      "Real-time tracking of Solana's top-performing tokens and liquidity pools.",
     icon: Radar,
     href: "/market",
     highlight: false,
   },
   {
-    tag: "Module 02",
-    title: "Token Deep-Dive",
+    tag: "Analyze",
+    title: "Portfolio Intelligence",
     description:
-      "Analyze any SPL token. View social metadata, holder distribution, and smart contract interactions in one unified view.",
+      "Deep-dive into any wallet's history and behavior with our AI-powered behavioral tagging.",
     icon: ScanSearch,
     href: "/tokens",
     highlight: false,
   },
   {
-    tag: "Module 03",
-    title: "Behavioral Visualization",
+    tag: "Monitor",
+    title: "Smart Alerts",
     description:
-      "Decode complex transaction graphs. Our proprietary AI visualizes the flow of funds to expose wallet relationships and patterns.",
-    icon: Bot,
+      "Never miss a move. Set custom alerts for large swaps and whale activity delivered straight to your Discord.",
+    icon: Bell,
     href: "/market",
     highlight: true,
   },
@@ -81,7 +81,7 @@ export function LandingProducts() {
             className="mx-auto mt-4 max-w-3xl text-center text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
-            Built for Solana analytics teams shipping at speed.
+            Everything you need to stay ahead of the market.
           </h2>
         </div>
 

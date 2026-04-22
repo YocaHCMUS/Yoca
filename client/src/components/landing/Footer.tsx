@@ -6,7 +6,7 @@ const columns = [
     title: "Products",
     links: [
       { label: "Data Hub", to: "/market" },
-      { label: "APIs & Connectors", to: "/tokens" },
+      { label: "Token Explorer", to: "/tokens" },
       { label: "Datashare", to: "/market" },
       { label: "Chains", to: "/tokens" },
       { label: "Pricing", to: "#cta" },
