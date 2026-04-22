@@ -4,7 +4,6 @@ import "./App.css";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
-import ProfilePage from "@/pages/profile";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import TokenPage from "@/pages/token";
@@ -23,7 +22,6 @@ function App() {
         {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route path="/market" element={<MarketPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route path="/tokens/:address" element={<TokenOverviewPage />} />
         <Route path="/debug/swr" element={<SwrDebugDemo />} />

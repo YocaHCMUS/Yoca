@@ -58,6 +58,17 @@ function isValidSolanaAddress(value: string): boolean {
 export default function AlertsPage() {
   const { tr, fmt } = useLocalization();
   const { user } = useAuth();
+
+  // ── Discord settings state ───────────────────────────────────
+  const [discordUrl, setDiscordUrl] = useState("");
+  const [discordLoading, setDiscordLoading] = useState(true);
+  const [discordSaving, setDiscordSaving] = useState(false);
+  const [discordInline, setDiscordInline] = useState<{
+    kind: "success" | "error";
+    title: string;
+  } | null>(null);
+
+  // ── Wallet list state ────────────────────────────────────────
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [rows, setRows] = useState<FollowedWalletRow[]>([]);
@@ -71,14 +82,54 @@ export default function AlertsPage() {
   const [inlineTitle, setInlineTitle] = useState("");
   const [inlineSubtitle, setInlineSubtitle] = useState("");
 
+  // ── Discord settings load/save ───────────────────────────────
+  const loadDiscordSettings = useCallback(async () => {
+    setDiscordLoading(true);
+    try {
+      const res = await (client.api.alerts as any).settings.$get();
+      if (res.ok) {
+        const data = (await res.json()) as { discordWebhookUrl: string | null };
+        setDiscordUrl(data.discordWebhookUrl || "");
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setDiscordLoading(false);
+    }
+  }, []);
+
+  const onSaveDiscord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDiscordInline(null);
+    setDiscordSaving(true);
+    try {
+      const trimmed = discordUrl.trim();
+      const res = await (client.api.alerts as any).settings.$patch({
+        json: { discordWebhookUrl: trimmed || null },
+      });
+      if (res.ok) {
+        setDiscordInline({ kind: "success", title: tr("alertsPage.discordSaved") });
+      } else {
+        const body = (await res.json()) as { error?: string };
+        setDiscordInline({
+          kind: "error",
+          title: body?.error || tr("alertsPage.discordSaveError"),
+        });
+      }
+    } catch {
+      setDiscordInline({ kind: "error", title: tr("alertsPage.discordSaveError") });
+    } finally {
+      setDiscordSaving(false);
+    }
+  };
+
+  // ── Wallet list load ─────────────────────────────────────────
   const loadList = useCallback(async () => {
     setListLoading(true);
     setListError(null);
     try {
       const res = await client.api.alerts.$get();
-      if (!res.ok) {
-        throw new Error("list_failed");
-      }
+      if (!res.ok) throw new Error("list_failed");
       const data = (await res.json()) as FollowedWalletRow[];
       setRows(Array.isArray(data) ? data : []);
     } catch {
@@ -90,9 +141,16 @@ export default function AlertsPage() {
   }, [tr]);
 
   useEffect(() => {
-    void loadList();
-  }, [loadList]);
+    if (user) {
+      void loadList();
+      void loadDiscordSettings();
+    } else {
+      setListLoading(false);
+      setDiscordLoading(false);
+    }
+  }, [user, loadList, loadDiscordSettings]);
 
+  // ── Wallet inline helpers ────────────────────────────────────
   const showInline = (
     kind: "success" | "error" | "warning",
     title: string,
@@ -109,6 +167,7 @@ export default function AlertsPage() {
     setInlineSubtitle("");
   };
 
+  // ── Wallet add ───────────────────────────────────────────────
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dismissInline();
@@ -120,14 +179,9 @@ export default function AlertsPage() {
     setSubmitting(true);
     try {
       const res = await client.api.alerts.$post({
-        json: {
-          address: trimmed,
-          label: label.trim() || undefined,
-        },
+        json: { address: trimmed, label: label.trim() || undefined },
       });
-      const body = (await res.json()) as
-        | PostAlertsResponse
-        | { error?: string };
+      const body = (await res.json()) as PostAlertsResponse | { error?: string };
 
       if (res.status === 409) {
         showInline("warning", tr("alertsPage.errorDuplicate"));
@@ -144,11 +198,7 @@ export default function AlertsPage() {
       }
 
       if (body.heliusSync.ok) {
-        showInline(
-          "success",
-          tr("alertsPage.successHelius"),
-          tr("alertsPage.successSaved"),
-        );
+        showInline("success", tr("alertsPage.successHelius"), tr("alertsPage.successSaved"));
       } else {
         showInline("warning", tr("alertsPage.partialHelius"), body.heliusSync.error || "");
       }
@@ -163,6 +213,7 @@ export default function AlertsPage() {
     }
   };
 
+  // ── Wallet delete ────────────────────────────────────────────
   const onDelete = async (id: number) => {
     dismissInline();
     setDeletingId(id);
@@ -193,6 +244,7 @@ export default function AlertsPage() {
     }
   };
 
+  // ── Render ───────────────────────────────────────────────────
   return (
     <PageWrapper>
       <div className={styles.page}>
@@ -205,142 +257,182 @@ export default function AlertsPage() {
           <Grid narrow fullWidth className={styles.card}>
             <Column lg={16} md={8} sm={4}>
               <Tile style={{ background: "transparent", padding: "2rem" }}>
-                <p style={{ textAlign: "center", color: "var(--cds-text-secondary)", padding: "2rem 0" }}>
+                <p
+                  style={{
+                    textAlign: "center",
+                    color: "var(--cds-text-secondary)",
+                    padding: "2rem 0",
+                  }}
+                >
                   {tr("alertsPage.signInRequired")}
                 </p>
               </Tile>
             </Column>
           </Grid>
         ) : (
-        <Grid narrow fullWidth className={styles.card}>
-          <Column lg={16} md={8} sm={4}>
-            <Tile style={{ background: "transparent", padding: "2rem" }}>
-              {inlineKind && (
-                <InlineNotification
-                  kind={inlineKind}
-                  title={inlineTitle}
-                  subtitle={inlineSubtitle}
-                  onClose={dismissInline}
-                  lowContrast
-                  style={{ marginBottom: "1.5rem" }}
-                />
-              )}
+          <>
+            {/* ── Discord Webhook URL section ─────────────────── */}
+            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+              <Column lg={16} md={8} sm={4}>
+                <Tile style={{ background: "transparent", padding: "2rem" }}>
+                  <h3 className={styles.sectionTitle}>
+                    {tr("alertsPage.discordSectionTitle")}
+                  </h3>
 
-              <form onSubmit={onSubmit}>
-                <div className={styles.formRow}>
-                  <TextInput
-                    id="follow-address"
-                    labelText={tr("alertsPage.addressLabel")}
-                    placeholder={tr("alertsPage.addressPlaceholder")}
-                    value={address}
-                    onChange={(ev) => setAddress(ev.target.value)}
-                    disabled={submitting}
-                    autoComplete="off"
-                  />
-                  <TextInput
-                    id="follow-label"
-                    labelText={tr("alertsPage.labelOptional")}
-                    placeholder={tr("alertsPage.labelPlaceholder")}
-                    value={label}
-                    onChange={(ev) => setLabel(ev.target.value)}
-                    disabled={submitting}
-                    autoComplete="off"
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    {submitting ? (
-                      <InlineLoading
-                        description={tr("alertsPage.followButton")}
+                  {discordInline && (
+                    <InlineNotification
+                      kind={discordInline.kind}
+                      title={discordInline.title}
+                      onClose={() => setDiscordInline(null)}
+                      lowContrast
+                      style={{ marginBottom: "1rem" }}
+                    />
+                  )}
+
+                  {discordLoading ? (
+                    <InlineLoading description="Loading…" />
+                  ) : (
+                    <form onSubmit={onSaveDiscord}>
+                      <div className={styles.discordRow}>
+                        <TextInput
+                          id="discord-webhook-url"
+                          labelText={tr("alertsPage.discordLabel")}
+                          placeholder={tr("alertsPage.discordPlaceholder")}
+                          value={discordUrl}
+                          onChange={(ev) => setDiscordUrl(ev.target.value)}
+                          disabled={discordSaving}
+                          autoComplete="off"
+                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          {discordSaving ? <InlineLoading /> : null}
+                          <Button type="submit" kind="primary" disabled={discordSaving}>
+                            {tr("alertsPage.discordSaveButton")}
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+                </Tile>
+              </Column>
+            </Grid>
+
+            {/* ── Followed wallets section ────────────────────── */}
+            <Grid narrow fullWidth className={styles.card}>
+              <Column lg={16} md={8} sm={4}>
+                <Tile style={{ background: "transparent", padding: "2rem" }}>
+                  {inlineKind && (
+                    <InlineNotification
+                      kind={inlineKind}
+                      title={inlineTitle}
+                      subtitle={inlineSubtitle}
+                      onClose={dismissInline}
+                      lowContrast
+                      style={{ marginBottom: "1.5rem" }}
+                    />
+                  )}
+
+                  <form onSubmit={onSubmit}>
+                    <div className={styles.formRow}>
+                      <TextInput
+                        id="follow-address"
+                        labelText={tr("alertsPage.addressLabel")}
+                        placeholder={tr("alertsPage.addressPlaceholder")}
+                        value={address}
+                        onChange={(ev) => setAddress(ev.target.value)}
+                        disabled={submitting}
+                        autoComplete="off"
                       />
-                    ) : null}
-                    <Button type="submit" kind="primary" disabled={submitting}>
-                      {tr("alertsPage.followButton")}
-                    </Button>
-                  </div>
-                </div>
-              </form>
+                      <TextInput
+                        id="follow-label"
+                        labelText={tr("alertsPage.labelOptional")}
+                        placeholder={tr("alertsPage.labelPlaceholder")}
+                        value={label}
+                        onChange={(ev) => setLabel(ev.target.value)}
+                        disabled={submitting}
+                        autoComplete="off"
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        {submitting ? (
+                          <InlineLoading description={tr("alertsPage.followButton")} />
+                        ) : null}
+                        <Button type="submit" kind="primary" disabled={submitting}>
+                          {tr("alertsPage.followButton")}
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
 
-              {listError ? (
-                <InlineNotification
-                  kind="error"
-                  title={listError}
-                  lowContrast
-                  onClose={() => setListError(null)}
-                  style={{ marginBottom: "1rem" }}
-                />
-              ) : null}
+                  {listError ? (
+                    <InlineNotification
+                      kind="error"
+                      title={listError}
+                      lowContrast
+                      onClose={() => setListError(null)}
+                      style={{ marginBottom: "1rem" }}
+                    />
+                  ) : null}
 
-              {listLoading ? (
-                <InlineLoading description={tr("alertsPage.loadingList")} />
-              ) : rows.length === 0 ? (
-                <p style={{ color: "var(--cds-text-secondary)" }}>
-                  {tr("alertsPage.emptyList")}
-                </p>
-              ) : (
-                <div className={styles.tableWrap}>
-                  <Table size="lg" useZebraStyles>
-                    <TableHead>
-                      <TableRow>
-                        <TableHeader>
-                          {tr("alertsPage.tableAddress")}
-                        </TableHeader>
-                        <TableHeader>
-                          {tr("alertsPage.tableLabel")}
-                        </TableHeader>
-                        <TableHeader>
-                          {tr("alertsPage.tableAdded")}
-                        </TableHeader>
-                        <TableHeader className={styles.actionsCell}>
-                          {tr("alertsPage.tableActions")}
-                        </TableHeader>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell>
-                            <span
-                              style={{
-                                fontFamily: "IBM Plex Mono, monospace",
-                                wordBreak: "break-all",
-                              }}
-                            >
-                              {row.address}
-                            </span>
-                          </TableCell>
-                          <TableCell>{row.label || "—"}</TableCell>
-                          <TableCell>
-                            {fmt.datetime.datetime(new Date(row.createdAt))}
-                          </TableCell>
-                          <TableCell className={styles.actionsCell}>
-                            {deletingId === row.id ? (
-                              <InlineLoading />
-                            ) : (
-                              <Button
-                                kind="ghost"
-                                size="sm"
-                                hasIconOnly
-                                iconDescription="Delete"
-                                renderIcon={TrashCan}
-                                disabled={deletingId !== null}
-                                onClick={() => onDelete(row.id)}
-                              />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </Tile>
-          </Column>
-        </Grid>
+                  {listLoading ? (
+                    <InlineLoading description={tr("alertsPage.loadingList")} />
+                  ) : rows.length === 0 ? (
+                    <p style={{ color: "var(--cds-text-secondary)" }}>
+                      {tr("alertsPage.emptyList")}
+                    </p>
+                  ) : (
+                    <div className={styles.tableWrap}>
+                      <Table size="lg" useZebraStyles>
+                        <TableHead>
+                          <TableRow>
+                            <TableHeader>{tr("alertsPage.tableAddress")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.tableLabel")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.tableAdded")}</TableHeader>
+                            <TableHeader className={styles.actionsCell}>
+                              {tr("alertsPage.tableActions")}
+                            </TableHeader>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {rows.map((row) => (
+                            <TableRow key={row.id}>
+                              <TableCell>
+                                <span
+                                  style={{
+                                    fontFamily: "IBM Plex Mono, monospace",
+                                    wordBreak: "break-all",
+                                  }}
+                                >
+                                  {row.address}
+                                </span>
+                              </TableCell>
+                              <TableCell>{row.label || "—"}</TableCell>
+                              <TableCell>
+                                {fmt.datetime.datetime(new Date(row.createdAt))}
+                              </TableCell>
+                              <TableCell className={styles.actionsCell}>
+                                {deletingId === row.id ? (
+                                  <InlineLoading />
+                                ) : (
+                                  <Button
+                                    kind="ghost"
+                                    size="sm"
+                                    hasIconOnly
+                                    iconDescription="Delete"
+                                    renderIcon={TrashCan}
+                                    disabled={deletingId !== null}
+                                    onClick={() => onDelete(row.id)}
+                                  />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </Tile>
+              </Column>
+            </Grid>
+          </>
         )}
       </div>
     </PageWrapper>

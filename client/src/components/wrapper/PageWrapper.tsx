@@ -107,7 +107,7 @@ export function PageWrapper({ children, extraHeaderPanel }: PageWrapperProps) {
       <>
         <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
         <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
-        <HeaderMenuItem href="/profile">{tr("nav.profile")}</HeaderMenuItem>
+        <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
   }
