@@ -35,12 +35,15 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
+  fetchWalletAiAnalysis,
   fetchWalletCounterparties,
   fetchWalletIntelligence,
   fetchWalletOverview,
   fetchWalletPortfolio,
   fetchWalletSwaps,
   fetchWalletTransfers,
+  type WalletAiAnalysisResponse,
+  type WalletAiRisk,
   type WalletCounterpartyRow,
   type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
@@ -174,10 +177,20 @@ export default function WalletPage() {
     useState<WalletIntelligenceResponse | null>(null);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  /** 0 Overview, 1 Holdings, 2 Activity / Risk — data loads when each tab is first visited. */
+  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 AI Analysis — data loads when each tab is first visited. */
   const [activeTab, setActiveTab] = useState(0);
   /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
   const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
+  const [aiAnalysisReport, setAiAnalysisReport] =
+    useState<WalletAiAnalysisResponse | null>(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null);
+  const [aiAnalysisWaitingReason, setAiAnalysisWaitingReason] = useState<
+    string | null
+  >(null);
+  const [aiAnalysisLastUpdated, setAiAnalysisLastUpdated] = useState<
+    string | null
+  >(null);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
@@ -186,6 +199,15 @@ export default function WalletPage() {
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
   const portfolioLoadedRef = useRef(false);
   const activityLoadedRef = useRef(false);
+  const aiAnalysisRequestedRef = useRef(false);
+  const aiAnalysisLoadedRef = useRef(false);
+  const aiAnalysisRequestIdRef = useRef(0);
+  const aiAnalysisCacheRef = useRef<Record<string, WalletAiAnalysisResponse>>(
+    {},
+  );
+  const aiAnalysisInFlightRef = useRef<
+    Partial<Record<string, Promise<WalletAiAnalysisResponse | null>>>
+  >({});
   /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
   const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
 
@@ -374,7 +396,7 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""),
           typeof swap.exchangeName === "string" &&
-          swap.exchangeName.trim().length > 0
+            swap.exchangeName.trim().length > 0
             ? swap.exchangeName
             : "—",
           formatSwapPair(swap),
@@ -410,7 +432,7 @@ export default function WalletPage() {
         transfer.from,
         transfer.to,
         typeof transfer.tokenSymbol === "string" &&
-        transfer.tokenSymbol.trim().length > 0
+          transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
           : "Unknown",
         transfer.amount,
@@ -841,8 +863,134 @@ export default function WalletPage() {
     }
   }, [address]);
 
+  const loadAiAnalysisData = useCallback(
+    async (forceRefresh = false): Promise<WalletAiAnalysisResponse | null> => {
+      if (!address || address === "null") {
+        return null;
+      }
+
+      if (!forceRefresh && aiAnalysisCacheRef.current[address]) {
+        const cached = aiAnalysisCacheRef.current[address];
+        setAiAnalysisReport(cached);
+        setAiAnalysisError(null);
+        setAiAnalysisWaitingReason(null);
+        aiAnalysisLoadedRef.current = true;
+        return cached;
+      }
+
+      if (aiAnalysisInFlightRef.current[address]) {
+        return aiAnalysisInFlightRef.current[address];
+      }
+
+      const requestId = ++aiAnalysisRequestIdRef.current;
+      const run = (async () => {
+        setAiAnalysisLoading(true);
+        setAiAnalysisError(null);
+        setAiAnalysisWaitingReason(null);
+
+        try {
+          const intelligence = intelligenceReport ?? await fetchWalletIntelligence(address);
+          if (!intelligenceReport) {
+            setIntelligenceReport(intelligence ?? null);
+          }
+
+          let portfolioRows = portfolio;
+          if (!portfolioLoadedRef.current) {
+            portfolioRows = await loadPortfolioData();
+          }
+
+          let activitySwaps = loadedSwaps;
+          if (!activityLoadedRef.current) {
+            const activity = await loadActivityData();
+            activitySwaps = activity.swaps;
+          }
+
+          const missingDependencies: string[] = [];
+
+          if (intelligence?.identity?.status === "unavailable") {
+            missingDependencies.push("identity");
+          }
+
+          if (!intelligence?.analysis?.firstFund) {
+            missingDependencies.push("first_fund");
+          }
+
+          if (!Array.isArray(portfolioRows) || portfolioRows.length === 0) {
+            missingDependencies.push("portfolio");
+          }
+
+          if (!Array.isArray(activitySwaps) || activitySwaps.length === 0) {
+            missingDependencies.push("swaps");
+          }
+
+          if (missingDependencies.length > 0) {
+            if (requestId === aiAnalysisRequestIdRef.current) {
+              setAiAnalysisReport(null);
+              setAiAnalysisWaitingReason(
+                `AI analysis waiting for dependencies: ${missingDependencies.join(", ")}`,
+              );
+            }
+            return null;
+          }
+
+          const response = await fetchWalletAiAnalysis(address);
+          if (requestId !== aiAnalysisRequestIdRef.current) {
+            return null;
+          }
+
+          aiAnalysisCacheRef.current[address] = response;
+          setAiAnalysisReport(response);
+          setAiAnalysisLastUpdated(new Date().toISOString());
+          aiAnalysisLoadedRef.current = true;
+          return response;
+        } catch (error) {
+          if (requestId !== aiAnalysisRequestIdRef.current) {
+            return null;
+          }
+
+          aiAnalysisLoadedRef.current = false;
+          setAiAnalysisReport(null);
+          setAiAnalysisError(
+            error instanceof Error
+              ? error.message
+              : tr("walletPage.aiAnalysisFailed"),
+          );
+          return null;
+        } finally {
+          delete aiAnalysisInFlightRef.current[address];
+          if (requestId === aiAnalysisRequestIdRef.current) {
+            setAiAnalysisLoading(false);
+          }
+        }
+      })();
+
+      aiAnalysisInFlightRef.current[address] = run;
+      return run;
+    },
+    [
+      address,
+      intelligenceReport,
+      portfolio,
+      loadedSwaps,
+      loadActivityData,
+      loadPortfolioData,
+      tr,
+    ],
+  );
+
   useEffect(() => {
     setIntelligenceEnabled(false);
+  }, [address]);
+
+  useEffect(() => {
+    aiAnalysisRequestIdRef.current += 1;
+    aiAnalysisRequestedRef.current = false;
+    aiAnalysisLoadedRef.current = false;
+    setAiAnalysisReport(null);
+    setAiAnalysisError(null);
+    setAiAnalysisWaitingReason(null);
+    setAiAnalysisLastUpdated(null);
+    setAiAnalysisLoading(false);
   }, [address]);
 
   useEffect(() => {
@@ -850,6 +998,13 @@ export default function WalletPage() {
       setIntelligenceEnabled(true);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 3 && !aiAnalysisRequestedRef.current) {
+      aiAnalysisRequestedRef.current = true;
+      void loadAiAnalysisData();
+    }
+  }, [activeTab, loadAiAnalysisData]);
 
   useEffect(() => {
     if (activeTab !== 1) {
@@ -870,10 +1025,16 @@ export default function WalletPage() {
       setCounterparties([]);
       setOverviewReport(null);
       setIntelligenceReport(null);
+      setAiAnalysisReport(null);
+      setAiAnalysisError(null);
+      setAiAnalysisWaitingReason(null);
+      setAiAnalysisLastUpdated(null);
+      setAiAnalysisLoading(false);
       return;
     }
     portfolioLoadedRef.current = false;
     activityLoadedRef.current = false;
+    aiAnalysisLoadedRef.current = false;
   }, [address]);
 
   useEffect(() => {
@@ -1039,7 +1200,7 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""),
           typeof swap.exchangeName === "string" &&
-          swap.exchangeName.trim().length > 0
+            swap.exchangeName.trim().length > 0
             ? swap.exchangeName
             : "—",
           formatSwapPair(swap),
@@ -1054,7 +1215,7 @@ export default function WalletPage() {
         transfer.from,
         transfer.to,
         typeof transfer.tokenSymbol === "string" &&
-        transfer.tokenSymbol.trim().length > 0
+          transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
           : "Unknown",
         transfer.amount,
@@ -1343,6 +1504,217 @@ export default function WalletPage() {
             />
           </div>
         </div>
+      </PageSection>
+    </div>
+  );
+
+  const aiRiskBadge = (riskRaw: WalletAiRisk | string) => {
+    const palette: Record<WalletAiRisk, { fg: string; bg: string }> = {
+      low: { fg: "#166534", bg: "#dcfce7" },
+      medium: { fg: "#92400e", bg: "#fef3c7" },
+      high: { fg: "#991b1b", bg: "#fee2e2" },
+    };
+    const normalizedRisk = String(riskRaw ?? "").trim().toLowerCase();
+    const selected =
+      normalizedRisk === "low" ||
+        normalizedRisk === "medium" ||
+        normalizedRisk === "high"
+        ? palette[normalizedRisk]
+        : { fg: "#1f2937", bg: "#e5e7eb" };
+
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          borderRadius: 999,
+          padding: "4px 10px",
+          fontSize: 12,
+          fontWeight: 600,
+          color: selected.fg,
+          background: selected.bg,
+          textTransform: "capitalize",
+        }}
+      >
+        {normalizedRisk || "unknown"}
+      </span>
+    );
+  };
+
+  const aiAnalysisTab = (
+    <div className={styles.tabPane}>
+      <PageSection>
+        {aiAnalysisLoading ? (
+          <div className={styles.chartSection}>{tr("walletPage.aiAnalysisLoading")}</div>
+        ) : aiAnalysisWaitingReason ? (
+          <div className={styles.chartSection}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>{aiAnalysisWaitingReason}</div>
+              <div>
+                <Button
+                  size="sm"
+                  kind="secondary"
+                  onClick={() => {
+                    aiAnalysisRequestedRef.current = true;
+                    void loadAiAnalysisData(true);
+                  }}
+                  disabled={aiAnalysisLoading}
+                >
+                  {tr("walletPage.aiAnalysisRetry")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : aiAnalysisError ? (
+          <div className={styles.chartSection}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>{tr("walletPage.aiAnalysisFailed")}</div>
+              <div style={{ color: "#dc2626", fontSize: 13 }}>{aiAnalysisError}</div>
+              <div>
+                <Button
+                  size="sm"
+                  kind="secondary"
+                  onClick={() => {
+                    aiAnalysisRequestedRef.current = true;
+                    void loadAiAnalysisData(true);
+                  }}
+                  disabled={aiAnalysisLoading}
+                >
+                  {tr("walletPage.aiAnalysisRetry")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : !aiAnalysisReport ? (
+          <div className={styles.chartSection}>{tr("walletPage.aiNoData")}</div>
+        ) : (
+          <div className={styles.sectionStack}>
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiSummary")}</h3>
+              <p style={{ margin: 0 }}>{aiAnalysisReport.summary}</p>
+              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
+                {aiAnalysisReport.wallet_address}
+              </div>
+              {aiAnalysisLastUpdated ? (
+                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>
+                  Last updated: {fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)}
+                </div>
+              ) : null}
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiClassification")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiPrimaryType")}: </strong>
+                  {aiAnalysisReport.classification.primary_type}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiConfidence")}: </strong>
+                  {aiAnalysisReport.classification.confidence_percentage}%
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiSupportingSignals")}: </strong>
+                  {aiAnalysisReport.classification.supporting_signals?.join(", ") || "-"}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiStrategy")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiPrimaryStrategy")}: </strong>
+                  {aiAnalysisReport.strategy.primary_strategy}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiSecondaryStrategies")}: </strong>
+                  {aiAnalysisReport.strategy.secondary_strategies?.join(", ") || "-"}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiEvidence")}: </strong>
+                  {aiAnalysisReport.strategy.evidence?.join(", ") || "-"}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiBehaviorMetrics")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiTradeFrequency")}: </strong>
+                  {aiAnalysisReport.behavior_metrics.trade_frequency}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiAvgHoldingTime")}: </strong>
+                  {aiAnalysisReport.behavior_metrics.avg_holding_time}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiPortfolioConcentration")}: </strong>
+                  {aiAnalysisReport.behavior_metrics.portfolio_concentration}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiWinLossEstimate")}: </strong>
+                  {aiAnalysisReport.behavior_metrics.win_loss_estimate}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiTokenDistribution")}: </strong>
+                  {aiAnalysisReport.behavior_metrics.token_distribution}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiFirstFunderAnalysis")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiFunderType")}: </strong>
+                  {aiAnalysisReport.first_funder_analysis.funder_type}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiRiskSignal")}: </strong>
+                  {aiRiskBadge(aiAnalysisReport.first_funder_analysis.risk_signal)}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiNotes")}: </strong>
+                  {aiAnalysisReport.first_funder_analysis.notes}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiWalletAge")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiAgeCategory")}: </strong>
+                  {aiAnalysisReport.wallet_age.age_category}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiFirstSeen")}: </strong>
+                  {aiAnalysisReport.wallet_age.first_seen}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiConsistencyAssessment")}: </strong>
+                  {aiAnalysisReport.wallet_age.consistency_assessment}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiRiskAssessment")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>{tr("walletPage.aiOverallRisk")}: </strong>
+                  {aiRiskBadge(aiAnalysisReport.risk_assessment.overall_risk)}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiFlags")}: </strong>
+                  {aiAnalysisReport.risk_assessment.flags?.join(", ") || "-"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </PageSection>
     </div>
   );
@@ -1792,13 +2164,15 @@ export default function WalletPage() {
                 tr("walletPage.overview"),
                 tr("walletPage.holdings"),
                 tr("walletPage.activityRisk"),
+                tr("walletPage.aiAnalysis"),
               ]}
               tabIcons={[
                 <ChartLine key="wallet-overview-icon" size={16} />,
                 <Wallet key="wallet-holdings-icon" size={16} />,
                 <Activity key="wallet-activity-icon" size={16} />,
+                <Activity key="wallet-ai-analysis-icon" size={16} />,
               ]}
-              tabs={[overviewTab, holdingsTab, activityTab]}
+              tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab]}
               onTabChange={(index) => setActiveTab(index)}
               actions={tabActions}
             />

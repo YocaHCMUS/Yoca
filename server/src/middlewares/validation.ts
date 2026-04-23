@@ -260,6 +260,10 @@ export const envSchema = z.object({
   HELIUS_WEBHOOK_ID: z.string(),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
+  N8N_ANALYSE_WALLET_URL: z
+    .url()
+    .default("http://localhost:5678/webhook/analyse-wallet"),
+  N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
 
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),
