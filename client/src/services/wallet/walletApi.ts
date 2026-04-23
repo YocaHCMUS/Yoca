@@ -236,6 +236,44 @@ export interface WalletIntelligenceResponse {
   };
 }
 
+export type WalletAiRisk = "low" | "medium" | "high";
+
+export interface WalletAiAnalysisResponse {
+  wallet_address: string;
+  classification: {
+    primary_type: string;
+    confidence_percentage: number;
+    supporting_signals: string[];
+  };
+  strategy: {
+    primary_strategy: string;
+    secondary_strategies: string[];
+    evidence: string[];
+  };
+  behavior_metrics: {
+    trade_frequency: string;
+    avg_holding_time: string;
+    portfolio_concentration: string;
+    win_loss_estimate: string;
+    token_distribution: string;
+  };
+  first_funder_analysis: {
+    funder_type: string;
+    risk_signal: WalletAiRisk | string;
+    notes: string;
+  };
+  wallet_age: {
+    age_category: string;
+    first_seen: string;
+    consistency_assessment: string;
+  };
+  risk_assessment: {
+    overall_risk: WalletAiRisk | string;
+    flags: string[];
+  };
+  summary: string;
+}
+
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
 
 export interface WalletOverviewPeriodStats {
@@ -529,6 +567,55 @@ export async function fetchWalletIntelligence(
   return data as WalletIntelligenceResponse;
 }
 
+/**
+ * Fetch wallet AI analysis
+ * POST /api/wallets/ai-analysis
+ */
+export async function fetchWalletAiAnalysis(
+  address: string,
+): Promise<WalletAiAnalysisResponse> {
+  const response = await client.api.wallets["ai-analysis"].$post({
+    json: { address },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch wallet AI analysis (${response.status})`;
+
+    try {
+      const errorData = await response.json() as {
+        error?: string;
+        message?: string;
+        code?: string;
+        details?: {
+          missingDependencies?: string[];
+        };
+      };
+
+      if (
+        errorData?.code === "dependency_not_ready" &&
+        Array.isArray(errorData.details?.missingDependencies)
+      ) {
+        const missing = errorData.details.missingDependencies.join(", ");
+        message =
+          missing.length > 0
+            ? `AI analysis dependencies are not ready: ${missing}`
+            : "AI analysis dependencies are not ready";
+      } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch (e) {
+      console.error("[walletApi] Failed to parse AI analysis error response:", e);
+    }
+
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as WalletAiAnalysisResponse;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -541,6 +628,7 @@ export const walletApi = {
   fetchWalletIdentity,
   fetchWalletIdentityBatch,
   fetchWalletIntelligence,
+  fetchWalletAiAnalysis,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
@@ -553,4 +641,5 @@ export const walletApi = {
   getIdentity: fetchWalletIdentity,
   getIdentityBatch: fetchWalletIdentityBatch,
   getIntelligence: fetchWalletIntelligence,
+  getAiAnalysis: fetchWalletAiAnalysis,
 };

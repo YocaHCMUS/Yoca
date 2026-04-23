@@ -7,7 +7,7 @@ import { ThrottledQueue } from "./internal/queue.js";
 
 import { ZodSchema } from "zod";
 
-type Provider = "birdeye" | "helius";
+type Provider = "birdeye" | "helius" | "n8n";
 // const providerConfigs = {
 //     birdeye: birdeyeConfig,
 //     helius: heliusConfig,
@@ -18,6 +18,7 @@ export class ApiManagerService {
   private queues: Record<Provider, ThrottledQueue> = {
     birdeye: new ThrottledQueue(),
     helius: new ThrottledQueue(),
+    n8n: new ThrottledQueue(),
   };
 
   /**
