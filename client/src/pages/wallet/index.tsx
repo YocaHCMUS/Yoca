@@ -44,7 +44,6 @@ import {
   fetchWalletSwaps,
   fetchWalletTransfers,
   type WalletAiAnalysisResponse,
-  type WalletAiRisk,
   type WalletCounterpartyRow,
   type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
@@ -1521,45 +1520,16 @@ export default function WalletPage() {
     </div>
   );
 
-  const aiRiskBadge = (riskRaw: WalletAiRisk | string) => {
-    const palette: Record<WalletAiRisk, { fg: string; bg: string }> = {
-      low: { fg: "#166534", bg: "#dcfce7" },
-      medium: { fg: "#92400e", bg: "#fef3c7" },
-      high: { fg: "#991b1b", bg: "#fee2e2" },
-    };
-    const normalizedRisk = String(riskRaw ?? "").trim().toLowerCase();
-    const selected =
-      normalizedRisk === "low" ||
-        normalizedRisk === "medium" ||
-        normalizedRisk === "high"
-        ? palette[normalizedRisk]
-        : { fg: "#1f2937", bg: "#e5e7eb" };
-
-    return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          borderRadius: 999,
-          padding: "4px 10px",
-          fontSize: 12,
-          fontWeight: 600,
-          color: selected.fg,
-          background: selected.bg,
-          textTransform: "capitalize",
-        }}
-      >
-        {normalizedRisk || "unknown"}
-      </span>
-    );
-  };
-
   const aiDataStatusBadge = (statusRaw: "ok" | "insufficient_data") => {
     const status = String(statusRaw ?? "").trim().toLowerCase();
     const selected =
       status === "ok"
-        ? { fg: "#166534", bg: "#dcfce7", label: "ok" }
-        : { fg: "#92400e", bg: "#fef3c7", label: "insufficient_data" };
+        ? { fg: "#166534", bg: "#dcfce7", label: tr("walletPage.aiStatusOk") }
+        : {
+          fg: "#92400e",
+          bg: "#fef3c7",
+          label: tr("walletPage.aiStatusInsufficientData"),
+        };
 
     return (
       <span
@@ -1647,10 +1617,10 @@ export default function WalletPage() {
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>Activity Profile</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiActivityProfile")}</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>Archetype: </strong>
+                  <strong>{tr("walletPage.aiArchetype")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.activity_profile.archetype,
                     aiAnalysisReport.reference,
@@ -1658,11 +1628,11 @@ export default function WalletPage() {
                   )}
                 </div>
                 <div>
-                  <strong>Activity level: </strong>
+                  <strong>{tr("walletPage.aiActivityLevel")}: </strong>
                   {aiAnalysisReport.activity_profile.activity_level}
                 </div>
                 <div>
-                  <strong>Last active: </strong>
+                  <strong>{tr("walletPage.aiLastActive")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.activity_profile.last_active,
                     aiAnalysisReport.reference,
@@ -1673,10 +1643,10 @@ export default function WalletPage() {
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>Interaction Fingerprint</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiInteractionFingerprint")}</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>Preferred protocols: </strong>
+                  <strong>{tr("walletPage.aiPreferredProtocols")}: </strong>
                   {renderWalletAiReferenceList(
                     aiAnalysisReport.interaction_fingerprint.preferred_protocols,
                     aiAnalysisReport.reference,
@@ -1684,21 +1654,45 @@ export default function WalletPage() {
                   )}
                 </div>
                 <div>
-                  <strong>Transaction timing: </strong>
+                  <strong>{tr("walletPage.aiTransactionTiming")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.interaction_fingerprint.transaction_timing,
                     aiAnalysisReport.reference,
                     "transaction-timing",
                   )}
                 </div>
+                <div>
+                  <strong>{tr("walletPage.aiPreferredTradingTokens")}: </strong>
+                  {renderWalletAiReferenceList(
+                    aiAnalysisReport.interaction_fingerprint.preffered_trading_tokens,
+                    aiAnalysisReport.reference,
+                    "preferred-trading-tokens",
+                  )}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiPreferredHoldingTokens")}: </strong>
+                  {renderWalletAiReferenceList(
+                    aiAnalysisReport.interaction_fingerprint.preffered_holding_tokens,
+                    aiAnalysisReport.reference,
+                    "preferred-holding-tokens",
+                  )}
+                </div>
+                <div>
+                  <strong>{tr("walletPage.aiTradingVolumeRange")}: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.interaction_fingerprint.trading_volume_range,
+                    aiAnalysisReport.reference,
+                    "trading-volume-range",
+                  )}
+                </div>
               </div>
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>Funder</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiFunder")}</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>Type: </strong>
+                  <strong>{tr("walletPage.aiFunderType")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.funder.type,
                     aiAnalysisReport.reference,
@@ -1706,11 +1700,7 @@ export default function WalletPage() {
                   )}
                 </div>
                 <div>
-                  <strong>Risk: </strong>
-                  {aiRiskBadge(aiAnalysisReport.funder.risk)}
-                </div>
-                <div>
-                  <strong>Notes: </strong>
+                  <strong>{tr("walletPage.aiNotes")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.funder.notes,
                     aiAnalysisReport.reference,
@@ -1721,24 +1711,35 @@ export default function WalletPage() {
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>Wallet Age</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiWalletAge")}</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>Category: </strong>
+                  <strong>{tr("walletPage.aiAgeCategory")}: </strong>
                   {aiAnalysisReport.wallet_age.category}
                 </div>
                 <div>
-                  <strong>First seen: </strong>
+                  <strong>{tr("walletPage.aiFirstSeen")}: </strong>
                   {aiAnalysisReport.wallet_age.first_seen}
                 </div>
                 <div>
-                  <strong>Consistency: </strong>
+                  <strong>{tr("walletPage.aiConsistencyAssessment")}: </strong>
                   {renderWalletAiReferenceText(
                     aiAnalysisReport.wallet_age.consistency,
                     aiAnalysisReport.reference,
                     "wallet-age-consistency",
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiSignals")}</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                {renderWalletAiReferenceList(
+                  aiAnalysisReport.signals,
+                  aiAnalysisReport.reference,
+                  "signals",
+                )}
               </div>
             </div>
           </div>

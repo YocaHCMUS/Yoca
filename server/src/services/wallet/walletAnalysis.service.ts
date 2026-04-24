@@ -25,11 +25,6 @@ const walletAiAnalysisRequestSchema = z.object({
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
-const walletAiAnalysisRiskSchema = z
-  .string()
-  .trim()
-  .transform((value) => value.toLowerCase());
-
 const walletAiAnalysisReferenceEntrySchema = z
   .object({
     ref_id: z.number(),
@@ -57,10 +52,12 @@ const walletAiAnalysisResponseSchema = z.object({
   interaction_fingerprint: z.object({
     preferred_protocols: z.array(z.string().trim().min(1)).default([]),
     transaction_timing: z.enum(["uniform", "burst_mode", "sporadic"]),
+    preffered_trading_tokens: z.array(z.string().trim().min(1)).default([]),
+    preffered_holding_tokens: z.array(z.string().trim().min(1)).default([]),
+    trading_volume_range: z.string().trim().min(1),
   }),
   funder: z.object({
     type: z.string().trim().min(1),
-    risk: walletAiAnalysisRiskSchema,
     notes: z.string().trim().min(1),
   }),
   wallet_age: z.object({
@@ -69,6 +66,7 @@ const walletAiAnalysisResponseSchema = z.object({
     consistency: z.string().trim().min(1),
   }),
   summary: z.string().trim().min(1),
+  signals: z.array(z.string().trim().min(1)).default([]),
   reference: z.array(walletAiAnalysisReferenceEntrySchema).optional(),
 }).passthrough();
 
