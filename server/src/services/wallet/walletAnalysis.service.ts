@@ -33,7 +33,7 @@ const walletAiAnalysisRiskSchema = z
 const walletAiAnalysisReferenceEntrySchema = z
   .object({
     ref_id: z.number(),
-    type: z.string().trim().min(1),
+    type: z.enum(["wallet", "exchange", "token"]),
     address: z.string().trim().optional(),
     name: z.string().trim().optional(),
     symbol: z.string().trim().optional(),
@@ -43,36 +43,30 @@ const walletAiAnalysisReferenceEntrySchema = z
 
 const walletAiAnalysisResponseSchema = z.object({
   wallet_address: z.string().trim().min(1),
-  classification: z.object({
-    primary_type: z.string().trim().min(1),
-    confidence_percentage: z.number(),
-    supporting_signals: z.array(z.string().trim().min(1)).default([]),
+  data: z.object({
+    swaps: z.enum(["ok", "insufficient_data"]),
+    portfolio: z.enum(["ok", "insufficient_data"]),
+    first_funder: z.enum(["ok", "insufficient_data"]),
+    identity: z.enum(["ok", "insufficient_data"]),
   }),
-  strategy: z.object({
-    primary_strategy: z.string().trim().min(1),
-    secondary_strategies: z.array(z.string().trim().min(1)).default([]),
-    evidence: z.array(z.string().trim().min(1)).default([]),
+  activity_profile: z.object({
+    archetype: z.string().trim().min(1),
+    activity_level: z.enum(["dormant", "low", "moderate", "high"]),
+    last_active: z.string().trim().min(1),
   }),
-  behavior_metrics: z.object({
-    trade_frequency: z.string().trim().min(1),
-    avg_holding_time: z.string().trim().min(1),
-    portfolio_concentration: z.string().trim().min(1),
-    win_loss_estimate: z.string().trim().min(1),
-    token_distribution: z.string().trim().min(1),
+  interaction_fingerprint: z.object({
+    preferred_protocols: z.array(z.string().trim().min(1)).default([]),
+    transaction_timing: z.enum(["uniform", "burst_mode", "sporadic"]),
   }),
-  first_funder_analysis: z.object({
-    funder_type: z.string().trim().min(1),
-    risk_signal: walletAiAnalysisRiskSchema,
+  funder: z.object({
+    type: z.string().trim().min(1),
+    risk: walletAiAnalysisRiskSchema,
     notes: z.string().trim().min(1),
   }),
   wallet_age: z.object({
-    age_category: z.string().trim().min(1),
+    category: z.enum(["new", "mid", "old", "unknown"]),
     first_seen: z.string().trim().min(1),
-    consistency_assessment: z.string().trim().min(1),
-  }),
-  risk_assessment: z.object({
-    overall_risk: walletAiAnalysisRiskSchema,
-    flags: z.array(z.string().trim().min(1)).default([]),
+    consistency: z.string().trim().min(1),
   }),
   summary: z.string().trim().min(1),
   reference: z.array(walletAiAnalysisReferenceEntrySchema).optional(),

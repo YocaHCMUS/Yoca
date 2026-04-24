@@ -57,7 +57,7 @@ const walletIdentityBatchRequestSchema = z.object({
 
 const walletAnalysisRequestSchema = z.object({
   address: z.string().trim().min(1),
-  language: z.string().trim().optional(),
+  language: z.enum(["en", "vn"]).optional(),
 });
 
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";

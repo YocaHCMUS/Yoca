@@ -1554,6 +1554,31 @@ export default function WalletPage() {
     );
   };
 
+  const aiDataStatusBadge = (statusRaw: "ok" | "insufficient_data") => {
+    const status = String(statusRaw ?? "").trim().toLowerCase();
+    const selected =
+      status === "ok"
+        ? { fg: "#166534", bg: "#dcfce7", label: "ok" }
+        : { fg: "#92400e", bg: "#fef3c7", label: "insufficient_data" };
+
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          borderRadius: 999,
+          padding: "4px 10px",
+          fontSize: 12,
+          fontWeight: 600,
+          color: selected.fg,
+          background: selected.bg,
+        }}
+      >
+        {selected.label}
+      </span>
+    );
+  };
+
   const aiAnalysisTab = (
     <div className={styles.tabPane}>
       <PageSection>
@@ -1622,148 +1647,96 @@ export default function WalletPage() {
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiClassification")}</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>Activity Profile</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>{tr("walletPage.aiPrimaryType")}: </strong>
-                  {aiAnalysisReport.classification.primary_type}
+                  <strong>Archetype: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.activity_profile.archetype,
+                    aiAnalysisReport.reference,
+                    "activity-archetype",
+                  )}
                 </div>
                 <div>
-                  <strong>{tr("walletPage.aiConfidence")}: </strong>
-                  {aiAnalysisReport.classification.confidence_percentage}%
+                  <strong>Activity level: </strong>
+                  {aiAnalysisReport.activity_profile.activity_level}
                 </div>
                 <div>
-                  <strong>{tr("walletPage.aiSupportingSignals")}: </strong>
+                  <strong>Last active: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.activity_profile.last_active,
+                    aiAnalysisReport.reference,
+                    "activity-last-active",
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.chartSection}>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>Interaction Fingerprint</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div>
+                  <strong>Preferred protocols: </strong>
                   {renderWalletAiReferenceList(
-                    aiAnalysisReport.classification.supporting_signals,
+                    aiAnalysisReport.interaction_fingerprint.preferred_protocols,
                     aiAnalysisReport.reference,
-                    "supporting-signals",
+                    "preferred-protocols",
+                  )}
+                </div>
+                <div>
+                  <strong>Transaction timing: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.interaction_fingerprint.transaction_timing,
+                    aiAnalysisReport.reference,
+                    "transaction-timing",
                   )}
                 </div>
               </div>
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiStrategy")}</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>Funder</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>{tr("walletPage.aiPrimaryStrategy")}: </strong>
-                  {aiAnalysisReport.strategy.primary_strategy}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiSecondaryStrategies")}: </strong>
-                  {aiAnalysisReport.strategy.secondary_strategies?.join(", ") || "-"}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiEvidence")}: </strong>
-                  {renderWalletAiReferenceList(
-                    aiAnalysisReport.strategy.evidence,
+                  <strong>Type: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.funder.type,
                     aiAnalysisReport.reference,
-                    "strategy-evidence",
+                    "funder-type",
+                  )}
+                </div>
+                <div>
+                  <strong>Risk: </strong>
+                  {aiRiskBadge(aiAnalysisReport.funder.risk)}
+                </div>
+                <div>
+                  <strong>Notes: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.funder.notes,
+                    aiAnalysisReport.reference,
+                    "funder-notes",
                   )}
                 </div>
               </div>
             </div>
 
             <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiBehaviorMetrics")}</h3>
+              <h3 style={{ margin: 0, marginBottom: 8 }}>Wallet Age</h3>
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
-                  <strong>{tr("walletPage.aiTradeFrequency")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.behavior_metrics.trade_frequency,
-                    aiAnalysisReport.reference,
-                    "trade-frequency",
-                  )}
+                  <strong>Category: </strong>
+                  {aiAnalysisReport.wallet_age.category}
                 </div>
                 <div>
-                  <strong>{tr("walletPage.aiAvgHoldingTime")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.behavior_metrics.avg_holding_time,
-                    aiAnalysisReport.reference,
-                    "avg-holding-time",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiPortfolioConcentration")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.behavior_metrics.portfolio_concentration,
-                    aiAnalysisReport.reference,
-                    "portfolio-concentration",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiWinLossEstimate")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.behavior_metrics.win_loss_estimate,
-                    aiAnalysisReport.reference,
-                    "win-loss-estimate",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiTokenDistribution")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.behavior_metrics.token_distribution,
-                    aiAnalysisReport.reference,
-                    "token-distribution",
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiFirstFunderAnalysis")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiFunderType")}: </strong>
-                  {aiAnalysisReport.first_funder_analysis.funder_type}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiRiskSignal")}: </strong>
-                  {aiRiskBadge(aiAnalysisReport.first_funder_analysis.risk_signal)}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiNotes")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.first_funder_analysis.notes,
-                    aiAnalysisReport.reference,
-                    "first-funder-notes",
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiWalletAge")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiAgeCategory")}: </strong>
-                  {aiAnalysisReport.wallet_age.age_category}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiFirstSeen")}: </strong>
+                  <strong>First seen: </strong>
                   {aiAnalysisReport.wallet_age.first_seen}
                 </div>
                 <div>
-                  <strong>{tr("walletPage.aiConsistencyAssessment")}: </strong>
-                  {aiAnalysisReport.wallet_age.consistency_assessment}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiRiskAssessment")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiOverallRisk")}: </strong>
-                  {aiRiskBadge(aiAnalysisReport.risk_assessment.overall_risk)}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiFlags")}: </strong>
-                  {renderWalletAiReferenceList(
-                    aiAnalysisReport.risk_assessment.flags,
+                  <strong>Consistency: </strong>
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.wallet_age.consistency,
                     aiAnalysisReport.reference,
-                    "risk-flags",
+                    "wallet-age-consistency",
                   )}
                 </div>
               </div>
