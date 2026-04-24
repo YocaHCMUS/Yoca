@@ -237,6 +237,7 @@ export interface WalletIntelligenceResponse {
 }
 
 export type WalletAiRisk = "low" | "medium" | "high";
+export type WalletAiAnalysisLanguage = "en" | "vn";
 
 export interface WalletAiAnalysisResponse {
   wallet_address: string;
@@ -573,9 +574,10 @@ export async function fetchWalletIntelligence(
  */
 export async function fetchWalletAiAnalysis(
   address: string,
+  language: WalletAiAnalysisLanguage,
 ): Promise<WalletAiAnalysisResponse> {
   const response = await client.api.wallets["ai-analysis"].$post({
-    json: { address },
+    json: { address, language },
   });
 
   if (!response.ok) {
