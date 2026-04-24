@@ -239,8 +239,18 @@ export interface WalletIntelligenceResponse {
 export type WalletAiRisk = "low" | "medium" | "high";
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export interface WalletAiReferenceEntry {
+  ref_id: number;
+  type: string;
+  address?: string;
+  name?: string;
+  symbol?: string;
+  logoUri?: string;
+}
+
 export interface WalletAiAnalysisResponse {
   wallet_address: string;
+  version?: string;
   classification: {
     primary_type: string;
     confidence_percentage: number;
@@ -273,6 +283,7 @@ export interface WalletAiAnalysisResponse {
     flags: string[];
   };
   summary: string;
+  reference?: WalletAiReferenceEntry[];
 }
 
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";

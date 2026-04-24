@@ -54,6 +54,10 @@ import {
   type WalletSwapTokenInfo,
   type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
+import {
+  renderWalletAiReferenceList,
+  renderWalletAiReferenceText,
+} from "@/services/wallet/walletAiReferenceRenderer.service.tsx";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { chunkArray } from "@/util/format";
 import { ChevronDown, Download } from "@carbon/icons-react";
@@ -1600,7 +1604,13 @@ export default function WalletPage() {
           <div className={styles.sectionStack}>
             <div className={styles.chartSection}>
               <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiSummary")}</h3>
-              <p style={{ margin: 0 }}>{aiAnalysisReport.summary}</p>
+              <p style={{ margin: 0 }}>
+                {renderWalletAiReferenceText(
+                  aiAnalysisReport.summary,
+                  aiAnalysisReport.reference,
+                  "summary",
+                )}
+              </p>
               <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
                 {aiAnalysisReport.wallet_address}
               </div>
@@ -1624,7 +1634,11 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiSupportingSignals")}: </strong>
-                  {aiAnalysisReport.classification.supporting_signals?.join(", ") || "-"}
+                  {renderWalletAiReferenceList(
+                    aiAnalysisReport.classification.supporting_signals,
+                    aiAnalysisReport.reference,
+                    "supporting-signals",
+                  )}
                 </div>
               </div>
             </div>
@@ -1642,7 +1656,11 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiEvidence")}: </strong>
-                  {aiAnalysisReport.strategy.evidence?.join(", ") || "-"}
+                  {renderWalletAiReferenceList(
+                    aiAnalysisReport.strategy.evidence,
+                    aiAnalysisReport.reference,
+                    "strategy-evidence",
+                  )}
                 </div>
               </div>
             </div>
@@ -1652,23 +1670,43 @@ export default function WalletPage() {
               <div style={{ display: "grid", gap: 8 }}>
                 <div>
                   <strong>{tr("walletPage.aiTradeFrequency")}: </strong>
-                  {aiAnalysisReport.behavior_metrics.trade_frequency}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.behavior_metrics.trade_frequency,
+                    aiAnalysisReport.reference,
+                    "trade-frequency",
+                  )}
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiAvgHoldingTime")}: </strong>
-                  {aiAnalysisReport.behavior_metrics.avg_holding_time}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.behavior_metrics.avg_holding_time,
+                    aiAnalysisReport.reference,
+                    "avg-holding-time",
+                  )}
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiPortfolioConcentration")}: </strong>
-                  {aiAnalysisReport.behavior_metrics.portfolio_concentration}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.behavior_metrics.portfolio_concentration,
+                    aiAnalysisReport.reference,
+                    "portfolio-concentration",
+                  )}
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiWinLossEstimate")}: </strong>
-                  {aiAnalysisReport.behavior_metrics.win_loss_estimate}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.behavior_metrics.win_loss_estimate,
+                    aiAnalysisReport.reference,
+                    "win-loss-estimate",
+                  )}
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiTokenDistribution")}: </strong>
-                  {aiAnalysisReport.behavior_metrics.token_distribution}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.behavior_metrics.token_distribution,
+                    aiAnalysisReport.reference,
+                    "token-distribution",
+                  )}
                 </div>
               </div>
             </div>
@@ -1686,7 +1724,11 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiNotes")}: </strong>
-                  {aiAnalysisReport.first_funder_analysis.notes}
+                  {renderWalletAiReferenceText(
+                    aiAnalysisReport.first_funder_analysis.notes,
+                    aiAnalysisReport.reference,
+                    "first-funder-notes",
+                  )}
                 </div>
               </div>
             </div>
@@ -1718,7 +1760,11 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <strong>{tr("walletPage.aiFlags")}: </strong>
-                  {aiAnalysisReport.risk_assessment.flags?.join(", ") || "-"}
+                  {renderWalletAiReferenceList(
+                    aiAnalysisReport.risk_assessment.flags,
+                    aiAnalysisReport.reference,
+                    "risk-flags",
+                  )}
                 </div>
               </div>
             </div>

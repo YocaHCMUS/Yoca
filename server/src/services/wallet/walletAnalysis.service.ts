@@ -30,6 +30,17 @@ const walletAiAnalysisRiskSchema = z
   .trim()
   .transform((value) => value.toLowerCase());
 
+const walletAiAnalysisReferenceEntrySchema = z
+  .object({
+    ref_id: z.number(),
+    type: z.string().trim().min(1),
+    address: z.string().trim().optional(),
+    name: z.string().trim().optional(),
+    symbol: z.string().trim().optional(),
+    logoUri: z.string().trim().optional(),
+  })
+  .passthrough();
+
 const walletAiAnalysisResponseSchema = z.object({
   wallet_address: z.string().trim().min(1),
   classification: z.object({
@@ -64,7 +75,8 @@ const walletAiAnalysisResponseSchema = z.object({
     flags: z.array(z.string().trim().min(1)).default([]),
   }),
   summary: z.string().trim().min(1),
-});
+  reference: z.array(walletAiAnalysisReferenceEntrySchema).optional(),
+}).passthrough();
 
 const walletAiAnalysisWebhookPayloadSchema = z.union([
   walletAiAnalysisResponseSchema,
