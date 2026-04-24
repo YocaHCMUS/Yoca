@@ -236,7 +236,6 @@ export interface WalletIntelligenceResponse {
   };
 }
 
-export type WalletAiRisk = "low" | "medium" | "high";
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
 export interface WalletAiReferenceEntry {
@@ -265,10 +264,12 @@ export interface WalletAiAnalysisResponse {
   interaction_fingerprint: {
     preferred_protocols: string[];
     transaction_timing: "uniform" | "burst_mode" | "sporadic";
+    preffered_trading_tokens: string[];
+    preffered_holding_tokens: string[];
+    trading_volume_range: string;
   };
   funder: {
     type: string;
-    risk: WalletAiRisk | string;
     notes: string;
   };
   wallet_age: {
@@ -277,6 +278,7 @@ export interface WalletAiAnalysisResponse {
     consistency: string;
   };
   summary: string;
+  signals: string[];
   reference?: WalletAiReferenceEntry[];
 }
 
