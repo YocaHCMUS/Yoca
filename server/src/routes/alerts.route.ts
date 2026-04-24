@@ -2,11 +2,12 @@ import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import { solanaBase58Schema, validate } from "@sv/middlewares/validation.js";
 import {
   addFollowedWallet,
-  getUserDiscordUrl,
+  getUserAlertSettings,
   isUniqueViolation,
   listFollowedWallets,
   removeFollowedWallet,
   setUserDiscordUrl,
+  setUserEmailAlertSettings,
   syncHeliusWebhookAccountAddresses,
 } from "@sv/services/followedWallets.service.js";
 import { statusCode } from "@sv/util/responses.js";
@@ -25,16 +26,32 @@ const followWalletBodySchema = z.object({
   label: z.string().trim().max(120).optional().nullable(),
 });
 
-const discordSettingsSchema = z.object({
-  discordWebhookUrl: z
-    .string()
-    .trim()
-    .url()
-    .refine((v) => v.includes("discord.com/api/webhooks/"), {
-      message: "Must be a Discord webhook URL",
-    })
-    .nullable(),
-});
+const settingsPatchSchema = z
+  .object({
+    discordWebhookUrl: z
+      .string()
+      .trim()
+      .url()
+      .refine((v) => v.includes("discord.com/api/webhooks/"), {
+        message: "Must be a Discord webhook URL",
+      })
+      .nullable()
+      .optional(),
+    emailAlertsEnabled: z.boolean().optional(),
+    emailAlertsAddress: z
+      .string()
+      .trim()
+      .email()
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (v) =>
+      v.discordWebhookUrl !== undefined ||
+      v.emailAlertsEnabled !== undefined ||
+      v.emailAlertsAddress !== undefined,
+    { message: "At least one field must be provided" },
+  );
 
 const app = new Hono()
   // ── Wallet CRUD (auth-guarded) ───────────────────────────────
@@ -84,12 +101,15 @@ const app = new Hono()
       return c.json({ error: "Failed to remove wallet" }, 500);
     }
   })
-  // ── User Discord settings (auth-guarded) ─────────────────────
+  // ── User notification settings (auth-guarded) ────────────────
   .get("/settings", honoJwt, async (c) => {
     const { id: userId } = c.get("jwtPayload") as { id: string };
     try {
-      const discordWebhookUrl = await getUserDiscordUrl(userId);
-      return c.json({ discordWebhookUrl }, statusCode.Ok);
+      const settings = await getUserAlertSettings(userId);
+      if (!settings) {
+        return c.json({ error: "User not found" }, 404);
+      }
+      return c.json(settings, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] GET settings failed:", err);
       return c.json({ error: "Failed to load settings" }, 500);
@@ -98,13 +118,32 @@ const app = new Hono()
   .patch(
     "/settings",
     honoJwt,
-    validate("json", discordSettingsSchema),
+    validate("json", settingsPatchSchema),
     async (c) => {
       const { id: userId } = c.get("jwtPayload") as { id: string };
-      const { discordWebhookUrl } = c.req.valid("json");
+      const body = c.req.valid("json");
       try {
-        await setUserDiscordUrl(userId, discordWebhookUrl);
-        return c.json({ discordWebhookUrl }, statusCode.Ok);
+        if (body.discordWebhookUrl !== undefined) {
+          await setUserDiscordUrl(userId, body.discordWebhookUrl);
+        }
+        if (
+          body.emailAlertsEnabled !== undefined ||
+          body.emailAlertsAddress !== undefined
+        ) {
+          const current = await getUserAlertSettings(userId);
+          await setUserEmailAlertSettings(userId, {
+            emailAlertsEnabled:
+              body.emailAlertsEnabled ??
+              current?.emailAlertsEnabled ??
+              false,
+            emailAlertsAddress:
+              body.emailAlertsAddress !== undefined
+                ? body.emailAlertsAddress
+                : current?.emailAlertsAddress ?? null,
+          });
+        }
+        const updated = await getUserAlertSettings(userId);
+        return c.json(updated, statusCode.Ok);
       } catch (err) {
         console.error("[alerts] PATCH settings failed:", err);
         return c.json({ error: "Failed to save settings" }, 500);

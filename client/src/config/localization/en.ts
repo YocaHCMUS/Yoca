@@ -451,6 +451,17 @@ export const translation = {
     discordSaveButton: "Save",
     discordSaved: "Discord webhook URL saved.",
     discordSaveError: "Failed to save Discord URL. Please try again.",
+    emailSectionTitle: "Email notifications",
+    emailToggleLabel: "Email me alerts",
+    emailRegisteredHint: "Registered email: {{email}}",
+    emailNoRegistered: "No registered email on file. Add an override email below.",
+    emailOverrideLabel: "Override email (optional)",
+    emailOverridePlaceholder: "Leave empty to use your registered email",
+    emailSaveButton: "Save",
+    emailSaved: "Email settings saved.",
+    emailSaveError: "Failed to save email settings. Please try again.",
+    emailNoDestination:
+      "Enable email alerts with either a registered email or an override address.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",

@@ -17,6 +17,7 @@ import {
   TableRow,
   TextInput,
   Tile,
+  Toggle,
 } from "@carbon/react";
 import { PublicKey } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
@@ -59,12 +60,21 @@ export default function AlertsPage() {
   const { tr, fmt } = useLocalization();
   const { user } = useAuth();
 
-  // ── Discord settings state ───────────────────────────────────
+  // ── Settings state (Discord + email) ─────────────────────────
   const [discordUrl, setDiscordUrl] = useState("");
   const [discordLoading, setDiscordLoading] = useState(true);
   const [discordSaving, setDiscordSaving] = useState(false);
   const [discordInline, setDiscordInline] = useState<{
     kind: "success" | "error";
+    title: string;
+  } | null>(null);
+
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailOverride, setEmailOverride] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailInline, setEmailInline] = useState<{
+    kind: "success" | "error" | "warning";
     title: string;
   } | null>(null);
 
@@ -82,14 +92,22 @@ export default function AlertsPage() {
   const [inlineTitle, setInlineTitle] = useState("");
   const [inlineSubtitle, setInlineSubtitle] = useState("");
 
-  // ── Discord settings load/save ───────────────────────────────
-  const loadDiscordSettings = useCallback(async () => {
+  // ── Settings load/save ───────────────────────────────────────
+  const loadSettings = useCallback(async () => {
     setDiscordLoading(true);
     try {
       const res = await (client.api.alerts as any).settings.$get();
       if (res.ok) {
-        const data = (await res.json()) as { discordWebhookUrl: string | null };
+        const data = (await res.json()) as {
+          discordWebhookUrl: string | null;
+          registeredEmail: string | null;
+          emailAlertsEnabled: boolean;
+          emailAlertsAddress: string | null;
+        };
         setDiscordUrl(data.discordWebhookUrl || "");
+        setRegisteredEmail(data.registeredEmail);
+        setEmailEnabled(data.emailAlertsEnabled);
+        setEmailOverride(data.emailAlertsAddress || "");
       }
     } catch {
       /* ignore */
@@ -123,6 +141,42 @@ export default function AlertsPage() {
     }
   };
 
+  const onSaveEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailInline(null);
+
+    const overrideTrimmed = emailOverride.trim();
+    const hasDestination = !!(overrideTrimmed || registeredEmail);
+
+    if (emailEnabled && !hasDestination) {
+      setEmailInline({ kind: "warning", title: tr("alertsPage.emailNoDestination") });
+      return;
+    }
+
+    setEmailSaving(true);
+    try {
+      const res = await (client.api.alerts as any).settings.$patch({
+        json: {
+          emailAlertsEnabled: emailEnabled,
+          emailAlertsAddress: overrideTrimmed || null,
+        },
+      });
+      if (res.ok) {
+        setEmailInline({ kind: "success", title: tr("alertsPage.emailSaved") });
+      } else {
+        const body = (await res.json()) as { error?: string };
+        setEmailInline({
+          kind: "error",
+          title: body?.error || tr("alertsPage.emailSaveError"),
+        });
+      }
+    } catch {
+      setEmailInline({ kind: "error", title: tr("alertsPage.emailSaveError") });
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
   // ── Wallet list load ─────────────────────────────────────────
   const loadList = useCallback(async () => {
     setListLoading(true);
@@ -143,12 +197,12 @@ export default function AlertsPage() {
   useEffect(() => {
     if (user) {
       void loadList();
-      void loadDiscordSettings();
+      void loadSettings();
     } else {
       setListLoading(false);
       setDiscordLoading(false);
     }
-  }, [user, loadList, loadDiscordSettings]);
+  }, [user, loadList, loadSettings]);
 
   // ── Wallet inline helpers ────────────────────────────────────
   const showInline = (
@@ -307,6 +361,76 @@ export default function AlertsPage() {
                           {discordSaving ? <InlineLoading /> : null}
                           <Button type="submit" kind="primary" disabled={discordSaving}>
                             {tr("alertsPage.discordSaveButton")}
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+                </Tile>
+              </Column>
+            </Grid>
+
+            {/* ── Email notifications section ─────────────────── */}
+            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+              <Column lg={16} md={8} sm={4}>
+                <Tile style={{ background: "transparent", padding: "2rem" }}>
+                  <h3 className={styles.sectionTitle}>
+                    {tr("alertsPage.emailSectionTitle")}
+                  </h3>
+
+                  {emailInline && (
+                    <InlineNotification
+                      kind={emailInline.kind}
+                      title={emailInline.title}
+                      onClose={() => setEmailInline(null)}
+                      lowContrast
+                      style={{ marginBottom: "1rem" }}
+                    />
+                  )}
+
+                  {discordLoading ? (
+                    <InlineLoading description="Loading…" />
+                  ) : (
+                    <form onSubmit={onSaveEmail}>
+                      <div style={{ marginBottom: "1rem" }}>
+                        <Toggle
+                          id="email-alerts-enabled"
+                          labelText={tr("alertsPage.emailToggleLabel")}
+                          labelA="Off"
+                          labelB="On"
+                          toggled={emailEnabled}
+                          onToggle={(checked: boolean) => setEmailEnabled(checked)}
+                          disabled={emailSaving}
+                        />
+                      </div>
+
+                      <p
+                        style={{
+                          fontSize: "0.8125rem",
+                          color: "var(--cds-text-secondary)",
+                          marginBottom: "1rem",
+                        }}
+                      >
+                        {registeredEmail
+                          ? tr("alertsPage.emailRegisteredHint", { email: registeredEmail })
+                          : tr("alertsPage.emailNoRegistered")}
+                      </p>
+
+                      <div className={styles.discordRow}>
+                        <TextInput
+                          id="email-override"
+                          type="email"
+                          labelText={tr("alertsPage.emailOverrideLabel")}
+                          placeholder={tr("alertsPage.emailOverridePlaceholder")}
+                          value={emailOverride}
+                          onChange={(ev) => setEmailOverride(ev.target.value)}
+                          disabled={emailSaving}
+                          autoComplete="off"
+                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          {emailSaving ? <InlineLoading /> : null}
+                          <Button type="submit" kind="primary" disabled={emailSaving}>
+                            {tr("alertsPage.emailSaveButton")}
                           </Button>
                         </div>
                       </div>

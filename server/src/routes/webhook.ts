@@ -1,4 +1,8 @@
-import { getDiscordUrlsForAddress } from "@sv/services/followedWallets.service.js";
+import { sendAlertEmail } from "@sv/services/email.service.js";
+import {
+  getDiscordUrlsForAddress,
+  getEmailRecipientsForAddress,
+} from "@sv/services/followedWallets.service.js";
 import { Hono } from "hono";
 
 interface HeliusTokenTransfer {
@@ -217,11 +221,30 @@ async function dispatchAlert(
 
   // Fan-out: per-user Discord URLs from DB
   const urlSet = new Set<string>();
+  const emailSet = new Set<string>();
   for (const addr of involvedAddresses) {
     const urls = await getDiscordUrlsForAddress(addr);
     for (const u of urls) urlSet.add(u);
+    const emails = await getEmailRecipientsForAddress(addr);
+    for (const e of emails) emailSet.add(e);
   }
-  const fanOutPromises = [...urlSet].map((url) => sendToDiscordUrl(alert, url));
+
+  const fanOutPromises: Array<Promise<unknown>> = [
+    ...[...urlSet].map((url) => sendToDiscordUrl(alert, url)),
+    ...[...emailSet].map((to) =>
+      sendAlertEmail(to, {
+        rule: alert.rule,
+        severity: alert.severity,
+        message: alert.message,
+        signature: alert.event.signature,
+        txType: alert.event.type,
+        feePayer: alert.event.feePayer,
+        source: alert.event.source,
+        swapSolAmount: alert.event.swapSolAmount,
+        emittedAt: alert.emittedAt,
+      }),
+    ),
+  ];
 
   // Legacy global admin channel (env-based)
   if (ALERT_FORWARD_WEBHOOK_URL && !urlSet.has(ALERT_FORWARD_WEBHOOK_URL)) {

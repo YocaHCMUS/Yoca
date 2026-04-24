@@ -1,19 +1,19 @@
-// --- ACMS API call cache table ---
-export const acmsApiCache = pgTable(
-  'acms_api_cache',
-  {
-    key: varchar('key', { length: 128 }).primaryKey(),
-    provider: varchar('provider', { length: 32 }).notNull(),
-    endpoint: varchar('endpoint', { length: 128 }).notNull(),
-    params: jsonb('params').notNull(),
-    result: jsonb('result').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  }
-);
+/**
+ * Centralised database schema.
+ *
+ * This is the SINGLE SOURCE OF TRUTH for every table, enum, and type that
+ * backs the PostgreSQL database. To propagate changes made here to the
+ * database, run:
+ *
+ *   npm run db:push
+ *
+ * Do NOT add ad-hoc SQL scripts, one-shot "ensure-*-table" tsx helpers, or
+ * hand-written migration files. Instead, edit this file and re-run db:push.
+ */
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   decimal as dec,
   integer,
@@ -37,7 +37,7 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-// #region Table definitions
+// #region Enums
 export const enumAuthProvider = pgEnum("auth_provider", [
   "password",
   "google",
@@ -47,6 +47,23 @@ export const enumAuthProvider = pgEnum("auth_provider", [
 ]);
 
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
+// #endregion
+
+// #region Table definitions
+
+// --- ACMS API call cache table ---
+export const acmsApiCache = pgTable("acms_api_cache", {
+  key: varchar("key", { length: 128 }).primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  endpoint: varchar("endpoint", { length: 128 }).notNull(),
+  params: jsonb("params").notNull(),
+  result: jsonb("result").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -54,6 +71,9 @@ export const users = pgTable("users", {
   // Email is not needed for wallet users, see it as contact
   email: varchar("email"),
   discordWebhookUrl: text("discord_webhook_url"),
+  emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
+  /** Optional override: if set, alerts go here instead of users.email */
+  emailAlertsAddress: text("email_alerts_address"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()

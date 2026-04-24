@@ -432,6 +432,17 @@ export const translation = defineTranslation({
     discordSaveButton: "Lưu",
     discordSaved: "Đã lưu Discord Webhook URL.",
     discordSaveError: "Lưu URL Discord thất bại. Vui lòng thử lại.",
+    emailSectionTitle: "Thông báo qua email",
+    emailToggleLabel: "Gửi cảnh báo qua email",
+    emailRegisteredHint: "Email đã đăng ký: {{email}}",
+    emailNoRegistered: "Chưa có email đăng ký. Nhập email thay thế bên dưới.",
+    emailOverrideLabel: "Email thay thế (tuỳ chọn)",
+    emailOverridePlaceholder: "Để trống để dùng email đã đăng ký",
+    emailSaveButton: "Lưu",
+    emailSaved: "Đã lưu cài đặt email.",
+    emailSaveError: "Lưu cài đặt email thất bại. Vui lòng thử lại.",
+    emailNoDestination:
+      "Bật thông báo email với email đã đăng ký hoặc email thay thế.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
