@@ -1,237 +1,230 @@
-# Wallet AI Summarization UX Enhancement Plan (2026-04-23)
+# Wallet AI Summarization UX Enhancement Plan (2026-04-23, Revised 2026-04-24)
 
 ## 1) Objective
-Enhance Wallet AI Analysis UX with two upgrades:
-- Language-aware summarization request (`en`, `vn`) driven by current localization context.
-- Entity-aware rendering (token/wallet/dex) using metadata capsules with existing `TokenIdentityCell` instead of plain text mentions.
+Enhance Wallet AI Analysis UX with workflow-native reference output:
+- Keep language-aware summarization request (en, vn) from localization context.
+- Consume reference-aware output produced directly by workflow.
+- Remove backend entity extraction and old enrichment payload dependence.
 
-## 2) Current Gaps
-- Client sends only wallet address to backend AI route.
-- Webhook does not receive explicit language preference.
-- AI response is text-heavy and not entity-structured.
-- UI displays raw strings for tokens/wallets/dex instead of reusable visual identity capsules.
+## 2) Scope Change
+Previous plan assumed backend/entity pipeline with separate enrichment blocks.
 
-## 3) Proposed End-State
-1. Client sends `{ address, language }` to backend AI endpoint.
-2. Backend forwards language to webhook payload.
-3. Backend resolves and enriches entity references into a metadata map.
-4. Backend response includes:
-- Existing analysis fields (for compatibility).
-- New `entities` dictionary.
-- New `rich` references pointing to entity IDs.
-5. Frontend interprets `rich` references and renders entity capsules via `TokenIdentityCell`.
+New reality:
+- Workflow returns structured output with ref markers in text and reference entries in output.reference.
+- Backend should pass through and normalize workflow format.
+- Frontend should resolve ref:n markers through output.reference and render capsules.
 
-## 4) API Contract Changes
+Out of scope now:
+- Backend entity extraction service.
+- Backend mention detection/classification.
+- old enrichment response contract.
 
-### 4.1 Client -> Backend
+## 3) Current Gaps (After Scope Change)
+- Route contract still assumes old optional enrichment fields.
+- UI still renders plain strings in sections containing ref:n markers.
+- Workflow envelope shape (array + output) needs consistent normalization.
+- output.reference not yet treated as single source of truth in renderer.
+
+## 4) Proposed End-State
+1. Client sends { address, language } to backend AI endpoint.
+2. Backend forwards { address, language } to workflow webhook.
+3. Backend route/service normalizes workflow envelope into stable API shape.
+4. Backend preserves output.reference and text fields with ref:n markers.
+5. Frontend resolves ref:n markers using output.reference and renders capsules.
+
+## 5) API Contract Changes
+
+### 5.1 Client -> Backend
 Endpoint:
-- `POST /api/wallets/ai-analysis`
+- POST /api/wallets/ai-analysis
 
 Request body:
 ```json
 {
-	"address": "<wallet-address>",
-	"language": "en"
+  "address": "<wallet-address>",
+  "language": "en"
 }
 ```
 
 Language values:
-- `en`
-- `vn`
+- en
+- vn
 
 Fallback:
-- If missing/invalid, backend defaults to `en`.
+- Missing/invalid language defaults to en.
 
-### 4.2 Backend -> Webhook
+### 5.2 Backend -> Workflow Webhook
 Webhook body:
 ```json
 {
-	"address": "<wallet-address>",
-	"language": "en"
+  "address": "<wallet-address>",
+  "language": "en"
 }
 ```
 
-### 4.3 Backend -> Client (V2)
-Backward-compatible response strategy:
-- Keep existing fields used by current UI.
-- Add new fields for rich rendering.
+### 5.3 Workflow -> Backend
+Accepted workflow envelope example:
 
-Example extension:
 ```json
-{
-	"version": "v2",
-	"wallet_address": "...",
-	"classification": { "...": "..." },
-	"strategy": { "...": "..." },
-	"behavior_metrics": { "...": "..." },
-	"first_funder_analysis": { "...": "..." },
-	"wallet_age": { "...": "..." },
-	"risk_assessment": { "...": "..." },
-	"summary": "...",
-	"entities": {
-		"token:So111...": {
-			"id": "token:So111...",
-			"kind": "token",
-			"address": "So111...",
-			"symbol": "SOL",
-			"label": "SOL",
-			"fullName": "Solana",
-			"logoUri": "https://..."
-		}
-	},
-	"rich": {
-		"summary": [
-			{ "type": "text", "text": "Rotated into " },
-			{ "type": "entity", "entityId": "token:So111...", "text": "SOL" }
-		],
-		"strategyEvidence": [
-			{
-				"segments": [
-					{ "type": "text", "text": "Used " },
-					{ "type": "entity", "entityId": "dex:jupiter", "text": "Jupiter" }
-				]
-			}
-		]
-	}
-}
+[
+  {
+    "output": {
+      "wallet_address": "...",
+      "classification": { "...": "..." },
+      "strategy": { "...": "..." },
+      "behavior_metrics": { "...": "..." },
+      "first_funder_analysis": { "...": "..." },
+      "wallet_age": { "...": "..." },
+      "risk_assessment": { "...": "..." },
+      "summary": "...",
+      "reference": [
+        {
+          "ref_id": 0,
+          "type": "wallet",
+          "address": "...",
+          "name": "Target Wallet",
+          "symbol": "N/A",
+          "logoUri": ""
+        },
+        {
+          "ref_id": 1,
+          "type": "token",
+          "address": "...",
+          "name": "Jupiter Perpetuals Liquidity Provider Token",
+          "symbol": "JLP",
+          "logoUri": "https://..."
+        }
+      ]
+    }
+  }
+]
 ```
 
-## 5) Architecture Changes
+Notes:
+- output.reference is authoritative source for ref:n tokens.
+- Route should tolerate missing/partial reference array for backward compatibility and fallback rendering.
 
-### 5.1 New Backend Service: Entity Resolver
-Add service that scans AI payload text and resolves identities.
+### 5.4 Backend -> Client
+Backend response strategy:
+- Preserve existing fields consumed by current UI.
+- Forward output.reference as-is.
+- Do not require any extra enrichment fields beyond reference.
 
-Suggested files:
-- `server/src/services/wallet/walletAiEntityResolver.service.ts`
-- `server/src/services/wallet/dtos/walletAiEntityObjects.ts`
+## 6) Route/Service Responsibilities (Revised)
 
-Resolver responsibilities:
-- Detect entity mentions in summary/evidence/signals.
-- Classify mention kind (`token`, `wallet`, `dex`, `cex`, `unknown`).
-- Resolve metadata (`logoUri`, `symbol`, `label`, `fullName`, `address`).
-- Return deduplicated `entities` map.
-- Convert text fields into mixed `rich` segments with entity references.
+### 6.1 Keep
+- Request validation (address, language).
+- Dependency readiness checks.
+- Webhook call + timeout/error mapping.
+- Envelope normalization (object, array, output wrapper).
+- ACMS key includes language.
 
-### 5.2 Identity Sources
-- Token metadata from existing token endpoints/caches.
-- Wallet identity from existing wallet identity service.
-- Exchange/dex labels from known mappings + swap/exchange context.
+### 6.2 Remove
+- Backend entity resolver service.
+- Mention detection/classification logic.
+- legacy enrichment schema requirements.
 
-### 5.3 Failure Strategy
-- Entity resolver must be non-blocking.
-- If resolver fails or partial misses:
-- Keep plain text fields intact.
-- Return best-effort `entities` + `rich`.
-- UI fallback to text.
+### 6.3 Add/Adjust
+- Route validation allows optional output.reference array.
+- Service normalization preserves reference block instead of rebuilding metadata maps.
+- Keep graceful fallback: unresolved ref:n remains plain text.
 
-## 6) Frontend UX Changes
+## 7) Frontend UX Changes (Primary Work)
 
-### 6.1 Request Language Wiring
-In wallet page:
-- Map `lang` from localization context:
-- `en` -> `en`
-- `vi` -> `vn`
-- Pass language into `fetchWalletAiAnalysis(address, language)`.
+### 7.1 Request Language Wiring
+- Map localization context:
+  - en -> en
+  - vi -> vn
+- Send language in fetchWalletAiAnalysis(address, language).
+- Cache key must include language.
 
-### 6.2 Data Types
-Update wallet API types to include:
-- `language` request param.
-- Optional `version`, `entities`, `rich` response fields.
+### 7.2 Data Types
+Update wallet AI types to support reference-driven payload:
+- reference?: Array<{ ref_id: number; type: string; address?: string; name?: string; symbol?: string; logoUri?: string }>
 
-### 6.3 Capsule Renderer
-Add helper renderer that takes `rich` segments and `entities` map and outputs JSX.
+Keep all legacy fields required by current cards/widgets.
 
-For entity segments:
-- Render `TokenIdentityCell` with:
-- `symbol`: `entity.symbol ?? entity.label`
-- `fullName`: `entity.fullName`
-- `imageUrl`: `entity.logoUri`
-- `showInitialsFallback: true`
+### 7.3 Renderer Strategy
+- Disclaimer: renderer will be implemented as a separate service/module for reuse across wallet AI sections and future pages.
+- Parse ref:n markers from text fields.
+- Resolve marker n with reference entry where reference.ref_id === n.
+- Render capsule using reference metadata when found.
+- Fallback to plain text token when missing/unresolved.
 
-Fallback:
-- If entity missing, render `segment.text` as plain string.
-
-### 6.4 Target UI Areas
-Replace plain text rendering (when `rich` exists) in:
+### 7.4 Target UI Areas
+Prioritize:
 - Summary
 - Classification supporting signals
 - Strategy evidence
-- Any section with entity mentions
+- Behavior metrics text containing references
+- First funder notes
 
-## 7) Backward Compatibility and Rollout
-1. Keep current schema fields unchanged.
-2. Add new fields as optional.
-3. Frontend prefers `rich` rendering when available.
-4. Frontend falls back to existing strings when `rich` absent.
-5. Enable with feature flag if needed:
-- `WALLET_AI_RICH_RENDERING_ENABLED`
+## 8) Backward Compatibility and Rollout
+1. Do not remove existing response fields.
+2. Treat reference rendering as optional enhancement.
+3. Feature-flag reference rendering if needed:
+   - WALLET_AI_REFERENCE_RENDERING_ENABLED
+4. Keep text fallback path always available.
 
-## 8) Implementation Steps
+## 9) Implementation Steps (Revised)
 
-### Step 1: Request Language
-- Backend: add `language` to request schema.
-- Backend: include `language` in webhook body.
-- Backend: include `language` in ACMS key params to avoid cross-language cache collisions.
-- Client: pass language from localization context.
+### Step 1: Contract/Route Alignment
+- Finalize accepted workflow envelope with output.reference.
+- Ensure route/service schema accepts optional reference field.
+- Keep language in request/webhook/ACMS params.
 
-### Step 2: Entity Resolver Service
-- Create DTO + service for entity extraction/resolution.
-- Implement deterministic matching first (addresses/exact symbols/known dex names).
-- Add contextual matching second (portfolio/swaps context).
+### Step 2: Frontend Type Update
+- Extend wallet AI response types with optional reference field.
+- Add parser guards for partial/missing reference entries.
 
-### Step 3: Response Enrichment
-- Enrich normalized analysis payload with `entities` + `rich`.
-- Validate with new optional schema fields.
+### Step 3: Frontend Rendering Integration
+- Add text-to-JSX ref resolver using output.reference.
+- Integrate in AI sections with strict fallback to plain text.
 
-### Step 4: Frontend Rendering
-- Update API types.
-- Add rich segment renderer.
-- Integrate `TokenIdentityCell` rendering in AI sections.
+### Step 4: QA + Hardening
+- Validate locale switch sends proper language and refetches correctly.
+- Validate reference rendering and fallback behavior.
+- Monitor payload variability from workflow.
 
-### Step 5: QA + Hardening
-- Add tests and manual checks.
-- Monitor fallback rate and resolver misses.
+## 10) Testing Plan (Revised)
 
-## 9) Testing Plan
-
-### 9.1 Backend
-- Request validation:
-- valid language values accepted.
-- invalid/missing language defaults to `en`.
+### 10.1 Backend Route/Service
+- Accepts valid language values.
+- Missing/invalid language defaults to en.
 - Webhook payload includes language.
-- ACMS keys differ by language.
+- ACMS key differs by language.
+- Envelope normalization handles:
+  - object
+  - array
+  - { output: ... }
+  - [ { output: ... } ]
+- Optional output.reference does not break schema.
 
-### 9.2 Resolver
-- Detect and resolve token mentions from symbols/addresses.
-- Resolve wallet mentions from addresses/identity labels.
-- Resolve dex mentions from known map.
-- Deduplicate entities across sections.
-- Graceful fallback on unresolved references.
+### 10.2 Frontend
+- Resolves ref:n markers using output.reference when present.
+- Falls back to legacy plain text when reference missing/partial.
+- Handles unresolved ref:n markers without crashing.
+- Locale switch causes language-specific request + cache isolation.
 
-### 9.3 Frontend
-- Uses `rich` + `entities` when present.
-- Falls back to plain text when absent.
-- Capsule rendering displays logo/name/symbol correctly.
-- Locale switch triggers language-specific request and fresh analysis fetch.
+## 11) Risks and Mitigations (Updated)
+- Risk: Workflow response shape drifts.
+- Mitigation: schema guards + tolerant normalization + fallback rendering.
 
-## 10) Risks and Mitigations
-- Risk: False-positive entity matching.
-- Mitigation: Prioritize deterministic rules, keep confidence thresholds, fall back to text.
+- Risk: Missing reference metadata for some ref markers.
+- Mitigation: render raw token text when lookup misses.
 
-- Risk: Response complexity increases payload size.
-- Mitigation: Deduplicate entities and reference by ID.
+- Risk: Cross-language cache contamination.
+- Mitigation: include language in cache/coalescing keys.
 
-- Risk: Language mismatch from cache.
-- Mitigation: Include language in cache/coalescing key.
+## 12) Deliverables (Updated)
+- Language-aware wallet AI request pipeline.
+- Route/service alignment for workflow envelope and output.reference.
+- Frontend support for output.reference-driven ref:n rendering.
+- Backward-compatible fallback rendering.
+- Tests for language behavior, envelope normalization, and UI fallback.
 
-## 11) Deliverables
-- Language-aware AI analysis request pipeline.
-- New backend entity resolver service.
-- Enriched AI response (`entities`, `rich`) with backward compatibility.
-- Frontend capsule rendering via `TokenIdentityCell` for entity references.
-- Tests for language behavior, resolver behavior, and UI fallback.
-
-## 12) Suggested Next Step
-Start with Step 1 and Step 2 in one PR:
-- Add language contract + resolver skeleton + response fields (empty `entities`/`rich` allowed).
-- This keeps contract stable while unblocking frontend integration.
+## 13) Suggested Next Step
+Single PR focused on routes + UI:
+- Finalize route/schema normalization for output.reference payload.
+- Extend frontend types + ref resolver renderer.
+- Add tests for envelope variants and fallback behavior.
