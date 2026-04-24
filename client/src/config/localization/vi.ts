@@ -326,6 +326,157 @@ export const translation = defineTranslation({
     aiOverallRisk: "Rủi ro tổng thể",
     aiFlags: "Cờ cảnh báo",
   },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Lướt sóng nhanh",
+        description:
+          "Thực hiện nhiều giao dịch ngắn hạn và ưu tiên vòng quay vị thế nhanh.",
+        benefit: {
+          fastTurnover: "Xoay vòng vốn nhanh sang cơ hội mới.",
+          adaptsVolatility:
+            "Có thể phản ứng nhanh khi độ biến động thị trường tăng mạnh.",
+        },
+        risk: {
+          feeHeavy: "Giao dịch dày có thể làm chi phí phí giao dịch tăng cao.",
+          emotionalPressure: "Cần theo dõi liên tục và ra quyết định rất nhanh.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          maxAvgHoldHours: "Số giờ nắm giữ trung bình tối đa",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Nắm bắt nhịp tăng/giảm theo chu kỳ vài ngày đến vài tuần và tránh nhiễu giao dịch quá mức.",
+        benefit: {
+          balancedPace:
+            "Cân bằng giữa bắt cơ hội và giảm áp lực khớp lệnh liên tục.",
+          trendCapture: "Phù hợp khi xu hướng trung hạn rõ ràng.",
+        },
+        risk: {
+          gapExposure:
+            "Khoảng trống giá qua đêm/cuối tuần có thể vượt điểm thoát dự kiến.",
+          lateReversal:
+            "Thoát lệnh chậm khi đảo chiều có thể bào mòn lợi nhuận.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          minAvgHoldHours: "Số giờ nắm giữ trung bình tối thiểu",
+        },
+      },
+      momentum: {
+        name: "Bám theo động lượng",
+        description:
+          "Theo các điểm bứt phá mạnh với gia tốc về giá và khối lượng.",
+        benefit: {
+          strongTrendUpside:
+            "Có thể mở rộng lợi nhuận khi xu hướng mạnh tiếp diễn.",
+          quickInvalidation:
+            "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
+        },
+        risk: {
+          falseBreakout: "Phá vỡ giả có thể gây chuỗi thua lỗ nhanh.",
+          whipsawLosses:
+            "Thị trường nhiễu có thể gây lỗ liên tục do vào/ra nhanh.",
+        },
+        rule: {
+          minBuySellRatio: "Tỷ lệ áp lực mua/bán tối thiểu",
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+        },
+      },
+      meanRevert: {
+        name: "Hồi quy trung bình",
+        description:
+          "Tìm các nhịp đi quá xa và giao dịch theo hướng quay về vùng giá trung bình.",
+        benefit: {
+          definedEntries: "Điều kiện vào lệnh thường đo được và lặp lại được.",
+          riskControlled: "Quản trị quy mô vị thế giúp kiểm soát rủi ro.",
+        },
+        risk: {
+          trendAgainst:
+            "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
+          patienceRequired: "Tín hiệu có thể thưa, cần kiên nhẫn và kỷ luật.",
+        },
+        rule: {
+          maxTrades30d: "Số lệnh tối đa trong 30 ngày",
+          minWinRate: "Tỷ lệ thắng tối thiểu",
+        },
+      },
+      conviction: {
+        name: "Nắm giữ niềm tin cao",
+        description:
+          "Xây vị thế tập trung và nắm giữ xuyên qua các chu kỳ thị trường rộng hơn.",
+        benefit: {
+          longCycleUpside:
+            "Có thể hưởng lợi kép trong xu hướng dài hạn.",
+          lowNoise: "Ít giao dịch hơn giúp giảm nhiễu ngắn hạn của thị trường.",
+        },
+        risk: {
+          concentration: "Mức tập trung cao có thể khuếch đại drawdown.",
+          slowExit: "Vị thế lớn có thể khó thoát nhanh khi cần thiết.",
+        },
+        rule: {
+          maxTokensHeld: "Số token phân biệt nắm giữ tối đa",
+          minAvgHoldDays: "Số ngày nắm giữ trung bình tối thiểu",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Ví thông minh",
+        description:
+          "Ví có lịch sử lợi nhuận tốt và quyết định ổn định theo mức rủi ro.",
+      },
+      activeTrader: {
+        name: "Ví giao dịch tích cực",
+        description:
+          "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
+      },
+      whale: {
+        name: "Ví cá voi",
+        description:
+          "Ví có quy mô vốn lớn, có thể ảnh hưởng thị trường thanh khoản mỏng.",
+      },
+      newWallet: {
+        name: "Ví mới",
+        description: "Ví mới hoạt động, dữ liệu hành vi lịch sử còn hạn chế.",
+      },
+      riskWallet: {
+        name: "Ví rủi ro",
+        description:
+          "Ví có tín hiệu biến động cao, bất lợi, hoặc hành vi thiếu ổn định.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Sàn tập trung",
+        description:
+          "Nguồn tiền nạp đầu tiên có dấu hiệu đến từ ví nóng của sàn tập trung.",
+      },
+      dexRouter: {
+        name: "Router DEX",
+        description:
+          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router hoán đổi phi tập trung.",
+      },
+      bridge: {
+        name: "Cầu nối",
+        description:
+          "Nguồn tiền nạp đầu tiên cho thấy hành vi chuyển tài sản liên chuỗi.",
+      },
+      otc: {
+        name: "Bàn OTC",
+        description:
+          "Nguồn tiền nạp đầu tiên có khả năng từ ví thanh toán OTC.",
+      },
+      unknown: {
+        name: "Nguồn chưa xác định",
+        description:
+          "Không đủ tín hiệu on-chain để phân loại nguồn tài trợ một cách tin cậy.",
+      },
+    },
+  },
   // Market Page
   marketPage: {
     topTokens: "Các token hàng đầu",
