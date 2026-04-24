@@ -241,7 +241,7 @@ export type WalletAiAnalysisLanguage = "en" | "vn";
 
 export interface WalletAiReferenceEntry {
   ref_id: number;
-  type: string;
+  type: "wallet" | "exchange" | "token";
   address?: string;
   name?: string;
   symbol?: string;
@@ -251,36 +251,30 @@ export interface WalletAiReferenceEntry {
 export interface WalletAiAnalysisResponse {
   wallet_address: string;
   version?: string;
-  classification: {
-    primary_type: string;
-    confidence_percentage: number;
-    supporting_signals: string[];
+  data: {
+    swaps: "ok" | "insufficient_data";
+    portfolio: "ok" | "insufficient_data";
+    first_funder: "ok" | "insufficient_data";
+    identity: "ok" | "insufficient_data";
   };
-  strategy: {
-    primary_strategy: string;
-    secondary_strategies: string[];
-    evidence: string[];
+  activity_profile: {
+    archetype: string;
+    activity_level: "dormant" | "low" | "moderate" | "high";
+    last_active: string;
   };
-  behavior_metrics: {
-    trade_frequency: string;
-    avg_holding_time: string;
-    portfolio_concentration: string;
-    win_loss_estimate: string;
-    token_distribution: string;
+  interaction_fingerprint: {
+    preferred_protocols: string[];
+    transaction_timing: "uniform" | "burst_mode" | "sporadic";
   };
-  first_funder_analysis: {
-    funder_type: string;
-    risk_signal: WalletAiRisk | string;
+  funder: {
+    type: string;
+    risk: WalletAiRisk | string;
     notes: string;
   };
   wallet_age: {
-    age_category: string;
+    category: "new" | "mid" | "old" | "unknown";
     first_seen: string;
-    consistency_assessment: string;
-  };
-  risk_assessment: {
-    overall_risk: WalletAiRisk | string;
-    flags: string[];
+    consistency: string;
   };
   summary: string;
   reference?: WalletAiReferenceEntry[];
