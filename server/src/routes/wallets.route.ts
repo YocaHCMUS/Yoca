@@ -57,6 +57,7 @@ const walletIdentityBatchRequestSchema = z.object({
 
 const walletAnalysisRequestSchema = z.object({
   address: z.string().trim().min(1),
+  language: z.string().trim().optional(),
 });
 
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
@@ -514,7 +515,10 @@ const routes = router
     }
 
     try {
-      const analysis = await getWalletAiAnalysis(parsed.data.address);
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
       return c.json(analysis, 200);
     } catch (err) {
       if (err instanceof WalletAnalysisServiceError) {
@@ -543,7 +547,10 @@ const routes = router
     }
 
     try {
-      const analysis = await getWalletAiAnalysis(parsed.data.address);
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
       return c.json(analysis, 200);
     } catch (err) {
       if (err instanceof WalletAnalysisServiceError) {

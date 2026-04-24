@@ -36,6 +36,7 @@ import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
   fetchWalletAiAnalysis,
+  type WalletAiAnalysisLanguage,
   fetchWalletCounterparties,
   fetchWalletIntelligence,
   fetchWalletOverview,
@@ -150,6 +151,8 @@ export default function WalletPage() {
   const navigate = useNavigate();
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
+  const aiAnalysisLanguage: WalletAiAnalysisLanguage =
+    lang === "vi" ? "vn" : "en";
 
   const [swapPages, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
   const [swapPageInfoByPage, setSwapPageInfoByPage] = useState<
@@ -869,8 +872,10 @@ export default function WalletPage() {
         return null;
       }
 
-      if (!forceRefresh && aiAnalysisCacheRef.current[address]) {
-        const cached = aiAnalysisCacheRef.current[address];
+      const aiAnalysisCacheKey = `${address}:${aiAnalysisLanguage}`;
+
+      if (!forceRefresh && aiAnalysisCacheRef.current[aiAnalysisCacheKey]) {
+        const cached = aiAnalysisCacheRef.current[aiAnalysisCacheKey];
         setAiAnalysisReport(cached);
         setAiAnalysisError(null);
         setAiAnalysisWaitingReason(null);
@@ -878,8 +883,8 @@ export default function WalletPage() {
         return cached;
       }
 
-      if (aiAnalysisInFlightRef.current[address]) {
-        return aiAnalysisInFlightRef.current[address];
+      if (aiAnalysisInFlightRef.current[aiAnalysisCacheKey]) {
+        return aiAnalysisInFlightRef.current[aiAnalysisCacheKey];
       }
 
       const requestId = ++aiAnalysisRequestIdRef.current;
@@ -933,12 +938,15 @@ export default function WalletPage() {
             return null;
           }
 
-          const response = await fetchWalletAiAnalysis(address);
+          const response = await fetchWalletAiAnalysis(
+            address,
+            aiAnalysisLanguage,
+          );
           if (requestId !== aiAnalysisRequestIdRef.current) {
             return null;
           }
 
-          aiAnalysisCacheRef.current[address] = response;
+          aiAnalysisCacheRef.current[aiAnalysisCacheKey] = response;
           setAiAnalysisReport(response);
           setAiAnalysisLastUpdated(new Date().toISOString());
           aiAnalysisLoadedRef.current = true;
@@ -957,14 +965,14 @@ export default function WalletPage() {
           );
           return null;
         } finally {
-          delete aiAnalysisInFlightRef.current[address];
+          delete aiAnalysisInFlightRef.current[aiAnalysisCacheKey];
           if (requestId === aiAnalysisRequestIdRef.current) {
             setAiAnalysisLoading(false);
           }
         }
       })();
 
-      aiAnalysisInFlightRef.current[address] = run;
+      aiAnalysisInFlightRef.current[aiAnalysisCacheKey] = run;
       return run;
     },
     [
@@ -974,6 +982,7 @@ export default function WalletPage() {
       loadedSwaps,
       loadActivityData,
       loadPortfolioData,
+      aiAnalysisLanguage,
       tr,
     ],
   );
@@ -991,7 +1000,7 @@ export default function WalletPage() {
     setAiAnalysisWaitingReason(null);
     setAiAnalysisLastUpdated(null);
     setAiAnalysisLoading(false);
-  }, [address]);
+  }, [address, aiAnalysisLanguage]);
 
   useEffect(() => {
     if (activeTab === 2) {

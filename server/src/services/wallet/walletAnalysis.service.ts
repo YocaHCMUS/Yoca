@@ -20,7 +20,10 @@ const DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL =
 
 const walletAiAnalysisRequestSchema = z.object({
   address: z.string().trim().min(1),
+  language: z.enum(["en", "vn"]).default("en"),
 });
+
+export type WalletAiAnalysisLanguage = "en" | "vn";
 
 const walletAiAnalysisRiskSchema = z
   .string()
@@ -124,6 +127,13 @@ function resolveWebhookEndpoint(): string {
     : DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL;
 }
 
+function normalizeWalletAiLanguage(
+  language: string | undefined,
+): WalletAiAnalysisLanguage {
+  const normalized = language?.trim().toLowerCase();
+  return normalized === "vn" ? "vn" : "en";
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value != null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -204,8 +214,10 @@ async function checkDependencies(
 
 export async function getWalletAiAnalysis(
   address: string,
+  language?: string,
 ): Promise<WalletAiAnalysisResponse> {
   const normalizedAddress = address.trim();
+  const normalizedLanguage = normalizeWalletAiLanguage(language);
   const requestId = createRequestId();
 
   if (!normalizedAddress || !isValidSolanaAddress(normalizedAddress)) {
@@ -233,6 +245,7 @@ export async function getWalletAiAnalysis(
   const endpoint = resolveWebhookEndpoint();
   const acmsParams = {
     address: normalizedAddress,
+    language: normalizedLanguage,
     modelVersion: process.env.WALLET_AI_MODEL_VERSION?.trim() || undefined,
     promptVersion: process.env.WALLET_AI_PROMPT_VERSION?.trim() || undefined,
   };
@@ -242,6 +255,7 @@ export async function getWalletAiAnalysis(
     console.debug("[wallet-ai-analysis] webhook request start", {
       requestId,
       address: normalizedAddress,
+      language: normalizedLanguage,
       endpoint,
       timeoutMs: WALLET_AI_ANALYSIS_TIMEOUT_MS,
       useAcms: WALLET_AI_ANALYSIS_USE_ACMS,
@@ -265,7 +279,10 @@ export async function getWalletAiAnalysis(
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ address: normalizedAddress }),
+            body: JSON.stringify({
+              address: normalizedAddress,
+              language: normalizedLanguage,
+            }),
             signal: controller.signal,
           });
 
@@ -304,6 +321,7 @@ export async function getWalletAiAnalysis(
       console.debug("[wallet-ai-analysis] webhook request success", {
         requestId,
         address: normalizedAddress,
+        language: normalizedLanguage,
         latencyMs,
         source: WALLET_AI_ANALYSIS_USE_ACMS ? "acms-enabled" : "webhook-live",
       });
@@ -316,6 +334,7 @@ export async function getWalletAiAnalysis(
         console.debug("[wallet-ai-analysis] webhook request failed", {
           requestId,
           address: normalizedAddress,
+          language: normalizedLanguage,
           code: error.code,
           status: error.status,
           details: error.details,
