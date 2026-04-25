@@ -1,7 +1,6 @@
 import { Stack, Tooltip } from "@carbon/react";
 import {
     type ComponentProps,
-    type CSSProperties,
 } from "react";
 import { TknImg } from "../TknImg";
 
@@ -16,33 +15,6 @@ export interface TokenIdentityCellProps {
     emphasizeSymbol?: boolean;
 }
 
-function getImageStyle(size: number): CSSProperties {
-    return {
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        objectFit: "cover",
-        flexShrink: 0,
-    };
-}
-
-function getInitialsStyle(size: number): CSSProperties {
-    return {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        backgroundColor: "var(--cds-layer-accent, #393939)",
-        color: "var(--cds-text-inverse, #ffffff)",
-        fontSize: Math.max(9, Math.floor(size * 0.4)),
-        fontWeight: 600,
-        flexShrink: 0,
-        userSelect: "none",
-        lineHeight: 1,
-    };
-}
 
 export function TokenIdentityCell({
     symbol,
@@ -51,6 +23,7 @@ export function TokenIdentityCell({
     imageSize = 28,
     tooltipAlign = "right",
     emphasizeSymbol = false,
+
 }: TokenIdentityCellProps): React.ReactElement {
     const normalizedSymbol = symbol?.trim() || "Unknown";
     const tooltipLabel = fullName?.trim() || normalizedSymbol;
