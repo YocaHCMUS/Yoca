@@ -598,7 +598,6 @@ export default function WalletPage() {
           fullName={transfer.tokenName}
           imageUrl={transfer.tokenLogoUri ?? fallbackLogoUri}
           imageSize={18}
-          showInitialsFallback
           tooltipAlign="right"
         />
       );
@@ -656,7 +655,7 @@ export default function WalletPage() {
           fullName={portfolioTokenMeta?.fullName}
           imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
           imageSize={20}
-          showInitialsFallback
+
           tooltipAlign="right"
         />
       );
