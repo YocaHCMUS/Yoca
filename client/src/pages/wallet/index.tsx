@@ -26,7 +26,7 @@ import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.ts
 import {
   AiAnalysisTab,
   type AiAnalysisDependencyItem,
-} from "@/components/walletfolder/ai-analysis";
+} from "@/components/wallet/AiAnalysis/index.ts";
 import {
   WalletReportTemplate,
   type WalletReportSection,
