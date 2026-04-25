@@ -24,6 +24,10 @@ import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import {
+  AiAnalysisTab,
+  type AiAnalysisDependencyItem,
+} from "@/components/walletfolder/ai-analysis";
+import {
   WalletReportTemplate,
   type WalletReportSection,
 } from "@/components/WalletReportTemplate";
@@ -53,21 +57,10 @@ import {
   type WalletSwapTokenInfo,
   type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
-import {
-  renderWalletAiReferenceList,
-  renderWalletAiReferenceText,
-} from "@/services/wallet/walletAiReferenceRenderer.service.tsx";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { chunkArray } from "@/util/format";
-import { ChevronDown, Download } from "@carbon/icons-react";
+import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, Wallet } from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
-import {
-  Activity,
-  ChartLine,
-  Star,
-  StarFilled,
-  Wallet,
-} from "@carbon/react/icons";
 import JSZip from "jszip";
 import {
   useCallback,
@@ -181,6 +174,7 @@ export default function WalletPage() {
     useState<WalletOverviewMultiPeriodResponse | null>(null);
   const [intelligenceReport, setIntelligenceReport] =
     useState<WalletIntelligenceResponse | null>(null);
+  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
   /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 AI Analysis — data loads when each tab is first visited. */
@@ -897,9 +891,17 @@ export default function WalletPage() {
         setAiAnalysisWaitingReason(null);
 
         try {
-          const intelligence = intelligenceReport ?? await fetchWalletIntelligence(address);
-          if (!intelligenceReport) {
-            setIntelligenceReport(intelligence ?? null);
+          let intelligence = intelligenceReport ?? null;
+          if (!intelligence) {
+            setIntelligenceLoading(true);
+            try {
+              intelligence = await fetchWalletIntelligence(address);
+              if (!intelligenceReport) {
+                setIntelligenceReport(intelligence ?? null);
+              }
+            } finally {
+              setIntelligenceLoading(false);
+            }
           }
 
           let portfolioRows = portfolio;
@@ -981,6 +983,7 @@ export default function WalletPage() {
     [
       address,
       intelligenceReport,
+      intelligenceLoading,
       portfolio,
       loadedSwaps,
       loadActivityData,
@@ -1552,198 +1555,69 @@ export default function WalletPage() {
   const aiAnalysisTab = (
     <div className={styles.tabPane}>
       <PageSection>
-        {aiAnalysisLoading ? (
-          <div className={styles.chartSection}>{tr("walletPage.aiAnalysisLoading")}</div>
-        ) : aiAnalysisWaitingReason ? (
-          <div className={styles.chartSection}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div>{aiAnalysisWaitingReason}</div>
-              <div>
-                <Button
-                  size="sm"
-                  kind="secondary"
-                  onClick={() => {
-                    aiAnalysisRequestedRef.current = true;
-                    void loadAiAnalysisData(true);
-                  }}
-                  disabled={aiAnalysisLoading}
-                >
-                  {tr("walletPage.aiAnalysisRetry")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : aiAnalysisError ? (
-          <div className={styles.chartSection}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div>{tr("walletPage.aiAnalysisFailed")}</div>
-              <div style={{ color: "#dc2626", fontSize: 13 }}>{aiAnalysisError}</div>
-              <div>
-                <Button
-                  size="sm"
-                  kind="secondary"
-                  onClick={() => {
-                    aiAnalysisRequestedRef.current = true;
-                    void loadAiAnalysisData(true);
-                  }}
-                  disabled={aiAnalysisLoading}
-                >
-                  {tr("walletPage.aiAnalysisRetry")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : !aiAnalysisReport ? (
-          <div className={styles.chartSection}>{tr("walletPage.aiNoData")}</div>
-        ) : (
-          <div className={styles.sectionStack}>
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiSummary")}</h3>
-              <p style={{ margin: 0 }}>
-                {renderWalletAiReferenceText(
-                  aiAnalysisReport.summary,
-                  aiAnalysisReport.reference,
-                  "summary",
-                )}
-              </p>
-              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
-                {aiAnalysisReport.wallet_address}
-              </div>
-              {aiAnalysisLastUpdated ? (
-                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>
-                  Last updated: {fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)}
-                </div>
-              ) : null}
-            </div>
+        <AiAnalysisTab
+          aiAnalysisLoading={aiAnalysisLoading}
+          aiAnalysisError={aiAnalysisError}
+          aiAnalysisWaitingReason={aiAnalysisWaitingReason}
+          aiAnalysisReport={aiAnalysisReport}
+          aiAnalysisLastUpdated={
+            aiAnalysisLastUpdated
+              ? fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)
+              : null
+          }
+          dependencyItems={((): AiAnalysisDependencyItem[] => {
+            const portfolioAvailable = Array.isArray(portfolio) && portfolio.length > 0;
+            const swapsAvailable = Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
+            const intelligenceAvailable = intelligenceReport != null;
 
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiActivityProfile")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiArchetype")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.activity_profile.archetype,
-                    aiAnalysisReport.reference,
-                    "activity-archetype",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiActivityLevel")}: </strong>
-                  {aiAnalysisReport.activity_profile.activity_level}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiLastActive")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.activity_profile.last_active,
-                    aiAnalysisReport.reference,
-                    "activity-last-active",
-                  )}
-                </div>
-              </div>
-            </div>
+            const portfolioStatus: AiAnalysisDependencyItem["status"] = portfolioAvailable
+              ? "available"
+              : portfolioLoading
+                ? "fetching"
+                : "no_data";
 
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiInteractionFingerprint")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiPreferredProtocols")}: </strong>
-                  {renderWalletAiReferenceList(
-                    aiAnalysisReport.interaction_fingerprint.preferred_protocols,
-                    aiAnalysisReport.reference,
-                    "preferred-protocols",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiTransactionTiming")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.interaction_fingerprint.transaction_timing,
-                    aiAnalysisReport.reference,
-                    "transaction-timing",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiPreferredTradingTokens")}: </strong>
-                  {renderWalletAiReferenceList(
-                    aiAnalysisReport.interaction_fingerprint.preffered_trading_tokens,
-                    aiAnalysisReport.reference,
-                    "preferred-trading-tokens",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiPreferredHoldingTokens")}: </strong>
-                  {renderWalletAiReferenceList(
-                    aiAnalysisReport.interaction_fingerprint.preffered_holding_tokens,
-                    aiAnalysisReport.reference,
-                    "preferred-holding-tokens",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiTradingVolumeRange")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.interaction_fingerprint.trading_volume_range,
-                    aiAnalysisReport.reference,
-                    "trading-volume-range",
-                  )}
-                </div>
-              </div>
-            </div>
+            const swapsStatus: AiAnalysisDependencyItem["status"] = swapsAvailable
+              ? "available"
+              : swapLoading
+                ? "fetching"
+                : "no_data";
 
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiFunder")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiFunderType")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.funder.type,
-                    aiAnalysisReport.reference,
-                    "funder-type",
-                  )}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiNotes")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.funder.notes,
-                    aiAnalysisReport.reference,
-                    "funder-notes",
-                  )}
-                </div>
-              </div>
-            </div>
+            const intelligenceStatus: AiAnalysisDependencyItem["status"] = intelligenceAvailable
+              ? "available"
+              : intelligenceLoading || (intelligenceEnabled && intelligenceReport == null)
+                ? "fetching"
+                : "no_data";
 
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiWalletAge")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>{tr("walletPage.aiAgeCategory")}: </strong>
-                  {aiAnalysisReport.wallet_age.category}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiFirstSeen")}: </strong>
-                  {aiAnalysisReport.wallet_age.first_seen}
-                </div>
-                <div>
-                  <strong>{tr("walletPage.aiConsistencyAssessment")}: </strong>
-                  {renderWalletAiReferenceText(
-                    aiAnalysisReport.wallet_age.consistency,
-                    aiAnalysisReport.reference,
-                    "wallet-age-consistency",
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.chartSection}>
-              <h3 style={{ margin: 0, marginBottom: 8 }}>{tr("walletPage.aiSignals")}</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                {renderWalletAiReferenceList(
-                  aiAnalysisReport.signals,
-                  aiAnalysisReport.reference,
-                  "signals",
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+            return [
+              {
+                id: "portfolio",
+                label: String(tr("walletPage.aiDataPortfolio")),
+                status: portfolioStatus,
+              },
+              { id: "swaps", label: String(tr("walletPage.aiDataSwaps")), status: swapsStatus },
+              {
+                id: "intelligence",
+                label: String(tr("walletPage.aiDataIntelligence")),
+                status: intelligenceStatus,
+              },
+            ];
+          })()}
+          canGenerate={
+            Array.isArray(portfolio) &&
+            portfolio.length > 0 &&
+            Array.isArray(loadedSwaps) &&
+            loadedSwaps.length > 0 &&
+            intelligenceReport != null
+          }
+          onGenerate={() => {
+            aiAnalysisRequestedRef.current = true;
+            void loadAiAnalysisData(true);
+          }}
+          onRetry={() => {
+            aiAnalysisRequestedRef.current = true;
+            void loadAiAnalysisData(true);
+          }}
+        />
       </PageSection>
     </div>
   );
@@ -2199,7 +2073,7 @@ export default function WalletPage() {
                 <ChartLine key="wallet-overview-icon" size={16} />,
                 <Wallet key="wallet-holdings-icon" size={16} />,
                 <Activity key="wallet-activity-icon" size={16} />,
-                <Activity key="wallet-ai-analysis-icon" size={16} />,
+                <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
               ]}
               tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab]}
               onTabChange={(index) => setActiveTab(index)}
