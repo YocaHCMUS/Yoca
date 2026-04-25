@@ -82,6 +82,7 @@ import {
   TokenAverageTradePrice,
   TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
+import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
@@ -1335,7 +1336,7 @@ export default function WalletPage() {
       <PageSection>
         <div className={styles.chartStack}>
           <div className={styles.chartSection}>
-            <WalletSingleBalanceChart
+            <BalanceChart
               minHeight={460}
               initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
               autoRefresh
@@ -1560,9 +1561,10 @@ export default function WalletPage() {
           aiAnalysisWaitingReason={aiAnalysisWaitingReason}
           aiAnalysisReport={aiAnalysisReport}
           aiAnalysisLastUpdated={
-            aiAnalysisLastUpdated
-              ? fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)
-              : null
+            null
+            // aiAnalysisLastUpdated
+            //   ? fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)
+            //   : null
           }
           dependencyItems={((): AiAnalysisDependencyItem[] => {
             const portfolioAvailable = Array.isArray(portfolio) && portfolio.length > 0;
