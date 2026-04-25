@@ -1,4 +1,4 @@
-import { Button } from "@carbon/react";
+import { Button, TextAreaSkeleton } from "@carbon/react";
 import styles from "./ai-analysis.module.scss";
 import type { WalletAiAnalysisResponse } from "@/services/wallet/walletApi.ts";
 import {
@@ -9,6 +9,37 @@ import { AiAnalysisSignalsList } from "./AiAnalysisSignalsList";
 import type { AiAnalysisDependencyItem } from "./types";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import type { ReactNode } from "react";
+import { FingerprintRecognition, Report, UserProfile, Purchase, Hourglass, ConnectionSignal } from "@carbon/react/icons";
+
+function formatTimestampOrIso(
+  value: unknown,
+  fmtDatetime: (value: string | number | Date) => string,
+): string {
+  if (value == null) return "—";
+
+  let parsed: number | string | null = null;
+
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return "—";
+
+    // Accept numeric strings as ms timestamps too.
+    if (/^\d+$/.test(raw)) {
+      parsed = Number(raw);
+    } else {
+      parsed = raw;
+    }
+  }
+
+  if (parsed == null) return String(value);
+
+  const date = new Date(parsed);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return fmtDatetime(parsed);
+}
 
 function renderCommaSeparatedReferenceList(
   items: unknown,
@@ -51,7 +82,7 @@ export function AiAnalysisTab({
   onGenerate: () => void;
   onRetry: () => void;
 }) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const showReadinessPanel = dependencyItems.length > 0;
 
   return (
@@ -66,21 +97,20 @@ export function AiAnalysisTab({
       ) : null}
 
       {aiAnalysisLoading ? (
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionInner}>
-            {String(tr("walletPage.aiAnalysisLoading"))}
-          </div>
-        </div>
+        // <div className={styles.sectionCard}>
+        //   <div className={styles.sectionInner}>
+        //     {String(tr("walletPage.aiAnalysisLoading"))}
+        //   </div>
+        // </div>
+        <TextAreaSkeleton
+          hideLabel
+          aria-label={String(tr("walletPage.aiAnalysisLoading"))}
+        />
       ) : aiAnalysisError ? (
         <div className={styles.sectionCard}>
           <div className={styles.sectionInner}>
             <div>{String(tr("walletPage.aiAnalysisFailed"))}</div>
             <div className={styles.errorText}>{aiAnalysisError}</div>
-            <div style={{ marginTop: 12 }}>
-              <Button size="sm" kind="secondary" onClick={onRetry}>
-                {String(tr("walletPage.aiAnalysisRetry"))}
-              </Button>
-            </div>
           </div>
         </div>
       ) : !aiAnalysisReport ? (
@@ -97,6 +127,7 @@ export function AiAnalysisTab({
             <div className={styles.sectionInner}>
               <div className={styles.titleRow}>
                 <h3 className={styles.sectionTitle}>
+                  <Report size={20} />
                   {String(tr("walletPage.aiSummary"))}
                 </h3>
                 {aiAnalysisLastUpdated ? (
@@ -112,15 +143,13 @@ export function AiAnalysisTab({
                   "summary",
                 )}
               </div>
-              <p className={styles.sectionMeta} style={{ marginTop: 8 }}>
-                {aiAnalysisReport.wallet_address}
-              </p>
             </div>
           </div>
 
           <div className={styles.sectionCard}>
             <div className={styles.sectionInner}>
               <h3 className={styles.sectionTitle}>
+                <UserProfile size={20} />
                 {String(tr("walletPage.aiActivityProfile"))}
               </h3>
               <div className={styles.kvGrid} style={{ marginTop: 8 }}>
@@ -139,7 +168,10 @@ export function AiAnalysisTab({
                 <div>
                   <strong>{String(tr("walletPage.aiLastActive"))}: </strong>
                   {renderWalletAiReferenceText(
-                    aiAnalysisReport.activity_profile.last_active,
+                    formatTimestampOrIso(
+                      aiAnalysisReport.activity_profile.last_active,
+                      fmt.datetime.datetime,
+                    ),
                     aiAnalysisReport.reference,
                     "activity-last-active",
                   )}
@@ -148,9 +180,11 @@ export function AiAnalysisTab({
             </div>
           </div>
 
+
           <div className={styles.sectionCard}>
             <div className={styles.sectionInner}>
               <h3 className={styles.sectionTitle}>
+                <FingerprintRecognition size={20} />
                 {String(tr("walletPage.aiInteractionFingerprint"))}
               </h3>
               <div className={styles.kvGrid} style={{ marginTop: 8 }}>
@@ -201,6 +235,7 @@ export function AiAnalysisTab({
           <div className={styles.sectionCard}>
             <div className={styles.sectionInner}>
               <h3 className={styles.sectionTitle}>
+                <Purchase size={20} />
                 {String(tr("walletPage.aiFunder"))}
               </h3>
               <div className={styles.kvGrid} style={{ marginTop: 8 }}>
@@ -227,6 +262,7 @@ export function AiAnalysisTab({
           <div className={styles.sectionCard}>
             <div className={styles.sectionInner}>
               <h3 className={styles.sectionTitle}>
+                <Hourglass size={20} />
                 {String(tr("walletPage.aiWalletAge"))}
               </h3>
               <div className={styles.kvGrid} style={{ marginTop: 8 }}>
@@ -255,6 +291,7 @@ export function AiAnalysisTab({
           <div className={styles.sectionCard}>
             <div className={styles.sectionInner}>
               <h3 className={styles.sectionTitle}>
+                <ConnectionSignal size={20} />
                 {String(tr("walletPage.aiSignals"))}
               </h3>
               <div style={{ marginTop: 8 }}>
