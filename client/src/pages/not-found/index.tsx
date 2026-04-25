@@ -43,16 +43,25 @@ export default function NotFoundPage() {
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full mx-4 p-8 gap-12">
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-base md:text-xl">
+        <div className="flex flex-col items-center gap-4 w-full max-w-7xl">
+          <p
+            className="text-neutral-400 font-semibold uppercase tracking-widest"
+            style={{ fontSize: "clamp(1rem, 2vw, 1.75rem)" }}
+          >
             {ERROR_LABEL}
           </p>
 
-          <h1 className="text-white text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight">
+          <h1
+            className="text-white font-bold tracking-tight leading-none my-2"
+            style={{ fontSize: "clamp(4rem, 10vw, 10rem)" }}
+          >
             {ERROR_TITLE}
           </h1>
 
-          <p className="text-neutral-300 text-2xl md:text-3xl max-w-3xl">
+          <p
+            className="text-neutral-300 leading-snug max-w-4xl"
+            style={{ fontSize: "clamp(1.2rem, 3vw, 2.25rem)" }}
+          >
             {ERROR_DESCRIPTION}
           </p>
         </div>
