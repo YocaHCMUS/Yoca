@@ -1,14 +1,14 @@
 import { Button, InlineLoading } from "@carbon/react";
-import { CheckmarkFilled, CloseFilled } from "@carbon/react/icons";
+import { Checkmark, Close } from "@carbon/react/icons";
 import styles from "./ai-analysis.module.scss";
 import type { AiAnalysisDependencyItem } from "./types";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 
 function StatusIcon({ status }: { status: AiAnalysisDependencyItem["status"] }) {
-  if (status === "available") return <CheckmarkFilled size={18} />;
+  if (status === "available") return <Checkmark size={20} />;
   if (status === "fetching")
     return <InlineLoading status="active" aria-label="Fetching" />;
-  return <CloseFilled size={18} />;
+  return <Close size={20} />;
 }
 
 export function AiAnalysisDependencyPanel({

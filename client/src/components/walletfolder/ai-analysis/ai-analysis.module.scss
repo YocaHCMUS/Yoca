@@ -24,10 +24,14 @@ $radius: 12px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  margin-bottom: $spacing-04;
   gap: 12px;
 }
 
 .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
   margin: 0;
   font-size: 16px;
   font-weight: 700;
@@ -79,8 +83,8 @@ $radius: 12px;
   font-size: 13px;
   font-weight: 600;
   color: $text-primary;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  // overflow: hidden;
+  // text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -128,4 +132,3 @@ $radius: 12px;
   background: $layer-01;
   padding: 12px;
 }
-
