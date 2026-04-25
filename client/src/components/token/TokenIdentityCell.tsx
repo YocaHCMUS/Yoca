@@ -2,9 +2,8 @@ import { Stack, Tooltip } from "@carbon/react";
 import {
     type ComponentProps,
     type CSSProperties,
-    useMemo,
-    useState,
 } from "react";
+import { TknImg } from "../TknImg";
 
 type TooltipAlign = ComponentProps<typeof Tooltip>["align"];
 
@@ -15,11 +14,6 @@ export interface TokenIdentityCellProps {
     imageSize?: number;
     tooltipAlign?: TooltipAlign;
     emphasizeSymbol?: boolean;
-    showInitialsFallback?: boolean;
-}
-
-function getInitials(label: string): string {
-    return label.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "?";
 }
 
 function getImageStyle(size: number): CSSProperties {
@@ -57,36 +51,14 @@ export function TokenIdentityCell({
     imageSize = 28,
     tooltipAlign = "right",
     emphasizeSymbol = false,
-    showInitialsFallback = false,
 }: TokenIdentityCellProps): React.ReactElement {
-    const [imgFailed, setImgFailed] = useState(false);
-
     const normalizedSymbol = symbol?.trim() || "Unknown";
     const tooltipLabel = fullName?.trim() || normalizedSymbol;
-    const initials = useMemo(() => getInitials(normalizedSymbol), [normalizedSymbol]);
-    const showImage = Boolean(imageUrl) && !imgFailed;
+    const source = imageUrl || null;
 
     return (
         <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
-            {showImage ? (
-                <img
-                    src={imageUrl || undefined}
-                    alt={normalizedSymbol}
-                    width={imageSize}
-                    height={imageSize}
-                    style={getImageStyle(imageSize)}
-                    crossOrigin="anonymous"
-                    referrerPolicy="no-referrer"
-                    loading="eager"
-                    decoding="async"
-                    onError={() => setImgFailed(true)}
-                />
-            ) : showInitialsFallback ? (
-                <span style={getInitialsStyle(imageSize)} aria-hidden="true">
-                    {initials}
-                </span>
-            ) : null}
-
+            <TknImg src={source} alt={normalizedSymbol} size={imageSize} />
             <span>
                 <Tooltip label={tooltipLabel} align={tooltipAlign}>
                     {emphasizeSymbol ? (
