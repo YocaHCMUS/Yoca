@@ -793,6 +793,32 @@ export const walletIdentityCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+export const walletAiAnalysisCache = pgTable(
+  "wallet_ai_analysis_cache",
+  {
+    key: varchar("key", { length: 256 }).primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull(),
+    modelVersion: varchar("model_version", { length: 64 }),
+    promptVersion: varchar("prompt_version", { length: 64 }),
+    raw: jsonb("raw").notNull(),
+    normalized: jsonb("normalized").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("wallet_ai_analysis_cache_address_lang_ver_uq").on(
+      t.address,
+      t.language,
+      t.modelVersion,
+      t.promptVersion,
+    ),
+  ],
+);
+
 export const walletBalanceHistoryCache = pgTable(
   "wallet_balance_history_cache",
   {
