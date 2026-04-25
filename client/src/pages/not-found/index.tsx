@@ -78,11 +78,11 @@ export default function NotFoundPage() {
           </button>
         </form>
 
-        <div>
+        <div className="flex flex-col items-start w-full text-left mt-4">
           <h2 className="text-2xl text-white font-semibold mb-6">
             Continue exploring
           </h2>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-8 md:gap-16">
+          <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-12 md:gap-32 w-full">
             <button
               type="button"
               onClick={() => navigate(HOME_ROUTE)}
