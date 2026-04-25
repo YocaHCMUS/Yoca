@@ -11,7 +11,6 @@ const ERROR_DESCRIPTION =
 
 const SEARCH_PLACEHOLDER = "Search wallet, token symbol, or pair";
 const SEARCH_BUTTON_LABEL = "Search";
-const HOME_BUTTON_LABEL = "Back to Home";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -49,9 +48,13 @@ export default function NotFoundPage() {
             {ERROR_LABEL}
           </p>
 
-          <h1 className="text-white text-5xl font-bold">{ERROR_TITLE}</h1>
+          <h1 className="text-white text-6xl md:text-7xl lg:text-8xl font-bold">
+            {ERROR_TITLE}
+          </h1>
 
-          <p className="text-neutral-300 text-lg">{ERROR_DESCRIPTION}</p>
+          <p className="text-neutral-300 text-xl md:text-2xl">
+            {ERROR_DESCRIPTION}
+          </p>
         </div>
 
         <form
@@ -75,13 +78,27 @@ export default function NotFoundPage() {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => navigate(HOME_ROUTE)}
-          className="px-6 py-2 text-neutral-300 hover:text-white transition-colors"
-        >
-          {HOME_BUTTON_LABEL}
-        </button>
+        <div>
+          <h2 className="text-2xl text-white font-semibold mb-6">
+            Continue exploring
+          </h2>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-8 md:gap-16">
+            <button
+              type="button"
+              onClick={() => navigate(HOME_ROUTE)}
+              className="text-[#14F195] hover:text-white font-medium text-lg transition-colors flex items-center gap-2"
+            >
+              Back to Homepage
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(MARKET_ROUTE)}
+              className="text-[#14F195] hover:text-white font-medium text-lg transition-colors flex items-center gap-2"
+            >
+              Go to Market
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
