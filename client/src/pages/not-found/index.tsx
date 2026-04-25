@@ -42,17 +42,17 @@ export default function NotFoundPage() {
         </span>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full mx-4 p-8 gap-12">
+      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full mx-4 p-8 gap-12">
         <div className="flex flex-col items-center gap-3">
-          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-sm">
+          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-base md:text-xl">
             {ERROR_LABEL}
           </p>
 
-          <h1 className="text-white text-6xl md:text-7xl lg:text-8xl font-bold">
+          <h1 className="text-white text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight">
             {ERROR_TITLE}
           </h1>
 
-          <p className="text-neutral-300 text-xl md:text-2xl">
+          <p className="text-neutral-300 text-2xl md:text-3xl max-w-3xl">
             {ERROR_DESCRIPTION}
           </p>
         </div>
