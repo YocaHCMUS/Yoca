@@ -1,18 +1,42 @@
+Below is the **final cleaned-up schema**, reflecting everything discussed:
+
+- Clear separation: shared / token / trading
+- Minimal but correct alert history
+- Proper `onDelete` behavior
+
+---
+
+# Shared Layer
+
+```ts
 import {
-  decimal as dec,
   pgEnum,
   pgTable,
   timestamp,
   uuid,
   varchar,
+  decimal as dec,
 } from "drizzle-orm/pg-core";
 import { users } from "./schema";
 
 function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
+```
 
+---
+
+## Enums
+
+```ts
 export const enumAlertType = pgEnum("alert_type", ["token", "trading"]);
+
+export const enumAlertStatus = pgEnum("alert_status", ["running", "stopped"]);
+
+export const enumAlertTriggerMode = pgEnum("alert_trigger_mode", [
+  "once",
+  "always",
+]);
 
 export const enumConditionOp = pgEnum("condition_op", [
   "gt",
@@ -22,32 +46,134 @@ export const enumConditionOp = pgEnum("condition_op", [
   "lte",
 ]);
 
-export const enumTokenMetric = pgEnum("token_metric", [
-  "price_percentage",
-  "price_usd",
-  "volume_usd",
-  "buying_volume_usd",
-  "buying_volume_percentage",
-  "selling_volume_usd",
-  "selling_volume_percentage",
-  "trades",
-  "trades_percentage",
-]);
-
-export const enumAlertStatus = pgEnum("alert_status", ["running", "stopped"]);
-
 export const enumAlertPeriod = pgEnum("alert_period", [
   "30m",
   "1h",
   "6h",
   "24h",
 ]);
+```
 
-export const enumAlertTriggerMode = pgEnum("alert_trigger_mode", [
-  "once",
-  "always",
+---
+
+## `alerts`
+
+```ts
+export const alerts = pgTable("alerts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  alertType: enumAlertType("alert_type").notNull(),
+
+  name: varchar("name", { length: 255 }).notNull(),
+
+  triggerMode: enumAlertTriggerMode("trigger_mode").notNull().default("once"),
+
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+```
+
+---
+
+## `alert_delivery`
+
+```ts
+export const alertDelivery = pgTable("alert_delivery", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  alertId: uuid("alert_id")
+    .notNull()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+
+  email: varchar("email", { length: 255 }).notNull(),
+});
+```
+
+---
+
+## `alert_state`
+
+```ts
+export const alertState = pgTable("alert_state", {
+  alertId: uuid("alert_id")
+    .primaryKey()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+
+  status: enumAlertStatus("status").notNull().default("running"),
+
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+```
+
+---
+
+# Token Alert Subsystem
+
+## Enums
+
+```ts
+export const enumTokenMetric = pgEnum("token_metric", [
+  "price_usd",
+  "price_change_pct",
 ]);
+```
 
+---
+
+## `token_alert_targets`
+
+```ts
+export const tokenAlertTargets = pgTable("token_alert_targets", {
+  alertId: uuid("alert_id")
+    .primaryKey()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+
+  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+});
+```
+
+---
+
+## `token_alert_conditions`
+
+```ts
+export const tokenAlertConditions = pgTable("token_alert_conditions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  alertId: uuid("alert_id")
+    .notNull()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+
+  metric: enumTokenMetric("metric").notNull(),
+
+  period: enumAlertPeriod("period").notNull().default("1h"),
+
+  conditionOp: enumConditionOp("condition_op").notNull(),
+
+  value: decimal("value").notNull(),
+});
+```
+
+---
+
+# Trading Alert Subsystem
+
+## Enums
+
+```ts
 export const enumTradeDirection = pgEnum("trade_direction", [
   "buy",
   "sell",
@@ -58,134 +184,96 @@ export const enumTradingAggregation = pgEnum("trading_aggregation", [
   "volume_usd",
   "trade_count",
 ]);
+```
 
-export const alerts = pgTable("alerts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  alertType: enumAlertType("alert_type").notNull(),
-  triggerMode: enumAlertTriggerMode("trigger_mode").notNull().default("once"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+---
 
-export const alertDelivery = pgTable("alert_delivery", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  alertId: uuid("alert_id")
-    .notNull()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  email: varchar("email", { length: 255 }).notNull(),
-});
+## `trading_alert_scopes`
 
-export const alertState = pgTable("alert_state", {
-  alertId: uuid("alert_id")
-    .primaryKey()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  status: enumAlertStatus("status").notNull().default("running"),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const tokenAlertTargets = pgTable("token_alert_targets", {
-  alertId: uuid("alert_id")
-    .primaryKey()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-});
-
-export const tokenAlertConditions = pgTable("token_alert_conditions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  alertId: uuid("alert_id")
-    .notNull()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  period: enumAlertPeriod("period").notNull().default("1h"),
-  metric: enumTokenMetric("metric").notNull(),
-  conditionOp: enumConditionOp("condition_op").notNull(),
-  value: decimal("value").notNull(),
-});
-
+```ts
 export const tradingAlertScopes = pgTable("trading_alert_scopes", {
   id: uuid("id").primaryKey().defaultRandom(),
+
   alertId: uuid("alert_id")
     .notNull()
     .references(() => alerts.id, { onDelete: "cascade" }),
+
   walletAddress: varchar("wallet_address", { length: 44 }),
+
   tokenAddress: varchar("token_address", { length: 44 }),
+
   poolAddress: varchar("pool_address", { length: 44 }),
-  counterpartyAddress: varchar("counterparty_address", { length: 44 }),
+
+  counterpartyAddress: varchar("counterparty_address", {
+    length: 44,
+  }),
+
   direction: enumTradeDirection("direction").notNull().default("both"),
 });
+```
 
+---
+
+## `trading_alert_conditions`
+
+```ts
 export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),
+
   alertId: uuid("alert_id")
     .notNull()
     .references(() => alerts.id, { onDelete: "cascade" }),
+
   aggregation: enumTradingAggregation("aggregation").notNull(),
+
   period: enumAlertPeriod("period").notNull().default("1h"),
+
   conditionOp: enumConditionOp("condition_op").notNull(),
+
   value: decimal("value").notNull(),
 });
+```
 
+---
+
+# Alert History (minimal, safe)
+
+```ts
 export const alertHistory = pgTable("alert_history", {
   id: uuid("id").primaryKey().defaultRandom(),
+
   alertId: uuid("alert_id").references(() => alerts.id, {
-    onDelete: "set null",
+    onDelete: "set null", // IMPORTANT
   }),
+
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+
   alertName: varchar("alert_name", { length: 255 }).notNull(),
+
   message: varchar("message", { length: 1000 }).notNull(),
+
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+
   readAt: timestamp("read_at"),
 });
+```
 
-export const userAlerts = alerts;
-export const userAlertState = alertState;
-export const userAlertConditions = tokenAlertConditions;
-export const alertsSent = alertHistory;
+---
 
-export type AlertInsert = typeof alerts.$inferInsert;
-export type AlertSelect = typeof alerts.$inferSelect;
-export type AlertStateSelect = typeof alertState.$inferSelect;
-export type AlertDeliveryInsert = typeof alertDelivery.$inferInsert;
-export type TokenAlertConditionInsert =
-  typeof tokenAlertConditions.$inferInsert;
-export type TokenAlertConditionSelect =
-  typeof tokenAlertConditions.$inferSelect;
-export type TradingAlertScopeInsert = typeof tradingAlertScopes.$inferInsert;
-export type TradingAlertConditionInsert =
-  typeof tradingAlertConditions.$inferInsert;
+# Final structure (mental model)
 
-export type UserAlertInsert = AlertInsert;
-export type UserAlertSelect = AlertSelect;
-export type UserAlertConditionSelect = TokenAlertConditionSelect;
-export type UserAlertTokenMetric = (typeof enumTokenMetric.enumValues)[number];
-export type UserAlertStatus = (typeof enumAlertStatus.enumValues)[number];
-export type UserAlertConditionOp = (typeof enumConditionOp.enumValues)[number];
-export type UserAlertPeriod = (typeof enumAlertPeriod.enumValues)[number];
-export type UserAlertTriggerMode =
-  (typeof enumAlertTriggerMode.enumValues)[number];
-export type UserAlertType = (typeof enumAlertType.enumValues)[number];
-export type UserTradeDirection = (typeof enumTradeDirection.enumValues)[number];
-export type UserTradingAggregation =
-  (typeof enumTradingAggregation.enumValues)[number];
-export type UserAlertConditionInsert = TokenAlertConditionInsert;
+- **alerts** → core definition
+- **token\_\* tables** → token logic
+- **trading\_\* tables** → trading logic
+- **alert_history** → immutable user-facing log
 
-export const userAlertConditionOps = enumConditionOp.enumValues;
-export const userAlertTokenMetric = enumTokenMetric.enumValues;
-export const userAlertPeriods = enumAlertPeriod.enumValues;
-export const userAlertTriggerModes = enumAlertTriggerMode.enumValues;
-export const userAlertStatus = enumAlertStatus.enumValues;
-export const userAlertTypes = enumAlertType.enumValues;
-export const userTradeDirections = enumTradeDirection.enumValues;
-export const userTradingAggregations = enumTradingAggregation.enumValues;
+---
+
+This version is:
+
+- Strictly separated
+- Safe against accidental data loss
+- Flexible for future trading complexity
+- Still simple enough to operate without over-engineering

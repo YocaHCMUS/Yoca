@@ -5,6 +5,9 @@ import {
   userAlertPeriods,
   userAlertTokenMetric,
   userAlertTriggerModes,
+  userAlertTypes,
+  userTradeDirections,
+  userTradingAggregations,
 } from "@sv/db/alerts.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
@@ -153,23 +156,62 @@ export const walletTokenTradesSchema = z.object({
   tokenAddress: solanaBase58Schema,
 });
 
-export const createAlertSchema = z.object({
-  tokenAddress: z.string().min(1),
-  triggerMode: z.enum(userAlertTriggerModes).default("once"),
-  expiresAt: z.iso.datetime({ offset: true }),
-  alertName: z.string().min(1),
-  email: z.email().optional(),
-  conditions: z
-    .array(
-      z.object({
-        period: z.enum(userAlertPeriods),
-        alertType: z.enum(userAlertTokenMetric),
-        conditionOp: z.enum(userAlertConditionOps),
-        value: z.coerce.number(),
-      }),
-    )
-    .min(1, "At least one condition is required"),
+const tokenAlertConditionSchema = z.object({
+  period: z.enum(userAlertPeriods),
+  metric: z.enum(userAlertTokenMetric),
+  conditionOp: z.enum(userAlertConditionOps),
+  value: z.coerce.number(),
 });
+
+const tradingAlertScopeSchema = z.object({
+  walletAddress: solanaBase58Schema.optional().nullable(),
+  tokenAddress: solanaBase58Schema.optional().nullable(),
+  poolAddress: solanaBase58Schema.optional().nullable(),
+  counterpartyAddress: solanaBase58Schema.optional().nullable(),
+  direction: z.enum(userTradeDirections).default("both"),
+});
+
+const tradingAlertConditionSchema = z.object({
+  aggregation: z.enum(userTradingAggregations),
+  period: z.enum(userAlertPeriods),
+  conditionOp: z.enum(userAlertConditionOps),
+  value: z.coerce.number(),
+});
+
+export const createAlertSchema = z.discriminatedUnion("alertType", [
+  z.object({
+    alertType: z.literal(userAlertTypes[0]),
+    name: z.string().trim().min(1),
+    triggerMode: z.enum(userAlertTriggerModes).default("once"),
+    expiresAt: z.iso.datetime({ offset: true }),
+    delivery: z
+      .object({
+        email: z.email(),
+      })
+      .optional(),
+    tokenTarget: z.object({
+      tokenAddress: solanaBase58Schema,
+    }),
+    conditions: z
+      .array(tokenAlertConditionSchema)
+      .min(1, "At least one condition is required"),
+  }),
+  z.object({
+    alertType: z.literal(userAlertTypes[1]),
+    name: z.string().trim().min(1),
+    triggerMode: z.enum(userAlertTriggerModes).default("once"),
+    expiresAt: z.iso.datetime({ offset: true }),
+    delivery: z
+      .object({
+        email: z.email(),
+      })
+      .optional(),
+    scopes: z.array(tradingAlertScopeSchema).default([]),
+    conditions: z
+      .array(tradingAlertConditionSchema)
+      .min(1, "At least one condition is required"),
+  }),
+]);
 
 export const alertIdSchema = z.object({
   id: z.uuid(),
@@ -227,7 +269,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+            `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);

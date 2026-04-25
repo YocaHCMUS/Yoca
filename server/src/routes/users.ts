@@ -3,7 +3,6 @@ import {
   AUTH_COOKIE_NAME,
   AUTHEN_COOKIE_TTL_MS,
 } from "@sv/config/constants.js";
-import { setErr } from "@sv/config/errors.js";
 import {
   googleTokenSchema,
   honoJwt,
@@ -16,6 +15,7 @@ import {
   validate,
 } from "@sv/middlewares/validation.js";
 import * as userService from "@sv/services/users.js";
+import { serverErr, setErr } from "@sv/util/errors.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
@@ -88,12 +88,8 @@ const app = new Hono()
           },
           statusCode.Created,
         );
-      } catch (error) {
-        console.error(error);
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
-        );
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -101,27 +97,35 @@ const app = new Hono()
     "/auth/password/login",
     validate("json", userVerificationSchema),
     async (c) => {
-      const { email, password } = c.req.valid("json");
-      const passwordUser = await userService.verifyUserPassword(
-        email,
-        password,
-      );
-      if (!passwordUser) {
-        return c.json(
-          setErr("EMAIL_OR_PASSWORD_WAS_INCORRECT"),
-          statusCode.Unauthorized,
+      try {
+        const { email, password } = c.req.valid("json");
+        const passwordUser = await userService.verifyUserPassword(
+          email,
+          password,
         );
+        if (!passwordUser) {
+          return c.json(
+            setErr("EMAIL_OR_PASSWORD_WAS_INCORRECT"),
+            statusCode.Unauthorized,
+          );
+        }
+        const user = await userService.getUserById(passwordUser.userId);
+        const token = await setAuthToken(
+          c,
+          passwordUser.userId,
+          user?.displayName,
+        );
+        return c.json(
+          {
+            message: messageText.LoggedInSuccessfully,
+            userId: passwordUser.userId,
+            token,
+          },
+          statusCode.Ok,
+        );
+      } catch (e) {
+        return serverErr(c, e);
       }
-      const user = await userService.getUserById(passwordUser.userId);
-      const token = await setAuthToken(c, passwordUser.userId, user?.displayName);
-      return c.json(
-        {
-          message: messageText.LoggedInSuccessfully,
-          userId: passwordUser.userId,
-          token,
-        },
-        statusCode.Ok,
-      );
     },
   )
   .post("/auth/google", validate("json", googleTokenSchema), async (c) => {
@@ -159,12 +163,8 @@ const app = new Hono()
         },
         statusCode.Ok,
       );
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+    } catch (e) {
+      return serverErr(c, e);
     }
   })
   .post(
@@ -198,16 +198,12 @@ const app = new Hono()
           },
           statusCode.Created,
         );
-      } catch (err) {
-        if (err instanceof Error && err.message === "WALLET_ALREADY_LINKED") {
-          return c.json(setErr("WALLET_ALREADY_LINKED"), 409);
+      } catch (e) {
+        if (e instanceof Error && e.message == "WALLET_ALREADY_LINKED") {
+          return c.json(setErr("WALLET_ALREADY_LINKED"), statusCode.Conflict);
         }
 
-        console.error(err);
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
-        );
+        return serverErr(c, e);
       }
     },
   )
@@ -215,32 +211,44 @@ const app = new Hono()
     "/auth/solana/verify",
     validate("json", solanaVerificationRequestSchema),
     async (c) => {
-      const { pubKey, signature } = c.req.valid("json");
+      try {
+        const { pubKey, signature } = c.req.valid("json");
 
-      const account = await userService.verifyWalletLoginNounce(
-        pubKey,
-        signature,
-      );
+        const account = await userService.verifyWalletLoginNounce(
+          pubKey,
+          signature,
+        );
 
-      if (!account) {
-        return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
+        if (!account) {
+          return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
+        }
+
+        const token = await setAuthToken(
+          c,
+          account.user.id,
+          account.user.displayName,
+        );
+
+        return c.json(
+          {
+            message: messageText.WalletVerifiedSuccessfully,
+            userId: account.user.id,
+            token,
+          },
+          statusCode.Created,
+        );
+      } catch (e) {
+        return serverErr(c, e);
       }
-
-      const token = await setAuthToken(c, account.user.id, account.user.displayName);
-
-      return c.json(
-        {
-          message: messageText.WalletVerifiedSuccessfully,
-          userId: account.user.id,
-          token,
-        },
-        201,
-      );
     },
   )
   .delete("/auth/logout", async (c) => {
-    deleteCookie(c, AUTH_COOKIE_NAME);
-    return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
+    try {
+      deleteCookie(c, AUTH_COOKIE_NAME);
+      return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
+    } catch (e) {
+      return serverErr(c, e);
+    }
   })
   .get("/auth/me", honoJwt, async (c) => {
     try {
@@ -265,12 +273,8 @@ const app = new Hono()
         } satisfies UserPayload,
         statusCode.Ok,
       );
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+    } catch (e) {
+      return serverErr(c, e);
     }
   });
 

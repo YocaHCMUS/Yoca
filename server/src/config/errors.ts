@@ -23,7 +23,3 @@ export const ErrCodes = {
 } as const;
 
 export type ErrCode = (typeof ErrCodes)[keyof typeof ErrCodes];
-
-export function setErr<T extends ErrCode>(code: T) {
-  return { errorCode: code };
-}
