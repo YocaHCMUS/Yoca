@@ -1,9 +1,10 @@
-import { setErr } from "@sv/config/errors.js";
 import { searchQuerySchema, validate } from "@sv/middlewares/validation.js";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
-import * as bds from "@sv/util/util-birdeye.js";
+import { serverErr } from "@sv/util/errors";
+import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { Hono } from "hono";
 import z from "zod";
@@ -62,7 +63,9 @@ function extractSolanaWalletAddress(input: string): string | null {
   return isLikelySolanaWalletAddress(matched[0]) ? matched[0] : null;
 }
 
-async function getSearchWalletsResult(query: string): Promise<WalletSearchResult[]> {
+async function getSearchWalletsResult(
+  query: string,
+): Promise<WalletSearchResult[]> {
   const walletAddress = extractSolanaWalletAddress(query);
   if (!walletAddress) {
     return [];
@@ -232,12 +235,8 @@ const app = new Hono().get(
         },
         statusCode.Ok,
       );
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+    } catch (e) {
+      return serverErr(c, e);
     }
   },
 );

@@ -1,4 +1,3 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   addressListSchema,
   addressSchema,
@@ -6,6 +5,7 @@ import {
   validate,
 } from "@sv/middlewares/validation.js";
 import * as tokenService from "@sv/services/tokens/index.js";
+import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 

@@ -1,14 +1,14 @@
 import { AUTH_COOKIE_NAME } from "@sv/config/constants";
-import { setErr } from "@sv/config/errors.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
   userAlertTokenMetric,
   userAlertTriggerModes,
-  userAlertTypes,
   userTradeDirections,
   userTradingAggregations,
 } from "@sv/db/alerts.js";
+import { userAlertStatus } from "@sv/db/schema";
+import { setErr } from "@sv/util/errors.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
 import type { Context, Next, ValidationTargets } from "hono";
@@ -178,43 +178,52 @@ const tradingAlertConditionSchema = z.object({
   value: z.coerce.number(),
 });
 
+const alertDeliverySchema = z.object({
+  email: z.email(),
+});
+
+const alertBaseSchema = {
+  name: z.string().trim().min(1),
+  triggerMode: z.enum(userAlertTriggerModes).default("once"),
+  expiresAt: z.iso.datetime({ offset: true }),
+  delivery: alertDeliverySchema.optional(),
+};
+
+export const createTokenAlertSchema = z.object({
+  alertType: z.literal("token"),
+  ...alertBaseSchema,
+  tokenTarget: z.object({
+    tokenAddress: solanaBase58Schema,
+  }),
+  conditions: z
+    .array(tokenAlertConditionSchema)
+    .min(1, "At least one condition is required"),
+});
+
+export const createTradingAlertSchema = z.object({
+  alertType: z.literal("trading"),
+  ...alertBaseSchema,
+  scopes: z.array(tradingAlertScopeSchema).default([]),
+  conditions: z
+    .array(tradingAlertConditionSchema)
+    .min(1, "At least one condition is required"),
+});
+
 export const createAlertSchema = z.discriminatedUnion("alertType", [
-  z.object({
-    alertType: z.literal(userAlertTypes[0]),
-    name: z.string().trim().min(1),
-    triggerMode: z.enum(userAlertTriggerModes).default("once"),
-    expiresAt: z.iso.datetime({ offset: true }),
-    delivery: z
-      .object({
-        email: z.email(),
-      })
-      .optional(),
-    tokenTarget: z.object({
-      tokenAddress: solanaBase58Schema,
-    }),
-    conditions: z
-      .array(tokenAlertConditionSchema)
-      .min(1, "At least one condition is required"),
-  }),
-  z.object({
-    alertType: z.literal(userAlertTypes[1]),
-    name: z.string().trim().min(1),
-    triggerMode: z.enum(userAlertTriggerModes).default("once"),
-    expiresAt: z.iso.datetime({ offset: true }),
-    delivery: z
-      .object({
-        email: z.email(),
-      })
-      .optional(),
-    scopes: z.array(tradingAlertScopeSchema).default([]),
-    conditions: z
-      .array(tradingAlertConditionSchema)
-      .min(1, "At least one condition is required"),
-  }),
+  createTokenAlertSchema,
+  createTradingAlertSchema,
 ]);
+
+export type CreateAlertSchema = z.infer<typeof createAlertSchema>;
+export type CreateTokenAlertSchema = z.infer<typeof createTokenAlertSchema>;
+export type CreateTradingAlertSchema = z.infer<typeof createTradingAlertSchema>;
 
 export const alertIdSchema = z.object({
   id: z.uuid(),
+});
+
+export const alertStatusUpdateSchema = z.object({
+  status: z.enum(userAlertStatus),
 });
 
 export function validate<

@@ -1,12 +1,17 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   addressSchema,
   validate,
   walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { getTokenDetails, getWalletFirstFund } from "@sv/services/wallet/index.js";
+import type {
+  WalletPortfolioItem,
+  WalletSwap,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  getTokenDetails,
+  getWalletFirstFund,
+} from "@sv/services/wallet/index.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -17,6 +22,7 @@ import {
   getWalletSwaps,
   getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
+import { setErr } from "@sv/util/errors.js";
 // import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
 import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
 import {
@@ -57,7 +63,9 @@ const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
 const DEFAULT_OVERVIEW_PERIOD = "24H";
 
-function parseOverviewPeriod(rawPeriod?: string): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+function parseOverviewPeriod(
+  rawPeriod?: string,
+): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
   const normalized = String(rawPeriod ?? "")
     .trim()
     .toUpperCase();
@@ -199,11 +207,16 @@ function mapSwapToTokenTradeRow(
           ? "buy"
           : "sell";
 
-  const selectedAmount = inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
-  const selectedTokenAddress = inferredAction === "buy" ? swap.bought.address : swap.sold.address;
-  const otherTokenAddress = inferredAction === "buy" ? swap.sold.address : swap.bought.address;
-  const selectedPrice = inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
-  const otherPrice = inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+  const selectedAmount =
+    inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress =
+    inferredAction === "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress =
+    inferredAction === "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice =
+    inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice =
+    inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
 
   return {
     address: walletAddress,
