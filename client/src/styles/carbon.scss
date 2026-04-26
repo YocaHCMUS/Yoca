@@ -5,5 +5,7 @@
 
 // Import Carbon Design System styles
 // This includes all theme tokens and component styles
-@use '@carbon/styles';
-@use '@carbon/styles/scss/theme';
+@use "@carbon/styles" with (
+  $font-path: "@ibm/plex"
+);
+@use "@carbon/styles/scss/theme";
