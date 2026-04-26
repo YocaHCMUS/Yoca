@@ -1,86 +1,69 @@
-import type {
-    UserAlertConditionOp,
-    UserAlertPeriod,
-    UserAlertTokenMetric,
-    UserAlertTriggerMode,
-} from "@/api/alerts";
 import client from "@/api/main";
-import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
-import { Flex } from "@/components/Flex";
 import { ModalStateManager } from "@/components/ModelStateManager";
-import { Divider } from "@/components/partials/Divider/Divider";
 import Tble from "@/components/Tble";
-import { TknImg } from "@/components/TknImg";
-import type { SelectedTokenValue } from "@/components/TokenSearch/TokenSearch";
-import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
-    Button,
-    Checkbox,
-    CheckboxGroup,
-    ClickableTile,
-    Column,
-    ComposedModal,
-    DatePicker,
-    DatePickerInput,
-    Dropdown,
-    FormGroup,
-    Grid,
-    IconButton,
-    InlineNotification,
-    ModalBody,
-    ModalFooter,
-    ModalHeader,
-    RadioButton,
-    RadioButtonGroup,
-    Section,
-    Stack,
-    TextArea,
-    TextInput,
-    TimePicker,
+  Button,
+  Column,
+  ComposedModal,
+  DatePicker,
+  DatePickerInput,
+  FormGroup,
+  Grid,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RadioButton,
+  RadioButtonGroup,
+  Section,
+  Stack,
+  TimePicker,
 } from "@carbon/react";
-import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
+import { Add, ArrowLeft, ArrowRight } from "@carbon/react/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ComponentType } from "react";
 import { useMemo, useState } from "react";
 import {
-    Controller,
-    FormProvider,
-    useFieldArray,
-    useForm,
-    useFormContext,
+  Controller,
+  FormProvider,
+  useForm,
+  useFormContext,
 } from "react-hook-form";
 import z from "zod";
+import AlertNotificationSettings from "./components/AlertNotificationSettings";
+import TokenStatsConfig from "./components/TokenStatsConfig";
+import TradingEventsConfig from "./components/TradingEventsConfig";
 import styles from "./demo.module.scss";
+import {
+  alertPeriods,
+  alertTypes,
+  conditionOps,
+  defaultConfig,
+  tokenAlertMetrics,
+  tradingAggregations,
+  triggerModes,
+  type AlertFormValues,
+  type AlertStep,
+  type AlertType,
+} from "./form-types";
 
 interface AlertRow {
   id: string;
-  tokenAddress: string;
+  type: string;
+  target: string;
   alertName: string;
   createdAt: string;
   [key: string]: string;
 }
 
-type AlertStep = "type-selection" | "configuration" | "notification";
-
-const alertTypes = [
-  "technical-indicators",
-  "token-stats",
-  "trading-events",
-  "market-movements",
-] as const;
-type AlertType = (typeof alertTypes)[number];
-const alertPeriods: UserAlertPeriod[] = ["30m", "1h", "6h", "24h"];
-const triggerModes: UserAlertTriggerMode[] = ["once", "always"];
-const conditionOps: UserAlertConditionOp[] = ["gt", "gte", "eq", "lt", "lte"];
-const tokenAlertMetrics: UserAlertTokenMetric[] = [
-  "price_percentage",
-  "price_usd",
-];
+const alertConfigModules: Partial<Record<AlertType, ComponentType>> = {
+  "token-stats": TokenStatsConfig,
+  "trading-events": TradingEventsConfig,
+};
 
 interface AlertTypeOption {
   id: AlertType;
@@ -89,16 +72,17 @@ interface AlertTypeOption {
   example: string;
 }
 
-interface AlertTypeTileProps {
+type AlertTypeTileProps = {
   option: AlertTypeOption;
   onClick: (type: AlertType) => void;
-}
+};
 
 function AlertTypeTile({ option, onClick }: AlertTypeTileProps) {
   return (
-    <ClickableTile
+    <Button
+      kind="ghost"
       onClick={() => onClick(option.id)}
-      className={overwriteStyles.alertTypeTile}
+      className={styles.alertTypeTile}
     >
       <Stack gap={2}>
         <Txt size="md" block bold>
@@ -111,7 +95,7 @@ function AlertTypeTile({ option, onClick }: AlertTypeTileProps) {
           {option.example}
         </Txt>
       </Stack>
-    </ClickableTile>
+    </Button>
   );
 }
 
@@ -181,6 +165,27 @@ const conditionRowSchema = z.object({
     .refine((v) => Number.isFinite(v), "Invalid number"),
 });
 
+const tradingConditionRowSchema = z.object({
+  id: z.string().min(1),
+  period: z.enum(alertPeriods),
+  aggregation: z.enum(tradingAggregations),
+  condition: z.enum(conditionOps),
+  value: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((v) => Number(v))
+    .refine((v) => Number.isFinite(v), "Invalid number"),
+});
+
+const tradingScopeSchema = z.object({
+  walletAddress: z.string().trim(),
+  tokenAddress: z.string().trim(),
+  poolAddress: z.string().trim(),
+  counterpartyAddress: z.string().trim(),
+  direction: z.enum(["buy", "sell", "both"]),
+});
+
 const alertFormSchema = z
   .object({
     type: z.enum(alertTypes).nullable(),
@@ -188,7 +193,9 @@ const alertFormSchema = z
     triggerMode: z.enum(triggerModes),
     expiresAtDate: z.date().nullable(),
     expiresAtTime: z.string().trim().min(1),
-    conditions: z.array(conditionRowSchema).min(1).max(3),
+    tokenConditions: z.array(conditionRowSchema).min(1).max(3),
+    tradingConditions: z.array(tradingConditionRowSchema).min(1).max(3),
+    tradingScope: tradingScopeSchema,
     alertName: z.string().trim().min(1),
     emailEnabled: z.boolean(),
     email: z.string().trim(),
@@ -207,6 +214,14 @@ const alertFormSchema = z
         code: "custom",
         path: ["token"],
         message: "Token is required",
+      });
+    }
+
+    if (data.type == "trading-events" && data.tradingConditions.length == 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tradingConditions"],
+        message: "At least one condition is required",
       });
     }
 
@@ -239,442 +254,72 @@ const alertFormSchema = z
     }
   });
 
-type AlertFormValues = z.input<typeof alertFormSchema>;
 type AlertConfig = z.output<typeof alertFormSchema>;
-type ConditionRow = AlertFormValues["conditions"][number];
-
-const conditionOptions: { id: UserAlertConditionOp; text: string }[] = [
-  { id: "gt", text: ">" },
-  { id: "gte", text: "≥" },
-  { id: "eq", text: "=" },
-  { id: "lt", text: "<" },
-  { id: "lte", text: "≤" },
-];
-
-const metricOptions: {
-  id: UserAlertTokenMetric;
-  text: string;
-  helper: string;
-}[] = [
-  {
-    id: "price_percentage",
-    text: "Price change %",
-    helper: "Percent change over the selected period",
-  },
-  { id: "price_usd", text: "Price", helper: "Current token price in USD" },
-];
-
-function getConditionOption(condition: UserAlertConditionOp) {
-  return (
-    conditionOptions.find((item) => item.id == condition) ?? conditionOptions[0]
-  );
-}
-
-function createConditionRow(
-  condition: UserAlertConditionOp = "gt",
-): ConditionRow {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    period: "1h",
-    metric: "price_percentage",
-    condition,
-    value: "",
-  };
-}
-
-function getMetricOption(metric: UserAlertTokenMetric) {
-  return metricOptions.find((item) => item.id == metric) ?? metricOptions[0];
-}
-
-function defaultConfig(type?: AlertType): AlertFormValues {
-  return {
-    type: type ?? ...,
-    token: null,
-    triggerMode: "once",
-    expiresAtDate: null,
-    expiresAtTime: "09:00",
-    conditions: [createConditionRow()],
-    alertName: "",
-    emailEnabled: true,
-    email: "",
-  };
-}
-
-function AlertConfiguration() {
+function AlertConfigurationShared() {
   const { lang } = useLocalization();
-  const {
-    control,
-    watch,
-    register,
-    formState: { errors },
-  } = useFormContext<AlertFormValues>();
-  const alertType = watch("type");
-  const {
-    fields: conditionFields,
-    append,
-    remove,
-  } = useFieldArray({
-    name: "conditions",
-    control,
-    keyName: "formId",
-  });
+  const { control } = useFormContext<AlertFormValues>();
 
   const datePickerLocale = lang == "vi" ? "vn" : "en";
   const datePickerFormat = lang == "vi" ? "d/m/Y" : "m/d/Y";
 
-  if (alertType !== "token-stats") {
-    return <Txt>Configuration for this alert type not yet implemented</Txt>;
-  }
-
   return (
-    <Stack gap={7}>
-      <FormGroup legendText="Token">
-        <Stack gap={4}>
-          <Dropdown
-            id="token-type-select"
-            titleText="Token Type"
-            label="Specific Token"
-            items={[
-              {
-                id: "specific",
-                text: "Specific Token",
-              },
-              {
-                id: "portfolio",
-                text: "From My Portfolio",
-                disabled: true,
-              },
-              {
-                id: "watchlist",
-                text: "From My Watchlist",
-                disabled: true,
-              },
-            ]}
-            itemToString={(item) => item?.text || ""}
-            initialSelectedItem={{
-              id: "specific",
-              text: "Specific Token",
-            }}
-            // disabled
-          />
+    <Stack gap={2} orientation="horizontal">
+      <FormGroup legendText="Trigger">
+        <Controller
+          name="triggerMode"
+          control={control}
+          render={({ field }) => (
+            <RadioButtonGroup
+              name="trigger"
+              valueSelected={field.value}
+              onChange={(next) => {
+                field.onChange(next);
+              }}
+            >
+              <RadioButton id="once" labelText="Only Once" value="once" />
+              <RadioButton id="always" labelText="Always" value="always" />
+            </RadioButtonGroup>
+          )}
+        />
+      </FormGroup>
+      <FormGroup legendText="Expiry">
+        <Stack gap={1} orientation="horizontal" className={styles.dateTimeWrap}>
           <Controller
-            name="token"
+            name="expiresAtDate"
             control={control}
             render={({ field }) => (
-              <DropdownPanelField
-                id="token-search-select"
-                titleText="Token"
-                placeholder="Select token"
-                initialValue={field.value}
-                onValueChange={field.onChange}
-                invalid={!!errors.token}
-                invalidText={String(
-                  errors.token?.message || "Token is required",
-                )}
-                renderValue={(token: SelectedTokenValue) => (
-                  <Flex
-                    align="center"
-                    gap={3}
-                    className={styles.selectedTokenValue}
-                  >
-                    <TknImg size={20} src={token.imgUrl} alt={token.symbol} />
-                    <span>{token.symbol || token.name || token.id}</span>
-                  </Flex>
-                )}
-                renderPanel={({ setValue, closePanel }) => (
-                  <TokenSearch setValue={setValue} closePanel={closePanel} />
-                )}
-              />
-            )}
-          />
-        </Stack>
-      </FormGroup>
-      <Divider />
-      <FormGroup legendText="Conditions">
-        <Stack gap={4}>
-          <InlineNotification
-            hideCloseButton
-            lowContrast
-            kind="info"
-            title="Notes:"
-            subtitle="Maximum 3 conditions"
-            style={{ maxInlineSize: "none" }}
-          />
-
-          <Stack gap={6}>
-            {conditionFields.map((row, index) => (
-              <div key={row.formId} className={styles.conditionRow}>
-                <Flex
-                  className={styles.conditionConfig}
-                  dir="row"
-                  align="start"
-                  gap={1}
-                >
-                  <Controller
-                    name={`conditions.${index}.metric`}
-                    control={control}
-                    render={({ field }) => (
-                      <div style={{ inlineSize: "16rem" }}>
-                        <Dropdown
-                          id={`condition-metric-${row.formId}`}
-                          titleText={
-                            index == 0 ? "Metric" : `Metric ${index + 1}`
-                          }
-                          label="Select metric"
-                          items={metricOptions}
-                          itemToString={(item) => item?.text || ""}
-                          selectedItem={getMetricOption(field.value)}
-                          onChange={({ selectedItem }) => {
-                            if (!selectedItem) return;
-                            field.onChange(selectedItem.id);
-                          }}
-                        />
-                      </div>
-                    )}
-                  />
-                  <Controller
-                    name={`conditions.${index}.period`}
-                    control={control}
-                    render={({ field }) => (
-                      <div style={{ inlineSize: "6rem" }}>
-                        <Dropdown
-                          id={`condition-period-${row.formId}`}
-                          titleText={
-                            index == 0 ? "Period" : `Period ${index + 1}`
-                          }
-                          label="Select period"
-                          items={[
-                            { id: "30m", text: "30m" },
-                            { id: "1h", text: "1h" },
-                            { id: "6h", text: "6h" },
-                            { id: "24h", text: "24h" },
-                          ]}
-                          itemToString={(item) => item?.text || ""}
-                          selectedItem={{ id: field.value, text: field.value }}
-                          onChange={({ selectedItem }) => {
-                            if (!selectedItem) return;
-                            field.onChange(selectedItem.id);
-                          }}
-                        />
-                      </div>
-                    )}
-                  />
-                  <Controller
-                    name={`conditions.${index}.condition`}
-                    control={control}
-                    render={({ field }) => (
-                      <div style={{ inlineSize: "6rem" }}>
-                        <Dropdown
-                          id={`condition-op-${row.formId}`}
-                          titleText={
-                            index == 0 ? "Condition" : `Condition ${index + 1}`
-                          }
-                          label="Select condition"
-                          items={conditionOptions}
-                          itemToString={(item) => item?.text || ""}
-                          selectedItem={getConditionOption(field.value)}
-                          onChange={({ selectedItem }) => {
-                            if (!selectedItem) return;
-                            field.onChange(selectedItem.id);
-                          }}
-                        />
-                      </div>
-                    )}
-                  />
-                  <TextInput
-                    id={`condition-value-${row.formId}`}
-                    labelText="Value"
-                    placeholder="10"
-                    {...register(`conditions.${index}.value`)}
-                    invalid={!!errors.conditions?.[index]?.value}
-                    invalidText={String(
-                      errors.conditions?.[index]?.value?.message || "",
-                    )}
-                  />
-
-                  <div
-                    style={{
-                      paddingBlockStart: "1.5rem",
-                    }}
-                  >
-                    <IconButton
-                      size="md"
-                      kind="ghost"
-                      label="Remove"
-                      style={{
-                        visibility: index > 0 ? "visible" : "hidden",
-                      }}
-                      onClick={() => {
-                        if (index == 0) return;
-                        remove(index);
-                      }}
-                    >
-                      <SubtractAlt />
-                    </IconButton>
-                  </div>
-                </Flex>
-              </div>
-            ))}
-            {conditionFields.length < 3 && (
-              <Button
-                kind="primary"
-                renderIcon={Add}
-                onClick={() => {
-                  append(createConditionRow());
+              <DatePicker
+                datePickerType="single"
+                locale={datePickerLocale}
+                dateFormat={datePickerFormat}
+                value={field.value ? [field.value] : []}
+                onChange={(selectedDates) => {
+                  field.onChange(selectedDates[0] ?? null);
                 }}
               >
-                Add Condition
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-      </FormGroup>
-      <Divider />
-      <Stack gap={2} orientation="horizontal">
-        <FormGroup legendText="Trigger">
-          <Controller
-            name="triggerMode"
-            control={control}
-            render={({ field }) => (
-              <RadioButtonGroup
-                name="trigger"
-                valueSelected={field.value}
-                onChange={(next) => {
-                  field.onChange(next);
-                }}
-              >
-                <RadioButton id="once" labelText="Only Once" value="once" />
-                <RadioButton id="always" labelText="Always" value="always" />
-              </RadioButtonGroup>
-            )}
-          />
-        </FormGroup>
-        <FormGroup legendText="Expiry">
-          <Stack
-            gap={1}
-            orientation="horizontal"
-            className={overwriteStyles.dateTimePicker}
-          >
-            <Controller
-              name="expiresAtDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  datePickerType="single"
-                  locale={datePickerLocale}
-                  dateFormat={datePickerFormat}
-                  value={field.value ? [field.value] : []}
-                  onChange={(selectedDates) => {
-                    field.onChange(selectedDates[0] ?? null);
-                  }}
-                >
-                  <DatePickerInput
-                    id="expiry-date-input"
-                    placeholder="mm/dd/yyyy"
-                    labelText="Expiry"
-                    hideLabel
-                  />
-                </DatePicker>
-              )}
-            />
-            <Controller
-              name="expiresAtTime"
-              control={control}
-              render={({ field }) => (
-                <TimePicker
-                  id="expiry-time-input"
-                  labelText="24h"
+                <DatePickerInput
+                  id="expiry-date-input"
+                  placeholder="mm/dd/yyyy"
+                  labelText="Expiry"
                   hideLabel
-                  value={field.value}
-                  onChange={(event) => {
-                    field.onChange(event.target.value);
-                  }}
                 />
-              )}
-            />
-          </Stack>
-          {/* <Txt secondary size="sm" block>
-            UTC stored: {expiresAtUtc ? fmt.datetime.utc(expiresAtUtc) : "---"}
-          </Txt> */}
-        </FormGroup>
-      </Stack>
-    </Stack>
-  );
-}
-
-function AlertNotificationSettings() {
-  const {
-    control,
-    register,
-    watch,
-    formState: { errors },
-  } = useFormContext<AlertFormValues>();
-  const emailEnabled = watch("emailEnabled");
-
-  return (
-    <Stack gap={6}>
-      <FormGroup legendText="Delivery Channel">
-        <CheckboxGroup legendText="Group label">
-          <Flex dir="row" align="center" gap={20}>
-            <Controller
-              name="emailEnabled"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  className={styles.emailCheckBox}
-                  id="delivery-channel-email"
-                  labelText="Email"
-                  checked={field.value}
-                  onChange={(_, data) => field.onChange(data.checked)}
-                  style={{ maxInlineSize: "fit-content" }}
-                />
-              )}
-            />
-            {emailEnabled && (
-              <TextInput
-                className={styles.emailSetup}
-                labelText="Email"
+              </DatePicker>
+            )}
+          />
+          <Controller
+            name="expiresAtTime"
+            control={control}
+            render={({ field }) => (
+              <TimePicker
+                id="expiry-time-input"
+                labelText="24h"
                 hideLabel
-                placeholder="phuc21744@gmail.com"
-                id="delivery-channel-email__email"
-                helperText=""
-                {...register("email")}
-                invalid={!!errors.email}
-                invalidText={String(errors.email?.message || "")}
+                value={field.value}
+                onChange={(event) => {
+                  field.onChange(event.target.value);
+                }}
               />
             )}
-          </Flex>
-          <Checkbox
-            id="delivery-channel-telegram"
-            labelText="Telegram"
-            disabled
-          />
-          <Checkbox
-            id="delivery-channel-discord"
-            labelText="Discord"
-            disabled
-          />
-        </CheckboxGroup>
-      </FormGroup>
-      <Divider />
-      <FormGroup legendText="Alert">
-        <Stack gap={4}>
-          <TextInput
-            labelText="Alert name"
-            placeholder="Token Stats Performance 1"
-            id="alert-name-input"
-            {...register("alertName")}
-            invalid={!!errors.alertName}
-            invalidText={String(errors.alertName?.message || "")}
-          />
-          <TextArea
-            className={overwriteStyles.filledTextArea}
-            labelText="Message (Auto)"
-            readOnly
-            value={`Token SOL on Solana
-Trigger condition:
-Price change (%) in 1h from 10% to 100%`}
-            id="alert-message-textarea"
           />
         </Stack>
       </FormGroup>
@@ -693,7 +338,7 @@ export default function AlertsDemo() {
     mode: "onChange",
   });
 
-  const alerts = useGet(
+  const tokenAlerts = useGet(
     client.api.alerts.tokens,
     200,
     {},
@@ -702,19 +347,49 @@ export default function AlertsDemo() {
     },
   );
 
+  const tradingAlerts = useGet(
+    client.api.alerts.trading,
+    200,
+    {},
+    {
+      enabled: !!user,
+    },
+  );
+
   const rows: AlertRow[] = useMemo(() => {
-    if (!alerts.data) return [];
-    return alerts.data.map((alertDetails) => ({
+    const tokenRows = (tokenAlerts.data ?? []).map((alertDetails) => ({
       id: alertDetails.alertId,
-      tokenAddress: alertDetails.tokenTarget.tokenAddress,
+      type: "token",
+      target: alertDetails.tokenTarget?.tokenAddress || "-",
       alertName: alertDetails.alert.alertName,
       createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
     }));
-  }, [alerts, fmt]);
+
+    const tradingRows = (tradingAlerts.data ?? []).map((alertDetails) => {
+      const firstScope = alertDetails.tradingScopes[0];
+      const target =
+        firstScope?.walletAddress ||
+        firstScope?.tokenAddress ||
+        firstScope?.poolAddress ||
+        firstScope?.counterpartyAddress ||
+        "all";
+
+      return {
+        id: alertDetails.alertId,
+        type: "trading",
+        target,
+        alertName: alertDetails.alert.name,
+        createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
+      };
+    });
+
+    return [...tokenRows, ...tradingRows];
+  }, [fmt, tokenAlerts.data, tradingAlerts.data]);
 
   const headers = useMemo(
     () => [
-      { header: "Token Address", key: "tokenAddress" },
+      { header: "Type", key: "type" },
+      { header: "Target", key: "target" },
       { header: "Alert Name", key: "alertName" },
       { header: "Created At", key: "createdAt" },
     ],
@@ -739,7 +414,19 @@ export default function AlertsDemo() {
       return;
     }
 
-    const isValid = await methods.trigger(["token", "conditions"]);
+    const selectedType = methods.getValues("type");
+    const fieldsToValidate =
+      selectedType == "token-stats"
+        ? (["token", "tokenConditions"] as const)
+        : selectedType == "trading-events"
+          ? (["tradingConditions"] as const)
+          : ([] as const);
+
+    if (fieldsToValidate.length == 0) {
+      return;
+    }
+
+    const isValid = await methods.trigger([...fieldsToValidate]);
     if (!isValid) {
       return;
     }
@@ -764,7 +451,7 @@ export default function AlertsDemo() {
     }
     const data = parsed.data;
 
-    if (data.type != "token-stats") {
+    if (data.type != "token-stats" && data.type != "trading-events") {
       handleModalClose();
       setOpen(false);
       return;
@@ -775,17 +462,6 @@ export default function AlertsDemo() {
       data.expiresAtTime,
     )!;
 
-    const mappedConditions = data.conditions.map((row) => ({
-      period: row.period,
-      metric: row.metric,
-      conditionOp: row.condition,
-      value: row.value,
-    }));
-
-    if (mappedConditions.length == 0) {
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       const email =
@@ -793,22 +469,71 @@ export default function AlertsDemo() {
           ? data.email.trim()
           : null;
 
-      const res = await client.api.alerts.tokens.$post({
-        json: {
-          alertType: "token",
-          tokenTarget: {
-            tokenAddress: data.token!.id,
-          },
-          triggerMode: data.triggerMode,
-          expiresAt,
-          name: data.alertName,
-          ...(email ? { delivery: { email } } : {}),
-          conditions: mappedConditions,
-        },
-      });
+      const res =
+        data.type == "token-stats"
+          ? await client.api.alerts.tokens.$post({
+              json: {
+                alertType: "token",
+                tokenTarget: {
+                  tokenAddress: data.token!.id,
+                },
+                triggerMode: data.triggerMode,
+                expiresAt,
+                name: data.alertName,
+                ...(email ? { delivery: { email } } : {}),
+                conditions: data.tokenConditions.map((row) => ({
+                  period: row.period,
+                  metric: row.metric,
+                  conditionOp: row.condition,
+                  value: row.value,
+                })),
+              },
+            })
+          : await client.api.alerts.trading.$post({
+              json: {
+                alertType: "trading",
+                triggerMode: data.triggerMode,
+                expiresAt,
+                name: data.alertName,
+                ...(email ? { delivery: { email } } : {}),
+                scopes: (() => {
+                  const scope = data.tradingScope;
+                  const trimOrNull = (value: string) => {
+                    const trimmed = value.trim();
+                    return trimmed.length > 0 ? trimmed : null;
+                  };
+
+                  const mapped = {
+                    walletAddress: trimOrNull(scope.walletAddress),
+                    tokenAddress: trimOrNull(scope.tokenAddress),
+                    poolAddress: trimOrNull(scope.poolAddress),
+                    counterpartyAddress: trimOrNull(scope.counterpartyAddress),
+                    direction: scope.direction,
+                  };
+
+                  const hasAddress =
+                    mapped.walletAddress ||
+                    mapped.tokenAddress ||
+                    mapped.poolAddress ||
+                    mapped.counterpartyAddress;
+
+                  if (!hasAddress && mapped.direction == "both") {
+                    return [];
+                  }
+
+                  return [mapped];
+                })(),
+                conditions: data.tradingConditions.map((row) => ({
+                  aggregation: row.aggregation,
+                  period: row.period,
+                  conditionOp: row.condition,
+                  value: row.value,
+                })),
+              },
+            });
 
       if (res.status == 201) {
-        await alerts.mutate();
+        await Promise.all([tokenAlerts.mutate(), tradingAlerts.mutate()]);
         handleModalClose();
         setOpen(false);
       }
@@ -889,6 +614,12 @@ export default function AlertsDemo() {
     },
   ];
 
+  const selectedType = methods.watch("type");
+  const ConfigModule =
+    selectedType && selectedType in alertConfigModules
+      ? alertConfigModules[selectedType]
+      : null;
+
   return (
     <PageWrapper noMarketTickers>
       <Grid fullWidth>
@@ -939,7 +670,19 @@ export default function AlertsDemo() {
                             />
                           )}
 
-                          {step == "configuration" && <AlertConfiguration />}
+                          {step == "configuration" && (
+                            <Stack gap={6}>
+                              {ConfigModule ? (
+                                <ConfigModule />
+                              ) : (
+                                <Txt>
+                                  Configuration for this alert type is not yet
+                                  implemented.
+                                </Txt>
+                              )}
+                              <AlertConfigurationShared />
+                            </Stack>
+                          )}
 
                           {step == "notification" && (
                             <AlertNotificationSettings />
@@ -956,12 +699,12 @@ export default function AlertsDemo() {
                 rows={rows}
                 headers={headers}
                 title="Your Alerts"
-                loading={alerts.isLoading}
+                loading={tokenAlerts.isLoading || tradingAlerts.isLoading}
                 enablePagination
                 pageSize={10}
               />
 
-              {alerts.error && (
+              {(tokenAlerts.error || tradingAlerts.error) && (
                 <Txt block secondary>
                   Failed to load alerts
                 </Txt>

@@ -1,8 +1,9 @@
 .divider {
   display: flex;
   align-items: center;
-  block-size: 100%;
+  inline-size: 100%;
   color: var(--cds-text-secondary);
+  padding-block: 0.4rem;
 }
 
 .divider::before,
