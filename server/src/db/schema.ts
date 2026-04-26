@@ -900,7 +900,28 @@ export const walletFirstFund = pgTable(
     slot: integer("slot").notNull(),
     explorerUrl: varchar("explorer_url", { length: 256 }),
   },
-  (t) => [primaryKey({ columns: [t.reciepient] })]
+  (t) => [primaryKey({ columns: [t.reciepient] })],
+);
+
+/**
+ * AI Wallet Forensic Audit cache.
+ *
+ * Stores Gemini-generated behavioural reports per wallet so we don't pay the
+ * model cost on every page view. Read path checks `fetchedAt >= now - 24h`.
+ */
+export const walletAuditCache = pgTable(
+  "wallet_audit_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    persona: varchar("persona", { length: 64 }).notNull(),
+    trustScore: integer("trust_score").notNull(),
+    summary: text("summary").notNull(),
+    observations: jsonb("observations").$type<string[]>().notNull(),
+    transactionCount: integer("transaction_count").notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 // #endregion
@@ -952,6 +973,8 @@ export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
+export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 
 // #endregion
 

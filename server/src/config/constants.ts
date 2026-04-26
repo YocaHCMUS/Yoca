@@ -44,6 +44,15 @@ export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
+// AI Wallet Forensic Audit
+export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+/** How many recent transactions to send into Gemini for behavioural audit. */
+export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
+/** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
+export const WALLET_AUDIT_MODEL =
+  process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-3-flash";
+export const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY?.trim() || "";
+
 function readBooleanEnv(name: string, fallback: boolean): boolean {
   const value = process.env[name]?.trim().toLowerCase();
   if (value == null || value.length === 0) {

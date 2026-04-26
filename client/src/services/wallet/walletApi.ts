@@ -529,6 +529,55 @@ export async function fetchWalletIntelligence(
   return data as WalletIntelligenceResponse;
 }
 
+/**
+ * AI Wallet Forensic Audit response.
+ *
+ * Mirrors the shape returned by `GET /api/wallets/:address/audit`.
+ * The backend caches results for 24 hours; `cached: true` indicates the
+ * report came straight from cache (no Gemini call was made).
+ */
+export type WalletAuditPersona =
+  | "Sniper"
+  | "Whale"
+  | "DCA"
+  | "LP"
+  | "Retail"
+  | "Unknown";
+
+export interface WalletAuditReport {
+  address: string;
+  persona: WalletAuditPersona;
+  trustScore: number;
+  summary: string;
+  observations: string[];
+  transactionCount: number;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+/**
+ * Fetch AI Wallet Forensic Audit
+ * GET /api/wallets/:address/audit
+ *
+ * Pass `force: true` to bypass the 24-hour cache and re-run Gemini.
+ */
+export async function fetchWalletAudit(
+  address: string,
+  options?: { force?: boolean },
+): Promise<WalletAuditReport> {
+  const url = client.api.wallets[":address"].audit.$url({
+    param: { address },
+  });
+  if (options?.force) {
+    url.searchParams.set("force", "1");
+  }
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as WalletAuditReport;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -541,6 +590,7 @@ export const walletApi = {
   fetchWalletIdentity,
   fetchWalletIdentityBatch,
   fetchWalletIntelligence,
+  fetchWalletAudit,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
@@ -553,4 +603,5 @@ export const walletApi = {
   getIdentity: fetchWalletIdentity,
   getIdentityBatch: fetchWalletIdentityBatch,
   getIntelligence: fetchWalletIntelligence,
+  getAudit: fetchWalletAudit,
 };

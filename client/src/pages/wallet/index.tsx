@@ -15,6 +15,7 @@ import {
     renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
@@ -1010,6 +1011,12 @@ export default function WalletPage() {
         </div>
     );
 
+    const auditTab = (
+        <div className={styles.tabPane}>
+            <WalletAuditPanel walletAddress={walletAddress} enabled={activeTab === 3} />
+        </div>
+    );
+
     const pdfPageStyle: React.CSSProperties = {
         width: 1024,
         background: "#ffffff",
@@ -1238,8 +1245,8 @@ export default function WalletPage() {
                     <div className={styles.rightContent}>
                         <TabContainer
                             activeTab={activeTab}
-                            names={[tr("walletPage.overview"), tr("walletPage.holdings"), tr("walletPage.activityRisk")]}
-                            tabs={[overviewTab, holdingsTab, activityTab]}
+                            names={[tr("walletPage.overview"), tr("walletPage.holdings"), tr("walletPage.activityRisk"), "AI Audit"]}
+                            tabs={[overviewTab, holdingsTab, activityTab, auditTab]}
                             onTabChange={(index) => setActiveTab(index)}
                             actions={tabActions}
                         />

@@ -26,6 +26,10 @@ import {
   getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
+import {
+  WalletAuditServiceError,
+  getWalletAudit,
+} from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -544,6 +548,44 @@ const routes = router
       return c.json(tokenDetails, 200);
     } catch (err) {
       console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  /**
+   * AI Wallet Forensic Audit.
+   *
+   * Returns a Gemini-generated behavioural classification (persona, trust
+   * score, summary, observations) for the wallet. Result is cached in
+   * `wallet_audit_cache` for 24 hours; pass `?force=1` to bypass the cache.
+   */
+  .get("/:address/audit", validate("param", addressSchema), async (c) => {
+    const { address } = c.req.valid("param");
+    const force = c.req.query("force") === "1" || c.req.query("force") === "true";
+
+    try {
+      const audit = await getWalletAudit(address, { force });
+      return c.json(audit, 200);
+    } catch (err) {
+      if (err instanceof WalletAuditServiceError) {
+        const statusByCode: Record<
+          WalletAuditServiceError["code"],
+          400 | 404 | 502 | 503
+        > = {
+          missing_api_key: 503,
+          no_transactions: 404,
+          model_error: 502,
+          invalid_model_response: 502,
+        };
+        return c.json(
+          { error: err.message, code: err.code },
+          statusByCode[err.code],
+        );
+      }
+
+      console.error("Failed to generate wallet audit", err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
