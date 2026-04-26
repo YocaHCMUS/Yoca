@@ -25,13 +25,6 @@ export const enumConditionOp = pgEnum("condition_op", [
 export const enumTokenMetric = pgEnum("token_metric", [
   "price_percentage",
   "price_usd",
-  "volume_usd",
-  "buying_volume_usd",
-  "buying_volume_percentage",
-  "selling_volume_usd",
-  "selling_volume_percentage",
-  "trades",
-  "trades_percentage",
 ]);
 
 export const enumAlertStatus = pgEnum("alert_status", ["running", "stopped"]);

@@ -1,3 +1,9 @@
+import type {
+    UserAlertConditionOp,
+    UserAlertPeriod,
+    UserAlertTokenMetric,
+    UserAlertTriggerMode,
+} from "@/api/alerts";
 import client from "@/api/main";
 import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { Flex } from "@/components/Flex";
@@ -14,39 +20,39 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
-  Button,
-  Checkbox,
-  CheckboxGroup,
-  ClickableTile,
-  Column,
-  ComposedModal,
-  DatePicker,
-  DatePickerInput,
-  Dropdown,
-  FormGroup,
-  Grid,
-  IconButton,
-  InlineNotification,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  RadioButton,
-  RadioButtonGroup,
-  Section,
-  Stack,
-  TextArea,
-  TextInput,
-  TimePicker,
+    Button,
+    Checkbox,
+    CheckboxGroup,
+    ClickableTile,
+    Column,
+    ComposedModal,
+    DatePicker,
+    DatePickerInput,
+    Dropdown,
+    FormGroup,
+    Grid,
+    IconButton,
+    InlineNotification,
+    ModalBody,
+    ModalFooter,
+    ModalHeader,
+    RadioButton,
+    RadioButtonGroup,
+    Section,
+    Stack,
+    TextArea,
+    TextInput,
+    TimePicker,
 } from "@carbon/react";
 import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
 import {
-  Controller,
-  FormProvider,
-  useFieldArray,
-  useForm,
-  useFormContext,
+    Controller,
+    FormProvider,
+    useFieldArray,
+    useForm,
+    useFormContext,
 } from "react-hook-form";
 import z from "zod";
 import styles from "./demo.module.scss";
@@ -59,36 +65,22 @@ interface AlertRow {
   [key: string]: string;
 }
 
-type AlertType =
-  | "technical-indicators"
-  | "token-stats"
-  | "trading-events"
-  | "market-movements"
-  | null;
 type AlertStep = "type-selection" | "configuration" | "notification";
-type AlertPeriod = "30m" | "1h" | "6h" | "24h";
-type TriggerMode = "once" | "always";
 
-const ALERT_TYPE_VALUES = [
+const alertTypes = [
   "technical-indicators",
   "token-stats",
   "trading-events",
   "market-movements",
 ] as const;
-const ALERT_PERIOD_VALUES = ["30m", "1h", "6h", "24h"] as const;
-const TRIGGER_MODE_VALUES = ["once", "always"] as const;
-const CONDITION_OP_VALUES = ["gt", "gte", "eq", "lt", "lte"] as const;
-const ALERT_METRIC_VALUES = [
+type AlertType = (typeof alertTypes)[number];
+const alertPeriods: UserAlertPeriod[] = ["30m", "1h", "6h", "24h"];
+const triggerModes: UserAlertTriggerMode[] = ["once", "always"];
+const conditionOps: UserAlertConditionOp[] = ["gt", "gte", "eq", "lt", "lte"];
+const tokenAlertMetrics: UserAlertTokenMetric[] = [
   "price_percentage",
   "price_usd",
-  "volume_usd",
-  "buying_volume_usd",
-  "buying_volume_percentage",
-  "selling_volume_usd",
-  "selling_volume_percentage",
-  "trades",
-  "trades_percentage",
-] as const;
+];
 
 interface AlertTypeOption {
   id: AlertType;
@@ -150,19 +142,6 @@ function AlertTypeSelection({
   );
 }
 
-type ConditionOp = "gt" | "gte" | "eq" | "lt" | "lte";
-
-type AlertMetric =
-  | "price_percentage"
-  | "price_usd"
-  | "volume_usd"
-  | "buying_volume_usd"
-  | "buying_volume_percentage"
-  | "selling_volume_usd"
-  | "selling_volume_percentage"
-  | "trades"
-  | "trades_percentage";
-
 function combineLocalDateAndTime(
   date: Date | null,
   time: string,
@@ -191,9 +170,9 @@ const selectedTokenSchema = z.object({
 
 const conditionRowSchema = z.object({
   id: z.string().min(1),
-  period: z.enum(ALERT_PERIOD_VALUES),
-  metric: z.enum(ALERT_METRIC_VALUES),
-  condition: z.enum(CONDITION_OP_VALUES),
+  period: z.enum(alertPeriods),
+  metric: z.enum(tokenAlertMetrics),
+  condition: z.enum(conditionOps),
   value: z
     .string()
     .trim()
@@ -204,9 +183,9 @@ const conditionRowSchema = z.object({
 
 const alertFormSchema = z
   .object({
-    type: z.enum(ALERT_TYPE_VALUES).nullable(),
+    type: z.enum(alertTypes).nullable(),
     token: selectedTokenSchema.nullable(),
-    triggerMode: z.enum(TRIGGER_MODE_VALUES),
+    triggerMode: z.enum(triggerModes),
     expiresAtDate: z.date().nullable(),
     expiresAtTime: z.string().trim().min(1),
     conditions: z.array(conditionRowSchema).min(1).max(3),
@@ -264,7 +243,7 @@ type AlertFormValues = z.input<typeof alertFormSchema>;
 type AlertConfig = z.output<typeof alertFormSchema>;
 type ConditionRow = AlertFormValues["conditions"][number];
 
-const CONDITION_OPTIONS: Array<{ id: ConditionOp; text: string }> = [
+const conditionOptions: { id: UserAlertConditionOp; text: string }[] = [
   { id: "gt", text: ">" },
   { id: "gte", text: "≥" },
   { id: "eq", text: "=" },
@@ -272,51 +251,28 @@ const CONDITION_OPTIONS: Array<{ id: ConditionOp; text: string }> = [
   { id: "lte", text: "≤" },
 ];
 
-const METRIC_OPTIONS: Array<{ id: AlertMetric; text: string; helper: string }> =
-  [
-    {
-      id: "price_percentage",
-      text: "Price change %",
-      helper: "Percent change over the selected period",
-    },
-    { id: "price_usd", text: "Price", helper: "Current token price in USD" },
-    { id: "volume_usd", text: "Volume", helper: "Total trading volume in USD" },
-    {
-      id: "buying_volume_usd",
-      text: "Buy volume",
-      helper: "Buy-side volume in USD",
-    },
-    {
-      id: "buying_volume_percentage",
-      text: "Buy volume %",
-      helper: "Buy-side share of total volume",
-    },
-    {
-      id: "selling_volume_usd",
-      text: "Sell volume",
-      helper: "Sell-side volume in USD",
-    },
-    {
-      id: "selling_volume_percentage",
-      text: "Sell volume %",
-      helper: "Sell-side share of total volume",
-    },
-    { id: "trades", text: "Trades", helper: "Number of trades" },
-    {
-      id: "trades_percentage",
-      text: "Trades %",
-      helper: "Trade count change over the selected period",
-    },
-  ];
+const metricOptions: {
+  id: UserAlertTokenMetric;
+  text: string;
+  helper: string;
+}[] = [
+  {
+    id: "price_percentage",
+    text: "Price change %",
+    helper: "Percent change over the selected period",
+  },
+  { id: "price_usd", text: "Price", helper: "Current token price in USD" },
+];
 
-function getConditionOption(condition: ConditionOp) {
+function getConditionOption(condition: UserAlertConditionOp) {
   return (
-    CONDITION_OPTIONS.find((item) => item.id == condition) ??
-    CONDITION_OPTIONS[0]
+    conditionOptions.find((item) => item.id == condition) ?? conditionOptions[0]
   );
 }
 
-function createConditionRow(condition: ConditionOp = "gt"): ConditionRow {
+function createConditionRow(
+  condition: UserAlertConditionOp = "gt",
+): ConditionRow {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     period: "1h",
@@ -326,13 +282,13 @@ function createConditionRow(condition: ConditionOp = "gt"): ConditionRow {
   };
 }
 
-function getMetricOption(metric: AlertMetric) {
-  return METRIC_OPTIONS.find((item) => item.id == metric) ?? METRIC_OPTIONS[0];
+function getMetricOption(metric: UserAlertTokenMetric) {
+  return metricOptions.find((item) => item.id == metric) ?? metricOptions[0];
 }
 
-function createInitialConfig(type: AlertType = null): AlertFormValues {
+function defaultConfig(type?: AlertType): AlertFormValues {
   return {
-    type,
+    type: type ?? ...,
     token: null,
     triggerMode: "once",
     expiresAtDate: null,
@@ -465,7 +421,7 @@ function AlertConfiguration() {
                             index == 0 ? "Metric" : `Metric ${index + 1}`
                           }
                           label="Select metric"
-                          items={METRIC_OPTIONS}
+                          items={metricOptions}
                           itemToString={(item) => item?.text || ""}
                           selectedItem={getMetricOption(field.value)}
                           onChange={({ selectedItem }) => {
@@ -497,7 +453,7 @@ function AlertConfiguration() {
                           selectedItem={{ id: field.value, text: field.value }}
                           onChange={({ selectedItem }) => {
                             if (!selectedItem) return;
-                            field.onChange(selectedItem.id as AlertPeriod);
+                            field.onChange(selectedItem.id);
                           }}
                         />
                       </div>
@@ -514,7 +470,7 @@ function AlertConfiguration() {
                             index == 0 ? "Condition" : `Condition ${index + 1}`
                           }
                           label="Select condition"
-                          items={CONDITION_OPTIONS}
+                          items={conditionOptions}
                           itemToString={(item) => item?.text || ""}
                           selectedItem={getConditionOption(field.value)}
                           onChange={({ selectedItem }) => {
@@ -584,7 +540,7 @@ function AlertConfiguration() {
                 name="trigger"
                 valueSelected={field.value}
                 onChange={(next) => {
-                  field.onChange(next as TriggerMode);
+                  field.onChange(next);
                 }}
               >
                 <RadioButton id="once" labelText="Only Once" value="once" />
@@ -732,13 +688,13 @@ export default function AlertsDemo() {
   const [step, setStep] = useState<AlertStep>("type-selection");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const methods = useForm<AlertFormValues, unknown, AlertConfig>({
-    defaultValues: useMemo(() => createInitialConfig(), []),
+    defaultValues: useMemo(() => defaultConfig(), []),
     resolver: zodResolver(alertFormSchema),
     mode: "onChange",
   });
 
   const alerts = useGet(
-    client.api.alertsToken,
+    client.api.alerts.tokens,
     200,
     {},
     {
@@ -748,11 +704,11 @@ export default function AlertsDemo() {
 
   const rows: AlertRow[] = useMemo(() => {
     if (!alerts.data) return [];
-    return alerts.data.map((alert) => ({
-      id: alert.alertId,
-      tokenAddress: alert.alert.tokenAddress,
-      alertName: alert.alert.alertName,
-      createdAt: fmt.datetime.datetime(alert.alert.createdAt),
+    return alerts.data.map((alertDetails) => ({
+      id: alertDetails.alertId,
+      tokenAddress: alertDetails.tokenTarget.tokenAddress,
+      alertName: alertDetails.alert.alertName,
+      createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
     }));
   }, [alerts, fmt]);
 
@@ -793,7 +749,7 @@ export default function AlertsDemo() {
 
   const handleModalClose = () => {
     setStep("type-selection");
-    methods.reset(createInitialConfig());
+    methods.reset(defaultConfig());
   };
 
   const handleSave = async (setOpen: (next: boolean) => void) => {
@@ -821,7 +777,7 @@ export default function AlertsDemo() {
 
     const mappedConditions = data.conditions.map((row) => ({
       period: row.period,
-      alertType: row.metric,
+      metric: row.metric,
       conditionOp: row.condition,
       value: row.value,
     }));
@@ -837,13 +793,16 @@ export default function AlertsDemo() {
           ? data.email.trim()
           : null;
 
-      const res = await client.api.alertsToken.$post({
+      const res = await client.api.alerts.tokens.$post({
         json: {
-          tokenAddress: data.token!.id,
+          alertType: "token",
+          tokenTarget: {
+            tokenAddress: data.token!.id,
+          },
           triggerMode: data.triggerMode,
           expiresAt,
-          alertName: data.alertName,
-          ...(email ? { email } : {}),
+          name: data.alertName,
+          ...(email ? { delivery: { email } } : {}),
           conditions: mappedConditions,
         },
       });
