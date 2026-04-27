@@ -325,6 +325,190 @@ export const translation = {
     exportChartsZip: "Export Charts (.zip images)",
     exportingReport: "Exporting report...",
     exportReportPdf: "Export Report (.pdf)",
+    aiAnalysis: "AI Analysis",
+    aiAnalysisLoading: "Analyzing wallet with AI...",
+    aiAnalysisFailed: "Failed to load AI analysis",
+    aiAnalysisRetry: "Retry AI analysis",
+    aiNoData: "No AI analysis data",
+    aiSummary: "Summary",
+    aiStatusOk: "ok",
+    aiStatusInsufficientData: "insufficient_data",
+    aiDataReadiness: "Data Readiness",
+    aiDataAllAvailable: "All data available",
+    aiDataWaiting: "Waiting for required data",
+    aiDataSwaps: "Swaps",
+    aiDataPortfolio: "Portfolio",
+    aiDataFirstFunder: "First funder",
+    aiDataIdentity: "Identity",
+    aiDataIntelligence: "Intelligence",
+    aiDepStatusAvailable: "available",
+    aiDepStatusNoData: "no data",
+    aiDepStatusFetching: "fetching",
+    aiGenerateAnalysis: "Generate analysis",
+    aiGenerating: "Generating...",
+    aiLastUpdated: "Last updated",
+    aiActivityProfile: "Activity Profile",
+    aiArchetype: "Archetype",
+    aiActivityLevel: "Activity level",
+    aiLastActive: "Last active",
+    aiInteractionFingerprint: "Interaction Fingerprint",
+    aiPreferredProtocols: "Preferred protocols",
+    aiTransactionTiming: "Transaction timing",
+    aiPreferredTradingTokens: "Preferred trading tokens",
+    aiPreferredHoldingTokens: "Preferred holding tokens",
+    aiTradingVolumeRange: "Trading volume range",
+    aiFunder: "Funder",
+    aiFunderType: "Funder type",
+    aiNotes: "Notes",
+    aiWalletAge: "Wallet age",
+    aiAgeCategory: "Age category",
+    aiFirstSeen: "First seen",
+    aiConsistencyAssessment: "Consistency assessment",
+    aiSignals: "Signals",
+  },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Scalper",
+        description:
+          "Executes many short-horizon trades and prioritizes fast position turnover.",
+        benefit: {
+          fastTurnover: "Quickly recycles capital into new opportunities.",
+          adaptsVolatility: "Can react fast when market volatility spikes.",
+        },
+        risk: {
+          feeHeavy: "Frequent trading can heavily increase fee drag.",
+          emotionalPressure: "Requires constant monitoring and fast decisions.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          maxAvgHoldHours: "Maximum average holding hours",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Captures multi-day to multi-week moves and avoids overtrading noise.",
+        benefit: {
+          balancedPace: "Balances opportunity capture with lower execution stress.",
+          trendCapture: "Works well in clear medium-term directional trends.",
+        },
+        risk: {
+          gapExposure: "Overnight or weekend gaps can bypass planned exits.",
+          lateReversal: "Delayed exits can erode gains after trend reversal.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          minAvgHoldHours: "Minimum average holding hours",
+        },
+      },
+      momentum: {
+        name: "Momentum Chaser",
+        description:
+          "Follows strong directional breakouts with acceleration in price and volume.",
+        benefit: {
+          strongTrendUpside: "Can scale returns in sustained trend expansions.",
+          quickInvalidation: "Clear invalidation levels help disciplined exits.",
+        },
+        risk: {
+          falseBreakout: "False breakouts can trigger repeated quick losses.",
+          whipsawLosses: "Choppy conditions can cause rapid entry-exit losses.",
+        },
+        rule: {
+          minBuySellRatio: "Minimum buy/sell pressure ratio",
+          minTrades30d: "Minimum trades in last 30 days",
+        },
+      },
+      meanRevert: {
+        name: "Mean Reverter",
+        description:
+          "Looks for overextended moves and trades back toward average pricing.",
+        benefit: {
+          definedEntries: "Entry conditions are often measurable and repeatable.",
+          riskControlled: "Structured position sizing can limit downside.",
+        },
+        risk: {
+          trendAgainst: "Strong trends can remain irrational longer than expected.",
+          patienceRequired: "Setups may be infrequent and require discipline.",
+        },
+        rule: {
+          maxTrades30d: "Maximum trades in last 30 days",
+          minWinRate: "Minimum required win rate",
+        },
+      },
+      conviction: {
+        name: "Conviction Holder",
+        description:
+          "Builds concentrated positions and holds through broader market cycles.",
+        benefit: {
+          longCycleUpside:
+            "Can capture compounding upside from long trend cycles.",
+          lowNoise: "Fewer trades reduce reaction to short-term market noise.",
+        },
+        risk: {
+          concentration: "High concentration can amplify drawdowns.",
+          slowExit: "Large positions may be harder to unwind quickly.",
+        },
+        rule: {
+          maxTokensHeld: "Maximum distinct tokens held",
+          minAvgHoldDays: "Minimum average holding days",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Smart Money",
+        description:
+          "Historically profitable wallet with consistent risk-adjusted decisions.",
+      },
+      activeTrader: {
+        name: "Active Trader",
+        description:
+          "High activity wallet with frequent rotations and short response cycles.",
+      },
+      whale: {
+        name: "Whale",
+        description:
+          "Wallet with large capital base capable of moving thin-liquidity markets.",
+      },
+      newWallet: {
+        name: "New Wallet",
+        description:
+          "Recently active wallet with limited historical behavior footprint.",
+      },
+      riskWallet: {
+        name: "Risk Wallet",
+        description:
+          "Wallet that shows elevated volatility, adverse signals, or unstable patterns.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Centralized Exchange",
+        description:
+          "First inbound funding appears to come from a centralized exchange hot wallet.",
+      },
+      dexRouter: {
+        name: "DEX Router",
+        description:
+          "First inbound funding originates from decentralized swap router infrastructure.",
+      },
+      bridge: {
+        name: "Bridge",
+        description:
+          "First inbound funding indicates cross-chain bridge transfer behavior.",
+      },
+      otc: {
+        name: "OTC Desk",
+        description:
+          "First inbound funding likely from over-the-counter settlement wallet.",
+      },
+      unknown: {
+        name: "Unknown Source",
+        description:
+          "Funding source cannot be confidently classified from available on-chain signals.",
+      },
+    },
   },
   // Market Page
   marketPage: {

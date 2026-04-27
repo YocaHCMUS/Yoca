@@ -103,17 +103,25 @@ const apiCallTrackerRedactFields = readListEnv(
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
   : [
-      "apikey",
-      "api_key",
-      "authorization",
-      "token",
-      "password",
-      "secret",
-      "signature",
-    ];
+    "apikey",
+    "api_key",
+    "authorization",
+    "token",
+    "password",
+    "secret",
+    "signature",
+  ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
 
 // ACMS / Wallet feature flags
 export const WALLET_USE_ACMS = readBooleanEnv("WALLET_USE_ACMS", false);
+export const WALLET_AI_ANALYSIS_USE_ACMS = readBooleanEnv(
+  "WALLET_AI_ANALYSIS_USE_ACMS",
+  false,
+);
+export const WALLET_AI_ANALYSIS_DEBUG = readBooleanEnv(
+  "WALLET_AI_ANALYSIS_DEBUG",
+  false,
+);
