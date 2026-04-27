@@ -12,94 +12,28 @@ import {
   isValidSolanaAddress,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { callViaAcms } from "@sv/services/wallet/providers/adapters/index.js";
+import {
+  createWalletAiAnalysisCacheKey,
+  getCachedWalletAiAnalysis,
+  saveCachedWalletAiAnalysis,
+} from "@sv/services/wallet/db/walletAnalysisCache.js";
+import {
+  walletAiAnalysisRequestSchema,
+  type WalletAiAnalysisResponse,
+  type WalletAnalysisErrorCode,
+  type WalletAnalysisErrorDetails,
+  type WalletAnalysisMissingDependency,
+} from "@sv/services/wallet/dtos/walletAnalysisObjects.js";
+import {
+  createWalletAiAnalysisRequestId,
+  isAbortError,
+  normalizeWalletAiAnalysisWebhookPayload,
+  normalizeWalletAiLanguage,
+  resolveWalletAiAnalysisWebhookEndpoint,
+} from "@sv/services/wallet/util/walletAnalysis.utils.js";
 import { z } from "zod";
-import { db } from "@sv/db/index.js";
-import { walletAiAnalysisCache } from "@sv/db/schema.js";
-import { eq } from "drizzle-orm";
 
 const WALLET_AI_ANALYSIS_TIMEOUT_MS = 180_000;
-const WALLET_AI_ANALYSIS_CACHE_TTL_MS = 3 * 60 * 60 * 1000;
-const DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL =
-  "http://localhost:5678/webhook/analyse-wallet";
-
-const walletAiAnalysisRequestSchema = z.object({
-  address: z.string().trim().min(1),
-  language: z.enum(["en", "vn"]).default("en"),
-});
-
-export type WalletAiAnalysisLanguage = "en" | "vn";
-
-const walletAiAnalysisReferenceEntrySchema = z
-  .object({
-    ref_id: z.number(),
-    type: z.enum(["wallet", "exchange", "token"]),
-    address: z.string().trim().optional(),
-    name: z.string().trim().optional(),
-    symbol: z.string().trim().optional(),
-    logoUri: z.string().trim().optional(),
-  })
-  .passthrough();
-
-const walletAiAnalysisResponseSchema = z.object({
-  wallet_address: z.string().trim().min(1),
-  data: z.object({
-    swaps: z.enum(["ok", "insufficient_data"]),
-    portfolio: z.enum(["ok", "insufficient_data"]),
-    first_funder: z.enum(["ok", "insufficient_data"]),
-    identity: z.enum(["ok", "insufficient_data"]),
-  }),
-  activity_profile: z.object({
-    archetype: z.string().trim().min(1),
-    activity_level: z.enum(["dormant", "low", "moderate", "high"]),
-    last_active: z.string().trim().min(1),
-  }),
-  interaction_fingerprint: z.object({
-    preferred_protocols: z.array(z.string().trim().min(1)).default([]),
-    transaction_timing: z.enum(["uniform", "burst_mode", "sporadic"]),
-    preffered_trading_tokens: z.array(z.string().trim().min(1)).default([]),
-    preffered_holding_tokens: z.array(z.string().trim().min(1)).default([]),
-    trading_volume_range: z.string().trim().min(1),
-  }),
-  funder: z.object({
-    type: z.string().trim().min(1),
-    notes: z.string().trim().min(1),
-  }),
-  wallet_age: z.object({
-    category: z.enum(["new", "mid", "old", "unknown"]),
-    first_seen: z.string().trim().min(1),
-    consistency: z.string().trim().min(1),
-  }),
-  summary: z.string().trim().min(1),
-  signals: z.array(z.string().trim().min(1)).default([]),
-  reference: z.array(walletAiAnalysisReferenceEntrySchema).optional(),
-}).passthrough();
-
-const walletAiAnalysisWebhookPayloadSchema = z.union([
-  walletAiAnalysisResponseSchema,
-  z.array(walletAiAnalysisResponseSchema).min(1),
-]);
-
-type WalletAiAnalysisResponse = z.infer<typeof walletAiAnalysisResponseSchema>;
-
-type WalletAnalysisErrorCode =
-  | "invalid_address"
-  | "dependency_not_ready"
-  | "provider_timeout"
-  | "provider_unavailable"
-  | "provider_bad_payload"
-  | "provider_unknown";
-
-type WalletAnalysisMissingDependency =
-  | "identity"
-  | "first_fund"
-  | "portfolio"
-  | "swaps";
-
-type WalletAnalysisErrorDetails = {
-  missingDependencies?: WalletAnalysisMissingDependency[];
-  providerStatusCode?: number;
-  requestId?: string;
-};
 
 export class WalletAnalysisServiceError extends Error {
   readonly code: WalletAnalysisErrorCode;
@@ -118,201 +52,6 @@ export class WalletAnalysisServiceError extends Error {
     this.status = status;
     this.details = details;
   }
-}
-
-function createRequestId(): string {
-  return `wai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
-}
-
-let warnedMissingWalletAiAnalysisCacheTable = false;
-
-function isMissingWalletAiAnalysisCacheTableError(error: unknown): boolean {
-  if (error == null || typeof error !== "object") {
-    return false;
-  }
-
-  const record = error as {
-    cause?: { code?: unknown };
-    message?: unknown;
-  };
-
-  if (record.cause != null && typeof record.cause === "object") {
-    const causeCode = (record.cause as { code?: unknown }).code;
-    if (causeCode === "42P01") {
-      return true;
-    }
-  }
-
-  if (typeof record.message !== "string") {
-    return false;
-  }
-
-  return (
-    record.message.includes("wallet_ai_analysis_cache") &&
-    record.message.toLowerCase().includes("does not exist")
-  );
-}
-
-function warnMissingWalletAiAnalysisCacheTableOnce(): void {
-  if (warnedMissingWalletAiAnalysisCacheTable) {
-    return;
-  }
-
-  warnedMissingWalletAiAnalysisCacheTable = true;
-  console.warn(
-    "[wallet-ai-analysis-cache] wallet_ai_analysis_cache table not found; continuing without AI analysis DB cache until migration is applied",
-  );
-}
-
-function resolveWebhookEndpoint(): string {
-  const configured = process.env.WALLET_AI_ANALYSIS_WEBHOOK_URL?.trim();
-  return configured && configured.length > 0
-    ? configured
-    : DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL;
-}
-
-function normalizeWalletAiLanguage(
-  language: string | undefined,
-): WalletAiAnalysisLanguage {
-  const normalized = language?.trim().toLowerCase();
-  return normalized === "vn" ? "vn" : "en";
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value != null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function createWalletAiAnalysisCacheKey(input: {
-  address: string;
-  language: WalletAiAnalysisLanguage;
-  modelVersion?: string;
-  promptVersion?: string;
-}): string {
-  const modelPart = input.modelVersion?.trim() || "-";
-  const promptPart = input.promptVersion?.trim() || "-";
-  return `wai:${input.address}:${input.language}:${modelPart}:${promptPart}`;
-}
-
-async function getCachedWalletAiAnalysis(
-  key: string,
-): Promise<WalletAiAnalysisResponse | null> {
-  let rows: unknown[];
-
-  try {
-    rows = await db
-      .select()
-      .from(walletAiAnalysisCache)
-      .where(eq(walletAiAnalysisCache.key, key))
-      .limit(1);
-  } catch (error) {
-    if (isMissingWalletAiAnalysisCacheTableError(error)) {
-      warnMissingWalletAiAnalysisCacheTableOnce();
-      return null;
-    }
-
-    throw error;
-  }
-
-  if (rows.length === 0) {
-    return null;
-  }
-
-  const row = rows[0] as any;
-  const fetchedAt =
-    row.fetchedAt instanceof Date ? row.fetchedAt : new Date(row.fetchedAt ?? Date.now());
-
-  const isFresh =
-    fetchedAt.getTime() >= Date.now() - WALLET_AI_ANALYSIS_CACHE_TTL_MS;
-
-  if (!isFresh) {
-    return null;
-  }
-
-  try {
-    return walletAiAnalysisResponseSchema.parse(row.normalized);
-  } catch {
-    return null;
-  }
-}
-
-async function saveCachedWalletAiAnalysis(input: {
-  key: string;
-  address: string;
-  language: WalletAiAnalysisLanguage;
-  modelVersion?: string;
-  promptVersion?: string;
-  raw: unknown;
-  normalized: WalletAiAnalysisResponse;
-}): Promise<void> {
-  try {
-    await db
-      .insert(walletAiAnalysisCache)
-      .values({
-        key: input.key,
-        address: input.address,
-        language: input.language,
-        modelVersion: input.modelVersion ?? null,
-        promptVersion: input.promptVersion ?? null,
-        raw: input.raw,
-        normalized: input.normalized,
-        fetchedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [walletAiAnalysisCache.key],
-        set: {
-          raw: input.raw,
-          normalized: input.normalized,
-          fetchedAt: new Date(),
-          updatedAt: new Date(),
-          address: input.address,
-          language: input.language,
-          modelVersion: input.modelVersion ?? null,
-          promptVersion: input.promptVersion ?? null,
-        },
-      });
-  } catch (error) {
-    if (isMissingWalletAiAnalysisCacheTableError(error)) {
-      warnMissingWalletAiAnalysisCacheTableOnce();
-      return;
-    }
-
-    throw error;
-  }
-}
-
-function unwrapWebhookPayload(payload: unknown): unknown {
-  let current: unknown = payload;
-
-  if (Array.isArray(current)) {
-    current = current[0];
-  }
-
-  const asObject = asRecord(current);
-  if (asObject?.output !== undefined) {
-    current = asObject.output;
-  }
-
-  if (Array.isArray(current)) {
-    current = current[0];
-  }
-
-  return current;
-}
-
-function normalizeWebhookPayload(payload: unknown): WalletAiAnalysisResponse {
-  const unwrappedPayload = unwrapWebhookPayload(payload);
-  const parsedPayload = walletAiAnalysisWebhookPayloadSchema.parse(unwrappedPayload);
-  const normalized = Array.isArray(parsedPayload)
-    ? parsedPayload[0]
-    : parsedPayload;
-
-  return walletAiAnalysisResponseSchema.parse(normalized);
 }
 
 async function checkDependencies(
@@ -364,7 +103,7 @@ export async function getWalletAiAnalysis(
 ): Promise<WalletAiAnalysisResponse> {
   const normalizedAddress = address.trim();
   const normalizedLanguage = normalizeWalletAiLanguage(language);
-  const requestId = createRequestId();
+  const requestId = createWalletAiAnalysisRequestId();
   const modelVersion = process.env.WALLET_AI_MODEL_VERSION?.trim() || undefined;
   const promptVersion = process.env.WALLET_AI_PROMPT_VERSION?.trim() || undefined;
 
@@ -390,7 +129,7 @@ export async function getWalletAiAnalysis(
     );
   }
 
-  const endpoint = resolveWebhookEndpoint();
+  const endpoint = resolveWalletAiAnalysisWebhookEndpoint();
   const cacheKey = createWalletAiAnalysisCacheKey({
     address: normalizedAddress,
     language: normalizedLanguage,
@@ -483,7 +222,7 @@ export async function getWalletAiAnalysis(
       });
     }
 
-    const normalized = normalizeWebhookPayload(payload);
+    const normalized = normalizeWalletAiAnalysisWebhookPayload(payload);
 
     await saveCachedWalletAiAnalysis({
       key: cacheKey,
