@@ -19,8 +19,8 @@ import * as userService from "@sv/services/users.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
-import { deleteCookie, setCookie } from "hono/cookie";
-import { sign } from "hono/jwt";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { jwt, sign } from "hono/jwt";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const googleClientId = process.env.GOOGLE_CLIENT_ID!;
@@ -229,14 +229,29 @@ const app = new Hono()
     deleteCookie(c, AUTH_COOKIE_NAME);
     return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
   })
-  .get("/auth/me", honoJwt, async (c) => {
+  .get("/auth/me", async (c) => {
     try {
+      const authCookie = getCookie(c, AUTH_COOKIE_NAME);
+      if (!authCookie) {
+        return c.json(null, statusCode.Ok);
+      }
+
+      const optionalJwt = jwt({
+        secret: jwtSecret,
+        alg: "HS256",
+        cookie: AUTH_COOKIE_NAME,
+      });
+      const jwtResult = await optionalJwt(c, async () => undefined);
+      if (jwtResult instanceof Response) {
+        return c.json(null, statusCode.Ok);
+      }
+
       // payload is typed as any, currently there is no typesafety for this yet
       const rawPayload = c.get("jwtPayload");
 
       const parsedPayload = userPayloadSchema.safeParse(rawPayload);
       if (!parsedPayload.success) {
-        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        return c.json(null, statusCode.Ok);
       }
 
       return c.json(parsedPayload.data, statusCode.Ok);

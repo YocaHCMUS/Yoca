@@ -54,6 +54,7 @@ function useTokenPageData(address: string, poolAddress: string) {
 
   const poolData = useGet(client.api.tokens.pools[":addresses"], 200, {
     param: { addresses: poolAddress },
+    query: { refresh: "true" },
   });
 
   const isLoading =
@@ -79,21 +80,46 @@ function useTokenPageData(address: string, poolAddress: string) {
     };
   }
 
-  // Safe unwrap after loading/error gate
-  const [meta] = baseMeta.data!;
+  const [metaFromApi] = baseMeta.data ?? [];
   const [holdersInfo] = holdersStats.data ?? [null];
-  const pool = poolData.data![0];
+  const pool = poolData.data?.[0] ?? null;
+
+  if (!pool || !baseMeta.data) {
+    return {
+      isLoading: false,
+      error: new Error(!pool ? "Pool data is unavailable" : "Token metadata is unavailable"),
+      data: null as null,
+    };
+  }
+
+  const fallbackSymbol = pool?.poolName?.split(" / ")[0] || "UNKNOWN";
+  const fallbackName = fallbackSymbol !== "UNKNOWN" ? fallbackSymbol : "Unknown Token";
+
+  const meta = {
+    ...metaFromApi,
+    name:
+      metaFromApi?.name && metaFromApi.name !== "Unknown Token"
+        ? metaFromApi.name
+        : fallbackName,
+    symbol:
+      metaFromApi?.symbol && metaFromApi.symbol !== "UNKNOWN"
+        ? metaFromApi.symbol
+        : fallbackSymbol,
+    address: metaFromApi?.address ?? address,
+  };
+
+  const normalizedTopPools = (topPools.data ?? []).filter((p) => !!p?.data);
 
   return {
     isLoading: false,
     error: null,
     data: {
       meta,
-      topPools: topPools.data!,
+      topPools: normalizedTopPools,
       holders: holders.data ?? [],
       holdersInfo,
       market: marketData.data?.[address] ?? null,
-      trades: trades.data!,
+      trades: trades.data ?? [],
       pool,
     },
   };
@@ -117,8 +143,19 @@ export default function TokenPage() {
     return <>Loading</>;
   }
 
-  if (result.error || !result.data) {
-    return <>Error</>;
+  if (result.error || !result.data || !result.data.meta) {
+    return (
+      <PageWrapper>
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <h2>Data Unavailable</h2>
+          <p>
+            {result.error instanceof Error
+              ? result.error.message
+              : "Could not load token details. Please try again later."}
+          </p>
+        </div>
+      </PageWrapper>
+    );
   }
 
   const { meta, topPools, holders, holdersInfo, market, trades, pool } =
@@ -208,7 +245,7 @@ export default function TokenPage() {
             baseMeta={{
               address,
               symbol: meta.symbol,
-              imageUrl: meta.imageUrl,
+              imageUrl: meta.imageUrl ?? null,
             }}
             tokenAddress={""}
             tokenSymbol={""}

@@ -196,11 +196,13 @@ export const MarketStats = ({
             className={styles.valueMedium}
           >
             {fmt.num.compact.currency(
-              pool?.marketCapUsd
+              pool?.marketCapUsd && Number(pool.marketCapUsd) !== 0
                 ? Number(pool.marketCapUsd)
-                : data?.marketCap
-                  ? Number(data.marketCap)
-                  : null,
+                : pool?.fdvUsd && Number(pool.fdvUsd) !== 0
+                  ? Number(pool.fdvUsd)
+                  : data?.marketCap
+                    ? Number(data.marketCap)
+                    : null,
             )}
           </Tip>
         </div>

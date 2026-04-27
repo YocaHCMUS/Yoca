@@ -7,6 +7,7 @@ import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
+import TransactionGraphPage from "@/pages/transactions";
 import WalletPage from "@/pages/wallet";
 // import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
 import WalletsComparisionPage from "@/pages/walletsComparision";
@@ -35,6 +36,11 @@ function App() {
         <Route
           path="/historical-data/:address"
           element={<HistoricalDataPage />}
+        />
+        <Route path="/transactions" element={<TransactionGraphPage />} />
+        <Route
+          path="/transactions/:txHash"
+          element={<TransactionGraphPage />}
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route

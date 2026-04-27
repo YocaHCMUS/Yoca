@@ -8,6 +8,7 @@ import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
 import search from "@sv/routes/search.js";
+import transactions from "@sv/routes/transactions.js";
 import tokens from "@sv/routes/tokens.js";
 import trades from "@sv/routes/trades.js";
 import transfers from "@sv/routes/transfers.js";
@@ -35,6 +36,7 @@ const app = new Hono()
   .route("/api/tokens", tokens)
   .route("/api/misc", misc)
   .route("/api/search", search)
+  .route("/api/transactions", transactions)
   .route("/api/balances", balances)
   .route("/api/transfers", transfers)
   .route("/api/charts", chartRoutes)
