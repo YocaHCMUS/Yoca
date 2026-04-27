@@ -55,25 +55,41 @@ export default function UnauthorizedPage() {
         </span>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full mx-4 p-8 gap-12">
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-sm">
+      <div className="relative z-10 flex flex-col items-center text-center max-w-7xl w-full mx-4 p-8 gap-12">
+        <div className="flex flex-col items-center gap-4 w-full max-w-7xl">
+          <p
+            className="text-neutral-400 font-semibold uppercase tracking-widest"
+            style={{ fontSize: "clamp(0.875rem, 1.2vw, 1.125rem)" }}
+          >
             {ERROR_CODE} Error
           </p>
 
-          <h1 className="text-white text-5xl font-bold">{ERROR_TITLE}</h1>
+          <h1
+            className="text-white font-bold tracking-tight leading-none my-2"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
+          >
+            {ERROR_TITLE}
+          </h1>
 
-          <p className="text-neutral-300 text-lg">{ERROR_DESCRIPTION}</p>
+          <p
+            className="text-neutral-300 leading-snug max-w-4xl"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)" }}
+          >
+            {ERROR_DESCRIPTION}
+          </p>
 
           {requestedPath.length > 0 ? (
-            <p className="text-neutral-300 text-lg">
+            <p
+              className="text-neutral-300 leading-snug max-w-4xl"
+              style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)" }}
+            >
               {PROTECTED_PATH_LABEL}{" "}
               <span className="font-medium text-neutral-100">{requestedPath}</span>
             </p>
           ) : null}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-4">
           <button
             type="button"
             onClick={() => setIsSignInOpen(true)}
@@ -85,7 +101,7 @@ export default function UnauthorizedPage() {
           <button
             type="button"
             onClick={() => navigate(HOME_ROUTE)}
-            className="text-neutral-300 hover:text-white px-6 py-3 transition-colors"
+            className="text-[#14F195] hover:text-white font-medium text-lg transition-colors"
           >
             {HOME_BUTTON_LABEL}
           </button>

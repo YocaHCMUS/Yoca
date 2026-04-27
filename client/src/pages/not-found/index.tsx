@@ -11,7 +11,6 @@ const ERROR_DESCRIPTION =
 
 const SEARCH_PLACEHOLDER = "Search wallet, token symbol, or pair";
 const SEARCH_BUTTON_LABEL = "Search";
-const HOME_BUTTON_LABEL = "Back to Home";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -43,15 +42,28 @@ export default function NotFoundPage() {
         </span>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl w-full mx-4 p-8 gap-12">
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-neutral-400 font-semibold uppercase tracking-wider text-sm">
+      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full mx-4 p-8 gap-12">
+        <div className="flex flex-col items-center gap-4 w-full max-w-7xl">
+          <p
+            className="text-neutral-400 font-semibold uppercase tracking-widest"
+            style={{ fontSize: "clamp(0.875rem, 1.2vw, 1.125rem)" }}
+          >
             {ERROR_LABEL}
           </p>
 
-          <h1 className="text-white text-5xl font-bold">{ERROR_TITLE}</h1>
+          <h1
+            className="text-white font-bold tracking-tight leading-none my-2"
+            style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
+          >
+            {ERROR_TITLE}
+          </h1>
 
-          <p className="text-neutral-300 text-lg">{ERROR_DESCRIPTION}</p>
+          <p
+            className="text-neutral-300 leading-snug max-w-4xl"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)" }}
+          >
+            {ERROR_DESCRIPTION}
+          </p>
         </div>
 
         <form
@@ -75,13 +87,27 @@ export default function NotFoundPage() {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => navigate(HOME_ROUTE)}
-          className="px-6 py-2 text-neutral-300 hover:text-white transition-colors"
-        >
-          {HOME_BUTTON_LABEL}
-        </button>
+        <div className="flex flex-col items-start w-full text-left mt-4">
+          <h2 className="text-2xl text-white font-semibold mb-6">
+            Continue exploring
+          </h2>
+          <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-12 md:gap-32 w-full">
+            <button
+              type="button"
+              onClick={() => navigate(HOME_ROUTE)}
+              className="text-[#14F195] hover:text-white font-medium text-lg transition-colors flex items-center gap-2"
+            >
+              Back to Homepage
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(MARKET_ROUTE)}
+              className="text-[#14F195] hover:text-white font-medium text-lg transition-colors flex items-center gap-2"
+            >
+              Go to Market
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
