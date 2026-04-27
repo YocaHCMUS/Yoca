@@ -227,7 +227,6 @@ export const renderTokenCell = (
           fullName={token.name ?? undefined}
           imageUrl={token.logoUri ?? undefined}
           imageSize={imageSize}
-          showInitialsFallback
           tooltipAlign="right"
         />
       </span>
