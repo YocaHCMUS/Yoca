@@ -240,10 +240,11 @@
   }
 }
 
-.inlineSearch {
-  :global(.cds--search--expandable) {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 1;
+.filledTextArea {
+  :global(.cds--text-area) {
+    border: solid;
+    border-width: 1px;
+    border-color: var(--cds-border-subtle-01);
+    background-color: var(--cds-field) !important;
   }
 }

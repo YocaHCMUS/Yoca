@@ -3,8 +3,9 @@ import { setErr } from "@sv/config/errors.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
-  userAlertTypes,
-} from "@sv/db/alert.js";
+  userAlertTokenMetric,
+  userAlertTriggerModes,
+} from "@sv/db/alerts.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
 import type { Context, Next, ValidationTargets } from "hono";
@@ -54,6 +55,66 @@ export const userVerificationSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const strongPasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+  .regex(/[a-z]/, "Password must include at least one lowercase letter")
+  .regex(/[0-9]/, "Password must include at least one number");
+
+export const authProviderSchema = z.enum([
+  "password",
+  "google",
+  "github",
+  "solana",
+  "other",
+]);
+
+export const providerQuerySchema = z.object({
+  provider: authProviderSchema.optional(),
+});
+
+export const profileIdentityUpdateSchema = z
+  .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1, "Display name cannot be empty")
+      .max(128)
+      .nullable()
+      .optional(),
+    email: z
+      .email("Invalid email format")
+      .transform((value) => value.trim().toLowerCase())
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (value) => value.displayName !== undefined || value.email !== undefined,
+    "At least one field must be provided",
+  );
+
+export const passwordUpdateSchema = z.object({
+  currentPassword: z.string().min(1).optional(),
+  newPassword: strongPasswordSchema,
+  email: z
+    .email("Invalid email format")
+    .transform((value) => value.trim().toLowerCase())
+    .nullable()
+    .optional(),
+});
+
+export const deleteAccountSchema = z.object({
+  confirmText: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "DELETE MY ACCOUNT",
+      "Confirm text must exactly match DELETE MY ACCOUNT",
+    ),
+  challengeToken: z.string().uuid().optional(),
+});
+
 export const googleTokenSchema = z.object({
   token: z.string().min(1),
 });
@@ -94,12 +155,16 @@ export const walletTokenTradesSchema = z.object({
 
 export const createAlertSchema = z.object({
   tokenAddress: z.string().min(1),
-  alertType: z.enum(userAlertTypes),
-  period: z.enum(userAlertPeriods),
+  triggerMode: z.enum(userAlertTriggerModes).default("once"),
+  expiresAt: z.iso.datetime({ offset: true }),
+  alertName: z.string().min(1),
+  email: z.email().optional(),
   conditions: z
     .array(
       z.object({
-        condition: z.enum(userAlertConditionOps),
+        period: z.enum(userAlertPeriods),
+        alertType: z.enum(userAlertTokenMetric),
+        conditionOp: z.enum(userAlertConditionOps),
         value: z.coerce.number(),
       }),
     )
@@ -108,19 +173,6 @@ export const createAlertSchema = z.object({
 
 export const alertIdSchema = z.object({
   id: z.uuid(),
-});
-
-export const updateAlertSchema = z.object({
-  alertType: z.enum(userAlertTypes),
-  period: z.enum(userAlertPeriods),
-  conditions: z
-    .array(
-      z.object({
-        condition: z.enum(userAlertConditionOps),
-        value: z.coerce.number(),
-      }),
-    )
-    .min(1, "At least one condition is required"),
 });
 
 export function validate<
@@ -175,7 +227,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-            `\n... (truncated ${safeStr.length - maxLog} chars)`,
+          `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);
@@ -208,6 +260,10 @@ export const envSchema = z.object({
   HELIUS_WEBHOOK_ID: z.string(),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
+  N8N_ANALYSE_WALLET_URL: z
+    .url()
+    .default("http://localhost:5678/webhook/analyse-wallet"),
+  N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
 
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),

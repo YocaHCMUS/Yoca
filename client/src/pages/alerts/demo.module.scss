@@ -1,0 +1,50 @@
+.conditionConfig {
+  :global(.cds--label) {
+    vertical-align: top;
+  }
+  :global(.cds--list-box__menu) {
+    max-block-size: 7.52rem !important;
+  }
+}
+
+.conditionRow {
+  animation: conditionRowEnter 260ms ease-out;
+}
+
+.emailCheckBox {
+  max-inline-size: 6rem;
+}
+
+.emailSetup {
+  animation: emailSetupReveal 180ms ease-out;
+}
+
+.selectedTokenValue {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@keyframes emailSetupReveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes conditionRowEnter {
+  from {
+    opacity: 0;
+    max-block-size: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    max-block-size: 9rem;
+    transform: translateY(0);
+  }
+}

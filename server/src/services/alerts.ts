@@ -1,25 +1,18 @@
 import type {
-  UserAlertConditionOp,
-  UserAlertPeriod,
-  UserAlertSelect,
-  UserAlertType,
-} from "@sv/db/alert.js";
-import { userAlertConditions, userAlerts } from "@sv/db/alert.js";
+  UserAlertConditionInsert,
+  UserAlertInsert,
+  UserAlertStatus,
+} from "@sv/db/alerts.js";
+import {
+  userAlertConditions,
+  userAlertState,
+  userAlerts,
+} from "@sv/db/alerts.js";
 import { db } from "@sv/db/index.js";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-// Type aliases for local reusability
-type AlertCondition = {
-  condition: UserAlertConditionOp;
-  value: number;
-};
-
-export type CreateAlertInput = {
-  userId: string;
-  tokenAddress: string;
-  alertType: UserAlertType;
-  period: UserAlertPeriod;
-  conditions: AlertCondition[];
+export type CreateAlertInput = UserAlertInsert & {
+  conditions: Omit<UserAlertConditionInsert, "alertId">[];
 };
 
 export async function createAlert(input: CreateAlertInput) {
@@ -27,81 +20,124 @@ export async function createAlert(input: CreateAlertInput) {
     return null;
   }
 
-  let createdAlert: UserAlertSelect | null = null;
+  let createdAlertId: string | null = null;
   await db.transaction(async (tx) => {
     const [alert] = await tx
       .insert(userAlerts)
       .values({
         userId: input.userId,
         tokenAddress: input.tokenAddress,
-        alertType: input.alertType,
-        period: input.period,
+        triggerMode: input.triggerMode,
+        expiresAt: new Date(input.expiresAt),
+        alertName: input.alertName,
+        email: input.email,
       })
       .returning();
 
-    createdAlert = alert;
+    createdAlertId = alert.id;
+
+    await tx.insert(userAlertState).values({
+      alertId: alert.id,
+      status: "running",
+    });
 
     // Insert all conditions
     await tx.insert(userAlertConditions).values(
       input.conditions.map((cond) => ({
         alertId: alert.id,
-        conditionOp: cond.condition,
+        period: cond.period,
+        alertType: cond.alertType,
+        conditionOp: cond.conditionOp,
         value: cond.value,
       })),
     );
   });
-  return createdAlert;
+
+  return createdAlertId;
 }
 
 export async function getAlertsByUser(userId: string) {
-  return await db
-    .select()
+  const alertDetails = await db
+    .select({
+      alertId: userAlerts.id,
+      alert: userAlerts,
+      state: userAlertState,
+    })
     .from(userAlerts)
+    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
     .where(eq(userAlerts.userId, userId));
+
+  return alertDetails;
 }
 
-export async function getAlertById(alertId: string) {
-  const [row] = await db
-    .select()
+export async function getAlertById(alertId: string, userId: string) {
+  const [alertDetail] = await db
+    .select({
+      alertId: userAlerts.id,
+      alert: userAlerts,
+      state: userAlertState,
+    })
     .from(userAlerts)
-    .where(eq(userAlerts.id, alertId))
+    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
+    .where(and(eq(userAlerts.userId, userId), eq(userAlerts.id, alertId)))
     .limit(1);
-  return row;
+
+  return alertDetail || null;
 }
 
-export async function updateAlert(
-  alertId: string,
-  conditions: {
-    alertType: UserAlertType;
-    period: UserAlertPeriod;
-    conditions: AlertCondition[];
-  },
-) {
-  let updatedAlert: UserAlertSelect | null = null;
-  await db.transaction(async (tx) => {
-    const [row] = await tx
-      .update(userAlerts)
-      .set({ alertType: conditions.alertType, period: conditions.period })
-      .where(eq(userAlerts.id, alertId))
-      .returning();
+export async function updateAlert(alertId: string, alert: CreateAlertInput) {
+  if (alert.conditions.length == 0) {
+    return;
+  }
 
-    updatedAlert = row;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(userAlerts)
+      .set({
+        userId: alert.userId,
+        tokenAddress: alert.tokenAddress,
+        triggerMode: alert.triggerMode,
+        expiresAt: new Date(alert.expiresAt),
+        alertName: alert.alertName,
+        email: alert.email,
+      })
+      .where(eq(userAlerts.id, alertId));
 
     // Delete old conditions
     await tx
       .delete(userAlertConditions)
       .where(eq(userAlertConditions.alertId, alertId));
 
-    // Insert new conditions
+    // Recreate conditions
     await tx.insert(userAlertConditions).values(
-      conditions.conditions.map((cond) => ({
+      alert.conditions.map((cond) => ({
         alertId,
-        conditionOp: cond.condition,
+        period: cond.period,
+        alertType: cond.alertType,
+        conditionOp: cond.conditionOp,
         value: cond.value,
       })),
     );
   });
-  return updatedAlert;
+}
+
+export async function setAlertState(alertId: string, status: UserAlertStatus) {
+  await db
+    .insert(userAlertState)
+    .values({
+      alertId,
+      status,
+    })
+    .onConflictDoUpdate({
+      target: userAlertState.alertId,
+      set: {
+        status,
+      },
+    });
+}
+
+export async function stopAlert(alertId: string) {
+  return await setAlertState(alertId, "stopped");
 }
 
 export async function deleteAlert(alertId: string) {

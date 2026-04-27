@@ -2,8 +2,17 @@ import appLogo from "@/assets/app-logo.png";
 import { useUserTheme } from "@/contexts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { headerNotificationsMockData } from "@/services/notifications/headerNotificationsMock";
+import type { AlertNotification } from "@/types/profile";
 import { cds } from "@/util/carbon-theme";
-import { Asleep, FireFill, Light } from "@carbon/icons-react";
+import {
+  Asleep,
+  ErrorFilled,
+  FireFill,
+  InformationFilled,
+  Light,
+  WarningAltFilled,
+} from "@carbon/icons-react";
 import {
   Content,
   Header,
@@ -22,7 +31,14 @@ import {
   SwitcherDivider,
   SwitcherItem,
 } from "@carbon/react";
-import { Checkmark, Logout, Search, User, Wikis } from "@carbon/react/icons";
+import {
+  Checkmark,
+  Logout,
+  Notification,
+  Search,
+  User,
+  Wikis,
+} from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
@@ -61,6 +77,31 @@ type PageWrapperProps = {
   noMarketTickers?: boolean;
 };
 
+function getNotificationSeverityLabel(severity: AlertNotification["severity"]) {
+  if (severity == "critical") return "CRITICAL";
+  if (severity == "warning") return "WARNING";
+  return "INFORMATION";
+}
+
+function getNotificationSeverityClass(
+  severity: AlertNotification["severity"],
+  stylesModule: typeof styles,
+) {
+  if (severity == "critical") return stylesModule.notificationSeverityCritical;
+  if (severity == "warning") return stylesModule.notificationSeverityWarning;
+  return stylesModule.notificationSeverityInfo;
+}
+
+function NotificationSeverityIcon({
+  severity,
+}: {
+  severity: AlertNotification["severity"];
+}) {
+  if (severity == "critical") return <ErrorFilled size={16} />;
+  if (severity == "warning") return <WarningAltFilled size={16} />;
+  return <InformationFilled size={16} />;
+}
+
 export function PageWrapper({
   children,
   extraHeaderPanel,
@@ -69,10 +110,14 @@ export function PageWrapper({
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
-  const [openPanel, setOpenPanel] = useState<"lang" | "account" | null>(null);
+  const [openPanel, setOpenPanel] = useState<
+    "lang" | "account" | "notifications" | null
+  >(null);
   const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const isHeaderNotificationPanelOpen = openPanel == "notifications";
+  const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -98,7 +143,7 @@ export function PageWrapper({
     setIsSideNavExpanded((prev) => !prev);
   };
 
-  const togglePanel = (panel: "lang" | "account") => {
+  const togglePanel = (panel: "lang" | "account" | "notifications") => {
     // Close header panel extension if it's open
     if (isExtraPanelOpen) {
       setIsExtraHeaderPanelOpen(false);
@@ -110,10 +155,37 @@ export function PageWrapper({
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="#">{tr("nav.dashboard")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.alerts")}</HeaderMenuItem>
-        <HeaderMenuItem href="#">{tr("nav.profile")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
+        <HeaderMenuItem href="/profile">{tr("nav.profile")}</HeaderMenuItem>
       </>
+    );
+  }
+
+  function HeaderNotificationsPanel({
+    notifications,
+  }: {
+    notifications: AlertNotification[];
+  }) {
+    return (
+      <section className={styles.notificationsPanel}>
+        <h3>{tr("nav.notification")}</h3>
+        {notifications.map((item) => (
+          <article key={item.id} className={styles.notificationItem}>
+            <strong
+              className={`${styles.notificationSeverityLabel} ${getNotificationSeverityClass(
+                item.severity,
+                styles,
+              )}`}
+            >
+              <NotificationSeverityIcon severity={item.severity} />
+              {getNotificationSeverityLabel(item.severity)}
+            </strong>
+            <p>{item.message}</p>
+            <small>{new Date(item.timestamp).toLocaleString()}</small>
+          </article>
+        ))}
+      </section>
     );
   }
 
@@ -156,6 +228,14 @@ export function PageWrapper({
             onClick={() => togglePanel("lang")}
           >
             <Wikis size={20} />
+          </HeaderGlobalAction>
+
+          <HeaderGlobalAction
+            aria-label={tr("nav.notification")}
+            isActive={isHeaderNotificationPanelOpen}
+            onClick={() => togglePanel("notifications")}
+          >
+            <Notification size={20} />
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
@@ -227,7 +307,11 @@ export function PageWrapper({
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
           <Switcher aria-label="Account" expanded={openPanel == "account"}>
-            <SwitcherItem aria-labelledby="account-id" isSelected={false}>
+            <SwitcherItem
+              aria-labelledby="account-id"
+              isSelected={false}
+              href="/profile"
+            >
               <Stack
                 orientation="horizontal"
                 gap={4}
@@ -261,6 +345,21 @@ export function PageWrapper({
           </Switcher>
         </HeaderPanel>
 
+        <HeaderPanel
+          className={styles.headerPanel}
+          expanded={isHeaderNotificationPanelOpen}
+          onHeaderPanelFocus={() => setOpenPanel(null)}
+        >
+          <Switcher
+            aria-label="Notifications"
+            expanded={isHeaderNotificationPanelOpen}
+          >
+            <HeaderNotificationsPanel
+              notifications={headerNotificationsMockData}
+            />
+          </Switcher>
+        </HeaderPanel>
+
         {extraHeaderPanel && (
           <HeaderPanel
             className={
@@ -269,6 +368,10 @@ export function PageWrapper({
                 : styles.headerPanel
             }
             expanded={isExtraPanelOpen}
+            onHeaderPanelFocus={() => {
+              setIsExtraHeaderPanelOpen(false);
+              extraHeaderPanel.onClose();
+            }}
           >
             <Switcher aria-label="Extra" expanded={isExtraPanelOpen}>
               <div className={styles.extraHeaderPanelContent}>
@@ -305,12 +408,18 @@ export function PageWrapper({
 
       <Content
         id="main-content"
-        className={isExtraPanelOpen ? styles.contentDimmed : ""}
+        className={isAnyExtraPanelOpen ? styles.contentDimmed : ""}
         onClick={
-          isExtraPanelOpen
+          isAnyExtraPanelOpen
             ? () => {
-                setIsExtraHeaderPanelOpen(false);
-                extraHeaderPanel?.onClose();
+                if (openPanel == "notifications") {
+                  setOpenPanel(null);
+                }
+
+                if (isExtraPanelOpen) {
+                  setIsExtraHeaderPanelOpen(false);
+                  extraHeaderPanel?.onClose();
+                }
               }
             : undefined
         }

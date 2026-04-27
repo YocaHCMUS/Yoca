@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu, Wallet } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import {
     fetchWalletIntelligence,
     fetchWalletOverview,
@@ -111,6 +112,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     enableIntelligence = true,
 }) => {
     const { user } = useAuth();
+    const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
     const { tr, fmt } = useLocalization();
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
@@ -126,9 +128,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [tags, setTags] = useState<string[]>([]);
     const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
-    const [bookmark, setBookmark] = useState(false);
     const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false);
     const utilityMenuRef = useRef<HTMLDivElement>(null);
+
+    const isBookmarked = walletWatchlist
+        .some((address) => address.toLowerCase() === walletAddress.toLowerCase());
+    const isBookmarkPending = Boolean(walletPending[walletAddress]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -301,8 +306,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleBookmark = () => {
-        setBookmark(!bookmark);
-        console.log('Bookmark toggled:', !bookmark);
+        if (!user || !walletAddress || walletAddress === 'null') {
+            return;
+        }
+
+        void toggleWallet(walletAddress);
     };
 
     const handleCreateAlert = () => {
@@ -429,13 +437,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* Actions: filter dropdown + utility icon buttons (default) / menu (mini) */}
                 <div className={styles.actionsSection}>
                     <div className={styles.utilityButtonsDefault}>
-                        <Tooltip label={bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
+                        <Tooltip label={isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
                             <button
                                 className={styles.iconButton}
                                 onClick={handleBookmark}
                                 aria-label="Bookmark wallet"
+                                disabled={!user || isBookmarkPending}
                             >
-                                {bookmark ? <BookmarkFilled size={20} /> : <Bookmark size={20} />}
+                                {isBookmarked ? <BookmarkFilled size={20} /> : <Bookmark size={20} />}
                             </button>
                         </Tooltip>
                         <Tooltip label={tr('wallet.createAlert')} align="bottom-left">
@@ -484,9 +493,10 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                         handleBookmark();
                                         setIsUtilityMenuOpen(false);
                                     }}
+                                    disabled={!user || isBookmarkPending}
                                 >
-                                    {bookmark ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
-                                    <span>{bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}</span>
+                                    {isBookmarked ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
+                                    <span>{isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}</span>
                                 </button>
                                 <button
                                     className={styles.menuItem}

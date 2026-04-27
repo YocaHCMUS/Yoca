@@ -6,6 +6,8 @@ import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDist
 import { TradingVolumePerTransaction } from '@/components/charts/TradingVolume/TradingVolumePerTransaction';
 import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume';
 
+const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
+
 
 export const GeneralTab: React.FC<WalletComparisionProp> = ({
     walletAddresses,
@@ -26,7 +28,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
     return (
         <div className={styles.grid}>
             {/* Balance history comparision */}
-            <div className={styles.stableCoinChart}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
                 <BalanceChart
                     initialFilters={{
                         timePeriod: "30D",
@@ -49,7 +51,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div> */}
 
             {/* Total Trading Volume Column Chart */}
-            <div className={styles.stableCoinChart}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
                 <TotalTradingVolumeChart
                     minHeight={300}
                     initialFilters={{
@@ -61,7 +63,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
             </div>
 
             {/* Trading Volume distribution Chart */}
-            <div className={styles.stableCoinChart}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}
@@ -70,7 +72,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
 
 
             {/* Average Trading Volume per transaction Charts */}
-            <div className={styles.stableCoinChart}>
+            <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}

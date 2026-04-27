@@ -1,11 +1,7 @@
 import client from "@/api/main";
+import type { ApiErrCode } from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { useSolanaContext } from "@/contexts/SolanaWalletContext";
-import { Button } from "@carbon/react";
-import { Wallet } from "@carbon/react/icons";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useEffect, useRef, useState } from "react";
+import { WalletActionButton } from "./WalletActionButton";
 
 type WalletAuthButtonProps = {
   disabled: boolean;
@@ -18,111 +14,58 @@ export function WalletAuthButton({
   onSuccess,
   onError,
 }: WalletAuthButtonProps) {
-  const { tr, fmt } = useLocalization();
-  const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
-  const { isModalOpen, openModal, closeModal } = useSolanaContext();
-  const walletConnectBtnRef = useRef<HTMLDivElement>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const { tr } = useLocalization();
 
-  useEffect(() => {
-    if (connected && isModalOpen) {
-      closeModal();
-    }
-  }, [connected, isModalOpen, closeModal]);
-
-  const triggerWalletMultiBtn = () => {
-    const container = walletConnectBtnRef.current;
-    if (!container) {
-      return;
-    }
-    const btn = container.querySelector("button");
-    if (btn instanceof HTMLElement) {
-      btn.click();
-    }
+  const getWalletAuthErrorMessage = (errorCode: ApiErrCode) => {
+    return tr(`ERROR.${errorCode}`);
   };
 
-  async function verifyWallet() {
-    if (!publicKey || !signMessage) {
-      return;
-    }
-    setIsVerifying(true);
-    try {
-      const nonceRes = await client.api.users.auth.solana.nounce.$post({
-        json: {
-          pubKey: publicKey.toBase58(),
-        },
-      });
-
-      if (nonceRes.ok) {
-        const { signMessage: message } = await nonceRes.json();
-        const signMessageBytes = new TextEncoder().encode(message);
-        const signatureBytes = await signMessage(signMessageBytes);
-        const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
-
-        const resp = await client.api.users.auth.solana.verify.$post({
+  return (
+    <WalletActionButton<string>
+      disabled={disabled}
+      onError={onError}
+      onSuccess={onSuccess}
+      action={async ({ publicKey, signMessage, closeModal, onSuccess: resolveSuccess, onError: resolveError }) => {
+        const nonceRes = await client.api.users.auth.solana.nounce.$post({
           json: {
-            pubKey: publicKey.toBase58(),
-            signature: signatureBase64,
+            pubKey: publicKey,
           },
         });
 
-        if (resp.ok) {
-          const res = await resp.json();
-          closeModal();
-          onSuccess(res.userId);
+        if (nonceRes.ok) {
+          const { signMessage: message } = (await nonceRes.json());
+          const signMessageBytes = new TextEncoder().encode(message);
+          const signatureBytes = await signMessage(signMessageBytes);
+          const signatureBase64 = Buffer.from(signatureBytes).toString("base64");
+
+          const resp = await client.api.users.auth.solana.verify.$post({
+            json: {
+              pubKey: publicKey,
+              signature: signatureBase64,
+            },
+          });
+
+          if (resp.ok) {
+            const res = await resp.json();
+            closeModal();
+            resolveSuccess(res.userId);
+          } else {
+            const res = (await resp.json());
+            const errCode =
+              res.errorCode ?? ("WALLET_VERIFICATION_FAILED" as ApiErrCode);
+            resolveError(getWalletAuthErrorMessage(errCode));
+          }
         } else {
-          onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
+          const res = (await nonceRes.json()) as { errorCode?: ApiErrCode };
+          const errCode =
+            res.errorCode ?? ("WALLET_NONCE_FAILED" as ApiErrCode);
+          resolveError(getWalletAuthErrorMessage(errCode));
         }
-      } else {
-        onError(tr("ERROR.WALLET_NONCE_FAILED"));
-      }
-    } catch (err) {
-      console.error("Wallet verification error:", err);
-      onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
-    } finally {
-      setIsVerifying(false);
-    }
-  }
-
-  async function onBtnClick() {
-    if (!connected) {
-      triggerWalletMultiBtn();
-      openModal();
-    }
-    await verifyWallet();
-  }
-
-  return (
-    <>
-      <Button
-        kind="tertiary"
-        renderIcon={Wallet}
-        disabled={disabled || isModalOpen || connecting || isVerifying}
-        onClick={() => {
-          onBtnClick();
-        }}
-        style={{
-          inlineSize: "100%",
-          maxInlineSize: "100%",
-        }}
-      >
-        {wallet
-          ? connected
-            ? tr("auth.continueWithConnectedWallet", {
-                connectedWalletAddress: publicKey?.toString() || "",
-                connectedWalletName: wallet.adapter.name,
-              })
-            : connecting
-              ? tr("auth.connectingWithWallet")
-              : tr("auth.continueWithSelectedWallet", {
-                  walletName: wallet.adapter.name,
-                })
-          : tr("auth.continueWithWallet")}
-      </Button>
-
-      <div ref={walletConnectBtnRef}>
-        <WalletMultiButton style={{ display: "none" }} />
-      </div>
-    </>
+      }}
+      style={{
+        inlineSize: "100%",
+        maxInlineSize: "100%",
+      }}
+    />
   );
 }

@@ -1,0 +1,38 @@
+.searchRow {
+  padding: 0.5rem;
+  border-block-end: 1px solid var(--cds-border-subtle-01);
+}
+
+.list {
+  padding: 0.5rem 0;
+  max-block-size: 14rem;
+  overflow-y: auto;
+}
+
+.item {
+  inline-size: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  padding: 0;
+}
+
+.item:hover {
+  background: var(--cds-layer-hover-01);
+}
+
+.symbol {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  color: var(--cds-text-secondary);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

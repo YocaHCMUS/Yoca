@@ -1,3 +1,4 @@
+import { getDiscordUrlsForAddress } from "@sv/services/followedWallets.service.js";
 import { Hono } from "hono";
 
 interface HeliusTokenTransfer {
@@ -13,6 +14,10 @@ interface HeliusNativeTransfer {
   toUserAccount?: string;
 }
 
+interface HeliusAccountData {
+  account?: string;
+}
+
 interface HeliusEnhancedTransaction {
   signature: string;
   type: string;
@@ -22,6 +27,7 @@ interface HeliusEnhancedTransaction {
   source?: string;
   tokenTransfers?: HeliusTokenTransfer[];
   nativeTransfers?: HeliusNativeTransfer[];
+  accountData?: HeliusAccountData[];
 }
 
 interface NormalizedAlertEvent {
@@ -118,10 +124,30 @@ function evaluateAlertRules(event: NormalizedAlertEvent): StructuredAlert[] {
   return alerts;
 }
 
+/** Collect all unique addresses involved in a transaction. */
+function extractInvolvedAddresses(tx: HeliusEnhancedTransaction): string[] {
+  const addrs = new Set<string>();
+  if (tx.feePayer) addrs.add(tx.feePayer);
+  for (const a of tx.accountData || []) {
+    if (a.account) addrs.add(a.account);
+  }
+  for (const t of tx.nativeTransfers || []) {
+    if (t.fromUserAccount) addrs.add(t.fromUserAccount);
+    if (t.toUserAccount) addrs.add(t.toUserAccount);
+  }
+  for (const t of tx.tokenTransfers || []) {
+    if (t.fromUserAccount) addrs.add(t.fromUserAccount);
+    if (t.toUserAccount) addrs.add(t.toUserAccount);
+  }
+  return [...addrs];
+}
+
+// ── Discord formatting ─────────────────────────────────────────────
+
 function toSeverityColor(severity: StructuredAlert["severity"]): number {
-  if (severity === "high") return 0xed4245; // red
-  if (severity === "medium") return 0xfee75c; // yellow
-  return 0x57f287; // green
+  if (severity === "high") return 0xed4245;
+  if (severity === "medium") return 0xfee75c;
+  return 0x57f287;
 }
 
 function toDiscordPayload(alert: StructuredAlert) {
@@ -166,32 +192,59 @@ function toDiscordPayload(alert: StructuredAlert) {
   };
 }
 
-async function sendStructuredAlert(alert: StructuredAlert): Promise<void> {
-  // Always log local structured alerts for observability.
-  console.log("[alert]", JSON.stringify(alert));
-
-  // Optional forwarding to external webhook (Slack/Discord/custom service).
-  if (!ALERT_FORWARD_WEBHOOK_URL) {
-    return;
-  }
-
+async function sendToDiscordUrl(
+  alert: StructuredAlert,
+  discordUrl: string,
+): Promise<void> {
   try {
-    const isDiscordWebhook = ALERT_FORWARD_WEBHOOK_URL.includes(
-      "discord.com/api/webhooks/",
-    );
-    const payload = isDiscordWebhook
-      ? toDiscordPayload(alert)
-      : alert;
-
-    await fetch(ALERT_FORWARD_WEBHOOK_URL, {
+    await fetch(discordUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(toDiscordPayload(alert)),
     });
   } catch (error) {
-    console.error("[alert] failed to forward alert:", error);
+    console.error("[alert] failed to send to Discord:", discordUrl, error);
   }
 }
+
+// ── Alert dispatch (fan-out + legacy global) ───────────────────────
+
+async function dispatchAlert(
+  alert: StructuredAlert,
+  involvedAddresses: string[],
+): Promise<void> {
+  console.log("[alert]", JSON.stringify(alert));
+
+  // Fan-out: per-user Discord URLs from DB
+  const urlSet = new Set<string>();
+  for (const addr of involvedAddresses) {
+    const urls = await getDiscordUrlsForAddress(addr);
+    for (const u of urls) urlSet.add(u);
+  }
+  const fanOutPromises = [...urlSet].map((url) => sendToDiscordUrl(alert, url));
+
+  // Legacy global admin channel (env-based)
+  if (ALERT_FORWARD_WEBHOOK_URL && !urlSet.has(ALERT_FORWARD_WEBHOOK_URL)) {
+    const isDiscord = ALERT_FORWARD_WEBHOOK_URL.includes(
+      "discord.com/api/webhooks/",
+    );
+    fanOutPromises.push(
+      fetch(ALERT_FORWARD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isDiscord ? toDiscordPayload(alert) : alert),
+      })
+        .then(() => {})
+        .catch((err) =>
+          console.error("[alert] global forward failed:", err),
+        ),
+    );
+  }
+
+  await Promise.allSettled(fanOutPromises);
+}
+
+// ── Hono route ─────────────────────────────────────────────────────
 
 const app = new Hono().post("/", async (c) => {
   const authorization = c.req.header("Authorization");
@@ -225,8 +278,9 @@ const app = new Hono().post("/", async (c) => {
 
         const event = normalizeAlertEvent(tx);
         const alerts = evaluateAlertRules(event);
+        const involvedAddresses = extractInvolvedAddresses(tx);
         for (const alert of alerts) {
-          await sendStructuredAlert(alert);
+          await dispatchAlert(alert, involvedAddresses);
         }
       }
     }

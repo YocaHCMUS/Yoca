@@ -12,6 +12,24 @@ export function formatNumber(num: number): string {
   });
 }
 
+export function chunkArray<T>(data: T[], size: number): T[][] {
+  if (data.length === 0) {
+    return [];
+  }
+
+  const normalizedSize = Math.floor(size);
+  if (!Number.isFinite(normalizedSize) || normalizedSize <= 0) {
+    return [data.slice()];
+  }
+
+  const chunks: T[][] = [];
+  for (let index = 0; index < data.length; index += normalizedSize) {
+    chunks.push(data.slice(index, index + normalizedSize));
+  }
+
+  return chunks;
+}
+
 export function formatAddress(address: string): string {
   if (!address || address.length <= 16) return address;
   return `${address.slice(0, 8)}...${address.slice(-6)}`;

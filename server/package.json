@@ -14,6 +14,7 @@
     "clear": "rimraf ./node_modules && npm run clean",
     "clean": "rimraf ./build",
     "db:generate": "drizzle-kit generate",
+    "db:ensure-followed-wallets": "tsx src/db/ensure-followed-wallets-table.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push --verbose",
     "db:push-force": "drizzle-kit push --verbose --force",

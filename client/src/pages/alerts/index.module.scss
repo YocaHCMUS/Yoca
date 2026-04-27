@@ -1,0 +1,58 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/type' as *;
+
+.page {
+  min-height: calc(100vh - 120px);
+  padding: $spacing-07 $spacing-05;
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+.hero {
+  max-width: 960px;
+  margin: 0 auto $spacing-09;
+  text-align: center;
+}
+
+.title {
+  @include type-style("productive-heading-04");
+  letter-spacing: 0.04em;
+  color: var(--cds-text-primary);
+}
+
+.subtitle {
+  @include type-style("body-compact-01");
+  margin-top: $spacing-04;
+  color: var(--cds-text-secondary);
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.card {
+  max-width: 960px;
+  margin: 0 auto;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  background: var(--cds-layer);
+}
+
+.formRow {
+  display: grid;
+  gap: $spacing-05;
+  margin-bottom: $spacing-06;
+
+  @media (min-width: 672px) {
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.actionsCell {
+  width: 56px;
+  text-align: center;
+}

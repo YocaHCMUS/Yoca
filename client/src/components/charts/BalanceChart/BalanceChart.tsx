@@ -7,7 +7,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchBalanceTrend, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency, formatTimestampWithTimezone } from '@/util/chart-helpers';
+import { formatTimestampWithTimezone } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import { getConditionalLegend } from '@/util/chart-legend-config';
 import type { BalanceRequestParams } from '@/types/chart-api.types';
@@ -315,7 +315,7 @@ export function BalanceChart({
     tokenSelectorOptions = [],
     maxTokenTags = 3,
 }: ChartProps) {
-    const { tr } = useLocalization();
+    const { tr, fmt } = useLocalization();
     const chartTitle = title || tr('charts.balanceChart.title');
 
     const chartRef = useRef<ReactECharts>(null);
@@ -901,7 +901,7 @@ export function BalanceChart({
                 type: 'value',
                 axisLabel: {
                     ...baseOption.yAxis?.axisLabel,
-                    formatter: (value: number) => formatCurrency(value),
+                    formatter: (value: number) => fmt.num.compact.currency(value),
                 },
             },
             series: seriesConfig,
@@ -912,11 +912,11 @@ export function BalanceChart({
                     formatAxisTooltip(
                         params,
                         (point) => formatTimestampWithTimezone(point.value[0], timezone, 'PPpp'),
-                        (point) => formatCurrency(point.value[1]),
+                        (point) => fmt.num.compact.currency(point.value[1]),
                     ),
             },
         };
-    }, [windowedDisplaySeries, timezone, chartTheme]);
+    }, [windowedDisplaySeries, timezone, chartTheme, fmt]);
 
     const summaryRows = useMemo(() => {
         if (isMultiWallet) {
@@ -961,7 +961,10 @@ export function BalanceChart({
             onRetry={handleRetry}
         >
             <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
-                <div className={sharedStyles.balanceChartControlTopRow}>
+                <div
+                    className={sharedStyles.balanceChartControlTopRow}
+                    data-html2canvas-ignore="true"
+                >
                     <div className={sharedStyles.balanceChartControlInputGroup}>
                         <label htmlFor={dataListId}>{isMultiWallet ? tr('charts.balanceChart.selectModeTokenLabel') : tr('charts.balanceChart.selectTokenLabel')}</label>
                         <select
@@ -1048,6 +1051,7 @@ export function BalanceChart({
                                         onClick={() => removeTag(row.key)}
                                         className={sharedStyles.balanceChartTagDismiss}
                                         title={canDismiss ? tr('charts.balanceChart.removeTag') : tr('charts.balanceChart.atLeastOneTagRequired')}
+                                        data-html2canvas-ignore="true"
                                     >
                                         <Close size={12} />
                                     </button>

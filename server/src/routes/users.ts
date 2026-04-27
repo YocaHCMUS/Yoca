@@ -112,7 +112,8 @@ const app = new Hono()
           statusCode.Unauthorized,
         );
       }
-      const token = await setAuthToken(c, passwordUser.userId);
+      const user = await userService.getUserById(passwordUser.userId);
+      const token = await setAuthToken(c, passwordUser.userId, user?.displayName);
       return c.json(
         {
           message: messageText.LoggedInSuccessfully,
@@ -170,32 +171,44 @@ const app = new Hono()
     "/auth/solana/nounce",
     validate("json", solanaNounceRequestSchema),
     async (c) => {
-      const { pubKey } = c.req.valid("json");
+      try {
+        const { pubKey } = c.req.valid("json");
 
-      const existingWalletUser =
-        await userService.findUserByWalletAddress(pubKey);
+        const existingWalletUser =
+          await userService.findUserByWalletAddress(pubKey);
 
-      if (existingWalletUser) {
-        const nounce = await userService.updateWalletLoginNounce(
-          existingWalletUser.user.id,
-        );
+        if (existingWalletUser) {
+          const nounce = await userService.updateWalletLoginNounce(
+            existingWalletUser.user.id,
+          );
+          return c.json(
+            {
+              signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+              nounce,
+            },
+            statusCode.Ok,
+          );
+        }
+
+        const { nounce } = await userService.createUserWithWallet(pubKey);
         return c.json(
           {
             signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
             nounce,
           },
-          statusCode.Ok,
+          statusCode.Created,
+        );
+      } catch (err) {
+        if (err instanceof Error && err.message === "WALLET_ALREADY_LINKED") {
+          return c.json(setErr("WALLET_ALREADY_LINKED"), 409);
+        }
+
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
         );
       }
-
-      const { nounce } = await userService.createUserWithWallet(pubKey);
-      return c.json(
-        {
-          signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
-          nounce,
-        },
-        statusCode.Created,
-      );
     },
   )
   .post(
@@ -213,7 +226,7 @@ const app = new Hono()
         return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
-      const token = await setAuthToken(c, account.user.id);
+      const token = await setAuthToken(c, account.user.id, account.user.displayName);
 
       return c.json(
         {
@@ -254,7 +267,19 @@ const app = new Hono()
         return c.json(null, statusCode.Ok);
       }
 
-      return c.json(parsedPayload.data, statusCode.Ok);
+      const user = await userService.getUserById(parsedPayload.data.id);
+      if (!user) {
+        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+      }
+
+      return c.json(
+        {
+          id: parsedPayload.data.id,
+          exp: parsedPayload.data.exp,
+          displayName: user.displayName,
+        } satisfies UserPayload,
+        statusCode.Ok,
+      );
     } catch (err) {
       console.error(err);
       return c.json(

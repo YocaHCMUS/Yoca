@@ -9,6 +9,7 @@ import { ChartProvider } from "./contexts/ChartContext";
 import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { WatchlistProvider } from "./contexts/WatchlistContext";
 import "./index.scss";
 import "./styles/carbon.scss";
 import "./styles/theme.scss";
@@ -27,9 +28,11 @@ function Root() {
           <GoogleOAuthProvider clientId={googleClientId}>
             <SolanaProvider>
               <LocalizationProvider>
-                <ChartProvider>
-                  <App />
-                </ChartProvider>
+                <WatchlistProvider>
+                  <ChartProvider>
+                    <App />
+                  </ChartProvider>
+                </WatchlistProvider>
               </LocalizationProvider>
             </SolanaProvider>
           </GoogleOAuthProvider>

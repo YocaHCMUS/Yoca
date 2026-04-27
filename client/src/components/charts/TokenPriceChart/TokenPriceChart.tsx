@@ -13,7 +13,6 @@ import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartTheme, getThemedChartBaseOption } from '../../../hooks/useChartTheme';
 import { ChartGridItem } from '../shared';
-import { formatCurrency } from '../../../util/chart-helpers';
 import { createTooltipHeader, createTooltipRow, createSeriesIndicator } from '@/util/tooltip-helpers';
 import styles from './TokenPriceChart.module.scss';
 
@@ -74,14 +73,14 @@ export function TokenPriceChart({
   showArea = true,
   className,
 }: TokenPriceChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTheme = useChartTheme();
 
   // Default title based on metric
   // const chartTitle = title || tr(`charts.tokenPriceChart.${metric}`, {
   //   defaultValue: metric === 'price' ? 'Price History' : metric === 'marketCap' ? 'Market Cap' : 'Volume',
   // });
-  const chartTitle = title ||''
+  const chartTitle = title || ''
   // const chartTitle = {
   //   switch (metric) {
   //     case 'price':
@@ -103,10 +102,10 @@ export function TokenPriceChart({
 
     // Prepare series data based on metric
     const seriesData = sortedData.map(point => {
-      const value = metric === 'price' 
-        ? point.price 
-        : metric === 'marketCap' 
-          ? point.marketCap 
+      const value = metric === 'price'
+        ? point.price
+        : metric === 'marketCap'
+          ? point.marketCap
           : point.totalVolume;
       return [point.unixTimestampMs, value];
     });
@@ -146,14 +145,14 @@ export function TokenPriceChart({
           });
 
           const value = point.data[1];
-          const formattedValue = formatCurrency(value);
+          const formattedValue = fmt.num.compact.currency(value);
 
           return createTooltipHeader(dateStr)
             + createTooltipRow(
-                chartTitle,
-                formattedValue,
-                { color: point.color, showIndicator: true }
-              );
+              chartTitle,
+              formattedValue,
+              { color: point.color, showIndicator: true }
+            );
         },
       },
       xAxis: {
@@ -173,7 +172,7 @@ export function TokenPriceChart({
         type: 'value',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
         splitNumber: 5,
       },
@@ -216,23 +215,23 @@ export function TokenPriceChart({
           },
           areaStyle: showArea
             ? {
-                color: {
-                  type: 'linear',
-                  x: 0,
-                  y: 0,
-                  x2: 0,
-                  y2: 1,
-                  colorStops: [
-                    { offset: 0, color: `${primaryColor}40` },
-                    { offset: 1, color: `${primaryColor}05` },
-                  ],
-                },
-              }
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: `${primaryColor}40` },
+                  { offset: 1, color: `${primaryColor}05` },
+                ],
+              },
+            }
             : undefined,
         },
       ],
     };
-  }, [data, chartTheme, metric, chartTitle, showArea]);
+  }, [data, chartTheme, metric, chartTitle, showArea, fmt]);
 
   // Empty state
   if (!data || data.length === 0) {

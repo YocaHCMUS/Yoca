@@ -5,6 +5,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
   padding: 0;
 }
 
@@ -75,14 +76,28 @@
   }
 }
 
+.tabButtonInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-03;
+}
+
+.tabButtonIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
 .tabContent {
   padding: 0;
-
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .tabPanelPreserve {
   width: 100%;
+  height: 100%;
   min-height: 0;
 }
 
@@ -96,5 +111,98 @@
   .tabHeaderActions {
     justify-content: flex-start;
     padding-top: 0;
+  }
+}
+
+/* Vertical Tab Layout */
+.tabContainerVertical {
+  display: flex;
+  flex-direction: row;
+
+  height: 100%;
+  overflow: scroll;
+}
+
+.tabHeadersVertical {
+  display: flex;
+  flex-direction: column;
+  border-bottom: none;
+  border-right: 1px solid $border-subtle-01;
+  width: auto;
+  min-width: 140px;
+  flex: 1;
+}
+
+.tabHeaderTabsVertical {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-height: $spacing-10;
+
+  .tabButton,
+  .tabButtonActive {
+    border-bottom: 1px solid $border-subtle-01;
+    border-right: 3px solid transparent;
+
+    min-height: $spacing-10;
+    padding: $spacing-03 $spacing-05;
+    font-size: 1rem;
+    // min-width: $spacing-16;
+    justify-content: flex-start;
+    align-content: flex-start;
+
+    .tabButtonInner {
+      justify-content: flex-start;
+    }
+  }
+
+  .tabButtonActive {
+    border-right: 3px solid $border-interactive;
+  }
+}
+
+.tabContentVertical {
+  background-color: $layer-01;
+  padding-bottom: $spacing-10;
+  flex: 4;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+@media (max-width: 960px) {
+  .tabContainerVertical {
+    flex-direction: column;
+  }
+
+
+
+  .tabHeadersVertical {
+    border-bottom: 1px solid $border-subtle-01;
+    border-right: none;
+    width: 100%;
+    min-width: auto;
+  }
+
+  .tabHeaderTabsVertical {
+    flex-direction: row;
+
+    .tabButton,
+    .tabButtonActive {
+      border-right: none;
+      border-bottom: 3px solid transparent;
+      flex: 1;
+    }
+
+    .tabButtonActive {
+      border-right: none;
+      border-bottom: 3px solid $border-interactive;
+    }
+  }
+
+  .tabContentVertical {
+    flex-direction: column;
   }
 }

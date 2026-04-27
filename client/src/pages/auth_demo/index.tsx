@@ -36,8 +36,10 @@ function WalletAuth() {
             setStatus("Verification failed");
           }
         } else {
-          console.error("Failed to get nounce");
-          setStatus("Faild to get nounce");
+          const res = (await nounceResq.json()) as { errorCode?: string };
+          const errCode = res.errorCode ?? "WALLET_NONCE_FAILED";
+          console.error("Failed to get nounce", errCode);
+          setStatus(`Failed to get nounce: ${errCode}`);
         }
       }
     };

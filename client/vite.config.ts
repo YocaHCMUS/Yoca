@@ -1,13 +1,11 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default ({ mode }: { mode: string }) => {
-  const env = loadEnv(mode, ".");
-
   return defineConfig({
     css: {
       preprocessorOptions: {
@@ -20,6 +18,11 @@ export default ({ mode }: { mode: string }) => {
     server: {
       port: 3000,
       allowedHosts: true,
+      // proxy: {
+      //   "/api": {
+      //     target: env.VITE_CLIENT_API_DOMAIN,
+      //   },
+      // },
       watch: {
         ignored: ["build/**"],
       },
