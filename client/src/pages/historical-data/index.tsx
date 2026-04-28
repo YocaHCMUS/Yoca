@@ -4,15 +4,15 @@ import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import {
-  DataTable,
-  DataTableSkeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
+    DataTable,
+    DataTableSkeleton,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@carbon/react";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";

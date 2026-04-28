@@ -7,6 +7,15 @@ import { and, gte, inArray } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
+function isCgRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const status = (error as { status?: unknown }).status;
+  return Number(status) === 429;
+}
+
 export async function fetchCgMarketDataBatched(
   cgIds: string[],
 ): Promise<CG_CoinMarkets> {
@@ -23,7 +32,7 @@ export async function fetchCgMarketDataBatched(
     chunks.push(cgIds.slice(i, i + cgBatchSize));
   }
 
-  const results = await Promise.all(
+  const settled = await Promise.allSettled(
     chunks.map(
       async (chunk) =>
         (await cg.client.coins.markets.get({
@@ -37,8 +46,12 @@ export async function fetchCgMarketDataBatched(
   );
 
   const allRes: CG_CoinMarkets = [];
-  for (const res of results) {
-    allRes.push(...res);
+  for (const result of settled) {
+    if (result.status !== "fulfilled") {
+      continue;
+    }
+
+    allRes.push(...result.value);
   }
 
   return allRes;
@@ -179,7 +192,25 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     return addressToMarketData;
   }
 
-  const refreshed = await fetchTokenMarketData(staleAddresses);
+  let refreshed: Awaited<ReturnType<typeof fetchTokenMarketData>> = null;
+  try {
+    refreshed = await fetchTokenMarketData(staleAddresses);
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      const staleRes = await db
+        .select()
+        .from(tokenMarketData)
+        .where(inArray(tokenMarketData.address, staleAddresses));
+
+      for (const row of staleRes) {
+        addressToMarketData[row.address] = row;
+      }
+
+      return addressToMarketData;
+    }
+
+    throw error;
+  }
 
   if (!refreshed || refreshed.length == 0) {
     return addressToMarketData;

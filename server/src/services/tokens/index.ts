@@ -13,6 +13,13 @@ export {
 export { getCoinGeckoIdsByAddresses as getCoinGeckoIdList } from "./token-list.js";
 export { getTokenMarketData } from "./token-market-data.js";
 export {
+  clearPoolValidationCache,
+  getNewMarketPools,
+  getTopGainerMarketPools,
+  getTopMarketPools,
+  getTrendingMarketPools,
+} from "./token-market-pools.js";
+export {
   getTokenPoolData,
   getTokenPoolDataList,
   getTokenTopPools,
