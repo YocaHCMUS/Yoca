@@ -1,0 +1,477 @@
+{
+    "name": "wallet-activity-analysis",
+    "nodes": [
+        {
+            "parameters": {
+                "promptType": "=define",
+                "text": "=Role:\nOn-chain Solana wallet analyst. Your objective is to create a technical profile of a wallet's observed activity using provided database context. You are an observer, not a speculator.\n\nInput (Webhook)\n{{ $json.body }}\n\nInput Rules (STRICT)\nExtract: address, language\nOnly valid input\nIf missing/empty → STOP and return:\n{\n  \"error\": \"INVALID_INPUT\",\n  \"message\": \"Wallet address required\",\n  \"received_payload\": \"<raw_input>\"\n}\n\nonly language input allowed: vn (Vietnamese), en (English)\n\nExecution Flow (MANDATORY)\n\n1. Validate\naddress exists, non-empty, base58-like\n\n2. Fetch Data (before analysis)\nwallet_identity\nwallet_swaps (≤200)\nwallet_portfolio\nwallet_first_fund\n\nIf unavailable → \"insufficient_data\"\n\n3. Analyze (DATA ONLY)\nAllowed inputs:\n\nDB data\n\n\nForbidden:\nGuessing\nExternal knowledge\nFabricated values, use Calculator to return metric based outputs\n\nOutputs to Produce:\n\nFirst funder: CEX | whale | personal | unknown\nWallet age:\nnew <30d\nmid 30–90d\nold >90d\nConstraints\nEvery claim must map to data\nIf no evidence → omit\nIf weak signal → lower confidence\nMissing data → \"insufficient_data\"\n\nNever use raw names/addresses for wallets, tokens, or DEXs in text strings.\nNotation: Use the format ref:<id> (e.g., ref:1, ref:2).\nMapping: Every ref:<id> used in a text field must have a corresponding entry in the references array.\nlogUri field in the reference can be fetched from token_meta\n\nOutput (STRICT JSON)\n{\n  \"wallet_address\": \"<exact_input>\",\n  \"data\": {\n    \"swaps\": \"ok | insufficient_data\",\n    \"portfolio\": \"ok | insufficient_data\",\n    \"first_funder\": \"ok | insufficient_data\",\n    \"identity\": \"ok | insufficient_data\"\n  },\n  \"activity_profile\": {\n    \"archetype\": \"High-Frequency / Long-term Holder / LP Provider / Bot(Algo)\",\n    \"activity_level\": \"dormant | low | moderate | high\",\n    \"last_active\": \"<timestamp>\"\n  },\n  \"interaction_fingerprint\": {\n    \"preferred_protocols\": [\"Jupiter (reference)\", \"Meteora (reference)\", \"Raydium (reference)\"],\n    \"transaction_timing\": \"uniform | burst_mode | sporadic\",\n    \"preffered_trading_tokens\": [\"SOL (reference)\",...],\n    \"preffered_holding_tokens\": [\"SOL (reference\",...], \n    \"trading_volume_range\": \"...\"\n  },\n  \"funder\": {\n    \"type\": \"<value | unknown>\",\n    \"notes\": \"...\"\n  },\n  \"wallet_age\": {\n    \"category\": \"new | mid | old | unknown\",\n    \"first_seen\": \"...\",\n    \"consistency\": \"...\"\n  },\n  \"reference\": [\n    {\n      \"ref_id\": 0,\n      \"type\": \"wallet | exchange | token\",\n      \"address\": \"...\",\n      \"name\": \"...\",\n      \"symbol\": \"...\",\n      \"logoUri\": \"...\"\n    },...\n  ],\n  \"summary\": \"data-backed only\",\n  \"signals\": [\"...\"]\n}\nNotes:\nnon categorical entries are to translated into the input language\nSignals are a list of observations gather to come up with the conclusion of the rest of data point\npreffered_holding_tokens should only contain tokens that are: \n+ have a larger buying volume than selling \n+ have total value be at least more than 25% of the total portfolio total\n+ are currently holding\n",
+                "hasOutputParser": true,
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
+            "position": [
+                624,
+                64
+            ],
+            "id": "04f23e44-332d-4063-bbaa-5c6de549b1d1",
+            "name": "AI analysis model",
+            "retryOnFail": true,
+            "waitBetweenTries": 2000,
+            "maxTries": 5,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemma-4-31b-it",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                304,
+                288
+            ],
+            "id": "d23919d6-3d34-49ff-9750-ae684b8ab27f",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "HBNSeIDY6xZpTDd8",
+                    "name": "Google Gemini(PaLM) Api account 2"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "analyse-wallet",
+                "responseMode": "lastNode",
+                "responseData": "allEntries",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -144,
+                64
+            ],
+            "id": "9f0a37b4-d858-4592-8744-0727ef06c10d",
+            "name": "Webhook",
+            "webhookId": "72e94cee-48c6-4634-aa37-68eb2402f350"
+        },
+        {
+            "parameters": {
+                "jsonSchemaExample": "{\n  \"wallet_address\": \"<exact_input>\",\n  \"data\": {\n    \"swaps\": \"ok | insufficient_data\",\n    \"portfolio\": \"ok | insufficient_data\",\n    \"first_funder\": \"ok | insufficient_data\",\n    \"identity\": \"ok | insufficient_data\"\n  },\n  \"activity_profile\": {\n    \"archetype\": \"High-Frequency / Long-term Holder / LP Provider / Bot(Algo)\",\n    \"activity_level\": \"dormant | low | moderate | high\",\n    \"last_active\": \"<timestamp>\"\n  },\n  \"interaction_fingerprint\": {\n    \"preferred_protocols\": [\"Jupiter (reference)\", \"Meteora (reference)\", \"Raydium (reference)\"],\n    \"transaction_timing\": \"uniform | burst_mode | sporadic\",\n    \"preffered_trading_tokens\": [\"SOL (reference)\"],\n    \"preffered_holding_tokens\": [\"SOL (reference\"], \n    \"trading_volume_range\": \"...\"\n  },\n  \"funder\": {\n    \"type\": \"<value | unknown>\",\n    \"notes\": \"...\"\n  },\n  \"wallet_age\": {\n    \"category\": \"new | mid | old | unknown\",\n    \"first_seen\": \"...\",\n    \"consistency\": \"...\"\n  },\n  \"reference\": [\n    {\n      \"ref_id\": 0,\n      \"type\": \"wallet | exchange | token\",\n      \"address\": \"...\",\n      \"name\": \"...\",\n      \"symbol\": \"...\",\n      \"logoUri\": \"...\"\n    }\n  ],\n  \"summary\": \"data-backed only\",\n  \"signals\": [\"...\"]\n}",
+                "autoFix": true
+            },
+            "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+            "typeVersion": 1.3,
+            "position": [
+                1216,
+                288
+            ],
+            "id": "a0ca954d-b3fe-4a99-8e2a-2bf5758c7cea",
+            "name": "Structured Output Parser",
+            "retryOnFail": true,
+            "waitBetweenTries": 2000,
+            "maxTries": 5,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "aacac137-6fdf-44d7-8275-07b43d3e158c",
+                            "name": "body",
+                            "value": "={{ $json.body }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                80,
+                64
+            ],
+            "id": "37ac95c2-845b-4090-b211-2157a6e585b8",
+            "name": "Edit Fields"
+        },
+        {
+            "parameters": {},
+            "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+            "typeVersion": 1,
+            "position": [
+                432,
+                288
+            ],
+            "id": "af2faefc-7251-4ce7-8f78-fb9bddda32d1",
+            "name": "Calculator"
+        },
+        {
+            "parameters": {
+                "descriptionType": "manual",
+                "toolDescription": "get a wallet identity from the address",
+                "operation": "select",
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "wallet_identity_cache",
+                    "mode": "list",
+                    "cachedResultName": "wallet_identity_cache"
+                },
+                "limit": 1,
+                "where": {
+                    "values": [
+                        {
+                            "column": "address",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgresTool",
+            "typeVersion": 2.6,
+            "position": [
+                560,
+                288
+            ],
+            "id": "216ee102-9307-4b49-84ed-19c507870434",
+            "name": "wallet_identity",
+            "rewireOutputLogTo": "ai_tool",
+            "credentials": {
+                "postgres": {
+                    "id": "Oro6drHm0caEza3l",
+                    "name": "postgres yoca db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "descriptionType": "manual",
+                "toolDescription": "get a wallet first fund and identity, funding amount, first fund timestamp (ms), and first fund token from the receiver address",
+                "operation": "select",
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "wallet_first_fund",
+                    "mode": "list",
+                    "cachedResultName": "wallet_first_fund"
+                },
+                "limit": 1,
+                "where": {
+                    "values": [
+                        {
+                            "column": "recipient",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgresTool",
+            "typeVersion": 2.6,
+            "position": [
+                688,
+                288
+            ],
+            "id": "7ecac37d-d971-43ed-bfee-02359a0df9d5",
+            "name": "wallet_first_fund",
+            "rewireOutputLogTo": "ai_tool",
+            "credentials": {
+                "postgres": {
+                    "id": "Oro6drHm0caEza3l",
+                    "name": "postgres yoca db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "descriptionType": "manual",
+                "toolDescription": "get the latest 200 swap transactions from an wallet address",
+                "operation": "select",
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "wallet_swap",
+                    "mode": "list",
+                    "cachedResultName": "wallet_swap"
+                },
+                "limit": 200,
+                "where": {
+                    "values": [
+                        {
+                            "column": "wallet_address",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+                        }
+                    ]
+                },
+                "sort": {
+                    "values": [
+                        {
+                            "column": "block_timestamp_ms",
+                            "direction": "DESC"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgresTool",
+            "typeVersion": 2.6,
+            "position": [
+                816,
+                288
+            ],
+            "id": "8ee49968-4f7b-4703-88c5-56532fa0ec43",
+            "name": "wallet_swaps",
+            "rewireOutputLogTo": "ai_tool",
+            "credentials": {
+                "postgres": {
+                    "id": "Oro6drHm0caEza3l",
+                    "name": "postgres yoca db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "descriptionType": "manual",
+                "toolDescription": "get the wallet current token portfolio from the address",
+                "operation": "select",
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "wallet_portfolio_cache",
+                    "mode": "list",
+                    "cachedResultName": "wallet_portfolio_cache"
+                },
+                "limit": 1,
+                "where": {
+                    "values": [
+                        {
+                            "column": "address",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgresTool",
+            "typeVersion": 2.6,
+            "position": [
+                944,
+                288
+            ],
+            "id": "eb017724-3d24-4d60-8cde-65dca577c056",
+            "name": "wallet_portfolio",
+            "rewireOutputLogTo": "ai_tool",
+            "credentials": {
+                "postgres": {
+                    "id": "Oro6drHm0caEza3l",
+                    "name": "postgres yoca db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "descriptionType": "manual",
+                "toolDescription": "fetch token meta data (name, symbol, image url)",
+                "operation": "select",
+                "schema": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "public"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "token_meta",
+                    "mode": "list",
+                    "cachedResultName": "token_meta"
+                },
+                "where": {
+                    "values": [
+                        {
+                            "column": "address",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+                        },
+                        {
+                            "column": "symbol",
+                            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values1_Value', `use LOWER('<symbol>') to normalize query input (all of the entry for this is lower case)`, 'string') }}"
+                        }
+                    ]
+                },
+                "combineConditions": "OR",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgresTool",
+            "typeVersion": 2.6,
+            "position": [
+                1072,
+                288
+            ],
+            "id": "742accdc-ea4f-4c2f-8234-bdf722110562",
+            "name": "token_meta",
+            "rewireOutputLogTo": "ai_tool",
+            "credentials": {
+                "postgres": {
+                    "id": "Oro6drHm0caEza3l",
+                    "name": "postgres yoca db"
+                }
+            }
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    },
+                    {
+                        "node": "Structured Output Parser",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Edit Fields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Structured Output Parser": {
+            "ai_outputParser": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_outputParser",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Edit Fields": {
+            "main": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calculator": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "wallet_identity": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "wallet_first_fund": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "wallet_swaps": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "wallet_portfolio": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "token_meta": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI analysis model",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI analysis model": {
+            "main": [
+                []
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate"
+    },
+    "versionId": "b8d8b43d-5e8b-4de9-8873-2443bd96c920",
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "c1d9efe4dc893fa1cde1e77ad371a674fc7a4f0335ece7ea9b08296076320464"
+    },
+    "id": "bX94BTm0ypCRvORv",
+    "tags": []
+}
