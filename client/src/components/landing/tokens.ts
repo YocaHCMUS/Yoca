@@ -7,6 +7,7 @@ export const LANDING_ACCENT_HOVER = "#ad6dff";
 export const LANDING_ACCENT_MUTED = "rgba(153, 69, 255, 0.4)";
 export const LANDING_ACCENT_GLOW = "rgba(20, 241, 149, 0.24)";
 
+export const NAVBAR_HEIGHT = "4rem";
 export const SECTION_PADDING_Y = 120;
 export const CARD_PADDING = 32;
 export const CARD_RADIUS = 12;

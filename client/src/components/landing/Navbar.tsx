@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import appLogo from "../../assets/app-logo.png";
 import { GRID_MAX_WIDTH, btnPrimaryBase, btnPrimaryEnter, btnPrimaryLeave } from "./tokens";
 
 const navLinks = [
@@ -22,6 +23,7 @@ const linkStyle = {
 export function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
@@ -29,6 +31,18 @@ export function LandingNavbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Close mobile menu when resizing to desktop
+  useEffect(() => {
+    if (!isMobile) setMobileOpen(false);
+  }, [isMobile]);
 
   return (
     <header
@@ -50,180 +64,238 @@ export function LandingNavbar() {
           "background-color 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease",
       }}
     >
-      {/* Desktop: strict three-part flex layout */}
-      <div
-        className="mx-auto hidden min-h-16 w-full items-center justify-between lg:flex"
-        style={{
-          maxWidth: GRID_MAX_WIDTH,
-          paddingLeft: "1.5rem",
-          paddingRight: "1.5rem",
-        }}
-      >
-        {/* Left slot: logo asset + wordmark */}
-        <div className="flex flex-1 items-center justify-start">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-[#f8fafc]"
-            style={{ textDecoration: "none" }}
-          >
-            <img
-              src="/vite.svg"
-              alt="Yoca logo"
-              width={20}
-              height={20}
-              style={{ display: "block" }}
-            />
-            <span>Yoca</span>
-          </Link>
-        </div>
-
-        {/* Center slot: dead-center nav, 32px gaps */}
-        <nav aria-label="Primary" className="flex shrink-0 items-center justify-center">
-          <ul className="flex items-center" style={{ columnGap: "32px" }}>
-            {navLinks.map((item) => (
-              <li key={item.label} className="shrink-0">
-                {item.href.startsWith("#") ? (
-                  <a
-                    href={item.href}
-                    style={linkStyle}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.color = "#f8fafc")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.color = "#94a3b8")
-                    }
-                  >
-                    {item.label}
-                  </a>
-                ) : (
-                  <Link
-                    to={item.href}
-                    style={linkStyle}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.color = "#f8fafc")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.color = "#94a3b8")
-                    }
-                  >
-                    {item.label}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Right slot: auth actions */}
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <Link
-            to="/auth"
+      {isMobile ? (
+        /* ── Mobile bar ── */
+        <>
+          <div
             style={{
-              ...linkStyle,
-              padding: "12px 20px",
+              display: "flex",
+              height: "4rem",
+              alignItems: "center",
+              justifyContent: "space-between",
+              maxWidth: GRID_MAX_WIDTH,
+              margin: "0 auto",
+              padding: "0 1.5rem",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
           >
-            Log in
-          </Link>
-          <Link
-            to="/auth"
-            style={btnPrimaryBase}
-            onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-            onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-          >
-            Sign up
-          </Link>
-        </div>
-      </div>
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontFamily: "inherit",
+                fontSize: "1.25rem",
+                fontWeight: 700,
+                letterSpacing: "-0.025em",
+                color: "#f8fafc",
+                textDecoration: "none",
+              }}
+            >
+              <img src={appLogo} alt="Yoca logo" width={28} height={28} style={{ display: "block" }} />
+              <span>YOCA</span>
+            </Link>
+            <button
+              type="button"
+              aria-expanded={mobileOpen}
+              aria-label="Toggle menu"
+              onClick={() => setMobileOpen((o) => !o)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#f8fafc",
+                padding: "0.5rem",
+                borderRadius: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
 
-      {/* Mobile / tablet */}
-      <div
-        className="flex h-16 items-center justify-between px-6 lg:hidden"
-        style={{ maxWidth: GRID_MAX_WIDTH, marginLeft: "auto", marginRight: "auto" }}
-      >
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 font-mono text-xl font-bold text-[#f8fafc]"
-          style={{ textDecoration: "none" }}
-        >
-          <img
-            src="/vite.svg"
-            alt="Yoca logo"
-            width={20}
-            height={20}
-            style={{ display: "block" }}
-          />
-          <span>Yoca</span>
-        </Link>
-        <button
-          type="button"
-          className="rounded-lg p-2 text-[#f8fafc]"
-          aria-expanded={mobileOpen}
-          aria-label="Toggle menu"
-          onClick={() => setMobileOpen((o) => !o)}
-        >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
-
-      {mobileOpen && (
-        <div
-          className="border-t border-white/6 px-6 py-5 lg:hidden"
-          style={{ backgroundColor: "#0a0a0f" }}
-        >
-          <ul className="flex flex-col gap-4">
-            {navLinks.map((item) => (
-              <li key={item.label}>
-                {item.href.startsWith("#") ? (
-                  <a
-                    href={item.href}
-                    className="block text-base text-[#94a3b8]"
-                    style={{ textDecoration: "none" }}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {item.label}
-                  </a>
-                ) : (
+          {mobileOpen && (
+            <div
+              style={{
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                padding: "1.25rem 1.5rem",
+                backgroundColor: "#0a0a0f",
+              }}
+            >
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {navLinks.map((item) => (
+                  <li key={item.label}>
+                    {item.href.startsWith("#") ? (
+                      <a
+                        href={item.href}
+                        style={{ ...linkStyle, fontSize: "1rem", display: "block" }}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={item.href}
+                        style={{ ...linkStyle, fontSize: "1rem", display: "block" }}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+                <li style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "0.75rem" }}>
                   <Link
-                    to={item.href}
-                    className="block text-base text-[#94a3b8]"
-                    style={{ textDecoration: "none" }}
+                    to="/auth"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      padding: "0.75rem",
+                      borderRadius: "9999px",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      color: "#f8fafc",
+                      textDecoration: "none",
+                    }}
                     onClick={() => setMobileOpen(false)}
                   >
-                    {item.label}
+                    Log In
                   </Link>
-                )}
-              </li>
-            ))}
-            <li className="flex flex-col gap-3 pt-3 sm:flex-row">
-              <Link
-                to="/auth"
-                className="flex-1 rounded-full border border-white/15 py-3 text-center text-sm font-medium text-[#f8fafc]"
-                style={{ textDecoration: "none" }}
-                onClick={() => setMobileOpen(false)}
-              >
-                Log in
-              </Link>
-              <Link
-                to="/auth"
-                className="flex-1 rounded-full py-3 text-center text-sm font-semibold text-[#0a0a0f]"
-                style={{
-                  ...btnPrimaryBase,
-                  width: "100%",
-                  justifyContent: "center",
-                }}
-                onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                onClick={() => setMobileOpen(false)}
-              >
-                Sign up
-              </Link>
-            </li>
-          </ul>
+                  <Link
+                    to="/auth"
+                    style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
+                    onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                    onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+        </>
+      ) : (
+        /* ── Desktop / Tablet bar (≥ 768px) — true CSS Grid 3-column ── */
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            alignItems: "center",
+            height: "4rem",
+            maxWidth: GRID_MAX_WIDTH,
+            margin: "0 auto",
+            padding: "0 1.5rem",
+            gap: "1rem",
+          }}
+        >
+          {/* LEFT — Logo */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
+            <Link
+              to="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontFamily: "inherit",
+                fontSize: "1.25rem",
+                fontWeight: 700,
+                letterSpacing: "-0.025em",
+                color: "#f8fafc",
+                textDecoration: "none",
+              }}
+            >
+              <img src={appLogo} alt="Yoca logo" width={28} height={28} style={{ display: "block" }} />
+              <span>YOCA</span>
+            </Link>
+          </div>
+
+          {/* CENTER — Nav links (always geometrically centered) */}
+          <nav aria-label="Primary">
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "clamp(1.25rem, 2.5vw, 2rem)",
+              }}
+            >
+              {navLinks.map((item) => (
+                <li key={item.label} style={{ flexShrink: 0 }}>
+                  {item.href.startsWith("#") ? (
+                    <a
+                      href={item.href}
+                      style={linkStyle}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      style={linkStyle}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                    >
+                      {item.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* RIGHT — Auth actions */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
+            {/* "Log In" text — only shown when there's enough space (≥ 900px approx) */}
+            <LogInLink />
+            <Link
+              to="/auth"
+              style={btnPrimaryBase}
+              onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+              onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+            >
+              Sign Up
+            </Link>
+          </div>
         </div>
       )}
     </header>
+  );
+}
+
+/** Renders "Log In" only on wide viewports (≥ 900 px) via a hidden span trick */
+function LogInLink() {
+  const [show, setShow] = useState(true);
+  useEffect(() => {
+    const check = () => setShow(window.innerWidth >= 900);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  if (!show) return null;
+  return (
+    <Link
+      to="/auth"
+      style={{
+        fontSize: "0.875rem",
+        fontWeight: 500,
+        color: "#94a3b8",
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+        padding: "12px 20px",
+        transition: "color 0.2s ease",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
+      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+    >
+      Log In
+    </Link>
   );
 }
