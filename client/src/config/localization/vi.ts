@@ -872,6 +872,7 @@ export const translation = defineTranslation({
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     NOT_FOUND: "Không tìm thấy",
+    UNAUTHORIZED: "Không được ủy quyền",
   },
   token: {
     overviewSectionTitle: "Tổng quan",
@@ -998,10 +999,10 @@ export const translation = defineTranslation({
       distributionDescription:
         "Phân bổ quyền sở hữu token {{symbol}} theo nhóm người nắm giữ hàng đầu.",
       top10: "Top 10",
-      rank1120: "11–20",
-      rank2140: "21–40",
-      rank1130: "11–30",
-      rank3150: "31–50",
+      rank1120: "11-20",
+      rank2140: "21-40",
+      rank1130: "11-30",
+      rank3150: "31-50",
       others: "Khác",
       volumeQ:
         "Khối lượng giao dịch hàng ngày của {{name}} ({{symbol}}) là bao nhiêu?",

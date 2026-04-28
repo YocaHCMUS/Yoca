@@ -10,7 +10,7 @@ import { Txt } from "../Txt";
 import styles from "./TokenSearch.module.scss";
 
 export interface SelectedTokenValue {
-  id: string;
+  address: string;
   symbol: string | null;
   name: string | null;
   imgUrl: string | null;
@@ -22,7 +22,7 @@ interface TokenSearchProps {
 }
 
 interface TokenSearchResult {
-  id: string;
+  address: string;
   name: string | null;
   symbol: string | null;
   imgUrl: string | null;
@@ -54,11 +54,11 @@ export default function TokenSearch({
       enabled: debouncedQuery.trim().length > 0,
       select: (data): TokenSearchResult[] =>
         data.tokens.map((token) => {
-          const id = token.address;
+          const address = token.address;
           const symbol = token.symbol;
 
           return {
-            id,
+            address,
             name: token.name,
             symbol,
             imgUrl: token.imgUrl,
@@ -131,12 +131,12 @@ export default function TokenSearch({
           tokens.length > 0 &&
           tokens.map((token) => (
             <button
-              key={token.id}
+              key={token.address}
               type="button"
               className={styles.item}
               onClick={() => {
                 setValue({
-                  id: token.id,
+                  address: token.address,
                   symbol: token.symbol,
                   name: token.name,
                   imgUrl: token.imgUrl,

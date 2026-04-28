@@ -11,7 +11,7 @@ import {
 } from "@carbon/react";
 import { Controller, useFormContext } from "react-hook-form";
 import styles from "../demo.module.scss";
-import type { AlertFormValues } from "../form-types";
+import type { BaseAlertForm } from "../form-schema";
 
 export default function AlertNotificationSettings() {
   const {
@@ -19,7 +19,7 @@ export default function AlertNotificationSettings() {
     register,
     watch,
     formState: { errors },
-  } = useFormContext<AlertFormValues>();
+  } = useFormContext<BaseAlertForm>();
 
   const emailEnabled = watch("emailEnabled");
 

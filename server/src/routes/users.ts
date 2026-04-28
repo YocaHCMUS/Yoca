@@ -16,14 +16,15 @@ import {
 } from "@sv/middlewares/validation.js";
 import * as userService from "@sv/services/users.js";
 import { serverErr, setErr } from "@sv/util/errors.js";
+import env from "@sv/util/load-env";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { sign } from "hono/jwt";
 
-const jwtSecret = process.env.JWT_SECRET!;
-const googleClientId = process.env.GOOGLE_CLIENT_ID!;
+const jwtSecret = env.JWT_SECRET;
+const googleClientId = env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(googleClientId);
 
 async function verifyGoogleToken(idToken: string) {

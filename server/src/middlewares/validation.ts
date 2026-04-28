@@ -12,7 +12,8 @@ import { setErr } from "@sv/util/errors.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
 import type { Context, Next, ValidationTargets } from "hono";
-import { jwt } from "hono/jwt";
+import { getCookie } from "hono/cookie";
+import { verify } from "hono/jwt";
 import { validator } from "hono/validator";
 import z from "zod";
 
@@ -179,14 +180,14 @@ const tradingAlertConditionSchema = z.object({
 });
 
 const alertDeliverySchema = z.object({
-  email: z.email(),
+  email: z.email().optional(),
 });
 
 const alertBaseSchema = {
   name: z.string().trim().min(1),
   triggerMode: z.enum(userAlertTriggerModes).default("once"),
   expiresAt: z.iso.datetime({ offset: true }),
-  delivery: alertDeliverySchema.optional(),
+  delivery: alertDeliverySchema,
 };
 
 export const createTokenAlertSchema = z.object({
@@ -246,13 +247,35 @@ export function validate<
   });
 }
 
-export const honoJwt = (c: Context, next: Next) => {
-  const jwtMiddleware = jwt({
+// This is re-implementation of jwt middleware with custom unauthorized response
+// See: https://github.com/atasoya/hono/blob/main/src/middleware/jwt/jwt.ts
+export const honoJwt = async (c: Context, next: Next) => {
+  // const jwtMiddleware = jwt({
+  //   secret: env.JWT_SECRET,
+  //   alg: "HS256",
+  //   cookie: AUTH_COOKIE_NAME,
+  // });
+  const options = {
     secret: env.JWT_SECRET,
     alg: "HS256",
     cookie: AUTH_COOKIE_NAME,
-  });
-  return jwtMiddleware(c, next);
+  } as const;
+  const token = getCookie(c, options.cookie);
+  if (!token) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  let payload;
+  try {
+    payload = await verify(token, options.secret, { alg: options.alg });
+  } catch (e) {}
+
+  if (!payload) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  c.set("jwtPayload", payload);
+  await next();
 };
 
 // Check if result schema was like expected. Useful for debugging

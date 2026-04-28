@@ -1,76 +1,69 @@
+import { UserTradeDirection, UserTradingAggregation } from "@/api/alerts";
 import { Flex } from "@/components/Flex";
 import { Divider } from "@/components/partials/Divider/Divider";
 import {
   Button,
+  ComposedModal,
   Dropdown,
   FormGroup,
   IconButton,
   InlineNotification,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Stack,
   TextInput,
 } from "@carbon/react";
-import { Add, SubtractAlt } from "@carbon/react/icons";
-import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import {
+  Controller,
+  FormProvider,
+  useFieldArray,
+  useForm,
+  useFormContext,
+} from "react-hook-form";
 import styles from "../demo.module.scss";
-import type { AlertFormValues } from "../form-types";
+import {
+  conditionOptions,
+  periodOptions,
+  TradingAlertForm,
+  tradingEventsSchema,
+} from "../form-schema";
+import AlertConfigurationShared from "./AlertConfigurationShared";
+import AlertNotificationSettings from "./AlertNotificationSettings";
 
-const conditionOptions = [
-  { id: "gt", text: ">" },
-  { id: "gte", text: "≥" },
-  { id: "eq", text: "=" },
-  { id: "lt", text: "<" },
-  { id: "lte", text: "≤" },
-] as const;
+const directionOptions: {
+  id: UserTradeDirection;
+  text: string;
+}[] = [
+  {
+    id: "both",
+    text: "Buy & Sell",
+  },
+  {
+    id: "buy",
+    text: "Buy",
+  },
+  {
+    id: "sell",
+    text: "Sell",
+  },
+];
 
-const periodOptions = [
-  { id: "30m", text: "30m" },
-  { id: "1h", text: "1h" },
-  { id: "6h", text: "6h" },
-  { id: "24h", text: "24h" },
-] as const;
-
-const aggregationOptions = [
+const aggregationOptions: { id: UserTradingAggregation; text: string }[] = [
   { id: "volume_usd", text: "Volume (USD)" },
-  { id: "trade_count", text: "Trade count" },
-] as const;
+  { id: "trade_count", text: "Trade Count" },
+];
 
-const directionOptions = [
-  { id: "buy", text: "Buy only" },
-  { id: "sell", text: "Sell only" },
-  { id: "both", text: "Both" },
-] as const;
-
-function getConditionOption(
-  condition: AlertFormValues["tradingConditions"][number]["condition"],
-) {
-  return (
-    conditionOptions.find((item) => item.id == condition) ?? conditionOptions[0]
-  );
-}
-
-function getAggregationOption(
-  aggregation: AlertFormValues["tradingConditions"][number]["aggregation"],
-) {
-  return (
-    aggregationOptions.find((item) => item.id == aggregation) ??
-    aggregationOptions[0]
-  );
-}
-
-function getDirectionOption(
-  direction: AlertFormValues["tradingScope"]["direction"],
-) {
-  return (
-    directionOptions.find((item) => item.id == direction) ?? directionOptions[0]
-  );
-}
-
-export default function TradingEventsConfig() {
+function TradingEventsConfigContent() {
+  const methods = useFormContext<TradingAlertForm>();
   const {
     control,
     register,
     formState: { errors },
-  } = useFormContext<AlertFormValues>();
+  } = methods;
 
   const { fields, append, remove } = useFieldArray({
     name: "tradingConditions",
@@ -114,9 +107,12 @@ export default function TradingEventsConfig() {
                 id="scope-direction"
                 titleText="Direction"
                 label="Select direction"
-                items={[...directionOptions]}
+                items={directionOptions}
                 itemToString={(item) => item?.text || ""}
-                selectedItem={getDirectionOption(field.value)}
+                selectedItem={
+                  directionOptions.find((option) => option.id == field.value) ||
+                  directionOptions[0]
+                }
                 onChange={({ selectedItem }) => {
                   if (!selectedItem) return;
                   field.onChange(selectedItem.id);
@@ -162,9 +158,13 @@ export default function TradingEventsConfig() {
                               : `Aggregation ${index + 1}`
                           }
                           label="Select aggregation"
-                          items={[...aggregationOptions]}
+                          items={aggregationOptions}
                           itemToString={(item) => item?.text || ""}
-                          selectedItem={getAggregationOption(field.value)}
+                          selectedItem={
+                            aggregationOptions.find(
+                              (option) => option.id == field.value,
+                            ) || aggregationOptions[0]
+                          }
                           onChange={({ selectedItem }) => {
                             if (!selectedItem) return;
                             field.onChange(selectedItem.id);
@@ -185,7 +185,7 @@ export default function TradingEventsConfig() {
                             index == 0 ? "Period" : `Period ${index + 1}`
                           }
                           label="Select period"
-                          items={[...periodOptions]}
+                          items={periodOptions}
                           itemToString={(item) => item?.text || ""}
                           selectedItem={{ id: field.value, text: field.value }}
                           onChange={({ selectedItem }) => {
@@ -198,7 +198,7 @@ export default function TradingEventsConfig() {
                   />
 
                   <Controller
-                    name={`tradingConditions.${index}.condition`}
+                    name={`tradingConditions.${index}.op`}
                     control={control}
                     render={({ field }) => (
                       <div style={{ inlineSize: "6rem" }}>
@@ -208,9 +208,13 @@ export default function TradingEventsConfig() {
                             index == 0 ? "Condition" : `Condition ${index + 1}`
                           }
                           label="Select condition"
-                          items={[...conditionOptions]}
+                          items={conditionOptions}
                           itemToString={(item) => item?.text || ""}
-                          selectedItem={getConditionOption(field.value)}
+                          selectedItem={
+                            conditionOptions.find(
+                              (option) => option.id == field.value,
+                            ) || conditionOptions[0]
+                          }
                           onChange={({ selectedItem }) => {
                             if (!selectedItem) return;
                             field.onChange(selectedItem.id);
@@ -255,11 +259,10 @@ export default function TradingEventsConfig() {
                 renderIcon={Add}
                 onClick={() => {
                   append({
-                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                     period: "1h",
                     aggregation: "volume_usd",
-                    condition: "gt",
-                    value: "",
+                    op: "gt",
+                    value: 0,
                   });
                 }}
               >
@@ -270,7 +273,121 @@ export default function TradingEventsConfig() {
         </Stack>
       </FormGroup>
 
-      <Divider />
+      <AlertConfigurationShared />
     </Stack>
+  );
+}
+
+export function createTradingEventsDefaultValues(): TradingAlertForm {
+  return {
+    type: "trading-events",
+    triggerMode: "once",
+    expiresAtDate: null,
+    expiresAtTime: "09:00",
+    tradingConditions: [
+      {
+        period: "1h",
+        aggregation: "volume_usd",
+        op: "gt",
+        value: 0,
+      },
+    ],
+    tradingScope: {
+      walletAddress: "",
+      tokenAddress: "So11111111111111111111111111111111111111112",
+      poolAddress: "",
+      counterpartyAddress: "",
+      direction: "both",
+    },
+    alertName: "",
+    emailEnabled: true,
+    email: "",
+  };
+}
+
+const stepFields: Record<number, (keyof TradingAlertForm)[]> = {
+  1: ["tradingConditions", "tradingScope"],
+  2: ["email", "emailEnabled"],
+};
+
+const finalStepNum = 2;
+
+interface TradingEventsConfigProps {
+  onReturn: () => void;
+  onFinish: () => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export function TradingEventsConfig({
+  onReturn,
+  onFinish,
+  open,
+  setOpen,
+}: TradingEventsConfigProps) {
+  const [stepNum, setStepNum] = useState(1);
+  const [isSubmitting, setSubmitting] = useState(false);
+
+  const methods = useForm({
+    resolver: zodResolver(tradingEventsSchema),
+    defaultValues: createTradingEventsDefaultValues(),
+    mode: "onChange",
+  });
+
+  const handleSubmit = () => {
+    setSubmitting(true);
+  };
+
+  const handleNext = async () => {
+    const fields = stepFields[stepNum];
+
+    const isValid = await methods.trigger(fields, {
+      // focuses first invalid field
+      shouldFocus: true,
+    });
+
+    if (!isValid) return;
+
+    setStepNum((prev) => prev + 1);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    onReturn();
+  };
+
+  return (
+    <ComposedModal open={open} onClose={handleClose}>
+      <ModalHeader label="Alerts" title="Trading Events Config" />
+      <ModalBody>
+        <FormProvider {...methods}>
+          <Stack gap={2}>
+            {stepNum == 1 && <TradingEventsConfigContent />}
+            {stepNum == 2 && <AlertNotificationSettings />}
+          </Stack>
+        </FormProvider>
+      </ModalBody>
+      <ModalFooter>
+        <Button
+          kind="secondary"
+          onClick={() =>
+            stepNum - 1 <= 0 ? handleClose() : setStepNum(stepNum - 1)
+          }
+          renderIcon={ArrowLeft}
+        >
+          Back
+        </Button>
+
+        {stepNum == finalStepNum ? (
+          <Button kind="primary" onClick={handleSubmit} disabled={isSubmitting}>
+            Save
+          </Button>
+        ) : (
+          <Button kind="primary" onClick={handleNext} renderIcon={ArrowRight}>
+            Next
+          </Button>
+        )}
+      </ModalFooter>
+    </ComposedModal>
   );
 }

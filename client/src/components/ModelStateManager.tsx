@@ -1,9 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import ReactDOM from "react-dom";
 
 type StateManagementProps = {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 type ModalStateManagerProps = {
@@ -23,7 +29,10 @@ export const ModalStateManager = ({
     setModalRoot(mRoot);
   }, []);
 
-  const stateProps: StateManagementProps = { open, setOpen };
+  const stateProps: StateManagementProps = {
+    open,
+    setOpen,
+  };
 
   return (
     <>

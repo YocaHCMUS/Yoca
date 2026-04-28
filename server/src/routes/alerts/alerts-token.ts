@@ -24,7 +24,7 @@ function normalizeCreatePayload(
     triggerMode: body.triggerMode,
     expiresAt: body.expiresAt,
     alertName: body.name,
-    email: body.delivery?.email,
+    email: body.delivery.email,
     conditions: body.conditions.map((condition) => ({
       period: condition.period,
       metric: condition.metric,
