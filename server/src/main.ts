@@ -21,7 +21,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
-import { startTokenPolling } from "./services/tokens/token-data-polling";
 
 const app = new Hono()
   .use("*", logger())
@@ -49,7 +48,7 @@ const app = new Hono()
   .route("/api/alertsToken", alertsToken)
   .route("/webhook", webhook);
 
-startTokenPolling();
+// startTokenPolling();
 
 // Server
 serve(
