@@ -10,8 +10,10 @@ import styles from "./PoolSearch.module.scss";
 export interface SelectedPoolValue {
   address: string;
   name: string | null;
+  baseTokenAddress: string | null;
   baseTokenSymbol: string | null;
   baseTokenImg: string | null;
+  quoteTokenAddress: string | null;
   quoteTokenSymbol: string | null;
   quoteTokenImg: string | null;
 }
@@ -24,6 +26,12 @@ interface PoolSearchProps {
 interface PoolSearchResult {
   address: string;
   name: string | null;
+  baseTokenAddress: string | null;
+  baseTokenSymbol: string | null;
+  baseTokenImg: string | null;
+  quoteTokenAddress: string | null;
+  quoteTokenSymbol: string | null;
+  quoteTokenImg: string | null;
 }
 
 export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
@@ -48,8 +56,14 @@ export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
       select: (data): PoolSearchResult[] =>
         data.pools.map((pool) => {
           return {
-            address: pool.attributes!.address!,
-            name: pool.attributes?.name || null,
+            address: pool.address,
+            name: pool.name,
+            baseTokenAddress: pool.baseToken?.address || null,
+            baseTokenSymbol: pool.baseToken?.symbol || null,
+            baseTokenImg: pool.baseToken?.imgUrl || null,
+            quoteTokenAddress: pool.quoteToken?.address || null,
+            quoteTokenSymbol: pool.quoteToken?.symbol || null,
+            quoteTokenImg: pool.quoteToken?.imgUrl || null,
           };
         }),
     },
@@ -122,6 +136,12 @@ export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
                 setValue({
                   address: pool.address,
                   name: pool.name,
+                  baseTokenAddress: pool.baseTokenAddress,
+                  baseTokenSymbol: pool.baseTokenSymbol,
+                  baseTokenImg: pool.baseTokenImg,
+                  quoteTokenAddress: pool.quoteTokenAddress,
+                  quoteTokenSymbol: pool.quoteTokenSymbol,
+                  quoteTokenImg: pool.quoteTokenImg,
                 });
                 closePanel();
               }}
@@ -134,12 +154,13 @@ export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
                       src={pool.baseTokenImg}
                       alt={pool.baseTokenSymbol}
                     />
-                    <TknImg
-                      size={24}
-                      src={pool.quoteTokenImg}
-                      alt={pool.quoteTokenSymbol}
-                      style={{ marginLeft: -12 }}
-                    />
+                    <span style={{ marginLeft: -12 }}>
+                      <TknImg
+                        size={24}
+                        src={pool.quoteTokenImg}
+                        alt={pool.quoteTokenSymbol}
+                      />
+                    </span>
                   </Flex>
                   <Flex dir="column" rowGap={1}>
                     <span className={styles.symbol}>

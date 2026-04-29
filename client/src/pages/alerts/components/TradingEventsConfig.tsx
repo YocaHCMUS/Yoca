@@ -3,6 +3,9 @@ import client from "@/api/main";
 import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { Flex } from "@/components/Flex";
 import { Divider } from "@/components/partials/Divider/Divider";
+import PoolSearch, {
+  type SelectedPoolValue,
+} from "@/components/PoolSearch/PoolSearch";
 import { TknImg } from "@/components/TknImg";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -102,13 +105,51 @@ function TradingEventsConfigContent() {
               />
             )}
           />
-          <TextInput
-            id="scope-pool-address"
-            labelText="Pool Address (Optional)"
-            placeholder="Enter pool address"
-            {...register("tradingScope.poolAddress")}
-            invalid={!!errors.tradingScope?.poolAddress}
-            invalidText={errors.tradingScope?.poolAddress?.message || ""}
+          <Controller
+            name="tradingScope.poolAddress"
+            control={control}
+            render={({ field }) => (
+              <DropdownPanelField<SelectedPoolValue>
+                id="pool-search-select"
+                titleText="Pool"
+                placeholder="Select pool"
+                initialValue={null}
+                onValueChange={(value) => {
+                  field.onChange(value?.address ?? "");
+                }}
+                invalid={!!errors.tradingScope?.poolAddress}
+                invalidText={errors.tradingScope?.poolAddress?.message || ""}
+                renderValue={(pool) => (
+                  <Flex
+                    align="center"
+                    gap={3}
+                    className={styles.selectedTokenValue}
+                  >
+                    <Flex align="center" gap={-2} style={{ zIndex: 2 }}>
+                      <TknImg
+                        size={20}
+                        src={pool.baseTokenImg}
+                        alt={pool.baseTokenSymbol}
+                      />
+                      <span style={{ marginLeft: -10 }}>
+                        <TknImg
+                          size={20}
+                          src={pool.quoteTokenImg}
+                          alt={pool.quoteTokenSymbol}
+                        />
+                      </span>
+                    </Flex>
+                    <span>
+                      {pool.baseTokenSymbol || pool.baseTokenAddress || "?"}/
+                      {pool.quoteTokenSymbol || pool.quoteTokenAddress || "?"}
+                    </span>
+                  </Flex>
+                )}
+                renderPanel={({ setValue, closePanel }) => (
+                  <PoolSearch setValue={setValue} closePanel={closePanel} />
+                )}
+              />
+            )}
           />
           <TextInput
             id="scope-counterparty-address"
