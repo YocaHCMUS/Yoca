@@ -89,6 +89,7 @@ const ERROR = {
   EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email or password was incorrect",
   FAILED_TO_FETCH_REQUESTED_DATA: "Failed to fetch requested data",
   GOOGLE_VERIFICATION_FAILED: "Google authentication failed. Please try again.",
+  WALLET_ALREADY_LINKED: "This wallet is already linked to an existing user.",
   WALLET_VERIFICATION_FAILED: "Wallet verification failed. Please try again.",
   WALLET_NONCE_FAILED:
     "Failed to initiate wallet authentication. Please try again.",
@@ -96,10 +97,21 @@ const ERROR = {
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
   INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
+  PASSWORD_AUTH_NOT_FOUND:
+    "Password auth method is not configured for this account.",
+  PASSWORD_ALREADY_SET:
+    "Password login is already configured for this account.",
+  CURRENT_PASSWORD_INVALID: "Current password is invalid.",
+  EMAIL_ALREADY_IN_USE: "Email is already in use by another account.",
+  ACCOUNT_DELETE_CONFIRM_MISMATCH:
+    "Account deletion confirmation text does not match.",
+  ACCOUNT_DELETE_FORBIDDEN:
+    "Account deletion request is not authorized. Please try again.",
   HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
     "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
+  NOT_FOUND: "Not found.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -384,12 +396,19 @@ export const translation = {
     general: "General",
     holdings: "Holdings",
     profitRiskManagement: "Profit & Risk Management",
+    exportPdf: "Export PDF",
+    generatingPdf: "Generating PDF...",
+    pdfReportTitle: "Wallet Comparison Report",
+    pdfGeneratedDate: "Generated Date",
+    pdfWalletsCompared: "Wallets Compared",
+    pdfWalletAddresses: "Wallet Addresses",
   },
   // Navigation
   nav: {
     market: "Market",
     alerts: "Alerts",
     dashboard: "Dashboard",
+    notification: "Notifications",
     profile: "Profile",
     settings: "Settings",
     theme: "Theme",
@@ -605,6 +624,7 @@ export const translation = {
     volumeBenchmark: "Volume Benchmark",
     transactionDistribution: "Transaction Distribution",
     holdingDurations: "Holding Durations",
+    aggregatedAssetDistribution: "Aggregated Asset Distribution",
 
     // Chart specific
     balanceChart: {
@@ -625,12 +645,31 @@ export const translation = {
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
     },
+    walletSingleBalanceChart: {
+      title: "Wallet Balance Trend",
+      notAvailable: "N/A",
+      window: {
+        label: "Window",
+        days7: "7D",
+        days30: "30D",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        netWorth: "Net Worth",
+        balanceChange24h: "24h Change",
+      },
+      ariaLabels: {
+        windowToggle: "Balance chart window toggle",
+      },
+    },
     assetDistributionChart: {
       title: "Assets Distribution",
       totalValue: "Total Value",
       asset: "Assets",
       value: "Value",
       percentage: "Percentage",
+      assetPrice: "Current Price",
       noWalletsMessage:
         "Please select at least one wallet to view asset distribution.",
       others: "Others",
@@ -656,6 +695,53 @@ export const translation = {
       },
       export: {
         name: "Assets Distribution",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Aggregated Asset Distribution",
+      totalValue: "Total Value",
+      value: "Value",
+      percentage: "Percentage",
+      noWalletsMessage:
+        "Please select at least one wallet to view aggregated asset distribution.",
+      others: "Others",
+      mode: {
+        label: "Mode",
+        single: "Single Wallet",
+        aggregate: "Multiple Aggregated",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        walletName: "Wallet Name",
+        walletAddress: "Wallet Address",
+        netWorth: "Net Worth",
+        uniqueTokenCount: "Unique Tokens",
+        isSelected: "Is Selected",
+        selectedCount: "{count} wallets selected",
+        selection: "Selection",
+        unknownWallet: "Unknown Wallet",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "All",
+        allPercent: "All %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Asset distribution mode toggle",
+        topNFilter: "Top N filter",
+        minPctFilter: "Min % filter",
+        walletSelector: "Select wallet {wallet}",
+      },
+      export: {
+        name: "Aggregated Asset Distribution",
       },
     },
     pnlChart: {
@@ -774,6 +860,17 @@ export const translation = {
     },
     drawdownChart: {
       title: "Drawdown Analysis",
+      visibility: {
+        active: "Active",
+        hidden: "Hidden",
+      },
+      stats: {
+        maxDrawdown: "Max Drawdown",
+        daysSinceMaxDD: "Days Since Max DD",
+        currentDrawdown: "Current Drawdown",
+        maxDDDate: "Max DD Date",
+        days: "days",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Average Rolling Annual Return",
@@ -950,6 +1047,159 @@ export const translation = {
       "The total number of coins or tokens that exist for a cryptocurrency, including those that are not yet circulating. It is used to calculate the maximum potential market capitalization of a cryptocurrency.",
     maxSupply:
       "The maximum number of coins or tokens that will ever exist for a cryptocurrency. It is used to calculate the fully diluted valuation of a cryptocurrency.",
+  },
+  profileSettings: {
+    identity: "Identity",
+    displayName: "Display name",
+    email: "Email",
+    saveIdentity: "Save identity",
+    savingIdentity: "Saving identity",
+    identityUpdateFailed: "Identity update failed",
+    identityUpdated: "Identity updated",
+    loginMethods: "Login methods",
+    loginMethodPasswordEmail: "Password / Email",
+    loginMethodPasswordNotSet: "Not set",
+    loginMethodGoogleOAuth: "Google Mail OAuth",
+    loginMethodSolanaWallet: "Solana Wallet",
+    statusConnected: "Connected",
+    statusNotConnected: "Not connected",
+    changePassword: "Change password",
+    addPassword: "Add password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    confirmPassword: "Confirm password",
+    passwordMatchError: "New password and confirmation do not match",
+    passwordValidationEmailRequired: "Email is required to set password login",
+    passwordValidationEmailInvalid: "Please enter a valid email address",
+    passwordValidationCurrentPasswordRequired:
+      "Current password is required to change password",
+    passwordValidationNewPasswordRequired: "New password is required",
+    passwordValidationMinLength: "Password must be at least 8 characters",
+    passwordValidationUppercase:
+      "Password must include at least one uppercase letter",
+    passwordValidationLowercase:
+      "Password must include at least one lowercase letter",
+    passwordValidationNumber: "Password must include at least one number",
+    passwordUpdateFailed: "Password update failed",
+    passwordChanged: "Password changed",
+    passwordAdded: "Password added",
+    updatingPassword: "Updating password",
+    savePassword: "Save password",
+    dangerZone: "Danger zone",
+    dangerZoneDescription:
+      "Delete account removes profile and all linked auth/wallet data.",
+    deleteAccount: "Delete account",
+    deleteAccountWarning:
+      "This action is permanent. Type DELETE MY ACCOUNT to confirm.",
+    deleteAccountConfirmationText: "Confirmation text",
+    deleteAccountConfirmButton: "Confirm delete",
+    accountDeleteConfirmError: "Confirmation text mismatch",
+    accountDeleteFailed: "Account deletion failed",
+  },
+  profileTabs: {
+    activity: {
+      title: "Activity",
+      unavailableTitle: "Activity unavailable",
+      unavailableDescription: "Unable to load activity data right now.",
+      swapsTableTitle: "Swaps",
+      transfersTableTitle: "Transfers",
+      tableHeaders: {
+        swaps: {
+          wallet: "Wallet",
+          time: "Time",
+          pair: "Pair",
+          exchange: "Exchange",
+          totalValue: "Total value",
+        },
+      },
+      unknownExchange: "Unknown",
+    },
+    alerts: {
+      title: "Alerts",
+      unavailableTitle: "Alerts unavailable",
+      unavailableDescription:
+        "No alert rules or notifications are available right now.",
+      tableTitle: "Alert list",
+      tableHeaders: {
+        token: "Token",
+        type: "Type",
+        condition: "Condition",
+        status: "Status",
+        updated: "Updated",
+        actions: "Actions",
+      },
+      createAlertTitle: "Create alert",
+      editAlertTitle: "Edit {{token}} alert",
+      createButton: "Create alert",
+      editButton: "Edit",
+      deleteButton: "Delete",
+    },
+    dashboard: {
+      title: "Dashboard",
+      unavailableTitle: "Dashboard unavailable",
+      unavailableDescription:
+        "No dashboard metrics are available for this account.",
+      kpiStripTitle: "KPI strip",
+      concentrationTableTitle: "Wallet concentration",
+      concentrationHeaders: {
+        wallet: "Wallet",
+        value: "Value",
+        share: "Share",
+      },
+      riskPanelTitle: "Risk panel",
+      anomaliesTitle: "Recent anomalies",
+    },
+    portfolio: {
+      title: "Portfolio",
+      unavailableTitle: "No linked wallets",
+      unavailableDescription:
+        "Link at least one wallet to view portfolio and charts.",
+      overviewCardTitle: "Overview",
+      accountTierLabel: "Account Tier",
+      linkWalletButton: "Link wallet",
+      linkedWalletsLabel: "Linked wallets",
+      linkedWalletsList: "Linked wallets list",
+      wallet: "Wallet",
+      address: "Address",
+      netWorth: "Net worth",
+      auth: "Auth",
+      actions: "Actions",
+      authWallet: "Auth wallet",
+      authWalletLabel: "Auth wallet",
+      linkedWalletLabel: "Linked wallet",
+      compare: "Compare",
+      authWalletCannotBeUnlinked: "Auth wallet cannot be unlinked",
+      unlinkWallet: "Unlink wallet",
+    },
+    wallet: {
+      title: "Wallets",
+      unavailableTitle: "Wallet data unavailable",
+      unavailableDescription: "Unable to load wallet data right now.",
+      noLinkedWalletsTitle: "No linked wallets",
+      noLinkedWalletsDescription:
+        "Link at least one wallet to view portfolio and charts.",
+      portfolioTableTitle: "Portfolio table",
+      balanceChartTitle: "Balance",
+      drawdownChartTitle: "Drawdown",
+    },
+    watchlist: {
+      title: "Watchlist",
+      walletSubtab: "Wallet watchlist",
+      tokenSubtab: "Token watchlist",
+      walletTableTitle: "Watched wallets",
+      tokenTableTitle: "Watched tokens",
+      walletAddress: "Wallet address",
+      walletIdentity: "Identity",
+      emptyWalletTitle: "No wallets in watchlist",
+      emptyWalletDescription: "Add wallets to watchlist to track them here.",
+      emptyTokenTitle: "No tokens in watchlist",
+      emptyTokenDescription:
+        "Add tokens to watchlist to track market movement.",
+    },
+    unavailableState: {
+      defaultTitle: "Data unavailable",
+      defaultDescription: "No profile data is available right now.",
+    },
   },
   ERROR,
 } as const;

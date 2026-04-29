@@ -47,6 +47,8 @@
   display: flex;
   align-items: center;
   gap: $spacing-03;
+  flex: 0 0 auto;
+  white-space: nowrap;
   height: 100%;
   padding-inline: $spacing-06;
   text-decoration: none;

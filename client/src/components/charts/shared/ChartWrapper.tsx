@@ -225,7 +225,12 @@ export function ChartWrapper({
       return null;
     }
     return (
-      <div className={styles.controls} role="toolbar" aria-label={tr('charts.chartViewingModes')}>
+      <div
+        className={styles.controls}
+        role="toolbar"
+        aria-label={tr('charts.chartViewingModes')}
+        data-html2canvas-ignore="true"
+      >
         {enableFullscreen && (
           <button
             className={styles.controlButton}
@@ -333,7 +338,7 @@ export function ChartWrapper({
           {toolbarLayout === 'stacked' ? (
             <>
               <h2
-                className={styles.title}
+                className={`${styles.title} hide-on-print-title`}
                 id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
               >
                 {title}
@@ -349,7 +354,7 @@ export function ChartWrapper({
           ) : (
             <>
               <h2
-                className={styles.title}
+                className={`${styles.title} hide-on-print-title`}
                 id={`chart-title-${title.replace(/\s+/g, '-').toLowerCase()}`}
               >
                 {title}

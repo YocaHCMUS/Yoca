@@ -1,6 +1,15 @@
+import { AUTH_COOKIE_NAME } from "@sv/config/constants";
 import { setErr } from "@sv/config/errors.js";
+import {
+  userAlertConditionOps,
+  userAlertPeriods,
+  userAlertTokenMetric,
+  userAlertTriggerModes,
+} from "@sv/db/alerts.js";
+import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
-import type { ValidationTargets } from "hono";
+import type { Context, Next, ValidationTargets } from "hono";
+import { jwt } from "hono/jwt";
 import { validator } from "hono/validator";
 import z from "zod";
 
@@ -46,6 +55,66 @@ export const userVerificationSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const strongPasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+  .regex(/[a-z]/, "Password must include at least one lowercase letter")
+  .regex(/[0-9]/, "Password must include at least one number");
+
+export const authProviderSchema = z.enum([
+  "password",
+  "google",
+  "github",
+  "solana",
+  "other",
+]);
+
+export const providerQuerySchema = z.object({
+  provider: authProviderSchema.optional(),
+});
+
+export const profileIdentityUpdateSchema = z
+  .object({
+    displayName: z
+      .string()
+      .trim()
+      .min(1, "Display name cannot be empty")
+      .max(128)
+      .nullable()
+      .optional(),
+    email: z
+      .email("Invalid email format")
+      .transform((value) => value.trim().toLowerCase())
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (value) => value.displayName !== undefined || value.email !== undefined,
+    "At least one field must be provided",
+  );
+
+export const passwordUpdateSchema = z.object({
+  currentPassword: z.string().min(1).optional(),
+  newPassword: strongPasswordSchema,
+  email: z
+    .email("Invalid email format")
+    .transform((value) => value.trim().toLowerCase())
+    .nullable()
+    .optional(),
+});
+
+export const deleteAccountSchema = z.object({
+  confirmText: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "DELETE MY ACCOUNT",
+      "Confirm text must exactly match DELETE MY ACCOUNT",
+    ),
+  challengeToken: z.string().uuid().optional(),
+});
+
 export const googleTokenSchema = z.object({
   token: z.string().min(1),
 });
@@ -65,12 +134,14 @@ export const userPayloadSchema = z.object({
   displayName: z.string().nullable(),
 });
 
+export type UserPayload = z.infer<typeof userPayloadSchema>;
+
 export const searchQuerySchema = z.object({
   q: z.string().optional(),
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
-// type inferrence to work correct (for some reason)
+// type inferrence to work correct (for some reasons)
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
@@ -82,7 +153,28 @@ export const walletTokenTradesSchema = z.object({
   tokenAddress: solanaBase58Schema,
 });
 
-// Helper to validate using Zod schema and return if errors happen before the routes even run
+export const createAlertSchema = z.object({
+  tokenAddress: z.string().min(1),
+  triggerMode: z.enum(userAlertTriggerModes).default("once"),
+  expiresAt: z.iso.datetime({ offset: true }),
+  alertName: z.string().min(1),
+  email: z.email().optional(),
+  conditions: z
+    .array(
+      z.object({
+        period: z.enum(userAlertPeriods),
+        alertType: z.enum(userAlertTokenMetric),
+        conditionOp: z.enum(userAlertConditionOps),
+        value: z.coerce.number(),
+      }),
+    )
+    .min(1, "At least one condition is required"),
+});
+
+export const alertIdSchema = z.object({
+  id: z.uuid(),
+});
+
 export function validate<
   T extends keyof ValidationTargets,
   U extends z.ZodType,
@@ -102,6 +194,15 @@ export function validate<
     return parsed.data;
   });
 }
+
+export const honoJwt = (c: Context, next: Next) => {
+  const jwtMiddleware = jwt({
+    secret: env.JWT_SECRET,
+    alg: "HS256",
+    cookie: AUTH_COOKIE_NAME,
+  });
+  return jwtMiddleware(c, next);
+};
 
 // Check if result schema was like expected. Useful for debugging
 export async function getTrackedApiResult<T extends z.ZodType>(
@@ -126,7 +227,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-            `\n... (truncated ${safeStr.length - maxLog} chars)`,
+          `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);
@@ -139,3 +240,32 @@ export async function getTrackedApiResult<T extends z.ZodType>(
     return;
   }
 }
+
+export const envSchema = z.object({
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
+  POSTGRES_DB_URL: z.url("Invalid database URL"),
+  JWT_SECRET: z.string().min(1, "Jwt is required"),
+  GOOGLE_CLIENT_ID: z.string().min(1, "Google client id is required"),
+  SERVER_PORT: z.coerce.number().default(4000),
+
+  // API Keys and URLs
+  COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
+  COINGECKO_API_KEY: z.string(),
+  BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
+  BIRDEYE_API_KEY: z.string(),
+  HELIUS_API_KEY: z.string(),
+  HELIUS_WEBHOOK_AUTH_KEY: z.string(),
+  HELIUS_WEBHOOK_ID: z.string(),
+  MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
+  MORALIS_API_KEY: z.string(),
+
+  // Client domains
+  CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),
+  CLIENT_DEV_DOMAIN: z.url().default("http://localhost:3000"),
+  CLIENT_DEV_PREVIEW_DOMAIN: z.url().default("http://localhost:4173"),
+  CLIENT_PROD_DOMAIN: z.url(),
+});
+
+export type Env = z.infer<typeof envSchema>;

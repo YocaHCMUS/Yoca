@@ -61,15 +61,66 @@
   min-height: 400px;
 }
 
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.walletTitleWrap {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.walletColorDot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.walletTitleText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.walletActiveIndicator {
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-layer-02);
+  color: var(--cds-text-secondary);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.walletActiveIndicatorOn {
+  background: var(--cds-button-primary);
+  color: var(--cds-text-on-color);
+  border-color: var(--cds-button-primary);
+}
+
+.walletActiveIndicatorOff {
+  opacity: 0.75;
+}
+
 @media (max-width: 768px) {
   .statsHeader {
     grid-template-columns: 1fr;
   }
-  
+
   .statsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .chartSection {
     min-height: 300px;
   }

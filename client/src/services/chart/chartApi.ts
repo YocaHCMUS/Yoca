@@ -89,10 +89,26 @@ export async function fetchAssetDistribution(
 export async function fetchExchangeComparison(
   params?: Parameters<typeof client.api.charts.exchanges.$get>[0],
 ) {
+  console.log("[fetchExchangeComparison] Requesting exchange data with params:", params);
+
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.exchanges.$get(honoParams);
+
   await handleResponse(response);
   const data = await response.json();
+
+  if ("error" in data) {
+    console.error("[fetchExchangeComparison] API returned error:", data.error);
+    throw new Error(`API error: ${data.error}`);
+  }
+
+  console.log("[fetchExchangeComparison] RAW API RESPONSE:", data);
+  console.log("[fetchExchangeComparison] Response structure - exchanges count:", data.exchanges?.length ?? 0);
+
+  if (data.exchanges && Array.isArray(data.exchanges)) {
+    console.log("[fetchExchangeComparison] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+
   return data;
 }
 
@@ -104,10 +120,26 @@ export async function fetchExchangeComparison(
 export async function fetchCounterpartyActivity(
   params?: Parameters<typeof client.api.charts.counterparties.$get>[0],
 ) {
+  console.log("[fetchCounterpartyActivity] Requesting counterparty data with params:", params);
+
   const honoParams = params ? { query: params } : undefined;
   const response = await client.api.charts.counterparties.$get(honoParams);
+
   await handleResponse(response);
   const data = await response.json();
+
+  if ("error" in data) {
+    console.error("[fetchCounterpartyActivity] API returned error:", data.error);
+    throw new Error(`API error: ${data.error}`);
+  }
+
+  console.log("[fetchCounterpartyActivity] RAW API RESPONSE:", data);
+  console.log("[fetchCounterpartyActivity] Response structure - counterparties count:", data.counterparties?.length ?? 0);
+
+  if (data.counterparties && Array.isArray(data.counterparties)) {
+    console.log("[fetchCounterpartyActivity] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+
   return data;
 }
 
@@ -160,23 +192,23 @@ export async function fetchTradingVolumeDistribution(
   // Normalize backend shape to { wallets: [{ walletAddress, data: [{name,value,percentage}], totalVolume }] }
   const wallets = Array.isArray(raw)
     ? raw.map((r: any) => {
-        const buyVol = r.buy.volumeUsd || 0;
-        const sellVol = r.sell.volumeUsd || 0;
-        const buyTx = r.buy.transactionCount || 0;
-        const sellTx = r.sell.transactionCount || 0;
-        const total = buyVol + sellVol;
-        const totalTx = buyTx + sellTx;
+      const buyVol = r.buy.volumeUsd || 0;
+      const sellVol = r.sell.volumeUsd || 0;
+      const buyTx = r.buy.transactionCount || 0;
+      const sellTx = r.sell.transactionCount || 0;
+      const total = buyVol + sellVol;
+      const totalTx = buyTx + sellTx;
 
-        return {
-          walletAddress: r.wallet,
-          buyVolume: buyVol,
-          sellVolume: sellVol,
-          totalVolume: total,
-          buyTransactionCount: buyTx,
-          sellTransactionCount: sellTx,
-          totalTransactionCount: totalTx,
-        };
-      })
+      return {
+        walletAddress: r.wallet,
+        buyVolume: buyVol,
+        sellVolume: sellVol,
+        totalVolume: total,
+        buyTransactionCount: buyTx,
+        sellTransactionCount: sellTx,
+        totalTransactionCount: totalTx,
+      };
+    })
     : [];
 
   return { wallets, metadata: { currency: "USD", timestamp: Date.now() } };
@@ -307,19 +339,36 @@ export async function fetchRollingAnnualReturn(
 }
 
 // /**
-//  * Fetch winrate data
-//  * GET /api/charts/winrate
-//  * Type automatically inferred from server route via Hono RPC
-//  */
-// export async function fetchWinrate(
-//   params?: Parameters<typeof client.api.charts.winrate.$get>[0],
-// ) {
-//   const honoParams = params ? { query: params } : undefined;
-//   const response = await client.api.charts.winrate.$get(honoParams);
-//   await handleResponse(response);
-//   const data = await response.json();
-//   return data;
-// }
+/**
+ * Fetch winrate data
+ * GET /api/charts/winrate
+ * Type automatically inferred from server route via Hono RPC
+ */
+export async function fetchWinrate(
+  params?: Parameters<typeof client.api.charts.winrate.$get>[0],
+) {
+  console.log("[fetchWinrate] Requesting winrate data with params:", params);
+
+  const honoParams = params ? { query: params } : undefined;
+  const response = await client.api.charts.winrate.$get(honoParams);
+
+  await handleResponse(response);
+  const data = await response.json();
+
+  if ("error" in data) {
+    console.error("[fetchWinrate] API returned error:", data.error);
+    throw new Error(`API error: ${data.error}`);
+  }
+
+  console.log("[fetchWinrate] RAW API RESPONSE:", data);
+  console.log("[fetchWinrate] Response structure - wallets count:", data.wallets?.length ?? 0);
+
+  if (data.wallets && Array.isArray(data.wallets)) {
+    console.log("[fetchWinrate] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+  }
+
+  return data;
+}
 
 /**
  * Fetch drawdown data
@@ -396,7 +445,7 @@ export const chartApi = {
   fetchTradingVolumeDistribution,
   fetchTradingVolumePerTransaction,
   fetchRollingAnnualReturn,
-  // fetchWinrate,
+  fetchWinrate,
   fetchDrawdown,
   fetchTotalTradingVolume,
   fetchStablecoinRatio,
@@ -410,7 +459,7 @@ export const chartApi = {
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,
   getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
   getRollingAnualReturn: fetchRollingAnnualReturn,
-  // getWinrate: fetchWinrate,
+  getWinrate: fetchWinrate,
   getDrawdown: fetchDrawdown,
   getTotalTradingVolume: fetchTotalTradingVolume,
   getStablecoinRatio: fetchStablecoinRatio,

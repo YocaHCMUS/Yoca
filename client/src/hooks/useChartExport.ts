@@ -205,6 +205,9 @@ interface ExportElementPdfOptions {
   imageType?: "PNG" | "JPEG";
   imageQuality?: number;
   maxPdfDimensionPx?: number;
+  pdfLayout?: "long-single-page" | "a4";
+  pdfOrientation?: "auto" | "portrait" | "landscape";
+  pdfMarginPx?: number;
 }
 
 const DEFAULT_CAPTURE_BLOCKING_SELECTORS = [
@@ -433,6 +436,95 @@ function exportCanvasAsLongSinglePagePdf(
   pdf.save(filename);
 }
 
+function exportCanvasAsA4MultiPagePdf(
+  canvas: HTMLCanvasElement,
+  filename: string,
+  imageType: "PNG" | "JPEG",
+  imageQuality: number,
+  pdfOrientation: "auto" | "portrait" | "landscape",
+  pdfMarginPx: number,
+): void {
+  const resolvedOrientation =
+    pdfOrientation === "auto"
+      ? canvas.width >= canvas.height
+        ? "landscape"
+        : "portrait"
+      : pdfOrientation;
+  const pdf = new jsPDF({
+    orientation: resolvedOrientation,
+    unit: "px",
+    format: "a4",
+    compress: true,
+  });
+
+  const imageFormat = imageType === "JPEG" ? "image/jpeg" : "image/png";
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = Math.max(0, Math.floor(pdfMarginPx));
+  const contentWidth = Math.max(1, pageWidth - margin * 2);
+  const contentHeight = Math.max(1, pageHeight - margin * 2);
+  const scale = contentWidth / canvas.width;
+  const sourceSliceHeight = Math.max(1, Math.floor(contentHeight / scale));
+
+  const sliceCanvas = document.createElement("canvas");
+  const sliceContext = sliceCanvas.getContext("2d");
+  if (!sliceContext) {
+    throw new Error("Canvas context is unavailable");
+  }
+
+  const paintPageBackground = () => {
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageWidth, pageHeight, "F");
+  };
+
+  let remainingHeight = canvas.height;
+  let sliceStartY = 0;
+
+  while (remainingHeight > 1) {
+    const currentSliceHeight = Math.min(sourceSliceHeight, remainingHeight);
+    const renderedSliceHeight = Math.min(contentHeight, currentSliceHeight * scale);
+
+    if (sliceStartY > 0) {
+      pdf.addPage();
+    }
+
+    paintPageBackground();
+
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = currentSliceHeight;
+    sliceContext.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+    sliceContext.drawImage(
+      canvas,
+      0,
+      sliceStartY,
+      canvas.width,
+      currentSliceHeight,
+      0,
+      0,
+      canvas.width,
+      currentSliceHeight,
+    );
+
+    const imageData = sliceCanvas.toDataURL(imageFormat, imageQuality);
+
+    pdf.addImage(
+      imageData,
+      imageType,
+      margin,
+      margin,
+      contentWidth,
+      renderedSliceHeight,
+      undefined,
+      "FAST",
+    );
+
+    sliceStartY += currentSliceHeight;
+    remainingHeight -= currentSliceHeight;
+  }
+
+  pdf.save(filename);
+}
+
 export async function exportElementRefAsPdf(
   targetRef: RefObject<HTMLElement | null>,
   options?: ExportElementPdfOptions,
@@ -447,10 +539,12 @@ export async function exportElementRefAsPdf(
     options?.baseFilename,
     options?.filename,
   );
-  const backgroundColor = options?.backgroundColor ?? "#ffffff";
   const imageType = options?.imageType ?? "PNG";
   const imageQuality = options?.imageQuality ?? 1;
   const maxPdfDimensionPx = options?.maxPdfDimensionPx ?? 14000;
+  const pdfLayout = options?.pdfLayout ?? "long-single-page";
+  const pdfOrientation = options?.pdfOrientation ?? "auto";
+  const pdfMarginPx = options?.pdfMarginPx ?? 24;
 
   const exportMarker = `pdf-export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   element.setAttribute("data-pdf-export-target", exportMarker);
@@ -460,24 +554,31 @@ export async function exportElementRefAsPdf(
     await waitForCaptureReadiness(element);
     await nextPaintFrame();
 
-    const captureWidth = getMaxScrollableWidth(element);
-    const captureHeight = getMaxScrollableHeight(element);
-    const scale =
-      options?.scale ?? Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    const { width: renderedWidth, height: renderedHeight } =
+      element.getBoundingClientRect();
+    if (renderedWidth <= 0 || renderedHeight <= 0) {
+      throw new Error("Export target has invalid dimensions");
+    }
+
+    const captureWidth = Math.max(element.scrollWidth, 1);
+    const captureHeight = Math.max(element.scrollHeight, 1);
+    if (captureWidth <= 1 || captureHeight <= 1) {
+      throw new Error("Export target has no visible content");
+    }
+
+    const scale = options?.scale ?? 2;
 
     const canvas = await html2canvas(element, {
-      backgroundColor,
       scale,
       useCORS: true,
-      allowTaint: true,
+      logging: false,
+      backgroundColor: "#ffffff",
       windowWidth: captureWidth,
       windowHeight: captureHeight,
-      width: captureWidth,
-      height: captureHeight,
+      x: 0,
+      y: 0,
       scrollX: 0,
-      scrollY: 0,
-      logging: false,
-      foreignObjectRendering: false,
+      scrollY: -window.scrollY,
       onclone: (clonedDocument) => {
         const clonedRoot = clonedDocument.documentElement;
         const clonedBody = clonedDocument.body;
@@ -496,6 +597,23 @@ export async function exportElementRefAsPdf(
           clonedBody.style.overflowY = "visible";
         }
 
+        const cleanupSelectors = [
+          ".recharts-accessibility-layer",
+          ".recharts-tooltip-wrapper",
+          '[data-html2canvas-ignore="true"]',
+        ];
+
+        for (const selector of cleanupSelectors) {
+          clonedDocument.querySelectorAll(selector).forEach((element) => {
+            element.remove();
+          });
+        }
+
+        const reportHeader = clonedDocument.querySelector("#pdf-report-header") as HTMLElement | null;
+        if (reportHeader) {
+          reportHeader.style.display = "block";
+        }
+
         const clonedTarget = clonedDocument.querySelector(
           `[data-pdf-export-target="${exportMarker}"]`,
         ) as HTMLElement | null;
@@ -505,13 +623,24 @@ export async function exportElementRefAsPdf(
       },
     });
 
-    exportCanvasAsLongSinglePagePdf(
-      canvas,
-      filename,
-      imageType,
-      imageQuality,
-      maxPdfDimensionPx,
-    );
+    if (pdfLayout === "a4") {
+      exportCanvasAsA4MultiPagePdf(
+        canvas,
+        filename,
+        imageType,
+        imageQuality,
+        pdfOrientation,
+        pdfMarginPx,
+      );
+    } else {
+      exportCanvasAsLongSinglePagePdf(
+        canvas,
+        filename,
+        imageType,
+        imageQuality,
+        maxPdfDimensionPx,
+      );
+    }
   } finally {
     element.removeAttribute("data-pdf-export-target");
   }

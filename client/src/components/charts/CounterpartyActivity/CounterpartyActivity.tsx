@@ -23,7 +23,7 @@ import {
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { CounterpartiesRequestParams } from "@/types/chart-api.types";
-import { formatCurrency, isChartSuccess } from "@/util/chart-helpers";
+import { isChartSuccess } from "@/util/chart-helpers";
 import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
@@ -116,7 +116,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // onDataLoaded,
 }) => {
   // i18n
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.counterpartyActivityChart.title");
 
   // State management
@@ -215,7 +215,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
   // };
 
   const counterpartyCountRanking = useMemo(() => {
+    console.log("[CounterpartyActivity] Calculating counterpartyCountRanking. Data:", data);
+    console.log("[CounterpartyActivity] isChartSuccess:", isChartSuccess(data, "counterparties"));
+
     if (!isChartSuccess(data, "counterparties")) {
+      console.log("[CounterpartyActivity] No valid counterparty data");
       return [];
     }
 
@@ -223,9 +227,11 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
       "counterpartiesByTransactionCount" in data &&
       data.counterpartiesByTransactionCount.length > 0
     ) {
+      console.log("[CounterpartyActivity] Using counterpartiesByTransactionCount");
       return data.counterpartiesByTransactionCount;
     }
 
+    console.log("[CounterpartyActivity] Using counterparties field");
     return data.counterparties;
   }, [data]);
 
@@ -365,7 +371,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
             createTooltipHeader(counterpartyName) +
             createTooltipRow(
               tr("charts.counterpartyActivityChart.totalVolume"),
-              formatCurrency(volume),
+              fmt.num.compact.currency(volume),
               { color: params[0].color, showIndicator: true },
             )
           );
@@ -398,7 +404,7 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
         nameTextStyle: { color: chartTheme.textColor },
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       series: [
@@ -412,13 +418,13 @@ export const CounterpartyActivity: React.FC<ChartProps> = ({
           label: {
             show: true,
             position: "top",
-            formatter: (params: { value: number; }) => formatCurrency(params.value),
+            formatter: (params: { value: number; }) => fmt.num.compact.currency(params.value),
             fontSize: 10,
           },
         },
       ],
     };
-  }, [counterpartyVolumeRanking, chartTheme, tr]);
+  }, [counterpartyVolumeRanking, chartTheme, tr, fmt]);
 
   // Handle limit change
   const handleLimitChange = (newLimit: number) => {

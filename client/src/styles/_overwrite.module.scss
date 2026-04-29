@@ -206,6 +206,27 @@
   inline-size: 100% !important;
 }
 
+.alertTypeTile:global(.cds--link:active:not(.cds--link--disabled)) {
+  text-decoration: none !important;
+}
+
+.dateTimePicker {
+  :global(.cds--time-picker__input-field.cds--text-input) {
+    padding: 0;
+    padding-inline-start: 0.5rem;
+  }
+
+  :global(.cds--date-picker__input) {
+    padding: 0;
+    padding-inline-start: 0.5rem;
+  }
+
+  :global(.cds--date-picker),
+  :global(.cds--date-picker-container) {
+    width: 100%;
+  }
+}
+
 .grdNarrowCustom {
   width: 100%;
   padding-inline: 0 !important;
@@ -216,5 +237,14 @@
 
   :global(.cds--css-grid-column:not(:last-child)) {
     border-inline-end: 1px solid var(--cds-border-subtle-03);
+  }
+}
+
+.filledTextArea {
+  :global(.cds--text-area) {
+    border: solid;
+    border-width: 1px;
+    border-color: var(--cds-border-subtle-01);
+    background-color: var(--cds-field) !important;
   }
 }

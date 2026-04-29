@@ -1,5 +1,6 @@
 import {
   TOKEN_POOL_DATA_TTL_MS,
+  TOKEN_DEX_LOGOS_TTL_MS,
   TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
@@ -17,6 +18,107 @@ import type {
   CG_PoolData,
   CG_TopPoolData,
 } from "../_types/token-raw-responses.js";
+
+type CG_ExchangeListItem = {
+  id: string;
+  image?: string;
+};
+
+const DEX_ID_ALIASES: Record<string, string> = {
+  raydium: "raydium2",
+  raydium_clmm: "raydium2",
+  raydium_cpmm: "raydium2",
+  raydium_clamm: "raydium2",
+  orca_whirlpools: "orca",
+  meteora_dlmm: "meteora",
+};
+
+let cachedDexLogos: Map<string, string> | null = null;
+let dexLogosFetchedAt = 0;
+let inFlightDexLogosPromise: Promise<Map<string, string>> | null = null;
+
+function resolveDexLogo(
+  dexId: string | null | undefined,
+  dexLogos: Map<string, string>,
+): string | null {
+  if (!dexId) return null;
+  // Normalize dexId: lowercase and convert hyphens to underscores
+  const normalizedDexId = dexId
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  // Look up through alias chain (may have multiple hops)
+  let currentId = normalizedDexId;
+  let resolvedId = DEX_ID_ALIASES[currentId] ?? currentId;
+  // Follow the chain if alias maps to another alias
+  while (DEX_ID_ALIASES[resolvedId] && DEX_ID_ALIASES[resolvedId] !== resolvedId) {
+    resolvedId = DEX_ID_ALIASES[resolvedId];
+  }
+  // Try to find in logos cache
+  return dexLogos.get(resolvedId) ?? null;
+}
+
+async function fetchDexLogos(): Promise<Map<string, string>> {
+  const pageSize = 250;
+  const result = new Map<string, string>();
+
+  for (let page = 1; ; page += 1) {
+    const cgEndpoint = cg.getEndpoint("/exchanges");
+    cgEndpoint.search = new URLSearchParams({
+      per_page: String(pageSize),
+      page: String(page),
+    }).toString();
+
+    const resp = await trackedFetch({
+      provider: "unknown",
+      url: cgEndpoint,
+      init: {
+        method: "GET",
+        headers: cg.getRequiredHeaders(),
+      },
+      serviceFile: "server/src/services/tokens/token-pools.ts",
+      functionName: "fetchDexLogos",
+    });
+
+    if (!resp.ok) {
+      break;
+    }
+
+    const exchanges = (await resp.json()) as CG_ExchangeListItem[];
+    for (const exchange of exchanges) {
+      if (exchange.id && exchange.image) {
+        result.set(exchange.id, exchange.image);
+      }
+    }
+
+    if (exchanges.length < pageSize) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+async function getDexLogos(): Promise<Map<string, string>> {
+  const now = Date.now();
+  if (
+    cachedDexLogos &&
+    now - dexLogosFetchedAt < TOKEN_DEX_LOGOS_TTL_MS
+  ) {
+    return cachedDexLogos;
+  }
+
+  if (!inFlightDexLogosPromise) {
+    inFlightDexLogosPromise = fetchDexLogos().then((logos) => {
+      cachedDexLogos = logos;
+      dexLogosFetchedAt = Date.now();
+      inFlightDexLogosPromise = null;
+      return logos;
+    });
+  }
+
+  return inFlightDexLogosPromise;
+}
 
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
   return id.startsWith(prefix) ? id.slice(prefix.length) : id;
@@ -50,6 +152,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
   }
 
   const res = (await resp.json()) as CG_TopPoolData;
+  const dexLogos = await getDexLogos();
   const poolDataList = res.data.map(
     (
       raw,
@@ -68,6 +171,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
         quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
 
         dexId: raw.relationships.dex.data.id,
+  dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
 
         poolCreatedAt: new Date(raw.attributes.pool_created_at),
         liquidityUsd: Number(raw.attributes.reserve_in_usd),
@@ -195,7 +299,7 @@ export async function getTokenTopPools(tokenAddress: string) {
     return await fetchTokenTopPools(tokenAddress);
   }
 
-  return await db
+  const pools = await db
     .select({
       rankInfo: tokenTopPools,
       data: tokenPoolData,
@@ -207,6 +311,14 @@ export async function getTokenTopPools(tokenAddress: string) {
     )
     .where(eq(tokenTopPools.tokenAddress, tokenAddress))
     .orderBy(tokenTopPools.rank);
+
+  const hasMissingDexLogo = pools.some((pool) => !pool.data.dexImageUrl);
+  if (hasMissingDexLogo) {
+    // Backfill dexImageUrl for older rows written before logo support.
+    return await fetchTokenTopPools(tokenAddress);
+  }
+
+  return pools;
 }
 
 async function fetchPoolData(poolAddress: string) {
@@ -236,6 +348,7 @@ async function fetchPoolData(poolAddress: string) {
   }
 
   const res = (await resp.json()) as CG_PoolData;
+  const dexLogos = await getDexLogos();
   const raw = res.data;
   const poolData: TokenPoolDataInsert = {
     poolAddress: raw.attributes.address,
@@ -245,6 +358,7 @@ async function fetchPoolData(poolAddress: string) {
     quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
 
     dexId: raw.relationships.dex.data.id,
+  dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
 
     poolCreatedAt: new Date(raw.attributes.pool_created_at),
     liquidityUsd: Number(raw.attributes.reserve_in_usd),

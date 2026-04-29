@@ -1,15 +1,16 @@
-/**
- * Centralised database schema.
- *
- * This is the SINGLE SOURCE OF TRUTH for every table, enum, and type that
- * backs the PostgreSQL database. To propagate changes made here to the
- * database, run:
- *
- *   npm run db:push
- *
- * Do NOT add ad-hoc SQL scripts, one-shot "ensure-*-table" tsx helpers, or
- * hand-written migration files. Instead, edit this file and re-run db:push.
- */
+// --- ACMS API call cache table ---
+// export const acmsApiCache = pgTable("acms_api_cache", {
+//   key: varchar("key", { length: 128 }).primaryKey(),
+//   provider: varchar("provider", { length: 32 }).notNull(),
+//   endpoint: varchar("endpoint", { length: 128 }).notNull(),
+//   params: jsonb("params").notNull(),
+//   result: jsonb("result").notNull(),
+//   createdAt: timestamp("created_at").notNull().defaultNow(),
+//   updatedAt: timestamp("updated_at")
+//     .notNull()
+//     .defaultNow()
+//     .$onUpdate(() => new Date()),
+// });
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -26,9 +27,11 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+export * from "./alerts.js";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -65,20 +68,66 @@ export const acmsApiCache = pgTable("acms_api_cache", {
     .$onUpdate(() => new Date()),
 });
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayName: varchar("display_name"),
-  // Email is not needed for wallet users, see it as contact
-  email: varchar("email"),
-  discordWebhookUrl: text("discord_webhook_url"),
-  emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayName: varchar("display_name"),
+    // Email is not needed for wallet users, see it as contact
+    email: varchar("email"),
+    discordWebhookUrl: text("discord_webhook_url"),
+    emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
   /** Optional override: if set, alerts go here instead of users.email */
   emailAlertsAddress: text("email_alerts_address"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("users_email_uq")
+      .on(table.email)
+      .where(sql`${table.email} IS NOT NULL`),
+  ],
+);
+
+export const userLinkedWallets = pgTable(
+  "user_linked_wallets",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    isAuthWallet: boolean("is_auth_wallet").notNull().default(false),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.walletAddress],
+    }),
+  ],
+);
+
+export const userTokenWatchlist = pgTable(
+  "user_token_watch_list",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.tokenAddress] })],
+);
+
+export const userWalletWatchlist = pgTable(
+  "user_wallet_watch_list",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.walletAddress] })],
+);
 
 export const authAccounts = pgTable(
   "auth_accounts",
@@ -96,6 +145,10 @@ export const authAccounts = pgTable(
     primaryKey({
       columns: [table.provider, table.providerUserId],
     }),
+    uniqueIndex("auth_accounts_user_provider_uq").on(
+      table.userId,
+      table.provider,
+    ),
     check(
       "provider_password",
       sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
@@ -184,6 +237,7 @@ export const tokenPoolData = pgTable("token_pool_data", {
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
 
   dexId: varchar("dex_id"),
+  dexImageUrl: varchar("dex_image_url"),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
@@ -529,7 +583,9 @@ export const walletOverviewCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
-    totalAssetValueChange24hPercent: decimal("total_asset_value_change_24h_percent"),
+    totalAssetValueChange24hPercent: decimal(
+      "total_asset_value_change_24h_percent",
+    ),
     tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
     tradingVolumeUsd7d: decimal("trading_volume_usd_7d"),
     tradingVolumeUsd30d: decimal("trading_volume_usd_30d"),
@@ -687,7 +743,9 @@ export const walletSwap = pgTable(
   {
     transactionHash: text("transaction_hash").notNull(),
     transactionType: text("transaction_type").notNull(),
-    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", {
+      mode: "number",
+    }).notNull(),
 
     subcategory: text("subcategory"),
 
@@ -700,7 +758,9 @@ export const walletSwap = pgTable(
     exchangeName: text("exchange_name").notNull(),
     exchangeLogo: text("exchange_logo").notNull(),
 
-    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAddress: varchar("bought_token_address", {
+      length: 66,
+    }).notNull(),
     boughtTokenAmount: decimal("bought_token_amount").notNull(),
     boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
 
@@ -965,16 +1025,17 @@ export type WalletBalanceHistoryCacheInsert =
   typeof walletBalanceHistoryCache.$inferInsert;
 export type WalletTokenBalanceHistoryCacheInsert =
   typeof walletTokenBalanceHistoryCache.$inferInsert;
-export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletHeliusTransactionsInsert =
+  typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
+export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 
 // #endregion
-
