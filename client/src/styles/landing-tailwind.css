@@ -166,21 +166,18 @@
     }
   }
 
-  .landing-dev-copy {
-    grid-column: span 12;
+  /* Market intelligence: stats sidebar responsive */
+  .landing-mi-stats {
+    width: 100%;
+    border-top: 1px solid #e0e0e0;
   }
 
-  .landing-dev-terminal {
-    grid-column: span 12;
-  }
-
-  @media (min-width: 1024px) {
-    .landing-dev-copy {
-      grid-column: span 5;
-    }
-
-    .landing-dev-terminal {
-      grid-column: span 7;
+  @media (min-width: 768px) {
+    .landing-mi-stats {
+      width: 260px;
+      flex-shrink: 0;
+      border-top: none;
+      border-left: 1px solid #e0e0e0;
     }
   }
 

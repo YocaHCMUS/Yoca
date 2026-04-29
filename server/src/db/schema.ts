@@ -1,16 +1,16 @@
 // --- ACMS API call cache table ---
-export const acmsApiCache = pgTable("acms_api_cache", {
-  key: varchar("key", { length: 128 }).primaryKey(),
-  provider: varchar("provider", { length: 32 }).notNull(),
-  endpoint: varchar("endpoint", { length: 128 }).notNull(),
-  params: jsonb("params").notNull(),
-  result: jsonb("result").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+// export const acmsApiCache = pgTable("acms_api_cache", {
+//   key: varchar("key", { length: 128 }).primaryKey(),
+//   provider: varchar("provider", { length: 32 }).notNull(),
+//   endpoint: varchar("endpoint", { length: 128 }).notNull(),
+//   params: jsonb("params").notNull(),
+//   result: jsonb("result").notNull(),
+//   createdAt: timestamp("created_at").notNull().defaultNow(),
+//   updatedAt: timestamp("updated_at")
+//     .notNull()
+//     .defaultNow()
+//     .$onUpdate(() => new Date()),
+// });
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -31,9 +31,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { array } from "zod";
-
-export * from "./alerts";
+//export * from "./alerts.js";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -42,7 +40,7 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-// #region Table definitions
+// #region Enums
 export const enumAuthProvider = pgEnum("auth_provider", [
   "password",
   "google",
@@ -52,6 +50,23 @@ export const enumAuthProvider = pgEnum("auth_provider", [
 ]);
 
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
+// #endregion
+
+// #region Table definitions
+
+// --- ACMS API call cache table ---
+export const acmsApiCache = pgTable("acms_api_cache", {
+  key: varchar("key", { length: 128 }).primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  endpoint: varchar("endpoint", { length: 128 }).notNull(),
+  params: jsonb("params").notNull(),
+  result: jsonb("result").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const users = pgTable(
   "users",
@@ -61,7 +76,10 @@ export const users = pgTable(
     // Email is not needed for wallet users, see it as contact
     email: varchar("email"),
     discordWebhookUrl: text("discord_webhook_url"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
+  /** Optional override: if set, alerts go here instead of users.email */
+  emailAlertsAddress: text("email_alerts_address"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),
@@ -1027,6 +1045,27 @@ export const firstFunderCategoryDictionary = pgTable("first_funder_category_dict
   description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
 });
 
+/**
+ * AI Wallet Forensic Audit cache.
+ *
+ * Stores Gemini-generated behavioural reports per wallet so we don't pay the
+ * model cost on every page view. Read path checks `fetchedAt >= now - 24h`.
+ */
+export const walletAuditCache = pgTable(
+  "wallet_audit_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    persona: varchar("persona", { length: 64 }).notNull(),
+    trustScore: integer("trust_score").notNull(),
+    summary: text("summary").notNull(),
+    observations: jsonb("observations").$type<string[]>().notNull(),
+    transactionCount: integer("transaction_count").notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
+);
+
 // #endregion
 
 // #region Types
@@ -1078,5 +1117,7 @@ export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
+export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 
 // #endregion

@@ -56,3 +56,19 @@
   width: 56px;
   text-align: center;
 }
+
+.sectionTitle {
+  @include type-style("productive-heading-03");
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-primary);
+}
+
+.discordRow {
+  display: grid;
+  gap: $spacing-05;
+
+  @media (min-width: 672px) {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+}

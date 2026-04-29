@@ -1,7 +1,6 @@
 import "@/styles/landing-tailwind.css";
 import {
   LandingCustomerStories,
-  LandingDeveloperSection,
   LandingFinalCTA,
   LandingFooter,
   LandingHero,
@@ -50,7 +49,6 @@ function Index() {
         <MarketIntelligenceSection />
         <LandingCustomerStories />
         <LandingTestimonials />
-        <LandingDeveloperSection />
         <LandingNewsSection />
         <LandingFinalCTA />
       </main>

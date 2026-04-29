@@ -29,7 +29,6 @@ function App() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
         <Route
           path="/alerts/demo"

@@ -22,6 +22,7 @@ import {
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import {
   AiAnalysisTab,

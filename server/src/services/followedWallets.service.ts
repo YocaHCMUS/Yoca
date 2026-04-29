@@ -79,16 +79,60 @@ export async function getDiscordUrlsForAddress(
   return [...new Set(rows.map((r) => r.url).filter(Boolean) as string[])];
 }
 
+// ── Fan-out: Email addresses for a given wallet address ────────────
+
+export async function getEmailRecipientsForAddress(
+  address: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({
+      email: users.email,
+      override: users.emailAlertsAddress,
+      enabled: users.emailAlertsEnabled,
+    })
+    .from(users)
+    .innerJoin(followedWallets, eq(users.id, followedWallets.userId))
+    .where(
+      and(
+        eq(followedWallets.address, address),
+        eq(users.emailAlertsEnabled, true),
+      ),
+    );
+
+  const recipients = rows
+    .map((r) => (r.override?.trim() || r.email || "").trim())
+    .filter((e): e is string => !!e && /.+@.+\..+/.test(e));
+  return [...new Set(recipients)];
+}
+
 // ── User settings ──────────────────────────────────────────────────
 
-export async function getUserDiscordUrl(
+export interface UserAlertSettings {
+  discordWebhookUrl: string | null;
+  registeredEmail: string | null;
+  emailAlertsEnabled: boolean;
+  emailAlertsAddress: string | null;
+}
+
+export async function getUserAlertSettings(
   userId: string,
-): Promise<string | null> {
+): Promise<UserAlertSettings | null> {
   const [row] = await db
-    .select({ url: users.discordWebhookUrl })
+    .select({
+      discordWebhookUrl: users.discordWebhookUrl,
+      registeredEmail: users.email,
+      emailAlertsEnabled: users.emailAlertsEnabled,
+      emailAlertsAddress: users.emailAlertsAddress,
+    })
     .from(users)
     .where(eq(users.id, userId));
-  return row?.url ?? null;
+  if (!row) return null;
+  return {
+    discordWebhookUrl: row.discordWebhookUrl ?? null,
+    registeredEmail: row.registeredEmail ?? null,
+    emailAlertsEnabled: Boolean(row.emailAlertsEnabled),
+    emailAlertsAddress: row.emailAlertsAddress ?? null,
+  };
 }
 
 export async function setUserDiscordUrl(
@@ -98,6 +142,19 @@ export async function setUserDiscordUrl(
   await db
     .update(users)
     .set({ discordWebhookUrl: url || null })
+    .where(eq(users.id, userId));
+}
+
+export async function setUserEmailAlertSettings(
+  userId: string,
+  input: { emailAlertsEnabled: boolean; emailAlertsAddress: string | null },
+): Promise<void> {
+  await db
+    .update(users)
+    .set({
+      emailAlertsEnabled: input.emailAlertsEnabled,
+      emailAlertsAddress: input.emailAlertsAddress || null,
+    })
     .where(eq(users.id, userId));
 }
 
