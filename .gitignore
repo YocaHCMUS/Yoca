@@ -17,7 +17,7 @@ dist-ssr
 .gitignore
 package-lock.json
 server/postgresdb
-n8n/docker-compose.yml
+n8n/*.yaml
 
 # Editor directories and files
 .vscode/*

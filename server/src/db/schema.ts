@@ -1027,6 +1027,48 @@ export const firstFunderCategoryDictionary = pgTable("first_funder_category_dict
   description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
 });
 
+// --- News tables (Phase 1: news-fetching AI filter integration) ---
+export const newsBatches = pgTable("news_batches", {
+  id: serial("id").primaryKey(),
+  address: varchar("address", { length: 44 }).notNull(),
+  symbol: varchar("symbol").notNull(),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const newsArticles = pgTable(
+  "news_articles",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id").notNull().references(() => newsBatches.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 512 }).notNull(),
+    url: varchar("url", { length: 1024 }).notNull(),
+    description: text("description"),
+    publishedAt: timestamp("published_at"),
+    sourceName: varchar("source_name"),
+    faviconUrl: varchar("favicon_url"),
+    contentHash: varchar("content_hash", { length: 128 }).notNull(),
+    raw: jsonb("raw"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("news_articles_url_uq").on(t.url),
+    uniqueIndex("news_articles_content_hash_uq").on(t.contentHash),
+  ],
+);
+
+export const userSources = pgTable(
+  "user_sources",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 44 }).notNull(),
+    sourceName: varchar("source_name").notNull(),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+  },
+  (t) => [unique().on(t.address, t.sourceName)],
+);
+
 // #endregion
 
 // #region Types
@@ -1078,5 +1120,8 @@ export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type newsBatchInsert = typeof newsBatches.$inferInsert;
+export type newsArticleInsert = typeof newsArticles.$inferInsert;
+export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #endregion
