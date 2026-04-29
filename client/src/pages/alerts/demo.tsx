@@ -36,7 +36,6 @@ type ConfigComponentProps = {
   onReturn: () => void;
   onFinish: () => void;
   open: boolean;
-  setOpen: (isOpen: boolean) => void;
 };
 
 const alertConfigModules: Record<
@@ -84,16 +83,20 @@ function AlertTypeTile({ option, onClick }: AlertTypeTileProps) {
 }
 
 interface AlertTypeSelectionProps {
+  open: boolean;
+  onClose: () => void;
   alertTypeOptions: AlertTypeOption[];
   onSelectType: (type: AlertType) => void;
 }
 
 function AlertTypeSelection({
+  open,
+  onClose,
   alertTypeOptions,
   onSelectType,
 }: AlertTypeSelectionProps) {
   return (
-    <>
+    <ComposedModal open={open} onClose={onClose}>
       <ModalHeader label="Alerts" title="Select trigger type" />
       <ModalBody>
         <Stack>
@@ -111,7 +114,7 @@ function AlertTypeSelection({
           </Stack>
         </Stack>
       </ModalBody>
-    </>
+    </ComposedModal>
   );
 }
 
@@ -188,7 +191,7 @@ export default function AlertsDemo() {
     setStep("configuration");
   };
 
-  const handleModalClose = () => {
+  const onModalClose = () => {
     setStep("type-selection");
     setSelectedAlertType(null);
   };
@@ -255,33 +258,38 @@ export default function AlertsDemo() {
                   return (
                     <>
                       {step == "type-selection" && (
-                        <ComposedModal
+                        <AlertTypeSelection
                           open={open}
-                          onClose={() => {
-                            handleModalClose();
-                            setOpen(false);
-                          }}
-                        >
-                          <AlertTypeSelection
-                            alertTypeOptions={alertTypeOptions}
-                            onSelectType={selectAlertType}
-                          />
-                        </ComposedModal>
-                      )}
-
-                      {step == "configuration" && ConfigComponent && (
-                        <ConfigComponent
-                          open={open}
-                          setOpen={setOpen}
-                          onReturn={() => setStep("type-selection")}
-                          onFinish={() => {
-                            handleModalClose();
-                            tokenAlerts.mutate();
-                            tradingAlerts.mutate();
-                            setOpen(false);
-                          }}
+                          onClose={() => setOpen(false)}
+                          alertTypeOptions={alertTypeOptions}
+                          onSelectType={selectAlertType}
                         />
                       )}
+
+                      {step == "configuration" &&
+                        (ConfigComponent ? (
+                          <ConfigComponent
+                            open={open}
+                            onReturn={() => setStep("type-selection")}
+                            onFinish={() => {
+                              onModalClose();
+                              tokenAlerts.mutate();
+                              tradingAlerts.mutate();
+                              setOpen(false);
+                            }}
+                          />
+                        ) : (
+                          <ComposedModal
+                            open={open}
+                            onClose={() => {
+                              console.log("close");
+                              onModalClose();
+                              setOpen(false);
+                            }}
+                          >
+                            <ModalBody>Not implemented yet</ModalBody>
+                          </ComposedModal>
+                        ))}
                     </>
                   );
                 }}

@@ -7,37 +7,37 @@ import { TknImg } from "@/components/TknImg";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
-    Button,
-    ComposedModal,
-    Dropdown,
-    Form,
-    FormGroup,
-    IconButton,
-    InlineNotification,
-    ModalBody,
-    ModalFooter,
-    ModalHeader,
-    Stack,
-    TextInput,
+  Button,
+  ComposedModal,
+  Dropdown,
+  Form,
+  FormGroup,
+  IconButton,
+  InlineNotification,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Stack,
+  TextInput,
 } from "@carbon/react";
 import { Add, ArrowLeft, ArrowRight, SubtractAlt } from "@carbon/react/icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import {
-    Controller,
-    FormProvider,
-    useFieldArray,
-    useForm,
-    useFormContext,
+  Controller,
+  FormProvider,
+  useFieldArray,
+  useForm,
+  useFormContext,
 } from "react-hook-form";
 import styles from "../demo.module.scss";
 import {
-    combineLocalDateAndTime,
-    conditionOptions,
-    periodOptions,
-    tokenStatsSchema,
-    type TokenAlertForm,
-    type TokenAlertMetric,
+  combineLocalDateAndTime,
+  conditionOptions,
+  periodOptions,
+  tokenStatsSchema,
+  type TokenAlertForm,
+  type TokenAlertMetric,
 } from "../form-schema";
 import AlertConfigurationShared from "./AlertConfigurationShared";
 import AlertNotificationSettings from "./AlertNotificationSettings";
@@ -81,7 +81,7 @@ function createTokenStatsDefaultValues(): TokenAlertForm {
       },
     ],
     alertName: "Token Stats Notification 1",
-    // should automatically choose signed in email if it was the case
+    // should automatically choose the signed in email if it was the case
     emailEnabled: true,
     email: "",
   };
@@ -93,7 +93,6 @@ interface TokenStatsConfigProps {
   onReturn: () => void;
   onFinish: () => void;
   open: boolean;
-  setOpen: (open: boolean) => void;
 }
 
 const stepFields: Record<number, (keyof TokenAlertForm)[]> = {
@@ -335,7 +334,6 @@ export default function TokenStatsConfig({
   onReturn,
   onFinish,
   open,
-  setOpen,
 }: TokenStatsConfigProps) {
   const { tr } = useLocalization();
 
@@ -348,7 +346,6 @@ export default function TokenStatsConfig({
   const [isSubmitting, setSubmitting] = useState(false);
 
   async function onSubmit(data: TokenAlertForm) {
-    console.log("submit: ", data);
     setSubmitting(true);
     try {
       const resp = await client.api.alerts.tokens.$post({
@@ -364,7 +361,6 @@ export default function TokenStatsConfig({
           tokenTarget: { tokenAddress: data.token.address },
           triggerMode: data.triggerMode,
           delivery: {
-            // TODO: changes me, or else...
             email: data.emailEnabled ? data.email : undefined,
           },
           expiresAt: combineLocalDateAndTime(
@@ -379,8 +375,6 @@ export default function TokenStatsConfig({
         tr(`ERROR.${res.errorCode}`);
         return;
       }
-
-      console.log("congrats!");
 
       onFinish();
     } catch (e) {
@@ -404,15 +398,10 @@ export default function TokenStatsConfig({
     setStepNum((prev) => prev + 1);
   };
 
-  const onClose = () => {
-    setOpen(false);
-    onReturn();
-  };
-
   return (
     <ComposedModal
       open={open}
-      onClose={stepNum == 1 ? onClose : () => setStepNum(stepNum - 1)}
+      onClose={() => (stepNum == 1 ? onReturn() : setStepNum(stepNum - 1))}
     >
       <ModalHeader label="Alerts" title="Token Stats Config" />
       <ModalBody>
@@ -427,7 +416,7 @@ export default function TokenStatsConfig({
         <Button
           kind="secondary"
           onClick={() =>
-            stepNum - 1 <= 0 ? onClose() : setStepNum(stepNum - 1)
+            stepNum - 1 <= 0 ? onReturn() : setStepNum(stepNum - 1)
           }
           renderIcon={ArrowLeft}
         >
@@ -438,9 +427,7 @@ export default function TokenStatsConfig({
           <Button
             kind="primary"
             disabled={isSubmitting}
-            onClick={methods.handleSubmit(onSubmit, (errors) => {
-              console.log();
-            })}
+            onClick={methods.handleSubmit(onSubmit)}
           >
             Save
           </Button>

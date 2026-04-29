@@ -25,7 +25,7 @@ function createUpdatePayload(
     alertName: body.name,
     email: body.delivery?.email ?? null,
     scopes: body.scopes.map((scope) => ({
-      walletAddress: scope.walletAddress ?? null,
+      walletAddress: scope.walletAddress,
       tokenAddress: scope.tokenAddress ?? null,
       poolAddress: scope.poolAddress ?? null,
       counterpartyAddress: scope.counterpartyAddress ?? null,

@@ -145,7 +145,7 @@ export const searchQuerySchema = z.object({
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
-// type inferrence to work correct (for some reasons)
+// type inferrence to work correctly (for some reasons)
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
@@ -165,7 +165,7 @@ const tokenAlertConditionSchema = z.object({
 });
 
 const tradingAlertScopeSchema = z.object({
-  walletAddress: solanaBase58Schema.optional().nullable(),
+  walletAddress: solanaBase58Schema,
   tokenAddress: solanaBase58Schema.optional().nullable(),
   poolAddress: solanaBase58Schema.optional().nullable(),
   counterpartyAddress: solanaBase58Schema.optional().nullable(),

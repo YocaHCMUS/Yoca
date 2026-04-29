@@ -2,6 +2,7 @@ import {
   decimal as dec,
   pgEnum,
   pgTable,
+  primaryKey,
   timestamp,
   uuid,
   varchar,
@@ -87,12 +88,22 @@ export const alertState = pgTable("alert_state", {
     .$onUpdate(() => new Date()),
 });
 
-export const tokenAlertTargets = pgTable("token_alert_targets", {
-  alertId: uuid("alert_id")
-    .primaryKey()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-});
+export const tokenAlertTargets = pgTable(
+  "token_alert_targets",
+  {
+    alertId: uuid("alert_id")
+      .notNull()
+      .references(() => alerts.id, {
+        onDelete: "cascade",
+      }),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.alertId, t.tokenAddress],
+    }),
+  ],
+);
 
 export const tokenAlertConditions = pgTable("token_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -105,17 +116,24 @@ export const tokenAlertConditions = pgTable("token_alert_conditions", {
   value: decimal("value").notNull(),
 });
 
-export const tradingAlertScopes = pgTable("trading_alert_scopes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  alertId: uuid("alert_id")
-    .notNull()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  walletAddress: varchar("wallet_address", { length: 44 }),
-  tokenAddress: varchar("token_address", { length: 44 }),
-  poolAddress: varchar("pool_address", { length: 44 }),
-  counterpartyAddress: varchar("counterparty_address", { length: 44 }),
-  direction: enumTradeDirection("direction").notNull().default("both"),
-});
+export const tradingAlertScopes = pgTable(
+  "trading_alert_scopes",
+  {
+    alertId: uuid("alert_id")
+      .notNull()
+      .references(() => alerts.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }),
+    poolAddress: varchar("pool_address", { length: 44 }),
+    counterpartyAddress: varchar("counterparty_address", { length: 44 }),
+    direction: enumTradeDirection("direction").notNull().default("both"),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.alertId, t.walletAddress],
+    }),
+  ],
+);
 
 export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),

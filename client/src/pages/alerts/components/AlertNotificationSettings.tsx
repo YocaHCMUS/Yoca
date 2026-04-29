@@ -26,7 +26,11 @@ export default function AlertNotificationSettings() {
   return (
     <Stack gap={6}>
       <FormGroup legendText="Delivery Channel">
-        <CheckboxGroup legendText="Group label">
+        <CheckboxGroup
+          legendText="Group label"
+          // invalid
+          // invalidText="At least one delivery channel should be selected"
+        >
           <Flex dir="row" align="center" gap={20}>
             <Controller
               name="emailEnabled"

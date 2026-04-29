@@ -6,6 +6,10 @@ import type {
   UserTradeDirection,
   UserTradingAggregation,
 } from "@/api/alerts";
+import {
+  emptyStringAsUndefinedSchema,
+  solanaBase58Schema,
+} from "@/util/validation";
 import { z } from "zod";
 
 export const alertTypes = [
@@ -46,14 +50,39 @@ export const tokenAlertMetrics: UserAlertTokenMetric[] = [
   "price_percentage",
   "price_usd",
 ];
+
+export const tradingTargetTypes = [
+  { id: "counter_party", text: "Counter Party" },
+  { id: "pool", text: "Pool" },
+  { id: "token", text: "Token" },
+];
+
 export const tradingAggregations: UserTradingAggregation[] = [
   "volume_usd",
   "trade_count",
 ];
 export const tradeDirections: UserTradeDirection[] = ["buy", "sell", "both"];
 
+export const directionOptions: {
+  id: UserTradeDirection;
+  text: string;
+}[] = [
+  {
+    id: "both",
+    text: "Buy & Sell",
+  },
+  {
+    id: "buy",
+    text: "Buy",
+  },
+  {
+    id: "sell",
+    text: "Sell",
+  },
+];
+
 const selectedTokenSchema = z.object({
-  address: z.string().min(1),
+  address: solanaBase58Schema,
   symbol: z.string().nullable(),
   name: z.string().nullable(),
   imgUrl: z.string().nullable(),
@@ -74,10 +103,14 @@ export const tradingConditionSchema = z.object({
 });
 
 export const tradingScopeSchema = z.object({
-  walletAddress: z.string().trim(),
-  tokenAddress: z.string().min(1),
-  poolAddress: z.string().trim(),
-  counterpartyAddress: z.string().trim(),
+  walletAddress: solanaBase58Schema,
+  token: selectedTokenSchema.optional(),
+  poolAddress: z
+    .union([emptyStringAsUndefinedSchema, solanaBase58Schema])
+    .optional(),
+  counterpartyAddress: z
+    .union([emptyStringAsUndefinedSchema, solanaBase58Schema])
+    .optional(),
   direction: z.enum(tradeDirections),
 });
 

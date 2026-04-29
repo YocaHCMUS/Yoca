@@ -1,6 +1,9 @@
-import { UserTradeDirection, UserTradingAggregation } from "@/api/alerts";
+import { UserTradingAggregation } from "@/api/alerts";
+import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { Flex } from "@/components/Flex";
 import { Divider } from "@/components/partials/Divider/Divider";
+import { TknImg } from "@/components/TknImg";
+import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import {
   Button,
   ComposedModal,
@@ -27,30 +30,13 @@ import {
 import styles from "../demo.module.scss";
 import {
   conditionOptions,
+  directionOptions,
   periodOptions,
   TradingAlertForm,
   tradingEventsSchema,
 } from "../form-schema";
 import AlertConfigurationShared from "./AlertConfigurationShared";
 import AlertNotificationSettings from "./AlertNotificationSettings";
-
-const directionOptions: {
-  id: UserTradeDirection;
-  text: string;
-}[] = [
-  {
-    id: "both",
-    text: "Buy & Sell",
-  },
-  {
-    id: "buy",
-    text: "Buy",
-  },
-  {
-    id: "sell",
-    text: "Sell",
-  },
-];
 
 const aggregationOptions: { id: UserTradingAggregation; text: string }[] = [
   { id: "volume_usd", text: "Volume (USD)" },
@@ -73,31 +59,63 @@ function TradingEventsConfigContent() {
 
   return (
     <Stack gap={7}>
-      <FormGroup legendText="Scope (Optional)">
+      <FormGroup legendText="Scope">
         <Stack gap={4}>
           <TextInput
             id="scope-wallet-address"
             labelText="Wallet Address"
             placeholder="Enter wallet address"
             {...register("tradingScope.walletAddress")}
+            invalid={!!errors.tradingScope?.walletAddress}
+            invalidText={errors.tradingScope?.walletAddress?.message || ""}
           />
-          <TextInput
-            id="scope-token-address"
-            labelText="Token Address"
-            placeholder="Enter token address"
-            {...register("tradingScope.tokenAddress")}
+          <Controller
+            name="tradingScope.token"
+            control={control}
+            render={({ field }) => (
+              <DropdownPanelField
+                id="token-search-select"
+                titleText="Token"
+                placeholder="Select token"
+                initialValue={field.value}
+                onValueChange={field.onChange}
+                invalid={!!errors.tradingScope?.token}
+                invalidText={
+                  errors.tradingScope?.token?.message || "Token is required"
+                }
+                renderValue={(token) => (
+                  <Flex
+                    align="center"
+                    gap={3}
+                    className={styles.selectedTokenValue}
+                  >
+                    <TknImg size={20} src={token.imgUrl} alt={token.symbol} />
+                    <span>{token.symbol || token.name || token.address}</span>
+                  </Flex>
+                )}
+                renderPanel={({ setValue, closePanel }) => (
+                  <TokenSearch setValue={setValue} closePanel={closePanel} />
+                )}
+              />
+            )}
           />
           <TextInput
             id="scope-pool-address"
-            labelText="Pool Address"
+            labelText="Pool Address (Optional)"
             placeholder="Enter pool address"
             {...register("tradingScope.poolAddress")}
+            invalid={!!errors.tradingScope?.poolAddress}
+            invalidText={errors.tradingScope?.poolAddress?.message || ""}
           />
           <TextInput
             id="scope-counterparty-address"
-            labelText="Counterparty Address"
+            labelText="Counterparty Address (Optional)"
             placeholder="Enter counterparty address"
             {...register("tradingScope.counterpartyAddress")}
+            invalid={!!errors.tradingScope?.counterpartyAddress}
+            invalidText={
+              errors.tradingScope?.counterpartyAddress?.message || ""
+            }
           />
           <Controller
             name="tradingScope.direction"
@@ -230,9 +248,9 @@ function TradingEventsConfigContent() {
                     placeholder="10"
                     {...register(`tradingConditions.${index}.value`)}
                     invalid={!!errors.tradingConditions?.[index]?.value}
-                    invalidText={String(
-                      errors.tradingConditions?.[index]?.value?.message || "",
-                    )}
+                    invalidText={
+                      errors.tradingConditions?.[index]?.value?.message || ""
+                    }
                   />
 
                   <div style={{ paddingBlockStart: "1.5rem" }}>
@@ -282,7 +300,7 @@ export function createTradingEventsDefaultValues(): TradingAlertForm {
   return {
     type: "trading-events",
     triggerMode: "once",
-    expiresAtDate: null,
+    expiresAtDate: new Date(),
     expiresAtTime: "09:00",
     tradingConditions: [
       {
@@ -294,9 +312,15 @@ export function createTradingEventsDefaultValues(): TradingAlertForm {
     ],
     tradingScope: {
       walletAddress: "",
-      tokenAddress: "So11111111111111111111111111111111111111112",
-      poolAddress: "",
-      counterpartyAddress: "",
+      token: {
+        address: "So11111111111111111111111111111111111111112",
+        imgUrl:
+          "https://assets.coingecko.com/coins/images/21629/standard/solana.jpg?1696520989",
+        name: "Wrapped SOL",
+        symbol: "SOL",
+      },
+      poolAddress: undefined,
+      counterpartyAddress: undefined,
       direction: "both",
     },
     alertName: "",
@@ -316,14 +340,12 @@ interface TradingEventsConfigProps {
   onReturn: () => void;
   onFinish: () => void;
   open: boolean;
-  setOpen: (open: boolean) => void;
 }
 
 export function TradingEventsConfig({
   onReturn,
   onFinish,
   open,
-  setOpen,
 }: TradingEventsConfigProps) {
   const [stepNum, setStepNum] = useState(1);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -334,11 +356,11 @@ export function TradingEventsConfig({
     mode: "onChange",
   });
 
-  const handleSubmit = () => {
+  const onSubmit = () => {
     setSubmitting(true);
   };
 
-  const handleNext = async () => {
+  const onNext = async () => {
     const fields = stepFields[stepNum];
 
     const isValid = await methods.trigger(fields, {
@@ -351,13 +373,11 @@ export function TradingEventsConfig({
     setStepNum((prev) => prev + 1);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    onReturn();
-  };
-
   return (
-    <ComposedModal open={open} onClose={handleClose}>
+    <ComposedModal
+      open={open}
+      onClose={() => (stepNum == 1 ? onReturn() : setStepNum(stepNum - 1))}
+    >
       <ModalHeader label="Alerts" title="Trading Events Config" />
       <ModalBody>
         <FormProvider {...methods}>
@@ -371,7 +391,7 @@ export function TradingEventsConfig({
         <Button
           kind="secondary"
           onClick={() =>
-            stepNum - 1 <= 0 ? handleClose() : setStepNum(stepNum - 1)
+            stepNum - 1 <= 0 ? onReturn() : setStepNum(stepNum - 1)
           }
           renderIcon={ArrowLeft}
         >
@@ -379,11 +399,15 @@ export function TradingEventsConfig({
         </Button>
 
         {stepNum == finalStepNum ? (
-          <Button kind="primary" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button
+            kind="primary"
+            onClick={methods.handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+          >
             Save
           </Button>
         ) : (
-          <Button kind="primary" onClick={handleNext} renderIcon={ArrowRight}>
+          <Button kind="primary" onClick={onNext} renderIcon={ArrowRight}>
             Next
           </Button>
         )}
