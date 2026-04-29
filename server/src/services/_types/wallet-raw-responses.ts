@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BDS_WalletFirstFundSchema = z.object({
+export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(
     z.string(),
@@ -133,7 +133,17 @@ export const mrl_WalletTokenSwapsSchema = z.object({
   ),
 });
 
-export type BDS_WalletFirstFund = z.infer<typeof BDS_WalletFirstFundSchema>;
+export const bds_WalletSearchSchema = z.object({
+  data: z.object({
+    meta: z.object({
+      address: z.string().trim().min(1),
+    }),
+  }),
+});
+
+export type BDS_WalletSearch = z.infer<typeof bds_WalletSearchSchema>;
+
+export type BDS_WalletFirstFund = z.infer<typeof bds_WalletFirstFundSchema>;
 export type BDS_WalletTokenDetails = z.infer<
   typeof bds_WalletTokenDetailsSchema
 >;

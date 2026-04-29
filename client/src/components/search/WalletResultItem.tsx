@@ -3,7 +3,6 @@ import styles from "./WalletResultItem.module.scss";
 
 export type WalletResult = {
   address: string;
-  label: string | null;
 };
 
 interface WalletResultItemProps {
@@ -31,7 +30,7 @@ export function WalletResultItem({
       <div className={styles.walletBadge}>W</div>
 
       <div className={styles.walletMeta}>
-        <p className={styles.walletLabel}>{wallet.label || "Wallet"}</p>
+        {/* <p className={styles.walletLabel}>{wallet.label || "Wallet"}</p> */}
         <p className={styles.walletAddress}>{formatAddress(wallet.address)}</p>
       </div>
     </div>

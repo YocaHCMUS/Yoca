@@ -2,10 +2,11 @@ import { dexLabel } from "@/util/format";
 import styles from "./PoolResultItem.module.scss";
 
 export type PoolResult = {
-  id: string;
   address: string | null;
   name: string | null;
   dexId: string | null;
+  baseTokenAddress: string | null;
+  quoteTokenAddress: string | null;
   baseTokenImg: string | null;
   quoteTokenImg: string | null;
 };
