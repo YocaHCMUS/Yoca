@@ -8,6 +8,25 @@ import {
 import * as tokenService from "@sv/services/tokens/index.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
+import z from "zod";
+
+const marketPoolsTrendingQuerySchema = z.object({
+  duration: z.enum(["5m", "1h", "6h", "24h"]).default("5m").optional(),
+});
+
+const marketPoolsTopQuerySchema = z.object({
+  sortBy: z
+    .enum(["volume", "txns", "marketCap"])
+    .default("volume")
+    .optional(),
+});
+
+const poolListQuerySchema = z.object({
+  refresh: z
+    .string()
+    .optional()
+    .transform((val) => val === "true"),
+});
 
 const app = new Hono()
   .get(
@@ -224,28 +243,34 @@ const app = new Hono()
       );
     }
   })
-  .get("/pools/:addresses", validate("param", addressListSchema), async (c) => {
-    try {
-      const { addresses } = c.req.valid("param");
-
-      const pools = await tokenService.getTokenPoolDataList(addresses);
-
-      if (pools) {
-        return c.json(pools, statusCode.Ok);
-      } else {
+  .get(
+    "/pools/:addresses",
+    validate("param", addressListSchema),
+    validate("query", poolListQuerySchema),
+    async (c) => {
+      try {
+        const { addresses } = c.req.valid("param");
+        const { refresh = false } = c.req.valid("query");
+  
+        const pools = await tokenService.getTokenPoolDataList(addresses, refresh);
+  
+        if (pools) {
+          return c.json(pools, statusCode.Ok);
+        } else {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+      } catch (err) {
+        console.error(err);
         return c.json(
-          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-          statusCode.BadGateway,
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
         );
       }
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
-    }
-  })
+    },
+  )
   .get(
     "/pools/trades/:address",
     validate("param", addressSchema),
@@ -276,6 +301,68 @@ const app = new Hono()
       }
 
       return c.json(trending, statusCode.Ok);
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  .get(
+    "/market-pools/trending",
+    validate("query", marketPoolsTrendingQuerySchema),
+    async (c) => {
+      try {
+        const { duration = "5m" } = c.req.valid("query");
+        const pools = await tokenService.getTrendingMarketPools(duration);
+        return c.json(pools, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
+  .get(
+    "/market-pools/top",
+    validate("query", marketPoolsTopQuerySchema),
+    async (c) => {
+      try {
+        const { sortBy = "volume" } = c.req.valid("query");
+        const pools = await tokenService.getTopMarketPools(sortBy);
+        return c.json(pools, statusCode.Ok);
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
+  .get("/market-pools/gainers", async (c) => {
+    try {
+      const pools = await tokenService.getTopGainerMarketPools();
+      return c.json(pools, statusCode.Ok);
+    } catch (err) {
+      console.error(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  .delete("/market-pools/cache", async (c) => {
+    tokenService.clearPoolValidationCache();
+    return c.json({ ok: true, message: "Pool validation cache cleared" }, statusCode.Ok);
+  })
+  .get("/market-pools/new-pairs", async (c) => {
+    try {
+      const pools = await tokenService.getNewMarketPools();
+      return c.json(pools, statusCode.Ok);
     } catch (err) {
       console.error(err);
       return c.json(

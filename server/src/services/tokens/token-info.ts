@@ -19,6 +19,15 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchCgMarketDataBatched } from "./token-market-data.js";
 
+function isCgRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const status = (error as { status?: unknown }).status;
+  return Number(status) === 429;
+}
+
 async function fetchHolderStatsItem(
   tokenAddress: string,
 ): Promise<TokenHolderStatsInsert> {
@@ -46,8 +55,18 @@ function fetchHolderStats(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return Promise.resolve([]);
   }
-  return Promise.all(
+
+  return Promise.allSettled(
     tokenAddresses.map((address) => fetchHolderStatsItem(address)),
+  ).then((results) =>
+    results
+      .filter(
+        (
+          result,
+        ): result is PromiseFulfilledResult<TokenHolderStatsInsert> =>
+          result.status === "fulfilled",
+      )
+      .map((result) => result.value),
   );
 }
 
@@ -63,7 +82,7 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
 
   const addressToCgIds = await getCoinGeckoIdsByAddresses(tokenAddresses);
 
-  const rawInfoList = await Promise.all(
+  const rawInfoSettled = await Promise.allSettled(
     tokenAddresses
       .filter((address) => addressToCgIds[address])
       .map(async (address) => {
@@ -78,6 +97,13 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
         return rawMeta;
       }),
   );
+
+  const rawInfoList = rawInfoSettled
+    .filter(
+      (result): result is PromiseFulfilledResult<any> =>
+        result.status === "fulfilled",
+    )
+    .map((result) => result.value);
 
   const details = rawInfoList.map(
     (
@@ -98,9 +124,11 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
         decimals: raw.detail_platforms!.solana!.decimal_place!,
         address: raw.platforms!.solana!,
         description: raw.description!.en!,
-        categories: raw.categories_details?.map((detail) => detail.id!),
+        categories: raw.categories_details?.map(
+          (detail: { id?: string | null }) => detail.id!,
+        ),
         linkBlockchainSites: raw.links?.blockchain_site,
-        linkDiscord: raw.links?.chat_url?.find((url) =>
+        linkDiscord: raw.links?.chat_url?.find((url: string) =>
           url.startsWith("https://discord.com/invite/"),
         ),
         linkHomepage: raw.links?.homepage?.at(0),
@@ -265,7 +293,15 @@ export async function getTokenMeta(tokenAddresses: string[]) {
     (address) => !addressToMeta[address],
   );
 
-  const refreshed = await fetchTokenMeta(staleAddresses);
+  let refreshed: Awaited<ReturnType<typeof fetchTokenMeta>> = [];
+  try {
+    refreshed = await fetchTokenMeta(staleAddresses);
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      return res;
+    }
+    throw error;
+  }
 
   if (!refreshed || refreshed.length == 0) {
     return res;
@@ -301,8 +337,18 @@ export async function getTokenDetails(tokenAddresses: string[]) {
   const staleAddresses = tokenAddresses.filter(
     (address) => !addressToRes[address],
   );
-  const { meta: refreshedMeta, details: refreshedDetails } =
-    await fetchTokenDetails(staleAddresses);
+  let refreshedMeta: TokenMetaInsert[] = [];
+  let refreshedDetails: TokenDetailedInfoInsert[] = [];
+  try {
+    const fetched = await fetchTokenDetails(staleAddresses);
+    refreshedMeta = fetched.meta;
+    refreshedDetails = fetched.details;
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      return res;
+    }
+    throw error;
+  }
   const addressToRefreshedDetails = Object.fromEntries(
     refreshedDetails.map((detail) => [detail.address, detail]),
   );
@@ -344,7 +390,15 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
     return res;
   }
 
-  const refreshed = await fetchHolderStats(staleAddresses);
+  let refreshed: TokenHolderStatsInsert[] = [];
+  try {
+    refreshed = await fetchHolderStats(staleAddresses);
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      return res;
+    }
+    throw error;
+  }
 
   if (refreshed.length == 0) {
     return res;

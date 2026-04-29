@@ -9,14 +9,14 @@ export const TOKEN_CHART_HOURLY_FETCH_RANGE_MS =
   90 * 24 * 60 * 60 * 1000 - 2 * 60 * 1000;
 export const TOKEN_CHART_DAILY_FETCH_RANGE_MS =
   365 * 24 * 60 * 60 * 1000 - 2 * 60 * 1000;
-export const TOKEN_POOLS_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
+export const TOKEN_POOLS_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const ONCHAIN_TOKEN_DATA_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const TRENDING_TOKENS_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const TOP_TOKEN_HOLDER_STATS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const TOP_TOKEN_HOLDERS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const POOL_TRADES_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const RECENT_TRADES_TTL_MS = 15 * 60 * 1000; // 15 minutes
-export const TOKEN_POOL_DATA_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
+export const TOKEN_POOL_DATA_TTL_MS = 1 * 60 * 1000; // 1 minute
 export const TOKEN_DEX_LOGOS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const AUTHEN_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const SOLANA_LOGIN_NOUNCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -112,17 +112,25 @@ const apiCallTrackerRedactFields = readListEnv(
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
   : [
-      "apikey",
-      "api_key",
-      "authorization",
-      "token",
-      "password",
-      "secret",
-      "signature",
-    ];
+    "apikey",
+    "api_key",
+    "authorization",
+    "token",
+    "password",
+    "secret",
+    "signature",
+  ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
 
 // ACMS / Wallet feature flags
 export const WALLET_USE_ACMS = readBooleanEnv("WALLET_USE_ACMS", false);
+export const WALLET_AI_ANALYSIS_USE_ACMS = readBooleanEnv(
+  "WALLET_AI_ANALYSIS_USE_ACMS",
+  false,
+);
+export const WALLET_AI_ANALYSIS_DEBUG = readBooleanEnv(
+  "WALLET_AI_ANALYSIS_DEBUG",
+  false,
+);

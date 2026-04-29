@@ -22,5 +22,6 @@ export const statusCode = {
   NotFound: 404,
   InternalServerError: 500,
   BadGateway: 502,
+  ServiceUnavailable: 503,
   UnprocessableEntity: 422,
 } as const;

@@ -811,6 +811,32 @@ export const walletIdentityCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+export const walletAiAnalysisCache = pgTable(
+  "wallet_ai_analysis_cache",
+  {
+    key: varchar("key", { length: 256 }).primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull(),
+    modelVersion: varchar("model_version", { length: 64 }),
+    promptVersion: varchar("prompt_version", { length: 64 }),
+    raw: jsonb("raw").notNull(),
+    normalized: jsonb("normalized").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("wallet_ai_analysis_cache_address_lang_ver_uq").on(
+      t.address,
+      t.language,
+      t.modelVersion,
+      t.promptVersion,
+    ),
+  ],
+);
+
 export const walletBalanceHistoryCache = pgTable(
   "wallet_balance_history_cache",
   {
@@ -962,6 +988,62 @@ export const walletFirstFund = pgTable(
   },
   (t) => [primaryKey({ columns: [t.reciepient] })],
 );
+
+
+
+// for AI agent workflow, and to easily access strategy to reduce token usage in the workflow
+export const tradingStrategyDictionary = pgTable("trading_strategy_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+})
+
+// a trading strategy can have multiple benefits and risks, we store them in separate tables with foreign key reference to the strategy dictionary
+export const tradingStrategyBenefit = pgTable("trading_strategy_benefit", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  benefit_key: text("benefit_key").notNull(),
+})
+
+export const tradingStrategyRisk = pgTable("trading_strategy_risk", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  risk_key: text("risk_key").notNull(),
+})
+
+// to store the weight of each metric for a trading strategy, which can be used in the AI agent workflow to calculate the score of a strategy based on the metrics of a wallet
+export const tradingStrategyWeight = pgTable("trading_strategy_weight", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  metric_name: varchar("metric_name", { length: 100 }).notNull(),
+  weight: decimal("weight").notNull(),
+})
+
+// to store any other rules for a trading strategy that are not covered by the benefits, risks and weights, such as if a strategy requires a certain token holding or trading volume, we can store them in this table with a key-value pair format
+export const tradingStrategyRule = pgTable("trading_strategy_rule", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  rule_key: text("rule_key").notNull(),
+  value: decimal("value").notNull(),
+});
+
+export const walletCategoryDictionary = pgTable("wallet_category_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+});
+
+export const firstFunderCategoryDictionary = pgTable("first_funder_category_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+});
 
 /**
  * AI Wallet Forensic Audit cache.
