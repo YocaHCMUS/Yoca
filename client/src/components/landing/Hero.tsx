@@ -36,7 +36,7 @@ export function LandingHero() {
     <section
       className="relative overflow-hidden"
       style={{
-        paddingTop: SECTION_PADDING_Y + 80,
+        paddingTop: 96,
         paddingBottom: SECTION_PADDING_Y,
       }}
     >

@@ -113,7 +113,7 @@ export function SignInModal({
   return (
     <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
-      <ModalBody className={"bodyne"} hasScrollingContent>
+      <ModalBody className={"bodyne"}>
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap={6}>
             <TextInput
