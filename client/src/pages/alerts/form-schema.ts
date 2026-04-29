@@ -92,14 +92,14 @@ export const tokenConditionSchema = z.object({
   period: z.enum(alertPeriods),
   metric: z.enum(tokenAlertMetrics),
   op: z.enum(conditionOps),
-  value: z.number(),
+  value: z.coerce.number(),
 });
 
 export const tradingConditionSchema = z.object({
   period: z.enum(alertPeriods),
   aggregation: z.enum(tradingAggregations),
   op: z.enum(conditionOps),
-  value: z.number(),
+  value: z.coerce.number(),
 });
 
 export const tradingScopeSchema = z.object({

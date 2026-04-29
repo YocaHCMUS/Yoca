@@ -1,9 +1,11 @@
 import { UserTradingAggregation } from "@/api/alerts";
+import client from "@/api/main";
 import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { Flex } from "@/components/Flex";
 import { Divider } from "@/components/partials/Divider/Divider";
 import { TknImg } from "@/components/TknImg";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   Button,
   ComposedModal,
@@ -29,6 +31,7 @@ import {
 } from "react-hook-form";
 import styles from "../demo.module.scss";
 import {
+  combineLocalDateAndTime,
   conditionOptions,
   directionOptions,
   periodOptions,
@@ -347,6 +350,8 @@ export function TradingEventsConfig({
   onFinish,
   open,
 }: TradingEventsConfigProps) {
+  const { tr } = useLocalization();
+
   const [stepNum, setStepNum] = useState(1);
   const [isSubmitting, setSubmitting] = useState(false);
 
@@ -356,9 +361,45 @@ export function TradingEventsConfig({
     mode: "onChange",
   });
 
-  const onSubmit = () => {
+  async function onSubmit(data: TradingAlertForm) {
     setSubmitting(true);
-  };
+    try {
+      const resp = await client.api.alerts.trading.$post({
+        json: {
+          alertType: "trading",
+          conditions: data.tradingConditions.map((cond) => ({
+            aggregation: cond.aggregation,
+            period: cond.period,
+            value: cond.value,
+            conditionOp: cond.op,
+          })),
+          delivery: {
+            email: data.emailEnabled ? data.email! : undefined,
+          },
+          expiresAt: combineLocalDateAndTime(
+            data.expiresAtDate,
+            data.expiresAtTime,
+          ),
+          name: data.alertName,
+          scopes: [data.tradingScope],
+          triggerMode: data.triggerMode,
+        },
+      });
+
+      if (!resp.ok) {
+        const res = await resp.json();
+        tr(`ERROR.${res.errorCode}`);
+        return;
+      }
+
+      onFinish();
+    } catch (e) {
+      console.error(e);
+      tr("ERROR.GENERAL_UNKNOWN_ERR");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const onNext = async () => {
     const fields = stepFields[stepNum];
