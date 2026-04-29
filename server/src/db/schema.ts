@@ -93,9 +93,9 @@ export const users = pgTable(
     email: varchar("email"),
     discordWebhookUrl: text("discord_webhook_url"),
     emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
-  /** Optional override: if set, alerts go here instead of users.email */
-  emailAlertsAddress: text("email_alerts_address"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+    /** Optional override: if set, alerts go here instead of users.email */
+    emailAlertsAddress: text("email_alerts_address"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),
@@ -1110,6 +1110,48 @@ export const walletAuditCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+// --- News tables (Phase 1: news-fetching AI filter integration) ---
+export const newsBatches = pgTable("news_batches", {
+  id: serial("id").primaryKey(),
+  address: varchar("address", { length: 44 }).notNull(),
+  symbol: varchar("symbol").notNull(),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const newsArticles = pgTable(
+  "news_articles",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id").notNull().references(() => newsBatches.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 512 }).notNull(),
+    url: varchar("url", { length: 1024 }).notNull(),
+    description: text("description"),
+    publishedAt: timestamp("published_at"),
+    sourceName: varchar("source_name"),
+    faviconUrl: varchar("favicon_url"),
+    contentHash: varchar("content_hash", { length: 128 }).notNull(),
+    raw: jsonb("raw"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("news_articles_url_uq").on(t.url),
+    uniqueIndex("news_articles_content_hash_uq").on(t.contentHash),
+  ],
+);
+
+export const userSources = pgTable(
+  "user_sources",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 44 }).notNull(),
+    sourceName: varchar("source_name").notNull(),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+  },
+  (t) => [unique().on(t.address, t.sourceName)],
+);
+
 // #endregion
 
 // #region Types
@@ -1165,5 +1207,8 @@ export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
+export type newsBatchInsert = typeof newsBatches.$inferInsert;
+export type newsArticleInsert = typeof newsArticles.$inferInsert;
+export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #endregion
