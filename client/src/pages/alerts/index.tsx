@@ -300,7 +300,7 @@ export default function AlertsPage() {
 
   // ── Render ───────────────────────────────────────────────────
   return (
-    <PageWrapper>
+    <PageWrapper noMarketTickers>
       <div className={styles.page}>
         <div className={styles.hero}>
           <h1 className={styles.title}>{tr("alertsPage.title")}</h1>
