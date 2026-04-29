@@ -1,0 +1,133 @@
+/* NewsTab styles */
+.newsTab {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #161616;
+    }
+}
+
+.cachedBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: #e8f4f8;
+    color: #0043ce;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.error {
+    padding: 12px 16px;
+    background: #fee5e5;
+    border: 1px solid #ff6b6b;
+    border-radius: 6px;
+    color: #da1e28;
+
+    p {
+        margin: 0;
+        font-size: 13px;
+    }
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    padding: 24px;
+}
+
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 200px;
+    padding: 24px;
+    text-align: center;
+    background: #f4f4f4;
+    border-radius: 8px;
+
+    p {
+        margin: 0;
+        font-size: 14px;
+        color: #525252;
+    }
+}
+
+.articlesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 12px;
+}
+
+.paginationInfo {
+    font-size: 12px;
+    color: #8d8d8d;
+}
+
+@media (max-width: 1024px) {
+    .articlesGrid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .newsTab {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .articlesGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

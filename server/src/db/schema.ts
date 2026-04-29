@@ -1131,7 +1131,7 @@ export const newsArticles = pgTable(
     sourceName: varchar("source_name"),
     faviconUrl: varchar("favicon_url"),
     contentHash: varchar("content_hash", { length: 128 }).notNull(),
-    raw: jsonb("raw"),
+    // raw: jsonb("raw"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

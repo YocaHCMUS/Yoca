@@ -6,6 +6,35 @@ import { eq, desc } from "drizzle-orm";
 const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
     "http://localhost:5678/webhook/latest-news";
 
+function parseNewsTimestamp(value: unknown): Date | null {
+    if (value == null || value === "") return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === "number") {
+        const millis = value < 1e12 ? value * 1000 : value;
+        const date = new Date(millis);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+
+        if (/^\d+$/.test(trimmed)) {
+            const numeric = Number(trimmed);
+            return parseNewsTimestamp(numeric);
+        }
+
+        const date = new Date(trimmed);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+}
+
 function extractEntriesFromN8n(respBody: any) {
     if (!respBody) return [];
     if (Array.isArray(respBody.entry)) return respBody.entry;
@@ -46,11 +75,10 @@ export async function storeFilteredNewsBatch(
             title: title.slice(0, 512),
             url: url.slice(0, 1024),
             description: (e.description as string) || null,
-            publishedAt: e.timestamp ? new Date(Number(e.timestamp)) : null,
+            publishedAt: parseNewsTimestamp(e.timestamp),
             sourceName: (e.meta && (e.meta as any).source) || null,
             faviconUrl: (e.meta && (e.meta as any).favicon) || null,
-            contentHash,
-            raw: e,
+            contentHash
         };
     });
 
@@ -70,7 +98,7 @@ export async function storeFilteredNewsBatch(
 
 async function fetchFromN8n(address: string, symbol: string, name: string) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 300_000);
     try {
         const resp = await fetch(N8N_LATEST_NEWS_URL, {
             method: "POST",
