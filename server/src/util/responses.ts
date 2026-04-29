@@ -23,4 +23,5 @@ export const statusCode = {
   InternalServerError: 500,
   BadGateway: 502,
   UnprocessableEntity: 422,
+  TooManyRequests: 429,
 } as const;

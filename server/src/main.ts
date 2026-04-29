@@ -17,6 +17,7 @@ import users from "@sv/routes/users.js";
 import wallets from "@sv/routes/wallets.route.js";
 import walletTags from "@sv/routes/walletTags.route.js";
 import webhook from "@sv/routes/webhook.js";
+import news from "@sv/routes/news.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -47,6 +48,7 @@ const app = new Hono()
   .route("/api/trades", trades)
   .route("/api/alerts", alerts)
   .route("/api/alertsToken", alertsToken)
+  .route("/api/news", news)
   .route("/webhook", webhook);
 
 startTokenPolling();
