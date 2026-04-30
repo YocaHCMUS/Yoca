@@ -393,7 +393,7 @@ export default function WalletsComparisionPage() {
         currentY += imgHeight + PDF_EXPORT_SECTION_GAP_MM;
       }
 
-      pdf.save(`Wallet_Comparison_${activeSegment}.pdf`);
+      pdf.save(`Wallet_Comparison_${activeSegment}_${lang.toLowerCase()}.pdf`);
     } finally {
       setIsExporting(false);
     }
