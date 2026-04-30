@@ -426,7 +426,7 @@ export default function WalletsComparisionPage() {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper noMarketTickers>
       <Grid className={styles.grid} fullWidth>
         <Column lg={4} md={4} sm={4}>
           <WalletComparisonSidebar
