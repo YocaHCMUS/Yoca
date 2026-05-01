@@ -1,5 +1,6 @@
 import {
   decimal as dec,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
@@ -135,6 +136,13 @@ export const tradingAlertScopes = pgTable(
   ],
 );
 
+export const tradingAlertWebhooks = pgTable("trading_alert_webhooks", {
+  alertId: uuid("alert_id")
+    .notNull()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+  webhook_id: uuid("webhook_id").notNull(),
+});
+
 export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),
   alertId: uuid("alert_id")
@@ -145,6 +153,21 @@ export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   conditionOp: enumConditionOp("condition_op").notNull(),
   value: decimal("value").notNull(),
 });
+
+export const walletMetrics1m = pgTable(
+  "wallet_metrics_1m",
+  {
+    wallet: varchar("wallet", { length: 44 }).notNull(),
+    bucketTs: timestamp("bucket_ts").notNull(),
+    volumeUsd: decimal("volume_usd").notNull().default(0),
+    tradeCount: integer("trade_count").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.wallet, t.bucketTs],
+    }),
+  ],
+);
 
 export const alertHistory = pgTable("alert_history", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -188,9 +211,10 @@ export type UserAlertTriggerMode =
   (typeof enumAlertTriggerMode.enumValues)[number];
 export type UserAlertType = (typeof enumAlertType.enumValues)[number];
 export type UserTradeDirection = (typeof enumTradeDirection.enumValues)[number];
+export type UserTradingScopeSelect = typeof tradingAlertScopes.$inferSelect;
 export type UserTradingAggregation =
   (typeof enumTradingAggregation.enumValues)[number];
-export type UserAlertConditionInsert = TokenAlertConditionInsert;
+export const WalletMetrics1mInsert = typeof walletMetrics1m.$inferInsert;
 
 export const userAlertConditionOps = enumConditionOp.enumValues;
 export const userAlertTokenMetric = enumTokenMetric.enumValues;

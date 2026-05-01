@@ -1,11 +1,11 @@
 // Add quality of life functions for Drizzle SQL-like query
 
-import { getTableColumns, sql } from "drizzle-orm";
+import { getTableColumns, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 // Wraps a column reference in the PostgreSQL `excluded.` prefix, used in
 // ON CONFLICT DO UPDATE to refer to the value that was attempted to be inserted.
-export function excluded<T extends PgColumn>(column: T): T["_"]["data"] {
+export function excluded<T extends PgColumn>(column: T): SQL<T["_"]["data"]> {
   return sql.raw(`excluded.${column.name}`);
 }
 
@@ -62,4 +62,13 @@ export function excludedAutoFromInsert<
       )
       .map((colName) => [colName, excluded(columns[colName])]),
   );
+}
+
+export function sum<T extends PgColumn>(column: T): SQL<T["_"]["data"]> {
+  return sql.raw(`SUM(${column.name})`);
+}
+
+export function coalesce<T>(...values: (SQL<T> | T)[]): SQL<T> {
+  const joined = values.join(",");
+  return sql.raw(`COALESCE(${joined})`) as SQL<T>;
 }
