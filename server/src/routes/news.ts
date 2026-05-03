@@ -5,29 +5,29 @@ import { statusCode } from "@sv/util/responses.js";
 import { setErr } from "@sv/config/errors.js";
 import { Hono } from "hono";
 
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 10; // per address per window
-const rateMap = new Map<string, { count: number; windowStart: number }>();
+// const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+// const RATE_LIMIT_MAX = 10; // per address per window
+// const rateMap = new Map<string, { count: number; windowStart: number }>();
 
 const app = new Hono()
     .post("/webhook", validate("json", newsWebhookSchema), async (c) => {
         try {
             const body = c.req.valid("json");
-            const key = body.address;
+            // const key = body.address;
 
             // rate limiting per address
-            const now = Date.now();
-            const entry = rateMap.get(key) || { count: 0, windowStart: now };
-            if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-                entry.count = 0;
-                entry.windowStart = now;
-            }
-            entry.count += 1;
-            rateMap.set(key, entry);
+            // const now = Date.now();
+            // const entry = rateMap.get(key) || { count: 0, windowStart: now };
+            // if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+            // entry.count = 0;
+            // entry.windowStart = now;
+            // }
+            // entry.count += 1;
+            // rateMap.set(key, entry);
 
-            if (entry.count > RATE_LIMIT_MAX) {
-                return c.json(setErr("RATE_LIMIT_EXCEEDED"), statusCode.TooManyRequests);
-            }
+            // if (entry.count > RATE_LIMIT_MAX) {
+            // return c.json(setErr("RATE_LIMIT_EXCEEDED"), statusCode.TooManyRequests);
+            // }
 
             const { address, symbol, name } = body;
 
