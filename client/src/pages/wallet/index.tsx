@@ -2018,7 +2018,7 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper
+    <PageWrapper noMarketTickers
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (

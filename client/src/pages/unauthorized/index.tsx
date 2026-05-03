@@ -42,58 +42,46 @@ export default function UnauthorizedPage() {
   const requestedPath = getRequestedPath(location.state);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black overflow-hidden font-sans">
-      <div className="absolute top-0 left-1/4 w-[40rem] h-[40rem] bg-[#9945FF] rounded-full mix-blend-screen filter blur-[128px] opacity-30 animate-pulse pointer-events-none"></div>
-      <div
-        className="absolute bottom-0 right-1/4 w-[40rem] h-[40rem] bg-[#14F195] rounded-full mix-blend-screen filter blur-[128px] opacity-30 animate-pulse pointer-events-none"
-        style={{ animationDelay: "2s" }}
-      ></div>
-
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
-        <span className="text-[15rem] md:text-[25rem] xl:text-[35rem] font-bold text-white opacity-[0.03]">
-          {ERROR_CODE}
-        </span>
-      </div>
-
-      <div className="relative z-10 flex flex-col items-center text-center max-w-7xl w-full mx-4 p-8 gap-12">
-        <div className="flex flex-col items-center gap-4 w-full max-w-7xl">
+    <div className="fixed inset-0 z-[100] flex flex-col justify-center items-center bg-[#161616] overflow-hidden font-sans px-8 md:px-16 lg:px-32">
+      <div className="flex flex-col items-center text-center max-w-4xl w-full mx-auto gap-10">
+        <div className="flex flex-col items-center gap-3 w-full">
           <p
-            className="text-neutral-400 font-semibold uppercase tracking-widest"
+            className="text-[#c6c6c6] font-semibold uppercase tracking-widest"
             style={{ fontSize: "clamp(0.875rem, 1.2vw, 1.125rem)" }}
           >
             {ERROR_CODE} Error
           </p>
 
           <h1
-            className="text-white font-bold tracking-tight leading-none my-2"
+            className="text-[#f4f4f4] font-bold tracking-tight leading-none"
             style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
           >
             {ERROR_TITLE}
           </h1>
 
           <p
-            className="text-neutral-300 leading-snug max-w-4xl"
-            style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)" }}
+            className="text-[#c6c6c6] leading-snug max-w-2xl"
+            style={{ fontSize: "clamp(1rem, 1.5vw, 1.25rem)" }}
           >
             {ERROR_DESCRIPTION}
           </p>
 
           {requestedPath.length > 0 ? (
             <p
-              className="text-neutral-300 leading-snug max-w-4xl"
-              style={{ fontSize: "clamp(1rem, 1.5vw, 1.5rem)" }}
+              className="text-[#c6c6c6] leading-snug max-w-2xl"
+              style={{ fontSize: "clamp(0.875rem, 1.2vw, 1rem)" }}
             >
               {PROTECTED_PATH_LABEL}{" "}
-              <span className="font-medium text-neutral-100">{requestedPath}</span>
+              <span className="font-medium text-[#f4f4f4]">{requestedPath}</span>
             </p>
           ) : null}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mt-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
           <button
             type="button"
             onClick={() => setIsSignInOpen(true)}
-            className="bg-[#14F195] hover:bg-[#10c87e] text-black font-bold px-8 py-3 rounded whitespace-nowrap transition-colors"
+            className="bg-[#0f62fe] hover:bg-[#0353e9] text-white font-semibold px-4 py-3 whitespace-nowrap transition-colors"
           >
             {LOGIN_BUTTON_LABEL}
           </button>
@@ -101,7 +89,7 @@ export default function UnauthorizedPage() {
           <button
             type="button"
             onClick={() => navigate(HOME_ROUTE)}
-            className="text-[#14F195] hover:text-white font-medium text-lg transition-colors"
+            className="text-[#78a9ff] hover:text-[#a6c8ff] hover:bg-[#353535] px-4 py-3 font-medium text-base transition-colors"
           >
             {HOME_BUTTON_LABEL}
           </button>

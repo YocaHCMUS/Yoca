@@ -393,7 +393,7 @@ export default function WalletsComparisionPage() {
         currentY += imgHeight + PDF_EXPORT_SECTION_GAP_MM;
       }
 
-      pdf.save(`Wallet_Comparison_${activeSegment}.pdf`);
+      pdf.save(`Wallet_Comparison_${activeSegment}_${lang.toLowerCase()}.pdf`);
     } finally {
       setIsExporting(false);
     }
@@ -426,7 +426,7 @@ export default function WalletsComparisionPage() {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper noMarketTickers>
       <Grid className={styles.grid} fullWidth>
         <Column lg={4} md={4} sm={4}>
           <WalletComparisonSidebar
