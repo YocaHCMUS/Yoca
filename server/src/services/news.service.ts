@@ -6,6 +6,8 @@ import { eq, desc } from "drizzle-orm";
 const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
     "http://localhost:5678/webhook/latest-news";
 
+const NEWS_CACHE_TTL_MS = process.env.NEWS_CACHE_TTL_MS ? parseInt(process.env.NEWS_CACHE_TTL_MS) : 3 * 60 * 60 * 1000; // 3 hours
+
 function parseNewsTimestamp(value: unknown): Date | null {
     if (value == null || value === "") return null;
 
@@ -117,7 +119,7 @@ async function fetchFromN8n(address: string, symbol: string, name: string) {
     }
 }
 
-async function getCachedNewsBatch(address: string, symbol: string, ttlMs = 3 * 60 * 60 * 1000) {
+async function getCachedNewsBatch(address: string) {
     // find latest batch for this address+symbol
     const rows = await db
         .select()
@@ -129,7 +131,7 @@ async function getCachedNewsBatch(address: string, symbol: string, ttlMs = 3 * 6
     const latest = rows[0] as any | undefined;
     if (latest && latest.createdAt) {
         const age = Date.now() - new Date(latest.createdAt).getTime();
-        if (age < ttlMs) {
+        if (age < NEWS_CACHE_TTL_MS) {
             const articles = await db
                 .select()
                 .from(newsArticles)
@@ -149,11 +151,9 @@ export async function getOrFetchNews(
     address: string,
     symbol: string,
     name: string,
-    ttlMs = 3 * 60 * 60 * 1000, // 3 hours
 ) {
-    // find latest batch for this address+symbol
     try {
-        return await getCachedNewsBatch(address, symbol, ttlMs);
+        return await getCachedNewsBatch(address);
     } catch (err) {
         console.info(`[news] no recent cached batch for ${address} (${symbol}), fetching from n8n...`);
     }
