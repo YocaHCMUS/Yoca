@@ -11,7 +11,7 @@
     transition: all 0.2s ease;
 
     &:hover {
-        border-color: #0f62fe;
+        border-color: $border-interactive;
         box-shadow: 0 2px 8px rgba(15, 98, 254, 0.1);
         transform: translateY(-2px);
     }
