@@ -117,16 +117,7 @@ async function fetchFromN8n(address: string, symbol: string, name: string) {
     }
 }
 
-/**
- * Return cached articles if a recent batch exists.
- * Otherwise fetch from n8n, store batch/articles and return fetched entries.
- */
-export async function getOrFetchNews(
-    address: string,
-    symbol: string,
-    name: string,
-    ttlMs = 5 * 60 * 1000,
-) {
+async function getCachedNewsBatch(address: string, symbol: string, ttlMs = 3 * 60 * 60 * 1000) {
     // find latest batch for this address+symbol
     const rows = await db
         .select()
@@ -145,6 +136,26 @@ export async function getOrFetchNews(
                 .where(eq(newsArticles.batchId, latest.id));
             return { cached: true, entries: articles };
         }
+    }
+
+    throw new Error("No recent cached batch");
+}
+
+/**
+ * Return cached articles if a recent batch exists.
+ * Otherwise fetch from n8n, store batch/articles and return fetched entries.
+ */
+export async function getOrFetchNews(
+    address: string,
+    symbol: string,
+    name: string,
+    ttlMs = 3 * 60 * 60 * 1000, // 3 hours
+) {
+    // find latest batch for this address+symbol
+    try {
+        return await getCachedNewsBatch(address, symbol, ttlMs);
+    } catch (err) {
+        console.info(`[news] no recent cached batch for ${address} (${symbol}), fetching from n8n...`);
     }
 
     // fetch from n8n and store
