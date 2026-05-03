@@ -21,6 +21,7 @@ import {
 } from "@carbon/react";
 import { PublicKey } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
+import { CreateAlertRuleModal } from "./CreateAlertRuleModal.tsx";
 import styles from "./index.module.scss";
 
 type FollowedWalletRow = {
@@ -42,6 +43,18 @@ type PostAlertsResponse = {
 type DeleteAlertsResponse = {
   deleted: boolean;
   heliusSync: HeliusSyncResult;
+};
+
+type AlertRuleApiRow = {
+  id: number;
+  name: string | null;
+  walletAddress: string;
+  actionType: string;
+  minVolume: number | string;
+  maxVolume: number | string | null;
+  triggerType: string;
+  volumeUnit: string;
+  expiryDate: string;
 };
 
 function isValidSolanaAddress(value: string): boolean {
@@ -91,6 +104,11 @@ export default function AlertsPage() {
   >(null);
   const [inlineTitle, setInlineTitle] = useState("");
   const [inlineSubtitle, setInlineSubtitle] = useState("");
+
+  const [rulesRows, setRulesRows] = useState<AlertRuleApiRow[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState<number | null>(null);
 
   // ── Settings load/save ───────────────────────────────────────
   const loadSettings = useCallback(async () => {
@@ -194,15 +212,33 @@ export default function AlertsPage() {
     }
   }, [tr]);
 
+  const loadRules = useCallback(async () => {
+    setRulesLoading(true);
+    try {
+      const api = client.api.alerts as unknown as {
+        rules: { $get: () => Promise<Response> };
+      };
+      const res = await api.rules.$get();
+      if (!res.ok) throw new Error("rules_failed");
+      const data = (await res.json()) as AlertRuleApiRow[];
+      setRulesRows(Array.isArray(data) ? data : []);
+    } catch {
+      setRulesRows([]);
+    } finally {
+      setRulesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       void loadList();
       void loadSettings();
+      void loadRules();
     } else {
       setListLoading(false);
       setDiscordLoading(false);
     }
-  }, [user, loadList, loadSettings]);
+  }, [user, loadList, loadSettings, loadRules]);
 
   // ── Wallet inline helpers ────────────────────────────────────
   const showInline = (
@@ -268,6 +304,26 @@ export default function AlertsPage() {
   };
 
   // ── Wallet delete ────────────────────────────────────────────
+  const onDeleteRule = async (ruleId: number) => {
+    dismissInline();
+    setDeletingRuleId(ruleId);
+    try {
+      const res = await (client.api.alerts as any).rules[":ruleId"].$delete({
+        param: { ruleId: String(ruleId) },
+      });
+      if (!res.ok) {
+        showInline("error", tr("alertsPage.deleteFailed"));
+        return;
+      }
+      showInline("success", tr("alertsPage.ruleDeleteSuccess"));
+      await loadRules();
+    } catch {
+      showInline("error", tr("alertsPage.deleteFailed"));
+    } finally {
+      setDeletingRuleId(null);
+    }
+  };
+
   const onDelete = async (id: number) => {
     dismissInline();
     setDeletingId(id);
@@ -440,6 +496,105 @@ export default function AlertsPage() {
               </Column>
             </Grid>
 
+            {/* ── Advanced alert rules (predicate filters) ───── */}
+            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+              <Column lg={16} md={8} sm={4}>
+                <Tile style={{ background: "transparent", padding: "2rem" }}>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <h3 className={styles.sectionTitle}>{tr("alertsPage.ruleTableTitle")}</h3>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--cds-text-secondary)",
+                        margin: "0 0 1rem",
+                        maxWidth: "52rem",
+                      }}
+                    >
+                      {tr("alertsPage.ruleTableSubtitle")}
+                    </p>
+                    <Button kind="tertiary" onClick={() => setRuleModalOpen(true)}>
+                      {tr("alertsPage.ruleCreateOpen")}
+                    </Button>
+                  </div>
+
+                  {rulesLoading ? (
+                    <InlineLoading description={tr("alertsPage.ruleLoading")} />
+                  ) : rulesRows.length === 0 ? (
+                    <p style={{ color: "var(--cds-text-secondary)" }}>
+                      {tr("alertsPage.ruleTableEmpty")}
+                    </p>
+                  ) : (
+                    <div className={styles.tableWrap}>
+                      <Table size="lg" useZebraStyles>
+                        <TableHead>
+                          <TableRow>
+                            <TableHeader>{tr("alertsPage.ruleTableName")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.ruleTableWallet")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.ruleTableAction")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.ruleTableVolume")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.ruleTableTrigger")}</TableHeader>
+                            <TableHeader>{tr("alertsPage.ruleTableExpires")}</TableHeader>
+                            <TableHeader className={styles.actionsCell}>
+                              {tr("alertsPage.tableActions")}
+                            </TableHeader>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {rulesRows.map((r) => {
+                            const min = Number(r.minVolume);
+                            const max =
+                              r.maxVolume != null && r.maxVolume !== ""
+                                ? Number(r.maxVolume)
+                                : null;
+                            const volLabel =
+                              max != null && Number.isFinite(max)
+                                ? `${min}–${max} ${r.volumeUnit}`
+                                : `${min}+ ${r.volumeUnit}`;
+                            return (
+                              <TableRow key={r.id}>
+                                <TableCell>{r.name?.trim() || "—"}</TableCell>
+                                <TableCell>
+                                  <span
+                                    style={{
+                                      fontFamily: "IBM Plex Mono, monospace",
+                                      wordBreak: "break-all",
+                                    }}
+                                  >
+                                    {r.walletAddress}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{r.actionType}</TableCell>
+                                <TableCell>{volLabel}</TableCell>
+                                <TableCell>{r.triggerType}</TableCell>
+                                <TableCell>
+                                  {fmt.datetime.datetime(new Date(r.expiryDate))}
+                                </TableCell>
+                                <TableCell className={styles.actionsCell}>
+                                  {deletingRuleId === r.id ? (
+                                    <InlineLoading />
+                                  ) : (
+                                    <Button
+                                      kind="ghost"
+                                      size="sm"
+                                      hasIconOnly
+                                      iconDescription="Delete rule"
+                                      renderIcon={TrashCan}
+                                      disabled={deletingRuleId !== null}
+                                      onClick={() => void onDeleteRule(r.id)}
+                                    />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </Tile>
+              </Column>
+            </Grid>
+
             {/* ── Followed wallets section ────────────────────── */}
             <Grid narrow fullWidth className={styles.card}>
               <Column lg={16} md={8} sm={4}>
@@ -559,6 +714,15 @@ export default function AlertsPage() {
           </>
         )}
       </div>
+
+      <CreateAlertRuleModal
+        open={ruleModalOpen}
+        onClose={() => setRuleModalOpen(false)}
+        onSaved={() => {
+          void loadRules();
+          showInline("success", tr("alertsPage.ruleCreateSuccess"));
+        }}
+      />
     </PageWrapper>
   );
 }

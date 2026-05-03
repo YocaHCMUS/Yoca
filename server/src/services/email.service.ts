@@ -89,11 +89,11 @@ function escapeHtml(s: string): string {
 export async function sendAlertEmail(
   to: string,
   alert: AlertEmailInput,
-): Promise<void> {
+): Promise<boolean> {
   const client = getResend();
   if (!client) {
     console.warn("[email] RESEND_API_KEY is not set; skipping email to", to);
-    return;
+    return false;
   }
   try {
     const result = await client.emails.send({
@@ -104,8 +104,11 @@ export async function sendAlertEmail(
     });
     if (result.error) {
       console.error("[email] failed to send to", to, result.error);
+      return false;
     }
+    return true;
   } catch (error) {
     console.error("[email] failed to send to", to, error);
+    return false;
   }
 }

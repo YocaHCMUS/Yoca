@@ -50,6 +50,22 @@ export const enumAuthProvider = pgEnum("auth_provider", [
 ]);
 
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
+
+export const enumAlertRuleAction = pgEnum("alert_rule_action", [
+  "SWAP",
+  "TRANSFER",
+  "ALL",
+]);
+
+export const enumAlertRuleTrigger = pgEnum("alert_rule_trigger", [
+  "ONCE",
+  "ALWAYS",
+]);
+
+export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
+  "USD",
+  "SOL",
+]);
 // #endregion
 
 // #region Table definitions
@@ -926,6 +942,34 @@ export const followedWallets = pgTable(
   (t) => [unique().on(t.userId, t.address)],
 );
 
+/**
+ * User-defined alert predicates (Observer stream + server-side filtering).
+ * Helius delivers raw events; matching rows determine Discord/email fan-out.
+ */
+export const alertRules = pgTable("alert_rules", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }),
+  walletAddress: text("wallet_address").notNull(),
+  actionType: enumAlertRuleAction("action_type").notNull(),
+  minVolume: dec("min_volume", { mode: "number" }).notNull(),
+  maxVolume: dec("max_volume", { mode: "number" }),
+  volumeUnit: enumAlertRuleVolumeUnit("volume_unit").notNull().default("USD"),
+  triggerType: enumAlertRuleTrigger("trigger_type").notNull(),
+  expiryDate: timestamp("expiry_date", { withTimezone: true }).notNull(),
+  oneShotFiredAt: timestamp("one_shot_fired_at", { withTimezone: true }),
+  useDefaultDelivery: boolean("use_default_delivery").notNull().default(true),
+  discordWebhookOverride: text("discord_webhook_override"),
+  emailOverride: text("email_override"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
   {
@@ -1117,6 +1161,8 @@ export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type AlertRuleInsert = typeof alertRules.$inferInsert;
+export type AlertRuleRow = typeof alertRules.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 

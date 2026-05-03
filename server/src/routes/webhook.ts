@@ -1,8 +1,14 @@
+/**
+ * Helius → single enhanced-tx stream (observable). We query `alert_rules` and
+ * evaluate predicates per row before notifying — Observer pattern + predicate filtering.
+ */
 import { sendAlertEmail } from "@sv/services/email.service.js";
 import {
-  getDiscordUrlsForAddress,
-  getEmailRecipientsForAddress,
-} from "@sv/services/followedWallets.service.js";
+  findActiveRulesForAddresses,
+  markRuleOneShotFired,
+  resolveRuleDelivery,
+} from "@sv/services/alertRules.service.js";
+import type { AlertRuleRow } from "@sv/db/schema.js";
 import { Hono } from "hono";
 
 interface HeliusTokenTransfer {
@@ -13,7 +19,7 @@ interface HeliusTokenTransfer {
 }
 
 interface HeliusNativeTransfer {
-  amount?: number; // lamports
+  amount?: number;
   fromUserAccount?: string;
   toUserAccount?: string;
 }
@@ -52,15 +58,16 @@ interface StructuredAlert {
   message: string;
   event: NormalizedAlertEvent;
   emittedAt: string;
+  /** Optional: user-defined label for embeds (rule name). */
+  displayTitle?: string;
 }
 
 const WEBHOOK_AUTH_KEY = "thisisphuonglekey";
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const LAMPORTS_PER_SOL = 1_000_000_000;
-const SWAP_ALERT_SOL_THRESHOLD = Number(
-  process.env.WEBHOOK_SWAP_ALERT_SOL_THRESHOLD || 1,
-);
-const ALERT_FORWARD_WEBHOOK_URL = process.env.ALERT_FORWARD_WEBHOOK_URL || "";
+/** Implied USD/SOL for converting Helius native amounts to USD when rules use `volumeUnit: USD`. */
+const WEBHOOK_SOL_PRICE_USD = Number(process.env.WEBHOOK_SOL_PRICE_USD || "150");
+
 const processedSignatures = new Set<string>();
 const MAX_SIGNATURE_CACHE_SIZE = 10_000;
 
@@ -112,20 +119,81 @@ function normalizeAlertEvent(tx: HeliusEnhancedTransaction): NormalizedAlertEven
   };
 }
 
-function evaluateAlertRules(event: NormalizedAlertEvent): StructuredAlert[] {
-  const alerts: StructuredAlert[] = [];
-
-  if (event.type === "SWAP" && event.swapSolAmount >= SWAP_ALERT_SOL_THRESHOLD) {
-    alerts.push({
-      rule: "swap-sol-threshold",
-      severity: event.swapSolAmount >= SWAP_ALERT_SOL_THRESHOLD * 5 ? "high" : "medium",
-      message: `Large swap detected: ${event.swapSolAmount} SOL (threshold: ${SWAP_ALERT_SOL_THRESHOLD} SOL)`,
-      event,
-      emittedAt: new Date().toISOString(),
-    });
+function transactionMatchesActionType(
+  txType: string,
+  ruleAction: AlertRuleRow["actionType"],
+): boolean {
+  const t = (txType || "").toUpperCase();
+  if (ruleAction === "ALL") return true;
+  if (ruleAction === "SWAP") {
+    return t === "SWAP" || t.includes("SWAP");
   }
+  if (ruleAction === "TRANSFER") {
+    return t === "TRANSFER" || t.includes("TRANSFER");
+  }
+  return false;
+}
 
-  return alerts;
+/**
+ * Choose a single comparable SOL notional for predicate evaluation.
+ * Aligned with `actionType`: swap-heavy paths use swap + wrapped SOL; transfers stress SOL legs.
+ */
+function solNotionalForRule(
+  event: NormalizedAlertEvent,
+  ruleAction: AlertRuleRow["actionType"],
+): number {
+  if (ruleAction === "TRANSFER") {
+    return Math.max(event.nativeTransferSolMax, event.nativeTransferSolTotal);
+  }
+  if (ruleAction === "SWAP") {
+    return Math.max(event.swapSolAmount, event.nativeTransferSolMax);
+  }
+  return Math.max(
+    event.swapSolAmount,
+    event.nativeTransferSolMax,
+    event.nativeTransferSolTotal,
+  );
+}
+
+function volumePredicateMatches(
+  rule: AlertRuleRow,
+  valueSol: number,
+  valueUsd: number,
+): boolean {
+  const min = Number(rule.minVolume);
+  const max = rule.maxVolume == null ? null : Number(rule.maxVolume);
+  const v = rule.volumeUnit === "SOL" ? valueSol : valueUsd;
+  if (Number.isNaN(v) || !Number.isFinite(v)) return false;
+  if (v < min) return false;
+  if (max != null && v > max) return false;
+  return true;
+}
+
+function buildStructuredAlert(
+  rule: AlertRuleRow,
+  event: NormalizedAlertEvent,
+  solNotional: number,
+  usdNotional: number,
+): StructuredAlert {
+  const volStr =
+    rule.volumeUnit === "SOL"
+      ? `${solNotional.toFixed(4)} SOL`
+      : `$${usdNotional.toFixed(2)} (≈${solNotional.toFixed(4)} SOL)`;
+
+  const title = rule.name?.trim() || `Rule #${rule.id}`;
+  const message = `${title}: ${event.type} · notion ${volStr}`;
+
+  const severity: StructuredAlert["severity"] =
+    rule.volumeUnit === "SOL" && solNotional >= 50 ? "high" : "medium";
+
+  return {
+    rule: `alert-rule:${rule.id}`,
+    severity,
+    message,
+    event,
+    emittedAt: new Date().toISOString(),
+    displayTitle: title,
+  };
 }
 
 /** Collect all unique addresses involved in a transaction. */
@@ -146,8 +214,6 @@ function extractInvolvedAddresses(tx: HeliusEnhancedTransaction): string[] {
   return [...addrs];
 }
 
-// ── Discord formatting ─────────────────────────────────────────────
-
 function toSeverityColor(severity: StructuredAlert["severity"]): number {
   if (severity === "high") return 0xed4245;
   if (severity === "medium") return 0xfee75c;
@@ -160,12 +226,13 @@ function toDiscordPayload(alert: StructuredAlert) {
     : "unknown";
   const signature = alert.event.signature;
   const txUrl = `https://solscan.io/tx/${signature}`;
+  const title = alert.displayTitle || alert.rule;
 
   return {
     username: "Yoca Alerts",
     embeds: [
       {
-        title: `Alert: ${alert.rule}`,
+        title,
         description: alert.message,
         color: toSeverityColor(alert.severity),
         fields: [
@@ -199,75 +266,61 @@ function toDiscordPayload(alert: StructuredAlert) {
 async function sendToDiscordUrl(
   alert: StructuredAlert,
   discordUrl: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await fetch(discordUrl, {
+    const res = await fetch(discordUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toDiscordPayload(alert)),
     });
+    return res.ok;
   } catch (error) {
     console.error("[alert] failed to send to Discord:", discordUrl, error);
+    return false;
   }
 }
 
-// ── Alert dispatch (fan-out + legacy global) ───────────────────────
-
-async function dispatchAlert(
+/** Observer + predicate filter: notify only when DB rule predicates match. */
+async function dispatchRuleAlert(
+  rule: AlertRuleRow,
   alert: StructuredAlert,
-  involvedAddresses: string[],
-): Promise<void> {
-  console.log("[alert]", JSON.stringify(alert));
+): Promise<boolean> {
+  console.log("[alert-rule]", JSON.stringify({ ruleId: rule.id, ...alert }));
 
-  // Fan-out: per-user Discord URLs from DB
-  const urlSet = new Set<string>();
-  const emailSet = new Set<string>();
-  for (const addr of involvedAddresses) {
-    const urls = await getDiscordUrlsForAddress(addr);
-    for (const u of urls) urlSet.add(u);
-    const emails = await getEmailRecipientsForAddress(addr);
-    for (const e of emails) emailSet.add(e);
+  const { discordUrl, email } = await resolveRuleDelivery(rule);
+  let ok = false;
+
+  if (discordUrl) {
+    const sent = await sendToDiscordUrl(alert, discordUrl);
+    if (sent) ok = true;
   }
 
-  const fanOutPromises: Array<Promise<unknown>> = [
-    ...[...urlSet].map((url) => sendToDiscordUrl(alert, url)),
-    ...[...emailSet].map((to) =>
-      sendAlertEmail(to, {
-        rule: alert.rule,
-        severity: alert.severity,
-        message: alert.message,
-        signature: alert.event.signature,
-        txType: alert.event.type,
-        feePayer: alert.event.feePayer,
-        source: alert.event.source,
-        swapSolAmount: alert.event.swapSolAmount,
-        emittedAt: alert.emittedAt,
-      }),
-    ),
-  ];
+  if (email) {
+    const mailOk = await sendAlertEmail(email, {
+      rule: alert.rule,
+      severity: alert.severity,
+      message: alert.message,
+      signature: alert.event.signature,
+      txType: alert.event.type,
+      feePayer: alert.event.feePayer,
+      source: alert.event.source,
+      swapSolAmount: alert.event.swapSolAmount,
+      emittedAt: alert.emittedAt,
+    });
+    if (mailOk) ok = true;
+  }
 
-  // Legacy global admin channel (env-based)
-  if (ALERT_FORWARD_WEBHOOK_URL && !urlSet.has(ALERT_FORWARD_WEBHOOK_URL)) {
-    const isDiscord = ALERT_FORWARD_WEBHOOK_URL.includes(
-      "discord.com/api/webhooks/",
-    );
-    fanOutPromises.push(
-      fetch(ALERT_FORWARD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isDiscord ? toDiscordPayload(alert) : alert),
-      })
-        .then(() => {})
-        .catch((err) =>
-          console.error("[alert] global forward failed:", err),
-        ),
+  if (!discordUrl && !email) {
+    console.warn(
+      "[alert-rule] no delivery channel resolved for rule",
+      rule.id,
+      "user",
+      rule.userId,
     );
   }
 
-  await Promise.allSettled(fanOutPromises);
+  return ok;
 }
-
-// ── Hono route ─────────────────────────────────────────────────────
 
 const app = new Hono().post("/", async (c) => {
   const authorization = c.req.header("Authorization");
@@ -300,10 +353,28 @@ const app = new Hono().post("/", async (c) => {
         );
 
         const event = normalizeAlertEvent(tx);
-        const alerts = evaluateAlertRules(event);
         const involvedAddresses = extractInvolvedAddresses(tx);
-        for (const alert of alerts) {
-          await dispatchAlert(alert, involvedAddresses);
+        const rules = await findActiveRulesForAddresses(involvedAddresses);
+
+        for (const rule of rules) {
+          if (!involvedAddresses.includes(rule.walletAddress)) continue;
+          if (!transactionMatchesActionType(tx.type || "", rule.actionType)) {
+            continue;
+          }
+
+          const solNotional = solNotionalForRule(event, rule.actionType);
+          const usdNotional = solNotional * WEBHOOK_SOL_PRICE_USD;
+
+          if (!volumePredicateMatches(rule, solNotional, usdNotional)) {
+            continue;
+          }
+
+          const structured = buildStructuredAlert(rule, event, solNotional, usdNotional);
+          const delivered = await dispatchRuleAlert(rule, structured);
+
+          if (delivered && rule.triggerType === "ONCE") {
+            await markRuleOneShotFired(rule.id);
+          }
         }
       }
     }

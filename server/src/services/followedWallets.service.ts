@@ -1,4 +1,4 @@
-import { followedWallets, users } from "@sv/db/schema.js";
+import { alertRules, followedWallets, users } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
 
@@ -55,10 +55,13 @@ export async function removeFollowedWallet(
 // ── Global address list (for Helius sync) ──────────────────────────
 
 export async function getFollowedWalletAddresses(): Promise<string[]> {
-  const rows = await db
+  const fw = await db
     .select({ address: followedWallets.address })
     .from(followedWallets);
-  return [...new Set(rows.map((r) => r.address))];
+  const ar = await db
+    .select({ address: alertRules.walletAddress })
+    .from(alertRules);
+  return [...new Set([...fw.map((r) => r.address), ...ar.map((r) => r.address)])];
 }
 
 // ── Fan-out: Discord URLs for a given wallet address ───────────────

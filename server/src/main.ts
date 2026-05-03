@@ -46,7 +46,6 @@ const app = new Hono()
   .route("/api/walletTags", walletTags)
   .route("/api/alerts", alerts)
   .route("/api/trades", trades)
-  .route("/api/alerts", alerts)
   .route("/api/alertsToken", alertsToken)
   .route("/webhook", webhook);
 

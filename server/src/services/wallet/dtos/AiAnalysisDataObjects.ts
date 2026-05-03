@@ -1,5 +1,6 @@
 import z from "zod";
 
+let warnedMissingWalletAiAnalysisCacheTable = false;
 
 export const WALLET_AI_ANALYSIS_TIMEOUT_MS = parseInt(process.env.WALLET_AI_ANALYSIS_TIMEOUT_MS || "180000");
 export const WALLET_AI_ANALYSIS_CACHE_TTL_MS = parseInt(process.env.WALLET_AI_ANALYSIS_CACHE_TTL_MS || "10800000");
