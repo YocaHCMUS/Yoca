@@ -1,3 +1,5 @@
+@use '@carbon/react/scss/theme' as *;
+
 /* NewsTab styles */
 .newsTab {
     display: flex;
@@ -22,7 +24,7 @@
         margin: 0;
         font-size: 18px;
         font-weight: 600;
-        color: #161616;
+        color: $text-primary;
     }
 }
 
@@ -30,8 +32,8 @@
     display: inline-flex;
     align-items: center;
     padding: 2px 8px;
-    background: #e8f4f8;
-    color: #0043ce;
+    background: $background-inverse;
+    color: $text-primary;
     font-size: 11px;
     font-weight: 600;
     border-radius: 12px;
@@ -46,10 +48,10 @@
 
 .error {
     padding: 12px 16px;
-    background: #fee5e5;
-    border: 1px solid #ff6b6b;
+    background: $background;
+    border: 1px solid $border-subtle;
     border-radius: 6px;
-    color: #da1e28;
+    color: $text-error;
 
     p {
         margin: 0;
@@ -74,13 +76,13 @@
     min-height: 200px;
     padding: 24px;
     text-align: center;
-    background: #f4f4f4;
+    background: $background-inverse;
     border-radius: 8px;
 
     p {
         margin: 0;
         font-size: 14px;
-        color: #525252;
+        color: $text-secondary;
     }
 }
 
@@ -96,13 +98,13 @@
     justify-content: space-between;
     gap: 16px;
     padding: 12px 0;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid $border-subtle;
     margin-top: 12px;
 }
 
 .paginationInfo {
     font-size: 12px;
-    color: #8d8d8d;
+    color: $text-secondary;
 }
 
 @media (max-width: 1024px) {
