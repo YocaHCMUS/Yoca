@@ -89,11 +89,6 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
             <div className={styles.header}>
                 <div className={styles.headerTitle}>
                     <h2>{tr('token.news.title')}</h2>
-                    {news.cached && (
-                        <span className={styles.cachedBadge} title={tr('token.news.cachedTooltip')}>
-                            {tr('token.news.cached')}
-                        </span>
-                    )}
                 </div>
 
                 <div className={styles.controls}>
