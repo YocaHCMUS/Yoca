@@ -114,7 +114,7 @@
 .cardFooter {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
     margin-top: 4px;
     font-size: 11px;
     color: $text-secondary;
@@ -197,7 +197,7 @@
 }
 
 .contextChartBody {
-    height: 48px;
+    height: 120px;
 }
 
 .expandedMeta {

@@ -1239,6 +1239,7 @@ export const translation = defineTranslation({
       noContext: "Không có dữ liệu ngữ cảnh token trong cache.",
       loadingContext: "Đang tải ngữ cảnh...",
       tokenContextLabel: "Ngữ cảnh cho {{symbol}}",
+      posted: "Bài viết được đăng",
       sourceAlt: "Biểu tượng nguồn tin",
       sourceFallback: "Tin tức",
       openArticle: "Mở bài viết",
