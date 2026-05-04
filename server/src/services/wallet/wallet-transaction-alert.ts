@@ -9,6 +9,7 @@ import {
 } from "@sv/db/alerts";
 import { validate } from "@sv/middlewares/validation";
 import { excluded } from "@sv/util/orm-sql";
+import { statusCode } from "@sv/util/responses";
 import { eq, sql } from "drizzle-orm";
 import {
   EnhancedNativeTransfer,
@@ -58,7 +59,7 @@ async function getTokenPrices(tokenAddresses: string[]) {
 function filterTransfersByScope(
   tx: EnhancedTransaction,
   scope: UserTradingScopeSelect,
-  feePayer: string,
+  signer: string,
 ): {
   tokenTransfers: EnhancedTokenTransfer[];
   nativeTransfers: EnhancedNativeTransfer[];
@@ -86,10 +87,10 @@ function filterTransfersByScope(
   if (scope.direction != "both") {
     const isBuy = scope.direction == "buy";
     tokenTransfers = tokenTransfers.filter((t) =>
-      isBuy ? t.toUserAccount == feePayer : t.fromUserAccount == feePayer,
+      isBuy ? t.toUserAccount == signer : t.fromUserAccount == signer,
     );
     nativeTransfers = nativeTransfers.filter((t) =>
-      isBuy ? t.toUserAccount == feePayer : t.fromUserAccount == feePayer,
+      isBuy ? t.toUserAccount == signer : t.fromUserAccount == signer,
     );
   }
 
@@ -299,6 +300,6 @@ const app = new Hono().post(
 
     await monitorTransaction(payload);
 
-    return c.json({ status: "ok" }, 200);
+    return c.json("ok", statusCode.Ok);
   },
 );
