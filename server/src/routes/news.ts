@@ -1,5 +1,5 @@
 import { validate } from "@sv/middlewares/validation.js";
-import newsWebhookSchema from "@sv/types/news.schema.js";
+import newsWebhookSchema, { newsArticleExpandParamSchema } from "@sv/types/news.schema.js";
 import * as newsService from "@sv/services/news.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { setErr } from "@sv/config/errors.js";
@@ -10,6 +10,21 @@ import { Hono } from "hono";
 // const rateMap = new Map<string, { count: number; windowStart: number }>();
 
 const app = new Hono()
+    .get("/articles/:contentHash/expand", validate("param", newsArticleExpandParamSchema), async (c) => {
+        try {
+            const { contentHash } = c.req.valid("param");
+            const expansion = await newsService.getExpandedNewsArticle(contentHash);
+
+            if (!expansion) {
+                return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+            }
+
+            return c.json({ status: "ok", ...expansion }, statusCode.Ok);
+        } catch (err) {
+            console.error("[news expand] error:", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
     .post("/webhook", validate("json", newsWebhookSchema), async (c) => {
         try {
             const body = c.req.valid("json");

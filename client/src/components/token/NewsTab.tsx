@@ -1,6 +1,6 @@
 /**
  * NewsTab Component
- * Displays news articles for a token with refresh, filtering, and pagination
+ * Displays news articles for a token with refresh, filtering, pagination, and inline expansion.
  */
 
 import { useEffect, useState } from 'react';
@@ -9,7 +9,8 @@ import { Button, SkeletonText } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { NewsCard } from './NewsCard';
 import { useNewsFeed } from '@/hooks/useNewsFeed';
-import type { TokenNewsQuery } from '@/types/news';
+import { getExpandedNewsArticle } from '@/services/news';
+import type { NewsArticle, NewsArticleExpansion, TokenNewsQuery } from '@/types/news';
 import styles from './NewsTab.module.scss';
 
 interface NewsTabProps {
@@ -26,11 +27,20 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
     const news = useNewsFeed(query);
     const [page, setPage] = useState(0);
     const [filteredEntries, setFilteredEntries] = useState(news.entries);
+    const [expandedContentHash, setExpandedContentHash] = useState<string | null>(null);
+    const [expandedArticles, setExpandedArticles] = useState<Record<string, NewsArticleExpansion | null>>({});
+    const [loadingContentHash, setLoadingContentHash] = useState<string | null>(null);
 
     useEffect(() => {
         setFilteredEntries(news.entries);
         setPage(0);
     }, [news.entries]);
+
+    useEffect(() => {
+        setExpandedContentHash(null);
+        setExpandedArticles({});
+        setLoadingContentHash(null);
+    }, [address, symbol, name]);
 
     const totalPages = Math.ceil(filteredEntries.length / ARTICLES_PER_PAGE);
     const paginatedEntries = filteredEntries.slice(
@@ -41,6 +51,28 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
     const handleLoadMore = () => {
         if (page < totalPages - 1) {
             setPage(page + 1);
+        }
+    };
+
+    const handleToggleExpand = async (article: NewsArticle) => {
+        if (!article.contentHash) return;
+
+        if (expandedContentHash === article.contentHash) {
+            setExpandedContentHash(null);
+            setLoadingContentHash(null);
+            return;
+        }
+
+        setExpandedContentHash(article.contentHash);
+
+        if (!expandedArticles[article.contentHash]) {
+            setLoadingContentHash(article.contentHash);
+            const expansion = await getExpandedNewsArticle(article.contentHash);
+            setExpandedArticles((prev) => ({
+                ...prev,
+                [article.contentHash as string]: expansion,
+            }));
+            setLoadingContentHash(null);
         }
     };
 
@@ -116,7 +148,14 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
                 <>
                     <div className={styles.articlesGrid}>
                         {paginatedEntries.map((article, idx) => (
-                            <NewsCard key={article.contentHash || idx} article={article} />
+                            <NewsCard
+                                key={article.contentHash || idx}
+                                article={article}
+                                isExpanded={expandedContentHash === article.contentHash}
+                                isLoadingExpansion={loadingContentHash === article.contentHash}
+                                expansion={article.contentHash ? expandedArticles[article.contentHash] ?? null : null}
+                                onToggleExpand={handleToggleExpand}
+                            />
                         ))}
                     </div>
 

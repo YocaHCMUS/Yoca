@@ -1,7 +1,9 @@
 import crypto from "crypto";
 import { db } from "@sv/db/index.js";
-import { newsBatches, newsArticles } from "@sv/db/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { newsBatches, newsArticles, tokenMarketChartDaily } from "@sv/db/schema.js";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
+import type { NewsArticleExpansion, NewsTokenContext } from "@sv/types/news.types.js";
+import { excluded } from "@sv/util/orm-sql.js";
 
 const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
     "http://localhost:5678/webhook/latest-news";
@@ -51,6 +53,62 @@ function extractEntriesFromN8n(respBody: any) {
     return [];
 }
 
+function normalizeExtraSnippets(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter((snippet): snippet is string => typeof snippet === "string" && snippet.trim().length > 0);
+}
+
+function toContextPayload(rows: Array<{ unixTimestampMs: number; price: number; marketCap: number }>): NewsTokenContext {
+    return {
+        labels: rows.map((row) => new Date(row.unixTimestampMs).toISOString().slice(0, 10)),
+        priceSeries: rows.map((row) => Number(row.price)),
+        marketCapSeries: rows.map((row) => Number(row.marketCap)),
+    };
+}
+
+async function getCachedTokenHistoricalContext(tokenAddress: string, publishedAt: Date | null, days = 5) {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const halfWindow = Math.floor(days / 2);
+
+    let rows = [] as Array<{ unixTimestampMs: number; price: number; marketCap: number }>;
+
+    if (publishedAt) {
+        rows = await db
+            .select({
+                unixTimestampMs: tokenMarketChartDaily.unixTimestampMs,
+                price: tokenMarketChartDaily.price,
+                marketCap: tokenMarketChartDaily.marketCap,
+            })
+            .from(tokenMarketChartDaily)
+            .where(
+                and(
+                    eq(tokenMarketChartDaily.address, tokenAddress),
+                    gte(tokenMarketChartDaily.unixTimestampMs, publishedAt.getTime() - halfWindow * dayMs),
+                    lte(tokenMarketChartDaily.unixTimestampMs, publishedAt.getTime() + halfWindow * dayMs),
+                ),
+            )
+            .orderBy(tokenMarketChartDaily.unixTimestampMs);
+    }
+
+    if (rows.length === 0) {
+        rows = await db
+            .select({
+                unixTimestampMs: tokenMarketChartDaily.unixTimestampMs,
+                price: tokenMarketChartDaily.price,
+                marketCap: tokenMarketChartDaily.marketCap,
+            })
+            .from(tokenMarketChartDaily)
+            .where(eq(tokenMarketChartDaily.address, tokenAddress))
+            .orderBy(desc(tokenMarketChartDaily.unixTimestampMs))
+            .limit(days)
+            .then((latestRows) => latestRows.reverse()) as Array<{ unixTimestampMs: number; price: number; marketCap: number }>;
+    }
+
+    if (rows.length === 0) return null;
+
+    return toContextPayload(rows);
+}
+
 export async function storeFilteredNewsBatch(
     address: string,
     symbol: string,
@@ -80,6 +138,7 @@ export async function storeFilteredNewsBatch(
             publishedAt: parseNewsTimestamp(e.timestamp),
             sourceName: (e.meta && (e.meta as any).source) || null,
             faviconUrl: (e.meta && (e.meta as any).favicon) || null,
+            extraSnippets: normalizeExtraSnippets(e.extra_snippets),
             contentHash
         };
     });
@@ -88,7 +147,19 @@ export async function storeFilteredNewsBatch(
         return { received: 0, stored: 0, batchId };
     }
 
-    await db.insert(newsArticles).values(rows).onConflictDoNothing();
+    await db.insert(newsArticles).values(rows).onConflictDoUpdate({
+        target: [newsArticles.contentHash],
+        set: {
+            batchId: excluded(newsArticles.batchId),
+            title: excluded(newsArticles.title),
+            url: excluded(newsArticles.url),
+            description: excluded(newsArticles.description),
+            publishedAt: excluded(newsArticles.publishedAt),
+            sourceName: excluded(newsArticles.sourceName),
+            faviconUrl: excluded(newsArticles.faviconUrl),
+            extraSnippets: excluded(newsArticles.extraSnippets),
+        },
+    });
 
     const storedRows = await db
         .select()
@@ -96,6 +167,51 @@ export async function storeFilteredNewsBatch(
         .where(eq(newsArticles.batchId, batchId));
 
     return { received: rows.length, stored: storedRows.length, batchId };
+}
+
+export async function getExpandedNewsArticle(contentHash: string): Promise<NewsArticleExpansion | null> {
+    const rows = await db
+        .select({
+            contentHash: newsArticles.contentHash,
+            title: newsArticles.title,
+            url: newsArticles.url,
+            description: newsArticles.description,
+            publishedAt: newsArticles.publishedAt,
+            sourceName: newsArticles.sourceName,
+            faviconUrl: newsArticles.faviconUrl,
+            extraSnippets: newsArticles.extraSnippets,
+            tokenAddress: newsBatches.address,
+            tokenSymbol: newsBatches.symbol,
+            tokenName: newsBatches.name,
+        })
+        .from(newsArticles)
+        .innerJoin(newsBatches, eq(newsArticles.batchId, newsBatches.id))
+        .where(eq(newsArticles.contentHash, contentHash))
+        .limit(1);
+
+    const article = rows[0];
+    if (!article) return null;
+
+    const context = await getCachedTokenHistoricalContext(article.tokenAddress, article.publishedAt ?? null, 5);
+
+    return {
+        article: {
+            contentHash: article.contentHash,
+            title: article.title,
+            url: article.url,
+            description: article.description ?? null,
+            publishedAt: article.publishedAt ? article.publishedAt.toISOString() : null,
+            sourceName: article.sourceName ?? null,
+            faviconUrl: article.faviconUrl ?? null,
+        },
+        token: {
+            address: article.tokenAddress,
+            symbol: article.tokenSymbol,
+            name: article.tokenName,
+        },
+        extraSnippets: normalizeExtraSnippets(article.extraSnippets),
+        context,
+    };
 }
 
 async function fetchFromN8n(address: string, symbol: string, name: string) {

@@ -5,7 +5,12 @@
  */
 
 import client from '@/api/main';
-import type { NewsFilterResult, TokenNewsQuery } from '@/types/news';
+import type {
+    NewsArticleExpansion,
+    NewsArticleExpansionResult,
+    NewsFilterResult,
+    TokenNewsQuery,
+} from '@/types/news';
 
 /**
  * Fetch filtered news for a token.
@@ -22,6 +27,7 @@ export async function getNewsForToken(query: TokenNewsQuery): Promise<NewsFilter
                 address: query.address,
                 symbol: query.symbol,
                 name: query.name,
+                entries: [],
             },
         });
 
@@ -38,5 +44,32 @@ export async function getNewsForToken(query: TokenNewsQuery): Promise<NewsFilter
     } catch (err) {
         console.error('[news service] error fetching news:', err);
         return { cached: false, entries: [] };
+    }
+}
+
+export async function getExpandedNewsArticle(contentHash: string): Promise<NewsArticleExpansion | null> {
+    try {
+        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN || window.location.origin;
+        const resp = await fetch(
+            `${apiDomain}/api/news/articles/${encodeURIComponent(contentHash)}/expand`,
+            {
+                credentials: 'include',
+            },
+        );
+
+        if (!resp.ok) {
+            return null;
+        }
+
+        const data = (await resp.json()) as NewsArticleExpansionResult;
+        return {
+            article: data.article,
+            token: data.token,
+            extraSnippets: data.extraSnippets ?? [],
+            context: data.context ?? null,
+        };
+    } catch (err) {
+        console.error('[news service] error fetching expanded article:', err);
+        return null;
     }
 }
