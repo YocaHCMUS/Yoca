@@ -192,24 +192,32 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
                             <h4 className={styles.sectionTitle}>{tr('token.news.contextTitle')}</h4>
 
                             {context && context.labels.length > 0 ? (
-                                <div className={styles.contextGrid}>
-                                    <div className={styles.contextChart}>
-                                        <div className={styles.contextChartHeader}>{tr('token.news.priceChartTitle')}</div>
-                                        <div className={styles.contextChartBody}>
-                                            <div style={{ width: '100%', height: 120 }}>
-                                                <ReactECharts option={buildOption(context?.labels ?? null, priceSeries, '#0072c3')} style={{ width: '100%', height: '100%' }} notMerge={true} lazyUpdate={true} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.contextChart}>
-                                        <div className={styles.contextChartHeader}>{tr('token.news.marketCapChartTitle')}</div>
-                                        <div className={styles.contextChartBody}>
-                                            <div style={{ width: '100%', height: 120 }}>
-                                                <ReactECharts option={buildOption(context?.labels ?? null, marketCapSeries, '#945200')} style={{ width: '100%', height: '100%' }} notMerge={true} lazyUpdate={true} />
-                                            </div>
+                                <div className={styles.contextChart}>
+                                    <div className={styles.contextChartHeader}>{tr('token.news.priceChartTitle')}</div>
+                                    <div className={styles.contextChartBody}>
+                                        <div style={{ width: '100%', height: 120 }}>
+                                            <ReactECharts option={buildOption(context?.labels ?? null, priceSeries, '#0072c3')} style={{ width: '100%', height: '100%' }} notMerge={true} lazyUpdate={true} />
                                         </div>
                                     </div>
                                 </div>
+                                // <div className={styles.contextGrid}>
+                                //     <div className={styles.contextChart}>
+                                //         <div className={styles.contextChartHeader}>{tr('token.news.priceChartTitle')}</div>
+                                //         <div className={styles.contextChartBody}>
+                                //             <div style={{ width: '100%', height: 120 }}>
+                                //                 <ReactECharts option={buildOption(context?.labels ?? null, priceSeries, '#0072c3')} style={{ width: '100%', height: '100%' }} notMerge={true} lazyUpdate={true} />
+                                //             </div>
+                                //         </div>
+                                //     </div>
+                                //     <div className={styles.contextChart}>
+                                //         <div className={styles.contextChartHeader}>{tr('token.news.marketCapChartTitle')}</div>
+                                //         <div className={styles.contextChartBody}>
+                                //             <div style={{ width: '100%', height: 120 }}>
+                                //                 <ReactECharts option={buildOption(context?.labels ?? null, marketCapSeries, '#945200')} style={{ width: '100%', height: '100%' }} notMerge={true} lazyUpdate={true} />
+                                //             </div>
+                                //         </div>
+                                //     </div>
+                                // </div>
                             ) : (
                                 <p className={styles.mutedText}>{tr('token.news.noContext')}</p>
                             )}

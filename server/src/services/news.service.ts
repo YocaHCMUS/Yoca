@@ -4,6 +4,7 @@ import { newsBatches, newsArticles, tokenMarketChartDaily } from "@sv/db/schema.
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import type { NewsArticleExpansion, NewsTokenContext } from "@sv/types/news.types.js";
 import { excluded } from "@sv/util/orm-sql.js";
+import { getTokenHistoricalData } from "./tokens/token-history";
 
 const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
     "http://localhost:5678/webhook/latest-news";
@@ -91,17 +92,23 @@ async function getCachedTokenHistoricalContext(tokenAddress: string, publishedAt
     }
 
     if (rows.length === 0) {
-        rows = await db
-            .select({
-                unixTimestampMs: tokenMarketChartDaily.unixTimestampMs,
-                price: tokenMarketChartDaily.price,
-                marketCap: tokenMarketChartDaily.marketCap,
-            })
-            .from(tokenMarketChartDaily)
-            .where(eq(tokenMarketChartDaily.address, tokenAddress))
-            .orderBy(desc(tokenMarketChartDaily.unixTimestampMs))
-            .limit(days)
-            .then((latestRows) => latestRows.reverse()) as Array<{ unixTimestampMs: number; price: number; marketCap: number }>;
+        const historicalData = await getTokenHistoricalData(tokenAddress, 35);
+
+        if (historicalData && historicalData.length > 0) {
+            rows = await db
+                .insert(tokenMarketChartDaily)
+                .values(
+                    historicalData.map((point) => ({
+                        address: tokenAddress,
+                        unixTimestampMs: point.timestampMs,
+                        price: point.price ?? 0,
+                        marketCap: point.marketCap ?? 0,
+                        totalVolume: point.volume ?? 0,
+                        unixUpdatedAtMs: Date.now(),
+                    }))
+                )
+                .returning();
+        }
     }
 
     if (rows.length === 0) return null;
@@ -166,7 +173,7 @@ export async function storeFilteredNewsBatch(
         .from(newsArticles)
         .where(eq(newsArticles.batchId, batchId));
 
-    return { received: rows.length, stored: storedRows.length, batchId };
+    return { received: rows.length, stored: storedRows.length, batchId, storedRows: storedRows };
 }
 
 export async function getExpandedNewsArticle(contentHash: string): Promise<NewsArticleExpansion | null> {
@@ -276,6 +283,6 @@ export async function getOrFetchNews(
 
     // fetch from n8n and store
     const entries = await fetchFromN8n(address, symbol, name);
-    await storeFilteredNewsBatch(address, symbol, name, entries);
-    return { cached: false, entries };
+    const { received, stored, batchId, storedRows } = await storeFilteredNewsBatch(address, symbol, name, entries);
+    return { cached: false, entries: storedRows };
 }
