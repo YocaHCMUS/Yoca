@@ -100,6 +100,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 12px;
+    grid-auto-rows: minmax(0, auto);
 }
 
 .pagination {
@@ -136,6 +137,10 @@
 
     .articlesGrid {
         grid-template-columns: 1fr;
+    }
+
+    .articlesGrid>* {
+        grid-column: 1 / -1;
     }
 
     .pagination {

@@ -112,6 +112,8 @@ const ERROR = {
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
   NOT_FOUND: "Not found.",
+  RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -1221,6 +1223,16 @@ export const translation = {
       showing: "Showing",
       of: "of",
       loadMore: "Load More",
+      expand: "Expand",
+      collapse: "Collapse",
+      snippetsTitle: "Extra snippets",
+      contextTitle: "Token context",
+      priceChartTitle: "Price",
+      marketCapChartTitle: "Market cap",
+      noSnippets: "No extra snippets available.",
+      noContext: "No cached token context available.",
+      loadingContext: "Loading context...",
+      tokenContextLabel: "Context for {{symbol}}",
       sourceAlt: "News source favicon",
       sourceFallback: "News",
       openArticle: "Open article",
