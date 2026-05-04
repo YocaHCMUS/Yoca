@@ -1134,6 +1134,7 @@ export const translation = {
       noContext: "No cached token context available.",
       loadingContext: "Loading context...",
       tokenContextLabel: "Context for {{symbol}}",
+      posted: "Article posted",
       sourceAlt: "News source favicon",
       sourceFallback: "News",
       openArticle: "Open article",
