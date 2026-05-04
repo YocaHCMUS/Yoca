@@ -22,7 +22,7 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
     const { tr, fmt } = useLocalization();
     const publishedAt = article.publishedAt ? new Date(article.publishedAt) : null;
     const publishedDate = publishedAt && !Number.isNaN(publishedAt.getTime())
-        ? fmt.datetime.datetime(publishedAt)
+        ? fmt.datetime.date(publishedAt)
         : null;
 
     const context = expansion?.context ?? article.context ?? null;
@@ -66,8 +66,9 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
                 axisLabel: {
                     formatter: (value: string) => {
                         const date = Date.parse(value);
-                        return fmt.datetime.datetime(date); // for side effect of locale formatting
+                        return fmt.datetime.date(date); // for side effect of locale formatting
                     }
+
                 }
             },
             yAxis: {
@@ -122,7 +123,7 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
                 formatter: (params: any) => {
                     const point = Array.isArray(params) ? params[0] : params;
                     // const label = point?.axisValue ? datetimeFormatter.format(new Date(Date.parse(point.axisValue))) : '';
-                    const label = point?.axisValue ? fmt.datetime.datetime(Date.parse(point.axisValue)) : '';
+                    const label = point?.axisValue ? fmt.datetime.date(Date.parse(point.axisValue)) : '';
                     const value = typeof point?.data === 'number' ? point.data : point?.value;
                     return `${label}<br/>${fmt.num.compact.currency(value) ?? '-'}`;
                 },
