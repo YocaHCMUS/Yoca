@@ -4,11 +4,11 @@ import { WinrateChart } from "@/components/charts/Winrate";
 import RollingProfitAndLoss from "@/components/charts/RollingProfitAndLoss/RollingProfitAndLoss";
 import React from "react";
 import styles from "./GeneralTab.module.scss";
-import type WalletComparisionProp from "./WalletComparisionProp";
+import type WalletComparisonProp from "./WalletComparisonProp";
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
-export const RiskTab: React.FC<WalletComparisionProp> = ({
+export const RiskTab: React.FC<WalletComparisonProp> = ({
   walletAddresses,
   fetchEnabled = true,
 }) => {

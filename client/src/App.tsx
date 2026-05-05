@@ -13,7 +13,7 @@ import TokenOverviewPage from "@/pages/token-overview";
 import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
-import WalletsComparisionPage from "@/pages/walletsComparision";
+import WalletsComparisonPage from "@/pages/walletsComparison";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
 
@@ -51,8 +51,8 @@ function App() {
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
-          path="/comparision/wallets"
-          element={<WalletsComparisionPage />}
+          path="/comparison/wallets"
+          element={<WalletsComparisonPage />}
         />
         <Route
           path="/secret-admin-dashboard"

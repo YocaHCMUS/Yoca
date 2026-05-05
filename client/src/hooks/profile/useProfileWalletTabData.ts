@@ -21,7 +21,7 @@ const EMPTY_WALLET_DATA: ProfileWalletsData = {
     linkedWalletRows: [],
     selectedComparisonWalletIds: [],
     walletDetailRouteTemplate: "/wallets/:walletId",
-    comparisonTargetRoute: "/comparision/wallets",
+    comparisonTargetRoute: "/comparison/wallets",
 };
 
 function normalizePeriod(period: TimePeriod): WalletOverviewPeriodKey {
@@ -110,7 +110,7 @@ export function useProfileWalletTabData({ walletAddresses, period }: UseProfileW
                     linkedWalletRows,
                     selectedComparisonWalletIds: linkedWalletRows.slice(0, 2).map((row) => row.walletId),
                     walletDetailRouteTemplate: "/wallets/:walletId",
-                    comparisonTargetRoute: "/comparision/wallets",
+                    comparisonTargetRoute: "/comparison/wallets",
                 });
             } catch (loadError) {
                 if (!isActive) {

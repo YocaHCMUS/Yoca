@@ -1,7 +1,7 @@
 import { TabContainer } from "@/components/tabContainer/tabContainer";
-import { GeneralTab } from "@/components/wallet/WalletComparision/GeneralTab";
-import { HoldingTab } from "@/components/wallet/WalletComparision/HoldingTab";
-import { RiskTab } from "@/components/wallet/WalletComparision/RiskTab";
+import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
+import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
+import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TranslationKeyPath } from "@/config/localization";
@@ -149,7 +149,7 @@ function WalletComparisonMainContent({
   );
 }
 
-export default function WalletsComparisionPage() {
+export default function WalletsComparisonPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */

@@ -2,7 +2,7 @@
 
 Tài liệu review toàn bộ API endpoint phục vụ **lấy data ví** và **phân tích hành vi ví, danh mục, số dư, PnL, token holding** cho hai đường dẫn:
 - **`/wallets/:address`** – Trang chi tiết một ví
-- **`/comparision/wallets`** – Trang so sánh nhiều ví
+- **`/comparison/wallets`** – Trang so sánh nhiều ví
 
 ---
 
@@ -259,7 +259,7 @@ GET /api/charts/drawdown?period=90D&wallets=addr1,addr2
 | Top Exchange | ExchangeComparison | GET /api/charts/exchanges | timePeriod (không có wallet) | **Mock, không theo ví** |
 | Top Counterparties | CounterpartyActivity | GET /api/charts/counterparties | timePeriod, wallets=[address] | Thật (1 ví) |
 
-### 5.2. Trang `/comparision/wallets`
+### 5.2. Trang `/comparison/wallets`
 
 | Tab | Component | API dùng | Params | Ghi chú |
 |-----|-----------|----------|--------|--------|

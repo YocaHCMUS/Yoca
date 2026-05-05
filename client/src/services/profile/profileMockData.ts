@@ -168,7 +168,7 @@ export const profileMockApiPayload: ProfilePageData = {
         ],
         selectedComparisonWalletIds: ["w1", "w2"],
         walletDetailRouteTemplate: "/wallets/:walletId",
-        comparisonTargetRoute: "/comparision/wallets",
+        comparisonTargetRoute: "/comparison/wallets",
     },
     activity: {
         leftNavItems: [
