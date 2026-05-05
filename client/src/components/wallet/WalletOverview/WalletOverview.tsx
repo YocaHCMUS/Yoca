@@ -322,7 +322,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleCompare = () => {
-        navigate(`/comparison/wallets?wallets=${encodeURIComponent(walletAddress)}`);
+        window.location.assign(`/comparison/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
     const handleOpenFirstFunder = (funderAddress: string) => {
