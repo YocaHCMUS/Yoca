@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import styles from './NewsCard.module.scss';
 import type { NewsArticle, NewsArticleExpansion } from '@/types/news';
+import { EChartsOption } from 'echarts';
 
 interface NewsCardProps {
     article: NewsArticle;
@@ -48,25 +49,18 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
         if (bestIdx >= 0) markerLabel = context.labels[bestIdx];
     }
 
-    const datetimeFormatter = new Intl.DateTimeFormat(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-
     const buildOption = (labels: string[] | null, data: (number | null)[] | null, color = '#0072c3') => {
         const serie = (data ?? []).map((v) => (v === null || v === undefined ? null : v));
         const x = labels ?? serie.map((_, i) => String(i));
-        const option: any = {
+        const option: EChartsOption = {
             grid: { left: 4, right: 4, top: 18, bottom: 8, containLabel: true },
             xAxis: {
                 type: 'category',
                 data: x,
                 axisLabel: {
                     formatter: (value: string) => {
-                        const date = Date.parse(value);
-                        return fmt.datetime.date(date); // for side effect of locale formatting
+                        // const date = Date.parse(value);
+                        return fmt.datetime.date(value); // for side effect of locale formatting
                     }
 
                 }
@@ -76,7 +70,7 @@ export function NewsCard({ article, isExpanded, isLoadingExpansion, expansion, o
                 scale: true,
                 splitLine: { show: false },
                 axisLabel: {
-                    formatter: (value: number) => (fmt.num.compact.currency(value) as string),
+                    formatter: (value: number) => (fmt.num.compact.currency(value)),
                 },
             },
             series: [

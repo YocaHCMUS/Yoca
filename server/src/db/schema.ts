@@ -1208,8 +1208,8 @@ export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
-export type newsBatchInsert = typeof newsBatches.$inferInsert;
-export type newsArticleInsert = typeof newsArticles.$inferInsert;
+export type NewsBatchInsert = typeof newsBatches.$inferInsert;
+export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #endregion

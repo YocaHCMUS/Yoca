@@ -36,7 +36,7 @@ export async function getNewsForToken(query: TokenNewsQuery): Promise<NewsFilter
             return { cached: false, entries: [] };
         }
 
-        const data = (await resp.json()) as any;
+        const data = (await resp.json());
         return {
             cached: data.cached ?? false,
             entries: data.entries ?? [],
@@ -49,13 +49,11 @@ export async function getNewsForToken(query: TokenNewsQuery): Promise<NewsFilter
 
 export async function getExpandedNewsArticle(contentHash: string): Promise<NewsArticleExpansion | null> {
     try {
-        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN || window.location.origin;
-        const resp = await fetch(
-            `${apiDomain}/api/news/articles/${encodeURIComponent(contentHash)}/expand`,
-            {
-                credentials: 'include',
-            },
-        );
+        const resp = await client.api.news.articles[':contentHash'].expand.$get({
+            param: {
+                contentHash: encodeURIComponent(contentHash),
+            }
+        });
 
         if (!resp.ok) {
             return null;

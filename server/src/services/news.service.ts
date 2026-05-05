@@ -5,11 +5,7 @@ import { and, desc, eq, gte, lte } from "drizzle-orm";
 import type { NewsArticleExpansion, NewsTokenContext } from "@sv/types/news.types.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import { getTokenHistoricalData } from "./tokens/token-history";
-
-const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
-    "http://localhost:5678/webhook/latest-news";
-
-const NEWS_CACHE_TTL_MS = process.env.NEWS_CACHE_TTL_MS ? parseInt(process.env.NEWS_CACHE_TTL_MS) : 3 * 60 * 60 * 1000; // 3 hours
+import { NEWS_CACHE_TTL_MS, N8N_LATEST_NEWS_URL } from "@sv/config/constants.js";
 
 function parseNewsTimestamp(value: unknown): Date | null {
     if (value == null || value === "") return null;
@@ -62,8 +58,8 @@ function normalizeExtraSnippets(value: unknown): string[] {
 function toContextPayload(rows: Array<{ unixTimestampMs: number; price: number; marketCap: number }>): NewsTokenContext {
     return {
         labels: rows.map((row) => new Date(row.unixTimestampMs).toISOString().slice(0, 10)),
-        priceSeries: rows.map((row) => Number(row.price)),
-        marketCapSeries: rows.map((row) => Number(row.marketCap)),
+        priceSeries: rows.map((row) => row.price),
+        marketCapSeries: rows.map((row) => row.marketCap),
     };
 }
 
@@ -127,7 +123,7 @@ export async function storeFilteredNewsBatch(
         .values({ address, symbol, name })
         .returning();
 
-    const batchId = (batch as any).id as number;
+    const batchId = (batch as any).id;
 
     const rows = entries.map((e) => {
         const title = (e.title as string) || "";
@@ -251,7 +247,7 @@ async function getCachedNewsBatch(address: string) {
         .orderBy(desc(newsBatches.createdAt))
         .limit(1);
 
-    const latest = rows[0] as any | undefined;
+    const latest = rows[0];
     if (latest && latest.createdAt) {
         const age = Date.now() - new Date(latest.createdAt).getTime();
         if (age < NEWS_CACHE_TTL_MS) {
