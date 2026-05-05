@@ -171,7 +171,11 @@ export default function WalletsComparisonPage() {
     }
   }, [selectedWallets.length]);
 
-  // Pre-populate from ?wallets=addr1,addr2 query param
+  const hasInitializedRef = useRef(false);
+
+  // Pre-populate from ?wallets=addr1,addr2 query param.
+  // Depends on searchParams so that navigating here from a different wallet
+  // (Back → Compare on a new wallet) correctly resets the list.
   useEffect(() => {
     const param = searchParams.get("wallets");
     if (!param) return;
@@ -181,8 +185,9 @@ export default function WalletsComparisonPage() {
       .filter(Boolean);
     if (addresses.length > 0) {
       setSelectedWallets(addresses);
+      hasInitializedRef.current = true;
     }
-  }, []); // run only once on mount
+  }, [searchParams]);
 
   const exportContainerClassName = styles.exportCaptureContainer;
 
