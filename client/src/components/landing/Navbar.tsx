@@ -3,6 +3,8 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import appLogo from "../../assets/app-logo.png";
 import { GRID_MAX_WIDTH, btnPrimaryBase, btnPrimaryEnter, btnPrimaryLeave } from "./tokens";
+import { SignInModal } from "../auth/SignInModal";
+import { SignUpModal } from "../auth/SignUpModal";
 
 const navLinks = [
   { label: "Products", href: "#products" },
@@ -24,6 +26,8 @@ export function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
@@ -146,11 +150,12 @@ export function LandingNavbar() {
                   </li>
                 ))}
                 <li style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "0.75rem" }}>
-                  <Link
-                    to="/auth"
+                  <button
+                    type="button"
                     style={{
                       display: "block",
                       textAlign: "center",
+                      width: "100%",
                       padding: "0.75rem",
                       borderRadius: "9999px",
                       border: "1px solid rgba(255,255,255,0.15)",
@@ -158,20 +163,22 @@ export function LandingNavbar() {
                       fontWeight: 500,
                       color: "#f8fafc",
                       textDecoration: "none",
+                      background: "none",
+                      cursor: "pointer",
                     }}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={() => { setMobileOpen(false); setIsSignInOpen(true); }}
                   >
                     Log In
-                  </Link>
-                  <Link
-                    to="/auth"
+                  </button>
+                  <button
+                    type="button"
                     style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
                     onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
                     onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={() => { setMobileOpen(false); setIsSignUpOpen(true); }}
                   >
                     Sign Up
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -253,24 +260,27 @@ export function LandingNavbar() {
           {/* RIGHT — Auth actions */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
             {/* "Log In" text — only shown when there's enough space (≥ 900px approx) */}
-            <LogInLink />
-            <Link
-              to="/auth"
-              style={btnPrimaryBase}
+            <LogInLink onOpen={() => setIsSignInOpen(true)} />
+            <button
+              type="button"
+              style={{ ...btnPrimaryBase, border: "none", cursor: "pointer" }}
               onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
               onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+              onClick={() => setIsSignUpOpen(true)}
             >
               Sign Up
-            </Link>
+            </button>
           </div>
         </div>
       )}
+      <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+      <SignUpModal open={isSignUpOpen} onClose={() => setIsSignUpOpen(false)} />
     </header>
   );
 }
 
 /** Renders "Log In" only on wide viewports (≥ 900 px) via a hidden span trick */
-function LogInLink() {
+function LogInLink({ onOpen }: { onOpen: () => void }) {
   const [show, setShow] = useState(true);
   useEffect(() => {
     const check = () => setShow(window.innerWidth >= 900);
@@ -281,8 +291,8 @@ function LogInLink() {
 
   if (!show) return null;
   return (
-    <Link
-      to="/auth"
+    <button
+      type="button"
       style={{
         fontSize: "0.875rem",
         fontWeight: 500,
@@ -291,11 +301,15 @@ function LogInLink() {
         whiteSpace: "nowrap",
         padding: "12px 20px",
         transition: "color 0.2s ease",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
       onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+      onClick={onOpen}
     >
       Log In
-    </Link>
+    </button>
   );
 }
