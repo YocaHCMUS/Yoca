@@ -12,3 +12,5 @@ export * from "./TopHolders";
 export * from "./TopHoldersTable";
 
 export * from "./TokenTabs";
+export * from "./NewsTab";
+export * from "./NewsCard";

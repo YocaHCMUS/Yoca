@@ -11,13 +11,14 @@ interface TokenTabsProps {
     address: string;
 }
 
-const TAB_IDS = ["overview", "markets"];
+const TAB_IDS = ["overview", "markets", "news"];
 
 export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabsProps) {
     const { tr } = useLocalization();
     const tabs = [
         { id: "overview", label: tr("token.tabs.overview") },
         { id: "markets", label: tr("token.tabs.markets") },
+        // { id: "news", label: "News" },
     ];
     const selectedIndex = TAB_IDS.indexOf(activeTab);
 

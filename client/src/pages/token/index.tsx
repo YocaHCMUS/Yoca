@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import {
   MarketStats,
+  NewsTab,
   PoolSelector,
   RecentTransactions,
   TokenChart,
@@ -231,6 +232,8 @@ export default function TokenPage() {
             />
 
             <TopHolders holders={holders} holdersInfo={holdersInfo} />
+
+            <NewsTab address={address} symbol={meta.symbol} name={meta.name} />
           </div>
         </div>
 

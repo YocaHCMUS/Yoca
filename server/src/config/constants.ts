@@ -134,3 +134,7 @@ export const WALLET_AI_ANALYSIS_DEBUG = readBooleanEnv(
   "WALLET_AI_ANALYSIS_DEBUG",
   false,
 );
+
+export const NEWS_CACHE_TTL_MS = readNumberEnv("NEWS_CACHE_TTL_MS", 3 * 60 * 60 * 1000); // 1 hour
+export const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
+  "http://localhost:5678/webhook/latest-news";

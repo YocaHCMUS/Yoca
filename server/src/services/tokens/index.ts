@@ -3,7 +3,6 @@ export {
   getDailyTokenMarketChart,
   getHourlyTokenMarketChart,
 } from "./token-chart.js";
-export { getTokenHistoricalData } from "./token-history.js";
 export { getTopTokenHolders } from "./token-holders.js";
 export {
   getTokenDetails,
