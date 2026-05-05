@@ -408,6 +408,11 @@ export function PageWrapper({
       <Content
         id="main-content"
         className={isAnyExtraPanelOpen ? styles.contentDimmed : ""}
+        style={
+          {
+            "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",
+          } as React.CSSProperties
+        }
         onClick={
           isAnyExtraPanelOpen
             ? () => {
