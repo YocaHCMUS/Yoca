@@ -1,9 +1,9 @@
-# Wallet Page Endpoint Trace (Overview + Comparision)
+# Wallet Page Endpoint Trace (Overview + Comparison)
 
 ## Purpose
 This document maps where wallet-related API endpoints are used for:
 - Wallet overview page (`/wallets/:address`)
-- Wallet comparison page (`/comparision/wallets`)
+- Wallet comparison page (`/Comparison/wallets`)
 
 It traces each flow from page/component -> client API caller -> server route -> backend service.
 
@@ -12,7 +12,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
 ### Client routes
 - `client/src/App.tsx`
   - `/wallets/:address` -> `WalletPage`
-  - `/comparision/wallets` -> `WalletsComparisionPage`
+  - `/Comparison/wallets` -> `WalletsComparisonPage`
 
 ### Server API mount points
 - `server/src/main.ts`
@@ -28,7 +28,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
   - Renders `BalanceChart` and `PnLChart`
 - `client/src/components/wallet/WalletOverview/WalletOverview.tsx`
   - Loads overview and intelligence data
-  - Compare button navigates to `/comparision/wallets?wallets=<address>`
+  - Compare button navigates to `/Comparison/wallets?wallets=<address>`
 
 ### Endpoints used by wallet overview page
 
@@ -125,7 +125,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
 ## 3) Wallet Comparison Page Endpoint Flow
 
 ### Entry components
-- `client/src/pages/walletsComparision/index.tsx`
+- `client/src/pages/walletsComparison/index.tsx`
   - Reads `?wallets=` query param and sets `selectedWallets`
   - Renders tabs:
     - `GeneralTab`
@@ -134,7 +134,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
 
 ### Comparison page endpoints by tab
 
-### GeneralTab (`client/src/components/wallet/WalletComparision/GeneralTab.tsx`)
+### GeneralTab (`client/src/components/wallet/WalletComparison/GeneralTab.tsx`)
 1. Balance comparison chart
 - Endpoint: `GET /api/charts/balance`
 - Client caller: `fetchBalanceTrend(...)`
@@ -164,7 +164,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
 - Route file: `server/src/routes/charts/trading-volume-per-transaction.route.ts`
 - Current backend source: mock generator (`generateTradingVolumePerTransaction`)
 
-### HoldingTab (`client/src/components/wallet/WalletComparision/HoldingTab.tsx`)
+### HoldingTab (`client/src/components/wallet/WalletComparison/HoldingTab.tsx`)
 1. Asset distribution chart
 - Endpoint: `GET /api/charts/distribution`
 - Client caller: `fetchAssetDistribution(...)`
@@ -188,7 +188,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
   - Route expects `walletIds`
   - `HoldingDurations` component sends `walletIds` query key (mapped correctly inside component query)
 
-### RiskTab (`client/src/components/wallet/WalletComparision/RiskTab.tsx`)
+### RiskTab (`client/src/components/wallet/WalletComparison/RiskTab.tsx`)
 1. Rolling annual return
 - Endpoint: `GET /api/charts/rollingAnnualReturn`
 - Client caller: `fetchRollingAnnualReturn(...)`
@@ -221,7 +221,7 @@ It traces each flow from page/component -> client API caller -> server route -> 
 
 ## 4) Quick Summary
 - Wallet overview page (`/wallets/:address`) is connected to real wallet routes for overview/portfolio/transfers/swaps/counterparties/intelligence, plus chart routes for balance and PnL.
-- Wallet comparison page (`/comparision/wallets`) is chart-route heavy; some charts are real DB/service-backed, while several comparison analytics routes still return mock-generated datasets.
+- Wallet comparison page (`/Comparison/wallets`) is chart-route heavy; some charts are real DB/service-backed, while several comparison analytics routes still return mock-generated datasets.
 
 ## 5) Backend Schema (Wallet Page)
 

@@ -10,7 +10,7 @@ Please review this plan to ensure it meets your expectations for the exported fi
 
 ## Proposed Changes
 
-### `client/src/pages/walletsComparision`
+### `client/src/pages/walletsComparison`
 
 #### [MODIFY] `index.tsx`
 - Extract the active language code using the `lang` property returned by the existing `useLocalization()` hook.

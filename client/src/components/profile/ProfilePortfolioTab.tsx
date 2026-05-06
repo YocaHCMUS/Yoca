@@ -154,8 +154,8 @@ export function ProfilePortfolioTab({
             return;
         }
 
-        navigate(
-            `/comparision/wallets?wallets=${encodeURIComponent(selectedComparisonWalletAddresses.join(","))}`,
+        window.location.assign(
+            `/comparison/wallets?wallets=${encodeURIComponent(selectedComparisonWalletAddresses.join(","))}`,
         );
     };
 

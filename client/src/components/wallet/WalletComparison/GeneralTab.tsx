@@ -1,5 +1,5 @@
 import React from 'react';
-import type WalletComparisionProp from "./WalletComparisionProp";
+import type WalletComparisonProp from "./WalletComparisonProp";
 import styles from './GeneralTab.module.scss';
 import { BalanceChart } from '@/components/charts/BalanceChart';
 import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution';
@@ -9,7 +9,7 @@ import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume'
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
 
-export const GeneralTab: React.FC<WalletComparisionProp> = ({
+export const GeneralTab: React.FC<WalletComparisonProp> = ({
     walletAddresses,
     fetchEnabled = true,
 }) => {
@@ -27,7 +27,7 @@ export const GeneralTab: React.FC<WalletComparisionProp> = ({
 
     return (
         <div className={styles.grid}>
-            {/* Balance history comparision */}
+            {/* Balance history comparison */}
             <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
                 <BalanceChart
                     initialFilters={{
