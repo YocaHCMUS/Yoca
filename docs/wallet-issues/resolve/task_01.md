@@ -1,7 +1,9 @@
 # Balance History Timezone & Tooltip Issues — Diagnosis Report
 
 ## Scope
+
 This report analyzes two wallet balance chart issues:
+
 1. Balance history timezone behavior
 2. Balance chart tooltip behavior
 
@@ -12,11 +14,13 @@ It covers what happened, root causes, impacted files, and suggested solutions.
 ## 1) What happened
 
 ### A. Timezone issue (Balance History)
+
 The Balance chart accepts timezone from the UI and forwards it to backend (`timezone` query), but the data pipeline itself is built on UTC day boundaries and raw timestamps, while display applies client-side timezone formatting.
 
 As a result, users in non-UTC timezones can see day labels/tooltips shifted relative to expected “daily bucket” dates (especially around midnight boundaries), because data points are UTC-day snapshots but rendered as local wall-clock times.
 
 ### B. Tooltip issue (Balance History / Token mode)
+
 The token-balance design intended token mode to show **both** token-unit and USD values together in tooltip (and dual-axis rendering). Current BalanceChart rendering path now only keeps USD series in displayed output and formats tooltip values as currency only.
 
 As a result, tooltip content in token scenarios is incomplete/misleading versus intended behavior (missing token unit value context).
@@ -69,6 +73,7 @@ As a result, tooltip content in token scenarios is incomplete/misleading versus 
 ## 3) Why these likely appeared
 
 Both issues are consistent with a refactor/regression pattern:
+
 - Balance chart evolved toward a unified/filtered display flow optimized for wallet comparison and simplified series handling.
 - During that evolution, timezone was kept as UI display control but not reconciled with UTC daily bucket semantics.
 - Token mode rendering appears to have converged on USD-only visual output, while the original dual-series tooltip contract was not preserved.
@@ -78,6 +83,7 @@ Both issues are consistent with a refactor/regression pattern:
 ## 4) Files involved
 
 ### Primary files (directly involved)
+
 - `client/src/components/charts/BalanceChart/BalanceChart.tsx`
 - `client/src/components/charts/shared/TimezoneSelector.tsx`
 - `client/src/util/chart-helpers.ts`
@@ -87,6 +93,7 @@ Both issues are consistent with a refactor/regression pattern:
 - `server/src/services/wallet/walletTokenBalance.service.ts`
 
 ### Contract/expectation references
+
 - `docs/wallets/WALLET_TOKEN_BALANCE_HISTORY_IMPLEMENTATION_PLAN.md`
 - `docs/wallets/WALLET_TOKEN_BALANCE_HISTORY_TEST_PLAN.md`
 - `docs/WALLET_PAGE_ENDPOINT_TRACE.md`
