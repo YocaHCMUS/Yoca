@@ -1,3 +1,4 @@
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCallback } from "react";
 import type { RefObject } from "react";
 import html2canvas from "html2canvas";
@@ -231,14 +232,16 @@ export function useExportReport({
   filenameBase,
   reportRef,
 }: ExportReportOptions): UseExportReportResult {
+  const { lang } = useLocalization();
   const exportReportAsPdf = useCallback(async () => {
     const reportElement = reportRef.current;
     if (!reportElement) {
       throw new Error("Report template element is not available");
     }
 
+    const langSuffix = lang.split("-")[0].toLowerCase();
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
-    const filename = `${filenameBase}-${timestamp}.pdf`;
+    const filename = `${filenameBase}-${timestamp}_${langSuffix}.pdf`;
 
     const previousInlineStyle = {
       display: reportElement.style.display,

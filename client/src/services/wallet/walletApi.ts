@@ -236,6 +236,52 @@ export interface WalletIntelligenceResponse {
   };
 }
 
+export type WalletAiAnalysisLanguage = "en" | "vn";
+
+export interface WalletAiReferenceEntry {
+  ref_id: number;
+  type: "wallet" | "exchange" | "token";
+  address?: string;
+  name?: string;
+  symbol?: string;
+  logoUri?: string;
+}
+
+export interface WalletAiAnalysisResponse {
+  wallet_address: string;
+  version?: string;
+  data: {
+    swaps: "ok" | "insufficient_data";
+    portfolio: "ok" | "insufficient_data";
+    first_funder: "ok" | "insufficient_data";
+    identity: "ok" | "insufficient_data";
+  };
+  activity_profile: {
+    archetype: string;
+    activity_level: "dormant" | "low" | "moderate" | "high";
+    last_active: string;
+  };
+  interaction_fingerprint: {
+    preferred_protocols: string[];
+    transaction_timing: "uniform" | "burst_mode" | "sporadic";
+    preffered_trading_tokens: string[];
+    preffered_holding_tokens: string[];
+    trading_volume_range: string;
+  };
+  funder: {
+    type: string;
+    notes: string;
+  };
+  wallet_age: {
+    category: "new" | "mid" | "old" | "unknown";
+    first_seen: string;
+    consistency: string;
+  };
+  summary: string;
+  signals: string[];
+  reference?: WalletAiReferenceEntry[];
+}
+
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
 
 export interface WalletOverviewPeriodStats {
@@ -529,6 +575,105 @@ export async function fetchWalletIntelligence(
   return data as WalletIntelligenceResponse;
 }
 
+/**
+ * Fetch wallet AI analysis
+ * POST /api/wallets/ai-analysis
+ */
+export async function fetchWalletAiAnalysis(
+  address: string,
+  language: WalletAiAnalysisLanguage,
+): Promise<WalletAiAnalysisResponse> {
+  const response = await client.api.wallets["ai-analysis"].$post({
+    json: { address, language },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch wallet AI analysis (${response.status})`;
+
+    try {
+      const errorData = await response.json() as {
+        error?: string;
+        message?: string;
+        code?: string;
+        details?: {
+          missingDependencies?: string[];
+        };
+      };
+
+      if (
+        errorData?.code === "dependency_not_ready" &&
+        Array.isArray(errorData.details?.missingDependencies)
+      ) {
+        const missing = errorData.details.missingDependencies.join(", ");
+        message =
+          missing.length > 0
+            ? `AI analysis dependencies are not ready: ${missing}`
+            : "AI analysis dependencies are not ready";
+      } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch (e) {
+      console.error("[walletApi] Failed to parse AI analysis error response:", e);
+    }
+
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as WalletAiAnalysisResponse;
+}
+
+/**
+ * AI Wallet Forensic Audit response.
+ *
+ * Mirrors the shape returned by `GET /api/wallets/:address/audit`.
+ * The backend caches results for 24 hours; `cached: true` indicates the
+ * report came straight from cache (no Gemini call was made).
+ */
+export type WalletAuditPersona =
+  | "Sniper"
+  | "Whale"
+  | "DCA"
+  | "LP"
+  | "Retail"
+  | "Unknown";
+
+export interface WalletAuditReport {
+  address: string;
+  persona: WalletAuditPersona;
+  trustScore: number;
+  summary: string;
+  observations: string[];
+  transactionCount: number;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+/**
+ * Fetch AI Wallet Forensic Audit
+ * GET /api/wallets/:address/audit
+ *
+ * Pass `force: true` to bypass the 24-hour cache and re-run Gemini.
+ */
+export async function fetchWalletAudit(
+  address: string,
+  options?: { force?: boolean },
+): Promise<WalletAuditReport> {
+  const url = client.api.wallets[":address"].audit.$url({
+    param: { address },
+  });
+  if (options?.force) {
+    url.searchParams.set("force", "1");
+  }
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as WalletAuditReport;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -541,6 +686,8 @@ export const walletApi = {
   fetchWalletIdentity,
   fetchWalletIdentityBatch,
   fetchWalletIntelligence,
+  fetchWalletAiAnalysis,
+  fetchWalletAudit,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
@@ -553,4 +700,6 @@ export const walletApi = {
   getIdentity: fetchWalletIdentity,
   getIdentityBatch: fetchWalletIdentityBatch,
   getIntelligence: fetchWalletIntelligence,
+  getAiAnalysis: fetchWalletAiAnalysis,
+  getAudit: fetchWalletAudit,
 };

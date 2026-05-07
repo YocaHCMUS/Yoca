@@ -1,19 +1,20 @@
 // --- ACMS API call cache table ---
-export const acmsApiCache = pgTable(
-  'acms_api_cache',
-  {
-    key: varchar('key', { length: 128 }).primaryKey(),
-    provider: varchar('provider', { length: 32 }).notNull(),
-    endpoint: varchar('endpoint', { length: 128 }).notNull(),
-    params: jsonb('params').notNull(),
-    result: jsonb('result').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  }
-);
+// export const acmsApiCache = pgTable("acms_api_cache", {
+//   key: varchar("key", { length: 128 }).primaryKey(),
+//   provider: varchar("provider", { length: 32 }).notNull(),
+//   endpoint: varchar("endpoint", { length: 128 }).notNull(),
+//   params: jsonb("params").notNull(),
+//   result: jsonb("result").notNull(),
+//   createdAt: timestamp("created_at").notNull().defaultNow(),
+//   updatedAt: timestamp("updated_at")
+//     .notNull()
+//     .defaultNow()
+//     .$onUpdate(() => new Date()),
+// });
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   decimal as dec,
   integer,
@@ -21,12 +22,16 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  serial,
   smallint,
   text,
   timestamp,
+  unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+//export * from "./alerts.js";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -35,7 +40,7 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-// #region Table definitions
+// #region Enums
 export const enumAuthProvider = pgEnum("auth_provider", [
   "password",
   "google",
@@ -46,16 +51,99 @@ export const enumAuthProvider = pgEnum("auth_provider", [
 
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayName: varchar("display_name"),
-  // Email is not needed for wallet users, see it as contact
-  email: varchar("email"),
+export const enumAlertRuleAction = pgEnum("alert_rule_action", [
+  "SWAP",
+  "TRANSFER",
+  "ALL",
+]);
+
+export const enumAlertRuleTrigger = pgEnum("alert_rule_trigger", [
+  "ONCE",
+  "ALWAYS",
+]);
+
+export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
+  "USD",
+  "SOL",
+]);
+// #endregion
+
+// #region Table definitions
+
+// --- ACMS API call cache table ---
+export const acmsApiCache = pgTable("acms_api_cache", {
+  key: varchar("key", { length: 128 }).primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  endpoint: varchar("endpoint", { length: 128 }).notNull(),
+  params: jsonb("params").notNull(),
+  result: jsonb("result").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
+    .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayName: varchar("display_name"),
+    // Email is not needed for wallet users, see it as contact
+    email: varchar("email"),
+    discordWebhookUrl: text("discord_webhook_url"),
+    emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
+    /** Optional override: if set, alerts go here instead of users.email */
+    emailAlertsAddress: text("email_alerts_address"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("users_email_uq")
+      .on(table.email)
+      .where(sql`${table.email} IS NOT NULL`),
+  ],
+);
+
+export const userLinkedWallets = pgTable(
+  "user_linked_wallets",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    isAuthWallet: boolean("is_auth_wallet").notNull().default(false),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.walletAddress],
+    }),
+  ],
+);
+
+export const userTokenWatchlist = pgTable(
+  "user_token_watch_list",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.tokenAddress] })],
+);
+
+export const userWalletWatchlist = pgTable(
+  "user_wallet_watch_list",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.walletAddress] })],
+);
 
 export const authAccounts = pgTable(
   "auth_accounts",
@@ -73,6 +161,10 @@ export const authAccounts = pgTable(
     primaryKey({
       columns: [table.provider, table.providerUserId],
     }),
+    uniqueIndex("auth_accounts_user_provider_uq").on(
+      table.userId,
+      table.provider,
+    ),
     check(
       "provider_password",
       sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
@@ -161,6 +253,7 @@ export const tokenPoolData = pgTable("token_pool_data", {
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
 
   dexId: varchar("dex_id"),
+  dexImageUrl: varchar("dex_image_url"),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
@@ -506,7 +599,9 @@ export const walletOverviewCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
-    totalAssetValueChange24hPercent: decimal("total_asset_value_change_24h_percent"),
+    totalAssetValueChange24hPercent: decimal(
+      "total_asset_value_change_24h_percent",
+    ),
     tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
     tradingVolumeUsd7d: decimal("trading_volume_usd_7d"),
     tradingVolumeUsd30d: decimal("trading_volume_usd_30d"),
@@ -664,7 +759,9 @@ export const walletSwap = pgTable(
   {
     transactionHash: text("transaction_hash").notNull(),
     transactionType: text("transaction_type").notNull(),
-    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", {
+      mode: "number",
+    }).notNull(),
 
     subcategory: text("subcategory"),
 
@@ -677,7 +774,9 @@ export const walletSwap = pgTable(
     exchangeName: text("exchange_name").notNull(),
     exchangeLogo: text("exchange_logo").notNull(),
 
-    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAddress: varchar("bought_token_address", {
+      length: 66,
+    }).notNull(),
     boughtTokenAmount: decimal("bought_token_amount").notNull(),
     boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
 
@@ -726,6 +825,32 @@ export const walletIdentityCache = pgTable(
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.address] })],
+);
+
+export const walletAiAnalysisCache = pgTable(
+  "wallet_ai_analysis_cache",
+  {
+    key: varchar("key", { length: 256 }).primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull(),
+    modelVersion: varchar("model_version", { length: 64 }),
+    promptVersion: varchar("prompt_version", { length: 64 }),
+    raw: jsonb("raw").notNull(),
+    normalized: jsonb("normalized").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("wallet_ai_analysis_cache_address_lang_ver_uq").on(
+      t.address,
+      t.language,
+      t.modelVersion,
+      t.promptVersion,
+    ),
+  ],
 );
 
 export const walletBalanceHistoryCache = pgTable(
@@ -802,6 +927,49 @@ export const walletUserTags = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.walletAddress] })],
 );
 
+/** Wallets followed for Helius webhook-driven alerts */
+export const followedWallets = pgTable(
+  "followed_wallets",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    address: text("address").notNull(),
+    label: text("label"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.address)],
+);
+
+/**
+ * User-defined alert predicates (Observer stream + server-side filtering).
+ * Helius delivers raw events; matching rows determine Discord/email fan-out.
+ */
+export const alertRules = pgTable("alert_rules", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }),
+  walletAddress: text("wallet_address").notNull(),
+  actionType: enumAlertRuleAction("action_type").notNull(),
+  minVolume: dec("min_volume", { mode: "number" }).notNull(),
+  maxVolume: dec("max_volume", { mode: "number" }),
+  volumeUnit: enumAlertRuleVolumeUnit("volume_unit").notNull().default("USD"),
+  triggerType: enumAlertRuleTrigger("trigger_type").notNull(),
+  expiryDate: timestamp("expiry_date", { withTimezone: true }).notNull(),
+  oneShotFiredAt: timestamp("one_shot_fired_at", { withTimezone: true }),
+  useDefaultDelivery: boolean("use_default_delivery").notNull().default(true),
+  discordWebhookOverride: text("discord_webhook_override"),
+  emailOverride: text("email_override"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
   {
@@ -862,7 +1030,127 @@ export const walletFirstFund = pgTable(
     slot: integer("slot").notNull(),
     explorerUrl: varchar("explorer_url", { length: 256 }),
   },
-  (t) => [primaryKey({ columns: [t.reciepient] })]
+  (t) => [primaryKey({ columns: [t.reciepient] })],
+);
+
+
+
+// for AI agent workflow, and to easily access strategy to reduce token usage in the workflow
+export const tradingStrategyDictionary = pgTable("trading_strategy_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+})
+
+// a trading strategy can have multiple benefits and risks, we store them in separate tables with foreign key reference to the strategy dictionary
+export const tradingStrategyBenefit = pgTable("trading_strategy_benefit", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  benefit_key: text("benefit_key").notNull(),
+})
+
+export const tradingStrategyRisk = pgTable("trading_strategy_risk", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  risk_key: text("risk_key").notNull(),
+})
+
+// to store the weight of each metric for a trading strategy, which can be used in the AI agent workflow to calculate the score of a strategy based on the metrics of a wallet
+export const tradingStrategyWeight = pgTable("trading_strategy_weight", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  metric_name: varchar("metric_name", { length: 100 }).notNull(),
+  weight: decimal("weight").notNull(),
+})
+
+// to store any other rules for a trading strategy that are not covered by the benefits, risks and weights, such as if a strategy requires a certain token holding or trading volume, we can store them in this table with a key-value pair format
+export const tradingStrategyRule = pgTable("trading_strategy_rule", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  rule_key: text("rule_key").notNull(),
+  value: decimal("value").notNull(),
+});
+
+export const walletCategoryDictionary = pgTable("wallet_category_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+});
+
+export const firstFunderCategoryDictionary = pgTable("first_funder_category_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+});
+
+/**
+ * AI Wallet Forensic Audit cache.
+ *
+ * Stores Gemini-generated behavioural reports per wallet so we don't pay the
+ * model cost on every page view. Read path checks `fetchedAt >= now - 24h`.
+ */
+export const walletAuditCache = pgTable(
+  "wallet_audit_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    persona: varchar("persona", { length: 64 }).notNull(),
+    trustScore: integer("trust_score").notNull(),
+    summary: text("summary").notNull(),
+    observations: jsonb("observations").$type<string[]>().notNull(),
+    transactionCount: integer("transaction_count").notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
+);
+
+// --- News tables (Phase 1: news-fetching AI filter integration) ---
+export const newsBatches = pgTable("news_batches", {
+  id: serial("id").primaryKey(),
+  address: varchar("address", { length: 44 }).notNull(),
+  symbol: varchar("symbol").notNull(),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const newsArticles = pgTable(
+  "news_articles",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id").notNull().references(() => newsBatches.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 512 }).notNull(),
+    url: varchar("url", { length: 1024 }).notNull(),
+    description: text("description"),
+    publishedAt: timestamp("published_at"),
+    sourceName: varchar("source_name"),
+    faviconUrl: varchar("favicon_url"),
+    contentHash: varchar("content_hash", { length: 128 }).notNull(),
+    extraSnippets: jsonb("extra_snippets").$type<string[] | null>(),
+    // raw: jsonb("raw"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("news_articles_url_uq").on(t.url),
+    uniqueIndex("news_articles_content_hash_uq").on(t.contentHash),
+  ],
+);
+
+export const userSources = pgTable(
+  "user_sources",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 44 }).notNull(),
+    sourceName: varchar("source_name").notNull(),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+  },
+  (t) => [unique().on(t.address, t.sourceName)],
 );
 
 // #endregion
@@ -906,12 +1194,22 @@ export type WalletBalanceHistoryCacheInsert =
   typeof walletBalanceHistoryCache.$inferInsert;
 export type WalletTokenBalanceHistoryCacheInsert =
   typeof walletTokenBalanceHistoryCache.$inferInsert;
-export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletHeliusTransactionsInsert =
+  typeof walletHeliusTransactions.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
+export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
+export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
+export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type AlertRuleInsert = typeof alertRules.$inferInsert;
+export type AlertRuleRow = typeof alertRules.$inferSelect;
+export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
+export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
+export type NewsBatchInsert = typeof newsBatches.$inferInsert;
+export type NewsArticleInsert = typeof newsArticles.$inferInsert;
+export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #endregion
-

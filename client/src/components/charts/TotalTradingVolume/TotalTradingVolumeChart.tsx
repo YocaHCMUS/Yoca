@@ -28,7 +28,6 @@ import {
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { TotalTradingVolumeRequestParams } from "@/types/chart-api.types";
-import { formatCurrency } from "@/util/chart-helpers";
 import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import { formatItemTooltip } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
@@ -51,9 +50,10 @@ export function TotalTradingVolumeChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.totalTradingVolumeChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
@@ -87,6 +87,7 @@ export function TotalTradingVolumeChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   /**
@@ -125,7 +126,7 @@ export function TotalTradingVolumeChart({
         name: `Volume (${data.metadata?.currency || "USD"})`,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       yAxis: {
@@ -149,7 +150,7 @@ export function TotalTradingVolumeChart({
           label: {
             show: true,
             position: "right",
-            formatter: (params: any) => formatCurrency(params.value),
+            formatter: (params: any) => fmt.num.compact.currency(params.value),
             color: chartTheme.textColor,
           },
           emphasis: {
@@ -173,13 +174,13 @@ export function TotalTradingVolumeChart({
           return formatItemTooltip(wallet.wallet, [
             {
               label: "Total Volume",
-              value: formatCurrency(wallet.tradingVolumeUsd ?? 0),
+              value: fmt.num.compact.currency(wallet.tradingVolumeUsd ?? 0),
             },
           ]);
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [data, chartTheme, tr, fmt]);
 
   return (
     <BaseChart
@@ -194,7 +195,7 @@ export function TotalTradingVolumeChart({
       }
       onRetry={() => refetch(false)}
     >
-      <div className={sharedStyles.chartControls}>
+      <div className={sharedStyles.chartControls} data-html2canvas-ignore="true">
         <PeriodSelector
           value={filters.timePeriod}
           onChange={(k) => setTimePeriod(k)}

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu, Wallet } from '@carbon/react/icons';
+import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
 import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import {
     fetchWalletIntelligence,
     fetchWalletOverview,
@@ -111,6 +112,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     enableIntelligence = true,
 }) => {
     const { user } = useAuth();
+    const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
     const { tr, fmt } = useLocalization();
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
@@ -126,9 +128,12 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [tags, setTags] = useState<string[]>([]);
     const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
 
-    const [bookmark, setBookmark] = useState(false);
     const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false);
     const utilityMenuRef = useRef<HTMLDivElement>(null);
+
+    const isBookmarked = walletWatchlist
+        .some((address) => address.toLowerCase() === walletAddress.toLowerCase());
+    const isBookmarkPending = Boolean(walletPending[walletAddress]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -301,8 +306,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleBookmark = () => {
-        setBookmark(!bookmark);
-        console.log('Bookmark toggled:', !bookmark);
+        if (!user || !walletAddress || walletAddress === 'null') {
+            return;
+        }
+
+        void toggleWallet(walletAddress);
     };
 
     const handleCreateAlert = () => {
@@ -314,7 +322,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleCompare = () => {
-        navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
+        window.location.assign(`/comparison/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
     const handleOpenFirstFunder = (funderAddress: string) => {
@@ -429,17 +437,20 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 {/* Actions: filter dropdown + utility icon buttons (default) / menu (mini) */}
                 <div className={styles.actionsSection}>
                     <div className={styles.utilityButtonsDefault}>
-                        <Tooltip label={bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
+                        <Tooltip label={isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleBookmark}
                                 aria-label="Bookmark wallet"
+                                disabled={!user || isBookmarkPending}
                             >
-                                {bookmark ? <BookmarkFilled size={20} /> : <Bookmark size={20} />}
+                                {isBookmarked ? <BookmarkFilled size={20} /> : <Bookmark size={20} />}
                             </button>
                         </Tooltip>
                         <Tooltip label={tr('wallet.createAlert')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleCreateAlert}
                                 aria-label="Create alert"
@@ -449,6 +460,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </Tooltip>
                         <Tooltip label={tr('wallet.compareWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleCompare}
                                 aria-label="Compare wallet"
@@ -458,6 +470,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </Tooltip>
                         <Tooltip label={tr('wallet.shareWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleShare}
                                 aria-label="Share wallet"
@@ -469,6 +482,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
                     <div className={styles.utilityButtonsMini} ref={utilityMenuRef}>
                         <button
+                            type="button"
                             className={styles.menuTrigger}
                             onClick={() => setIsUtilityMenuOpen(!isUtilityMenuOpen)}
                             aria-label="More options"
@@ -479,16 +493,19 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         {isUtilityMenuOpen && (
                             <div className={styles.dropdownMenu}>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleBookmark();
                                         setIsUtilityMenuOpen(false);
                                     }}
+                                    disabled={!user || isBookmarkPending}
                                 >
-                                    {bookmark ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
-                                    <span>{bookmark ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}</span>
+                                    {isBookmarked ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
+                                    <span>{isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleCreateAlert();
@@ -499,6 +516,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     <span>{tr('wallet.createAlert')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleCompare();
@@ -509,6 +527,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     <span>{tr('wallet.compareWallet')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleShare();

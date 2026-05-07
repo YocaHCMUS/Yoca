@@ -1,66 +1,31 @@
-// Request Schema
 /**
  * Winrate Chart API Route
- * 
+ *
  * Endpoint for fetching winrate and trade magnitude distribution data
- * 
+ *
  * @module routes/charts/winrate.route
  */
 
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateWinrateData } from '../../services/mockChartData.service.js';
+import { getWinrateData } from '@sv/services/charts/winrate.service.js';
 
-/**
- * Request parameter schema for winrate endpoint
- */
 const winrateRequestSchema = z.object({
-  period: z.enum(['7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 
-
-/**
- * Winrate chart route handler
- */
 const app = new Hono()
-  /**
-   * GET /api/charts/winrate
-   * 
-   * Fetch winrate and trade magnitude distribution data
-   * 
-   * Query Parameters:
-   * - period: '7D' | '30D' | '60D' | '90D' | '1Y' | 'All' (default: '30D')
-   * - wallets: Comma-separated wallet IDs (optional)
-   * 
-   * Response:
-   * {
-   *   wallets: Array<{
-   *     walletAddress: string,
-   *     walletName: string,
-   *     winrate: number,
-   *     totalTrades: number,
-   *     winningTrades: number,
-   *     losingTrades: number,
-   *     winningDistribution: Array<{ range: string, count: number, min: number, max: number }>,
-   *     losingDistribution: Array<{ range: string, count: number, min: number, max: number }>
-   *   }>,
-   *   metadata: { period: string, timestamp: number }
-   * }
-   */
   .get('/', async (c) => {
     try {
-      // Parse and validate query parameters
       const query = c.req.query();
       const params = winrateRequestSchema.parse(query);
 
-      // Generate winrate data
-      const data = generateWinrateData(
+      const data = await getWinrateData(
         params.wallets,
-        params.period
+        params.period as any
       );
 
-      // Return response
       return c.json(data, 200);
     } catch (error) {
       console.error('Error fetching winrate data:', error);

@@ -1,0 +1,230 @@
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f9fafb;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.headerLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.headerHash {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-family: "SF Mono", "Fira Code", monospace;
+}
+
+.layoutMain {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.chartWrap {
+  position: relative;
+  flex: 7;
+  min-width: 0;
+  border-right: 1px solid #e5e7eb;
+}
+
+.actionsPanel {
+  flex: 3;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 320px;
+}
+
+.actionsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  padding: 10px 18px;
+  margin: 0;
+  border-bottom: 1px solid #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metaPanel {
+  margin: 12px 12px 8px;
+  padding: 12px 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metaHeader {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.metaKey {
+  min-width: 60px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metaValue {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.metaValueMono {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: "SF Mono", "Fira Code", monospace;
+  word-break: break-all;
+  line-height: 1.45;
+}
+
+.metaStatusWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.finalizedText {
+  font-size: 12px;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.summaryBlock {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryLabel {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summaryText {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.actionsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+}
+
+.actionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  border-left: 3px solid transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: background 0.15s, border-left-color 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+
+.actionContent {
+  flex: 1;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.55;
+}
+
+.actionAddress {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100vh;
+  font-size: 14px;
+  color: #6b7280;
+  background: #f9fafb;
+  font-family: Inter, ui-sans-serif, sans-serif;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

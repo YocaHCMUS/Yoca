@@ -26,6 +26,14 @@ import {
   getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
+import {
+  WalletAnalysisServiceError,
+  getWalletAiAnalysis,
+} from "@sv/services/wallet/walletAnalysis.service.js";
+import {
+  WalletAuditServiceError,
+  getWalletAudit,
+} from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -49,6 +57,11 @@ const walletIdentityBatchRequestSchema = z.object({
     .array(z.string().trim().min(1))
     .min(1)
     .max(WALLET_IDENTITY_MAX_BATCH_SIZE),
+});
+
+const walletAnalysisRequestSchema = z.object({
+  address: z.string().trim().min(1),
+  language: z.enum(["en", "vn"]).optional(),
 });
 
 const DEFAULT_COUNTERPARTY_PERIOD = "7d";
@@ -119,6 +132,22 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
     status: fallbackStatus,
     error: "Failed to fetch wallet identity",
   };
+}
+
+function mapWalletAnalysisStatus(status: number): 400 | 409 | 502 | 504 {
+  if (status === 400) {
+    return 400;
+  }
+
+  if (status === 409) {
+    return 409;
+  }
+
+  if (status === 504) {
+    return 504;
+  }
+
+  return 502;
 }
 
 function parseCounterpartyPeriod(rawPeriod?: string): "24h" | "7d" {
@@ -475,6 +504,70 @@ const routes = router
       return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
     }
   })
+  .post("/ai-analysis", async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Missing or invalid required field: address" }, 400);
+    }
+
+    try {
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
+      return c.json(analysis, 200);
+    } catch (err) {
+      if (err instanceof WalletAnalysisServiceError) {
+        return c.json(
+          { error: err.message, code: err.code, details: err.details },
+          mapWalletAnalysisStatus(err.status),
+        );
+      }
+
+      console.error("Failed to get wallet AI analysis", err);
+      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+    }
+  })
+  .post("/analysis", async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Missing or invalid required field: address" }, 400);
+    }
+
+    try {
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
+      return c.json(analysis, 200);
+    } catch (err) {
+      if (err instanceof WalletAnalysisServiceError) {
+        return c.json(
+          { error: err.message, code: err.code, details: err.details },
+          mapWalletAnalysisStatus(err.status),
+        );
+      }
+
+      console.error("Failed to get wallet AI analysis", err);
+      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+    }
+  })
   .get("/intelligence", async (c) => {
     const address = c.req.query("address");
 
@@ -544,6 +637,44 @@ const routes = router
       return c.json(tokenDetails, 200);
     } catch (err) {
       console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  /**
+   * AI Wallet Forensic Audit.
+   *
+   * Returns a Gemini-generated behavioural classification (persona, trust
+   * score, summary, observations) for the wallet. Result is cached in
+   * `wallet_audit_cache` for 24 hours; pass `?force=1` to bypass the cache.
+   */
+  .get("/:address/audit", validate("param", addressSchema), async (c) => {
+    const { address } = c.req.valid("param");
+    const force = c.req.query("force") === "1" || c.req.query("force") === "true";
+
+    try {
+      const audit = await getWalletAudit(address, { force });
+      return c.json(audit, 200);
+    } catch (err) {
+      if (err instanceof WalletAuditServiceError) {
+        const statusByCode: Record<
+          WalletAuditServiceError["code"],
+          400 | 404 | 502 | 503
+        > = {
+          missing_api_key: 503,
+          no_transactions: 404,
+          model_error: 502,
+          invalid_model_response: 502,
+        };
+        return c.json(
+          { error: err.message, code: err.code },
+          statusByCode[err.code],
+        );
+      }
+
+      console.error("Failed to generate wallet audit", err);
       return c.json(
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,

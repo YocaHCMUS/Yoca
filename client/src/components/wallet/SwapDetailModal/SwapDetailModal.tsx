@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { ArrowRight, Close } from "@carbon/react/icons";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import type { WalletSwap, WalletSwapBalanceChange } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
@@ -174,6 +175,8 @@ export function SwapDetailModal({
   onClose,
   swap,
 }: SwapDetailModalProps) {
+  const { fmt } = useLocalization();
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -233,7 +236,6 @@ export function SwapDetailModal({
                     fullName={swap.sold.name ?? swap.sold.address}
                     imageUrl={swap.sold.logoUri ?? undefined}
                     imageSize={18}
-                    showInitialsFallback
                     tooltipAlign="right"
                   />
                 </span>
@@ -260,7 +262,6 @@ export function SwapDetailModal({
                     fullName={swap.bought.name ?? swap.bought.address}
                     imageUrl={swap.bought.logoUri ?? undefined}
                     imageSize={18}
-                    showInitialsFallback
                     tooltipAlign="right"
                   />
                 </span>
@@ -333,7 +334,7 @@ export function SwapDetailModal({
           {swap.totalValueUsd != null && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Total Value</span>
-              <span className={styles.detailVal}>${swap.totalValueUsd.toFixed(4)}</span>
+              <span className={styles.detailVal}>{fmt.num.currency(swap.totalValueUsd)}</span>
             </div>
           )}
 
@@ -394,7 +395,6 @@ export function SwapDetailModal({
                       fullName={getTokenName(change)}
                       imageUrl={getTokenImageUrl(change)}
                       imageSize={16}
-                      showInitialsFallback
                       tooltipAlign="right"
                     />
                   </span>

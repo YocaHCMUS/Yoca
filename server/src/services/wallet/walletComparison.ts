@@ -1,15 +1,15 @@
-import { mapWithConcurrency } from "@sv/util/concurrency";
-import {
+import { mapWithConcurrency } from "@sv/util/concurrency.js";
+import type {
   WalletOverviewPeriodKey,
   WalletTimePeriod,
-} from "./dtos/walletDataObjects";
+} from "./dtos/walletDataObjects.js";
 import {
   getWalletBalanceHistory,
   resolveWalletTimeRangeSec,
-} from "./walletCharts.service";
-import { getWalletOverview } from "./walletOverview.service";
-import { getWalletPortfolio } from "./walletPortfolio.service";
-import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service";
+} from "./walletCharts.service.js";
+import { getWalletOverview } from "./walletOverview.service.js";
+import { getWalletPortfolio } from "./walletPortfolio.service.js";
+import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service.js";
 
 export interface StablecoinRatioRequest {
   wallets: string[];
@@ -296,16 +296,17 @@ export async function processStablecoinRatioData(
     const walletAddress = walletAddresses[index] ?? walletKey;
     const dataPoints = rawData.map((row) => ({
       timestamp: row.timestamp,
-      value: typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
+      value:
+        typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
     }));
     const currentRatio =
       dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
     const averageRatio =
       dataPoints.length > 0
         ? clampToPercent(
-          dataPoints.reduce((sum, point) => sum + point.value, 0) /
-          dataPoints.length,
-        )
+            dataPoints.reduce((sum, point) => sum + point.value, 0) /
+              dataPoints.length,
+          )
         : null;
 
     return {

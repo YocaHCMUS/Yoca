@@ -30,14 +30,21 @@ import { WalletAuthButton } from "./WalletAuthButton";
 type SignInModalProps = {
   open: boolean;
   onClose: () => void;
+  redirectUrl?: string;
 };
 
-export function SignInModal({ open, onClose }: SignInModalProps) {
+export function SignInModal({
+  open,
+  onClose,
+  redirectUrl,
+}: SignInModalProps) {
   const { tr, fmt } = useLocalization();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const resolvedRedirectUrl =
+    typeof redirectUrl == "string" && redirectUrl.length > 0 ? redirectUrl : "/";
 
   const formSchema = z.object({
     email: z.email(tr("validation.invalidEmail")),
@@ -77,7 +84,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
       if (resp.status == 200) {
         await refreshUser();
         close();
-        navigate("/");
+        navigate(resolvedRedirectUrl, { replace: true });
       } else if (resp.status == 401 || resp.status == 422) {
         const res = await resp.json();
         const errCode = res.errorCode;
@@ -96,7 +103,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   function onGoogleSignInSuccess(_userId: string) {
     refreshUser();
     close();
-    navigate("/");
+    navigate(resolvedRedirectUrl, { replace: true });
   }
 
   function onGoogleSignInError(_error: string) {
@@ -106,7 +113,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   return (
     <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
-      <ModalBody className={"bodyne"} hasScrollingContent>
+      <ModalBody className={"bodyne"}>
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap={6}>
             <TextInput
@@ -166,7 +173,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
             onSuccess={async (userId) => {
               await refreshUser();
               close();
-              navigate("/");
+              navigate(resolvedRedirectUrl, { replace: true });
             }}
             onError={(err) => setErrMsg(err)}
           />

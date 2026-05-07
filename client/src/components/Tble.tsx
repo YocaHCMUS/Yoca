@@ -55,6 +55,7 @@ interface TblProps
   boxed?: boolean;
   pageSizes?: number[];
   marginTop?: number;
+  onRowClick?: (row: TblRw, rowIndex: number) => void;
 }
 
 export default function Tble({
@@ -72,6 +73,7 @@ export default function Tble({
   pageSize = 16,
   pageSizes = [8, 16, 24, 32],
   marginTop = 0,
+  onRowClick,
   ...dataTableProps
 }: TblProps) {
   const { tr } = useLocalization();
@@ -191,14 +193,7 @@ export default function Tble({
                 overflow: "auto",
               }}
             >
-              <Table
-                {...getTableProps()}
-                style={{
-                  width: "max-content",
-                  minWidth: "100%",
-                  tableLayout: "auto",
-                }}
-              >
+              <Table {...getTableProps()}>
                 <TableHead hidden={hideHeaders}>
                   <TableRow>
                     {internalHeaders.map((header) => {
@@ -223,7 +218,24 @@ export default function Tble({
                 </TableHead>
                 <TableBody>
                   {internalRows.map((row) => (
-                    <TableRow {...getRowProps({ row })} key={row.id}>
+                    <TableRow
+                      {...getRowProps({ row })}
+                      key={row.id}
+                      onClick={
+                        onRowClick
+                          ? () => {
+                            const rowIndex = rowsToRender.findIndex(
+                              (item) => item.id === row.id,
+                            );
+
+                            if (rowIndex >= 0) {
+                              onRowClick(rowsToRender[rowIndex], rowIndex);
+                            }
+                          }
+                          : undefined
+                      }
+                      style={onRowClick ? { cursor: "pointer" } : undefined}
+                    >
                       {row.cells.map((cell) => {
                         const config = getCellConfiguration(cell.info.header);
                         return (

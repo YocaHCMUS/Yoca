@@ -1,20 +1,20 @@
 /**
  * Winrate Chart Component
- * 
+ *
  * Displays winrate analysis with two-row layout:
  * - Row 1: Column chart showing overall winrate of multiple wallets
  * - Row 2: Histograms showing winning/losing magnitude distribution for each wallet
- * 
+ *
  * Features:
  * - Two-part layout (overall winrate + distribution)
  * - Multiple wallet support
  * - Auto-refresh on wallet changes
  * - Inverse data display for losing trades
- * 
+ *
  * @module components/charts/Winrate
  */
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
@@ -24,6 +24,7 @@ import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
 import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
 import { isChartSuccess } from '@/util/chart-helpers';
+import { formatAddress } from '@/util/format';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
 
 type WinrateData = InferFetcherData<typeof fetchWinrate>;
@@ -32,20 +33,9 @@ import { BaseChart } from '../Base/BaseChart';
 import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import sharedStyles from '../shared/ChartStyle.module.scss';
-import { nonnegative } from 'zod';
 
-const SHORT_WALLET_PREFIX_LENGTH = 6;
-const SHORT_WALLET_SUFFIX_LENGTH = 6;
 
-function shortenWalletAddress(address: string): string {
-  if (address.length <= SHORT_WALLET_PREFIX_LENGTH + SHORT_WALLET_SUFFIX_LENGTH + 3) {
-    return address;
-  }
 
-  const prefix = address.slice(0, SHORT_WALLET_PREFIX_LENGTH);
-  const suffix = address.slice(-SHORT_WALLET_SUFFIX_LENGTH);
-  return `${prefix}...${suffix}`;
-}
 
 export function WinrateChart({
   title,
@@ -58,32 +48,29 @@ export function WinrateChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
+  const WINRATE_TIME_RANGES = ['24H', '7D', '30D', 'All'] as const;
+  type WinrateTimeRange = (typeof WINRATE_TIME_RANGES)[number];
+
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.winrateChart.title');
+  const [timeRange, setTimeRange] = useState<WinrateTimeRange>('All');
 
   const overallChartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
 
-  // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query
-   */
   const query = useMemo<WinrateRequestParams>(
     () => ({
-      period: filters.timePeriod,
+      period: timeRange,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [timeRange, walletsString]
   );
 
-  /**
-   * Lifecycle controller
-   */
   const { data, loadingState, refetch } =
     useStandardChartController<WinrateData, WinrateRequestParams>({
       fetcher: fetchWinrate,
@@ -92,16 +79,23 @@ export function WinrateChart({
       refreshInterval,
     });
 
-  /**
-   * Generate overall winrate column chart
-   */
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
+    console.log("[WinrateChart] Generating overall winrate option. Data:", data);
+    console.log("[WinrateChart] isChartSuccess check:", isChartSuccess(data, 'wallets'));
+    console.log("[WinrateChart] data.wallets:", (data as any)?.wallets);
+    
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) {
+      console.log("[WinrateChart] No valid data for overall winrate chart");
+      return null;
+    }
 
     const baseOption = getThemedChartBaseOption(chartTheme);
 
-    const categories = data.wallets.map(w => w.walletName || shortenWalletAddress(w.walletAddress));
+    const categories = data.wallets.map(w => formatAddress(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
+
+    console.log("[WinrateChart] Chart categories:", categories);
+    console.log("[WinrateChart] Chart winrate values:", winrateValues);
 
     return {
       ...baseOption,
@@ -151,7 +145,7 @@ export function WinrateChart({
           const param = params[0];
           const wallet = data.wallets[param.dataIndex];
           return formatItemTooltip(
-            wallet.walletName || wallet.walletAddress,
+            formatAddress(wallet.walletAddress),
             [
               { label: 'Winrate', value: `${param.value}%` },
               { label: 'Winning Trades', value: wallet.winningTrades.toString() },
@@ -162,38 +156,22 @@ export function WinrateChart({
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [data, chartTheme]);
 
-  /**
-   * Generate distribution charts for each wallet
-   */
   const distributionCharts = useMemo(() => {
     if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return [];
 
     return data.wallets.map((wallet) => {
       const baseOption = getThemedChartBaseOption(chartTheme);
 
-      // Prepare data
       const categories = wallet.winningDistribution.map(d => d.range);
       const winningCounts = wallet.winningDistribution.map(d => d.count);
-      const losingCounts = wallet.losingDistribution.map(d => -d.count); // Negative for inverse display
+      const losingCounts = wallet.losingDistribution.map(d => -d.count);
 
       const option: EChartsOption = {
         ...baseOption,
-        // title: {
-        //   text: wallet.walletName || wallet.walletAddress,
-        //   left: 'center',
-        //   textStyle: {
-        //     color: chartTheme.textColor,
-        //     fontSize: 14,
-        //     fontWeight: 'normal',
-        //   },
-        // },
         title: wallet.walletAddress ? {
-          text:
-            wallet.walletName && wallet.walletName !== wallet.walletAddress
-              ? wallet.walletName
-              : shortenWalletAddress(wallet.walletAddress),
+          text: formatAddress(wallet.walletAddress),
           left: 8,
           top: 8,
           textStyle: {
@@ -235,7 +213,7 @@ export function WinrateChart({
             stack: 'total',
             data: winningCounts,
             itemStyle: {
-              color: chartTheme.colorPalette[1], // Green
+              color: chartTheme.colorPalette[1],
             },
           },
           {
@@ -244,7 +222,7 @@ export function WinrateChart({
             stack: 'total',
             data: losingCounts,
             itemStyle: {
-              color: chartTheme.colorPalette[2], // Red
+              color: chartTheme.colorPalette[2],
             },
           },
         ],
@@ -282,15 +260,40 @@ export function WinrateChart({
     });
   }, [data, chartTheme]);
 
+  const filterControls = (
+    <div className={sharedStyles.filterGroup} data-html2canvas-ignore="true">
+      <label className={sharedStyles.filterField}>
+        <span className={sharedStyles.filterLabelSmall}>Range</span>
+        <div
+          className={sharedStyles.filterSegmentedGroup}
+          role="group"
+          aria-label="Winrate time range"
+        >
+          {WINRATE_TIME_RANGES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setTimeRange(option)}
+              className={`${sharedStyles.filterSegmentedButton} ${timeRange === option ? sharedStyles.filterSegmentedButtonActive : ''}`}
+              aria-pressed={timeRange === option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </label>
+    </div>
+  );
+
   return (
     <BaseChart
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
       onRetry={() => refetch(false)}
+      actions={filterControls}
     >
       <ChartContainer gap='0'>
-        {/* Overall Winrate Section */}
         <ChartSection minHeight="300px">
           {overallWinrateOption && (
             <ChartGridItem minHeight={300}>
@@ -305,7 +308,6 @@ export function WinrateChart({
           )}
         </ChartSection>
 
-        {/* Distribution Histograms Grid */}
         <ChartGrid itemCount={distributionCharts.length} autoFit minColumnWidth="400px">
           {distributionCharts.map((chart) => (
             <ChartGridItem

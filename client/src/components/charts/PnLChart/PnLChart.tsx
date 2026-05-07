@@ -15,7 +15,6 @@ import {
 import type { PnLRequestParams } from "@/types/chart-api.types";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import {
-  formatCurrency,
   formatTimestampWithTimezone,
 } from "@/util/chart-helpers";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
@@ -40,6 +39,9 @@ export interface PnLChartProps {
     timePeriod?: TimePeriod;
     wallets?: string[];
   };
+
+  /** When false, no chart fetch (inactive comparison tab). */
+  fetchEnabled?: boolean;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -53,8 +55,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   className,
   initialViewMode = "both",
   initialFilters,
+  fetchEnabled = true,
 }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
@@ -90,6 +93,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   const displayData = data;
@@ -148,13 +152,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       }
 
       const formatAxisValue = (value: number) => {
-        if (Math.abs(value) >= 1000000) {
-          return `$${(value / 1000000).toFixed(1)}M`;
-        }
-        if (Math.abs(value) >= 1000) {
-          return `$${(value / 1000).toFixed(1)}K`;
-        }
-        return formatCurrency(value);
+        return fmt.num.compact.currency(value);
       };
 
       const yAxis: any[] = [];
@@ -230,7 +228,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             if (showDaily) {
               tooltipContent += createTooltipRow(
                 tr("charts.pnlChart.dailyPnL"),
-                formatCurrency(dailyValue),
+                fmt.num.compact.currency(dailyValue),
                 { valueColor: dailyValue >= 0 ? profitColor : lossColor },
               );
             }
@@ -238,7 +236,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             if (showCumulative) {
               tooltipContent += createTooltipRow(
                 tr("charts.pnlChart.cumulativePnL"),
-                formatCurrency(cumulativeValue),
+                fmt.num.compact.currency(cumulativeValue),
               );
             }
 
@@ -256,7 +254,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         series,
       };
     },
-    [chartTheme, timezone, tr, viewMode],
+    [chartTheme, timezone, tr, viewMode, fmt],
   );
 
   const chartOptions = useMemo(() => {

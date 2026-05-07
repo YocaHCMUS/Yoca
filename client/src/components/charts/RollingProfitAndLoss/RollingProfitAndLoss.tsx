@@ -39,9 +39,10 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   },
   autoRefresh = false,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
 }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle =
     title || tr("charts.rollingAnnualReturn.title") || "Rolling P&L";
   const TIME_PERIOD_LABELS = [
@@ -83,6 +84,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
   // Determine available value types from metadata
@@ -128,7 +130,15 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         data: labels,
         axisLabel: { rotate: 30 },
       },
-      yAxis: { ...base.yAxis, type: "value", name: "USD" },
+      yAxis: {
+        ...base.yAxis,
+        type: "value",
+        name: "USD",
+        axisLabel: {
+          ...(base.yAxis as any)?.axisLabel,
+          formatter: (value: number) => fmt.num.compact.currency(value),
+        },
+      },
       tooltip: {
         ...base.tooltip,
         trigger: "axis",
@@ -157,7 +167,15 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
       ...base,
       ...getChartGridConfig,
       xAxis: { ...base.xAxis, type: "category", data: labels },
-      yAxis: { ...base.yAxis, type: "value", name: "USD" },
+      yAxis: {
+        ...base.yAxis,
+        type: "value",
+        name: "USD",
+        axisLabel: {
+          ...(base.yAxis as any)?.axisLabel,
+          formatter: (value: number) => fmt.num.compact.currency(value),
+        },
+      },
       tooltip: {
         ...base.tooltip,
         trigger: "axis",
@@ -242,6 +260,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
     >
       <div
         className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]} ${sharedStyles["chartControls--withBackground"]}`}
+        data-html2canvas-ignore="true"
       >
         <select
           value={filters.timePeriod}

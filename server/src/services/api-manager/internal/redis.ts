@@ -19,8 +19,6 @@ export function getRedisClient(): RedisClientType | null {
     } as unknown as RedisClientType;
   }
   if (!client) {
-    console.log("creating client ...");
-
     client = createClient({
       url: process.env.REDIS_URL || "redis://localhost:6379",
     });

@@ -80,6 +80,7 @@ export interface TableProps {
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
     filterSchema: Record<number, FilterConfig>;
+    actions?: React.ReactNode;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
     dataEntries?: any[][];
@@ -88,6 +89,10 @@ export interface TableProps {
     maxHeight?: number;
     /** Called when the user clicks a data row. Receives the original row array and its index inside dataEntries. */
     onRowClick?: (row: any[], rowIndex: number) => void;
+    /** Optional row-level className callback for stateful row styling (e.g., selected row). */
+    rowClassName?: (row: any[], rowIndex: number) => string | undefined;
+    /** Enable CSV export menu in table header (default: true). */
+    enableExport?: boolean;
     serverPagination?: ServerPaginationConfig;
     loading?: boolean;
 }
@@ -97,6 +102,7 @@ export const Table: React.FC<TableProps> = ({
     headers,
     initialFilters,
     filterSchema,
+    actions,
     classnames = [],
     cellRenderers = [],
     dataEntries = [],
@@ -104,6 +110,8 @@ export const Table: React.FC<TableProps> = ({
     sortConfigs,
     maxHeight,
     onRowClick,
+    rowClassName,
+    enableExport = true,
     serverPagination,
     loading = false,
 }) => {
@@ -566,7 +574,9 @@ export const Table: React.FC<TableProps> = ({
     return (
         <TableWrapper
             title={title}
+            actions={actions}
             onExport={handleExport}
+            enableExport={enableExport}
             isEmpty={!loading && filteredData.length === 0}
             enableToolbar={true}
             searchPlaceholder="Search table..."
@@ -696,11 +706,15 @@ export const Table: React.FC<TableProps> = ({
                                                 const originalIndex = onRowClick
                                                     ? dataEntries.indexOf(originalRow)
                                                     : -1;
+                                                const resolvedRowClass = rowClassName
+                                                    ? rowClassName(safeRow, originalIndex)
+                                                    : undefined;
                                                 return (
                                                     <TableRow
                                                         key={key}
                                                         {...rowProps}
                                                         onClick={onRowClick ? () => onRowClick(safeRow, originalIndex) : undefined}
+                                                        className={[rowProps.className, resolvedRowClass].filter(Boolean).join(' ')}
                                                         style={onRowClick ? { cursor: 'pointer' } : undefined}
                                                     >
                                                         {row.cells.map((cell, cellIndex) => {

@@ -1,0 +1,145 @@
+import z from "zod";
+
+let warnedMissingWalletAiAnalysisCacheTable = false;
+
+export const WALLET_AI_ANALYSIS_TIMEOUT_MS = parseInt(process.env.WALLET_AI_ANALYSIS_TIMEOUT_MS || "180000");
+export const WALLET_AI_ANALYSIS_CACHE_TTL_MS = parseInt(process.env.WALLET_AI_ANALYSIS_CACHE_TTL_MS || "10800000");
+export const DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL =
+    process.env.DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL || "http://localhost:5678/webhook/analyse-wallet";
+
+
+export const walletAiAnalysisRequestSchema = z.object({
+    address: z.string().trim().min(1),
+    language: z.enum(["en", "vn"]).default("en"),
+});
+
+export type WalletAiAnalysisLanguage = "en" | "vn";
+
+export const walletAiAnalysisReferenceEntrySchema = z
+    .object({
+        ref_id: z.number(),
+        type: z.enum(["wallet", "exchange", "token"]),
+        address: z.string().trim().optional(),
+        name: z.string().trim().optional(),
+        symbol: z.string().trim().optional(),
+        logoUri: z.string().trim().optional(),
+    })
+    .passthrough();
+
+export const walletAiAnalysisResponseSchema = z.object({
+    wallet_address: z.string().trim().min(1),
+    data: z.object({
+        swaps: z.enum(["ok", "insufficient_data"]),
+        portfolio: z.enum(["ok", "insufficient_data"]),
+        first_funder: z.enum(["ok", "insufficient_data"]),
+        identity: z.enum(["ok", "insufficient_data"]),
+    }),
+    activity_profile: z.object({
+        archetype: z.string().trim().min(1),
+        activity_level: z.enum(["dormant", "low", "moderate", "high"]),
+        last_active: z.string().trim().min(1),
+    }),
+    interaction_fingerprint: z.object({
+        preferred_protocols: z.array(z.string().trim().min(1)).default([]),
+        transaction_timing: z.enum(["uniform", "burst_mode", "sporadic"]),
+        preffered_trading_tokens: z.array(z.string().trim().min(1)).default([]),
+        preffered_holding_tokens: z.array(z.string().trim().min(1)).default([]),
+        trading_volume_range: z.string().trim().min(1),
+    }),
+    funder: z.object({
+        type: z.string().trim().min(1),
+        notes: z.string().trim().min(1),
+    }),
+    wallet_age: z.object({
+        category: z.enum(["new", "mid", "old", "unknown"]),
+        first_seen: z.string().trim().min(1),
+        consistency: z.string().trim().min(1),
+    }),
+    summary: z.string().trim().min(1),
+    signals: z.array(z.string().trim().min(1)).default([]),
+    reference: z.array(walletAiAnalysisReferenceEntrySchema).optional(),
+}).passthrough();
+
+export const walletAiAnalysisWebhookPayloadSchema = z.union([
+    walletAiAnalysisResponseSchema,
+    z.array(walletAiAnalysisResponseSchema).min(1),
+]);
+
+export type WalletAiAnalysisResponse = z.infer<typeof walletAiAnalysisResponseSchema>;
+
+export type WalletAnalysisErrorCode =
+    | "invalid_address"
+    | "dependency_not_ready"
+    | "provider_timeout"
+    | "provider_unavailable"
+    | "provider_bad_payload"
+    | "provider_unknown";
+
+export type WalletAnalysisMissingDependency =
+    | "identity"
+    | "first_fund"
+    | "portfolio"
+    | "swaps";
+
+export type WalletAnalysisErrorDetails = {
+    missingDependencies?: WalletAnalysisMissingDependency[];
+    providerStatusCode?: number;
+    requestId?: string;
+};
+
+export class WalletAnalysisServiceError extends Error {
+    readonly code: WalletAnalysisErrorCode;
+    readonly status: number;
+    readonly details?: WalletAnalysisErrorDetails;
+
+    constructor(
+        message: string,
+        code: WalletAnalysisErrorCode,
+        status: number,
+        details?: WalletAnalysisErrorDetails,
+    ) {
+        super(message);
+        this.name = "WalletAnalysisServiceError";
+        this.code = code;
+        this.status = status;
+        this.details = details;
+    }
+}
+
+function isMissingWalletAiAnalysisCacheTableError(error: unknown): boolean {
+    if (error == null || typeof error !== "object") {
+        return false;
+    }
+
+    const record = error as {
+        cause?: { code?: unknown };
+        message?: unknown;
+    };
+
+    if (record.cause != null && typeof record.cause === "object") {
+        const causeCode = (record.cause as { code?: unknown }).code;
+        if (causeCode === "42P01") {
+            return true;
+        }
+    }
+
+    if (typeof record.message !== "string") {
+        return false;
+    }
+
+    return (
+        record.message.includes("wallet_ai_analysis_cache") &&
+        record.message.toLowerCase().includes("does not exist")
+    );
+}
+
+function warnMissingWalletAiAnalysisCacheTableOnce(): void {
+    if (warnedMissingWalletAiAnalysisCacheTable) {
+        return;
+    }
+
+    warnedMissingWalletAiAnalysisCacheTable = true;
+    console.warn(
+        "[wallet-ai-analysis-cache] wallet_ai_analysis_cache table not found; continuing without AI analysis DB cache until migration is applied",
+    );
+}

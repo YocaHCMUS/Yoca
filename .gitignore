@@ -17,6 +17,7 @@ dist-ssr
 .gitignore
 package-lock.json
 server/postgresdb
+n8n/*.yaml
 
 # Editor directories and files
 .vscode/*
@@ -46,3 +47,4 @@ s**/.env
 CHANGES.md
 
 server/api_logs
+externals

@@ -6,9 +6,11 @@ import {
 import { setErr } from "@sv/config/errors.js";
 import {
   googleTokenSchema,
+  honoJwt,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
+  UserPayload,
   userPayloadSchema,
   userVerificationSchema,
   validate,
@@ -17,21 +19,12 @@ import * as userService from "@sv/services/users.js";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
-import { deleteCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
-import type z from "zod";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const googleClientId = process.env.GOOGLE_CLIENT_ID!;
 const googleClient = new OAuth2Client(googleClientId);
-
-type UserPayload = z.infer<typeof userPayloadSchema>;
-
-const honoJwt = jwt({
-  alg: "HS256",
-  secret: jwtSecret,
-  cookie: AUTH_COOKIE_NAME,
-});
 
 async function verifyGoogleToken(idToken: string) {
   const ticket = await googleClient.verifyIdToken({
@@ -119,7 +112,8 @@ const app = new Hono()
           statusCode.Unauthorized,
         );
       }
-      const token = await setAuthToken(c, passwordUser.userId);
+      const user = await userService.getUserById(passwordUser.userId);
+      const token = await setAuthToken(c, passwordUser.userId, user?.displayName);
       return c.json(
         {
           message: messageText.LoggedInSuccessfully,
@@ -177,32 +171,44 @@ const app = new Hono()
     "/auth/solana/nounce",
     validate("json", solanaNounceRequestSchema),
     async (c) => {
-      const { pubKey } = c.req.valid("json");
+      try {
+        const { pubKey } = c.req.valid("json");
 
-      const existingWalletUser =
-        await userService.findUserByWalletAddress(pubKey);
+        const existingWalletUser =
+          await userService.findUserByWalletAddress(pubKey);
 
-      if (existingWalletUser) {
-        const nounce = await userService.updateWalletLoginNounce(
-          existingWalletUser.user.id,
-        );
+        if (existingWalletUser) {
+          const nounce = await userService.updateWalletLoginNounce(
+            existingWalletUser.user.id,
+          );
+          return c.json(
+            {
+              signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+              nounce,
+            },
+            statusCode.Ok,
+          );
+        }
+
+        const { nounce } = await userService.createUserWithWallet(pubKey);
         return c.json(
           {
             signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
             nounce,
           },
-          statusCode.Ok,
+          statusCode.Created,
+        );
+      } catch (err) {
+        if (err instanceof Error && err.message === "WALLET_ALREADY_LINKED") {
+          return c.json(setErr("WALLET_ALREADY_LINKED"), 409);
+        }
+
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
         );
       }
-
-      const { nounce } = await userService.createUserWithWallet(pubKey);
-      return c.json(
-        {
-          signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
-          nounce,
-        },
-        statusCode.Created,
-      );
     },
   )
   .post(
@@ -220,7 +226,7 @@ const app = new Hono()
         return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
-      const token = await setAuthToken(c, account.user.id);
+      const token = await setAuthToken(c, account.user.id, account.user.displayName);
 
       return c.json(
         {
@@ -236,17 +242,44 @@ const app = new Hono()
     deleteCookie(c, AUTH_COOKIE_NAME);
     return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
   })
-  .get("/auth/me", honoJwt, async (c) => {
+  .get("/auth/me", async (c) => {
     try {
+      const authCookie = getCookie(c, AUTH_COOKIE_NAME);
+      if (!authCookie) {
+        return c.json(null, statusCode.Ok);
+      }
+
+      const optionalJwt = jwt({
+        secret: jwtSecret,
+        alg: "HS256",
+        cookie: AUTH_COOKIE_NAME,
+      });
+      const jwtResult = await optionalJwt(c, async () => undefined);
+      if (jwtResult instanceof Response) {
+        return c.json(null, statusCode.Ok);
+      }
+
       // payload is typed as any, currently there is no typesafety for this yet
       const rawPayload = c.get("jwtPayload");
 
       const parsedPayload = userPayloadSchema.safeParse(rawPayload);
       if (!parsedPayload.success) {
+        return c.json(null, statusCode.Ok);
+      }
+
+      const user = await userService.getUserById(parsedPayload.data.id);
+      if (!user) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
 
-      return c.json(parsedPayload.data, statusCode.Ok);
+      return c.json(
+        {
+          id: parsedPayload.data.id,
+          exp: parsedPayload.data.exp,
+          displayName: user.displayName,
+        } satisfies UserPayload,
+        statusCode.Ok,
+      );
     } catch (err) {
       console.error(err);
       return c.json(

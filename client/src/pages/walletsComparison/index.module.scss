@@ -1,0 +1,191 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '../../styles/variables' as *;
+
+.walletsComparisonPage {
+  min-height: 100vh;
+  background: $background;
+  margin: 0;
+  padding: 0 $header-height 0 0;
+}
+
+.sidebarContainer {
+  position: sticky;
+  top: $header-height;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+  padding-top: $spacing-02;
+  padding-left: $spacing-06;
+  border-left: 1px solid $border-subtle;
+  height: calc(100vh - $header-height);
+  overflow-y: auto;
+}
+
+.mainContentContainer {
+  min-height: calc(100vh - $header-height - $spacing-05);
+  border: 1px solid $border-subtle;
+  background: $layer-01;
+}
+
+.exportCaptureContainer {
+  background: $layer-01;
+  width: 100%;
+  min-height: 1px;
+}
+
+.exportCaptureContainerExporting {
+  background: #ffffff;
+  padding: $spacing-06;
+}
+
+.exportReportHeader {
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(13, 18, 28, 0.06);
+  margin-bottom: $spacing-06;
+  padding: $spacing-05 $spacing-06;
+}
+
+:global(#pdf-report-header) {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.exportReportHeaderTopRow {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-05;
+}
+
+.exportReportKicker {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 $spacing-02;
+  text-transform: uppercase;
+}
+
+.exportReportTitle {
+  color: $text-primary;
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.exportReportStampBlock {
+  background: $layer-accent-01;
+  border: 1px solid $border-subtle;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+  min-width: 160px;
+  padding: $spacing-03 $spacing-04;
+}
+
+.exportReportStampLabel {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.exportReportStampValue {
+  color: $text-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.exportReportMeta {
+  color: $text-secondary;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  gap: $spacing-05;
+  margin-top: $spacing-03;
+}
+
+.exportReportMetaDivider {
+  color: $text-disabled;
+}
+
+.grid {
+  width: 100%;
+  padding: 0 !important;
+  min-height: calc(100vh - $header-height);
+}
+
+.sidebarTitle {
+  margin: 0;
+  color: $text-primary;
+}
+
+.sidebarHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.walletInput {
+  margin-bottom: $spacing-md;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.buttonTag {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyState {
+  font-size: 0.875rem;
+  color: $text-secondary;
+}
+
+.walletTag {
+  width: 100% !important;
+  max-width: 100% !important;
+
+
+  // span {
+  //   width: 100%;
+  //   display: flex;
+  //   justify-content: space-between;
+
+  //   // :global(.cds--interactive--tag-children) {
+  //   //   display: flex;
+  //   //   width: 100%;
+  //   //   max-width: 100% !important;
+  //   //   display: flex;
+  //   //   justify-content: space-between;
+
+  //   //   :global(.cds--tag__label) {
+  //   //     flex: 1;
+  //   //     // overflow: hidden;
+  //   //     // text-overflow: ellipsis;
+  //   //   }
+
+  //   //   :global(.cds--tag__close-icon) {
+  //   //     margin-left: auto;
+  //   //   }
+  //   // }
+
+
+  // }
+
+}
