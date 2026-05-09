@@ -294,11 +294,7 @@ const routes = router
     const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
-      const txs = await getWalletSwaps(address, {
-        limit: Number.isFinite(limit) ? limit : undefined,
-        cursor: cursor ?? undefined,
-        before: before ?? undefined,
-      });
+      const txs = await getWalletSwaps(address);
 
       return c.json(txs);
     } catch (err) {
@@ -317,12 +313,7 @@ const routes = router
       const limit = limitParam ? Number(limitParam) : undefined;
 
       try {
-        const swaps = await getWalletSwaps(walletAddress, {
-          tokenAddress,
-          limit: Number.isFinite(limit) ? limit : undefined,
-          cursor: cursor ?? undefined,
-          before: before ?? undefined,
-        });
+        const swaps = await getWalletSwaps(walletAddress);
 
         const trades = swaps.swaps.map((swap) =>
           mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
@@ -353,11 +344,7 @@ const routes = router
     const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
-      const txs = await getWalletTransfers(address, {
-        limit: Number.isFinite(limit) ? limit : undefined,
-        cursor: cursor ?? undefined,
-        before: before ?? undefined,
-      });
+      const txs = await getWalletTransfers(address);
 
       return c.json(txs);
     } catch (err) {

@@ -462,9 +462,7 @@ async function fetchCounterpartyActivityDataset(
 
     while ((transferHasMore || swapHasMore) && transferEvents.length + swapEvents.length < maxRecords) {
         if (transferHasMore && transferEvents.length + swapEvents.length < maxRecords) {
-            const transferPage = await getWalletTransfers(address, {
-                cursor: transferCursor,
-            });
+            const transferPage = await getWalletTransfers(address);
             sourceSet.add(transferPage.pageInfo.source);
 
             let reachedTransferBoundary = false;
@@ -504,9 +502,7 @@ async function fetchCounterpartyActivityDataset(
         }
 
         if (swapHasMore && transferEvents.length + swapEvents.length < maxRecords) {
-            const swapPage = await getWalletSwaps(address, {
-                cursor: swapCursor,
-            });
+            const swapPage = await getWalletSwaps(address);
             sourceSet.add(swapPage.pageInfo.source);
 
             let reachedSwapBoundary = false;

@@ -340,11 +340,11 @@ export async function getCachedWalletTransfers(
 	from?: number, //ms
 	to?: number
 ): Promise<WalletTransfer[] | null> {
-	const predicates = [eq(walletSwap.walletAddress, address)];
+	const predicates = [eq(tokenTransfers.address, address)];
 
 	if (from != null && to != null) {
-		predicates.push(gte(walletSwap.blockTimestampMs, from));
-		predicates.push(lte(walletSwap.blockTimestampMs, to));
+		predicates.push(gte(tokenTransfers.blockTime, new Date(from)));
+		predicates.push(lte(tokenTransfers.blockTime, new Date(to)));
 	}
 
 	const rows = await db
@@ -443,7 +443,7 @@ export async function getCachedWalletSwapsMeta(address: string) {
 	return await db
 		.select()
 		.from(walletSwapMeta)
-		.where(eq(walletTransferMeta.address, address))
+		.where(eq(walletSwapMeta.address, address))
 		.limit(1)
 }
 

@@ -19,7 +19,8 @@ import { getWalletIdentity } from "./walletIdentity.service.js";
 
 export type WalletSwapsPageFetcher = (
   address: string,
-  options?: WalletSwapsQueryOptions,
+  from?: number,
+  to?: number,
 ) => Promise<WalletSwapsResponse>;
 
 type WalletExchangeAccumulator = {
@@ -167,52 +168,13 @@ async function collectWalletSwapsForExchangeAggregation(
   source: WalletPageInfo["source"];
   truncated: boolean;
 }> {
-  const swaps: WalletSwap[] = [];
-  const sources = new Set<WalletPageInfo["source"]>();
-
-  let cursor: string | undefined;
-  let hasMore = true;
-
-  while (hasMore && swaps.length < transactionLimit) {
-    const remainingCapacity = Math.max(1, transactionLimit - swaps.length);
-    const pageLimit = Math.min(WALLET_TABLE_PAGE_SIZE, remainingCapacity);
-    const page = await fetchSwapsPage(address, {
-      limit: pageLimit,
-      cursor,
-      before: cursor,
-    });
-
-    sources.add(page.pageInfo.source);
-
-    for (const swap of page.swaps) {
-      swaps.push(swap);
-
-      if (swaps.length >= transactionLimit) {
-        break;
-      }
-    }
-
-    hasMore = Boolean(page.pageInfo.hasMore);
-    const nextCursor = normalizeCursorValue(
-      page.pageInfo.nextCursor ?? undefined,
-    );
-    if (
-      !hasMore ||
-      !nextCursor ||
-      nextCursor === cursor ||
-      page.swaps.length === 0
-    ) {
-      break;
-    }
-
-    cursor = nextCursor;
-  }
-
-  const truncated = hasMore && swaps.length >= transactionLimit;
+  const page = await fetchSwapsPage(address);
+  const swaps = page.swaps.slice(0, transactionLimit);
+  const truncated = page.swaps.length > transactionLimit;
 
   return {
     swaps,
-    source: collapseSwapSources(sources),
+    source: page.pageInfo.source,
     truncated,
   };
 }

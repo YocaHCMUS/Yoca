@@ -251,61 +251,6 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
   }
 }
 
-// export async function saveTransactionsCache(
-//   address: string,
-//   transactions: WalletTransaction[],
-// ): Promise<void> {
-//   try {
-//     await db.delete(walletTransactions).where(
-//       eq(walletTransactions.address, address)
-//     );
-
-//     if (transactions.length > 0) {
-//       // Deduplicate by transaction hash to avoid multiple rows with the same
-//       // (address, hash) primary key when providers return several
-//       // legs for a single on-chain transaction.
-//       const uniqueByHash = new Map<string, WalletTransaction>();
-//       for (const tx of transactions) {
-//         if (!uniqueByHash.has(tx.hash)) {
-//           uniqueByHash.set(tx.hash, tx);
-//         }
-//       }
-
-//       const uniqueTransactions = Array.from(uniqueByHash.values());
-
-//       const rows = uniqueTransactions.map((tx) => ({
-//         address,
-//         hash: tx.hash,
-//         blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-//         fromAddress: tx.from,
-//         toAddress: tx.to,
-//         receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-//         fee: tx.fee ?? null,
-//         mainAction: tx.mainAction ?? null,
-//         direction: tx.direction ?? null,
-//         primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-//         primaryTokenAmount: tx.primaryTokenAmount ?? null,
-//         primaryTokenAddress: tx.primaryTokenAddress ?? null,
-//         // Price fields are response-time enrichments and are not persisted.
-//         priceUsd: null,
-//         totalUsd: null,
-//         tokens: tx.tokens ?? null,
-//       }));
-
-//       await db.insert(walletTransactions).values(rows);
-//     }
-//     await db
-//       .insert(walletTransactionsMeta)
-//       .values({ address })
-//       .onConflictDoUpdate({
-//         target: [walletTransactionsMeta.address],
-//         set: { fetchedAt: new Date() },
-//       });
-//   } catch (err) {
-//     console.error("Failed to save wallet transactions cache", err);
-//   }
-// }
-
 // not very optimised I know, this will have some overlap with swap db
 export async function saveTransactionsHeliusCache(
   address: string,
