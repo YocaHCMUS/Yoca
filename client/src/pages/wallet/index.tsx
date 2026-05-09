@@ -3,7 +3,6 @@ import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDi
 import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
 import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
-import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
   FilterType,
@@ -21,13 +20,12 @@ import {
   renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
-import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
-import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import {
   AiAnalysisTab,
   type AiAnalysisDependencyItem,
 } from "@/components/wallet/AiAnalysis/index.ts";
+import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import {
   WalletReportTemplate,
   type WalletReportSection,
@@ -41,13 +39,13 @@ import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
   fetchWalletAiAnalysis,
-  type WalletAiAnalysisLanguage,
   fetchWalletCounterparties,
   fetchWalletIntelligence,
   fetchWalletOverview,
   fetchWalletPortfolio,
   fetchWalletSwaps,
   fetchWalletTransfers,
+  type WalletAiAnalysisLanguage,
   type WalletAiAnalysisResponse,
   type WalletCounterpartyRow,
   type WalletIntelligenceResponse,
@@ -60,7 +58,16 @@ import {
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { chunkArray } from "@/util/format";
-import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, Wallet } from "@carbon/icons-react";
+import {
+  Activity,
+  AiGenerate,
+  ChartLine,
+  ChevronDown,
+  Download,
+  Star,
+  StarFilled,
+  Wallet,
+} from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -398,7 +405,7 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""),
           typeof swap.exchangeName === "string" &&
-            swap.exchangeName.trim().length > 0
+          swap.exchangeName.trim().length > 0
             ? swap.exchangeName
             : "—",
           formatSwapPair(swap),
@@ -434,7 +441,7 @@ export default function WalletPage() {
         transfer.from,
         transfer.to,
         typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
+        transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
           : "Unknown",
         transfer.amount,
@@ -657,7 +664,6 @@ export default function WalletPage() {
           fullName={portfolioTokenMeta?.fullName}
           imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
           imageSize={20}
-
           tooltipAlign="right"
         />
       );
@@ -1216,7 +1222,7 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""),
           typeof swap.exchangeName === "string" &&
-            swap.exchangeName.trim().length > 0
+          swap.exchangeName.trim().length > 0
             ? swap.exchangeName
             : "—",
           formatSwapPair(swap),
@@ -1231,7 +1237,7 @@ export default function WalletPage() {
         transfer.from,
         transfer.to,
         typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
+        transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
           : "Unknown",
         transfer.amount,
@@ -1525,15 +1531,17 @@ export default function WalletPage() {
   );
 
   const aiDataStatusBadge = (statusRaw: "ok" | "insufficient_data") => {
-    const status = String(statusRaw ?? "").trim().toLowerCase();
+    const status = String(statusRaw ?? "")
+      .trim()
+      .toLowerCase();
     const selected =
       status === "ok"
         ? { fg: "#166534", bg: "#dcfce7", label: tr("walletPage.aiStatusOk") }
         : {
-          fg: "#92400e",
-          bg: "#fef3c7",
-          label: tr("walletPage.aiStatusInsufficientData"),
-        };
+            fg: "#92400e",
+            bg: "#fef3c7",
+            label: tr("walletPage.aiStatusInsufficientData"),
+          };
 
     return (
       <span
@@ -1568,27 +1576,33 @@ export default function WalletPage() {
             //   : null
           }
           dependencyItems={((): AiAnalysisDependencyItem[] => {
-            const portfolioAvailable = Array.isArray(portfolio) && portfolio.length > 0;
-            const swapsAvailable = Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
+            const portfolioAvailable =
+              Array.isArray(portfolio) && portfolio.length > 0;
+            const swapsAvailable =
+              Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
             const intelligenceAvailable = intelligenceReport != null;
 
-            const portfolioStatus: AiAnalysisDependencyItem["status"] = portfolioAvailable
-              ? "available"
-              : portfolioLoading
-                ? "fetching"
-                : "no_data";
+            const portfolioStatus: AiAnalysisDependencyItem["status"] =
+              portfolioAvailable
+                ? "available"
+                : portfolioLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const swapsStatus: AiAnalysisDependencyItem["status"] = swapsAvailable
-              ? "available"
-              : swapLoading
-                ? "fetching"
-                : "no_data";
+            const swapsStatus: AiAnalysisDependencyItem["status"] =
+              swapsAvailable
+                ? "available"
+                : swapLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const intelligenceStatus: AiAnalysisDependencyItem["status"] = intelligenceAvailable
-              ? "available"
-              : intelligenceLoading || (intelligenceEnabled && intelligenceReport == null)
-                ? "fetching"
-                : "no_data";
+            const intelligenceStatus: AiAnalysisDependencyItem["status"] =
+              intelligenceAvailable
+                ? "available"
+                : intelligenceLoading ||
+                    (intelligenceEnabled && intelligenceReport == null)
+                  ? "fetching"
+                  : "no_data";
 
             return [
               {
@@ -1596,7 +1610,11 @@ export default function WalletPage() {
                 label: String(tr("walletPage.aiDataPortfolio")),
                 status: portfolioStatus,
               },
-              { id: "swaps", label: String(tr("walletPage.aiDataSwaps")), status: swapsStatus },
+              {
+                id: "swaps",
+                label: String(tr("walletPage.aiDataSwaps")),
+                status: swapsStatus,
+              },
               {
                 id: "intelligence",
                 label: String(tr("walletPage.aiDataIntelligence")),
@@ -2018,7 +2036,8 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper noMarketTickers
+    <PageWrapper
+      noMarketTickers
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (

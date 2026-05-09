@@ -1,18 +1,29 @@
 import client from "@/api/main";
-import { DexTable } from "@/components/market/DexTable";
+import {
+  DexTable,
+  INITIAL_FILTERS,
+  SortKey,
+  TableFilters,
+} from "@/components/market/DexTable";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
-import { SOLSCAN_TX_URL } from "@/config/constants";
-import { useLocalization } from "@/contexts/LocalizationContext";
-import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useGet } from "@/hooks/useGet";
-import styles from "./index.module.scss";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import {
+  ArrowUp,
+  ChartBar,
+  Checkmark,
+  ChevronDown,
+  Close,
+  Growth,
+  SettingsAdjust,
+  Star,
+  Trophy,
+} from "@carbon/icons-react";
 import { Column, Grid, Section, Stack } from "@carbon/react";
-import { Growth, ChartBar, ArrowUp, Star, Trophy, ChevronDown, Checkmark, SettingsAdjust, Close } from "@carbon/icons-react";
-import { useMemo, useState, useRef, useEffect } from "react";
-import { TableFilters, INITIAL_FILTERS, SortKey } from "@/components/market/DexTable";
 import classNames from "classnames";
+import { useEffect, useMemo, useRef, useState } from "react";
+import styles from "./index.module.scss";
 
 type PoolMainTab = "trending" | "top" | "gainers" | "newPairs";
 type PoolDuration = "5m" | "1h" | "6h" | "24h";
@@ -46,8 +57,13 @@ export default function MarketPage() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (rankRef.current && !rankRef.current.contains(event.target as Node)) setIsRankOpen(false);
-      if (filterRef.current && !filterRef.current.contains(event.target as Node)) setIsFilterOpen(false);
+      if (rankRef.current && !rankRef.current.contains(event.target as Node))
+        setIsRankOpen(false);
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      )
+        setIsFilterOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -71,10 +87,14 @@ export default function MarketPage() {
     setTempFilters(INITIAL_FILTERS);
   };
 
-  const updateTempFilter = (key: keyof TableFilters, field: "min" | "max", val: string) => {
-    setTempFilters(prev => ({
+  const updateTempFilter = (
+    key: keyof TableFilters,
+    field: "min" | "max",
+    val: string,
+  ) => {
+    setTempFilters((prev) => ({
       ...prev,
-      [key]: { ...prev[key], [field]: val }
+      [key]: { ...prev[key], [field]: val },
     }));
   };
 
@@ -90,28 +110,28 @@ export default function MarketPage() {
     { key: "age", label: "Pair Age" },
   ];
 
-
   const trendingPools = useGet(
     client.api.tokens["market-pools"].trending,
     200,
     { query: { duration: trendingDuration } },
   );
 
-  const topPools = useGet(
-    client.api.tokens["market-pools"].top,
-    200,
-    { query: { sortBy: topSort } },
-  );
+  const topPools = useGet(client.api.tokens["market-pools"].top, 200, {
+    query: { sortBy: topSort },
+  });
 
+  // why is this not used
   const topGainerPools = useGet(client.api.tokens["market-pools"].gainers, 200);
   const newPairs = useGet(client.api.tokens["market-pools"]["new-pairs"], 200);
 
+  // Note: localization here
   const headings = useMemo(() => {
     switch (activeTab) {
       case "trending":
         return {
           title: "Trending Pools",
-          subtitle: "Các pool đang trend trên Solana theo mốc thời gian 5M, 1H, 6H, 24H.",
+          subtitle:
+            "Các pool đang trend trên Solana theo mốc thời gian 5M, 1H, 6H, 24H.",
         };
       case "top":
         return {
@@ -154,9 +174,15 @@ export default function MarketPage() {
                   const isActive = activeTab === tab.key;
 
                   if (isActive) {
-                    const hasSubfilters = tab.key === "trending" || tab.key === "top" || tab.key === "gainers";
+                    const hasSubfilters =
+                      tab.key === "trending" ||
+                      tab.key === "top" ||
+                      tab.key === "gainers";
                     return (
-                      <div key={tab.key} className={`${styles.activeTabContainer} ${!hasSubfilters ? styles.noSubfilters : ""}`}>
+                      <div
+                        key={tab.key}
+                        className={`${styles.activeTabContainer} ${!hasSubfilters ? styles.noSubfilters : ""}`}
+                      >
                         <span className={styles.activeTabText}>
                           {tab.key === "trending" && <Growth size={16} />}
                           {tab.key === "top" && <ChartBar size={16} />}
@@ -170,7 +196,9 @@ export default function MarketPage() {
                               <button
                                 key={d}
                                 className={`${styles.inlineFilterBtn} ${trendingDuration === d ? styles.active : ""}`}
-                                onClick={() => setTrendingDuration(d as PoolDuration)}
+                                onClick={() =>
+                                  setTrendingDuration(d as PoolDuration)
+                                }
                               >
                                 {d}
                               </button>
@@ -199,9 +227,11 @@ export default function MarketPage() {
                       key={tab.key}
                       className={styles.tabBtn}
                       onClick={() => {
-                        const newIndex = MAIN_TABS.findIndex((t) => t.key === tab.key);
+                        const newIndex = MAIN_TABS.findIndex(
+                          (t) => t.key === tab.key,
+                        );
                         setActiveTabIndex(newIndex);
-                        
+
                         // Reset or set specific sort when switching tabs
                         if (tab.key === "gainers") {
                           setSortKey(trendingDuration as SortKey);
@@ -221,36 +251,70 @@ export default function MarketPage() {
                 {/* Toolbar moved here */}
                 <div className={styles.toolbarWrapper}>
                   <div className={styles.rankContainer} ref={rankRef}>
-                    <button 
-                      className={classNames(styles.toolbarBtn, { [styles.active]: isRankOpen })}
+                    <button
+                      className={classNames(styles.toolbarBtn, {
+                        [styles.active]: isRankOpen,
+                      })}
                       onClick={() => setIsRankOpen(!isRankOpen)}
                     >
                       <Trophy size={16} />
-                      <span>Rank by: {sortKey === "none" ? "None" : `${sortDirection === "desc" ? "↓" : "↑"} ${SORT_OPTIONS.find(o => o.key === sortKey)?.label}`}</span>
+                      <span>
+                        Rank by:{" "}
+                        {sortKey === "none"
+                          ? "None"
+                          : `${sortDirection === "desc" ? "↓" : "↑"} ${SORT_OPTIONS.find((o) => o.key === sortKey)?.label}`}
+                      </span>
                       <ChevronDown size={16} />
                     </button>
-                    
+
                     {isRankOpen && (
                       <div className={styles.dropdown}>
                         <div className={styles.dropdownSection}>
                           <div className={styles.sectionTitle}>Order</div>
-                          <div className={styles.option} onClick={() => { setSortDirection("desc"); setIsRankOpen(false); }}>
-                            {sortDirection === "desc" && <Checkmark size={14} />}
+                          <div
+                            className={styles.option}
+                            onClick={() => {
+                              setSortDirection("desc");
+                              setIsRankOpen(false);
+                            }}
+                          >
+                            {sortDirection === "desc" && (
+                              <Checkmark size={14} />
+                            )}
                             <span>Descending</span>
                           </div>
-                          <div className={styles.option} onClick={() => { setSortDirection("asc"); setIsRankOpen(false); }}>
+                          <div
+                            className={styles.option}
+                            onClick={() => {
+                              setSortDirection("asc");
+                              setIsRankOpen(false);
+                            }}
+                          >
                             {sortDirection === "asc" && <Checkmark size={14} />}
                             <span>Ascending</span>
                           </div>
                         </div>
                         <div className={styles.dropdownSection}>
                           <div className={styles.sectionTitle}>Rank by</div>
-                          <div className={styles.option} onClick={() => { setSortKey("none"); setIsRankOpen(false); }}>
+                          <div
+                            className={styles.option}
+                            onClick={() => {
+                              setSortKey("none");
+                              setIsRankOpen(false);
+                            }}
+                          >
                             {sortKey === "none" && <Checkmark size={14} />}
                             <span>Default (No Sort)</span>
                           </div>
-                          {SORT_OPTIONS.map(opt => (
-                            <div key={opt.key} className={styles.option} onClick={() => { setSortKey(opt.key); setIsRankOpen(false); }}>
+                          {SORT_OPTIONS.map((opt) => (
+                            <div
+                              key={opt.key}
+                              className={styles.option}
+                              onClick={() => {
+                                setSortKey(opt.key);
+                                setIsRankOpen(false);
+                              }}
+                            >
                               {sortKey === opt.key && <Checkmark size={14} />}
                               <span>{opt.label}</span>
                             </div>
@@ -261,9 +325,14 @@ export default function MarketPage() {
                   </div>
 
                   <div className={styles.filterContainer} ref={filterRef}>
-                    <button 
-                      className={classNames(styles.toolbarBtn, { [styles.active]: isFilterOpen })}
-                      onClick={() => { setIsFilterOpen(!isFilterOpen); setTempFilters(filters); }}
+                    <button
+                      className={classNames(styles.toolbarBtn, {
+                        [styles.active]: isFilterOpen,
+                      })}
+                      onClick={() => {
+                        setIsFilterOpen(!isFilterOpen);
+                        setTempFilters(filters);
+                      }}
                     >
                       <SettingsAdjust size={16} />
                       <span>Filters</span>
@@ -273,7 +342,11 @@ export default function MarketPage() {
                       <div className={styles.filterPopup}>
                         <div className={styles.popupHeader}>
                           <span>Customize Filters</span>
-                          <Close size={20} className={styles.closeIcon} onClick={() => setIsFilterOpen(false)} />
+                          <Close
+                            size={20}
+                            className={styles.closeIcon}
+                            onClick={() => setIsFilterOpen(false)}
+                          />
                         </div>
                         <div className={styles.popupContent}>
                           {[
@@ -282,27 +355,57 @@ export default function MarketPage() {
                             { label: "Volume (24h)", key: "volume", unit: "$" },
                             { label: "Txns (24h)", key: "txns", unit: "" },
                             { label: "Pair age (h)", key: "age", unit: "" },
-                            { label: "24h change", key: "change24h", unit: "%" },
-                          ].map(f => (
+                            {
+                              label: "24h change",
+                              key: "change24h",
+                              unit: "%",
+                            },
+                          ].map((f) => (
                             <div key={f.key} className={styles.filterRow}>
                               <label>{f.label}:</label>
                               <div className={styles.inputGroup}>
                                 <div className={styles.inputWithUnit}>
-                                  {f.unit && <span className={styles.unit}>{f.unit}</span>}
-                                  <input 
-                                    type="number" 
-                                    placeholder="Min" 
-                                    value={tempFilters[f.key as keyof TableFilters].min || ""} 
-                                    onChange={e => updateTempFilter(f.key as keyof TableFilters, "min", e.target.value)}
+                                  {f.unit && (
+                                    <span className={styles.unit}>
+                                      {f.unit}
+                                    </span>
+                                  )}
+                                  <input
+                                    type="number"
+                                    placeholder="Min"
+                                    value={
+                                      tempFilters[f.key as keyof TableFilters]
+                                        .min || ""
+                                    }
+                                    onChange={(e) =>
+                                      updateTempFilter(
+                                        f.key as keyof TableFilters,
+                                        "min",
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                 </div>
                                 <div className={styles.inputWithUnit}>
-                                  {f.unit && <span className={styles.unit}>{f.unit}</span>}
-                                  <input 
-                                    type="number" 
-                                    placeholder="Max" 
-                                    value={tempFilters[f.key as keyof TableFilters].max || ""} 
-                                    onChange={e => updateTempFilter(f.key as keyof TableFilters, "max", e.target.value)}
+                                  {f.unit && (
+                                    <span className={styles.unit}>
+                                      {f.unit}
+                                    </span>
+                                  )}
+                                  <input
+                                    type="number"
+                                    placeholder="Max"
+                                    value={
+                                      tempFilters[f.key as keyof TableFilters]
+                                        .max || ""
+                                    }
+                                    onChange={(e) =>
+                                      updateTempFilter(
+                                        f.key as keyof TableFilters,
+                                        "max",
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                 </div>
                               </div>
@@ -310,8 +413,18 @@ export default function MarketPage() {
                           ))}
                         </div>
                         <div className={styles.popupFooter}>
-                          <button className={styles.resetBtn} onClick={handleResetFilters}>Reset</button>
-                          <button className={styles.applyBtn} onClick={handleApplyFilters}>Apply</button>
+                          <button
+                            className={styles.resetBtn}
+                            onClick={handleResetFilters}
+                          >
+                            Reset
+                          </button>
+                          <button
+                            className={styles.applyBtn}
+                            onClick={handleApplyFilters}
+                          >
+                            Apply
+                          </button>
                         </div>
                       </div>
                     )}
@@ -320,36 +433,42 @@ export default function MarketPage() {
               </div>
 
               {activeTab === "trending" && (
-                <DexTable 
-                  loading={trendingPools.isLoading || trendingPools.isValidating} 
-                  data={trendingPools.data as any} 
+                <DexTable
+                  loading={
+                    trendingPools.isLoading || trendingPools.isValidating
+                  }
+                  data={trendingPools.data as any}
                   sortKey={sortKey}
                   sortDirection={sortDirection}
                   filters={filters}
                 />
               )}
               {activeTab === "top" && (
-                <DexTable 
-                  loading={topPools.isLoading || topPools.isValidating} 
-                  data={topPools.data as any} 
+                <DexTable
+                  loading={topPools.isLoading || topPools.isValidating}
+                  data={topPools.data as any}
                   sortKey={sortKey}
                   sortDirection={sortDirection}
                   filters={filters}
                 />
               )}
               {activeTab === "gainers" && (
-                <DexTable 
-                  loading={trendingPools.isLoading || trendingPools.isValidating} 
-                  data={trendingPools.data as any} 
-                  sortKey={sortKey === "none" ? (trendingDuration as SortKey) : sortKey}
+                <DexTable
+                  loading={
+                    trendingPools.isLoading || trendingPools.isValidating
+                  }
+                  data={trendingPools.data as any}
+                  sortKey={
+                    sortKey === "none" ? (trendingDuration as SortKey) : sortKey
+                  }
                   sortDirection={sortDirection}
                   filters={filters}
                 />
               )}
               {activeTab === "newPairs" && (
-                <DexTable 
-                  loading={newPairs.isLoading} 
-                  data={newPairs.data as any} 
+                <DexTable
+                  loading={newPairs.isLoading}
+                  data={newPairs.data as any}
                   sortKey={sortKey}
                   sortDirection={sortDirection}
                   filters={filters}

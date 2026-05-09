@@ -1,17 +1,19 @@
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
-  const { themeRef } = useUserTheme();
-  const [values, setValues] = useState<Record<string, string>>({});
+  const { theme, themeRef } = useUserTheme();
 
-  useEffect(() => {
-    if (!themeRef.current) return;
+  const values = useMemo(() => {
+    if (!themeRef.current) {
+      return {} as { [K in keyof T]: string };
+    }
 
     const resolved: Record<string, string> = {};
 
     for (const key in tokens) {
       const varName = extractVarName(tokens[key]);
+
       if (varName) {
         resolved[key] = getComputedStyle(themeRef.current)
           .getPropertyValue(varName)
@@ -19,10 +21,10 @@ export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
       }
     }
 
-    setValues(resolved);
-  });
+    return resolved as { [K in keyof T]: string };
+  }, [theme, tokens]);
 
-  return values as { [K in keyof T]: string };
+  return values;
 }
 
 function extractVarName(token: string) {

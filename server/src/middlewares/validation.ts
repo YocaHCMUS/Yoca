@@ -141,7 +141,8 @@ export const searchQuerySchema = z.object({
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
-// type inferrence to work correct (for some reasons)
+// type inferrence to work correct. Or else all field would collapsed into
+// string | string[]
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
@@ -227,7 +228,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+            `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);

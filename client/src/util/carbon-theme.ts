@@ -85,9 +85,7 @@ export const cds = {
   supportInfo: "var(--cds-support-info)",
 
   /* Interactive States */
-  interactive01: "var(--cds-interactive-01)",
-  interactive02: "var(--cds-interactive-02)",
-  interactive03: "var(--cds-interactive-03)",
+  interactive: "var(--cds-interactive)",
   focus: "var(--cds-focus)",
 } as const;
 

@@ -1,12 +1,12 @@
 /**
  * Chart API Response Types
- * 
+ *
  * Defines TypeScript interfaces for API endpoint responses.
- * 
+ *
  * @module chart-api.types
  */
 
-import type { TimeSeriesPoint, DistributionPoint } from './chart-data.types';
+import type { DistributionPoint, TimeSeriesPoint } from "./chart-data.types";
 
 /**
  * Base interface for all responses
@@ -26,7 +26,7 @@ export interface ApiResponseMetadata extends ChartResponseBase {
   timezone?: string;
 
   /** Data aggregation granularity */
-  aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  aggregation?: "hourly" | "daily" | "weekly" | "monthly";
 
   /** Response timestamp */
   timestamp?: number;
@@ -46,10 +46,10 @@ export interface BalanceTrendResponse extends ChartResponseBase {
     data: TimeSeriesPoint[];
 
     /** ECharts series render type */
-    seriesType?: 'line' | 'bar';
+    seriesType?: "line" | "bar";
 
     /** Unit of the series values */
-    unit?: 'TOKEN' | 'USD';
+    unit?: "TOKEN" | "USD";
   }[];
 
   /** Wallet addresses when multi-wallet view (optional) */
@@ -60,25 +60,31 @@ export interface BalanceTrendResponse extends ChartResponseBase {
     currency: string;
     timezone: string;
     aggregation: string;
-    mode?: 'total' | 'token' | 'composite';
+    mode?: "total" | "token" | "composite";
     tokens?: string[];
-    primaryYAxis?: 'TOKEN' | 'USD';
-    tokenMeta?: Record<string, {
-      symbol: string;
-      logoUri?: string;
-      tokenAddress?: string;
-    }>;
-    walletMeta?: Record<string, {
-      label: string;
-      identityName?: string;
-    }>;
+    primaryYAxis?: "TOKEN" | "USD";
+    tokenMeta?: Record<
+      string,
+      {
+        symbol: string;
+        logoUri?: string;
+        tokenAddress?: string;
+      }
+    >;
+    walletMeta?: Record<
+      string,
+      {
+        label: string;
+        identityName?: string;
+      }
+    >;
   };
 }
 
 /**
  * Asset distribution API response
  * GET /api/charts/distribution
- * 
+ *
  * Returns either aggregated data (when no wallets or single wallet)
  * or per-wallet data (when multiple wallets specified)
  */
@@ -156,7 +162,7 @@ export interface ExchangeComparisonResponse extends ChartResponseBase {
   /** Response metadata */
   metadata: {
     period: string;
-    metric: 'count' | 'volume';
+    metric: "count" | "volume";
   };
 }
 
@@ -207,7 +213,7 @@ export interface CounterpartyActivityResponse extends ChartResponseBase {
 /**
  * P&L chart API response
  * GET /api/charts/pnl
- * 
+ *
  * Returns either aggregated data (when no wallets or single wallet)
  * or per-wallet data (when multiple wallets specified)
  */
@@ -299,7 +305,7 @@ export interface HoldingDurationsResponse extends ChartResponseBase {
 
   /** Response metadata */
   metadata: {
-    unit: 'days' | 'weeks' | 'months';
+    unit: "days" | "weeks" | "months";
   };
 }
 
@@ -337,7 +343,7 @@ export interface VolumeBenchmarkResponse extends ChartResponseBase {
 /**
  * Trading volume distribution API response
  * GET /api/charts/trading-volume-distribution
- * 
+ *
  * Returns trading volume distribution by token for each wallet
  */
 export interface TradingVolumeDistributionResponse extends ChartResponseBase {
@@ -382,7 +388,7 @@ export interface BoxPlotDataPoint {
 /**
  * Trading volume per transaction API response
  * GET /api/charts/trading-volume-per-transaction
- * 
+ *
  * Returns box plot data for trading volume per transaction by wallet and type
  */
 export interface TradingVolumePerTransactionResponse extends ChartResponseBase {
@@ -415,7 +421,7 @@ export interface TradingVolumePerTransactionResponse extends ChartResponseBase {
 /**
  * Rolling annual return API response
  * GET /api/charts/rolling-annual-return
- * 
+ *
  * Returns rolling annual return data with cumulative values over time.
  * Supports either aggregated data (when no wallets or single wallet)
  * or per-wallet data (when multiple wallets specified)
@@ -454,7 +460,7 @@ export interface RollingAnnualReturnResponse extends ChartResponseBase {
   /** Response metadata */
   metadata: {
     currency: string;
-    timeUnit: 'month' | 'quarter' | 'year' | 'custom';
+    timeUnit: "month" | "quarter" | "year" | "custom";
     windowSize?: number; // For custom time unit (in days)
     startReturn?: number;
     endReturn?: number;
@@ -490,14 +496,14 @@ export interface RollingProfitAndLossResponse extends ChartResponseBase {
   metadata: {
     timestamp: number;
     currency?: string;
-    availableValueTypes: ('total' | 'realized' | 'unrealized')[];
+    availableValueTypes: ("total" | "realized" | "unrealized")[];
   };
 }
 
 /**
  * Average rolling annual return API response
  * GET /api/charts/average-rolling-annual-return
- * 
+ *
  * Returns box plot data for average rolling annual returns by wallet
  */
 export interface AverageRollingAnnualReturnResponse extends ChartResponseBase {
@@ -519,7 +525,7 @@ export interface AverageRollingAnnualReturnResponse extends ChartResponseBase {
   /** Response metadata */
   metadata: {
     period: string;
-    timeUnit: 'month' | 'quarter' | 'year' | 'custom';
+    timeUnit: "month" | "quarter" | "year" | "custom";
     windowSize?: number; // For custom time unit (in days)
     timestamp: number;
   };
@@ -540,28 +546,6 @@ export interface ApiErrorResponse extends ChartResponseBase {
 
   /** Timestamp of error */
   timestamp: number;
-}
-
-/**
- * API request parameters for balance endpoint
- */
-export interface BalanceRequestParams extends ChartResponseBase {
-  /** Time period filter */
-  timePeriod?: string;
-
-  /** Comma-separated token list */
-  tokens?: string;
-
-  /** Comma-separated wallet list */
-  wallets?: string;
-
-  /** Timezone for timestamp formatting */
-  timezone?: string;
-
-  /** Aggregation level */
-  aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
-
-  [key: string]: string | number | undefined;
 }
 
 /**
@@ -588,7 +572,29 @@ export interface ExchangesRequestParams extends ChartResponseBase {
   type?: string;
 
   /** Metric type */
-  metric?: 'count' | 'volume';
+  metric?: "count" | "volume";
+
+  [key: string]: string | number | undefined;
+}
+
+/**
+ * API request parameters for balance endpoint
+ */
+export interface BalanceRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  timePeriod?: string;
+
+  /** Comma-separated token list */
+  tokens?: string;
+
+  /** Comma-separated wallet list */
+  wallets?: string;
+
+  /** Timezone for timestamp formatting */
+  timezone?: string;
+
+  /** Aggregation level */
+  aggregation?: "hourly" | "daily" | "weekly" | "monthly";
 
   [key: string]: string | number | undefined;
 }
@@ -632,7 +638,7 @@ export interface PnLRequestParams extends ChartResponseBase {
   period?: string;
 
   /** Aggregation level */
-  aggregation?: 'daily' | 'weekly' | 'monthly';
+  aggregation?: "daily" | "weekly" | "monthly";
 
   /** Comma-separated wallet list */
   wallets?: string;
@@ -643,7 +649,8 @@ export interface PnLRequestParams extends ChartResponseBase {
 /**
  * API request parameters for transaction distribution endpoint
  */
-export interface TransactionDistributionRequestParams extends ChartResponseBase {
+export interface TransactionDistributionRequestParams
+  extends ChartResponseBase {
   /** Time period filter */
   period?: string;
 
@@ -667,7 +674,7 @@ export interface HoldingsRequestParams extends ChartResponseBase {
   limit?: number;
 
   /** Time unit for duration */
-  unit?: 'days' | 'weeks' | 'months';
+  unit?: "days" | "weeks" | "months";
 
   [key: string]: string | number | undefined;
 }
@@ -721,7 +728,7 @@ export interface PriceHistoryRequestParams extends ChartResponseBase {
   tokens?: string;
 
   /** Aggregation level */
-  aggregation?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  aggregation?: "hourly" | "daily" | "weekly" | "monthly";
 
   [key: string]: string | number | undefined;
 }
@@ -729,7 +736,8 @@ export interface PriceHistoryRequestParams extends ChartResponseBase {
 /**
  * API request parameters for trading volume distribution endpoint
  */
-export interface TradingVolumeDistributionRequestParams extends ChartResponseBase {
+export interface TradingVolumeDistributionRequestParams
+  extends ChartResponseBase {
   /** Time period filter */
   period?: string;
 
@@ -742,7 +750,8 @@ export interface TradingVolumeDistributionRequestParams extends ChartResponseBas
 /**
  * API request parameters for trading volume per transaction endpoint
  */
-export interface TradingVolumePerTransactionRequestParams extends ChartResponseBase {
+export interface TradingVolumePerTransactionRequestParams
+  extends ChartResponseBase {
   /** Time period filter */
   period?: string;
 
@@ -766,7 +775,7 @@ export interface RollingAnnualReturnRequestParams extends ChartResponseBase {
   wallets?: string;
 
   /** Time unit for rolling window: 'month', 'quarter', 'year', or 'custom' */
-  timeUnit?: 'month' | 'quarter' | 'year' | 'custom';
+  timeUnit?: "month" | "quarter" | "year" | "custom";
 
   /** Window size in days (for custom time unit) */
   windowSize?: number;
@@ -780,7 +789,8 @@ export interface RollingAnnualReturnRequestParams extends ChartResponseBase {
 /**
  * API request parameters for average rolling annual return endpoint
  */
-export interface AverageRollingAnnualReturnRequestParams extends ChartResponseBase {
+export interface AverageRollingAnnualReturnRequestParams
+  extends ChartResponseBase {
   /** Time period filter */
   period?: string;
 
@@ -788,7 +798,7 @@ export interface AverageRollingAnnualReturnRequestParams extends ChartResponseBa
   wallets?: string;
 
   /** Time unit for rolling window: 'month', 'quarter', 'year', or 'custom' */
-  timeUnit?: 'month' | 'quarter' | 'year' | 'custom';
+  timeUnit?: "month" | "quarter" | "year" | "custom";
 
   /** Window size in days (for custom time unit) */
   windowSize?: number;

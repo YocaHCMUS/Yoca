@@ -1,3 +1,4 @@
+import "@/debug/wdyr";
 import { BaseChart } from "@/components/charts/Base/BaseChart";
 import { ChartGridItem } from "@/components/charts/shared";
 import type { ChartProps } from "@/components/charts/shared/ChartProp";
@@ -124,7 +125,7 @@ async function fetchBalanceTrendWithCache(
     query: {
       wallets: query.wallets,
       tokens: query.tokens,
-      timePeriod: query.timePeriod,
+      timePeriod: query.timePeriod as any,
     },
   })
     .then((result) => {
@@ -338,7 +339,7 @@ function mergeLoadingState(
   };
 }
 
-export function BalanceChart({
+function BalanceChart({
   title,
   minHeight = 400,
   initialFilters = {
@@ -1204,3 +1205,7 @@ export function BalanceChart({
     </BaseChart>
   );
 }
+
+BalanceChart.whyDidYouRender = true;
+
+export { BalanceChart };

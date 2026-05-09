@@ -45,8 +45,6 @@ export function TimeSeriesLineChart({
 }: TimeSeriesChartProps) {
   const { fmt, tr } = useLocalization();
 
-  console.log(markLines);
-
   const tokens = useCarbonTokens({
     textPrimary: cds.textPrimary,
     textSecondary: cds.textSecondary,
@@ -57,8 +55,10 @@ export function TimeSeriesLineChart({
     error: cds.supportError,
     borderSubtle: cds.borderSubtle00,
     // Default color for markLines
-    interactive: cds.interactive01,
+    interactive: cds.interactive,
   });
+
+  console.log(JSON.stringify(tokens, null, 2));
 
   const chartData = useMemo(() => {
     if (!data || data.length == 0) return [];

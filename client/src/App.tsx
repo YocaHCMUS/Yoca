@@ -4,6 +4,7 @@ import "./App.css";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
+import BalanceChartDebugPage from "@/pages/balance-chart-debug";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
@@ -14,9 +15,10 @@ import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
-import { AuthGuard } from "./components/auth";
-import AlertsDemo from "./pages/alerts/demo";
 import { Component, type ReactNode } from "react";
+import { AuthGuard } from "./components/auth";
+import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
+import AlertsDemo from "./pages/alerts/demo";
 
 /** Catches render errors inside route elements so a silent crash does not
  *  abort the React Router transition (leaving the old page mounted). */
@@ -94,10 +96,14 @@ function App() {
           }
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
+        <Route path="/walletsfix-v1" element={<BalanceChartDebugPage />} />
         <Route
-          path="/secret-admin-dashboard"
-          element={<UnauthorizedPage />}
+          path="/walletsfix"
+          element={
+            <BalanceChartV2 address="4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk" />
+          }
         />
+        <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
