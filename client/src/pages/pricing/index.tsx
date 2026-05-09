@@ -221,18 +221,18 @@ export default function PricingPage() {
                     role="switch"
                     aria-checked={isStandard}
                     onClick={() => setIsStandard((v) => !v)}
-                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/8 border border-white/10 rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
+                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/8 border border-white/10 !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
                   >
                     <span className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
-                      Standard (Free)
+                      STANDARD
                     </span>
                     <span
-                      className={`relative inline-flex h-6 w-11 shrink-0 border-2 border-transparent rounded-full transition-colors duration-300 ${
+                      className={`relative flex items-center justify-start h-6 w-11 shrink-0 !rounded-full transition-colors duration-300 p-0.5 ${
                         isStandard ? "bg-[#14F195]" : "bg-white/20"
                       }`}
                     >
                       <span
-                        className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
+                        className={`inline-block h-5 w-5 !rounded-full bg-white shadow-md transition-transform duration-300 ${
                           isStandard ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
