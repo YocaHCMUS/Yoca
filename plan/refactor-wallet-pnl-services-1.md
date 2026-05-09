@@ -54,10 +54,10 @@ This plan refactors wallet PnL chart services to add a dedicated PnL caching lay
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-001 | Add `walletPnlDataCache` and `walletPnlDataMeta` table definitions to `server/src/db/schema.ts` with explicit column types and primary keys on `(address, timePeriod, aggregation)`. |  |  |
-| TASK-002 | Create a migration file in `server/postgresdb/migrations` to create the two new tables and indexes for `(address, timePeriod, aggregation)` and coverage range filtering columns. |  |  |
-| TASK-003 | Extend `server/src/services/wallet/db/walletDataCacher.ts` with `saveWalletPnlCache(...)` that upserts both `walletPnlDataCache` and `walletPnlDataMeta` in a single transaction. |  |  |
-| TASK-004 | Extend `server/src/services/wallet/db/walletDataRetriever.ts` with `getCachedWalletPnl(...)` and `getWalletPnlMeta(...)` that return cache payload plus explicit coverage metadata. |  |  |
+| TASK-001 | Add `walletPnlDataCache` and `walletPnlDataMeta` table definitions to `server/src/db/schema.ts` with explicit column types and primary keys on `(address, timePeriod, aggregation)`. | Yes | 2026-05-09 |
+| TASK-002 | ~~Create a migration file in `server/postgresdb/migrations` to create the two new tables and indexes for `(address, timePeriod, aggregation)` and coverage range filtering columns.~~ Use `npm run db:push` instead. | N/A | N/A |
+| TASK-003 | Extend `server/src/services/wallet/db/walletDataCacher.ts` with `saveWalletPnlCache(...)` that upserts both `walletPnlDataCache` and `walletPnlDataMeta` in a single transaction. | Yes | 2026-05-09 |
+| TASK-004 | Extend `server/src/services/wallet/db/walletDataRetriever.ts` with `getCachedWalletPnl(...)` and `getWalletPnlMeta(...)` that return cache payload plus explicit coverage metadata. | Yes | 2026-05-09 |
 
 ### Implementation Phase 2
 

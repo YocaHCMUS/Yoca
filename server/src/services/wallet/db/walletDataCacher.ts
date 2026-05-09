@@ -1,5 +1,5 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund, walletPnlDataCache, walletPnlDataMeta } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
 import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
@@ -476,5 +476,87 @@ export async function saveWalletFirstFundCache(
       });
   } catch (err) {
     console.error("Failed to save wallet first fund cache", err);
+  }
+}
+
+/**
+ * Save wallet PnL data cache and metadata.
+ *
+ * Accepts:
+ * - address: wallet address
+ * - timePeriod: e.g. "7D"
+ * - aggregation: e.g. "daily", "hourly"
+ * - dailyData: array of daily PnL records with {dayStartMs, dailyPnl, cumulativePnl, dayOpen, dayClose}
+ * - coverageFromMs, coverageToMs: PnL cache coverage range
+ * - sourceBalanceRangeFromMs, sourceBalanceRangeToMs: balance history source range
+ * - sourceTransferRangeFromMs, sourceTransferRangeToMs: transfer history source range
+ *
+ * Upserts both walletPnlDataCache (per-day rows) and walletPnlDataMeta (coverage) in two operations.
+ */
+export async function saveWalletPnlCache(
+  address: string,
+  timePeriod: string,
+  aggregation: string,
+  dailyData: Array<{
+    dayStartMs: number;
+    dailyPnl: number | string;
+    cumulativePnl: number | string;
+    dayOpen: number | string;
+    dayClose: number | string;
+  }>,
+  coverageFromMs: number,
+  coverageToMs: number,
+  sourceBalanceRangeFromMs: number,
+  sourceBalanceRangeToMs: number,
+  sourceTransferRangeFromMs: number,
+  sourceTransferRangeToMs: number,
+): Promise<void> {
+  try {
+    // Insert/upsert daily PnL rows. Each day gets its own row with (address, timePeriod, aggregation, dayStartMs) as PK.
+    if (dailyData.length > 0) {
+      const rows = dailyData.map((d) => ({
+        address,
+        timePeriod,
+        aggregation,
+        dayStartMs: d.dayStartMs,
+        dailyPnl: Number(d.dailyPnl),
+        cumulativePnl: Number(d.cumulativePnl),
+        dayOpen: Number(d.dayOpen),
+        dayClose: Number(d.dayClose),
+        computedAt: new Date(),
+      }));
+
+      await db.insert(walletPnlDataCache).values(rows).onConflictDoNothing();
+    }
+
+    // Upsert metadata to track coverage and source ranges.
+    await db
+      .insert(walletPnlDataMeta)
+      .values({
+        address,
+        timePeriod,
+        aggregation,
+        coverageFromMs,
+        coverageToMs,
+        sourceBalanceRangeFromMs,
+        sourceBalanceRangeToMs,
+        sourceTransferRangeFromMs,
+        sourceTransferRangeToMs,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [walletPnlDataMeta.address, walletPnlDataMeta.timePeriod, walletPnlDataMeta.aggregation],
+        set: {
+          coverageFromMs,
+          coverageToMs,
+          sourceBalanceRangeFromMs,
+          sourceBalanceRangeToMs,
+          sourceTransferRangeFromMs,
+          sourceTransferRangeToMs,
+          updatedAt: new Date(),
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet PnL cache", err);
   }
 }

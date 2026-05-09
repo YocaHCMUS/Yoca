@@ -1095,6 +1095,69 @@ export const firstFunderCategoryDictionary = pgTable("first_funder_category_dict
   description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
 });
 
+// --- Wallet PnL Cache tables ---
+
+/**
+ * Daily wallet PnL cache (normalized: one row per day, not JSONB array).
+ * 
+ * Stores computed daily PnL data per wallet/period/aggregation combination.
+ * Each row represents a single day of data within the requested period.
+ * Primary key prevents duplicate daily entries for same wallet/period/aggregation/day combo.
+ */
+export const walletPnlDataCache = pgTable(
+  "wallet_pnl_data_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    dayStartMs: bigint("day_start_ms", { mode: "number" }).notNull(),
+    dailyPnl: decimal("daily_pnl").notNull(),
+    cumulativePnl: decimal("cumulative_pnl").notNull(),
+    dayOpen: decimal("day_open").notNull(),
+    dayClose: decimal("day_close").notNull(),
+    computedAt: timestamp("computed_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.address, t.timePeriod, t.aggregation, t.dayStartMs],
+    }),
+  ],
+);
+
+/**
+ * Wallet PnL cache metadata and coverage tracking.
+ *
+ * Stores coverage ranges (from/to ms), source data ranges for balance history
+ * and transfer data, and update timestamp. Used to determine cache validity
+ * and whether recomputation is needed for a requested range.
+ */
+export const walletPnlDataMeta = pgTable(
+  "wallet_pnl_data_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    coverageFromMs: bigint("coverage_from_ms", { mode: "number" }).notNull(),
+    coverageToMs: bigint("coverage_to_ms", { mode: "number" }).notNull(),
+    sourceBalanceRangeFromMs: bigint("source_balance_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceBalanceRangeToMs: bigint("source_balance_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeFromMs: bigint("source_transfer_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeToMs: bigint("source_transfer_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.address, t.timePeriod, t.aggregation] }),
+  ],
+);
+
 /**
  * AI Wallet Forensic Audit cache.
  *
@@ -1214,6 +1277,10 @@ export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
+export type WalletPnlDataCacheInsert = typeof walletPnlDataCache.$inferInsert;
+export type WalletPnlDataCacheRow = typeof walletPnlDataCache.$inferSelect;
+export type WalletPnlDataMetaInsert = typeof walletPnlDataMeta.$inferInsert;
+export type WalletPnlDataMetaRow = typeof walletPnlDataMeta.$inferSelect;
 export type NewsBatchInsert = typeof newsBatches.$inferInsert;
 export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;

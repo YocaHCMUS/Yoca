@@ -15,6 +15,8 @@ import {
 	walletTransferMeta,
 	walletBalanceHistoryCache,
 	walletFirstFund,
+	walletPnlDataCache,
+	walletPnlDataMeta,
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
@@ -800,6 +802,61 @@ export async function getCachedWalletFirstFund(
 		.from(walletFirstFund)
 		.where(
 			eq(walletFirstFund.reciepient, address),
+		)
+		.limit(1);
+
+	return row.length > 0 ? row[0] : null;
+}
+
+/**
+ * Retrieve wallet PnL cache rows for a given address/period/aggregation within a date range.
+ *
+ * Returns daily PnL records sorted by dayStartMs ascending.
+ * If no data is cached, returns an empty array.
+ */
+export async function getCachedWalletPnl(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+	fromMs: number,
+	toMs: number,
+) {
+	const rows = await db
+		.select()
+		.from(walletPnlDataCache)
+		.where(
+			and(
+				eq(walletPnlDataCache.address, address),
+				eq(walletPnlDataCache.timePeriod, timePeriod),
+				eq(walletPnlDataCache.aggregation, aggregation),
+				gte(walletPnlDataCache.dayStartMs, fromMs),
+				lt(walletPnlDataCache.dayStartMs, toMs),
+			),
+		)
+		.orderBy(walletPnlDataCache.dayStartMs);
+
+	return rows;
+}
+
+/**
+ * Retrieve wallet PnL cache metadata for a given address/period/aggregation.
+ *
+ * Returns metadata with coverage ranges and source data ranges, or null if not cached.
+ */
+export async function getWalletPnlMeta(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+) {
+	const row = await db
+		.select()
+		.from(walletPnlDataMeta)
+		.where(
+			and(
+				eq(walletPnlDataMeta.address, address),
+				eq(walletPnlDataMeta.timePeriod, timePeriod),
+				eq(walletPnlDataMeta.aggregation, aggregation),
+			),
 		)
 		.limit(1);
 
