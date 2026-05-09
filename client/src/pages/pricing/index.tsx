@@ -8,333 +8,340 @@ import {
   btnPrimaryLeave,
 } from "@/components/landing/tokens";
 
-// Static tiers for columns 2, 3, 4
-const staticTiers = [
-  {
-    name: "Plus",
-    price: "$199",
-    included: "15,000,000 CUs/MO",
-    apiLimit: "50 RPS",
-    overage: "$9.9/1M CUs",
-    features: [
-      "Unlimited API Keys & Custom API Access",
-      "Max 100 Million Compute Units (CUs) per month",
-      "WebSocket: 500 concurrent connections",
-      "Priority Support",
-    ],
-    isMostPopular: true,
-    isPro: false,
-  },
-  {
-    name: "Pro",
-    price: "$499",
-    included: "60,000,000 CUs/MO",
-    apiLimit: "100 RPS",
-    overage: "$6.9/1M CUs",
-    features: [
-      "Unlimited API Keys & Custom API Access",
-      "Batch tokens API access",
-      "Unlimited Compute Units (CUs) per month",
-      "WebSocket: 2,000 concurrent connections",
-      "Dedicated Support",
-    ],
-    isMostPopular: false,
-    isPro: true,
-  },
-];
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
-// Tier data for the dynamic column 1
 const LITE_DATA = {
   name: "Lite",
   price: "$39",
+  period: "/ month",
   included: "1,500,000 CUs/MO",
   apiLimit: "15 RPS",
   overage: "$23/1M CUs",
-  cta: "BUY NOW",
+  websocket: "No",
+  cta: "Buy Now",
 };
 
 const STANDARD_DATA = {
   name: "Standard",
   price: "FREE",
+  period: "",
   included: "30,000 CUs/MO",
   apiLimit: "1 RPS",
   overage: "Not Allowed",
-  cta: "TRY FOR FREE",
+  websocket: "No",
+  cta: "Try For Free",
 };
 
-// Check icon SVG
-function CheckIcon() {
+const PLUS_TIER = {
+  name: "Plus",
+  price: "$199",
+  period: "/ month",
+  included: "15,000,000 CUs/MO",
+  apiLimit: "50 RPS",
+  overage: "$9.9/1M CUs",
+  features: [
+    "Unlimited API Keys & Custom API Access",
+    "Max 100 Million Compute Units/month",
+    "WebSocket: 500 concurrent connections",
+    "Priority Support",
+  ],
+  isMostPopular: true,
+  accentColor: "#14F195" as const,
+};
+
+const PRO_TIER = {
+  name: "Pro",
+  price: "$499",
+  period: "/ month",
+  included: "60,000,000 CUs/MO",
+  apiLimit: "100 RPS",
+  overage: "$6.9/1M CUs",
+  features: [
+    "Unlimited API Keys & Custom API Access",
+    "Batch tokens API access",
+    "Unlimited Compute Units/month",
+    "WebSocket: 2,000 concurrent connections",
+    "Dedicated Support",
+  ],
+  isMostPopular: false,
+  accentColor: "#9945FF" as const,
+};
+
+// ─── Icons ─────────────────────────────────────────────────────────────────────
+
+function CheckIcon({ color = "#14F195" }: { color?: string }) {
   return (
     <svg
-      className="w-4 h-4 text-[#14F195] mt-0.5 shrink-0"
+      className="w-4 h-4 shrink-0 mt-0.5"
       fill="none"
-      stroke="currentColor"
+      stroke={color}
+      strokeWidth={2}
       viewBox="0 0 24 24"
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M5 13l4 4L19 7"
-      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   );
 }
 
-// Bolt icon SVG
-function BoltIcon({ className = "w-4 h-4" }: { className?: string }) {
+function BoltIcon({ color = "#14F195" }: { color?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13 10V3L4 14h7v7l9-11h-7z"
-      />
+    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   );
 }
+
+// ─── Metric Row ────────────────────────────────────────────────────────────────
+
+function MetricRow({
+  label,
+  value,
+  accent = false,
+  color = "#14F195",
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  color?: string;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748b] mb-1">
+        {label}
+      </p>
+      <p
+        className="text-[15px] font-semibold"
+        style={{ color: accent ? color : "#f8fafc" }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const [isStandardMode, setIsStandardMode] = useState(false);
-
-  const col1 = isStandardMode ? STANDARD_DATA : LITE_DATA;
+  const [isStandard, setIsStandard] = useState(false);
+  const col1 = isStandard ? STANDARD_DATA : LITE_DATA;
 
   return (
     <div
       id="pricing"
-      className="landing-page min-h-screen w-full bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#9945FF]/35 selection:text-[#f8fafc] relative flex flex-col items-center"
+      className="landing-page min-h-screen w-full bg-[#0a0a0f] text-[#f8fafc] antialiased relative flex flex-col"
     >
       <LandingNavbar />
 
-      <main className="relative z-10 flex-grow w-full flex flex-col items-center overflow-hidden pb-24 pt-32">
-        {/* Glowing Orbs — copied from LandingHero */}
+      <main className="relative flex-grow flex flex-col items-center pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* ── Background Orbs ── */}
         <div
+          aria-hidden
           className="pointer-events-none absolute rounded-full"
           style={{
-            left: "-8rem",
-            top: "5rem",
-            width: "420px",
-            height: "420px",
-            background: "rgba(153,69,255,0.22)",
-            filter: "blur(100px)",
+            left: "-10rem",
+            top: "4rem",
+            width: 500,
+            height: 500,
+            background: "rgba(153,69,255,0.2)",
+            filter: "blur(110px)",
           }}
-          aria-hidden
         />
         <div
+          aria-hidden
           className="pointer-events-none absolute rounded-full"
           style={{
-            right: "-6rem",
-            top: "10rem",
-            width: "380px",
-            height: "380px",
-            background: "rgba(139,92,246,0.18)",
-            filter: "blur(100px)",
+            right: "-8rem",
+            top: "8rem",
+            width: 420,
+            height: 420,
+            background: "rgba(20,241,149,0.10)",
+            filter: "blur(110px)",
           }}
-          aria-hidden
         />
         <div
+          aria-hidden
           className="pointer-events-none absolute rounded-full"
           style={{
             left: "50%",
-            top: "50%",
-            width: "600px",
-            height: "300px",
+            top: "55%",
+            width: 700,
+            height: 350,
             transform: "translate(-50%, -50%)",
             background: LANDING_ACCENT_GLOW,
-            filter: "blur(80px)",
+            filter: "blur(90px)",
           }}
-          aria-hidden
         />
 
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center relative z-10">
-          {/* Header Section */}
-          <div className="flex flex-col items-center justify-center text-center pb-16 w-full max-w-3xl mx-auto">
-            <h1 className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl mb-6 text-center">
-              Pricing
-            </h1>
-            <p className="text-lg text-[#94a3b8] w-full text-center mx-auto">
-              Outfit your platform with real-time crypto data and insights from
-              200+ markets—with just 1 integration.
-            </p>
-          </div>
+        {/* ── Header ── */}
+        <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">
+          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-white mb-5">
+            Pricing
+          </h1>
+          <p className="text-lg text-[#94a3b8] leading-relaxed">
+            Outfit your platform with real-time crypto data and insights from
+            200+ markets—with just 1 integration.
+          </p>
+        </div>
 
-          {/* Pricing Cards Grid — 1 col mobile, 2 tablet, 3 desktop (col1 + 2 static) */}
-          <div className="w-full flex justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl justify-center">
+        {/* ── Cards Grid ── */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
 
-            {/* ── Column 1: Dynamic Lite / Standard ── */}
-            <div className="flex flex-col bg-[#0a0a0f]/80 backdrop-blur-xl p-8 lg:p-10 relative rounded-3xl border border-white/10 hover:border-[#14F195]/50 transition-all duration-300 shadow-2xl">
-              {/* Tier header */}
-              <div className="mb-6 border-b border-white/10 pb-6">
-                <h3 className="text-base font-medium text-[#f8fafc] flex items-center gap-2 mb-3">
-                  <BoltIcon className="w-5 h-5 text-[#14F195]" />
-                  {col1.name}
-                </h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-white">
-                    {col1.price}
-                  </span>
-                  {col1.price !== "FREE" && (
-                    <span className="text-sm text-[#94a3b8] font-medium">/ month</span>
-                  )}
-                </div>
-              </div>
+            {/* ── Card 1: Dynamic Lite / Standard ── */}
+            <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300 overflow-hidden">
+              <div className="flex flex-col flex-1 p-8 gap-6">
 
-              {/* Metrics */}
-              <div className="flex-grow space-y-5">
-                <div>
-                  <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">Included</p>
-                  <p className="text-[15px] font-semibold text-[#14F195]">
-                    {col1.included}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">API Rate Limit</p>
-                  <p className="text-[15px] font-semibold text-white">{col1.apiLimit}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">Overage cost</p>
-                  <p className="text-[15px] font-semibold text-[#14F195]">
-                    {col1.overage}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">
-                    WebSocket Access
-                  </p>
-                  <p className="text-[15px] font-semibold text-white">No</p>
-                </div>
-              </div>
-
-              {/* Toggle switch + CTA */}
-              <div className="mt-8 pt-6 border-t border-white/10 space-y-5">
-                <div className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#f8fafc]">
-                    Standard
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isStandardMode}
-                    onClick={() => setIsStandardMode(!isStandardMode)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none rounded-full ${
-                      isStandardMode ? "bg-[#14F195]" : "bg-white/20"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${
-                        isStandardMode ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <button className="w-full uppercase tracking-widest text-xs font-bold h-12 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/30 transition-all duration-300 text-[#f8fafc] rounded-full shadow-lg">
-                  {col1.cta}
-                </button>
-              </div>
-            </div>
-
-            {/* ── Columns 2-3: Plus & Pro (static) ── */}
-            {staticTiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`flex flex-col bg-[#0a0a0f]/80 backdrop-blur-xl p-8 lg:p-10 relative rounded-3xl transition-all duration-300 shadow-2xl
-                  ${
-                    tier.isPro
-                      ? "border border-[#9945FF]/50 shadow-[0_0_30px_rgba(153,69,255,0.15)] hover:shadow-[0_0_40px_rgba(153,69,255,0.25)] hover:border-[#9945FF]"
-                      : "border border-white/10 hover:border-[#14F195]/50"
-                  }
-                `}
-              >
-                {/* Most Popular badge */}
-                {tier.isMostPopular && (
-                  <div className="absolute top-0 right-8 -translate-y-1/2">
-                    <span className="bg-gradient-to-r from-[#14F195] to-[#0ea5e9] text-[#0a0a0f] text-[10px] font-extrabold px-4 py-1.5 uppercase tracking-widest rounded-full shadow-[0_0_20px_rgba(20,241,149,0.5)] border border-white/20">
-                      Most Popular
-                    </span>
+                {/* Tier name + price */}
+                <div className="space-y-3 pb-6 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <BoltIcon color="#14F195" />
+                    <h3 className="text-lg font-semibold text-white">{col1.name}</h3>
                   </div>
-                )}
-
-                {/* Tier header */}
-                <div className="mb-6 border-b border-white/10 pb-6">
-                  <h3 className="text-base font-medium text-[#f8fafc] flex items-center gap-2 mb-3">
-                    <BoltIcon className={`w-5 h-5 ${tier.isPro ? "text-[#9945FF]" : "text-[#14F195]"}`} />
-                    {tier.name}
-                  </h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-white">
-                      {tier.price}
-                    </span>
-                    <span className="text-sm text-[#94a3b8] font-medium">/ month</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-extrabold text-white">{col1.price}</span>
+                    {col1.period && (
+                      <span className="text-sm text-[#64748b] font-medium">{col1.period}</span>
+                    )}
                   </div>
                 </div>
 
                 {/* Metrics */}
-                <div className="flex-grow space-y-5">
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">Included</p>
-                    <p className={`text-[15px] font-semibold ${tier.isPro ? "text-[#9945FF]" : "text-[#14F195]"}`}>
-                      {tier.included}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">
-                      API Rate Limit
-                    </p>
-                    <p className="text-[15px] font-semibold text-white">{tier.apiLimit}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-1 font-medium uppercase tracking-wider">Overage cost</p>
-                    <p className={`text-[15px] font-semibold ${tier.isPro ? "text-[#9945FF]" : "text-[#14F195]"}`}>
-                      {tier.overage}
-                    </p>
-                  </div>
-
-                  {/* Feature list */}
-                  {tier.features.length > 0 && (
-                    <ul className="space-y-4 pt-5 border-t border-white/5">
-                      {tier.features.map((feat, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-3 text-sm text-[#e2e8f0]"
-                        >
-                          <CheckIcon />
-                          <span className="leading-relaxed">{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                <div className="space-y-5 flex-1">
+                  <MetricRow label="Included" value={col1.included} accent color="#14F195" />
+                  <MetricRow label="API Rate Limit" value={col1.apiLimit} />
+                  <MetricRow label="Overage Cost" value={col1.overage} accent color="#14F195" />
+                  <MetricRow label="WebSocket Access" value={col1.websocket} />
                 </div>
 
-                {/* CTA */}
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  {tier.isMostPopular ? (
-                    <button
-                      className="w-full uppercase tracking-widest text-xs font-bold h-12 rounded-full shadow-[0_0_20px_rgba(20,241,149,0.3)]"
-                      style={{ ...btnPrimaryBase }}
-                      onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                      onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                {/* Toggle + CTA */}
+                <div className="space-y-4 pt-6 border-t border-white/10">
+                  {/* Pill toggle */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isStandard}
+                    onClick={() => setIsStandard((v) => !v)}
+                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/8 border border-white/10 rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
+                  >
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
+                      Standard (Free)
+                    </span>
+                    <span
+                      className={`relative inline-flex h-6 w-11 shrink-0 border-2 border-transparent rounded-full transition-colors duration-300 ${
+                        isStandard ? "bg-[#14F195]" : "bg-white/20"
+                      }`}
                     >
-                      Buy Now
-                    </button>
-                  ) : (
-                    <button className="w-full uppercase tracking-widest text-xs font-bold h-12 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#9945FF]/40 transition-all duration-300 text-[#f8fafc] rounded-full shadow-lg">
-                      Buy Now
-                    </button>
-                  )}
+                      <span
+                        className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
+                          isStandard ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </span>
+                  </button>
+
+                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg">
+                    {col1.cta}
+                  </button>
                 </div>
               </div>
-            ))}
             </div>
+
+            {/* ── Card 2: Plus (Most Popular) ── */}
+            <div className="flex flex-col rounded-3xl border border-[#14F195]/30 bg-white/[0.04] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 overflow-hidden relative">
+              {/* Most Popular badge */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#14F195] to-[#0ea5e9] text-[#0a0a0f] text-[10px] font-extrabold px-5 py-1.5 uppercase tracking-widest rounded-full shadow-[0_0_24px_rgba(20,241,149,0.6)]">
+                  ★ Most Popular
+                </span>
+              </div>
+
+              <div className="flex flex-col flex-1 p-8 gap-6 pt-10">
+                {/* Tier name + price */}
+                <div className="space-y-3 pb-6 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <BoltIcon color="#14F195" />
+                    <h3 className="text-lg font-semibold text-white">{PLUS_TIER.name}</h3>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-extrabold text-white">{PLUS_TIER.price}</span>
+                    <span className="text-sm text-[#64748b] font-medium">{PLUS_TIER.period}</span>
+                  </div>
+                </div>
+
+                {/* Metrics */}
+                <div className="space-y-5">
+                  <MetricRow label="Included" value={PLUS_TIER.included} accent color="#14F195" />
+                  <MetricRow label="API Rate Limit" value={PLUS_TIER.apiLimit} />
+                  <MetricRow label="Overage Cost" value={PLUS_TIER.overage} accent color="#14F195" />
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-3 pt-4 border-t border-white/5 flex-1">
+                  {PLUS_TIER.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-[#cbd5e1] leading-relaxed">
+                      <CheckIcon color="#14F195" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <div className="pt-4 border-t border-white/10">
+                  <button
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300"
+                    style={{ ...btnPrimaryBase }}
+                    onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                    onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                  >
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Card 3: Pro ── */}
+            <div className="flex flex-col rounded-3xl border border-[#9945FF]/40 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(153,69,255,0.12)] hover:shadow-[0_0_50px_rgba(153,69,255,0.22)] hover:border-[#9945FF]/70 transition-all duration-300 overflow-hidden">
+              <div className="flex flex-col flex-1 p-8 gap-6">
+                {/* Tier name + price */}
+                <div className="space-y-3 pb-6 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <BoltIcon color="#9945FF" />
+                    <h3 className="text-lg font-semibold text-white">{PRO_TIER.name}</h3>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-extrabold text-white">{PRO_TIER.price}</span>
+                    <span className="text-sm text-[#64748b] font-medium">{PRO_TIER.period}</span>
+                  </div>
+                </div>
+
+                {/* Metrics */}
+                <div className="space-y-5">
+                  <MetricRow label="Included" value={PRO_TIER.included} accent color="#9945FF" />
+                  <MetricRow label="API Rate Limit" value={PRO_TIER.apiLimit} />
+                  <MetricRow label="Overage Cost" value={PRO_TIER.overage} accent color="#9945FF" />
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-3 pt-4 border-t border-white/5 flex-1">
+                  {PRO_TIER.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-[#cbd5e1] leading-relaxed">
+                      <CheckIcon color="#9945FF" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <div className="pt-4 border-t border-white/10">
+                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#9945FF]/40 hover:bg-[#9945FF]/10 hover:border-[#9945FF] transition-all duration-300 text-white shadow-lg">
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
-        </section>
+        </div>
       </main>
 
       <LandingFooter />
