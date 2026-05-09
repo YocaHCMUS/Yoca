@@ -10,7 +10,7 @@ const navLinks = [
   { label: "Products", href: "#products" },
   { label: "Use Cases", href: "#stories" },
   { label: "Docs", href: "/market" },
-  { label: "Pricing", href: "#cta" },
+  { label: "Pricing", href: "/pricing" },
 ] as const;
 
 const linkStyle = {
