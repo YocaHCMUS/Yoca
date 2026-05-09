@@ -2,15 +2,15 @@
 goal: Update PnL chart and backing data path for 7-day wallet history
 version: 1.0
 date_created: 2026-05-08
-last_updated: 2026-05-08
+last_updated: 2026-05-09
 owner: unassigned
-status: Planned
+status: In Progress
 tags: [feature, bugfix, chart, pnl, wallet]
 ---
 
 # Introduction
 
-![Status: Planned](https://img.shields.io/badge/status-Planned-blue)
+![Status: In Progress](https://img.shields.io/badge/status-In%20Progress-yellow)
 
 Implement 7-day constrained wallet PnL data flow end-to-end. The plan updates server-side PnL calculation, transaction cache coverage metadata, and client chart consumption so the chart reflects the corrected data model.
 
@@ -48,7 +48,7 @@ Implement 7-day constrained wallet PnL data flow end-to-end. The plan updates se
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-005 | Update `server/src/services/wallet/walletCharts.service.ts` so `getCumulativePnL` computes daily PnL from day-over-day balance change minus same-day net inflow. |  |  |
+| TASK-005 | Update `server/src/services/wallet/walletCharts.service.ts` so `getCumulativePnL` computes daily PnL from day-over-day balance change minus same-day net inflow. | ✅ | 2026-05-09 |
 | TASK-006 | Update `server/src/routes/charts/pnl.route.ts` so the route forwards validated query parameters to `getHistoricalPnLData` and no parameter is silently dropped. |  |  |
 | TASK-007 | Review `client/src/components/charts/PnLChart/PnLChart.tsx` and the chart API types so the client request matches the server contract after the PnL service update. |  |  |
 | TASK-008 | Validate chart rendering behavior for `daily`, `cumulative`, and `both` modes after the server response shape is stabilized. |  |  |
