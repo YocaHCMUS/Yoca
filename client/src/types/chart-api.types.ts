@@ -628,11 +628,11 @@ export interface CounterpartiesRequestParams extends ChartResponseBase {
  * API request parameters for P&L endpoint
  */
 export interface PnLRequestParams extends ChartResponseBase {
-  /** Time period filter */
-  period?: string;
+  /** Fixed time period for P&L endpoint */
+  period?: '7D';
 
-  /** Aggregation level */
-  aggregation?: 'daily' | 'weekly' | 'monthly';
+  /** Fixed aggregation for P&L endpoint */
+  aggregation?: 'daily';
 
   /** Comma-separated wallet list */
   wallets?: string;

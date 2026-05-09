@@ -60,6 +60,8 @@ function buildDailyBalanceAnchors(
     let currentDayStart = getUtcStartOfDayMs(fromMs);
     const endOfRange = Math.min(toMs, Date.now());
 
+    const reversedHistory = [...balanceHistory].reverse()
+
     while (currentDayStart <= endOfRange) {
         const nextDayStart = currentDayStart + DAY_MS;
 
@@ -67,22 +69,15 @@ function buildDailyBalanceAnchors(
         let balanceAtStart = 0;
         let balanceAtEnd = 0;
 
-        // Balance at start of day: find closest point at or after day start
-        const pointAtStart = balanceHistory.find((p) => p.timestamp >= currentDayStart);
-        if (pointAtStart) {
-            balanceAtStart = pointAtStart.value;
-        } else {
-            // Use last point if all are before day start
-            balanceAtStart = balanceHistory[balanceHistory.length - 1]?.value ?? 0;
-        }
+        const pointAtStart = reversedHistory
+            .find((p) => p.timestamp <= currentDayStart);
 
-        // Balance at end of day: find closest point before next day start, or use current/last if no data yet
-        const pointsBeforeNextDay = balanceHistory.filter((p) => p.timestamp < nextDayStart);
-        if (pointsBeforeNextDay.length > 0) {
-            balanceAtEnd = pointsBeforeNextDay[pointsBeforeNextDay.length - 1]!.value;
-        } else {
-            balanceAtEnd = balanceAtStart; // No data yet for this day
-        }
+        balanceAtStart = pointAtStart?.value ?? balanceHistory[0].value;
+
+        const pointBeforeNextDay = reversedHistory
+            .find((p) => p.timestamp < nextDayStart);
+
+        balanceAtEnd = pointBeforeNextDay?.value ?? balanceAtStart;
 
         anchors.push({
             dayStartMs: currentDayStart,
@@ -109,12 +104,14 @@ async function computeDailyNetInflow(
     fromMs: number,
     toMs: number,
 ): Promise<Map<number, number>> {
-    const DAY_MS = 24 * 60 * 60 * 1000;
     const dailyNetInflow = new Map<number, number>();
 
     try {
         const transfersResponse = await getWalletTransfers(address, fromMs, toMs);
         const transfers = transfersResponse?.transfers ?? [];
+
+        // console.log("[computeDailyNetInflow] transfers: ")
+        // console.info(transfers)
 
         for (const transfer of transfers) {
             if (!transfer.amountUsd) {
@@ -252,6 +249,8 @@ export async function getCumulativePnL(
 
         // TASK-007: Compute daily net inflow
         const dailyNetInflowMap = await computeDailyNetInflow(address, fromMs, toMs);
+        // console.log("[getCumulativePnL] dailyNetInflowMap")
+        // console.info(dailyNetInflowMap)
 
         // TASK-008: Apply formula: dailyPnL[i] = (balanceEnd - balanceStart) - netInflow[i]
         const dailyPnLArray: PnLDataPoint[] = [];
@@ -265,6 +264,10 @@ export async function getCumulativePnL(
 
             // Formula: dailyPnL = dayDelta - netInflow
             const dayPnL = roundUsd(balanceDelta - netInflow);
+            // const dayPnL = roundUsd(balanceDelta);
+            // const dayPnL = roundUsd(netInflow);
+
+
 
             dailyPnLArray.push({
                 timestamp: dayStartMs,

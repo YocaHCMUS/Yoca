@@ -3,6 +3,7 @@ import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type {
     PnLDataPoint
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { PnLAggregation, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 
 interface SingleWalletPnL {
@@ -40,7 +41,9 @@ const DEFAULT_WALLET_NAMES = ["Main Wallet", "Trading Wallet", "Cold Storage"];
 const MAX_WALLET_CHART_CONCURRENCY = 4;
 
 export async function getHistoricalPnLData(
-    wallets: string[] = []
+    wallets: string[] = [],
+    period: WalletTimePeriod = "7D",
+    aggregation: PnLAggregation = "daily",
 ): Promise<HistoricalPnLResponse> {
     const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
 
@@ -59,7 +62,7 @@ export async function getHistoricalPnLData(
     const walletPnLItems = await mapWithConcurrency(
         normalizedWallets,
         MAX_WALLET_CHART_CONCURRENCY,
-        async (walletAddress) => getCumulativePnL(walletAddress),
+        async (walletAddress) => getCumulativePnL(walletAddress, period, aggregation),
     );
 
     const walletsResponse: MultiWalletPnLItem[] = walletPnLItems.map((pnl, index) => ({

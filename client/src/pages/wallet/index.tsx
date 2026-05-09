@@ -1346,9 +1346,8 @@ export default function WalletPage() {
           <div className={styles.chartSection}>
             <PnLChart
               minHeight={400}
-              aggregation="daily"
               autoRefresh
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
+              initialFilters={{ wallets: [walletAddress] }}
             />
           </div>
         </div>

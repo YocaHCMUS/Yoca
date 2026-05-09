@@ -13,7 +13,6 @@ import {
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { PnLRequestParams } from "@/types/chart-api.types";
-import type { TimePeriod } from "@/types/chart-filters.types";
 import {
   formatTimestampWithTimezone,
 } from "@/util/chart-helpers";
@@ -28,15 +27,12 @@ type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 export interface PnLChartProps {
   title?: string;
   minHeight?: number;
-  initialTimePeriod?: TimePeriod;
   initialWallets?: string[];
-  aggregation?: "daily" | "weekly" | "monthly";
   autoRefresh?: boolean;
   refreshInterval?: number;
   className?: string;
   initialViewMode?: "daily" | "cumulative" | "both";
   initialFilters?: {
-    timePeriod?: TimePeriod;
     wallets?: string[];
   };
 
@@ -47,9 +43,7 @@ export interface PnLChartProps {
 export const PnLChart: React.FC<PnLChartProps> = ({
   title,
   minHeight = 400,
-  initialTimePeriod = "30D",
   initialWallets = [],
-  aggregation = "daily",
   autoRefresh = true,
   refreshInterval = 30000,
   className,
@@ -67,9 +61,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     initialViewMode,
   );
 
-  const { filters, walletsString } = useChartFiltersSync({
+  const { walletsString } = useChartFiltersSync({
     initialFilters: initialFilters || {
-      timePeriod: initialTimePeriod,
       wallets: initialWallets.length > 0 ? initialWallets : undefined,
     },
     debounceDelay: 300,
@@ -77,12 +70,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
   const query = useMemo<PnLRequestParams>(
     () => ({
-      period: filters.timePeriod,
+      period: "7D",
       wallets: walletsString,
-      aggregation,
-      timezone,
+      aggregation: "daily",
     }),
-    [filters.timePeriod, walletsString, aggregation, timezone],
+    [walletsString],
   );
 
   const { data, loadingState, refetch } = useStandardChartController<
