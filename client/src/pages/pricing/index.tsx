@@ -184,12 +184,12 @@ export default function PricingPage() {
         </div>
 
         {/* ── Cards Grid ── */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto">
+        <div className="relative z-10 w-full max-w-6xl mx-auto mt-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
-            <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300 overflow-hidden">
-              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
+            <div className="flex flex-col p-8 lg:p-10 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300">
+              <div className="flex flex-col flex-1 gap-6">
 
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
@@ -247,8 +247,8 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 2: Plus ── */}
-            <div className="flex flex-col rounded-3xl border border-[#14F195]/30 bg-white/[0.04] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 overflow-hidden relative">
-              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
+            <div className="flex flex-col p-8 lg:p-10 rounded-3xl border border-[#14F195]/30 bg-white/[0.04] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+              <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
                   <div className="flex items-center gap-2">
@@ -293,8 +293,8 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 3: Pro ── */}
-            <div className="flex flex-col rounded-3xl border border-[#14F195]/30 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 overflow-hidden relative">
-              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
+            <div className="flex flex-col p-8 lg:p-10 rounded-3xl border border-[#14F195]/30 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+              <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
                   <div className="flex items-center gap-2">
