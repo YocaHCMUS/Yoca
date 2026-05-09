@@ -94,6 +94,20 @@ const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES = 5;
 const MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES = 50;
 const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS = 500;
 const MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS = 10_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function getUtcStartOfDayMs(tsMs: number): number {
+  const date = new Date(tsMs);
+  return Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
 
 function resolveHistoryWindow(
   from: HeliusHistoryFrom | number | HeliusHistoryRange,
@@ -749,10 +763,8 @@ export async function fetchHeliusSolanaTransfers(
   endCursor?: string,
 ): Promise<WalletTransfer[]> {
   const nowMs = Date.now();
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
   const resolvedToMs = to ?? nowMs;
-  const resolvedFromMs =
-    from ?? (to != null ? resolvedToMs - sevenDaysMs : nowMs - sevenDaysMs);
+  const resolvedFromMs = from ?? getUtcStartOfDayMs(resolvedToMs - 7 * DAY_MS);
 
   const rangeFromMs = Math.min(resolvedFromMs, resolvedToMs);
   const rangeToMs = Math.max(resolvedFromMs, resolvedToMs);
@@ -923,10 +935,8 @@ export async function fetchMoralisSolanaSwap(
   to?: number,
 ): Promise<WalletSwap[]> {
   const nowMs = Date.now();
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
   const resolvedToMs = to ?? nowMs;
-  const resolvedFromMs =
-    from ?? (to != null ? resolvedToMs - sevenDaysMs : nowMs - sevenDaysMs);
+  const resolvedFromMs = from ?? getUtcStartOfDayMs(resolvedToMs - 7 * DAY_MS);
 
   const rangeFromMs = Math.min(resolvedFromMs, resolvedToMs);
   const rangeToMs = Math.max(resolvedFromMs, resolvedToMs);
