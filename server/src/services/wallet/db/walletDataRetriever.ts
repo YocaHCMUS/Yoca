@@ -89,15 +89,6 @@ function toEpochSec(value: unknown): number | null {
 	return null;
 }
 
-function toNullableFiniteNumber(value: unknown): number | null {
-	if (value == null) {
-		return null;
-	}
-
-	const parsed = Number(value);
-	return Number.isFinite(parsed) ? parsed : null;
-}
-
 function resolveRange(input: CachedRange | "24h" | "7d") {
 	const nowSec = Math.floor(Date.now() / 1000);
 	if (typeof input === "object") {
@@ -294,30 +285,72 @@ export async function getCachedWalletTransactionsHelius(
 	};
 }
 
+// export async function getCachedWalletTransfers(
+// 	address: string,
+// 	from: "24h" | "7d" | CachedRange = "7d",
+// ): Promise<WalletTransfer[] | null> {
+// 	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
+// 	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
+// 	if (!isFresh) {
+// 		return null;
+// 	}
+
+// 	const range = resolveRange(from);
+// 	const fromDate = new Date(range.fromSec * 1000);
+// 	const toDate = new Date(range.toSec * 1000);
+
+// 	const rows = await db
+// 		.select()
+// 		.from(tokenTransfers)
+// 		.where(
+// 			and(
+// 				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
+// 				gte(tokenTransfers.blockTime, fromDate),
+// 				lte(tokenTransfers.blockTime, toDate),
+// 			),
+// 		)
+// 		.orderBy(desc(tokenTransfers.blockTime));
+
+// 	if (rows.length === 0) {
+// 		return null;
+// 	}
+
+// 	return rows.map((r) => ({
+// 		from: r.fromOwner,
+// 		to: r.toOwner,
+// 		amount: r.amount,
+// 		timestamp: toIsoTimestamp(r.blockTime),
+// 		tokenAddress: r.tokenAddress,
+// 		tokenSymbol: r.tokenSymbol,
+// 		transactionSignature: r.transactionSignature,
+// 		instructionIndex: r.instructionIndex,
+// 	}));
+// }
+
+export async function getCachedWalletTransfersMeta(address: string) {
+	return await db
+		.select()
+		.from(walletTransferMeta)
+		.where(eq(walletTransferMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletTransfers(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number
 ): Promise<WalletTransfer[] | null> {
-	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
-	if (!isFresh) {
-		return null;
-	}
+	const predicates = [eq(walletSwap.walletAddress, address)];
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000);
-	const toDate = new Date(range.toSec * 1000);
+	if (from != null && to != null) {
+		predicates.push(gte(walletSwap.blockTimestampMs, from));
+		predicates.push(lte(walletSwap.blockTimestampMs, to));
+	}
 
 	const rows = await db
 		.select()
 		.from(tokenTransfers)
-		.where(
-			and(
-				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-				gte(tokenTransfers.blockTime, fromDate),
-				lte(tokenTransfers.blockTime, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(tokenTransfers.blockTime));
 
 	if (rows.length === 0) {
@@ -336,30 +369,100 @@ export async function getCachedWalletTransfers(
 	}));
 }
 
+// export async function getCachedWalletSwaps(
+// 	address: string,
+// 	from: "24h" | "7d" | CachedRange = "7d",
+// ): Promise<WalletSwap[] | null> {
+// 	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
+// 	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
+// 	if (!isFresh) {
+// 		return null;
+// 	}
+
+// 	const range = resolveRange(from);
+// 	const fromDate = new Date(range.fromSec * 1000).getTime();
+// 	const toDate = new Date(range.toSec * 1000).getTime();
+
+// 	const rows = await db
+// 		.select()
+// 		.from(walletSwap)
+// 		.where(
+// 			and(
+// 				eq(walletSwap.walletAddress, address),
+// 				gte(walletSwap.blockTimestampMs, fromDate),
+// 				lte(walletSwap.blockTimestampMs, toDate),
+// 			),
+// 		)
+// 		.orderBy(desc(walletSwap.blockTimestampMs));
+
+// 	if (rows.length === 0) {
+// 		return null;
+// 	}
+
+// 	return rows.map((r) => ({
+// 		walletAddress: r.walletAddress,
+// 		transactionHash: r.transactionHash,
+// 		blockTimestampIso: toIsoTimestamp(new Date(r.blockTimestampMs)),
+// 		transactionType: r.transactionType,
+// 		subcategory: r.subcategory,
+// 		tokensInvolved: r.tokensInvoled,
+
+// 		pairAddress: r.pairAddress,
+// 		exchangeAddress: r.exchangeAddress,
+// 		exchangeName: r.exchangeName,
+// 		exchangeLogo: r.exchangeLogo,
+// 		bought: {
+// 			address: r.boughtTokenAddress,
+// 			amount: r.boughtTokenAmount,
+// 			symbol: null,
+// 			name: null,
+// 			logoUri: null,
+// 			priceUsd: r.boughtTokenPriceUsd,
+// 			valueUsd: r.boughtTokenAmount != null && r.boughtTokenPriceUsd != null
+// 				? Number(r.boughtTokenAmount) * Number(r.boughtTokenPriceUsd)
+// 				: 0,
+// 		},
+// 		sold: {
+// 			address: r.soldTokenAddress,
+// 			amount: r.soldTokenAmount,
+// 			symbol: null,
+// 			name: null,
+// 			logoUri: null,
+// 			priceUsd: r.soldTokenPriceUsd,
+// 			valueUsd: r.soldTokenAmount != null && r.soldTokenPriceUsd != null
+// 				? Number(r.soldTokenAmount) * Number(r.soldTokenPriceUsd)
+// 				: 0,
+// 		},
+// 		totalValueUsd: r.totalValueUsd,
+// 		baseQuotePrice: r.baseQuotePrice,
+
+// 	}));
+// }
+
+export async function getCachedWalletSwapsMeta(address: string) {
+	return await db
+		.select()
+		.from(walletSwapMeta)
+		.where(eq(walletTransferMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletSwaps(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number
 ): Promise<WalletSwap[] | null> {
-	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
-	if (!isFresh) {
-		return null;
-	}
+	const predicates = [eq(walletSwap.walletAddress, address)];
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000).getTime();
-	const toDate = new Date(range.toSec * 1000).getTime();
+	if (from != null && to != null) {
+		predicates.push(gte(walletSwap.blockTimestampMs, from));
+		predicates.push(lte(walletSwap.blockTimestampMs, to));
+	}
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(
-			and(
-				eq(walletSwap.walletAddress, address),
-				gte(walletSwap.blockTimestampMs, fromDate),
-				lte(walletSwap.blockTimestampMs, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(walletSwap.blockTimestampMs));
 
 	if (rows.length === 0) {
@@ -405,6 +508,7 @@ export async function getCachedWalletSwaps(
 
 	}));
 }
+
 
 export async function getCachedWalletTransfersChunk(
 	address: string,

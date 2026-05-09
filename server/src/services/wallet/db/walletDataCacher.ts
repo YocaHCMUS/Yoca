@@ -24,6 +24,9 @@ export async function saveSwapsCache(
   transactions: WalletSwap[],
 ) {
   try {
+    let coverageFromMs: number | undefined;
+    let coverageToMs: number | undefined;
+
     if (transactions.length > 0) {
       // Deduplicate by transaction hash to avoid multiple rows with the same
       // (address, signature) primary key when providers return several
@@ -37,7 +40,6 @@ export async function saveSwapsCache(
       }
 
       const uniqueTransactions = Array.from(uniqueBySignature.values());
-
       const rows = uniqueTransactions.map((tx) => {
         const ex = walletSwapExchangeForDb(tx);
         return {
@@ -68,6 +70,26 @@ export async function saveSwapsCache(
         };
       });
 
+      const coverageBounds = rows.length > 0
+        ? rows.reduce(
+          (bounds, row) => ({
+            fromMs: Math.min(bounds.fromMs, row.blockTimestampMs),
+            toMs: Math.max(bounds.toMs, row.blockTimestampMs),
+          }),
+          {
+            fromMs: Number.POSITIVE_INFINITY,
+            toMs: Number.NEGATIVE_INFINITY,
+          },
+        )
+        : null;
+
+      coverageFromMs = coverageBounds
+        ? coverageBounds.fromMs
+        : undefined;
+      coverageToMs = coverageBounds
+        ? coverageBounds.toMs
+        : undefined;
+
       await db.insert(walletSwap).values(rows).onConflictDoNothing();
     }
     await db
@@ -75,7 +97,12 @@ export async function saveSwapsCache(
       .values({ address })
       .onConflictDoUpdate({
         target: [walletSwapMeta.address],
-        set: { fetchedAt: new Date() },
+        set: {
+          fetchedAt: new Date(),
+          ...(typeof coverageFromMs === "number" && typeof coverageToMs === "number"
+            ? { coverageFromMs, coverageToMs }
+            : {}),
+        },
       });
   } catch (err) {
     console.error("Failed to save wallet transactions cache", err);
@@ -224,60 +251,60 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
   }
 }
 
-export async function saveTransactionsCache(
-  address: string,
-  transactions: WalletTransaction[],
-): Promise<void> {
-  try {
-    await db.delete(walletTransactions).where(
-      eq(walletTransactions.address, address)
-    );
+// export async function saveTransactionsCache(
+//   address: string,
+//   transactions: WalletTransaction[],
+// ): Promise<void> {
+//   try {
+//     await db.delete(walletTransactions).where(
+//       eq(walletTransactions.address, address)
+//     );
 
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueByHash = new Map<string, WalletTransaction>();
-      for (const tx of transactions) {
-        if (!uniqueByHash.has(tx.hash)) {
-          uniqueByHash.set(tx.hash, tx);
-        }
-      }
+//     if (transactions.length > 0) {
+//       // Deduplicate by transaction hash to avoid multiple rows with the same
+//       // (address, hash) primary key when providers return several
+//       // legs for a single on-chain transaction.
+//       const uniqueByHash = new Map<string, WalletTransaction>();
+//       for (const tx of transactions) {
+//         if (!uniqueByHash.has(tx.hash)) {
+//           uniqueByHash.set(tx.hash, tx);
+//         }
+//       }
 
-      const uniqueTransactions = Array.from(uniqueByHash.values());
+//       const uniqueTransactions = Array.from(uniqueByHash.values());
 
-      const rows = uniqueTransactions.map((tx) => ({
-        address,
-        hash: tx.hash,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-        fee: tx.fee ?? null,
-        mainAction: tx.mainAction ?? null,
-        direction: tx.direction ?? null,
-        primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-        primaryTokenAmount: tx.primaryTokenAmount ?? null,
-        primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        // Price fields are response-time enrichments and are not persisted.
-        priceUsd: null,
-        totalUsd: null,
-        tokens: tx.tokens ?? null,
-      }));
+//       const rows = uniqueTransactions.map((tx) => ({
+//         address,
+//         hash: tx.hash,
+//         blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
+//         fromAddress: tx.from,
+//         toAddress: tx.to,
+//         receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
+//         fee: tx.fee ?? null,
+//         mainAction: tx.mainAction ?? null,
+//         direction: tx.direction ?? null,
+//         primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
+//         primaryTokenAmount: tx.primaryTokenAmount ?? null,
+//         primaryTokenAddress: tx.primaryTokenAddress ?? null,
+//         // Price fields are response-time enrichments and are not persisted.
+//         priceUsd: null,
+//         totalUsd: null,
+//         tokens: tx.tokens ?? null,
+//       }));
 
-      await db.insert(walletTransactions).values(rows);
-    }
-    await db
-      .insert(walletTransactionsMeta)
-      .values({ address })
-      .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address],
-        set: { fetchedAt: new Date() },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
-  }
-}
+//       await db.insert(walletTransactions).values(rows);
+//     }
+//     await db
+//       .insert(walletTransactionsMeta)
+//       .values({ address })
+//       .onConflictDoUpdate({
+//         target: [walletTransactionsMeta.address],
+//         set: { fetchedAt: new Date() },
+//       });
+//   } catch (err) {
+//     console.error("Failed to save wallet transactions cache", err);
+//   }
+// }
 
 // not very optimised I know, this will have some overlap with swap db
 export async function saveTransactionsHeliusCache(
@@ -349,6 +376,12 @@ export async function saveTransfersCache(
   transfers: WalletTransfer[],
 ): Promise<void> {
   try {
+    let coverageFromMs: number | undefined;
+    let coverageToMs: number | undefined;
+    let firstAddress: string | undefined;
+    let lastAddress: string | undefined;
+
+
     if (transfers.length > 0) {
       // Deduplicate by transaction signature + instruction index to avoid multiple rows
       // with the same primary key when providers return duplicate transfer records.
@@ -378,14 +411,56 @@ export async function saveTransfersCache(
         instructionIndex: t.instructionIndex,
       }));
 
+      const coverageBounds = rows.length > 0
+        ? rows.reduce(
+          (bounds, row) => (
+            {
+              fromMs: Math.min(bounds.fromMs, row.blockTime.getTime()),
+              toMs: Math.max(bounds.toMs, row.blockTime.getTime()),
+              lastAddress: bounds.fromMs < row.blockTime.getTime() ? bounds.lastAddress : row.address,
+              firstAddress: bounds.toMs < row.blockTime.getTime() ? row.address : bounds.firstAddress
+            }),
+          {
+            fromMs: Number.POSITIVE_INFINITY,
+            toMs: Number.NEGATIVE_INFINITY,
+            lastAddress: "",
+            firstAddress: ""
+          },
+        )
+        : null;
+
+      coverageFromMs = coverageBounds
+        ? coverageBounds.fromMs
+        : undefined;
+      coverageToMs = coverageBounds
+        ? coverageBounds.toMs
+        : undefined;
+
+      firstAddress = coverageBounds
+        ? coverageBounds.firstAddress
+        : undefined;
+
+      lastAddress = coverageBounds
+        ? coverageBounds.lastAddress
+        : undefined;
+
+
       await db.insert(tokenTransfers).values(rows).onConflictDoNothing();
     }
+
     await db
       .insert(walletTransferMeta)
       .values({ address })
       .onConflictDoUpdate({
         target: [walletTransferMeta.address],
-        set: { fetchedAt: new Date() },
+        set: {
+          fetchedAt: new Date(),
+          ...(typeof coverageFromMs === "number" && typeof coverageToMs === "number"
+            ? { coverageFromMs, coverageToMs }
+            : {}),
+          coveredFromCursor: lastAddress,
+          coveredToCursor: firstAddress
+        },
       });
   } catch (err) {
     console.error("Failed to save wallet transfers cache", err);

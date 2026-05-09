@@ -703,6 +703,8 @@ export const walletSwapMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromMs: integer("covered_from_sec"),
+    coveredToMs: integer("covered_to_sec"),
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -712,6 +714,10 @@ export const walletTransferMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromMs: integer("covered_from_sec"),
+    coveredToMs: integer("covered_to_sec"),
+    coveredFromCursor: varchar("last_wallet_address", { length: 66 }),
+    coveredToCursor: varchar("first_wallet_address", { length: 66 })
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
