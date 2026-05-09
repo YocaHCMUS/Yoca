@@ -108,11 +108,11 @@ export default function PricingPage() {
   return (
     <div
       id="pricing"
-      className="landing-page min-h-screen bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#9945FF]/35 selection:text-[#f8fafc] relative flex flex-col"
+      className="landing-page min-h-screen w-full bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#9945FF]/35 selection:text-[#f8fafc] relative flex flex-col items-center"
     >
       <LandingNavbar />
 
-      <main className="relative z-10 flex-grow overflow-hidden pb-24 pt-32">
+      <main className="relative z-10 flex-grow w-full flex flex-col items-center overflow-hidden pb-24 pt-32">
         {/* Glowing Orbs — copied from LandingHero */}
         <div
           className="pointer-events-none absolute rounded-full"
@@ -152,20 +152,21 @@ export default function PricingPage() {
           aria-hidden
         />
 
-        <div className="max-w-7xl mx-auto w-full px-4 flex flex-col items-center relative z-10">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center relative z-10">
           {/* Header Section */}
-          <div className="flex flex-col items-center text-center pb-16 w-full">
-            <h1 className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl mb-6">
+          <div className="flex flex-col items-center justify-center text-center pb-16 w-full max-w-3xl mx-auto">
+            <h1 className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl mb-6 text-center">
               Pricing
             </h1>
-            <p className="text-lg text-[#94a3b8] max-w-2xl mx-auto">
+            <p className="text-lg text-[#94a3b8] w-full text-center mx-auto">
               Outfit your platform with real-time crypto data and insights from
               200+ markets—with just 1 integration.
             </p>
           </div>
 
           {/* Pricing Cards Grid — 1 col mobile, 2 tablet, 3 desktop (col1 + 2 static) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full justify-center">
+          <div className="w-full flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl justify-center">
 
             {/* ── Column 1: Dynamic Lite / Standard ── */}
             <div className="flex flex-col bg-[#0a0a0f]/80 backdrop-blur-xl p-8 lg:p-10 relative rounded-3xl border border-white/10 hover:border-[#14F195]/50 transition-all duration-300 shadow-2xl">
@@ -331,8 +332,9 @@ export default function PricingPage() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
-        </div>
+        </section>
       </main>
 
       <LandingFooter />
