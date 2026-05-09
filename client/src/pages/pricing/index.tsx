@@ -64,7 +64,7 @@ const PRO_TIER = {
     "Dedicated Support",
   ],
   isMostPopular: false,
-  accentColor: "#9945FF" as const,
+  accentColor: "#14F195" as const,
 };
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export default function PricingPage() {
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
             <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300 overflow-hidden">
-              <div className="flex flex-col flex-1 p-8 gap-6">
+              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
 
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
@@ -246,16 +246,9 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* ── Card 2: Plus (Most Popular) ── */}
+            {/* ── Card 2: Plus ── */}
             <div className="flex flex-col rounded-3xl border border-[#14F195]/30 bg-white/[0.04] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 overflow-hidden relative">
-              {/* Most Popular badge */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#14F195] to-[#0ea5e9] text-[#0a0a0f] text-[10px] font-extrabold px-5 py-1.5 uppercase tracking-widest rounded-full shadow-[0_0_24px_rgba(20,241,149,0.6)]">
-                  ★ Most Popular
-                </span>
-              </div>
-
-              <div className="flex flex-col flex-1 p-8 gap-6 pt-10">
+              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
                   <div className="flex items-center gap-2">
@@ -300,12 +293,12 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 3: Pro ── */}
-            <div className="flex flex-col rounded-3xl border border-[#9945FF]/40 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(153,69,255,0.12)] hover:shadow-[0_0_50px_rgba(153,69,255,0.22)] hover:border-[#9945FF]/70 transition-all duration-300 overflow-hidden">
-              <div className="flex flex-col flex-1 p-8 gap-6">
+            <div className="flex flex-col rounded-3xl border border-[#14F195]/30 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 overflow-hidden relative">
+              <div className="flex flex-col flex-1 p-8 lg:p-10 gap-6">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-white/10">
                   <div className="flex items-center gap-2">
-                    <BoltIcon color="#9945FF" />
+                    <BoltIcon color="#14F195" />
                     <h3 className="text-lg font-semibold text-white">{PRO_TIER.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
@@ -316,16 +309,16 @@ export default function PricingPage() {
 
                 {/* Metrics */}
                 <div className="space-y-5">
-                  <MetricRow label="Included" value={PRO_TIER.included} accent color="#9945FF" />
+                  <MetricRow label="Included" value={PRO_TIER.included} accent color="#14F195" />
                   <MetricRow label="API Rate Limit" value={PRO_TIER.apiLimit} />
-                  <MetricRow label="Overage Cost" value={PRO_TIER.overage} accent color="#9945FF" />
+                  <MetricRow label="Overage Cost" value={PRO_TIER.overage} accent color="#14F195" />
                 </div>
 
                 {/* Features */}
                 <ul className="space-y-3 pt-4 border-t border-white/5 flex-1">
                   {PRO_TIER.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-[#cbd5e1] leading-relaxed">
-                      <CheckIcon color="#9945FF" />
+                      <CheckIcon color="#14F195" />
                       {f}
                     </li>
                   ))}
@@ -333,7 +326,7 @@ export default function PricingPage() {
 
                 {/* CTA */}
                 <div className="pt-4 border-t border-white/10">
-                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#9945FF]/40 hover:bg-[#9945FF]/10 hover:border-[#9945FF] transition-all duration-300 text-white shadow-lg">
+                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white shadow-lg">
                     Buy Now
                   </button>
                 </div>
