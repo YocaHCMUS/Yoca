@@ -5,8 +5,14 @@ import {
   walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { getTokenDetails, getWalletFirstFund } from "@sv/services/wallet/index.js";
+import type {
+  WalletPortfolioItem,
+  WalletSwap,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  getTokenDetails,
+  getWalletFirstFund,
+} from "@sv/services/wallet/index.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -35,10 +41,8 @@ import {
   getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
 import { z } from "zod";
-
-const router = new Hono();
+import { Hono } from "hono";
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -70,7 +74,9 @@ const MAX_COUNTERPARTY_LIMIT = 100;
 const MAX_EXCHANGE_LIMIT = 5000;
 const DEFAULT_OVERVIEW_PERIOD = "24H";
 
-function parseOverviewPeriod(rawPeriod?: string): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+function parseOverviewPeriod(
+  rawPeriod?: string,
+): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
   const normalized = String(rawPeriod ?? "")
     .trim()
     .toUpperCase();
@@ -228,11 +234,16 @@ function mapSwapToTokenTradeRow(
           ? "buy"
           : "sell";
 
-  const selectedAmount = inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
-  const selectedTokenAddress = inferredAction === "buy" ? swap.bought.address : swap.sold.address;
-  const otherTokenAddress = inferredAction === "buy" ? swap.sold.address : swap.bought.address;
-  const selectedPrice = inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
-  const otherPrice = inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+  const selectedAmount =
+    inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress =
+    inferredAction === "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress =
+    inferredAction === "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice =
+    inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice =
+    inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
 
   return {
     address: walletAddress,
@@ -254,7 +265,7 @@ function mapSwapToTokenTradeRow(
   };
 }
 
-const routes = router
+const app = new Hono()
   .get("/overview", async (c) => {
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
@@ -276,10 +287,13 @@ const routes = router
 
     try {
       const portfolio = await getWalletPortfolio(address);
-      return c.json(portfolio);
-    } catch (err) {
-      console.error("Failed to get wallet portfolio", err);
-      return c.json({ error: "Failed to get wallet portfolio" }, 500);
+      return c.json(portfolio, statusCode.Ok);
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { error: "Failed to get wallet portfolio" },
+        statusCode.InternalServerError,
+      );
     }
   })
   .get("/swap", async (c) => {
@@ -515,7 +529,10 @@ const routes = router
 
     const parsed = walletAnalysisRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Missing or invalid required field: address" }, 400);
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
     }
 
     try {
@@ -547,7 +564,10 @@ const routes = router
 
     const parsed = walletAnalysisRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Missing or invalid required field: address" }, 400);
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
     }
 
     try {
@@ -652,7 +672,8 @@ const routes = router
    */
   .get("/:address/audit", validate("param", addressSchema), async (c) => {
     const { address } = c.req.valid("param");
-    const force = c.req.query("force") === "1" || c.req.query("force") === "true";
+    const force =
+      c.req.query("force") === "1" || c.req.query("force") === "true";
 
     try {
       const audit = await getWalletAudit(address, { force });
@@ -682,4 +703,6 @@ const routes = router
     }
   });
 
-export default routes;
+export default app;
+
+export type WalletsAppType = typeof app;

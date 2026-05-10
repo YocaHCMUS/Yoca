@@ -92,7 +92,9 @@ export const users = pgTable(
     // Email is not needed for wallet users, see it as contact
     email: varchar("email"),
     discordWebhookUrl: text("discord_webhook_url"),
-    emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
+    emailAlertsEnabled: boolean("email_alerts_enabled")
+      .notNull()
+      .default(false),
     /** Optional override: if set, alerts go here instead of users.email */
     emailAlertsAddress: text("email_alerts_address"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -1033,42 +1035,51 @@ export const walletFirstFund = pgTable(
   (t) => [primaryKey({ columns: [t.reciepient] })],
 );
 
-
-
 // for AI agent workflow, and to easily access strategy to reduce token usage in the workflow
-export const tradingStrategyDictionary = pgTable("trading_strategy_dictionary", {
-  id: varchar("id", { length: 20 }).primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
-  description: text("description").notNull(), // for AI agent workflow
-  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
-  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
-})
+export const tradingStrategyDictionary = pgTable(
+  "trading_strategy_dictionary",
+  {
+    id: varchar("id", { length: 20 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+    description: text("description").notNull(), // for AI agent workflow
+    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+  },
+);
 
 // a trading strategy can have multiple benefits and risks, we store them in separate tables with foreign key reference to the strategy dictionary
 export const tradingStrategyBenefit = pgTable("trading_strategy_benefit", {
   id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
   benefit_key: text("benefit_key").notNull(),
-})
+});
 
 export const tradingStrategyRisk = pgTable("trading_strategy_risk", {
   id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
   risk_key: text("risk_key").notNull(),
-})
+});
 
 // to store the weight of each metric for a trading strategy, which can be used in the AI agent workflow to calculate the score of a strategy based on the metrics of a wallet
 export const tradingStrategyWeight = pgTable("trading_strategy_weight", {
   id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
   metric_name: varchar("metric_name", { length: 100 }).notNull(),
   weight: decimal("weight").notNull(),
-})
+});
 
 // to store any other rules for a trading strategy that are not covered by the benefits, risks and weights, such as if a strategy requires a certain token holding or trading volume, we can store them in this table with a key-value pair format
 export const tradingStrategyRule = pgTable("trading_strategy_rule", {
   id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 }).notNull().references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
   rule_key: text("rule_key").notNull(),
   value: decimal("value").notNull(),
 });
@@ -1081,13 +1092,16 @@ export const walletCategoryDictionary = pgTable("wallet_category_dictionary", {
   description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
 });
 
-export const firstFunderCategoryDictionary = pgTable("first_funder_category_dictionary", {
-  id: varchar("id", { length: 20 }).primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
-  description: text("description").notNull(), // for AI agent workflow
-  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
-  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
-});
+export const firstFunderCategoryDictionary = pgTable(
+  "first_funder_category_dictionary",
+  {
+    id: varchar("id", { length: 20 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+    description: text("description").notNull(), // for AI agent workflow
+    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+  },
+);
 
 /**
  * AI Wallet Forensic Audit cache.
@@ -1123,7 +1137,9 @@ export const newsArticles = pgTable(
   "news_articles",
   {
     id: serial("id").primaryKey(),
-    batchId: integer("batch_id").notNull().references(() => newsBatches.id, { onDelete: "cascade" }),
+    batchId: integer("batch_id")
+      .notNull()
+      .references(() => newsBatches.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 512 }).notNull(),
     url: varchar("url", { length: 1024 }).notNull(),
     description: text("description"),
@@ -1134,7 +1150,10 @@ export const newsArticles = pgTable(
     extraSnippets: jsonb("extra_snippets").$type<string[] | null>(),
     // raw: jsonb("raw"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("news_articles_url_uq").on(t.url),
@@ -1157,7 +1176,9 @@ export const userSources = pgTable(
 
 // #region Types
 export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
+export type TokenMetaSelect = typeof tokenMeta.$inferSelect;
 export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
+export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;

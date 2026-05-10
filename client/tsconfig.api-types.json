@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "extendedDiagnostics": true,
+    "declarationMap": true,
+    "outDir": "./types"
+  },
+  "files": ["src/api/main.ts"],
+  "include": []
+}

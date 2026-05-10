@@ -1,10 +1,8 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
-
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
-import BalanceChartDebugPage from "@/pages/balance-chart-debug";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
@@ -14,10 +12,11 @@ import TokenOverviewPage from "@/pages/token-overview";
 import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
+import WalletIssuesBalanceV1Page from "@/pages/wallet-issues-v1";
+import WalletIssuesBalanceV2Page from "@/pages/wallet-issues-v2";
 import WalletsComparisonPage from "@/pages/walletsComparison";
 import { Component, type ReactNode } from "react";
 import { AuthGuard } from "./components/auth";
-import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
 import AlertsDemo from "./pages/alerts/demo";
 
 /** Catches render errors inside route elements so a silent crash does not
@@ -96,12 +95,13 @@ function App() {
           }
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route path="/walletsfix-v1" element={<BalanceChartDebugPage />} />
         <Route
-          path="/walletsfix"
-          element={
-            <BalanceChartV2 address="4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk" />
-          }
+          path="/wallet-issues/v1"
+          element={<WalletIssuesBalanceV1Page />}
+        />
+        <Route
+          path="/wallet-issues/v2"
+          element={<WalletIssuesBalanceV2Page />}
         />
         <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />

@@ -66,7 +66,9 @@ const WEBHOOK_AUTH_KEY = "thisisphuonglekey";
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const LAMPORTS_PER_SOL = 1_000_000_000;
 /** Implied USD/SOL for converting Helius native amounts to USD when rules use `volumeUnit: USD`. */
-const WEBHOOK_SOL_PRICE_USD = Number(process.env.WEBHOOK_SOL_PRICE_USD || "150");
+const WEBHOOK_SOL_PRICE_USD = Number(
+  process.env.WEBHOOK_SOL_PRICE_USD || "150",
+);
 
 const processedSignatures = new Set<string>();
 const MAX_SIGNATURE_CACHE_SIZE = 10_000;
@@ -94,7 +96,9 @@ function extractSwapSolAmount(tx: HeliusEnhancedTransaction): number {
   return toFixedAmount(Math.max(...lamports) / LAMPORTS_PER_SOL);
 }
 
-function normalizeAlertEvent(tx: HeliusEnhancedTransaction): NormalizedAlertEvent {
+function normalizeAlertEvent(
+  tx: HeliusEnhancedTransaction,
+): NormalizedAlertEvent {
   const nativeTransfers = tx.nativeTransfers || [];
   const nativeSolAmounts = nativeTransfers
     .map((t) => (t.amount || 0) / LAMPORTS_PER_SOL)
@@ -369,7 +373,12 @@ const app = new Hono().post("/", async (c) => {
             continue;
           }
 
-          const structured = buildStructuredAlert(rule, event, solNotional, usdNotional);
+          const structured = buildStructuredAlert(
+            rule,
+            event,
+            solNotional,
+            usdNotional,
+          );
           const delivered = await dispatchRuleAlert(rule, structured);
 
           if (delivered && rule.triggerType === "ONCE") {
@@ -386,3 +395,5 @@ const app = new Hono().post("/", async (c) => {
 });
 
 export default app;
+
+export type WebhookAppType = typeof app;

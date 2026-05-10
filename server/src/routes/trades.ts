@@ -79,3 +79,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type TradesAppType = typeof app;

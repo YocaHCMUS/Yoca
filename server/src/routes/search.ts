@@ -62,7 +62,9 @@ function extractSolanaWalletAddress(input: string): string | null {
   return isLikelySolanaWalletAddress(matched[0]) ? matched[0] : null;
 }
 
-async function getSearchWalletsResult(query: string): Promise<WalletSearchResult[]> {
+async function getSearchWalletsResult(
+  query: string,
+): Promise<WalletSearchResult[]> {
   const walletAddress = extractSolanaWalletAddress(query);
   if (!walletAddress) {
     return [];
@@ -243,3 +245,5 @@ const app = new Hono().get(
 );
 
 export default app;
+
+export type SearchAppType = typeof app;

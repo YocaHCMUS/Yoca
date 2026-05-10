@@ -6,7 +6,6 @@ import {
 import { setErr } from "@sv/config/errors.js";
 import {
   googleTokenSchema,
-  honoJwt,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
@@ -113,7 +112,11 @@ const app = new Hono()
         );
       }
       const user = await userService.getUserById(passwordUser.userId);
-      const token = await setAuthToken(c, passwordUser.userId, user?.displayName);
+      const token = await setAuthToken(
+        c,
+        passwordUser.userId,
+        user?.displayName,
+      );
       return c.json(
         {
           message: messageText.LoggedInSuccessfully,
@@ -226,7 +229,11 @@ const app = new Hono()
         return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
       }
 
-      const token = await setAuthToken(c, account.user.id, account.user.displayName);
+      const token = await setAuthToken(
+        c,
+        account.user.id,
+        account.user.displayName,
+      );
 
       return c.json(
         {
@@ -290,3 +297,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type UsersAppType = typeof app;
