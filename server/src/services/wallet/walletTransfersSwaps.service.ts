@@ -81,11 +81,11 @@ export async function getWalletTransfers(
 
     const requestedRange = resolveRequestedRange(from, to);
     const coveredRange =
-        walletTransferMeta?.coveredFromMs != null &&
-            walletTransferMeta?.coveredToMs != null
+        walletTransferMeta?.coveredFromSec != null &&
+            walletTransferMeta?.coveredToSec != null
             ? {
-                fromMs: walletTransferMeta.coveredFromMs * 1000,
-                toMs: walletTransferMeta.coveredToMs * 1000,
+                fromMs: walletTransferMeta.coveredFromSec * 1000,
+                toMs: walletTransferMeta.coveredToSec * 1000,
             }
             : null;
 
@@ -202,10 +202,10 @@ export async function getWalletSwaps(
 
     const requestedRange = resolveRequestedRange(from, to);
     const coveredRange =
-        walletSwapMeta?.coveredFromMs != null && walletSwapMeta?.coveredToMs != null
+        walletSwapMeta?.coveredFromSec != null && walletSwapMeta?.coveredToSec != null
             ? {
-                fromMs: walletSwapMeta.coveredFromMs * 1000,
-                toMs: walletSwapMeta.coveredToMs * 1000,
+                fromMs: walletSwapMeta.coveredFromSec * 1000,
+                toMs: walletSwapMeta.coveredToSec * 1000,
             }
             : null;
 

@@ -101,8 +101,8 @@ export async function saveSwapsCache(
         target: [walletSwapMeta.address],
         set: {
           fetchedAt: new Date(),
-          coveredFromMs: Math.floor(from / 1000),
-          coveredToMs: Math.floor(to / 1000),
+          coveredFromSec: Math.floor(from / 1000),
+          coveredToSec: Math.floor(to / 1000),
         },
       });
   } catch (err) {
@@ -403,8 +403,8 @@ export async function saveTransfersCache(
         target: [walletTransferMeta.address],
         set: {
           fetchedAt: new Date(),
-          coveredFromMs: Math.floor(from / 1000),
-          coveredToMs: Math.floor(to / 1000),
+          coveredFromSec: Math.floor(from / 1000),
+          coveredToSec: Math.floor(to / 1000),
           coveredFromCursor: lastAddress,
           coveredToCursor: firstAddress
         },
