@@ -236,7 +236,7 @@ export async function getCumulativePnL(
     const toMs = rangeSec.toSec * 1000;
 
     try {
-        // TASK-005: Get balance history and build daily anchors
+        // Get balance history and build daily anchors
         const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
         if (balanceHistory.length === 0) {
             return emptyPnL();
@@ -247,12 +247,12 @@ export async function getCumulativePnL(
             return emptyPnL();
         }
 
-        // TASK-007: Compute daily net inflow
+        // Compute daily net inflow
         const dailyNetInflowMap = await computeDailyNetInflow(address, fromMs, toMs);
         // console.log("[getCumulativePnL] dailyNetInflowMap")
         // console.info(dailyNetInflowMap)
 
-        // TASK-008: Apply formula: dailyPnL[i] = (balanceEnd - balanceStart) - netInflow[i]
+        // Apply formula: dailyPnL[i] = (balanceEnd - balanceStart) - netInflow[i]
         const dailyPnLArray: PnLDataPoint[] = [];
         let cumulativePnL = 0;
         const cumulativePnLArray: PnLDataPoint[] = [];
@@ -267,8 +267,6 @@ export async function getCumulativePnL(
             // const dayPnL = roundUsd(balanceDelta);
             // const dayPnL = roundUsd(netInflow);
 
-
-
             dailyPnLArray.push({
                 timestamp: dayStartMs,
                 value: dayPnL,
@@ -282,7 +280,7 @@ export async function getCumulativePnL(
             });
         }
 
-        // TASK-009: startBalance and endBalance from day-anchor balances
+        // startBalance and endBalance from day-anchor balances
         const startBalance = dailyAnchors.length > 0 ? roundUsd(dailyAnchors[0]!.balanceAtStart) : 0;
         const endBalance = dailyAnchors.length > 0 ? roundUsd(dailyAnchors[dailyAnchors.length - 1]!.balanceAtEnd) : 0;
 

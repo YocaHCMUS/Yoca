@@ -12,11 +12,13 @@ type WalletRangeMs = {
 
 function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
     const nowMs = Date.now();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    // const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const monthMs = 30 * 24 * 60 * 60 * 1000
 
     const requestedToMs = to ?? nowMs;
     const requestedFromMs =
-        from ?? (to != null ? requestedToMs - sevenDaysMs : nowMs - sevenDaysMs);
+        // from ?? (to != null ? requestedToMs - sevenDaysMs : nowMs - sevenDaysMs);
+        from ?? (to != null ? requestedToMs - monthMs : nowMs - monthMs)
 
     return {
         fromMs: Math.min(requestedFromMs, requestedToMs),
