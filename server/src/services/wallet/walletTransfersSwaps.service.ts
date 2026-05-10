@@ -26,6 +26,11 @@ function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
     };
 }
 
+function isMissingRangeSignificant(from: number, to: number) {
+    const TTL = 5 * 60 * 1000
+    return to - from > TTL
+}
+
 function getMissingRanges(
     requestedRange: WalletRangeMs,
     coveredRange: WalletRangeMs | null,
@@ -79,8 +84,8 @@ export async function getWalletTransfers(
         walletTransferMeta?.coveredFromMs != null &&
             walletTransferMeta?.coveredToMs != null
             ? {
-                fromMs: walletTransferMeta.coveredFromMs,
-                toMs: walletTransferMeta.coveredToMs,
+                fromMs: walletTransferMeta.coveredFromMs * 1000,
+                toMs: walletTransferMeta.coveredToMs * 1000,
             }
             : null;
 
@@ -128,12 +133,15 @@ export async function getWalletTransfers(
 
     const fetchedTransfers: WalletTransfer[] = [];
     for (const range of missingRanges) {
-        const segment = await fetchHeliusSolanaTransfers(
-            address,
-            range.fromMs,
-            range.toMs,
-        );
-        fetchedTransfers.push(...segment);
+        if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
+            console.log(`[get wallet transfer] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
+            const segment = await fetchHeliusSolanaTransfers(
+                address,
+                range.fromMs,
+                range.toMs,
+            );
+            fetchedTransfers.push(...segment);
+        }
     }
 
     const combinedTransfers = sortTransfersByTimestampDesc([
@@ -153,7 +161,18 @@ export async function getWalletTransfers(
         };
     }
 
-    await saveTransfersCache(address, combinedTransfers);
+    const cacheTo = to || Date.now()
+    const fromDate = new Date(cacheTo - (30 * 24 * 60 * 60 * 1000))
+    const cachefrom = from || Date.UTC(
+        fromDate.getUTCFullYear(),
+        fromDate.getUTCMonth(),
+        fromDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+    )
+    await saveTransfersCache(address, combinedTransfers, cachefrom, cacheTo);
     await enrichWithSolanaTokenPrices(combinedTransfers);
 
     return {
@@ -185,8 +204,8 @@ export async function getWalletSwaps(
     const coveredRange =
         walletSwapMeta?.coveredFromMs != null && walletSwapMeta?.coveredToMs != null
             ? {
-                fromMs: walletSwapMeta.coveredFromMs,
-                toMs: walletSwapMeta.coveredToMs,
+                fromMs: walletSwapMeta.coveredFromMs * 1000,
+                toMs: walletSwapMeta.coveredToMs * 1000,
             }
             : null;
 
@@ -234,12 +253,16 @@ export async function getWalletSwaps(
 
     const fetchedSwaps: WalletSwap[] = [];
     for (const range of missingRanges) {
-        const segment = await fetchMoralisSolanaSwap(
-            address,
-            range.fromMs,
-            range.toMs,
-        );
-        fetchedSwaps.push(...segment);
+        if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
+            console.log(`[get wallet swaps] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
+
+            const segment = await fetchMoralisSolanaSwap(
+                address,
+                range.fromMs,
+                range.toMs,
+            );
+            fetchedSwaps.push(...segment);
+        }
     }
 
     const combinedSwaps = sortSwapsByTimestampDesc([
@@ -259,7 +282,18 @@ export async function getWalletSwaps(
         };
     }
 
-    await saveSwapsCache(address, combinedSwaps);
+    const cacheTo = to || Date.now()
+    const fromDate = new Date(cacheTo - (30 * 24 * 60 * 60 * 1000))
+    const cachefrom = from || Date.UTC(
+        fromDate.getUTCFullYear(),
+        fromDate.getUTCMonth(),
+        fromDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+    )
+    await saveSwapsCache(address, combinedSwaps, cachefrom, cacheTo);
     await enrichWithSolanaTokenPrices(combinedSwaps);
 
     const source =

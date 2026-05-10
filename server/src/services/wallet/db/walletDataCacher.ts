@@ -22,10 +22,12 @@ function walletSwapExchangeForDb(tx: WalletSwap): {
 export async function saveSwapsCache(
   address: string,
   transactions: WalletSwap[],
+  from: number,
+  to: number
 ) {
   try {
-    let coverageFromMs: number | undefined;
-    let coverageToMs: number | undefined;
+    // let coverageFromMs: number | undefined;
+    // let coverageToMs: number | undefined;
 
     if (transactions.length > 0) {
       // Deduplicate by transaction hash to avoid multiple rows with the same
@@ -70,25 +72,25 @@ export async function saveSwapsCache(
         };
       });
 
-      const coverageBounds = rows.length > 0
-        ? rows.reduce(
-          (bounds, row) => ({
-            fromMs: Math.min(bounds.fromMs, row.blockTimestampMs),
-            toMs: Math.max(bounds.toMs, row.blockTimestampMs),
-          }),
-          {
-            fromMs: Number.POSITIVE_INFINITY,
-            toMs: Number.NEGATIVE_INFINITY,
-          },
-        )
-        : null;
+      // const coverageBounds = rows.length > 0
+      //   ? rows.reduce(
+      //     (bounds, row) => ({
+      //       fromMs: Math.min(bounds.fromMs, row.blockTimestampMs),
+      //       toMs: Math.max(bounds.toMs, row.blockTimestampMs),
+      //     }),
+      //     {
+      //       fromMs: Number.POSITIVE_INFINITY,
+      //       toMs: Number.NEGATIVE_INFINITY,
+      //     },
+      //   )
+      //   : null;
 
-      coverageFromMs = coverageBounds
-        ? coverageBounds.fromMs
-        : undefined;
-      coverageToMs = coverageBounds
-        ? coverageBounds.toMs
-        : undefined;
+      // coverageFromMs = coverageBounds
+      //   ? coverageBounds.fromMs
+      //   : undefined;
+      // coverageToMs = coverageBounds
+      //   ? coverageBounds.toMs
+      //   : undefined;
 
       await db.insert(walletSwap).values(rows).onConflictDoNothing();
     }
@@ -99,9 +101,8 @@ export async function saveSwapsCache(
         target: [walletSwapMeta.address],
         set: {
           fetchedAt: new Date(),
-          ...(typeof coverageFromMs === "number" && typeof coverageToMs === "number"
-            ? { coverageFromMs, coverageToMs }
-            : {}),
+          coveredFromMs: Math.floor(from / 1000),
+          coveredToMs: Math.floor(to / 1000),
         },
       });
   } catch (err) {
@@ -319,10 +320,12 @@ export async function saveTransactionsHeliusCache(
 export async function saveTransfersCache(
   address: string,
   transfers: WalletTransfer[],
+  from: number,
+  to: number
 ): Promise<void> {
   try {
-    let coverageFromMs: number | undefined;
-    let coverageToMs: number | undefined;
+    // let coverageFromMs: number | undefined;
+    // let coverageToMs: number | undefined;
     let firstAddress: string | undefined;
     let lastAddress: string | undefined;
 
@@ -374,12 +377,12 @@ export async function saveTransfersCache(
         )
         : null;
 
-      coverageFromMs = coverageBounds
-        ? coverageBounds.fromMs
-        : undefined;
-      coverageToMs = coverageBounds
-        ? coverageBounds.toMs
-        : undefined;
+      // coverageFromMs = coverageBounds
+      //   ? coverageBounds.fromMs
+      //   : undefined;
+      // coverageToMs = coverageBounds
+      //   ? coverageBounds.toMs
+      //   : undefined;
 
       firstAddress = coverageBounds
         ? coverageBounds.firstAddress
@@ -400,9 +403,8 @@ export async function saveTransfersCache(
         target: [walletTransferMeta.address],
         set: {
           fetchedAt: new Date(),
-          ...(typeof coverageFromMs === "number" && typeof coverageToMs === "number"
-            ? { coverageFromMs, coverageToMs }
-            : {}),
+          coveredFromMs: Math.floor(from / 1000),
+          coveredToMs: Math.floor(to / 1000),
           coveredFromCursor: lastAddress,
           coveredToCursor: firstAddress
         },

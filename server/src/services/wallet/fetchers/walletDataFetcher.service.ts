@@ -817,13 +817,13 @@ export async function fetchMoralisSolanaSwap(
         }
 
         json = (await response.json()) as MoralisSwapResponseRoot;
-        console.log(
-          `[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
-          {
-            url: url.toString(),
-            responseStatus: response.status,
-          },
-        );
+        // console.log(
+        //   `[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
+        //   {
+        //     url: url.toString(),
+        //     responseStatus: response.status,
+        //   },
+        // );
       } catch (err) {
         console.error("Moralis wallet-swaps request failed", err);
         return {
@@ -863,9 +863,9 @@ export async function fetchMoralisSolanaSwap(
         pageItems.push(mapped);
       }
 
-      console.log(
-        `[fetchMoralisSolanaSwap] Page ${page}: Collected ${pageItems.length} swaps on page`,
-      );
+      // console.log(
+      //   `[fetchMoralisSolanaSwap] Page ${page}: Collected ${pageItems.length} swaps on page`,
+      // );
 
       const nextCursor = json.cursor || null;
       const hasMore = reachedRangeCutoff ? false : Boolean(nextCursor);
