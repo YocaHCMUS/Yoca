@@ -107,7 +107,6 @@ const app = new Hono().get(
           400,
         );
       }
-
       if (tokenSelectors.length === 0) {
         const allHistories = await mapWithConcurrency(
           walletAddresses,

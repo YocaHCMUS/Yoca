@@ -44,6 +44,7 @@ export function MultiTimeSeriesLineChart({
     success: cds.supportSuccess,
     error: cds.supportError,
     interactive: cds.interactive,
+    layer: cds.layer02,
   });
 
   const prepared = useMemo(() => {
@@ -70,6 +71,7 @@ export function MultiTimeSeriesLineChart({
     const range = endTime - startTime;
 
     // Random colors for those series, please add more or kill yourself
+    // Or prefer hashing the series key
     const palette = [tokens.interactive, tokens.success, tokens.error];
 
     return {
@@ -116,6 +118,8 @@ export function MultiTimeSeriesLineChart({
             show: true,
             data: prepared.map((s) => s.label ?? s.key),
             textStyle: { color: tokens.textPrimary },
+            backgroundColor: tokens.layer,
+            padding: 8,
           }
         : undefined,
       grid: { left: 10, right: 10, top: 20, bottom: 30, containLabel: true },

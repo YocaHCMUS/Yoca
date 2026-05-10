@@ -5,9 +5,12 @@ import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
+import { Layer, MultiSelect } from "@carbon/react";
+import { TknImg } from "@/components/TknImg";
+import { ChartWrapper } from "../shared";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -21,7 +24,7 @@ type TimeSeriesDataPoint = {
 };
 
 function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
-  if (points.length < 2) return null;
+  if (!points || points.length < 2) return null;
 
   const latest = points[points.length - 1];
   const targetTimestamp = latest.unixTimeMs - ONE_DAY_MS;
@@ -49,8 +52,15 @@ export function BalanceChartV2({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
+  const [selectedTokens, setSelectedTokens] = useState<string[] | null>(null);
 
-  const balance = useGet(
+  const portfolio = useGet(client.api.wallets.portfolio, 200, {
+    query: {
+      address,
+    },
+  });
+
+  const totalBalance = useGet(
     client.api.charts.balance,
     200,
     {
@@ -60,100 +70,136 @@ export function BalanceChartV2({ address }: { address: string }) {
       },
     },
     {
-      select: (data) =>
-        data.series
+      select: (data) => ({
+        key: "total-balance",
+        label: "Total Balance",
+        data: data.series
           .filter(
             (series) => series.unit == "USD" && series.seriesType == "line",
-          )
-          .at(0)
-          ?.data.map((point) => ({
+          )[0]
+          .data.map((point) => ({
             unixTimeMs: point.timestamp,
             value: point.value,
           })),
+      }),
     },
   );
-
-  const portfolio = useGet(client.api.wallets.portfolio, 200, {
-    query: {
-      address,
-    },
-  });
 
   const tokenBalances = useGet(
     client.api.charts.balance,
     200,
     {
       query: {
-        timePeriod: "30D",
+        timePeriod,
         wallets: address,
-        tokens:
-          portfolio.data?.map((account) => account.tokenAddress).join(",") ||
-          "",
+        tokens: selectedTokens?.join(",") || undefined,
       },
     },
     {
-      enabled: !!portfolio.data,
+      enabled: !!portfolio.data && selectedTokens != null,
       select: (data) =>
-        data.series
-          .filter(
-            (series) => series.unit == "USD" && series.seriesType == "line",
-          )
-          .map((series, index) => ({
-            key: String(index),
-            label: series.name,
-            data: series.data.map((point) => ({
-              unixTimeMs: point.timestamp,
-              value: point.value,
-            })),
+        [
+          ...new Map(
+            data.series
+              .filter(
+                (series) => series.unit == "USD" && series.seriesType == "bar",
+              )
+              .map((series) => [series.name, series]),
+          ).values(),
+        ].map((series, index) => ({
+          key: String(index),
+          label: series.name,
+          data: series.data.map((point) => ({
+            unixTimeMs: point.timestamp,
+            value: point.value,
           })),
+        })),
     },
   );
 
   const change24h = useMemo(
-    () => (balance.data ? compute24hChange(balance.data) : null),
-    [balance.data],
+    () => (totalBalance.data ? compute24hChange(totalBalance.data.data) : null),
+    [totalBalance.data],
   );
 
+  const balanceSeries =
+    selectedTokens == null
+      ? totalBalance.data
+        ? [totalBalance.data]
+        : []
+      : [
+          ...(tokenBalances.data ?? []),
+          ...(totalBalance.data ? [totalBalance.data] : []),
+        ];
+
   return (
-    <Flex dir="column" gap={1}>
-      <Flex justify="end" gap={1}>
-        <FilterSwitch
-          options={[
-            { value: "7D", label: "7D" },
-            { value: "30D", label: "30D" },
-          ]}
-          value={timePeriod}
-          onChange={(v) => setTimePeriod(v)}
-          width="sm"
+    <ChartWrapper title="Balance History">
+      <Flex dir="column" gap={8}>
+        <Flex justify="between" align="end">
+          <Layer style={{ width: 300 }}>
+            <MultiSelect
+              id="token-selector"
+              items={portfolio.data || []}
+              label="Select tokens"
+              size="lg"
+              itemToElement={(account) => (
+                <Flex gap={4} align="center">
+                  <TknImg
+                    size={20}
+                    alt={account.symbol || account.tokenAddress}
+                    loading={portfolio.isLoading}
+                    src={account.logoUri}
+                  />
+                  <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
+                </Flex>
+              )}
+              selectionFeedback="top-after-reopen"
+              onChange={(v) =>
+                setSelectedTokens(
+                  v.selectedItems?.map((item) => item.tokenAddress) || null,
+                )
+              }
+            />
+          </Layer>
+
+          <FilterSwitch
+            options={[
+              { value: "7D", label: "7D" },
+              { value: "30D", label: "30D" },
+            ]}
+            value={timePeriod}
+            onChange={(v) => setTimePeriod(v)}
+            width="sm"
+          />
+        </Flex>
+
+        {change24h && (
+          <Flex align="center" gap={4}>
+            <Txt size="md" secondary>
+              24h Total:
+            </Txt>
+            <Flex gap={4}>
+              <TrendNum
+                value={change24h.pct}
+                prefixes="plus-minus"
+                formatter={fmt.num.percent}
+              />
+              <TrendNum
+                value={change24h.delta}
+                prefixes="plus-minus"
+                formatter={fmt.num.currency}
+              />
+            </Flex>
+          </Flex>
+        )}
+
+        <MultiTimeSeriesLineChart
+          series={balanceSeries}
+          height={500}
+          loading={tokenBalances.isLoading}
+          valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>
-
-      {change24h && (
-        <Flex align="center" gap={4}>
-          <Txt size="md" secondary>
-            24h
-          </Txt>
-          <Flex gap={4}>
-            <TrendNum
-              value={change24h.pct}
-              prefixes="plus-minus"
-              formatter={fmt.num.percent}
-            />
-            <TrendNum
-              value={change24h.delta}
-              prefixes="none"
-              formatter={fmt.num.currency}
-            />
-          </Flex>
-        </Flex>
-      )}
-
-      <MultiTimeSeriesLineChart
-        series={tokenBalances.data}
-        height={500}
-        loading={balance.isLoading}
-        valueFormatter={(val) => fmt.num.currency(val)}
-      />
-    </Flex>
+    </ChartWrapper>
   );
 }
