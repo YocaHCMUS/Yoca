@@ -20,7 +20,9 @@ import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import React, { useCallback, useMemo, useRef, useState } from "react";
+import { ChartColumn, ChartCombo, ChartLineData } from "@carbon/react/icons";
 import { BaseChart } from "../Base/BaseChart";
+import sharedStyles from "@/components/charts/shared/ChartStyle.module.scss";
 
 type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 
@@ -57,9 +59,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const chartTheme = useChartTheme();
   const { selectedTimezone: timezone } = useChartContext();
-  const [viewMode, setViewMode] = useState<"daily" | "cumulative" | "both">(
+  const [displayMode, setDisplayMode] = useState<"daily" | "cumulative" | "both">(
     initialViewMode,
   );
+  const [chartTimePeriod, setChartTimePeriod] = useState<"7D" | "30D">("30D");
 
   const { walletsString } = useChartFiltersSync({
     initialFilters: initialFilters || {
@@ -70,10 +73,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
   const query = useMemo<PnLRequestParams>(
     () => ({
-      period: "30D",
-      wallets: walletsString
+      period: chartTimePeriod,
+      wallets: walletsString,
     }),
-    [walletsString],
+    [chartTimePeriod, walletsString],
   );
 
   const { data, loadingState, refetch } = useStandardChartController<
@@ -88,6 +91,25 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   });
 
   const displayData = data;
+
+  const handleDisplayModeChange = useCallback(
+    (mode: "daily" | "cumulative" | "both") => {
+      setDisplayMode(mode);
+    },
+    [],
+  );
+
+  const handleChartPeriodChange = useCallback(
+    (nextPeriod: "7D" | "30D") => {
+      if (nextPeriod === chartTimePeriod) {
+        refetch(true);
+        return;
+      }
+
+      setChartTimePeriod(nextPeriod);
+    },
+    [chartTimePeriod, refetch],
+  );
 
   const createChartOption = useCallback(
     (
@@ -121,15 +143,15 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       };
 
       const sharedAxisBounds =
-        viewMode === "both"
+        displayMode === "both"
           ? calculateSharedAxisBounds(combinedValues)
           : undefined;
 
       const xAxisData = timestamps.map((ts) =>
         formatTimestampWithTimezone(ts, timezone, "MM/dd"),
       );
-      const showDaily = viewMode === "daily" || viewMode === "both";
-      const showCumulative = viewMode === "cumulative" || viewMode === "both";
+      const showDaily = displayMode === "daily" || displayMode === "both";
+      const showCumulative = displayMode === "cumulative" || displayMode === "both";
 
       const series: any[] = [];
 
@@ -137,7 +159,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         series.push({
           name: tr("charts.pnlChart.dailyPnL"),
           type: "bar",
-          yAxisIndex: viewMode === "both" ? 0 : undefined,
+          yAxisIndex: displayMode === "both" ? 0 : undefined,
           data: dailyValues,
           itemStyle: {
             color: (params: any) =>
@@ -150,7 +172,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         series.push({
           name: tr("charts.pnlChart.cumulativePnL"),
           type: "line",
-          yAxisIndex: viewMode === "both" ? 1 : undefined,
+          yAxisIndex: displayMode === "both" ? 1 : undefined,
           data: cumulativeValues,
           smooth: false,
           lineStyle: {
@@ -168,7 +190,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       };
 
       const yAxis: any[] = [];
-      if (viewMode === "both") {
+      if (displayMode === "both") {
         yAxis.push({
           ...baseOption.yAxis,
           type: "value",
@@ -199,7 +221,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           ...baseOption.yAxis,
           type: "value",
           name:
-            viewMode === "daily"
+            displayMode === "daily"
               ? tr("charts.pnlChart.dailyPnL")
               : tr("charts.pnlChart.cumulativePnL"),
           axisLabel: {
@@ -268,9 +290,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         ],
         yAxis,
         series,
+        legend: undefined
       };
     },
-    [chartTheme, timezone, tr, viewMode, fmt],
+    [chartTheme, timezone, tr, displayMode, fmt],
   );
 
   const chartOptions = useMemo(() => {
@@ -320,7 +343,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       (!("dailyPnL" in displayData) ||
         !displayData.dailyPnL ||
         displayData.dailyPnL.length === 0));
-
+  //  <span>{tr("charts.pnlChart.displayedData")}</span>
   return (
     <BaseChart
       title={chartTitle}
@@ -328,34 +351,61 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       isEmpty={isEmpty}
       onRetry={() => refetch(false)}
     >
-      {/* <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--between']} ${sharedStyles['chartControls--withBackground']}`}>
-                <div className={sharedStyles['chartToggle--padded']}>
-                    <button
-                        className={`${sharedStyles.chartToggleButton} ${viewMode === 'daily' ? sharedStyles.active : ''}`}
-                        onClick={() => setViewMode('daily')}
-                        aria-label={tr('charts.pnlChart.dailyPnL')}
-                        title={tr('charts.pnlChart.dailyPnL')}
-                    >
-                        {tr('charts.pnlChart.dailyPnL')}
-                    </button>
-                    <button
-                        className={`${sharedStyles.chartToggleButton} ${viewMode === 'cumulative' ? sharedStyles.active : ''}`}
-                        onClick={() => setViewMode('cumulative')}
-                        aria-label={tr('charts.pnlChart.cumulativePnL')}
-                        title={tr('charts.pnlChart.cumulativePnL')}
-                    >
-                        {tr('charts.pnlChart.cumulativePnL')}
-                    </button>
-                    <button
-                        className={`${sharedStyles.chartToggleButton} ${viewMode === 'both' ? sharedStyles.active : ''}`}
-                        onClick={() => setViewMode('both')}
-                        aria-label={tr('charts.pnlChart.both')}
-                        title={tr('charts.pnlChart.both')}
-                    >
-                        {tr('charts.pnlChart.both')}
-                    </button>
-                </div>
-            </div> */}
+      <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
+        <div className={sharedStyles.balanceChartControlTopRow} data-html2canvas-ignore="true">
+          <div className={sharedStyles.balanceChartControlInputGroup}>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${displayMode === "daily" ? sharedStyles.active : ""}`}
+              onClick={() => handleDisplayModeChange("daily")}
+              aria-label={tr("charts.pnlChart.dailyPnL")}
+              title={tr("charts.pnlChart.dailyPnL")}
+              aria-pressed={displayMode === "daily"}
+            >
+              <ChartColumn size={18} />
+            </button>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${displayMode === "cumulative" ? sharedStyles.active : ""}`}
+              onClick={() => handleDisplayModeChange("cumulative")}
+              aria-label={tr("charts.pnlChart.cumulativePnL")}
+              title={tr("charts.pnlChart.cumulativePnL")}
+              aria-pressed={displayMode === "cumulative"}
+            >
+              <ChartLineData size={18} />
+            </button>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${displayMode === "both" ? sharedStyles.active : ""}`}
+              onClick={() => handleDisplayModeChange("both")}
+              aria-label={tr("charts.pnlChart.both")}
+              title={tr("charts.pnlChart.both")}
+              aria-pressed={displayMode === "both"}
+            >
+              <ChartCombo size={18} />
+            </button>
+          </div>
+
+          <div className={sharedStyles.balanceChartWindowToggleGroup}>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartTimePeriod === "7D" ? sharedStyles.balanceChartWindowButtonActive : ""}`}
+              onClick={() => handleChartPeriodChange("7D")}
+              aria-pressed={chartTimePeriod === "7D"}
+            >
+              {tr("charts.balanceChart.window7d")}
+            </button>
+            <button
+              type="button"
+              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartTimePeriod === "30D" ? sharedStyles.balanceChartWindowButtonActive : ""}`}
+              onClick={() => handleChartPeriodChange("30D")}
+              aria-pressed={chartTimePeriod === "30D"}
+            >
+              {tr("charts.balanceChart.window30d")}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {chartOptions.length > 0 && (
         <div

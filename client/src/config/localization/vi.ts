@@ -1010,7 +1010,7 @@ export const translation = defineTranslation({
       daily: "Hàng ngày",
       weekly: "Hàng tuần",
       monthly: "Hàng tháng",
-      both: "Cả hai",
+      both: "Lãi/Lỗ hàng ngày + tích lũy",
     },
     exchangeComparisonChart: {
       title: "So sánh hoạt động sàn giao dịch",

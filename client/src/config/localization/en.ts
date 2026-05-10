@@ -1036,7 +1036,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
-      both: "Both",
+      both: "Daily + Cumulative P&L",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",
