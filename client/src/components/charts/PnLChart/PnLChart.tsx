@@ -103,6 +103,27 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       const timestamps = dailyPnLData.map((item) => item.timestamp);
       const dailyValues = dailyPnLData.map((item) => item.value);
       const cumulativeValues = cumulativePnLData.map((item) => item.value);
+      const combinedValues = [...dailyValues, ...cumulativeValues];
+
+      const calculateSharedAxisBounds = (values: number[]) => {
+        const minValue = Math.min(...values, 0);
+        const maxValue = Math.max(...values, 0);
+        const spread =
+          maxValue - minValue ||
+          Math.max(Math.abs(minValue), Math.abs(maxValue)) ||
+          1;
+        const padding = spread * 0.12;
+
+        return {
+          min: minValue - padding,
+          max: maxValue + padding,
+        };
+      };
+
+      const sharedAxisBounds =
+        viewMode === "both"
+          ? calculateSharedAxisBounds(combinedValues)
+          : undefined;
 
       const xAxisData = timestamps.map((ts) =>
         formatTimestampWithTimezone(ts, timezone, "MM/dd"),
@@ -153,6 +174,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           type: "value",
           name: tr("charts.pnlChart.dailyPnL"),
           position: "left",
+          min: sharedAxisBounds?.min,
+          max: sharedAxisBounds?.max,
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
             formatter: formatAxisValue,
@@ -163,6 +186,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           type: "value",
           name: tr("charts.pnlChart.cumulativePnL"),
           position: "right",
+          min: sharedAxisBounds?.min,
+          max: sharedAxisBounds?.max,
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
             formatter: formatAxisValue,
