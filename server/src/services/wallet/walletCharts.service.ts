@@ -17,6 +17,7 @@ import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.servic
 import { getCachedWalletBalanceHistory } from "./db/walletDataRetriever.js";
 import { saveBalanceHistoryCache } from "./db/walletDataCacher.js";
 import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
+import { getWalletOverview } from "./walletOverview.service.js";
 
 function startOfUtcTodayMs(): number {
     const d = new Date();
@@ -235,13 +236,23 @@ export async function getCumulativePnL(
     const toMs = rangeSec.toSec * 1000;
 
     try {
+
         // Get balance history and build daily anchors
         const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
         if (balanceHistory.length === 0) {
             return emptyPnL();
         }
 
-        const dailyAnchors = buildDailyBalanceAnchors(balanceHistory, fromMs, toMs);
+        // get Current balance
+        const currentBalance = (await getWalletOverview(address)).holdings.totalAssetValueUsd
+        const historyPoint: BalanceDataPoint = {
+            timestamp: Date.now(),
+            value: currentBalance,
+            date: '', // this value is not used to calculate so can be left as ''
+        }
+        const fullBalanceHistory = [...balanceHistory, historyPoint];
+
+        const dailyAnchors = buildDailyBalanceAnchors(fullBalanceHistory, fromMs, toMs);
         if (dailyAnchors.length === 0) {
             return emptyPnL();
         }
