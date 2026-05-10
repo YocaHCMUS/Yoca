@@ -42,8 +42,7 @@ const MAX_WALLET_CHART_CONCURRENCY = 4;
 
 export async function getHistoricalPnLData(
     wallets: string[] = [],
-    period: WalletTimePeriod = "7D",
-    aggregation: PnLAggregation = "daily",
+    period: WalletTimePeriod = "7D"
 ): Promise<HistoricalPnLResponse> {
     const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
 
@@ -62,7 +61,7 @@ export async function getHistoricalPnLData(
     const walletPnLItems = await mapWithConcurrency(
         normalizedWallets,
         MAX_WALLET_CHART_CONCURRENCY,
-        async (walletAddress) => getCumulativePnL(walletAddress, period, aggregation),
+        async (walletAddress) => getCumulativePnL(walletAddress, period),
     );
 
     const walletsResponse: MultiWalletPnLItem[] = walletPnLItems.map((pnl, index) => ({

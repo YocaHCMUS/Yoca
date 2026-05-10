@@ -70,9 +70,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
   const query = useMemo<PnLRequestParams>(
     () => ({
-      period: "7D",
-      wallets: walletsString,
-      aggregation: "daily",
+      period: "30D",
+      wallets: walletsString
     }),
     [walletsString],
   );
@@ -132,7 +131,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           type: "line",
           yAxisIndex: viewMode === "both" ? 1 : undefined,
           data: cumulativeValues,
-          smooth: true,
+          smooth: false,
           lineStyle: {
             color: cumulativeColor,
             width: 2,

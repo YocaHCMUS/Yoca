@@ -629,10 +629,7 @@ export interface CounterpartiesRequestParams extends ChartResponseBase {
  */
 export interface PnLRequestParams extends ChartResponseBase {
   /** Fixed time period for P&L endpoint */
-  period?: '7D';
-
-  /** Fixed aggregation for P&L endpoint */
-  aggregation?: 'daily';
+  period?: '7D' | '30D';
 
   /** Comma-separated wallet list */
   wallets?: string;

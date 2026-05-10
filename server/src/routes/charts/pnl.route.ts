@@ -5,9 +5,9 @@ import { getHistoricalPnLData } from "@sv/services/charts/pnlChart.service.js";
 const MAX_CHART_WALLETS = 5;
 
 const pnlRequestSchema = z.object({
-    period: z.literal("7D").optional().default("7D"),
+    // period: z.literal("7D").optional().default("7D"),
+    period: z.enum(["7D", "30D"]).optional().default("30D"),
     wallets: z.string().optional(),
-    aggregation: z.literal("daily").optional().default("daily"),
 });
 
 const app = new Hono().get("/", async (c) => {
@@ -32,7 +32,7 @@ const app = new Hono().get("/", async (c) => {
             );
         }
 
-        const data = await getHistoricalPnLData(wallets, params.period, params.aggregation);
+        const data = await getHistoricalPnLData(wallets, params.period);
         return c.json(data, 200);
     } catch (error) {
         if (error instanceof z.ZodError) {

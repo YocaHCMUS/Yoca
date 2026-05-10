@@ -228,8 +228,7 @@ export async function getWalletBalanceHistory(
 
 export async function getCumulativePnL(
     address: string,
-    timePeriod: WalletTimePeriod = "30D",
-    aggregation: PnLAggregation = "daily",
+    timePeriod: WalletTimePeriod = "30D"
 ): Promise<WalletCumulativePnLResult> {
     const rangeSec = resolveWalletTimeRangeSec(timePeriod);
     const fromMs = rangeSec.fromSec * 1000;
@@ -294,7 +293,7 @@ export async function getCumulativePnL(
         console.error("[WalletCumulativePnL] failed to compute series", {
             address,
             timePeriod,
-            aggregation,
+            // aggregation,
             error,
         });
         return emptyPnL();
