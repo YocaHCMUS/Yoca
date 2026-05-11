@@ -293,7 +293,7 @@
 // ===== Swap token cells =====
 .swapTokenCell {
   display: inline-flex;
-  align-items: flex-start;
+  // align-items: flex-start;
   gap: $spacing-03;
   min-width: 0;
 }
