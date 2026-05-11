@@ -319,17 +319,6 @@ export default function WalletPage() {
     [transferPages],
   );
 
-  const transferByKey = useMemo(
-    () =>
-      new Map(
-        loadedTransfers.map((transfer) => [
-          `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-          transfer,
-        ]),
-      ),
-    [loadedTransfers],
-  );
-
   const swapHasMore = useMemo(() => {
     const maxLoadedPage = getMaxLoadedPage(swapPages);
     return maxLoadedPage >= 1
@@ -392,9 +381,6 @@ export default function WalletPage() {
         const totalValueUsd = toOptionalFiniteNumber(
           (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
         );
-        const baseQuotePrice = toOptionalFiniteNumber(
-          (swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice,
-        );
         return [
           String(swap.blockTimestampIso ?? ""),
           typeof swap.exchangeName === "string" &&
@@ -405,8 +391,6 @@ export default function WalletPage() {
           swap.sold,
           swap.bought,
           totalValueUsd ?? "—",
-          baseQuotePrice ?? "—",
-          swap.transactionHash,
         ];
       }),
     [loadedSwaps],
@@ -421,26 +405,48 @@ export default function WalletPage() {
         swap.sold?.symbol ? String(swap.sold.symbol).toUpperCase() : "—",
         swap.bought?.symbol ? String(swap.bought.symbol).toUpperCase() : "—",
         swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
-        swap.baseQuotePrice != null
-          ? fmt.num.decimal(swap.baseQuotePrice)
-          : "—",
       ]),
     [fmt, loadedSwaps],
   );
 
   const transferData = useMemo(
     () =>
-      loadedTransfers.map((transfer) => [
-        transfer.from,
-        transfer.to,
-        typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown",
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-      ]),
+      loadedTransfers.map((transfer) => {
+        const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
+          transfer.tokenAddress,
+        );
+        const fallbackLogoUri = tokenMetaLookupAddress
+          ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
+          : undefined;
+        const tokenSymbol =
+          typeof transfer.tokenSymbol === "string" &&
+            transfer.tokenSymbol.trim().length > 0
+            ? transfer.tokenSymbol
+            : "Unknown";
+        const tokenAmount = transfer.amount;
+        const tokenCell = {
+          address: transfer.tokenAddress,
+          amount: tokenAmount,
+          symbol: tokenSymbol,
+          name: transfer.tokenName ?? null,
+          logoUri: transfer.tokenLogoUri ?? fallbackLogoUri ?? null,
+          priceUsd: transfer.priceUsd ?? 0,
+          valueUsd: transfer.amountUsd ?? tokenAmount * (transfer.priceUsd ?? 0),
+          toString: () => {
+            return tokenSymbol;
+          },
+          valueOf: () => {
+            return tokenAmount;
+          },
+        };
+
+        return [
+          transfer.timestamp,
+          transfer.from,
+          transfer.to,
+          tokenCell,
+        ];
+      }),
     [loadedTransfers],
   );
 
@@ -482,15 +488,13 @@ export default function WalletPage() {
     tr("walletPage.tokenSold"),
     tr("walletPage.tokenBought"),
     tr("walletPage.totalValueUSD"),
-    tr("walletPage.feeInLamports"),
   ];
 
   const transferHeaders = [
+    tr("walletPage.time"),
     tr("walletPage.sender"),
     tr("walletPage.receiver"),
     tr("walletPage.token"),
-    tr("walletPage.amount"),
-    tr("walletPage.time"),
   ];
 
   const portfolioHeaders = [
@@ -515,8 +519,8 @@ export default function WalletPage() {
 
   const isSortableCounterparties = [false, false, true, false, true, true];
   const isSortablePortfolio = [false, false, true, true, true];
-  const isSortableSwaps = [true, false, false, false, false, true, true];
-  const isSortableTransfers = [false, false, false, true, true];
+  const isSortableSwaps = [true, false, false, false, false, true];
+  const isSortableTransfers = [true, false, false, true];
 
   const counterpartySortConfigs = {
     2: { type: SortType.Number },
@@ -526,11 +530,10 @@ export default function WalletPage() {
   const swapSortConfigs = {
     0: { type: SortType.Date },
     5: { type: SortType.Number },
-    6: { type: SortType.Number },
   };
   const transferSortConfigs = {
-    3: { type: SortType.Number },
-    4: { type: SortType.Date },
+    0: { type: SortType.Date },
+    2: { type: SortType.Number },
   };
   const portfolioSortConfig = {
     2: { type: SortType.Number },
@@ -555,18 +558,18 @@ export default function WalletPage() {
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string) => renderCode(value),
     (value: string) => renderCode(value),
-    (value: unknown, row?: unknown[] | null) => {
+    (value: WalletSwapTokenInfo, row?: any) => {
       if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value as WalletSwapTokenInfo;
+      const token = value
       return renderTokenCell(
         token,
         renderSwapTokenInfoClassnames,
         18,
       )(String(token.symbol ?? ""), row ?? null);
     },
-    (value: unknown, row?: unknown[] | null) => {
+    (value: WalletSwapTokenInfo, row?: any) => {
       if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value as WalletSwapTokenInfo;
+      const token = value;
       return renderTokenCell(
         token,
         renderSwapTokenInfoClassnames,
@@ -577,35 +580,19 @@ export default function WalletPage() {
       value === "—"
         ? renderBase(value)
         : renderReducedNumber(value, renderCurrency, bcp47),
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
   ];
 
   const transferCellRenderers = [
-    (value: string) => renderHash(value),
-    (value: string) => renderHash(value),
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row) || row.length < 6) return renderCode(value);
-      const transferKey = String(row[5] ?? "");
-      const transfer = transferByKey.get(transferKey);
-      if (!transfer) return renderCode(value);
-      const transferTokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-        transfer.tokenAddress,
-      );
-      const fallbackLogoUri = transferTokenMetaLookupAddress
-        ? tokenMeta.data?.[transferTokenMetaLookupAddress]?.imageUrl
-        : undefined;
-      return (
-        <TokenIdentityCell
-          symbol={String(transfer.tokenSymbol ?? value)}
-          fullName={transfer.tokenName}
-          imageUrl={transfer.tokenLogoUri ?? fallbackLogoUri}
-          imageSize={18}
-          tooltipAlign="right"
-        />
-      );
-    },
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
+    (value: string) => renderHash(value),
+    (value: string) => renderHash(value),
+    (value: WalletSwapTokenInfo, row?: any) => { // neccessary evil
+      return renderTokenCell(
+        value,
+        renderSwapTokenInfoClassnames,
+        18,
+      )(String(value.symbol ?? ""), row);
+    },
   ];
 
   const portfolioCellRenderers = [
@@ -1228,15 +1215,14 @@ export default function WalletPage() {
         ];
       });
       const transferSheetRows = snap.transfers.map((transfer) => [
+        fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
-          : "Unknown",
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+          : "Unknown"
+        } (${fmt.num.decimal(transfer.amount)})`,
       ]);
       const counterpartySheetRows = snap.counterparties.map((row) => {
         const identityLabel =
@@ -1410,21 +1396,6 @@ export default function WalletPage() {
   const activityTab = (
     <div className={styles.tabPane}>
       <PageSection>
-        <div className={styles.sectionStack}>
-          <div className={styles.chartSection}>
-            <CounterpartyActivity
-              minHeight={320}
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
-              autoRefresh
-            />
-          </div>
-          <div className={styles.chartSection}>
-            <ExchangeComparison walletAddress={walletAddress} />
-          </div>
-        </div>
-      </PageSection>
-
-      <PageSection>
         <div className={styles.tableStack}>
           <div className={styles.chartSection}>
             <Table
@@ -1445,7 +1416,6 @@ export default function WalletPage() {
                   max: 1_000_000,
                   step: 0.01,
                 },
-                6: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
               }}
               cellRenderers={swapCellRenderers}
               dataEntries={swapData}
@@ -1479,7 +1449,6 @@ export default function WalletPage() {
                 1: { type: FilterType.Select },
                 2: { type: FilterType.Select },
                 3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                4: { type: FilterType.Select },
               }}
               cellRenderers={transferCellRenderers}
               dataEntries={transferData}
@@ -1520,6 +1489,23 @@ export default function WalletPage() {
           </div>
         </div>
       </PageSection>
+
+      <PageSection>
+        <div className={styles.sectionStack}>
+
+          <div className={styles.chartSection}>
+            <CounterpartyActivity
+              minHeight={320}
+              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
+              autoRefresh
+            />
+          </div>
+          <div className={styles.chartSection}>
+            <ExchangeComparison walletAddress={walletAddress} />
+          </div>
+        </div>
+      </PageSection>
+
     </div>
   );
 
@@ -1891,7 +1877,16 @@ export default function WalletPage() {
       />
 
       <ChunkedPdfPages
-        items={transferData.map((row) => row.map((cell) => String(cell)))}
+        items={loadedTransfers.map((transfer) => [
+          fmt.datetime.relativeShort(transfer.timestamp, true),
+          transfer.from,
+          transfer.to,
+          `${typeof transfer.tokenSymbol === "string" &&
+            transfer.tokenSymbol.trim().length > 0
+            ? transfer.tokenSymbol
+            : "Unknown"
+          } (${fmt.num.decimal(transfer.amount)})`,
+        ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
         renderChunk={(chunkRows, chunkIndex, chunkCount) => (
           <div

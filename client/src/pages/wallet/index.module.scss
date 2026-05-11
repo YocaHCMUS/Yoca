@@ -262,6 +262,12 @@
   gap: 36px;
 }
 
+.tableRow {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
 .chartStack {
   display: flex;
   flex-direction: column;
