@@ -2,16 +2,16 @@
 @use '@carbon/react/scss/theme' as *;
 
 // Custom variables for table component
-$filter-popup-min-width: 280px;
-$table-max-height: 400px;
+$filter-popup-min-width: 300px;
+$table-max-height: 600px;
 $filter-popup-z-index: 9999;
 
 .filterPopup {
-  position: absolute;
-  top: calc(100% + $spacing-03);
+  position: fixed;
+  top: 0;
   z-index: $filter-popup-z-index;
   min-width: $filter-popup-min-width;
-  max-height: $table-max-height;
+  max-height: $table-max-height * 0.8;
   overflow-y: auto;
   background: var(--cds-layer-01);
   border: 1px solid var(--cds-border-subtle-01);
@@ -44,14 +44,48 @@ $filter-popup-z-index: 9999;
 .filterPopupContent {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: $spacing-02;
+}
+
+.filterPopupContentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: $spacing-08;
+  row-gap: 0;
+}
+
+.filterPopupItem {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Range controls should span all three columns */
+.filterPopupItemRange {
+  grid-column: 1 / -1;
+}
+
+/* Selector controls occupy a single column */
+.filterPopupItemSelect {
+  grid-column: auto / span 1;
+}
+
+/* Date controls occupy a single column by default */
+.filterPopupItemDate {
+  grid-column: auto / span 1;
+}
+
+.filterPopupTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin-bottom: 0;
 }
 
 .filterPopupHeader {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--cds-text-primary);
-  margin-bottom: $spacing-03;
+  color: var(--cds-link-primary);
+  margin-bottom: 0;
 }
 
 .filterPopupActions {

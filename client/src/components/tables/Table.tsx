@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import { DataTable, DataTableSkeleton, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
@@ -460,9 +462,11 @@ export const Table: React.FC<TableProps> = ({
     const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
     const [tempFilterValue, setTempFilterValue] = useState<FilterStateValue>(null);
     const [popupAlignment, setPopupAlignment] = useState<'left' | 'right'>('right');
+    const [popupPosition, setPopupPosition] = useState<CSSProperties>({});
     const filterPopupRef = useRef<HTMLDivElement>(null);
     const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
     const tableContainerRef = useRef<HTMLDivElement>(null);
+    const { themeRef } = useUserTheme();
 
     const isServerPagination = Boolean(serverPagination?.enabled);
     // Pagination UI is always client-side; server mode only controls when to load more data.
@@ -487,21 +491,77 @@ export const Table: React.FC<TableProps> = ({
         }
     }, [openFilterModal]);
 
+    useEffect(() => {
+        if (openFilterModal === null) {
+            setPopupPosition({});
+            return;
+        }
+
+        const updatePopupPosition = () => {
+            const buttonElement = filterButtonRefs.current[openFilterModal];
+
+            if (!buttonElement) {
+                return;
+            }
+
+            const buttonRect = buttonElement.getBoundingClientRect();
+            const popupWidth = 380;
+            const popupOffset = 12;
+            const viewportWidth = window.innerWidth;
+            const top = buttonRect.bottom + popupOffset;
+
+            const alignLeft = viewportWidth - buttonRect.right < popupWidth;
+
+            if (alignLeft) {
+                const left = Math.max(
+                    popupOffset,
+                    Math.min(buttonRect.left, viewportWidth - popupWidth - popupOffset),
+                );
+                setPopupAlignment('left');
+                setPopupPosition({ top, left });
+                return;
+            }
+
+            const right = Math.max(popupOffset, viewportWidth - buttonRect.right);
+            setPopupAlignment('right');
+            setPopupPosition({ top, right });
+        };
+
+        updatePopupPosition();
+        window.addEventListener('resize', updatePopupPosition);
+        window.addEventListener('scroll', updatePopupPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePopupPosition);
+            window.removeEventListener('scroll', updatePopupPosition, true);
+        };
+    }, [openFilterModal]);
+
     /**
      * Open filter modal for specific column
      */
     const openFilterForColumn = (columnIndex: number) => {
         const buttonElement = filterButtonRefs.current[columnIndex];
-        const tableContainer = tableContainerRef.current;
-
-        if (buttonElement && tableContainer) {
+        if (buttonElement) {
             const buttonRect = buttonElement.getBoundingClientRect();
-            const tableRect = tableContainer.getBoundingClientRect();
-            const popupWidth = 280; // min-width from CSS, risky value
-            const spaceFromTableStart = buttonRect.right - tableRect.left;
+            const popupWidth = 380;
+            const popupOffset = 12;
+            const viewportWidth = window.innerWidth;
 
-            // If not enough space from table start to button right, align to left
-            setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
+            const alignLeft = viewportWidth - buttonRect.right < popupWidth;
+
+            if (alignLeft) {
+                const left = Math.max(
+                    popupOffset,
+                    Math.min(buttonRect.left, viewportWidth - popupWidth - popupOffset),
+                );
+                setPopupAlignment('left');
+                setPopupPosition({ top: buttonRect.bottom + popupOffset, left });
+            } else {
+                const right = Math.max(popupOffset, viewportWidth - buttonRect.right);
+                setPopupAlignment('right');
+                setPopupPosition({ top: buttonRect.bottom + popupOffset, right });
+            }
         }
         setOpenFilterModal(columnIndex);
         const schema = filterSchema[columnIndex];
@@ -801,7 +861,7 @@ export const Table: React.FC<TableProps> = ({
                     : {};
 
             return (
-                <div className={styles.filterPopupContent}>
+                <div className={styles.filterPopupContentGrid}>
                     {Object.entries(schema.filters).map(([childKey, childSchema]) => {
                         if (!isEnabledFilterConfig(childSchema)) {
                             return null;
@@ -811,8 +871,15 @@ export const Table: React.FC<TableProps> = ({
                             (compositeValue as Record<string, FilterStateValue | null>)[childKey] ??
                             getDefaultFilterState(childSchema);
 
+                        const itemClass = [
+                            styles.filterPopupItem,
+                            childSchema.type === FilterType.Range ? styles.filterPopupItemRange : '',
+                            childSchema.type === FilterType.Select ? styles.filterPopupItemSelect : '',
+                            childSchema.type === FilterType.Date ? styles.filterPopupItemDate : '',
+                        ].filter(Boolean).join(' ');
+
                         return (
-                            <div key={`${columnIndex}-${keyPath ?? "root"}-${childKey}`} style={{ display: "grid", gap: "0.5rem" }}>
+                            <div key={`${columnIndex}-${keyPath ?? "root"}-${childKey}`} className={itemClass}>
                                 <div className={styles.filterPopupHeader}>
                                     {childKey}
                                 </div>
@@ -919,7 +986,7 @@ export const Table: React.FC<TableProps> = ({
             !allSelected;
 
         return (
-            <CheckboxGroup legendText="Select values (multiple allowed)">
+            <CheckboxGroup legendText="">
                 <Checkbox
                     id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-select-all`}
                     labelText="Select All"
@@ -949,30 +1016,30 @@ export const Table: React.FC<TableProps> = ({
         );
     };
 
-    const renderFilterPopup = (columnIndex: number) => {
-        if (openFilterModal !== columnIndex) return null;
+    const renderFilterPopup = () => {
+        if (openFilterModal === null) return null;
 
-        const schema = filterSchema[columnIndex];
-        const columnHeader = headerLabels[columnIndex] || `Column ${columnIndex}`;
+        const schema = filterSchema[openFilterModal];
+        const columnHeader = headerLabels[openFilterModal] || `Column ${openFilterModal}`;
 
         if (!isEnabledFilterConfig(schema)) return null;
 
         const popupValue = tempFilterValue ?? getDefaultFilterState(schema);
-
-        return (
+        const popup = (
             <div
                 className={`${styles.filterPopup} ${popupAlignment === 'left' ? styles.filterPopupLeft : styles.filterPopupRight}`}
                 ref={filterPopupRef}
+                style={popupPosition}
             >
                 <div className={styles.filterPopupContent}>
-                    <div className={styles.filterPopupHeader}>
+                    <div className={styles.filterPopupTitle}>
                         Filter: {columnHeader}
                     </div>
                     {renderFilterControl(
                         schema,
                         popupValue,
                         setTempFilterValue,
-                        columnIndex,
+                        openFilterModal,
                     )}
                     <div className={styles.filterPopupActions}>
                         <Button
@@ -985,7 +1052,7 @@ export const Table: React.FC<TableProps> = ({
                         <Button
                             kind="primary"
                             size="sm"
-                            onClick={() => applyFilter(columnIndex)}
+                            onClick={() => applyFilter(openFilterModal)}
                         >
                             Apply
                         </Button>
@@ -993,6 +1060,9 @@ export const Table: React.FC<TableProps> = ({
                 </div>
             </div>
         );
+
+        const portalTarget = themeRef.current;
+        return portalTarget ? createPortal(popup, portalTarget) : popup;
     };
 
     const paginationTotalItems = isServerPagination
@@ -1116,7 +1186,6 @@ export const Table: React.FC<TableProps> = ({
                                                                         >
                                                                             <Filter />
                                                                         </IconButton>
-                                                                        {renderFilterPopup(index)}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -1182,6 +1251,7 @@ export const Table: React.FC<TableProps> = ({
                         </DataTable>
                     )}
                 </div>
+                {renderFilterPopup()}
                 {/* <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
                 </div> */}
                 <div className={styles.paginationContainer}>
