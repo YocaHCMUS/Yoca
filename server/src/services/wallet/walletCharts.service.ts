@@ -12,7 +12,6 @@ import {
     resolvePnLAggregationByGap,
 } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
-import { getHistoricalPortfolioValueSeries } from "./walletPortfolio.service.js";
 import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.service.js";
 import { getCachedWalletBalanceHistory } from "./db/walletDataRetriever.js";
 import { saveBalanceHistoryCache } from "./db/walletDataCacher.js";
