@@ -52,14 +52,77 @@ export enum SortType {
 
 export enum FilterType {
     Select = 'select',
-    Range = 'range'
+    Range = 'range',
+    Date = 'date',
+    Composite = 'composite'
 }
 
-export interface FilterConfig {
-    type: FilterType;
+export interface FilterSelectConfig {
+    type: FilterType.Select;
+    field?: string;
+}
+
+export interface FilterRangeConfig {
+    type: FilterType.Range;
+    field?: string;
     min?: number;
     max?: number;
     step?: number;
+}
+
+export interface FilterDateConfig {
+    type: FilterType.Date;
+    field?: string;
+}
+
+export interface FilterCompositeConfig {
+    type: FilterType.Composite;
+    filters: Record<string, FilterConfig | null>;
+}
+
+export interface FilterIgnoredConfig {
+    type: null;
+}
+
+export type FilterConfig =
+    | FilterSelectConfig
+    | FilterRangeConfig
+    | FilterDateConfig
+    | FilterCompositeConfig
+    | FilterIgnoredConfig;
+
+interface FilterRangeValue {
+    min?: number;
+    max?: number;
+}
+
+interface FilterDateValue {
+    from?: string;
+    to?: string;
+}
+
+interface FilterCompositeState {
+    [key: string]: string[] | FilterRangeValue | FilterDateValue | FilterCompositeState | null;
+}
+
+type FilterStateValue = string[] | FilterRangeValue | FilterDateValue | FilterCompositeState | null;
+
+function isFilterRangeValue(value: FilterStateValue): value is FilterRangeValue {
+    return Boolean(
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        ("min" in value || "max" in value),
+    );
+}
+
+function isFilterDateValue(value: FilterStateValue): value is FilterDateValue {
+    return Boolean(
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        ("from" in value || "to" in value),
+    );
 }
 
 export interface SortConfig {
@@ -79,7 +142,7 @@ export interface TableProps {
     headers: TableColumnHeader[];
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
-    filterSchema: Record<number, FilterConfig>;
+    filterSchema: Record<number, FilterConfig | null>;
     actions?: React.ReactNode;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
@@ -95,6 +158,269 @@ export interface TableProps {
     enableExport?: boolean;
     serverPagination?: ServerPaginationConfig;
     loading?: boolean;
+}
+
+function isEnabledFilterConfig(
+    schema: FilterConfig | null,
+): schema is Exclude<FilterConfig, FilterIgnoredConfig> {
+    return Boolean(schema && schema.type !== null);
+}
+
+function getFilterTargetValue(
+    rowValue: unknown,
+    field?: string,
+): unknown {
+    if (
+        field &&
+        rowValue != null &&
+        typeof rowValue === "object" &&
+        !Array.isArray(rowValue) &&
+        field in (rowValue as Record<string, unknown>)
+    ) {
+        return (rowValue as Record<string, unknown>)[field];
+    }
+
+    return rowValue;
+}
+
+function getDefaultFilterState(schema: FilterConfig | null): FilterStateValue {
+    if (!schema || schema.type === null) {
+        return null;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return [];
+        case FilterType.Range:
+            return { min: schema.min, max: schema.max };
+        case FilterType.Date:
+            return { from: undefined, to: undefined };
+        case FilterType.Composite:
+            return Object.fromEntries(
+                Object.entries(schema.filters).map(([key, childSchema]) => [
+                    key,
+                    getDefaultFilterState(childSchema),
+                ]),
+            );
+        default:
+            return null;
+    }
+}
+
+function isFilterStateActive(
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+): boolean {
+    if (!schema || schema.type === null || value == null) {
+        return false;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return Array.isArray(value) && value.length > 0;
+        case FilterType.Range: {
+            if (!isFilterRangeValue(value)) {
+                return false;
+            }
+
+            return (
+                value.min !== undefined ||
+                value.max !== undefined
+            );
+        }
+        case FilterType.Date: {
+            if (!isFilterDateValue(value)) {
+                return false;
+            }
+
+            return value.from !== undefined || value.to !== undefined;
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters).some(([key, childSchema]) => {
+                if (!isEnabledFilterConfig(childSchema)) {
+                    return false;
+                }
+
+                return isFilterStateActive(childSchema, (value as Record<string, FilterStateValue | null>)[key] ?? null);
+            });
+        default:
+            return false;
+    }
+}
+
+function getFilterDisplayText(
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+): string {
+    if (!schema || schema.type === null || value == null) {
+        return "";
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return Array.isArray(value) ? value.join(", ") : String(value);
+        case FilterType.Range: {
+            if (!isFilterRangeValue(value)) {
+                return String(value);
+            }
+
+            if (value.min !== undefined && value.max !== undefined) {
+                return `${value.min} - ${value.max}`;
+            }
+
+            if (value.min !== undefined) {
+                return `≥ ${value.min}`;
+            }
+
+            if (value.max !== undefined) {
+                return `≤ ${value.max}`;
+            }
+
+            return "";
+        }
+        case FilterType.Date: {
+            if (!isFilterDateValue(value)) {
+                return String(value);
+            }
+
+            if (value.from && value.to) {
+                return `${value.from} - ${value.to}`;
+            }
+
+            if (value.from) {
+                return `From ${value.from}`;
+            }
+
+            if (value.to) {
+                return `To ${value.to}`;
+            }
+
+            return "";
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters)
+                .map(([key, childSchema]) => {
+                    if (!isEnabledFilterConfig(childSchema)) {
+                        return "";
+                    }
+
+                    const childValue = (value as Record<string, FilterStateValue | null>)[key] ?? null;
+                    const childDisplayText = getFilterDisplayText(childSchema, childValue);
+                    return childDisplayText ? `${key}: ${childDisplayText}` : "";
+                })
+                .filter(Boolean)
+                .join("; ");
+        default:
+            return String(value);
+    }
+}
+
+function matchesFilterSchema(
+    rowValue: unknown,
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+    fallbackField?: string,
+): boolean {
+    if (!schema || schema.type === null || value == null) {
+        return true;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return true;
+                }
+
+                return value.includes(String(targetValue ?? ""));
+            }
+
+            return String(targetValue ?? "") === String(value);
+        }
+        case FilterType.Range: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            const numericValue = Number(targetValue);
+            const rangeValue = value;
+
+            if (Number.isNaN(numericValue) || !isFilterRangeValue(rangeValue)) {
+                return true;
+            }
+
+            if (rangeValue.min !== undefined && numericValue < rangeValue.min) {
+                return false;
+            }
+
+            if (rangeValue.max !== undefined && numericValue > rangeValue.max) {
+                return false;
+            }
+
+            return true;
+        }
+        case FilterType.Date: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            const targetTime = new Date(String(targetValue ?? "")).getTime();
+            const dateValue = value;
+
+            if (Number.isNaN(targetTime) || !isFilterDateValue(dateValue)) {
+                return true;
+            }
+
+            if (dateValue.from) {
+                const fromTime = new Date(dateValue.from).getTime();
+                if (!Number.isNaN(fromTime) && targetTime < fromTime) {
+                    return false;
+                }
+            }
+
+            if (dateValue.to) {
+                const toTime = new Date(dateValue.to).getTime();
+                if (!Number.isNaN(toTime) && targetTime > toTime) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters).every(([key, childSchema]) => {
+                if (!isEnabledFilterConfig(childSchema)) {
+                    return true;
+                }
+
+                return matchesFilterSchema(
+                    rowValue,
+                    childSchema,
+                    (value as Record<string, FilterStateValue | null>)[key] ?? null,
+                    key,
+                );
+            });
+        default:
+            return true;
+    }
+}
+
+function getFilterCandidateValues(
+    dataEntries: any[][],
+    columnIndex: number,
+    schema: FilterConfig,
+    fallbackField?: string,
+): string[] {
+    const values = new Set<string>();
+
+    for (const row of dataEntries) {
+        const targetValue = getFilterTargetValue(row[columnIndex], schema.type === FilterType.Select || schema.type === FilterType.Range ? schema.field ?? fallbackField : fallbackField);
+        if (targetValue == null) {
+            continue;
+        }
+
+        const normalized = String(targetValue);
+        if (normalized.length > 0) {
+            values.add(normalized);
+        }
+    }
+
+    return Array.from(values).sort();
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -122,9 +448,9 @@ export const Table: React.FC<TableProps> = ({
     const [clientPageSize, setClientPageSize] = useState(20);
     // const [sortIndex, setSortIndex] = useState(0);
     const [searchValue, setSearchValue] = useState("");
-    const [filters, setFilters] = useState<Partial<any>>(initialFilters);
+    const [filters, setFilters] = useState<Partial<Record<number, FilterStateValue>>>(initialFilters);
     const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
-    const [tempFilterValue, setTempFilterValue] = useState<any>(null);
+    const [tempFilterValue, setTempFilterValue] = useState<FilterStateValue>(null);
     const [popupAlignment, setPopupAlignment] = useState<'left' | 'right'>('right');
     const filterPopupRef = useRef<HTMLDivElement>(null);
     const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -170,13 +496,8 @@ export const Table: React.FC<TableProps> = ({
             setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
         }
         setOpenFilterModal(columnIndex);
-        // Initialize with existing filter or empty array for Select type
         const schema = filterSchema[columnIndex];
-        if (schema?.type === FilterType.Select) {
-            setTempFilterValue(filters[columnIndex] || []);
-        } else {
-            setTempFilterValue(filters[columnIndex] || null);
-        }
+        setTempFilterValue(filters[columnIndex] ?? getDefaultFilterState(schema ?? null));
     };
 
     /**
@@ -192,8 +513,13 @@ export const Table: React.FC<TableProps> = ({
      */
     const applyFilter = (columnIndex: number) => {
         const schema = filterSchema[columnIndex];
-        // For Select type, only apply if array has items
-        if (schema?.type === FilterType.Select) {
+        if (!isEnabledFilterConfig(schema)) {
+            setClientPage(1);
+            closeFilterModal();
+            return;
+        }
+
+        if (schema.type === FilterType.Select) {
             if (Array.isArray(tempFilterValue) && tempFilterValue.length > 0) {
                 setFilters(prev => ({
                     ...prev,
@@ -201,6 +527,32 @@ export const Table: React.FC<TableProps> = ({
                 }));
             } else {
                 // Remove filter if no items selected
+                setFilters(prev => {
+                    const newFilters = { ...prev };
+                    delete newFilters[columnIndex];
+                    return newFilters;
+                });
+            }
+        } else if (schema.type === FilterType.Range) {
+            if (isFilterRangeValue(tempFilterValue)) {
+                setFilters(prev => ({
+                    ...prev,
+                    [columnIndex]: tempFilterValue
+                }));
+            } else {
+                setFilters(prev => {
+                    const newFilters = { ...prev };
+                    delete newFilters[columnIndex];
+                    return newFilters;
+                });
+            }
+        } else if (schema.type === FilterType.Composite) {
+            if (isFilterStateActive(schema, tempFilterValue)) {
+                setFilters(prev => ({
+                    ...prev,
+                    [columnIndex]: tempFilterValue
+                }));
+            } else {
                 setFilters(prev => {
                     const newFilters = { ...prev };
                     delete newFilters[columnIndex];
@@ -239,31 +591,17 @@ export const Table: React.FC<TableProps> = ({
             const colIdx = parseInt(columnIndex);
             const schema = filterSchema[colIdx];
             const columnName = headerLabels[colIdx] || `Column ${colIdx}`;
+            const resolvedFilterValue = (filterValue ?? null) as FilterStateValue;
 
-            if (!schema || !filterValue) return;
+            if (!isEnabledFilterConfig(schema) || !isFilterStateActive(schema, resolvedFilterValue)) return;
 
-            let displayText = '';
+            const displayText = getFilterDisplayText(schema, resolvedFilterValue);
 
-            if (schema.type === FilterType.Range) {
-                const rangeFilter = filterValue as { min?: number; max?: number };
-                if (rangeFilter.min !== undefined && rangeFilter.max !== undefined) {
-                    displayText = `${rangeFilter.min} - ${rangeFilter.max}`;
-                } else if (rangeFilter.min !== undefined) {
-                    displayText = `≥ ${rangeFilter.min}`;
-                } else if (rangeFilter.max !== undefined) {
-                    displayText = `≤ ${rangeFilter.max}`;
-                }
-            } else if (Array.isArray(filterValue)) {
-                displayText = filterValue.join(', ');
-            } else {
-                displayText = String(filterValue);
-            }
-
-            if (displayText && filterValue !== 'all' && !(Array.isArray(filterValue) && filterValue.length === 0)) {
+            if (displayText && !(Array.isArray(resolvedFilterValue) && resolvedFilterValue.length === 0)) {
                 active.push({
                     columnIndex: colIdx,
                     columnName,
-                    value: filterValue,
+                    value: resolvedFilterValue,
                     displayText
                 });
             }
@@ -288,36 +626,12 @@ export const Table: React.FC<TableProps> = ({
             for (const [columnIndex, filterValue] of Object.entries(filters)) {
                 const colIdx = parseInt(columnIndex);
                 const schema = filterSchema[colIdx];
+                const resolvedFilterValue = (filterValue ?? null) as FilterStateValue;
 
-                if (!schema) continue;
+                if (!isEnabledFilterConfig(schema)) continue;
 
-                if (schema.type === FilterType.Range) {
-                    // Handle range filter
-                    const numValue = Number(row[colIdx]);
-                    if (isNaN(numValue)) continue;
-
-                    const rangeFilter = filterValue as { min?: number; max?: number };
-                    if (!rangeFilter) continue;
-
-                    if (rangeFilter.min !== undefined && numValue < rangeFilter.min) {
-                        return false;
-                    }
-                    if (rangeFilter.max !== undefined && numValue > rangeFilter.max) {
-                        return false;
-                    }
-                } else {
-                    // Handle select filter (multi-select with OR logic)
-                    if (Array.isArray(filterValue) && filterValue.length > 0) {
-                        const cellValue = String(row[colIdx]);
-                        if (!filterValue.includes(cellValue)) {
-                            return false;
-                        }
-                    } else if (filterValue && filterValue !== 'all') {
-                        const cellValue = String(row[colIdx]);
-                        if (cellValue !== filterValue) {
-                            return false;
-                        }
-                    }
+                if (!matchesFilterSchema(row[colIdx], schema, resolvedFilterValue)) {
+                    return false;
                 }
             }
         }
@@ -457,13 +771,181 @@ export const Table: React.FC<TableProps> = ({
     /**
      * Render filter popup for specific column index
      */
+    const renderFilterControl = (
+        schema: FilterConfig,
+        value: FilterStateValue,
+        setValue: (nextValue: FilterStateValue) => void,
+        columnIndex: number,
+        keyPath?: string,
+    ): React.ReactNode => {
+        if (schema.type === null) {
+            return null;
+        }
+
+        if (schema.type === FilterType.Composite) {
+            const compositeValue =
+                value && typeof value === "object" && !Array.isArray(value)
+                    ? value
+                    : {};
+
+            return (
+                <div className={styles.filterPopupContent}>
+                    {Object.entries(schema.filters).map(([childKey, childSchema]) => {
+                        if (!isEnabledFilterConfig(childSchema)) {
+                            return null;
+                        }
+
+                        const childValue =
+                            (compositeValue as Record<string, FilterStateValue | null>)[childKey] ??
+                            getDefaultFilterState(childSchema);
+
+                        return (
+                            <div key={`${columnIndex}-${keyPath ?? "root"}-${childKey}`} style={{ display: "grid", gap: "0.5rem" }}>
+                                <div className={styles.filterPopupHeader}>
+                                    {childKey}
+                                </div>
+                                {renderFilterControl(
+                                    childSchema,
+                                    childValue,
+                                    (nextValue) => {
+                                        setValue({
+                                            ...(compositeValue as Record<string, FilterStateValue | null>),
+                                            [childKey]: nextValue,
+                                        });
+                                    },
+                                    columnIndex,
+                                    childKey,
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (schema.type === FilterType.Range) {
+            const rangeValue =
+                isFilterRangeValue(value)
+                    ? value
+                    : getDefaultFilterState(schema);
+            const resolvedRangeValue = rangeValue as FilterRangeValue | null;
+
+            return (
+                <Slider
+                    ariaLabelInput="Minimum Value"
+                    unstable_ariaLabelInputUpper="Maximum Value"
+                    value={resolvedRangeValue?.min ?? schema.min ?? 0}
+                    unstable_valueUpper={resolvedRangeValue?.max ?? schema.max ?? 100}
+                    min={schema.min ?? 0}
+                    max={schema.max ?? 100}
+                    step={schema.step ?? 1}
+                    stepMultiplier={10}
+                    hideTextInput={true}
+                    onChange={(nextValue: any) => {
+                        setValue({
+                            ...(resolvedRangeValue ?? {}),
+                            min: nextValue.value,
+                            max: nextValue.valueUpper,
+                        });
+                    }}
+                />
+            );
+        }
+
+        if (schema.type === FilterType.Date) {
+            const dateValue =
+                isFilterDateValue(value)
+                    ? value
+                    : getDefaultFilterState(schema);
+            const resolvedDateValue = dateValue as FilterDateValue | null;
+
+            return (
+                <div style={{ display: "grid", gap: "0.75rem" }}>
+                    <label style={{ display: "grid", gap: "0.25rem" }}>
+                        <span>From</span>
+                        <input
+                            type="date"
+                            value={resolvedDateValue?.from ?? ""}
+                            onChange={(event) => {
+                                setValue({
+                                    ...(resolvedDateValue ?? {}),
+                                    from: event.target.value || undefined,
+                                });
+                            }}
+                        />
+                    </label>
+                    <label style={{ display: "grid", gap: "0.25rem" }}>
+                        <span>To</span>
+                        <input
+                            type="date"
+                            value={resolvedDateValue?.to ?? ""}
+                            onChange={(event) => {
+                                setValue({
+                                    ...(resolvedDateValue ?? {}),
+                                    to: event.target.value || undefined,
+                                });
+                            }}
+                        />
+                    </label>
+                </div>
+            );
+        }
+
+        const selectedValues = Array.isArray(value) ? value : [];
+        const candidateValues = getFilterCandidateValues(
+            dataEntries,
+            columnIndex,
+            schema,
+            keyPath,
+        );
+        const allSelected =
+            candidateValues.length > 0 &&
+            candidateValues.every((candidate) => selectedValues.includes(candidate));
+        const indeterminate =
+            selectedValues.length > 0 &&
+            candidateValues.some((candidate) => selectedValues.includes(candidate)) &&
+            !allSelected;
+
+        return (
+            <CheckboxGroup legendText="Select values (multiple allowed)">
+                <Checkbox
+                    id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-select-all`}
+                    labelText="Select All"
+                    checked={allSelected}
+                    indeterminate={indeterminate}
+                    onChange={(_event: unknown, { checked }: { checked: boolean }) => {
+                        setValue(checked ? candidateValues : []);
+                    }}
+                />
+                {candidateValues.map((candidateValue) => (
+                    <Checkbox
+                        key={candidateValue}
+                        id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-${candidateValue}`}
+                        labelText={candidateValue}
+                        checked={selectedValues.includes(candidateValue)}
+                        onChange={(_event: unknown, { checked }: { checked: boolean }) => {
+                            const currentValues = Array.isArray(value) ? [...value] : [];
+                            if (checked) {
+                                setValue([...currentValues, candidateValue]);
+                            } else {
+                                setValue(currentValues.filter((candidate) => candidate !== candidateValue));
+                            }
+                        }}
+                    />
+                ))}
+            </CheckboxGroup>
+        );
+    };
+
     const renderFilterPopup = (columnIndex: number) => {
         if (openFilterModal !== columnIndex) return null;
 
         const schema = filterSchema[columnIndex];
         const columnHeader = headerLabels[columnIndex] || `Column ${columnIndex}`;
 
-        if (!schema) return null;
+        if (!isEnabledFilterConfig(schema)) return null;
+
+        const popupValue = tempFilterValue ?? getDefaultFilterState(schema);
 
         return (
             <div
@@ -474,74 +956,11 @@ export const Table: React.FC<TableProps> = ({
                     <div className={styles.filterPopupHeader}>
                         Filter: {columnHeader}
                     </div>
-                    {schema.type === FilterType.Range ? (
-                        <Slider
-                            ariaLabelInput="Minimum Value"
-                            unstable_ariaLabelInputUpper="Maximum Value"
-                            value={tempFilterValue?.min ?? schema.min ?? 0}
-                            unstable_valueUpper={tempFilterValue?.max ?? schema.max ?? 100}
-                            min={schema.min ?? 0}
-                            max={schema.max ?? 100}
-                            step={schema.step ?? 1}
-                            stepMultiplier={10}
-                            hideTextInput={true}
-                            onChange={(value: any) => {
-                                setTempFilterValue((prev: any) => ({
-                                    ...(prev || {}),
-                                    min: value.value,
-                                    max: value.valueUpper
-                                }));
-                            }}
-                        />
-                    ) : (
-                        <CheckboxGroup
-                            legendText="Select values (multiple allowed)"
-                        >
-                            {(() => {
-                                const allValues = Array.from(
-                                    new Set(dataEntries.map(row => String(row[columnIndex])))
-                                ).sort();
-                                const selectedValues = Array.isArray(tempFilterValue) ? tempFilterValue : [];
-                                const allSelected = allValues.length > 0 && allValues.every(v => selectedValues.includes(v));
-                                const indeterminate = selectedValues.length > 0 && allValues.some(v => selectedValues.includes(v)) && !allSelected;
-
-                                return (
-                                    <>
-                                        <Checkbox
-                                            id={`filter-checkbox-${columnIndex}-select-all`}
-                                            labelText="Select All"
-                                            checked={allSelected}
-                                            indeterminate={indeterminate}
-                                            onChange={(e: any, { checked }: { checked: boolean }) => {
-                                                if (checked) {
-                                                    setTempFilterValue(allValues);
-                                                } else {
-                                                    setTempFilterValue([]);
-                                                }
-                                            }}
-                                        />
-                                        {allValues.map(value => {
-                                            return (
-                                                <Checkbox
-                                                    key={value}
-                                                    id={`filter-checkbox-${columnIndex}-${value}`}
-                                                    labelText={value}
-                                                    checked={selectedValues.includes(value)}
-                                                    onChange={(e: any, { checked }: { checked: boolean }) => {
-                                                        const currentValues = Array.isArray(tempFilterValue) ? [...tempFilterValue] : [];
-                                                        if (checked) {
-                                                            setTempFilterValue([...currentValues, value]);
-                                                        } else {
-                                                            setTempFilterValue(currentValues.filter(v => v !== value));
-                                                        }
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </>
-                                );
-                            })()}
-                        </CheckboxGroup>
+                    {renderFilterControl(
+                        schema,
+                        popupValue,
+                        setTempFilterValue,
+                        columnIndex,
                     )}
                     <div className={styles.filterPopupActions}>
                         <Button

@@ -7,6 +7,7 @@ import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanc
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
   FilterType,
+  type FilterConfig,
   SortType,
   Table,
   tableHeaderLabel,
@@ -382,17 +383,17 @@ export default function WalletPage() {
           (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
         );
         return [
-          String(swap.blockTimestampIso ?? ""),
+          String(swap.blockTimestampIso ?? ""), // time column
           {
             name: typeof swap.exchangeName === "string" &&
               swap.exchangeName.trim().length > 0
               ? swap.exchangeName
               : "_",
             logo: swap.exchangeLogo ?? null,
-          },
-          formatSwapPair(swap),
-          swap.sold,
-          swap.bought,
+          }, // exchange column
+          formatSwapPair(swap), // pair column
+          swap.sold, // sold column
+          swap.bought, // bought column
           totalValueUsd ?? "—",
         ];
       }),
@@ -696,7 +697,7 @@ export default function WalletPage() {
     },
   ];
 
-  const counterpartyFilterSchema = {
+  const counterpartyFilterSchema: Record<number, FilterConfig | null> = {
     0: { type: FilterType.Select },
     1: { type: FilterType.Select },
     2: { type: FilterType.Range, min: 0, max: 100, step: 1 },
@@ -705,11 +706,89 @@ export default function WalletPage() {
     5: { type: FilterType.Range, min: 0, max: 10_000, step: 1 },
   };
 
-  const portfolioFilterSchema = {
+  const portfolioFilterSchema: Record<number, FilterConfig | null> = {
     1: { type: FilterType.Select },
     2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
     3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
     4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
+  };
+
+  const swapFilterSchema: Record<number, FilterConfig | null> = {
+    0: { type: FilterType.Date },
+    1: {
+      type: FilterType.Composite,
+      filters: {
+        name: { type: FilterType.Select, field: "name" },
+        logo: null,
+      },
+    },
+    2: { type: FilterType.Select },
+    3: {
+      type: FilterType.Composite,
+      filters: {
+        address: null,
+        amount: null,
+        symbol: null,
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: {
+          type: FilterType.Range,
+          field: "valueUsd",
+          min: 0,
+          max: 10_000,
+          step: 0.01
+        }
+      }
+    },
+    4: {
+      type: FilterType.Composite,
+      filters: {
+        address: null,
+        amount: null,
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: {
+          type: FilterType.Range,
+          field: "valueUsd",
+          min: 0,
+          max: 10_000,
+          step: 0.01
+        }
+      }
+    },
+    5: {
+      type: FilterType.Range,
+      min: 0,
+      max: 1_000_000,
+      step: 0.01,
+    },
+  };
+
+  const transferFilterSchema: Record<number, FilterConfig | null> = {
+    0: { type: FilterType.Date },
+    1: { type: FilterType.Select },
+    2: { type: FilterType.Select },
+    3: {
+      type: FilterType.Composite,
+      filters: {
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01,
+        },
+        logoUri: null,
+        address: null,
+        priceUsd: null,
+        valueUsd: null,
+      },
+    },
   };
 
   // const handleSwapPageChange = async (): Promise<boolean> => {
@@ -1440,19 +1519,7 @@ export default function WalletPage() {
               headers={swapHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(swapData)}
-              filterSchema={{
-                0: { type: FilterType.Select },
-                1: { type: FilterType.Select },
-                2: { type: FilterType.Select },
-                3: { type: FilterType.Select },
-                4: { type: FilterType.Select },
-                5: {
-                  type: FilterType.Range,
-                  min: 0,
-                  max: 1_000_000,
-                  step: 0.01,
-                },
-              }}
+              filterSchema={swapFilterSchema}
               cellRenderers={swapCellRenderers}
               dataEntries={swapData}
               isSortable={isSortableSwaps}
@@ -1480,12 +1547,7 @@ export default function WalletPage() {
               headers={transferHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transferData)}
-              filterSchema={{
-                0: { type: FilterType.Select },
-                1: { type: FilterType.Select },
-                2: { type: FilterType.Select },
-                3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-              }}
+              filterSchema={transferFilterSchema}
               cellRenderers={transferCellRenderers}
               dataEntries={transferData}
               isSortable={isSortableTransfers}
