@@ -235,7 +235,7 @@ export function SwapDetailModal({
                     symbol={swap.sold.symbol ?? swap.sold.address}
                     fullName={swap.sold.name ?? swap.sold.address}
                     imageUrl={swap.sold.logoUri ?? undefined}
-                    imageSize={18}
+                    imageSize={30}
                     tooltipAlign="right"
                   />
                 </span>
@@ -261,7 +261,7 @@ export function SwapDetailModal({
                     symbol={swap.bought.symbol ?? swap.bought.address}
                     fullName={swap.bought.name ?? swap.bought.address}
                     imageUrl={swap.bought.logoUri ?? undefined}
-                    imageSize={18}
+                    imageSize={30}
                     tooltipAlign="right"
                   />
                 </span>

@@ -21,6 +21,7 @@ import {
   renderReducedNumber,
   renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
+import { TknImg } from "@/components/TknImg";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
@@ -56,6 +57,7 @@ import {
   type WalletPageInfo,
   type WalletPortfolioItem,
   type WalletSwap,
+  type WalletSwapTokenChange,
   type WalletSwapTokenInfo,
   type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
@@ -568,19 +570,41 @@ export default function WalletPage() {
         <TokenIdentityCell
           symbol={value.name}
           imageUrl={value.logo}
-          imageSize={18}
+          imageSize={30}
           emphasizeSymbol={false}
         />
       );
     },
-    (value: string) => renderCode(value),
+    (value: string, row?: any[]) => {
+      const soldToken = Array.isArray(row) ? (row[3] as WalletSwapTokenChange | undefined) : undefined;
+      const boughtToken = Array.isArray(row) ? (row[4] as WalletSwapTokenChange | undefined) : undefined;
+      const soldSymbol = soldToken?.symbol ? String(soldToken.symbol).toUpperCase() : "UNK";
+      const boughtSymbol = boughtToken?.symbol ? String(boughtToken.symbol).toUpperCase() : "UNK";
+      const pairLabel = String(value || "").replace(/,/g, " → ");
+
+      return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <span style={{ position: "relative", width: 30, height: 30, flexShrink: 0 }}>
+            <span style={{ position: "absolute", inset: 0, borderRadius: 999, overflow: "hidden", boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.45)" }}>
+              <TknImg src={soldToken?.logoUri ?? null} alt={soldToken?.name ?? soldSymbol} size={30} />
+            </span>
+            <span style={{ position: "absolute", right: -2, bottom: -2, borderRadius: 999, overflow: "hidden", boxShadow: "0 0 0 2px var(--cds-layer, #fff)" }}>
+              <TknImg src={boughtToken?.logoUri ?? null} alt={boughtToken?.name ?? boughtSymbol} size={14} />
+            </span>
+          </span>
+          <span style={{ display: "inline-flex", flexDirection: "column", minWidth: 0, lineHeight: 1.2 }}>
+            <span style={{ color: "var(--cds-text-primary)" }}>{pairLabel}</span>
+          </span>
+        </span>
+      );
+    },
     (value: WalletSwapTokenInfo, row?: any) => {
       if (!value || typeof value !== "object") return renderCode(String(value));
       const token = value
       return renderTokenCell(
         token,
         renderSwapTokenInfoClassnames,
-        18,
+        30,
         true,
         "negative"
       )(String(token.symbol ?? ""), row ?? null);
@@ -591,7 +615,7 @@ export default function WalletPage() {
       return renderTokenCell(
         token,
         renderSwapTokenInfoClassnames,
-        18,
+        30,
         true,
         "positive"
       )(String(token.symbol ?? ""), row ?? null);
@@ -628,7 +652,7 @@ export default function WalletPage() {
       return renderTokenCell(
         value,
         renderSwapTokenInfoClassnames,
-        18,
+        30,
         true,
       )(String(value.symbol ?? ""), row);
     },
@@ -682,8 +706,7 @@ export default function WalletPage() {
           symbol={value}
           fullName={portfolioTokenMeta?.fullName}
           imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
-          imageSize={20}
-
+          imageSize={30}
           tooltipAlign="right"
         />
       );

@@ -20,7 +20,7 @@ export function TokenIdentityCell({
     symbol,
     fullName,
     imageUrl,
-    imageSize = 28,
+    imageSize = 30,
     tooltipAlign = "right",
     emphasizeSymbol = false,
 
