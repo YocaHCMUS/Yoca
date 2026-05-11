@@ -225,6 +225,7 @@ export const translation = defineTranslation({
     seller: "Người gửi",
     sender: "Người gửi",
     receiver: "Người nhận",
+    currentWallet: "Ví hiện tại",
     type: "Loại",
     token: "Token",
     amount: "Số lượng",

@@ -60,7 +60,7 @@ import {
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { chunkArray } from "@/util/format";
-import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, Wallet } from "@carbon/icons-react";
+import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, User, Wallet } from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -588,8 +588,26 @@ export default function WalletPage() {
 
   const transferCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    (value: string) => renderHash(value),
-    (value: string) => renderHash(value),
+    (value: string) => {
+      const isCurrentWallet = value === walletAddress;
+      return renderHash(
+        value,
+        6,
+        4,
+        isCurrentWallet ? <User size={12} /> : undefined,
+        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+      );
+    },
+    (value: string) => {
+      const isCurrentWallet = value === walletAddress;
+      return renderHash(
+        value,
+        6,
+        4,
+        isCurrentWallet ? <User size={12} /> : undefined,
+        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+      );
+    },
     (value: WalletSwapTokenInfo, row?: any) => { // neccessary evil
       return renderTokenCell(
         value,

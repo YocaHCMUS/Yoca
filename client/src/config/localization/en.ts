@@ -258,6 +258,7 @@ export const translation = {
     seller: "Sender",
     sender: "Sender",
     receiver: "Receiver",
+    currentWallet: "Current wallet",
     type: "Type",
     token: "Token",
     amount: "Amount",
