@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
@@ -451,6 +452,7 @@ export const Table: React.FC<TableProps> = ({
     serverPagination,
     loading = false,
 }) => {
+    const { tr } = useLocalization();
     const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
         normalizeTableHeaders(headers);
 
@@ -941,7 +943,7 @@ export const Table: React.FC<TableProps> = ({
             return (
                 <div style={{ display: "grid", gap: "0.75rem" }}>
                     <label style={{ display: "grid", gap: "0.25rem" }}>
-                        <span>From</span>
+                        <span>{tr("table.from")}</span>
                         <input
                             type="date"
                             value={resolvedDateValue?.from ?? ""}
@@ -954,7 +956,7 @@ export const Table: React.FC<TableProps> = ({
                         />
                     </label>
                     <label style={{ display: "grid", gap: "0.25rem" }}>
-                        <span>To</span>
+                        <span>{tr("table.to")}</span>
                         <input
                             type="date"
                             value={resolvedDateValue?.to ?? ""}
@@ -989,7 +991,7 @@ export const Table: React.FC<TableProps> = ({
             <CheckboxGroup legendText="">
                 <Checkbox
                     id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-select-all`}
-                    labelText="Select All"
+                    labelText={tr("table.selectAll")}
                     checked={allSelected}
                     indeterminate={indeterminate}
                     onChange={(_event: unknown, { checked }: { checked: boolean }) => {
@@ -1033,7 +1035,7 @@ export const Table: React.FC<TableProps> = ({
             >
                 <div className={styles.filterPopupContent}>
                     <div className={styles.filterPopupTitle}>
-                        Filter: {columnHeader}
+                        {tr("table.filterLabel", { column: columnHeader })}
                     </div>
                     {renderFilterControl(
                         schema,
@@ -1047,14 +1049,14 @@ export const Table: React.FC<TableProps> = ({
                             size="sm"
                             onClick={closeFilterModal}
                         >
-                            Cancel
+                            {tr("common.cancel")}
                         </Button>
                         <Button
                             kind="primary"
                             size="sm"
                             onClick={() => applyFilter(openFilterModal)}
                         >
-                            Apply
+                            {tr("table.apply")}
                         </Button>
                     </div>
                 </div>
@@ -1080,7 +1082,6 @@ export const Table: React.FC<TableProps> = ({
             enableExport={enableExport}
             isEmpty={!loading && filteredData.length === 0}
             enableToolbar={true}
-            searchPlaceholder="Search table..."
             searchValue={searchValue}
             onSearchChange={(value) => {
                 setSearchValue(value);
@@ -1239,7 +1240,7 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableRow className={styles.noHover}>
                                                     <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
                                                         <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            No data available
+                                                            {tr("common.noData")}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -1260,6 +1261,11 @@ export const Table: React.FC<TableProps> = ({
                         pageSize={pageSize}
                         pageSizes={[20, 30, 40, 50]}
                         totalItems={paginationTotalItems}
+                        itemsPerPageText={tr("table.itemsPerPageText")}
+                        pageRangeText={(current, total) => tr("table.pageRangeText", { count: current, total })}
+                        itemRangeText={(min, max, total) => tr("table.itemRangeText", { min, max, count: total })}
+                        forwardText={tr("table.nextPage")}
+                        backwardText={tr("table.previousPage")}
                         onChange={({ page: nextPage, pageSize: nextPageSize }) => {
                             if (isServerPagination) {
                                 if (serverPagination?.isLoading) {

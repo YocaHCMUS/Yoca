@@ -106,6 +106,12 @@ export const translation = defineTranslation({
     itemRangeText: "{{min}}-{{max}} của {{count}} mục",
     nextPage: "Trang tiếp theo",
     previousPage: "Trang trước",
+    searchPlaceholder: "Tìm kiếm bảng...",
+    filterLabel: "Bộ lọc: {{column}}",
+    apply: "Áp dụng",
+    selectAll: "Chọn tất cả",
+    from: "Từ",
+    to: "Đến",
   },
   // Authentication
   auth: {

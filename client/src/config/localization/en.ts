@@ -139,6 +139,12 @@ export const translation = {
     itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
     nextPage: "Next Page",
     previousPage: "Previous Page",
+    searchPlaceholder: "Search table...",
+    filterLabel: "Filter: {{column}}",
+    apply: "Apply",
+    selectAll: "Select All",
+    from: "From",
+    to: "To",
   },
   // Authentication
   auth: {
