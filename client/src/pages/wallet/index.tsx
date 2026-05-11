@@ -565,6 +565,8 @@ export default function WalletPage() {
         token,
         renderSwapTokenInfoClassnames,
         18,
+        true,
+        "negative"
       )(String(token.symbol ?? ""), row ?? null);
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -574,6 +576,8 @@ export default function WalletPage() {
         token,
         renderSwapTokenInfoClassnames,
         18,
+        true,
+        "positive"
       )(String(token.symbol ?? ""), row ?? null);
     },
     (value: string) =>
@@ -591,6 +595,7 @@ export default function WalletPage() {
         value,
         renderSwapTokenInfoClassnames,
         18,
+        true,
       )(String(value.symbol ?? ""), row);
     },
   ];
