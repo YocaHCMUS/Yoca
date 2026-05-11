@@ -128,6 +128,7 @@ function isFilterDateValue(value: FilterStateValue): value is FilterDateValue {
 export interface SortConfig {
     type: SortType;
     priorityMap?: Record<string, number>;
+    field?: string;
 }
 
 export interface ServerPaginationConfig {
@@ -181,6 +182,13 @@ function getFilterTargetValue(
     }
 
     return rowValue;
+}
+
+function getSortTargetValue(
+    rowValue: unknown,
+    field?: string,
+): unknown {
+    return getFilterTargetValue(rowValue, field);
 }
 
 function getDefaultFilterState(schema: FilterConfig | null): FilterStateValue {
@@ -738,18 +746,22 @@ export const Table: React.FC<TableProps> = ({
             return String(cellA).localeCompare(String(cellB), locale);
         }
 
+        const sortTargetField = columnConfig.field;
+        const sortValueA = getSortTargetValue(cellA, sortTargetField);
+        const sortValueB = getSortTargetValue(cellB, sortTargetField);
+
         // 1. Dynamic Logic Selection
         switch (columnConfig.type) {
             case SortType.Priority:
                 console.log("priority");
                 const map = columnConfig.priorityMap || {};
-                comparison = (map[cellA] ?? 99) - (map[cellB] ?? 99);
+                comparison = (map[sortValueA as any] ?? 99) - (map[sortValueB as any] ?? 99);
                 break;
             case SortType.Date:
                 console.log("date");
-                const dateA = new Date(cellA).getTime();
-                const dateB = new Date(cellB).getTime();
-                console.log(`cellA: ${cellA} - ${dateA}; cellB: ${cellB} - ${dateB}`);
+                const dateA = new Date(sortValueA as any).getTime();
+                const dateB = new Date(sortValueB as any).getTime();
+                console.log(`cellA: ${sortValueA} - ${dateA}; cellB: ${sortValueB} - ${dateB}`);
                 // Handle invalid dates
                 if (isNaN(dateA) && isNaN(dateB)) comparison = 0;
                 else if (isNaN(dateA)) comparison = 1;
@@ -758,11 +770,11 @@ export const Table: React.FC<TableProps> = ({
                 break;
             case SortType.Number:
                 console.log("number");
-                comparison = Number(cellA) - Number(cellB);
+                comparison = Number(sortValueA) - Number(sortValueB);
                 break;
             default:
                 console.log("default");
-                comparison = String(cellA).localeCompare(String(cellB), locale);
+                comparison = String(sortValueA ?? "").localeCompare(String(sortValueB ?? ""), locale);
         }
         // 3. Apply Directionality
         return sortDirection === sortStates.DESC ? comparison * -1 : comparison;

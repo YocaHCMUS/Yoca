@@ -523,7 +523,7 @@ export default function WalletPage() {
 
   const isSortableCounterparties = [false, false, true, false, true, true];
   const isSortablePortfolio = [false, false, true, true, true];
-  const isSortableSwaps = [true, false, false, false, false, true];
+  const isSortableSwaps = [true, false, false, true, true, true];
   const isSortableTransfers = [true, false, false, true];
 
   const counterpartySortConfigs = {
@@ -533,6 +533,8 @@ export default function WalletPage() {
   };
   const swapSortConfigs = {
     0: { type: SortType.Date },
+    3: { type: SortType.Number, field: "amount" },
+    4: { type: SortType.Number, field: "amount" },
     5: { type: SortType.Number },
   };
   const transferSortConfigs = {
@@ -727,36 +729,36 @@ export default function WalletPage() {
       type: FilterType.Composite,
       filters: {
         address: null,
-        amount: null,
-        symbol: null,
-        name: { type: FilterType.Select, field: "name" },
-        logoUri: null,
-        priceUsd: null,
-        valueUsd: {
+        amount: {
           type: FilterType.Range,
-          field: "valueUsd",
+          field: "amount",
           min: 0,
           max: 10_000,
           step: 0.01
-        }
+        },
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: null
       }
     },
     4: {
       type: FilterType.Composite,
       filters: {
         address: null,
-        amount: null,
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01
+        },
         symbol: { type: FilterType.Select, field: "symbol" },
         name: { type: FilterType.Select, field: "name" },
         logoUri: null,
         priceUsd: null,
-        valueUsd: {
-          type: FilterType.Range,
-          field: "valueUsd",
-          min: 0,
-          max: 10_000,
-          step: 0.01
-        }
+        valueUsd: null
       }
     },
     5: {
