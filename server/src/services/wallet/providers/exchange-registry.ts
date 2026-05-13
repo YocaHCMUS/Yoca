@@ -22,6 +22,7 @@ const EXCHANGE_REGISTRY: Record<string, ExchangeInfo> = {
   SANCTUM_SOL: { name: "Sanctum",     logoUri: "" },
   LIFINITY:    { name: "Lifinity",    logoUri: "" },
   PUMPFUN:     { name: "Pump.fun",    logoUri: "" },
+  PUMP_FUN:    { name: "Pump.fun",    logoUri: "" },
   MOONSHOT:    { name: "Moonshot",    logoUri: "" },
   SYSTEM_PROGRAM: { name: "System Program", logoUri: "" },
   TOKEN_PROGRAM:  { name: "Token Program",  logoUri: "" },

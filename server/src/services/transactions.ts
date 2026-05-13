@@ -5,7 +5,7 @@ import {
 } from "@sv/util/util-birdeye.js";
 import { getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 
-type HeliusEnhancedTokenTransfer = {
+export type HeliusEnhancedTokenTransfer = {
   mint?: string;
   tokenAmount?: number;
   amount?: number;
@@ -22,7 +22,7 @@ type HeliusEnhancedTokenTransfer = {
   toWallet?: string;
 };
 
-type HeliusEnhancedNativeTransfer = {
+export type HeliusEnhancedNativeTransfer = {
   amount?: number;
   fromUserAccount?: string;
   toUserAccount?: string;
