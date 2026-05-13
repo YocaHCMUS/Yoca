@@ -143,7 +143,7 @@ export function mapHeliusTxToSwap(
 
   const signer = walletAddress;
   const source = String(
-    tx.source ?? tx.events?.swap?.source ?? tx.programName ?? "",
+    tx.source ?? "",
   ).trim();
   const programId = extractSwapProgramId(tx);
 
@@ -189,7 +189,7 @@ export function mapHeliusTxToSwap(
     .filter((a, i, arr) => arr.indexOf(a) === i)
     .join(",");
 
-  const transactionType = source.toUpperCase() || "SWAP";
+  const transactionType = "SWAP";
 
   return {
     transactionHash: txnHash,

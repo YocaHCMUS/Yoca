@@ -14,6 +14,8 @@ const EXCHANGE_REGISTRY: Record<string, ExchangeInfo> = {
   PHOENIX:     { name: "Phoenix",     logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/phoenix.png" },
   METEORA:     { name: "Meteora",     logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/meteora.png" },
   METEORA_DLMM:{ name: "Meteora DLMM",logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/meteora.png" },
+  METEORA_DAMM:{ name: "Meteora DAMM",logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/meteora.png" },
+  METEORA_DAMM_V2:{ name: "Meteora DAMM V2",logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/meteora.png" },
   OPENBOOK:    { name: "OpenBook",    logoUri: "" },
   KAMINO:      { name: "Kamino",      logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/kamino.png" },
   MARGINFI:    { name: "Marginfi",    logoUri: "https://dd.dexscreener.com/ds-data/dexes/solana/marginfi.png" },

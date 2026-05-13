@@ -4,6 +4,7 @@ import type { WalletTransfersResponse, WalletSwapsResponse, WalletSwap, WalletTr
 import { fetchHeliusSolanaTransfers } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
 import { fetchAndProcessWalletTransactions } from "@sv/services/wallet/providers/helius-transaction-provider.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
+import { resolveTokenPricesAtTimestamp } from "@sv/services/wallet/providers/resolve-token-price.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
 
 type WalletRangeMs = {
@@ -57,6 +58,45 @@ function getMissingRanges(
     }
 
     return missingRanges.filter((range) => range.fromMs <= range.toMs);
+}
+
+async function postEnrichSwaps(swaps: WalletSwap[]): Promise<void> {
+  for (const swap of swaps) {
+    const boughtSym = swap.bought?.symbol ?? swap.bought?.address ?? "?";
+    const soldSym = swap.sold?.symbol ?? swap.sold?.address ?? "?";
+    const uniqueSyms = [...new Set([soldSym, boughtSym])];
+    swap.tokensInvolved = uniqueSyms.join("/");
+    swap.pairAddress = swap.tokensInvolved;
+  }
+
+  const pending = swaps.filter(s => s.totalValueUsd == null && s.blockTimestampIso);
+  if (pending.length === 0) return;
+
+  await Promise.all(pending.map(async (swap) => {
+    const tsSec = Math.floor(new Date(swap.blockTimestampIso!).getTime() / 1000);
+    const mints = [swap.sold?.address, swap.bought?.address].filter(Boolean) as string[];
+    if (mints.length === 0) return;
+    const prices = await resolveTokenPricesAtTimestamp(mints, tsSec);
+
+    if (swap.sold?.address) {
+      const p = prices.get(swap.sold.address);
+      if (p != null && Number.isFinite(p) && p > 0) {
+        swap.sold.priceUsd = p;
+        swap.sold.valueUsd = swap.sold.amount * p;
+      }
+    }
+    if (swap.bought?.address) {
+      const p = prices.get(swap.bought.address);
+      if (p != null && Number.isFinite(p) && p > 0) {
+        swap.bought.priceUsd = p;
+        swap.bought.valueUsd = swap.bought.amount * p;
+      }
+    }
+
+    const values = [swap.bought?.valueUsd, swap.sold?.valueUsd]
+      .filter((v): v is number => Number.isFinite(v) && v > 0);
+    if (values.length > 0) swap.totalValueUsd = Math.max(...values);
+  }));
 }
 
 function sortTransfersByTimestampDesc(transfers: WalletTransfer[]): WalletTransfer[] {
@@ -241,6 +281,7 @@ export async function getWalletSwaps(
 
         const swaps = sortSwapsByTimestampDesc(cachedSwaps);
         await enrichWithSolanaTokenPrices(swaps);
+        await postEnrichSwaps(swaps);
         return {
             address,
             swaps,
@@ -295,6 +336,7 @@ export async function getWalletSwaps(
     )
     await saveSwapsCache(address, combinedSwaps, cachefrom, cacheTo);
     await enrichWithSolanaTokenPrices(combinedSwaps);
+    await postEnrichSwaps(combinedSwaps);
 
     const source =
         cachedSwaps.length > 0 && fetchedSwaps.length > 0
