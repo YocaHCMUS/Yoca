@@ -205,7 +205,7 @@ const app = new Hono().get(
         pairs,
         MAX_WALLET_CHART_CONCURRENCY,
         async ({ address, token }) =>
-          getWalletTokenBalanceHistory(address, token),
+          getWalletTokenBalanceHistory(address, token, params.timePeriod),
       );
 
       const selectedTokenSymbols = Array.from(

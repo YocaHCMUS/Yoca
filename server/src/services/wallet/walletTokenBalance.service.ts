@@ -1,39 +1,24 @@
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
-import type { TokenBalanceSeriesResult, BalanceDataPoint } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { TokenBalanceSeriesResult, BalanceDataPoint, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { toFiniteNumber } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { SOL_MINT, TOKEN_BALANCE_SNAPSHOT_CONCURRENCY, DAY_MS, DAY_SEC, TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS, TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS } from "@sv/services/wallet/wallet.constants.js";
+import { SOL_MINT, TOKEN_BALANCE_SNAPSHOT_CONCURRENCY, DAY_MS } from "@sv/services/wallet/wallet.constants.js";
 import { normalizeMint, isSolSymbol, toIsoFromSec } from "@sv/services/wallet/walletData.core.js";
 import { getCachedWalletTokenBalanceHistory, saveWalletTokenBalanceHistoryCache } from "@sv/services/wallet/db/walletTokenBalanceHistoryCache.js";
 import { fetchBirdeyePortfolioSnapshot } from "./fetchers/walletDataFetcher.service.js";
 import { getWalletPortfolio } from "./walletPortfolio.service.js";
 import { resolveWalletTimeRangeSec } from "./walletCharts.service.js";
 
-type CachedPortfolioSnapshot = {
-    expiresAtMs: number;
-    snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>;
-};
-
-const tokenBalanceSnapshotCache = new Map<string, CachedPortfolioSnapshot>();
-const TOKEN_LIVE_POINT_IN_MEMORY_TTL_MS = 60 * 1000;
-
-type CachedTokenLivePoint = {
-    expiresAtMs: number;
-    dayStartMs: number;
-    tokenPoint: BalanceDataPoint;
-    usdPoint: BalanceDataPoint;
-};
-
-const tokenBalanceLivePointCache = new Map<string, CachedTokenLivePoint>();
-
 export async function getWalletTokenBalanceHistory(
     address: string,
     tokenSelector: string,
+    timePeriod: WalletTimePeriod = "30D",
 ): Promise<TokenBalanceSeriesResult> {
     const nowMs = Date.now();
     const nowSec = Math.floor(nowMs / 1000);
-    const rangeSec = resolveWalletTimeRangeSec("30D", nowSec);
-    const todayDayStartMs = toUtcDayStartMs(nowMs);
-    const historicalDayStartMs = buildHistoricalDayStartMsList(rangeSec.fromSec, todayDayStartMs);
+    const rangeSec = resolveWalletTimeRangeSec(timePeriod, nowSec);
+
+    // Build day-aligned timestamps starting from the exact range start (no UTC snapping)
+    const historicalDayStartMs = buildHistoricalDayStartMsList(rangeSec.fromSec * 1000, nowMs);
     const historicalFromMs = historicalDayStartMs[0];
     const historicalToMs = historicalDayStartMs[historicalDayStartMs.length - 1];
     const selectorLower = tokenSelector.trim().toLowerCase();
@@ -90,7 +75,9 @@ export async function getWalletTokenBalanceHistory(
                 TOKEN_BALANCE_SNAPSHOT_CONCURRENCY,
                 async (daySec) => {
                     try {
-                        const snapshot = await getBirdeyePortfolioSnapshotCached(address, daySec, nowSec);
+                        const snapshot = await fetchBirdeyePortfolioSnapshot(address, {
+                            time: toIsoFromSec(daySec),
+                        });
                         return { daySec, snapshot };
                     } catch {
                         return { daySec, snapshot: null };
@@ -123,12 +110,17 @@ export async function getWalletTokenBalanceHistory(
             coveredToMs: historicalToMs,
         });
 
-        const [liveTokenPoint, liveUsdPoint] = await getOrFetchLivePoint(
-            address,
-            resolvedMint,
-            nowMs,
-            todayDayStartMs,
-        );
+        // Fetch live/current snapshot
+        let liveSnapshot = null;
+        try {
+            liveSnapshot = await fetchBirdeyePortfolioSnapshot(address, {
+                time: new Date(nowMs).toISOString(),
+            });
+        } catch {
+            liveSnapshot = null;
+        }
+
+        const [liveTokenPoint, liveUsdPoint] = toSeriesPoints(liveSnapshot, resolvedMint, nowMs);
 
         return {
             tokenSeries: [...historicalTokenSeries, liveTokenPoint],
@@ -147,58 +139,10 @@ export async function getWalletTokenBalanceHistory(
     throw new Error(`Unable to retrieve balance history for token "${tokenSelector}"`);
 }
 
-
-export async function getBirdeyePortfolioSnapshotCached(
-    address: string,
-    daySec: number,
-    nowSec: number,
-): Promise<Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>> {
-    const cacheKey = buildTokenSnapshotCacheKey(address, daySec);
-    const nowMs = Date.now();
-    const cached = tokenBalanceSnapshotCache.get(cacheKey);
-
-    if (cached && cached.expiresAtMs > nowMs) {
-        return cached.snapshot;
-    }
-
-    const snapshot = await fetchBirdeyePortfolioSnapshot(address, {
-        time: toIsoFromSec(daySec),
-    });
-
-    const ttlMs = getTokenSnapshotCacheTtlMs(daySec, nowSec);
-    tokenBalanceSnapshotCache.set(cacheKey, {
-        expiresAtMs: nowMs + ttlMs,
-        snapshot,
-    });
-
-    return snapshot;
-}
-
-function buildTokenSnapshotCacheKey(address: string, daySec: number): string {
-    return `${address.toLowerCase()}:${daySec}`;
-}
-
-function buildTokenLivePointCacheKey(address: string, tokenAddress: string): string {
-    return `${address.toLowerCase()}:${tokenAddress}`;
-}
-
-function getTokenSnapshotCacheTtlMs(daySec: number, nowSec: number): number {
-    const ageSec = Math.max(0, nowSec - daySec);
-    return ageSec <= DAY_SEC
-        ? TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS
-        : TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS;
-}
-
-function toUtcDayStartMs(timestampMs: number): number {
-    const date = new Date(timestampMs);
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function buildHistoricalDayStartMsList(fromSec: number, todayDayStartMs: number): number[] {
-    const fromDayStartMs = toUtcDayStartMs(fromSec * 1000);
+function buildHistoricalDayStartMsList(fromMs: number, toMs: number): number[] {
     const values: number[] = [];
-    for (let day = fromDayStartMs; day < todayDayStartMs; day += DAY_MS) {
-        values.push(day);
+    for (let t = fromMs; t < toMs; t += DAY_MS) {
+        values.push(t);
     }
     return values;
 }
@@ -258,36 +202,4 @@ function toSeriesPoints(
             date: new Date(timestamp).toISOString(),
         },
     ];
-}
-
-async function getOrFetchLivePoint(
-    address: string,
-    tokenAddress: string,
-    nowMs: number,
-    todayDayStartMs: number,
-): Promise<[BalanceDataPoint, BalanceDataPoint]> {
-    const cacheKey = buildTokenLivePointCacheKey(address, tokenAddress);
-    const cached = tokenBalanceLivePointCache.get(cacheKey);
-    if (cached && cached.expiresAtMs > nowMs && cached.dayStartMs === todayDayStartMs) {
-        return [cached.tokenPoint, cached.usdPoint];
-    }
-
-    let snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>> | null = null;
-    try {
-        snapshot = await fetchBirdeyePortfolioSnapshot(address, {
-            time: new Date(nowMs).toISOString(),
-        });
-    } catch {
-        snapshot = null;
-    }
-
-    const [tokenPoint, usdPoint] = toSeriesPoints(snapshot, tokenAddress, nowMs);
-    tokenBalanceLivePointCache.set(cacheKey, {
-        expiresAtMs: nowMs + TOKEN_LIVE_POINT_IN_MEMORY_TTL_MS,
-        dayStartMs: todayDayStartMs,
-        tokenPoint,
-        usdPoint,
-    });
-
-    return [tokenPoint, usdPoint];
 }
