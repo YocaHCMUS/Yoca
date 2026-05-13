@@ -8,6 +8,7 @@ import alerts from "@sv/routes/alerts.route.js";
 import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
+import payment from "@sv/routes/payment.route.js";
 import profile from "@sv/routes/profile.js";
 import search from "@sv/routes/search.js";
 import transactions from "@sv/routes/transactions.js";
@@ -49,6 +50,7 @@ const app = new Hono()
   .route("/api/trades", trades)
   .route("/api/alertsToken", alertsToken)
   .route("/api/news", news)
+  .route("/api/payment", payment)
   .route("/webhook", webhook);
 
 // startTokenPolling();

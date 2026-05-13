@@ -95,6 +95,8 @@ export const users = pgTable(
     emailAlertsEnabled: boolean("email_alerts_enabled").notNull().default(false),
     /** Optional override: if set, alerts go here instead of users.email */
     emailAlertsAddress: text("email_alerts_address"),
+    /** Stripe Customer ID — created lazily on first payment attempt */
+    stripeCustomerId: varchar("stripe_customer_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

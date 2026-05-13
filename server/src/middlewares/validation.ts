@@ -265,6 +265,9 @@ export const envSchema = z.object({
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
 
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().default(""),
+
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),
   CLIENT_DEV_DOMAIN: z.url().default("http://localhost:3000"),

@@ -1,5 +1,5 @@
 import "@/styles/landing-tailwind.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LandingFooter, LandingNavbar } from "@/components/landing";
 import {
   LANDING_ACCENT_GLOW,
@@ -7,6 +7,8 @@ import {
   btnPrimaryEnter,
   btnPrimaryLeave,
 } from "@/components/landing/tokens";
+import { useAuth } from "@/contexts/AuthContext";
+import { AuthReminderModal, PaymentModalWrapper } from "@/components/payment";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -122,8 +124,43 @@ function MetricRow({
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
+  const { user } = useAuth();
   const [isStandard, setIsStandard] = useState(false);
   const col1 = isStandard ? STANDARD_DATA : LITE_DATA;
+
+  // Payment flow state
+  const [isAuthReminderOpen, setIsAuthReminderOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Check for success redirect from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      setPaymentSuccess(true);
+      // Clean up URL without reloading
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  /**
+   * Called when a "Buy Now" CTA button is clicked.
+   * Intercepts unauthenticated users; opens the payment modal for authenticated ones.
+   */
+  function handleBuyNow(tier: { name: string; price: string }) {
+    if (!user) {
+      setIsAuthReminderOpen(true);
+      return;
+    }
+    setSelectedTier(tier);
+    setIsPaymentModalOpen(true);
+  }
+
+  function handlePaymentSuccess() {
+    setIsPaymentModalOpen(false);
+    setPaymentSuccess(true);
+  }
 
   return (
     <div
@@ -171,6 +208,26 @@ export default function PricingPage() {
             filter: "blur(90px)",
           }}
         />
+
+        {/* ── Payment Success Banner ── */}
+        {paymentSuccess && (
+          <div className="relative z-10 w-full max-w-2xl mx-auto mb-8 flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#14F195]/10 border border-[#14F195]/30 text-[#14F195]">
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-semibold text-sm">
+              🎉 Payment successful! Welcome to the <strong>{selectedTier?.name}</strong> plan.
+            </span>
+            <button
+              type="button"
+              onClick={() => setPaymentSuccess(false)}
+              className="ml-auto text-[#14F195]/60 hover:text-[#14F195] transition-colors"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">
@@ -239,9 +296,25 @@ export default function PricingPage() {
                     </span>
                   </button>
 
-                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg">
-                    {col1.cta}
-                  </button>
+                  {/* CTA: only show "Buy Now" for Lite (paid), not for Standard (free) */}
+                  {!isStandard ? (
+                    <button
+                      id="pricing-lite-buy-btn"
+                      type="button"
+                      onClick={() => handleBuyNow({ name: col1.name, price: col1.price })}
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg"
+                    >
+                      {col1.cta}
+                    </button>
+                  ) : (
+                    <button
+                      id="pricing-standard-try-btn"
+                      type="button"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg"
+                    >
+                      {col1.cta}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -281,6 +354,9 @@ export default function PricingPage() {
                 {/* CTA */}
                 <div className="pt-4 border-t border-white/10">
                   <button
+                    id="pricing-plus-buy-btn"
+                    type="button"
+                    onClick={() => handleBuyNow({ name: PLUS_TIER.name, price: PLUS_TIER.price })}
                     className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300"
                     style={{ ...btnPrimaryBase }}
                     onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
@@ -326,7 +402,12 @@ export default function PricingPage() {
 
                 {/* CTA */}
                 <div className="pt-4 border-t border-white/10">
-                  <button className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white shadow-lg">
+                  <button
+                    id="pricing-pro-buy-btn"
+                    type="button"
+                    onClick={() => handleBuyNow({ name: PRO_TIER.name, price: PRO_TIER.price })}
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white shadow-lg"
+                  >
                     Buy Now
                   </button>
                 </div>
@@ -338,6 +419,20 @@ export default function PricingPage() {
       </main>
 
       <LandingFooter />
+
+      {/* ── Auth Reminder Modal (unauthenticated users) ── */}
+      <AuthReminderModal
+        open={isAuthReminderOpen}
+        onClose={() => setIsAuthReminderOpen(false)}
+      />
+
+      {/* ── Payment Modal (authenticated users) ── */}
+      <PaymentModalWrapper
+        open={isPaymentModalOpen}
+        tier={selectedTier}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }
