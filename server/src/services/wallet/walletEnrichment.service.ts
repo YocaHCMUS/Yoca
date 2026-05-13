@@ -1,8 +1,113 @@
 import { getTokenMeta } from "../tokens/token-info.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
+import {
+    getEndpoint as getBirdeyeEndpoint,
+    getRequiredHeaders as getBirdeyeHeaders,
+} from "../../util/util-birdeye.js";
+import * as moralis from "@sv/util/util-moralis.js";
+import { db } from "@sv/db/index.js";
+import { tokenMeta, type TokenMetaInsert } from "@sv/db/schema.js";
+import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import type { WalletTransaction, WalletTransfer, WalletSwap } from "./dtos/walletDataObjects.js";
 import { SOL_MINT } from "./wallet.constants.js";
 import { isMissingPortfolioLogoUri, isValidPortfolioTokenAddress, normalizePortfolioAddressKey, normalizePortfolioLookupAddress, normalizePortfolioText, shouldFillPortfolioText } from "./walletData.core.js";
+
+type BirdeyeTokenMeta = { symbol: string; name?: string; logoUri?: string };
+
+function extractBirdeyeTokenMeta(payload: unknown): BirdeyeTokenMeta | undefined {
+    const root = payload as {
+        success?: boolean;
+        data?: {
+            symbol?: unknown;
+            tokenSymbol?: unknown;
+            name?: unknown;
+            logoURI?: unknown;
+            token?: { symbol?: unknown; name?: unknown; logoURI?: unknown };
+        };
+    };
+    const data = root?.data;
+    if (!data) return undefined;
+
+    const symbolCandidates = [data.symbol, data.tokenSymbol, data.token?.symbol];
+    let symbol: string | undefined;
+    for (const c of symbolCandidates) {
+        const s = String(c ?? "").trim();
+        if (s) { symbol = s.toUpperCase(); break; }
+    }
+    if (!symbol) return undefined;
+
+    const nameCandidates = [data.name, data.token?.name];
+    let name: string | undefined;
+    for (const c of nameCandidates) {
+        const n = String(c ?? "").trim();
+        if (n) { name = n; break; }
+    }
+
+    const logoCandidates = [data.logoURI, data.token?.logoURI];
+    let logoUri: string | undefined;
+    for (const c of logoCandidates) {
+        const l = String(c ?? "").trim();
+        if (l) { logoUri = l; break; }
+    }
+
+    return { symbol, name, logoUri };
+}
+
+async function fetchBirdeyeTokenMeta(mint: string): Promise<BirdeyeTokenMeta | undefined> {
+    if (!process.env.BIRDEYE_API_KEY || !process.env.BIRDEYE_API_BASE_URL) return undefined;
+    try {
+        const endpoint = getBirdeyeEndpoint("/defi/token_overview");
+        endpoint.searchParams.set("address", mint);
+        const response = await fetch(endpoint, { method: "GET", headers: getBirdeyeHeaders() });
+        if (!response.ok) return undefined;
+        return extractBirdeyeTokenMeta(await response.json());
+    } catch {
+        return undefined;
+    }
+}
+
+async function fetchBirdeyeTokenMetasForMints(mints: string[]): Promise<Map<string, BirdeyeTokenMeta>> {
+    const result = new Map<string, BirdeyeTokenMeta>();
+    const uniqueMints = [...new Set(mints.filter(Boolean))];
+    await Promise.all(uniqueMints.map(async (mint) => {
+        const meta = await fetchBirdeyeTokenMeta(mint);
+        if (meta) result.set(mint, meta);
+    }));
+    return result;
+}
+
+async function fetchMoralisTokenMeta(mint: string): Promise<BirdeyeTokenMeta | undefined> {
+    try {
+        const endpoint = moralis.getEndpoint(`/token/mainnet/${mint}/metadata`);
+        const response = await moralis.moralisFetch(endpoint, {
+            method: "GET",
+            headers: moralis.getRequiredHeaders(),
+        });
+        if (!response.ok) return undefined;
+        const data = (await response.json()) as {
+            symbol?: unknown; name?: unknown; logo?: unknown;
+        };
+        const symbol = String(data.symbol ?? "").trim().toUpperCase();
+        if (!symbol) return undefined;
+        return {
+            symbol,
+            name: String(data.name ?? "").trim() || undefined,
+            logoUri: String(data.logo ?? "").trim() || undefined,
+        };
+    } catch {
+        return undefined;
+    }
+}
+
+async function fetchMoralisTokenMetasForMints(mints: string[]): Promise<Map<string, BirdeyeTokenMeta>> {
+    const result = new Map<string, BirdeyeTokenMeta>();
+    const uniqueMints = [...new Set(mints.filter(Boolean))];
+    await Promise.all(uniqueMints.map(async (mint) => {
+        const meta = await fetchMoralisTokenMeta(mint);
+        if (meta) result.set(mint, meta);
+    }));
+    return result;
+}
 
 export async function enrichWithSolanaTokenPrices(
     transactions: WalletTransaction[] | WalletTransfer[] | WalletSwap[],
@@ -209,6 +314,83 @@ export async function enrichWithSolanaTokenPrices(
             }
         } catch (err) {
             console.warn("[enrichWithSolanaTokenPrices] Token metadata enrichment failed", err);
+        }
+
+        // Track which keys CoinGecko populated so we know what to persist later
+        const coinGeckoKeys = new Set(tokenMetaByKey.keys());
+
+        // Birdeye fallback: fetch metadata for mints CoinGecko missed
+        const birdeyeFallbackAddresses = candidateAddresses.filter((addr) => {
+            const resolved = resolveLookupAndKey(addr);
+            return resolved ? !tokenMetaByKey.has(resolved.addressKey) : false;
+        });
+        if (birdeyeFallbackAddresses.length > 0) {
+            try {
+                const birdeyeMetas = await fetchBirdeyeTokenMetasForMints(birdeyeFallbackAddresses);
+                for (const [address, meta] of birdeyeMetas) {
+                    const resolved = resolveLookupAndKey(address);
+                    if (resolved && !tokenMetaByKey.has(resolved.addressKey)) {
+                        counters.tokenMetaHits += 1;
+                        tokenMetaByKey.set(resolved.addressKey, {
+                            symbol: meta.symbol,
+                            name: meta.name,
+                            logoUri: meta.logoUri,
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("[enrichWithSolanaTokenPrices] Birdeye metadata fallback failed", err);
+            }
+        }
+
+        // Moralis fallback: fetch metadata for mints still missed
+        const moralisFallbackAddresses = candidateAddresses.filter((addr) => {
+            const resolved = resolveLookupAndKey(addr);
+            return resolved ? !tokenMetaByKey.has(resolved.addressKey) : false;
+        });
+        if (moralisFallbackAddresses.length > 0) {
+            try {
+                const moralisMetas = await fetchMoralisTokenMetasForMints(moralisFallbackAddresses);
+                for (const [address, meta] of moralisMetas) {
+                    const resolved = resolveLookupAndKey(address);
+                    if (resolved && !tokenMetaByKey.has(resolved.addressKey)) {
+                        counters.tokenMetaHits += 1;
+                        tokenMetaByKey.set(resolved.addressKey, {
+                            symbol: meta.symbol,
+                            name: meta.name,
+                            logoUri: meta.logoUri,
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("[enrichWithSolanaTokenPrices] Moralis metadata fallback failed", err);
+            }
+        }
+
+        // Persist fallback results to token_meta DB so future runs skip API calls
+        const fallbackInserts: TokenMetaInsert[] = [];
+        for (const [addressKey, meta] of tokenMetaByKey) {
+            if (!coinGeckoKeys.has(addressKey) && meta.symbol) {
+                const lookupAddr = candidateAddressesByKey.get(addressKey);
+                if (lookupAddr) {
+                    fallbackInserts.push({
+                        address: lookupAddr,
+                        name: meta.name ?? "",
+                        symbol: meta.symbol,
+                        imageUrl: meta.logoUri ?? null,
+                    });
+                }
+            }
+        }
+        if (fallbackInserts.length > 0) {
+            try {
+                await db.insert(tokenMeta).values(fallbackInserts).onConflictDoUpdate({
+                    target: [tokenMeta.address],
+                    set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, fallbackInserts),
+                });
+            } catch (err) {
+                console.warn("[enrichWithSolanaTokenPrices] Failed to persist fallback metadata", err);
+            }
         }
 
         try {
