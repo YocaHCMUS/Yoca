@@ -65,7 +65,7 @@ export async function heliusFetch(
 export function getEndpoint(path: string): URL {
   const base =
     process.env.HELIUS_API_BASE_URL &&
-    process.env.HELIUS_API_BASE_URL.length > 0
+      process.env.HELIUS_API_BASE_URL.length > 0
       ? process.env.HELIUS_API_BASE_URL
       : DEFAULT_HELIUS_API_BASE_URL;
 
@@ -91,6 +91,23 @@ export function getRequiredHeaders() {
     Accept: "application/json",
     "X-API-Key": apiKey,
   };
+}
+
+export function getNextkey() {
+  if (!heliusKeysInitialized) {
+    apiKeyManager.initializeKeys(
+      HELIUS_SERVICE_NAME,
+      process.env.HELIUS_API_KEY,
+    );
+    heliusKeysInitialized = true;
+  }
+
+  const apiKey = apiKeyManager.getNextKey(HELIUS_SERVICE_NAME);
+  if (!apiKey) {
+    throw new Error("HELIUS_API_KEY is not set");
+  }
+
+  return apiKey
 }
 
 export function getRequiredHeadersWithMetadata(): {

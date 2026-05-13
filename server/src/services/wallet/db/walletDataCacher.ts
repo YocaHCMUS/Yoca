@@ -69,6 +69,7 @@ export async function saveSwapsCache(
 
           totalValueUsd: tx.totalValueUsd,
           baseQuotePrice: tx.baseQuotePrice,
+          providerSource: (tx as unknown as Record<string, unknown>).providerSource as string | undefined ?? "helius",
         };
       });
 

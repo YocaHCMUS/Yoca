@@ -1,7 +1,8 @@
 import { saveSwapsCache, saveTransfersCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getCachedWalletTransfers, getCachedWalletSwaps, getCachedWalletTransfersMeta, getCachedWalletSwapsMeta } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type { WalletTransfersResponse, WalletSwapsResponse, WalletSwap, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { fetchHeliusSolanaTransfers, fetchMoralisSolanaSwap } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { fetchHeliusSolanaTransfers } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { fetchAndProcessWalletTransactions } from "@sv/services/wallet/providers/helius-transaction-provider.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
 
@@ -256,12 +257,11 @@ export async function getWalletSwaps(
         if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
             console.log(`[get wallet swaps] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
 
-            const segment = await fetchMoralisSolanaSwap(
+            const result = await fetchAndProcessWalletTransactions(
                 address,
-                range.fromMs,
-                range.toMs,
+                { fromMs: range.fromMs, toMs: range.toMs },
             );
-            fetchedSwaps.push(...segment);
+            fetchedSwaps.push(...result.swaps);
         }
     }
 

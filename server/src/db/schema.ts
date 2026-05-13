@@ -792,6 +792,8 @@ export const walletSwap = pgTable(
 
     totalValueUsd: decimal("total_value_usd"),
     baseQuotePrice: decimal("base_quote_price_usd"),
+
+    providerSource: text("provider_source"),
   },
   (t) => [primaryKey({ columns: [t.transactionHash] })],
 );

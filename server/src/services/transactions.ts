@@ -45,6 +45,14 @@ type HeliusSwapLeg = {
 type HeliusSwapEvent = {
   tokenInputs?: HeliusSwapLeg[];
   tokenOutputs?: HeliusSwapLeg[];
+  source?: string;
+  programId?: string;
+  innerSwaps?: Array<{
+    tokenInputs?: HeliusSwapLeg[];
+    tokenOutputs?: HeliusSwapLeg[];
+    source?: string;
+    programId?: string;
+  }>;
 };
 
 export type HeliusEnhancedTransaction = {
@@ -53,6 +61,10 @@ export type HeliusEnhancedTransaction = {
   fee?: number;
   slot?: number;
   timestamp?: number;
+  source?: string;
+  type?: string;
+  description?: string;
+  programName?: string;
   instructions?: unknown[];
   events?: {
     swap?: HeliusSwapEvent;
