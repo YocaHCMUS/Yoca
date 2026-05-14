@@ -8,7 +8,7 @@ import {
   btnPrimaryLeave,
 } from "@/components/landing/tokens";
 import { useAuth } from "@/contexts/AuthContext";
-import { AuthReminderModal, PaymentModalWrapper } from "@/components/payment";
+import { AuthReminderModal, PaymentModalWrapper, PaymentSuccessModal } from "@/components/payment";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -209,25 +209,12 @@ export default function PricingPage() {
           }}
         />
 
-        {/* ── Payment Success Banner ── */}
-        {paymentSuccess && (
-          <div className="relative z-10 w-full max-w-2xl mx-auto mb-8 flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#14F195]/10 border border-[#14F195]/30 text-[#14F195]">
-            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold text-sm">
-              🎉 Payment successful! Welcome to the <strong>{selectedTier?.name}</strong> plan.
-            </span>
-            <button
-              type="button"
-              onClick={() => setPaymentSuccess(false)}
-              className="ml-auto text-[#14F195]/60 hover:text-[#14F195] transition-colors"
-              aria-label="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        {/* ── Payment Success Modal ── */}
+        <PaymentSuccessModal
+          open={paymentSuccess}
+          tierName={selectedTier?.name ?? ""}
+          onClose={() => setPaymentSuccess(false)}
+        />
 
         {/* ── Header ── */}
         <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">

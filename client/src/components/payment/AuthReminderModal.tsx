@@ -32,7 +32,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
         aria-labelledby="auth-reminder-title"
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="pointer-events-auto w-full max-w-md bg-[#111118] border border-white/10 shadow-2xl rounded-2xl p-8 flex flex-col gap-6 text-center">
+        <div className="pointer-events-auto w-full max-w-md bg-[#111118] border border-white/5 shadow-2xl rounded-none !px-10 !py-12 sm:!px-16 sm:!py-14 flex flex-col gap-8 text-center">
           {/* Icon */}
           <div className="flex justify-center">
             <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#14F195]/10 border border-[#14F195]/20">
@@ -82,7 +82,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
               onClick={() => {
                 setIsSignInOpen(true);
               }}
-              className="flex-1 bg-[#14F195] hover:bg-[#0fd484] text-[#0a0a0f] font-bold px-4 py-3 rounded-full transition-all duration-200 text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(20,241,149,0.3)]"
+              className="flex-1 bg-[#14F195] hover:bg-[#0fd484] text-[#0a0a0f] font-bold px-4 !py-4 rounded-full transition-all duration-200 text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(20,241,149,0.3)]"
             >
               Sign In
             </button>
@@ -91,7 +91,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
               id="auth-reminder-close-btn"
               type="button"
               onClick={onClose}
-              className="flex-1 text-[#78a9ff] hover:text-[#a6c8ff] hover:bg-white/5 px-4 py-3 font-medium text-sm rounded-full border border-white/10 transition-all duration-200"
+              className="flex-1 text-[#78a9ff] hover:text-[#a6c8ff] hover:bg-white/5 px-4 !py-4 font-medium text-sm rounded-full border border-white/10 transition-all duration-200"
             >
               Maybe Later
             </button>

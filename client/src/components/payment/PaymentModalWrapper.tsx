@@ -116,9 +116,9 @@ export function PaymentModalWrapper({
         aria-labelledby="payment-modal-title"
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="pointer-events-auto w-full max-w-xl bg-[#0f0f17] border border-white/10 shadow-[0_0_80px_rgba(20,241,149,0.12)] rounded-none overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="pointer-events-auto w-full max-w-xl bg-[#0f0f17] border border-white/5 shadow-[0_0_80px_rgba(20,241,149,0.12)] rounded-none overflow-hidden flex flex-col max-h-[90vh]">
           {/* Header (Fixed) */}
-          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 border-b border-white/10">
+          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 border-b border-white/5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#64748b] mb-1">
