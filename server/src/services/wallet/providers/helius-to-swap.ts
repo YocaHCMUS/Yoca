@@ -31,8 +31,7 @@ function extractSwapProgramId(
 ): string | null {
   const instructions = tx.instructions ?? [];
   for (const ins of instructions) {
-    const record = ins as Record<string, unknown>;
-    const programId = String(record.programId ?? "").trim();
+    const programId = String(ins.programId ?? "").trim();
     if (programId && !SYSTEM_PROGRAMS.has(programId)) {
       return programId;
     }

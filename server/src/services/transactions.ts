@@ -32,6 +32,19 @@ export type HeliusEnhancedNativeTransfer = {
   valueUsdSource?: "historical" | "inferred" | "none";
 };
 
+export type HeliusEnhancedInnerInstruction = {
+  accounts?: string[];
+  data?: string;
+  programId?: string;
+};
+
+export type HeliusEnhancedInstruction = {
+  accounts?: string[];
+  data?: string;
+  programId?: string;
+  innerInstructions?: HeliusEnhancedInnerInstruction[];
+};
+
 type HeliusSwapTokenAmount = {
   tokenAmount?: string;
   decimals?: number;
@@ -65,7 +78,7 @@ export type HeliusEnhancedTransaction = {
   type?: string;
   description?: string;
   programName?: string;
-  instructions?: unknown[];
+  instructions?: HeliusEnhancedInstruction[];
   events?: {
     swap?: HeliusSwapEvent;
   };

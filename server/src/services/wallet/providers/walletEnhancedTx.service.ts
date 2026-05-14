@@ -3,13 +3,15 @@ import {
   walletEnhancedTransactions,
   walletEnhancedTokenTransfers,
   walletEnhancedNativeTransfers,
+  walletEnhancedInstructions,
+  walletEnhancedInnerInstructions,
   walletEnhancedTxMeta,
 } from "@sv/db/schema.js";
 import { and, eq, gte, lte, sql, inArray } from "drizzle-orm";
 import { fetchHeliusAddressTransactions } from "./helius-tx-fetcher.js";
 import { getMissingRanges, isMissingRangeSignificant } from "@sv/services/wallet/walletRange.utils.js";
 import type { WalletRangeMs } from "@sv/services/wallet/walletRange.utils.js";
-import type { HeliusEnhancedTransaction, HeliusEnhancedTokenTransfer, HeliusEnhancedNativeTransfer } from "@sv/services/transactions.js";
+import type { HeliusEnhancedTransaction, HeliusEnhancedTokenTransfer, HeliusEnhancedNativeTransfer, HeliusEnhancedInstruction, HeliusEnhancedInnerInstruction } from "@sv/services/transactions.js";
 
 type TokenTransferRow = {
   mint: string;
@@ -39,8 +41,7 @@ const TX_SYSTEM_PROGRAMS = new Set([
 function extractProgramId(tx: HeliusEnhancedTransaction): string | null {
   const instructions = tx.instructions ?? [];
   for (const ins of instructions) {
-    const record = ins as { programId?: string };
-    const programId = String(record.programId ?? "").trim();
+    const programId = String(ins.programId ?? "").trim();
     if (programId && !TX_SYSTEM_PROGRAMS.has(programId)) {
       return programId;
     }
@@ -107,6 +108,26 @@ async function getCachedTxsByRange(
       ),
     );
 
+  const instructionRows = await db
+    .select()
+    .from(walletEnhancedInstructions)
+    .where(
+      and(
+        eq(walletEnhancedInstructions.address, address),
+        inArray(walletEnhancedInstructions.signature, signatures),
+      ),
+    );
+
+  const innerRows = await db
+    .select()
+    .from(walletEnhancedInnerInstructions)
+    .where(
+      and(
+        eq(walletEnhancedInnerInstructions.address, address),
+        inArray(walletEnhancedInnerInstructions.signature, signatures),
+      ),
+    );
+
   const tokenBySig = new Map<string, TokenTransferRow[]>();
   for (const row of tokenRows) {
     const group = tokenBySig.get(row.signature);
@@ -153,6 +174,39 @@ async function getCachedTxsByRange(
     }
   }
 
+  const innerBySigAndIdx = new Map<string, HeliusEnhancedInnerInstruction[]>();
+  for (const row of innerRows) {
+    const key = `${row.signature}:${row.instructionIndex}`;
+    const group = innerBySigAndIdx.get(key);
+    const entry: HeliusEnhancedInnerInstruction = {
+      programId: row.programId,
+      data: row.data ?? undefined,
+      accounts: row.accounts ?? undefined,
+    };
+    if (group) {
+      group.push(entry);
+    } else {
+      innerBySigAndIdx.set(key, [entry]);
+    }
+  }
+
+  const insBySig = new Map<string, HeliusEnhancedInstruction[]>();
+  for (const row of instructionRows) {
+    const group = insBySig.get(row.signature);
+    const innerKey = `${row.signature}:${row.instructionIndex}`;
+    const entry: HeliusEnhancedInstruction = {
+      programId: row.programId,
+      data: row.data ?? undefined,
+      accounts: row.accounts ?? undefined,
+      innerInstructions: innerBySigAndIdx.get(innerKey),
+    };
+    if (group) {
+      group.push(entry);
+    } else {
+      insBySig.set(row.signature, [entry]);
+    }
+  }
+
   const result: HeliusEnhancedTransaction[] = [];
 
   for (const row of txRows) {
@@ -180,9 +234,7 @@ async function getCachedTxsByRange(
 
     const tsSec = Math.floor(row.blockTimestampMs / 1000);
 
-    const instructions = row.programId
-      ? [{ programId: row.programId }] as unknown as unknown[]
-      : [];
+    const instructions = insBySig.get(row.signature);
 
     const tx: HeliusEnhancedTransaction = {
       signature: row.signature,
@@ -267,6 +319,25 @@ async function cacheTransactions(
     transferIndex: number;
   }> = [];
 
+  const instructionRows: Array<{
+    address: string;
+    signature: string;
+    instructionIndex: number;
+    programId: string;
+    data: string | null;
+    accounts: string[] | null;
+  }> = [];
+
+  const innerInstructionRows: Array<{
+    address: string;
+    signature: string;
+    instructionIndex: number;
+    innerIndex: number;
+    programId: string;
+    data: string | null;
+    accounts: string[] | null;
+  }> = [];
+
   for (const tx of txs) {
     const tokenTransfers = tx.tokenTransfers ?? [];
     for (let i = 0; i < tokenTransfers.length; i++) {
@@ -305,6 +376,36 @@ async function cacheTransactions(
         transferIndex: i,
       });
     }
+
+    const instructions = tx.instructions ?? [];
+    for (let i = 0; i < instructions.length; i++) {
+      const ins = instructions[i];
+      const programId = String(ins.programId ?? "").trim();
+      if (!programId) continue;
+      instructionRows.push({
+        address,
+        signature: tx.signature,
+        instructionIndex: i,
+        programId,
+        data: ins.data ?? null,
+        accounts: ins.accounts ?? null,
+      });
+      const innerInstructions = ins.innerInstructions ?? [];
+      for (let j = 0; j < innerInstructions.length; j++) {
+        const inner = innerInstructions[j];
+        const innerProgramId = String(inner.programId ?? "").trim();
+        if (!innerProgramId) continue;
+        innerInstructionRows.push({
+          address,
+          signature: tx.signature,
+          instructionIndex: i,
+          innerIndex: j,
+          programId: innerProgramId,
+          data: inner.data ?? null,
+          accounts: inner.accounts ?? null,
+        });
+      }
+    }
   }
 
   await db.insert(walletEnhancedTransactions).values(parentRows).onConflictDoNothing();
@@ -315,6 +416,14 @@ async function cacheTransactions(
 
   if (nativeRows.length > 0) {
     await db.insert(walletEnhancedNativeTransfers).values(nativeRows).onConflictDoNothing();
+  }
+
+  if (instructionRows.length > 0) {
+    await db.insert(walletEnhancedInstructions).values(instructionRows).onConflictDoNothing();
+  }
+
+  if (innerInstructionRows.length > 0) {
+    await db.insert(walletEnhancedInnerInstructions).values(innerInstructionRows).onConflictDoNothing();
   }
 
   await db

@@ -785,6 +785,42 @@ export const walletEnhancedNativeTransfers = pgTable(
   (t) => [uniqueIndex("uq_enh_native_tx").on(t.address, t.signature, t.transferIndex)],
 );
 
+export const walletEnhancedInstructions = pgTable(
+  "wallet_enhanced_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [uniqueIndex("uq_enh_ins_tx").on(t.address, t.signature, t.instructionIndex)],
+);
+
+export const walletEnhancedInnerInstructions = pgTable(
+  "wallet_enhanced_inner_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    innerIndex: integer("inner_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_inner_ins_tx").on(
+      t.address,
+      t.signature,
+      t.instructionIndex,
+      t.innerIndex,
+    ),
+  ],
+);
+
 export const walletEnhancedTxMeta = pgTable(
   "wallet_enhanced_tx_meta",
   {
@@ -1331,6 +1367,10 @@ export type WalletEnhancedTokenTransfersInsert =
   typeof walletEnhancedTokenTransfers.$inferInsert;
 export type WalletEnhancedNativeTransfersInsert =
   typeof walletEnhancedNativeTransfers.$inferInsert;
+export type WalletEnhancedInstructionsInsert =
+  typeof walletEnhancedInstructions.$inferInsert;
+export type WalletEnhancedInnerInstructionsInsert =
+  typeof walletEnhancedInnerInstructions.$inferInsert;
 export type WalletEnhancedTxMetaInsert =
   typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
