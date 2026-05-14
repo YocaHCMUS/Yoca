@@ -90,7 +90,7 @@ import {
   TokenAverageTradePrice,
   TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
-import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/index.tsx";
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
@@ -1343,11 +1343,7 @@ export default function WalletPage() {
       <PageSection>
         <div className={styles.chartStack}>
           <div className={styles.chartSection}>
-            <BalanceChart
-              minHeight={460}
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
-              autoRefresh
-            />
+            <BalanceChartV2 address={walletAddress} />
           </div>
           <div className={styles.chartSection}>
             <PnLChart

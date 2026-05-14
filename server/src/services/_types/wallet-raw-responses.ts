@@ -138,3 +138,32 @@ export type BDS_WalletTokenDetails = z.infer<
   typeof bds_WalletTokenDetailsSchema
 >;
 export type MRL_WalletTokenSwaps = z.infer<typeof mrl_WalletTokenSwapsSchema>;
+
+
+export const bds_WalletNetAssetsSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    wallet_address: z.string(),
+    currency: z.string(),
+    net_worth: z.number(),
+    requested_timestamp: z.string(),
+    resolved_timestamp: z.string(),
+    net_assets: z.array(
+      z.object({
+        symbol: z.string(),
+        token_address: z.string(),
+        decimal: z.number(),
+        balance: z.string(),
+        price: z.number(),
+        value: z.number()
+      })
+    )
+  }),
+  pagination: z.object({
+    limit: z.number(),
+    offset: z.number(),
+    total: z.number()
+  })
+})
+
+export type BDS_WalletNetAssets = z.infer<typeof bds_WalletNetAssetsSchema>;

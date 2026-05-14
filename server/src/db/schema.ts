@@ -31,6 +31,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+export * from "./wallets.js";
 //export * from "./alerts.js";
 
 // Decimal has "string" mode by default, due to how node-postgres saves

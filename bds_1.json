@@ -1,0 +1,29 @@
+{
+  "data": {
+    "wallet_address": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+    "currency": "usd",
+    "current_timestamp": "2026-05-14T23:59:59Z",
+    "past_timestamp": "2026-05-12T23:59:59Z",
+    "history": [
+      {
+        "timestamp": "2026-05-14T05:54:36Z",
+        "net_worth": 12940.13,
+        "net_worth_change": -148.75,
+        "net_worth_change_percent": -1.12
+      },
+      {
+        "timestamp": "2026-05-13T23:59:59Z",
+        "net_worth": 12917.48,
+        "net_worth_change": -171.39,
+        "net_worth_change_percent": -1.3
+      },
+      {
+        "timestamp": "2026-05-12T23:59:59Z",
+        "net_worth": 13088.88,
+        "net_worth_change": 0,
+        "net_worth_change_percent": 0
+      }
+    ]
+  },
+  "success": true
+}

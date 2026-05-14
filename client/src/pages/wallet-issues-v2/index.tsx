@@ -1,4 +1,4 @@
-import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2";
+import { BalanceChartV2 } from "@/components/charts/BalanceChartV2";
 
 const TEST_WALLET_ADDRESS = "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH";
 
