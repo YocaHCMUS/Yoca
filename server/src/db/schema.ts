@@ -738,6 +738,64 @@ export const walletHeliusTransactions = pgTable(
   (t) => [primaryKey({ columns: [t.address, t.signature] })],
 );
 
+export const walletEnhancedTransactions = pgTable(
+  "wallet_enhanced_transactions",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    slot: bigint("slot", { mode: "number" }),
+    fee: bigint("fee", { mode: "number" }),
+    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    source: text("source"),
+    type: text("type"),
+    programId: varchar("program_id", { length: 66 }),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.signature] })],
+);
+
+export const walletEnhancedTokenTransfers = pgTable(
+  "wallet_enhanced_token_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    mint: varchar("mint", { length: 66 }).notNull(),
+    tokenAmount: decimal("token_amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    symbol: text("symbol"),
+    tokenSymbol: text("token_symbol"),
+    instructionIndex: integer("instruction_index").notNull(),
+  },
+  (t) => [uniqueIndex("uq_enh_token_tx").on(t.address, t.signature, t.instructionIndex)],
+);
+
+export const walletEnhancedNativeTransfers = pgTable(
+  "wallet_enhanced_native_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    amount: decimal("amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    transferIndex: integer("transfer_index").notNull(),
+  },
+  (t) => [uniqueIndex("uq_enh_native_tx").on(t.address, t.signature, t.transferIndex)],
+);
+
+export const walletEnhancedTxMeta = pgTable(
+  "wallet_enhanced_tx_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromMs: bigint("covered_from_ms", { mode: "number" }),
+    coveredToMs: bigint("covered_to_ms", { mode: "number" }),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
+);
+
 export const walletTransactions = pgTable(
   "wallet_transactions",
   {
@@ -1267,6 +1325,14 @@ export type WalletTokenBalanceHistoryCacheInsert =
   typeof walletTokenBalanceHistoryCache.$inferInsert;
 export type walletHeliusTransactionsInsert =
   typeof walletHeliusTransactions.$inferInsert;
+export type WalletEnhancedTransactionsInsert =
+  typeof walletEnhancedTransactions.$inferInsert;
+export type WalletEnhancedTokenTransfersInsert =
+  typeof walletEnhancedTokenTransfers.$inferInsert;
+export type WalletEnhancedNativeTransfersInsert =
+  typeof walletEnhancedNativeTransfers.$inferInsert;
+export type WalletEnhancedTxMetaInsert =
+  typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;

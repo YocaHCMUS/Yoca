@@ -1,64 +1,13 @@
 import { saveSwapsCache, saveTransfersCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { getCachedWalletTransfers, getCachedWalletSwaps, getCachedWalletTransfersMeta, getCachedWalletSwapsMeta } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type { WalletTransfersResponse, WalletSwapsResponse, WalletSwap, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { fetchHeliusSolanaTransfers } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
-import { fetchAndProcessWalletTransactions } from "@sv/services/wallet/providers/helius-transaction-provider.js";
 import { enrichWithSolanaTokenPrices } from "@sv/services/wallet/walletEnrichment.service.js";
 import { resolveTokenPricesAtTimestamp } from "@sv/services/wallet/providers/resolve-token-price.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
-
-type WalletRangeMs = {
-    fromMs: number;
-    toMs: number;
-};
-
-function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
-    const nowMs = Date.now();
-    // const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    const monthMs = 30 * 24 * 60 * 60 * 1000
-
-    const requestedToMs = to ?? nowMs;
-    const requestedFromMs =
-        // from ?? (to != null ? requestedToMs - sevenDaysMs : nowMs - sevenDaysMs);
-        from ?? (to != null ? requestedToMs - monthMs : nowMs - monthMs)
-
-    return {
-        fromMs: Math.min(requestedFromMs, requestedToMs),
-        toMs: Math.max(requestedFromMs, requestedToMs),
-    };
-}
-
-function isMissingRangeSignificant(from: number, to: number) {
-    const TTL = 5 * 60 * 1000
-    return to - from > TTL
-}
-
-function getMissingRanges(
-    requestedRange: WalletRangeMs,
-    coveredRange: WalletRangeMs | null,
-): WalletRangeMs[] {
-    if (!coveredRange) {
-        return [requestedRange];
-    }
-
-    const missingRanges: WalletRangeMs[] = [];
-
-    if (requestedRange.fromMs < coveredRange.fromMs) {
-        missingRanges.push({
-            fromMs: requestedRange.fromMs,
-            toMs: coveredRange.fromMs - 1,
-        });
-    }
-
-    if (coveredRange.toMs < requestedRange.toMs) {
-        missingRanges.push({
-            fromMs: coveredRange.toMs + 1,
-            toMs: requestedRange.toMs,
-        });
-    }
-
-    return missingRanges.filter((range) => range.fromMs <= range.toMs);
-}
+import { resolveEnhancedTransactions } from "@sv/services/wallet/providers/walletEnhancedTx.service.js";
+import { mapHeliusTxsToSwaps } from "@sv/services/wallet/providers/helius-to-swap.js";
+import { mapHeliusTxsToTransfers } from "@sv/services/wallet/providers/helius-to-transfer.js";
+import { resolveRequestedRange, isMissingRangeSignificant, getMissingRanges } from "@sv/services/wallet/walletRange.utils.js";
 
 async function postEnrichSwaps(swaps: WalletSwap[]): Promise<void> {
   for (const swap of swaps) {
@@ -176,11 +125,12 @@ export async function getWalletTransfers(
     for (const range of missingRanges) {
         if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
             console.log(`[get wallet transfer] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
-            const segment = await fetchHeliusSolanaTransfers(
+            const txs = await resolveEnhancedTransactions(
                 address,
                 range.fromMs,
                 range.toMs,
             );
+            const segment = mapHeliusTxsToTransfers(txs, address);
             fetchedTransfers.push(...segment);
         }
     }
@@ -298,11 +248,13 @@ export async function getWalletSwaps(
         if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
             console.log(`[get wallet swaps] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
 
-            const result = await fetchAndProcessWalletTransactions(
+            const txs = await resolveEnhancedTransactions(
                 address,
-                { fromMs: range.fromMs, toMs: range.toMs },
+                range.fromMs,
+                range.toMs,
             );
-            fetchedSwaps.push(...result.swaps);
+            const mapped = mapHeliusTxsToSwaps(txs, address);
+            fetchedSwaps.push(...mapped);
         }
     }
 

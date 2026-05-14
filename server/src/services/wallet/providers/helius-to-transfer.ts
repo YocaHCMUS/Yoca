@@ -21,6 +21,7 @@ export function mapHeliusTxToTransfers(
   if (!txnSig) return [];
 
   const tokenTransfers = tx.tokenTransfers ?? [];
+  const nativeTransfers = tx.nativeTransfers ?? []
   const transfers: WalletTransfer[] = [];
 
   for (let i = 0; i < tokenTransfers.length; i++) {
@@ -44,6 +45,31 @@ export function mapHeliusTxToTransfers(
     });
   }
 
+  const SOL_MINT = "So11111111111111111111111111111111111111112";
+  for (let i = 0; i < nativeTransfers.length; i++) {
+    const nt = nativeTransfers[i];
+    const amount = Number(nt.amount ?? 0) / 1e9;
+    const from = String(nt.fromUserAccount ?? "").trim();
+    const to = String(nt.toUserAccount ?? "").trim();
+
+    if (from != walletAddress && to != walletAddress) {
+      continue // there are instances of transfer to multiple wallets
+    }
+
+    if (amount <= 0 || !from || !to) continue;
+
+    transfers.push({
+      from,
+      to,
+      amount,
+      timestamp: blockTimestampIso,
+      tokenAddress: SOL_MINT,
+      tokenSymbol: "SOL",
+      transactionSignature: txnSig,
+      instructionIndex: tokenTransfers.length + i,
+    });
+  }
+
   return transfers;
 }
 
@@ -53,6 +79,7 @@ export function mapHeliusTxsToTransfers(
 ): WalletTransfer[] {
   const transfers: WalletTransfer[] = [];
   for (const tx of txs) {
+    if (classifyTransaction(tx, walletAddress) === "swap") continue;
     const mapped = mapHeliusTxToTransfers(tx, walletAddress);
     transfers.push(...mapped);
   }
