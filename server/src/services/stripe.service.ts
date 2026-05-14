@@ -67,11 +67,12 @@ export async function createPaymentIntent(
   }
 
   const intent = await stripe.paymentIntents.create({
-    amount,
+    amount: amount + 1, // Verification change: add 1 cent
     currency: "usd",
     customer: opts.saveCard ? opts.stripeCustomerId : undefined,
-    // Temporarily limit to 'card' only. Other methods like 'link' or 'sepa_debit' can be added here later.
+    // Explicitly disable automatic methods and force 'card' only
     payment_method_types: ["card"],
+    automatic_payment_methods: { enabled: false },
     ...(opts.saveCard
       ? { setup_future_usage: "off_session" }
       : {}),

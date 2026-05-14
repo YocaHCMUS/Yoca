@@ -302,7 +302,7 @@ export default function PricingPage() {
                       id="pricing-lite-buy-btn"
                       type="button"
                       onClick={() => handleBuyNow({ name: col1.name, price: col1.price })}
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white"
                     >
                       {col1.cta}
                     </button>
@@ -310,7 +310,7 @@ export default function PricingPage() {
                     <button
                       id="pricing-standard-try-btn"
                       type="button"
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white shadow-lg"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white"
                     >
                       {col1.cta}
                     </button>
@@ -357,10 +357,7 @@ export default function PricingPage() {
                     id="pricing-plus-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: PLUS_TIER.name, price: PLUS_TIER.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300"
-                    style={{ ...btnPrimaryBase }}
-                    onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                    onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
                   >
                     Buy Now
                   </button>
@@ -406,7 +403,7 @@ export default function PricingPage() {
                     id="pricing-pro-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: PRO_TIER.name, price: PRO_TIER.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white shadow-lg"
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
                   >
                     Buy Now
                   </button>
