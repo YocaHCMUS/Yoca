@@ -31,12 +31,14 @@ type SignInModalProps = {
   open: boolean;
   onClose: () => void;
   redirectUrl?: string;
+  onToggleSignUp?: () => void;
 };
 
 export function SignInModal({
   open,
   onClose,
   redirectUrl,
+  onToggleSignUp,
 }: SignInModalProps) {
   const { tr, fmt } = useLocalization();
   const { refreshUser } = useAuth();
@@ -187,8 +189,12 @@ export function SignInModal({
                 $createAccount: (
                   <Link
                     onClick={() => {
-                      setOpen(true);
-                      onClose();
+                      if (onToggleSignUp) {
+                        onToggleSignUp();
+                      } else {
+                        setOpen(true);
+                        onClose();
+                      }
                     }}
                   >
                     {tr("auth.createAccount")}

@@ -289,7 +289,7 @@ export default function PricingPage() {
                       id="pricing-lite-buy-btn"
                       type="button"
                       onClick={() => handleBuyNow({ name: col1.name, price: col1.price })}
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
                     >
                       {col1.cta}
                     </button>
@@ -297,7 +297,7 @@ export default function PricingPage() {
                     <button
                       id="pricing-standard-try-btn"
                       type="button"
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#14F195]/40 transition-all duration-300 text-white"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
                     >
                       {col1.cta}
                     </button>
