@@ -116,127 +116,130 @@ export function PaymentModalWrapper({
         aria-labelledby="payment-modal-title"
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="pointer-events-auto w-full max-w-lg bg-[#0f0f17] border border-white/10 shadow-[0_0_60px_rgba(20,241,149,0.08)] rounded-2xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
-                Secure Payment
-              </p>
-              <h2
-                id="payment-modal-title"
-                className="text-white font-bold text-lg"
+        <div className="pointer-events-auto w-full max-w-xl bg-[#0f0f17] border border-white/10 shadow-[0_0_80px_rgba(20,241,149,0.12)] rounded-none overflow-hidden flex flex-col max-h-[90vh]">
+          {/* Header (Fixed) */}
+          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 border-b border-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#64748b] mb-1">
+                  Secure Payment
+                </p>
+                <h2
+                  id="payment-modal-title"
+                  className="text-white font-bold text-xl tracking-tight"
+                >
+                  Subscribe to {tier.name}
+                </h2>
+              </div>
+              <button
+                id="payment-modal-close-btn"
+                type="button"
+                onClick={onClose}
+                className="text-[#64748b] hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
+                aria-label="Close payment modal"
               >
-                Subscribe to {tier.name}
-              </h2>
-            </div>
-            <button
-              id="payment-modal-close-btn"
-              type="button"
-              onClick={onClose}
-              className="text-[#64748b] hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
-              aria-label="Close payment modal"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="px-6 py-6">
-            {intentState.status === "loading" && (
-              <div className="flex flex-col items-center gap-4 py-12 text-[#64748b]">
                 <svg
-                  className="w-8 h-8 animate-spin text-[#14F195]"
+                  className="w-5 h-5"
                   fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
                   viewBox="0 0 24 24"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
                   <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
-                <p className="text-sm">Preparing secure payment…</p>
-              </div>
-            )}
+              </button>
+            </div>
+          </div>
 
-            {intentState.status === "error" && (
-              <div className="flex flex-col items-center gap-4 py-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+          {/* Body (Scrollable) */}
+          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 overflow-y-auto custom-scrollbar">
+            {intentState.status === "loading" && (
+                <div className="flex flex-col items-center gap-4 py-12 text-[#64748b]">
                   <svg
-                    className="w-6 h-6 text-red-400"
+                    className="w-8 h-8 animate-spin text-[#14F195]"
                     fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
                     viewBox="0 0 24 24"
                   >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
                     <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
                   </svg>
+                  <p className="text-sm">Preparing secure payment…</p>
                 </div>
-                <p className="text-red-400 text-sm">{intentState.message}</p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-sm text-[#78a9ff] hover:underline"
-                >
-                  Close
-                </button>
-              </div>
-            )}
+              )}
 
-            {intentState.status === "ready" && (
-              <Elements
-                stripe={intentState.stripePromise}
-                options={{
-                  clientSecret: intentState.clientSecret,
-                  appearance: {
-                    theme: "night",
-                    variables: {
-                      colorPrimary: "#14F195",
-                      colorBackground: "#0f0f17",
-                      colorText: "#f8fafc",
-                      colorDanger: "#f87171",
-                      fontFamily: "Inter, sans-serif",
-                      borderRadius: "12px",
+              {intentState.status === "error" && (
+                <div className="flex flex-col items-center gap-4 py-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <svg
+                      className="w-6 h-6 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-red-400 text-sm">{intentState.message}</p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-sm text-[#78a9ff] hover:underline"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
+              {intentState.status === "ready" && (
+                <Elements
+                  stripe={intentState.stripePromise}
+                  options={{
+                    clientSecret: intentState.clientSecret,
+                    appearance: {
+                      theme: "night",
+                      variables: {
+                        colorPrimary: "#14F195",
+                        colorBackground: "#0f0f17",
+                        colorText: "#f8fafc",
+                        colorDanger: "#f87171",
+                        fontFamily: "Inter, sans-serif",
+                        borderRadius: "12px",
+                        spacingUnit: "5px",
+                      },
                     },
-                  },
-                }}
-              >
-                <CheckoutForm
-                  tierName={tier.name}
-                  tierPrice={tier.price}
-                  onSuccess={onSuccess}
-                  onCancel={onClose}
-                />
-              </Elements>
-            )}
+                  }}
+                >
+                  <CheckoutForm
+                    tierName={tier.name}
+                    tierPrice={tier.price}
+                    onSuccess={onSuccess}
+                    onCancel={onClose}
+                  />
+                </Elements>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </>
-  );
-}
+      </>
+    );
+  }

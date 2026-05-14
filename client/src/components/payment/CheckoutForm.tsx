@@ -55,7 +55,7 @@ export function CheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {/* Tier summary */}
-      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+      <div className="flex items-center justify-between !p-6 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
             Plan
@@ -147,12 +147,12 @@ export function CheckoutForm({
       )}
 
       {/* Submit + Cancel */}
-      <div className="flex flex-col sm:flex-row gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row gap-4 pt-4">
         <button
           id="checkout-submit-btn"
           type="submit"
           disabled={isProcessing || !stripe}
-          className="flex-1 py-3 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? "Processing…" : "Pay Now"}
         </button>
@@ -162,14 +162,14 @@ export function CheckoutForm({
           type="button"
           onClick={onCancel}
           disabled={isProcessing}
-          className="flex-1 py-3 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
+          className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
         >
           Cancel
         </button>
       </div>
 
       {/* Test mode notice */}
-      <p className="text-center text-xs text-[#475569]">
+      <p className="text-center text-[11px] text-[#475569] mt-2">
         🔒 Stripe test mode — use card{" "}
         <span className="font-mono text-[#64748b]">4242 4242 4242 4242</span>
       </p>
