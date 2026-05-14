@@ -69,7 +69,9 @@ export async function createPaymentIntent(
   const intent = await stripe.paymentIntents.create({
     amount,
     currency: "usd",
-    customer: opts.stripeCustomerId,
+    customer: opts.saveCard ? opts.stripeCustomerId : undefined,
+    // Temporarily limit to 'card' only. Other methods like 'link' or 'sepa_debit' can be added here later.
+    payment_method_types: ["card"],
     ...(opts.saveCard
       ? { setup_future_usage: "off_session" }
       : {}),

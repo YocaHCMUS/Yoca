@@ -76,6 +76,25 @@ export function CheckoutForm({
           id="stripe-payment-element"
           options={{
             layout: "tabs",
+            paymentMethodOrder: ["card"],
+            // @ts-ignore - explicitly hiding bank transfer if it persists
+            paymentMethods: {
+              card: "always",
+              bank_transfer: "never",
+              us_bank_account: "never",
+              ach_direct_debit: "never",
+              sepa_debit: "never",
+              sofort: "never",
+              ideal: "never",
+              bancontact: "never",
+              giropay: "never",
+              eps: "never",
+              p24: "never",
+              bacs_debit: "never",
+              au_becs_debit: "never",
+              link: "never",
+              cashapp: "never",
+            },
           }}
         />
       </div>

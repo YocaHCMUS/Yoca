@@ -212,9 +212,11 @@ export function PaymentModalWrapper({
 
               {intentState.status === "ready" && (
                 <Elements
+                  key={intentState.clientSecret}
                   stripe={intentState.stripePromise}
                   options={{
                     clientSecret: intentState.clientSecret,
+                    locale: "en",
                     appearance: {
                       theme: "night",
                       variables: {
