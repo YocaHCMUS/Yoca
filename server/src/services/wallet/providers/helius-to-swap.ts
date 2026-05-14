@@ -149,17 +149,20 @@ export function mapHeliusTxToSwap(
   const tokenTransfers = tx.tokenTransfers ?? [];
   const nativeTransfers = tx.nativeTransfers ?? [];
 
-  const outflows: Array<{ mint: string; amount: number }> = [];
-  const inflows: Array<{ mint: string; amount: number }> = [];
+  const outflows: Array<{ mint: string; amount: number; counterParty: string }> = [];
+  const inflows: Array<{ mint: string; amount: number; counterParty: string }> = [];
 
   for (const t of tokenTransfers) {
     const mint = String(t.mint ?? "").trim();
     const amount = Number(t.tokenAmount ?? t.amount ?? 0);
+    const fromAccount = t.fromUserAccount || ""
+    const toAccount = t.toUserAccount || ""
     if (!mint || amount <= 0) continue;
-    if (t.fromUserAccount === signer) outflows.push({ mint, amount });
-    if (t.toUserAccount === signer) inflows.push({ mint, amount });
+    if (fromAccount === signer) outflows.push({ mint, amount, counterParty: toAccount });
+    if (toAccount === signer) inflows.push({ mint, amount, counterParty: fromAccount });
   }
 
+  let counterparty: string;
   let bought: WalletSwapTokenChange | null = null;
   let sold: WalletSwapTokenChange | null = null;
 
@@ -168,18 +171,21 @@ export function mapHeliusTxToSwap(
     const maxIn = inflows.reduce((a, b) => (a.amount > b.amount ? a : b));
     sold = buildSwapLeg(maxOut.mint, maxOut.amount);
     bought = buildSwapLeg(maxIn.mint, maxIn.amount);
+    counterparty = maxOut.counterParty || maxIn.counterParty || "unknown";
   } else if (outflows.length > 0) {
     const nativeInflow = findSwapNativeTransfer(nativeTransfers, signer, "to");
     if (!nativeInflow) return null;
     const maxOut = outflows.reduce((a, b) => (a.amount > b.amount ? a : b));
     sold = buildSwapLeg(maxOut.mint, maxOut.amount);
     bought = buildSwapLeg(SOL_MINT, nativeInflow.lamports / 1e9);
+    counterparty = nativeInflow.counterparty;
   } else if (inflows.length > 0) {
     const nativeOutflow = findSwapNativeTransfer(nativeTransfers, signer, "from");
     if (!nativeOutflow) return null;
     const maxIn = inflows.reduce((a, b) => (a.amount > b.amount ? a : b));
     bought = buildSwapLeg(maxIn.mint, maxIn.amount);
     sold = buildSwapLeg(SOL_MINT, nativeOutflow.lamports / 1e9);
+    counterparty = nativeOutflow.counterparty;
   } else {
     return null;
   }
@@ -196,7 +202,7 @@ export function mapHeliusTxToSwap(
     blockTimestampIso,
     subcategory: null,
     walletAddress: signer,
-    pairAddress: tokensInvolved || programId || "unknown",
+    pairAddress: counterparty,
     tokensInvolved,
     exchangeAddress: programId || source || "unknown",
     exchangeName: exchangeName(source) || "Unknown",

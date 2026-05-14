@@ -389,6 +389,31 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
+/**
+ * Token price cache for timestamp-aware enrichment.
+ *
+ * Stores price-at-timestamp lookups bucketed to 5-min intervals.
+ * Composite PK prevents duplicate (mint, bucket) entries.
+ * Populated by resolve-token-price.ts cache-first flow.
+ */
+export const tokenPriceCache = pgTable(
+  "token_price_cache",
+  {
+    mint: varchar("mint", { length: 44 }).notNull(),
+    timestampSec: bigint("timestamp_sec", { mode: "number" }).notNull(),
+    priceUsd: decimal("price_usd").notNull(),
+    source: varchar("source", { length: 20 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.mint, table.timestampSec] }),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,
@@ -1337,6 +1362,8 @@ export type TokenMarketChartDailyInsert =
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
+export type TokenPriceCacheInsert = typeof tokenPriceCache.$inferInsert;
+export type TokenPriceCacheRow = typeof tokenPriceCache.$inferSelect;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type RecentTradeInsert = typeof recentTrades.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;

@@ -545,44 +545,10 @@ export async function enrichWithSolanaTokenPrices(
                 } else {
                     counters.tokenMetaMisses += 1;
                 }
-
-                const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd != null) {
-                    counters.marketDataHits += 1;
-                    const hasPriceUsd = toOptionalFiniteNumber(leg.priceUsd) != null;
-                    if (!hasPriceUsd) {
-                        leg.priceUsd = priceUsd;
-                        changed = true;
-                    }
-
-                    const hasValueUsd = toOptionalFiniteNumber(leg.valueUsd) != null;
-                    const amount = toOptionalFiniteNumber(leg.amount);
-                    const basePrice = toOptionalFiniteNumber(leg.priceUsd) ?? priceUsd;
-                    const computedValueUsd = amount != null ? Math.abs(amount) * basePrice : undefined;
-
-                    if (!hasValueUsd && computedValueUsd != null && Number.isFinite(computedValueUsd)) {
-                        leg.valueUsd = computedValueUsd;
-                        changed = true;
-                    }
-                } else {
-                    counters.marketDataMisses += 1;
-                }
             };
 
             enrichSwapLeg(rawSwap.bought);
             enrichSwapLeg(rawSwap.sold);
-
-            const hasTotalValueUsd = toOptionalFiniteNumber(rawSwap.totalValueUsd) != null;
-            if (!hasTotalValueUsd) {
-                const boughtValue = toOptionalFiniteNumber(rawSwap.bought && (rawSwap.bought as RecordLike).valueUsd);
-                const soldValue = toOptionalFiniteNumber(rawSwap.sold && (rawSwap.sold as RecordLike).valueUsd);
-                const derivedTotalValueUsd = [boughtValue, soldValue].find((value) => value != null && value > 0);
-
-                if (derivedTotalValueUsd != null) {
-                    rawSwap.totalValueUsd = derivedTotalValueUsd;
-                    changed = true;
-                }
-            }
 
             if (changed) {
                 counters.swapFieldFills += 1;
