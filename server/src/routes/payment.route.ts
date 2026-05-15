@@ -1,6 +1,6 @@
 // server/src/routes/payment.route.ts
 import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
-import { setErr } from "@sv/config/errors.js";
+import { setErr } from "@sv/util/errors.js";
 import { db } from "@sv/db/index.js";
 import { users, subscriptions } from "@sv/db/schema.js";
 import { validate } from "@sv/middlewares/validation.js";
@@ -11,7 +11,10 @@ import {
   retrievePaymentIntent,
 } from "@sv/services/stripe.service.js";
 import { getUserById } from "@sv/services/users.js";
-import { upsertSubscription, recordInvoicePayment } from "@sv/services/subscription.service.js";
+import {
+  upsertSubscription,
+  recordInvoicePayment,
+} from "@sv/services/subscription.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -40,10 +43,18 @@ const app = new Hono()
       try {
         const payload = c.get("jwtPayload") as { id?: string } | undefined;
         const userId = payload?.id;
-        if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!userId)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const user = await getUserById(userId);
-        if (!user) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!user)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const { tier } = c.req.valid("json");
 
@@ -55,13 +66,21 @@ const app = new Hono()
 
         // Persist the customer ID if it was just created
         if (!user.stripeCustomerId) {
-          await db.update(users).set({ stripeCustomerId }).where(eq(users.id, userId));
+          await db
+            .update(users)
+            .set({ stripeCustomerId })
+            .where(eq(users.id, userId));
         }
 
         const setupIntent = await createSetupIntent(stripeCustomerId);
         const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY ?? "";
 
-        console.log("[setup-intent] Created SetupIntent:", setupIntent.id, "for tier:", tier);
+        console.log(
+          "[setup-intent] Created SetupIntent:",
+          setupIntent.id,
+          "for tier:",
+          tier,
+        );
 
         return c.json(
           {
@@ -75,7 +94,10 @@ const app = new Hono()
       } catch (err: any) {
         console.error("[payment/setup-intent]", err);
         return c.json(
-          { errorCode: "INTERNAL_SERVER_ERR", message: err.message || "An unknown error occurred." },
+          {
+            errorCode: "INTERNAL_SERVER_ERR",
+            message: err.message || "An unknown error occurred.",
+          },
           statusCode.InternalServerError,
         );
       }
@@ -107,10 +129,18 @@ const app = new Hono()
       try {
         const payload = c.get("jwtPayload") as { id?: string } | undefined;
         const userId = payload?.id;
-        if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!userId)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const user = await getUserById(userId);
-        if (!user) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!user)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const { paymentMethodId, tier } = c.req.valid("json");
 
@@ -118,7 +148,11 @@ const app = new Hono()
         const stripeCustomerId = user.stripeCustomerId;
         if (!stripeCustomerId) {
           return c.json(
-            { errorCode: "BAD_REQUEST", message: "No Stripe customer found. Please restart the payment flow." },
+            {
+              errorCode: "BAD_REQUEST",
+              message:
+                "No Stripe customer found. Please restart the payment flow.",
+            },
             statusCode.BadRequest,
           );
         }
@@ -137,7 +171,7 @@ const app = new Hono()
         try {
           const { getStripe } = await import("@sv/services/stripe.service.js");
           const stripeClient = getStripe();
-          
+
           // Fetch invoices for this subscription to capture the initial payment
           const invoices = await stripeClient.invoices.list({
             subscription: subscription.id,
@@ -145,14 +179,23 @@ const app = new Hono()
           });
 
           if (invoices.data.length > 0) {
-            const invoice = await stripeClient.invoices.retrieve(invoices.data[0].id, {
-              expand: ["payment_intent"],
-            });
+            const invoice = await stripeClient.invoices.retrieve(
+              invoices.data[0].id,
+              {
+                expand: ["payment_intent"],
+              },
+            );
             await recordInvoicePayment(invoice);
-            console.log("[payment/activate-subscription] Recorded initial payment for invoice:", invoice.id);
+            console.log(
+              "[payment/activate-subscription] Recorded initial payment for invoice:",
+              invoice.id,
+            );
           }
         } catch (invoiceErr: any) {
-          console.warn("[payment/activate-subscription] Could not record initial payment:", invoiceErr.message);
+          console.warn(
+            "[payment/activate-subscription] Could not record initial payment:",
+            invoiceErr.message,
+          );
           // Don't fail the response if we can't record the invoice — the subscription was created successfully
         }
 
@@ -175,7 +218,10 @@ const app = new Hono()
         }
 
         return c.json(
-          { errorCode: "INTERNAL_SERVER_ERR", message: err.message || "An unknown error occurred." },
+          {
+            errorCode: "INTERNAL_SERVER_ERR",
+            message: err.message || "An unknown error occurred.",
+          },
           statusCode.InternalServerError,
         );
       }
@@ -201,29 +247,48 @@ const app = new Hono()
 
           const intentAny = intent as any;
           if (intentAny.invoice) {
-            const invoiceId = typeof intentAny.invoice === "string" ? intentAny.invoice : intentAny.invoice.id;
+            const invoiceId =
+              typeof intentAny.invoice === "string"
+                ? intentAny.invoice
+                : intentAny.invoice.id;
             const invoice = await stripeClient.invoices.retrieve(invoiceId, {
               expand: ["payment_intent"],
             });
 
             const invoiceAny = invoice as any;
             if (invoiceAny.subscription) {
-              const subId = typeof invoiceAny.subscription === "string" ? invoiceAny.subscription : invoiceAny.subscription.id;
-              const subscription = await stripeClient.subscriptions.retrieve(subId);
+              const subId =
+                typeof invoiceAny.subscription === "string"
+                  ? invoiceAny.subscription
+                  : invoiceAny.subscription.id;
+              const subscription =
+                await stripeClient.subscriptions.retrieve(subId);
 
               const sub = await upsertSubscription(subscription);
               await recordInvoicePayment(invoice);
 
-              return c.json({ success: true, subscription: sub }, statusCode.Ok);
+              return c.json(
+                { success: true, subscription: sub },
+                statusCode.Ok,
+              );
             }
           }
-          return c.json({ success: true, message: "No subscription attached." }, statusCode.Ok);
+          return c.json(
+            { success: true, message: "No subscription attached." },
+            statusCode.Ok,
+          );
         }
 
-        return c.json({ success: false, status: intent.status }, statusCode.BadRequest);
+        return c.json(
+          { success: false, status: intent.status },
+          statusCode.BadRequest,
+        );
       } catch (err: any) {
         console.error("[payment/confirm]", err);
-        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
     },
   )
@@ -238,16 +303,28 @@ const app = new Hono()
     async (c) => {
       try {
         const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        if (!payload?.id) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!payload?.id)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const { subscriptionId } = c.req.valid("json");
 
-        const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+        const [sub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
         if (!sub || sub.userId !== payload.id) {
-          return c.json({ errorCode: "NOT_FOUND", message: "Subscription not found" }, statusCode.NotFound);
+          return c.json(
+            { errorCode: "NOT_FOUND", message: "Subscription not found" },
+            statusCode.NotFound,
+          );
         }
 
-        const { cancelSubscription } = await import("@sv/services/stripe.service.js");
+        const { cancelSubscription } = await import(
+          "@sv/services/stripe.service.js"
+        );
         const updatedSub = await cancelSubscription(subscriptionId);
 
         await db
@@ -256,12 +333,19 @@ const app = new Hono()
           .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
 
         return c.json(
-          { success: true, status: updatedSub.status, cancel_at_period_end: updatedSub.cancel_at_period_end },
+          {
+            success: true,
+            status: updatedSub.status,
+            cancel_at_period_end: updatedSub.cancel_at_period_end,
+          },
           statusCode.Ok,
         );
       } catch (err: any) {
         console.error("[payment/cancel]", err);
-        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
     },
   )
@@ -272,21 +356,42 @@ const app = new Hono()
   .post(
     "/upgrade",
     honoJwt,
-    validate("json", z.object({ subscriptionId: z.string(), newTier: z.enum(["Lite", "Plus", "Pro"]) })),
+    validate(
+      "json",
+      z.object({
+        subscriptionId: z.string(),
+        newTier: z.enum(["Lite", "Plus", "Pro"]),
+      }),
+    ),
     async (c) => {
       try {
         const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        if (!payload?.id) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        if (!payload?.id)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
 
         const { subscriptionId, newTier } = c.req.valid("json");
 
-        const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+        const [sub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
         if (!sub || sub.userId !== payload.id) {
-          return c.json({ errorCode: "NOT_FOUND", message: "Subscription not found" }, statusCode.NotFound);
+          return c.json(
+            { errorCode: "NOT_FOUND", message: "Subscription not found" },
+            statusCode.NotFound,
+          );
         }
 
-        const { upgradeSubscription } = await import("@sv/services/stripe.service.js");
-        const { subscription, clientSecret } = await upgradeSubscription(subscriptionId, newTier);
+        const { upgradeSubscription } = await import(
+          "@sv/services/stripe.service.js"
+        );
+        const { subscription, clientSecret } = await upgradeSubscription(
+          subscriptionId,
+          newTier,
+        );
 
         if (!clientSecret) {
           await db
@@ -296,12 +401,20 @@ const app = new Hono()
         }
 
         return c.json(
-          { success: true, subscriptionId: subscription.id, clientSecret, status: subscription.status },
+          {
+            success: true,
+            subscriptionId: subscription.id,
+            clientSecret,
+            status: subscription.status,
+          },
           statusCode.Ok,
         );
       } catch (err: any) {
         console.error("[payment/upgrade]", err);
-        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
     },
   );

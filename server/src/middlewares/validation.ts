@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME } from "@sv/config/constants";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
@@ -7,7 +7,7 @@ import {
   userTradeDirections,
   userTradingAggregations,
 } from "@sv/db/alerts.js";
-import { userAlertStatus } from "@sv/db/schema";
+import { userAlertStatus } from "@sv/db/schema.js";
 import { setErr } from "@sv/util/errors.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
