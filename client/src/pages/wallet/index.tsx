@@ -472,8 +472,8 @@ export default function WalletPage() {
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string, row?: any[]) => {
-      const soldToken = Array.isArray(row) ? (row[3] as WalletSwapTokenChange | undefined) : undefined;
-      const boughtToken = Array.isArray(row) ? (row[4] as WalletSwapTokenChange | undefined) : undefined;
+      const soldToken = Array.isArray(row) ? (row[2] as WalletSwapTokenChange | undefined) : undefined;
+      const boughtToken = Array.isArray(row) ? (row[3] as WalletSwapTokenChange | undefined) : undefined;
       const soldSymbol = soldToken?.symbol ? String(soldToken.symbol).toUpperCase() : "UNK";
       const boughtSymbol = boughtToken?.symbol ? String(boughtToken.symbol).toUpperCase() : "UNK";
       const pairLabel = String(value || "").replace(/,/g, " → ");
