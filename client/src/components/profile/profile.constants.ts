@@ -12,6 +12,7 @@ export const PROFILE_TABS = [
     { id: "wallets", label: "Wallets" },
     { id: "watchlist", label: "Watchlist" },
     { id: "activity", label: "Activity" },
+    { id: "subscriptions", label: "Subscriptions" },
     { id: "settings", label: "Settings" },
 ] as const;
 

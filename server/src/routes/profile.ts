@@ -32,6 +32,7 @@ import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
 import { addAddressToWatchlist, addTokenToWatchlist, getAddressWatchlist, getTokenWatchlist, isAddressInWatchlist, isTokenInWatchlist, removeAddressFromWatchlist, removeTokenFromWatchlist } from "@sv/services/profile/watchlist.service.js";
+import { backfillUserPaymentHistory, enrichPaymentHistoryWithStripeProduct, getUserSubscription, getUserPaymentHistory, getUserSubscriptions, repairPaymentHistorySubscriptionLinks, syncUserSubscriptionsFromStripe } from "@sv/services/subscription.service.js";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
@@ -637,5 +638,81 @@ const app = new Hono()
                 return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
             }
         })
+    .get("/subscriptions", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+            if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+
+            try {
+                await syncUserSubscriptionsFromStripe(userId);
+            } catch (syncErr) {
+                console.warn("Failed to sync subscriptions from Stripe", syncErr);
+            }
+
+            const sub = await getUserSubscription(userId);
+            return c.json(sub, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get subscription", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .get("/subscriptions/all", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+            if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+
+            try {
+                await syncUserSubscriptionsFromStripe(userId);
+            } catch (syncErr) {
+                console.warn("Failed to sync subscriptions from Stripe", syncErr);
+            }
+
+            const subs = await getUserSubscriptions(userId);
+            return c.json(subs, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get subscriptions", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .get("/payment-history", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+            if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+
+            try {
+                await syncUserSubscriptionsFromStripe(userId);
+            } catch (syncErr) {
+                console.warn("Failed to sync subscriptions from Stripe", syncErr);
+            }
+
+            let history = await getUserPaymentHistory(userId);
+
+            if (history.length === 0) {
+                try {
+                    await backfillUserPaymentHistory(userId);
+                    await repairPaymentHistorySubscriptionLinks(userId);
+                    history = await getUserPaymentHistory(userId);
+                } catch (syncErr) {
+                    console.warn("Failed to backfill payment history", syncErr);
+                }
+            } else {
+                try {
+                    await repairPaymentHistorySubscriptionLinks(userId);
+                    history = await getUserPaymentHistory(userId);
+                } catch (repairErr) {
+                    console.warn("Failed to repair payment history links", repairErr);
+                }
+            }
+
+            const enrichedHistory = await enrichPaymentHistoryWithStripeProduct(history as any[]);
+            return c.json(enrichedHistory, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get payment history", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
     ;
 export default app;

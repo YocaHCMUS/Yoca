@@ -5,12 +5,14 @@ import appLogo from "../../assets/app-logo.png";
 import { GRID_MAX_WIDTH, btnPrimaryBase, btnPrimaryEnter, btnPrimaryLeave } from "./tokens";
 import { SignInModal } from "../auth/SignInModal";
 import { SignUpModal } from "../auth/SignUpModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogOut } from "lucide-react";
 
 const navLinks = [
   { label: "Products", href: "#products" },
   { label: "Use Cases", href: "#stories" },
   { label: "Docs", href: "/market" },
-  { label: "Pricing", href: "#cta" },
+  { label: "Pricing", href: "/pricing" },
 ] as const;
 
 const linkStyle = {
@@ -23,6 +25,7 @@ const linkStyle = {
 };
 
 export function LandingNavbar() {
+  const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -150,35 +153,49 @@ export function LandingNavbar() {
                   </li>
                 ))}
                 <li style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "0.75rem" }}>
-                  <button
-                    type="button"
-                    style={{
-                      display: "block",
-                      textAlign: "center",
-                      width: "100%",
-                      padding: "0.75rem",
-                      borderRadius: "9999px",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      color: "#f8fafc",
-                      textDecoration: "none",
-                      background: "none",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => { setMobileOpen(false); setIsSignInOpen(true); }}
-                  >
-                    Log In
-                  </button>
-                  <button
-                    type="button"
-                    style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
-                    onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                    onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                    onClick={() => { setMobileOpen(false); setIsSignUpOpen(true); }}
-                  >
-                    Sign Up
-                  </button>
+                  {!user ? (
+                    <>
+                      <button
+                        type="button"
+                        style={{
+                          display: "block",
+                          textAlign: "center",
+                          width: "100%",
+                          padding: "0.75rem",
+                          borderRadius: "9999px",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "#f8fafc",
+                          textDecoration: "none",
+                          background: "none",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => { setMobileOpen(false); setIsSignInOpen(true); }}
+                      >
+                        Log In
+                      </button>
+                      <button
+                        type="button"
+                        style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
+                        onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                        onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                        onClick={() => { setMobileOpen(false); setIsSignUpOpen(true); }}
+                      >
+                        Sign Up
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      to="/market"
+                      style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
+                      onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                      onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Go to Market
+                    </Link>
+                  )}
                 </li>
               </ul>
             </div>
@@ -259,17 +276,57 @@ export function LandingNavbar() {
 
           {/* RIGHT — Auth actions */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
-            {/* "Log In" text — only shown when there's enough space (≥ 900px approx) */}
-            <LogInLink onOpen={() => setIsSignInOpen(true)} />
-            <button
-              type="button"
-              style={{ ...btnPrimaryBase, border: "none", cursor: "pointer" }}
-              onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-              onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-              onClick={() => setIsSignUpOpen(true)}
-            >
-              Sign Up
-            </button>
+            {!user ? (
+              <>
+                <LogInLink onOpen={() => setIsSignInOpen(true)} />
+                <button
+                  type="button"
+                  style={{ ...btnPrimaryBase, border: "none", cursor: "pointer" }}
+                  onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                  onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                  onClick={() => setIsSignUpOpen(true)}
+                >
+                  Sign Up
+                </button>
+              </>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <Link
+                  to="/market"
+                  style={{ ...btnPrimaryBase, border: "none", cursor: "pointer", textDecoration: "none" }}
+                  onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
+                  onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                >
+                  Go to Market
+                </Link>
+                <button
+                  onClick={signOut}
+                  title="Log out"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    padding: "8px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "#f8fafc";
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#94a3b8";
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,0 +1,68 @@
+// server/src/routes/stripe-webhook.ts
+import { db } from "@sv/db/index.js";
+import { 
+  subscriptions, 
+  paymentHistory, 
+  enumPlanTier, 
+  enumSubscriptionStatus, 
+  enumPaymentStatus 
+} from "@sv/db/schema.js";
+import { constructEvent } from "@sv/services/stripe.service.js";
+import { upsertSubscription, recordInvoicePayment } from "@sv/services/subscription.service.js";
+import { eq } from "drizzle-orm";
+import { Hono } from "hono";
+import type Stripe from "stripe";
+
+const app = new Hono();
+
+app.post("/", async (c) => {
+  const signature = c.req.header("stripe-signature");
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!signature) {
+    console.warn("[stripe-webhook] Missing stripe-signature header");
+    return c.text("Webhook Error: Missing signature", 400);
+  }
+
+  if (!webhookSecret) {
+    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set in environment variables.");
+    return c.text("Webhook Error: Server configuration issue", 500);
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    const body = await c.req.text();
+    event = constructEvent(body, signature, webhookSecret);
+  } catch (err: any) {
+    console.error(`[stripe-webhook] Error verifying webhook: ${err.message}`);
+    return c.text(`Webhook Error: ${err.message}`, 400);
+  }
+
+  console.log(`[stripe-webhook] Received event: ${event.type}`);
+
+  try {
+    if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated" ||
+      event.type === "customer.subscription.deleted"
+    ) {
+      const subscription = event.data.object as Stripe.Subscription;
+      await upsertSubscription(subscription);
+      console.log(`[stripe-webhook] Successfully processed subscription ${subscription.id}`);
+    }
+
+    if (event.type === "invoice.payment_succeeded" || event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      await recordInvoicePayment(invoice);
+      console.log(`[stripe-webhook] Successfully processed invoice payment ${invoice.id}`);
+    }
+
+    return c.text("OK", 200);
+  } catch (err: any) {
+    console.error(`[stripe-webhook] Error processing event: ${err.message}`);
+    return c.text("Internal Server Error", 500);
+  }
+});
+
+export default app;

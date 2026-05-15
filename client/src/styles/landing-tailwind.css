@@ -1,3 +1,4 @@
+@source "../";
 @import "tailwindcss";
 
 /*
@@ -35,56 +36,56 @@
   }
 
   /* Strip default margins Carbon may add */
-  .landing-page h1,
-  .landing-page h2,
-  .landing-page h3,
-  .landing-page h4,
-  .landing-page h5,
-  .landing-page h6,
-  .landing-page p,
-  .landing-page blockquote,
-  .landing-page figure,
-  .landing-page pre,
-  .landing-page ul,
-  .landing-page ol,
-  .landing-page dl,
-  .landing-page dd {
+  :where(.landing-page) h1,
+  :where(.landing-page) h2,
+  :where(.landing-page) h3,
+  :where(.landing-page) h4,
+  :where(.landing-page) h5,
+  :where(.landing-page) h6,
+  :where(.landing-page) p,
+  :where(.landing-page) blockquote,
+  :where(.landing-page) figure,
+  :where(.landing-page) pre,
+  :where(.landing-page) ul,
+  :where(.landing-page) ol,
+  :where(.landing-page) dl,
+  :where(.landing-page) dd {
     margin: 0;
   }
 
   /* Reset headings – let Tailwind size them */
-  .landing-page h1,
-  .landing-page h2,
-  .landing-page h3,
-  .landing-page h4 {
+  :where(.landing-page) h1,
+  :where(.landing-page) h2,
+  :where(.landing-page) h3,
+  :where(.landing-page) h4 {
     font-size: inherit;
     font-weight: inherit;
     line-height: inherit;
   }
 
   /* Reset links – let Tailwind color them */
-  .landing-page a {
+  :where(.landing-page) a {
     color: inherit;
     text-decoration: inherit;
   }
 
   /* Reset lists */
-  .landing-page ul,
-  .landing-page ol {
+  :where(.landing-page) ul,
+  :where(.landing-page) ol {
     list-style: none;
     padding: 0;
   }
 
   /* Images / media */
-  .landing-page img,
-  .landing-page svg,
-  .landing-page video {
+  :where(.landing-page) img,
+  :where(.landing-page) svg,
+  :where(.landing-page) video {
     display: block;
     max-width: 100%;
   }
 
   /* Buttons */
-  .landing-page button {
+  :where(.landing-page) button {
     font: inherit;
     color: inherit;
     background: none;

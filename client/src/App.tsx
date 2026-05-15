@@ -14,6 +14,7 @@ import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
+import PricingPage from "@/pages/pricing";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
 import { Component, type ReactNode } from "react";
@@ -58,6 +59,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthShowcase />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/test-401" element={<UnauthorizedPage />} />
         {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
