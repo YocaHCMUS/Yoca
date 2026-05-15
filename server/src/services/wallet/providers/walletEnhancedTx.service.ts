@@ -8,6 +8,7 @@ import {
   walletEnhancedTxMeta,
 } from "@sv/db/schema.js";
 import { and, eq, gte, lte, sql, inArray } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { fetchHeliusAddressTransactions } from "./helius-tx-fetcher.js";
 import { getMissingRanges, isMissingRangeSignificant } from "@sv/services/wallet/walletRange.utils.js";
 import type { WalletRangeMs } from "@sv/services/wallet/walletRange.utils.js";
@@ -261,6 +262,18 @@ async function getCachedTxsByRange(
   return result;
 }
 
+const INSERT_CHUNK_SIZE = 3_000;
+
+async function chunkedInsert<T extends PgTable>(
+  table: T,
+  rows: Array<T['$inferInsert']>,
+): Promise<void> {
+  if (rows.length === 0) return;
+  for (let i = 0; i < rows.length; i += INSERT_CHUNK_SIZE) {
+    await db.insert(table).values(rows.slice(i, i + INSERT_CHUNK_SIZE)).onConflictDoNothing();
+  }
+}
+
 async function cacheTransactions(
   address: string,
   txs: HeliusEnhancedTransaction[],
@@ -408,23 +421,11 @@ async function cacheTransactions(
     }
   }
 
-  await db.insert(walletEnhancedTransactions).values(parentRows).onConflictDoNothing();
-
-  if (tokenRows.length > 0) {
-    await db.insert(walletEnhancedTokenTransfers).values(tokenRows).onConflictDoNothing();
-  }
-
-  if (nativeRows.length > 0) {
-    await db.insert(walletEnhancedNativeTransfers).values(nativeRows).onConflictDoNothing();
-  }
-
-  if (instructionRows.length > 0) {
-    await db.insert(walletEnhancedInstructions).values(instructionRows).onConflictDoNothing();
-  }
-
-  if (innerInstructionRows.length > 0) {
-    await db.insert(walletEnhancedInnerInstructions).values(innerInstructionRows).onConflictDoNothing();
-  }
+  await chunkedInsert(walletEnhancedTransactions, parentRows);
+  await chunkedInsert(walletEnhancedTokenTransfers, tokenRows);
+  await chunkedInsert(walletEnhancedNativeTransfers, nativeRows);
+  await chunkedInsert(walletEnhancedInstructions, instructionRows);
+  await chunkedInsert(walletEnhancedInnerInstructions, innerInstructionRows);
 
   await db
     .insert(walletEnhancedTxMeta)

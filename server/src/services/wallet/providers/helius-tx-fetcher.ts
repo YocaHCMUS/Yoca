@@ -46,7 +46,7 @@ export async function fetchHeliusAddressTransactions(
   const paged = await runCursorPagination<HeliusEnhancedTransaction>({
     initialCursor: options?.before ?? null,
     maxPages: 50,
-    maxItems: 5000,
+    maxItems: 1000,
     fetchPage: async (cursor) => {
       let json: unknown;
       try {
