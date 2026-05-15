@@ -43,12 +43,7 @@ const settingsPatchSchema = z
       .nullable()
       .optional(),
     emailAlertsEnabled: z.boolean().optional(),
-    emailAlertsAddress: z
-      .string()
-      .trim()
-      .email()
-      .nullable()
-      .optional(),
+    emailAlertsAddress: z.string().trim().email().nullable().optional(),
   })
   .refine(
     (v) =>
@@ -97,8 +92,9 @@ const alertRuleBodySchema = z
       });
     }
     if (!data.useDefaultDelivery) {
-      const discordOk =
-        !!data.discordWebhookOverride?.includes("discord.com/api/webhooks/");
+      const discordOk = !!data.discordWebhookOverride?.includes(
+        "discord.com/api/webhooks/",
+      );
       const emailOk =
         !!data.emailOverride?.trim() &&
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.emailOverride.trim());
@@ -145,35 +141,30 @@ const app = new Hono()
       return c.json({ error: "Failed to load alert rules" }, 500);
     }
   })
-  .post(
-    "/rules",
-    honoJwt,
-    validate("json", alertRuleBodySchema),
-    async (c) => {
-      const { id: userId } = c.get("jwtPayload") as { id: string };
-      const body = c.req.valid("json");
-      try {
-        const rule = await createAlertRule(userId, {
-          name: body.name ?? null,
-          walletAddress: body.walletAddress,
-          actionType: body.actionType,
-          minVolume: body.minVolume,
-          maxVolume: body.maxVolume ?? null,
-          volumeUnit: body.volumeUnit,
-          triggerType: body.triggerType,
-          expiryDate: new Date(body.expiryDate),
-          useDefaultDelivery: body.useDefaultDelivery,
-          discordWebhookOverride: body.discordWebhookOverride ?? null,
-          emailOverride: body.emailOverride ?? null,
-        });
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
-        return c.json({ rule, heliusSync }, statusCode.Created);
-      } catch (err) {
-        console.error("[alerts] POST /rules failed:", err);
-        return c.json({ error: "Failed to create alert rule" }, 500);
-      }
-    },
-  )
+  .post("/rules", honoJwt, validate("json", alertRuleBodySchema), async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
+    const body = c.req.valid("json");
+    try {
+      const rule = await createAlertRule(userId, {
+        name: body.name ?? null,
+        walletAddress: body.walletAddress,
+        actionType: body.actionType,
+        minVolume: body.minVolume,
+        maxVolume: body.maxVolume ?? null,
+        volumeUnit: body.volumeUnit,
+        triggerType: body.triggerType,
+        expiryDate: new Date(body.expiryDate),
+        useDefaultDelivery: body.useDefaultDelivery,
+        discordWebhookOverride: body.discordWebhookOverride ?? null,
+        emailOverride: body.emailOverride ?? null,
+      });
+      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      return c.json({ rule, heliusSync }, statusCode.Created);
+    } catch (err) {
+      console.error("[alerts] POST /rules failed:", err);
+      return c.json({ error: "Failed to create alert rule" }, 500);
+    }
+  })
   .delete("/rules/:ruleId", honoJwt, async (c) => {
     const { id: userId } = c.get("jwtPayload") as { id: string };
     const ruleId = Number(c.req.param("ruleId"));
@@ -207,7 +198,11 @@ const app = new Hono()
     const { id: userId } = c.get("jwtPayload") as { id: string };
     const { address, label } = c.req.valid("json");
     try {
-      const wallet = await addFollowedWallet(userId, address, label ?? undefined);
+      const wallet = await addFollowedWallet(
+        userId,
+        address,
+        label ?? undefined,
+      );
       const heliusSync = await syncHeliusWebhookAccountAddresses();
       return c.json({ wallet, heliusSync }, statusCode.Created);
     } catch (err) {
@@ -271,13 +266,11 @@ const app = new Hono()
           const current = await getUserAlertSettings(userId);
           await setUserEmailAlertSettings(userId, {
             emailAlertsEnabled:
-              body.emailAlertsEnabled ??
-              current?.emailAlertsEnabled ??
-              false,
+              body.emailAlertsEnabled ?? current?.emailAlertsEnabled ?? false,
             emailAlertsAddress:
               body.emailAlertsAddress !== undefined
                 ? body.emailAlertsAddress
-                : current?.emailAlertsAddress ?? null,
+                : (current?.emailAlertsAddress ?? null),
           });
         }
         const updated = await getUserAlertSettings(userId);

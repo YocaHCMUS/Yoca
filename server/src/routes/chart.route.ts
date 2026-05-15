@@ -12,9 +12,7 @@ import chartTransactions from "@sv/routes/charts/transactions.route.js";
 import chartWinrate from "@sv/routes/charts/winrate.route.js";
 import { Hono } from "hono";
 
-const app = new Hono();
-
-const routes = app
+const app = new Hono()
   .route("/balance", chartBalance)
   .route("/distribution", chartDistribution)
   .route("/pnl", chartPnL)
@@ -28,4 +26,4 @@ const routes = app
   .route("/totalTradingVolume", chartTotalTradingVolume)
   .route("/stablecoinRatio", chartStablecoinRatio);
 
-export default routes;
+export default app;

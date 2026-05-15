@@ -355,7 +355,8 @@ export const translation = defineTranslation({
         },
         risk: {
           feeHeavy: "Giao dịch dày có thể làm chi phí phí giao dịch tăng cao.",
-          emotionalPressure: "Cần theo dõi liên tục và ra quyết định rất nhanh.",
+          emotionalPressure:
+            "Cần theo dõi liên tục và ra quyết định rất nhanh.",
         },
         rule: {
           minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
@@ -389,8 +390,7 @@ export const translation = defineTranslation({
         benefit: {
           strongTrendUpside:
             "Có thể mở rộng lợi nhuận khi xu hướng mạnh tiếp diễn.",
-          quickInvalidation:
-            "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
+          quickInvalidation: "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
         },
         risk: {
           falseBreakout: "Phá vỡ giả có thể gây chuỗi thua lỗ nhanh.",
@@ -411,8 +411,7 @@ export const translation = defineTranslation({
           riskControlled: "Quản trị quy mô vị thế giúp kiểm soát rủi ro.",
         },
         risk: {
-          trendAgainst:
-            "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
+          trendAgainst: "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
           patienceRequired: "Tín hiệu có thể thưa, cần kiên nhẫn và kỷ luật.",
         },
         rule: {
@@ -425,8 +424,7 @@ export const translation = defineTranslation({
         description:
           "Xây vị thế tập trung và nắm giữ xuyên qua các chu kỳ thị trường rộng hơn.",
         benefit: {
-          longCycleUpside:
-            "Có thể hưởng lợi kép trong xu hướng dài hạn.",
+          longCycleUpside: "Có thể hưởng lợi kép trong xu hướng dài hạn.",
           lowNoise: "Ít giao dịch hơn giúp giảm nhiễu ngắn hạn của thị trường.",
         },
         risk: {
@@ -447,8 +445,7 @@ export const translation = defineTranslation({
       },
       activeTrader: {
         name: "Ví giao dịch tích cực",
-        description:
-          "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
+        description: "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
       },
       whale: {
         name: "Ví cá voi",
@@ -722,8 +719,7 @@ export const translation = defineTranslation({
     ruleTableTrigger: "Kích hoạt",
     ruleTableExpires: "Hết hạn",
     ruleDeleteSuccess: "Đã xoá quy tắc và đồng bộ Helius.",
-    rulePreviewBody:
-      "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
+    rulePreviewBody: "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
     rulePreviewVerbSwap: "một giao dịch swap",
     rulePreviewVerbTransfer: "một giao dịch chuyển",
     rulePreviewVerbAny: "hoạt động",
@@ -740,7 +736,8 @@ export const translation = defineTranslation({
       "Cung cấp URL Discord webhook và/hoặc email ghi đè hợp lệ.",
     ruleSaveError: "Không thể lưu quy tắc cảnh báo.",
     ruleLoading: "Đang tải quy tắc cảnh báo…",
-    ruleCreateSuccess: "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
+    ruleCreateSuccess:
+      "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
@@ -1170,6 +1167,7 @@ export const translation = defineTranslation({
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     NOT_FOUND: "Không tìm thấy",
+    UNAUTHORIZED: "Không được ủy quyền",
     RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
     BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
@@ -1329,10 +1327,10 @@ export const translation = defineTranslation({
       distributionDescription:
         "Phân bổ quyền sở hữu token {{symbol}} theo nhóm người nắm giữ hàng đầu.",
       top10: "Top 10",
-      rank1120: "11–20",
-      rank2140: "21–40",
-      rank1130: "11–30",
-      rank3150: "31–50",
+      rank1120: "11-20",
+      rank2140: "21-40",
+      rank1130: "11-30",
+      rank3150: "31-50",
       others: "Khác",
       volumeQ:
         "Khối lượng giao dịch hàng ngày của {{name}} ({{symbol}}) là bao nhiêu?",

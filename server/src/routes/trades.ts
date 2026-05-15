@@ -1,4 +1,3 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   recentTradesQuerySchema,
   validate,
@@ -8,6 +7,7 @@ import {
   getTopGainers,
   getTopLosers,
 } from "@sv/services/trades.js";
+import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 

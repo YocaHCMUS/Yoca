@@ -144,7 +144,10 @@ export default function AlertsPage() {
         json: { discordWebhookUrl: trimmed || null },
       });
       if (res.ok) {
-        setDiscordInline({ kind: "success", title: tr("alertsPage.discordSaved") });
+        setDiscordInline({
+          kind: "success",
+          title: tr("alertsPage.discordSaved"),
+        });
       } else {
         const body = (await res.json()) as { error?: string };
         setDiscordInline({
@@ -153,7 +156,10 @@ export default function AlertsPage() {
         });
       }
     } catch {
-      setDiscordInline({ kind: "error", title: tr("alertsPage.discordSaveError") });
+      setDiscordInline({
+        kind: "error",
+        title: tr("alertsPage.discordSaveError"),
+      });
     } finally {
       setDiscordSaving(false);
     }
@@ -167,7 +173,10 @@ export default function AlertsPage() {
     const hasDestination = !!(overrideTrimmed || registeredEmail);
 
     if (emailEnabled && !hasDestination) {
-      setEmailInline({ kind: "warning", title: tr("alertsPage.emailNoDestination") });
+      setEmailInline({
+        kind: "warning",
+        title: tr("alertsPage.emailNoDestination"),
+      });
       return;
     }
 
@@ -271,7 +280,9 @@ export default function AlertsPage() {
       const res = await client.api.alerts.$post({
         json: { address: trimmed, label: label.trim() || undefined },
       });
-      const body = (await res.json()) as PostAlertsResponse | { error?: string };
+      const body = (await res.json()) as
+        | PostAlertsResponse
+        | { error?: string };
 
       if (res.status === 409) {
         showInline("warning", tr("alertsPage.errorDuplicate"));
@@ -288,9 +299,17 @@ export default function AlertsPage() {
       }
 
       if (body.heliusSync.ok) {
-        showInline("success", tr("alertsPage.successHelius"), tr("alertsPage.successSaved"));
+        showInline(
+          "success",
+          tr("alertsPage.successHelius"),
+          tr("alertsPage.successSaved"),
+        );
       } else {
-        showInline("warning", tr("alertsPage.partialHelius"), body.heliusSync.error || "");
+        showInline(
+          "warning",
+          tr("alertsPage.partialHelius"),
+          body.heliusSync.error || "",
+        );
       }
 
       setAddress("");
@@ -344,7 +363,11 @@ export default function AlertsPage() {
       if (body.heliusSync.ok) {
         showInline("success", tr("alertsPage.deleteSuccess"));
       } else {
-        showInline("warning", tr("alertsPage.deletePartial"), body.heliusSync.error || "");
+        showInline(
+          "warning",
+          tr("alertsPage.deletePartial"),
+          body.heliusSync.error || "",
+        );
       }
       await loadList();
     } catch {
@@ -382,7 +405,12 @@ export default function AlertsPage() {
         ) : (
           <>
             {/* ── Discord Webhook URL section ─────────────────── */}
-            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+            <Grid
+              narrow
+              fullWidth
+              className={styles.card}
+              style={{ marginBottom: "1.5rem" }}
+            >
               <Column lg={16} md={8} sm={4}>
                 <Tile style={{ background: "transparent", padding: "2rem" }}>
                   <h3 className={styles.sectionTitle}>
@@ -413,9 +441,19 @@ export default function AlertsPage() {
                           disabled={discordSaving}
                           autoComplete="off"
                         />
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                          }}
+                        >
                           {discordSaving ? <InlineLoading /> : null}
-                          <Button type="submit" kind="primary" disabled={discordSaving}>
+                          <Button
+                            type="submit"
+                            kind="primary"
+                            disabled={discordSaving}
+                          >
                             {tr("alertsPage.discordSaveButton")}
                           </Button>
                         </div>
@@ -427,7 +465,12 @@ export default function AlertsPage() {
             </Grid>
 
             {/* ── Email notifications section ─────────────────── */}
-            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+            <Grid
+              narrow
+              fullWidth
+              className={styles.card}
+              style={{ marginBottom: "1.5rem" }}
+            >
               <Column lg={16} md={8} sm={4}>
                 <Tile style={{ background: "transparent", padding: "2rem" }}>
                   <h3 className={styles.sectionTitle}>
@@ -455,7 +498,9 @@ export default function AlertsPage() {
                           labelA="Off"
                           labelB="On"
                           toggled={emailEnabled}
-                          onToggle={(checked: boolean) => setEmailEnabled(checked)}
+                          onToggle={(checked: boolean) =>
+                            setEmailEnabled(checked)
+                          }
                           disabled={emailSaving}
                         />
                       </div>
@@ -468,7 +513,9 @@ export default function AlertsPage() {
                         }}
                       >
                         {registeredEmail
-                          ? tr("alertsPage.emailRegisteredHint", { email: registeredEmail })
+                          ? tr("alertsPage.emailRegisteredHint", {
+                              email: registeredEmail,
+                            })
                           : tr("alertsPage.emailNoRegistered")}
                       </p>
 
@@ -477,15 +524,27 @@ export default function AlertsPage() {
                           id="email-override"
                           type="email"
                           labelText={tr("alertsPage.emailOverrideLabel")}
-                          placeholder={tr("alertsPage.emailOverridePlaceholder")}
+                          placeholder={tr(
+                            "alertsPage.emailOverridePlaceholder",
+                          )}
                           value={emailOverride}
                           onChange={(ev) => setEmailOverride(ev.target.value)}
                           disabled={emailSaving}
                           autoComplete="off"
                         />
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                          }}
+                        >
                           {emailSaving ? <InlineLoading /> : null}
-                          <Button type="submit" kind="primary" disabled={emailSaving}>
+                          <Button
+                            type="submit"
+                            kind="primary"
+                            disabled={emailSaving}
+                          >
                             {tr("alertsPage.emailSaveButton")}
                           </Button>
                         </div>
@@ -497,11 +556,18 @@ export default function AlertsPage() {
             </Grid>
 
             {/* ── Advanced alert rules (predicate filters) ───── */}
-            <Grid narrow fullWidth className={styles.card} style={{ marginBottom: "1.5rem" }}>
+            <Grid
+              narrow
+              fullWidth
+              className={styles.card}
+              style={{ marginBottom: "1.5rem" }}
+            >
               <Column lg={16} md={8} sm={4}>
                 <Tile style={{ background: "transparent", padding: "2rem" }}>
                   <div style={{ marginBottom: "1rem" }}>
-                    <h3 className={styles.sectionTitle}>{tr("alertsPage.ruleTableTitle")}</h3>
+                    <h3 className={styles.sectionTitle}>
+                      {tr("alertsPage.ruleTableTitle")}
+                    </h3>
                     <p
                       style={{
                         fontSize: "0.875rem",
@@ -512,7 +578,10 @@ export default function AlertsPage() {
                     >
                       {tr("alertsPage.ruleTableSubtitle")}
                     </p>
-                    <Button kind="tertiary" onClick={() => setRuleModalOpen(true)}>
+                    <Button
+                      kind="tertiary"
+                      onClick={() => setRuleModalOpen(true)}
+                    >
                       {tr("alertsPage.ruleCreateOpen")}
                     </Button>
                   </div>
@@ -528,12 +597,24 @@ export default function AlertsPage() {
                       <Table size="lg" useZebraStyles>
                         <TableHead>
                           <TableRow>
-                            <TableHeader>{tr("alertsPage.ruleTableName")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.ruleTableWallet")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.ruleTableAction")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.ruleTableVolume")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.ruleTableTrigger")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.ruleTableExpires")}</TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableName")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableWallet")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableAction")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableVolume")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableTrigger")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.ruleTableExpires")}
+                            </TableHeader>
                             <TableHeader className={styles.actionsCell}>
                               {tr("alertsPage.tableActions")}
                             </TableHeader>
@@ -567,7 +648,9 @@ export default function AlertsPage() {
                                 <TableCell>{volLabel}</TableCell>
                                 <TableCell>{r.triggerType}</TableCell>
                                 <TableCell>
-                                  {fmt.datetime.datetime(new Date(r.expiryDate))}
+                                  {fmt.datetime.datetime(
+                                    new Date(r.expiryDate),
+                                  )}
                                 </TableCell>
                                 <TableCell className={styles.actionsCell}>
                                   {deletingRuleId === r.id ? (
@@ -630,11 +713,23 @@ export default function AlertsPage() {
                         disabled={submitting}
                         autoComplete="off"
                       />
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                        }}
+                      >
                         {submitting ? (
-                          <InlineLoading description={tr("alertsPage.followButton")} />
+                          <InlineLoading
+                            description={tr("alertsPage.followButton")}
+                          />
                         ) : null}
-                        <Button type="submit" kind="primary" disabled={submitting}>
+                        <Button
+                          type="submit"
+                          kind="primary"
+                          disabled={submitting}
+                        >
                           {tr("alertsPage.followButton")}
                         </Button>
                       </div>
@@ -662,9 +757,15 @@ export default function AlertsPage() {
                       <Table size="lg" useZebraStyles>
                         <TableHead>
                           <TableRow>
-                            <TableHeader>{tr("alertsPage.tableAddress")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.tableLabel")}</TableHeader>
-                            <TableHeader>{tr("alertsPage.tableAdded")}</TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.tableAddress")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.tableLabel")}
+                            </TableHeader>
+                            <TableHeader>
+                              {tr("alertsPage.tableAdded")}
+                            </TableHeader>
                             <TableHeader className={styles.actionsCell}>
                               {tr("alertsPage.tableActions")}
                             </TableHeader>

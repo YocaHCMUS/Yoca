@@ -6,7 +6,6 @@ import {
   TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import {
   tokenMarketChart24h,
   tokenMarketChartDaily,
@@ -15,6 +14,7 @@ import {
   type TokenMarketChartDailyInsert,
   type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
+import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte, lte } from "drizzle-orm";

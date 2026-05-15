@@ -19,6 +19,8 @@ export const statusCode = {
   Accepted: 202,
   BadRequest: 400,
   Unauthorized: 401,
+  Forbidden: 403,
+  Conflict: 409,
   NotFound: 404,
   InternalServerError: 500,
   BadGateway: 502,

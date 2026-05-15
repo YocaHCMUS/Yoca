@@ -3,8 +3,8 @@ import env from "@sv/util/load-env.js";
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
-import alertsToken from "@sv/routes/alerts.js";
 import alerts from "@sv/routes/alerts.route.js";
+import alertsRoute from "@sv/routes/alerts.js";
 import balances from "@sv/routes/balances.js";
 import chartRoutes from "@sv/routes/chart.route.js";
 import misc from "@sv/routes/misc.js";
@@ -46,9 +46,9 @@ const app = new Hono()
   .route("/api/profile", profile)
   .route("/api/wallets", wallets)
   .route("/api/walletTags", walletTags)
-  .route("/api/alerts", alerts)
+  .route("/api/alertsRoute", alertsRoute)
   .route("/api/trades", trades)
-  .route("/api/alertsToken", alertsToken)
+  .route("/api/alerts", alerts)
   .route("/api/news", news)
   .route("/api/payment", payment)
   .route("/webhook", webhook);
@@ -60,7 +60,7 @@ serve(
   {
     // Redirect Node's requests to Hono
     fetch: app.fetch,
-    port: Number(process.env.SERVER_PORT!) || 4000,
+    port: env.SERVER_PORT,
   },
   (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);

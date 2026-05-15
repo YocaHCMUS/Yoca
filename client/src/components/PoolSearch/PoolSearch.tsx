@@ -1,42 +1,43 @@
 import client from "@/api/main";
 import { Flex } from "@/components/Flex";
 import { TknImg } from "@/components/TknImg";
-import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { InlineLoading, Search } from "@carbon/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TrendNum } from "../TrendNum";
 import { Txt } from "../Txt";
-import styles from "./TokenSearch.module.scss";
+import styles from "./PoolSearch.module.scss";
 
-export interface SelectedTokenValue {
+export interface SelectedPoolValue {
   address: string;
-  symbol: string | null;
   name: string | null;
-  imgUrl: string | null;
+  baseTokenAddress: string | null;
+  baseTokenSymbol: string | null;
+  baseTokenImg: string | null;
+  quoteTokenAddress: string | null;
+  quoteTokenSymbol: string | null;
+  quoteTokenImg: string | null;
 }
 
-interface TokenSearchProps {
-  setValue: (value: SelectedTokenValue | null) => void;
+interface PoolSearchProps {
+  setValue: (value: SelectedPoolValue | null) => void;
   closePanel: () => void;
 }
 
-interface TokenSearchResult {
+interface PoolSearchResult {
   address: string;
   name: string | null;
-  symbol: string | null;
-  imgUrl: string | null;
-  priceChangePercentage24h: number | null;
+  baseTokenAddress: string | null;
+  baseTokenSymbol: string | null;
+  baseTokenImg: string | null;
+  quoteTokenAddress: string | null;
+  quoteTokenSymbol: string | null;
+  quoteTokenImg: string | null;
 }
 
-export default function TokenSearch({
-  setValue,
-  closePanel,
-}: TokenSearchProps) {
+export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { fmt } = useLocalization();
 
   useEffect(() => {
     return () => {
@@ -52,17 +53,17 @@ export default function TokenSearch({
     { query: { q: debouncedQuery } },
     {
       enabled: debouncedQuery.trim().length > 0,
-      select: (data): TokenSearchResult[] =>
-        data.tokens.map((token) => {
-          const address = token.address;
-          const symbol = token.symbol;
-
+      select: (data): PoolSearchResult[] =>
+        data.pools.map((pool) => {
           return {
-            address,
-            name: token.name,
-            symbol,
-            imgUrl: token.imgUrl,
-            priceChangePercentage24h: token.priceChangePercentage24h,
+            address: pool.address,
+            name: pool.name,
+            baseTokenAddress: pool.baseToken?.address || null,
+            baseTokenSymbol: pool.baseToken?.symbol || null,
+            baseTokenImg: pool.baseToken?.imgUrl || null,
+            quoteTokenAddress: pool.quoteToken?.address || null,
+            quoteTokenSymbol: pool.quoteToken?.symbol || null,
+            quoteTokenImg: pool.quoteToken?.imgUrl || null,
           };
         }),
     },
@@ -78,20 +79,20 @@ export default function TokenSearch({
     }, 320);
   };
 
-  const tokens = useMemo(() => searchResults.data ?? [], [searchResults.data]);
+  const pools = useMemo(() => searchResults.data ?? [], [searchResults.data]);
   const showHint = !searchResults.isLoading && !debouncedQuery.trim();
   const showEmpty =
     !searchResults.isLoading &&
     debouncedQuery.trim().length > 0 &&
-    tokens.length == 0;
+    pools.length == 0;
 
   return (
     <Flex dir="column">
       <div className={styles.searchRow}>
         <Search
           size="md"
-          labelText="Search for token"
-          placeholder="Search by symbol"
+          labelText="Search for pool"
+          placeholder="Search by token pair"
           value={query}
           onChange={(event) => handleInput(event.target.value)}
         />
@@ -99,10 +100,7 @@ export default function TokenSearch({
 
       <Flex justify="between" align="center" pInline={8} pBlockStart={8}>
         <Txt size="sm" secondary>
-          Token
-        </Txt>
-        <Txt size="sm" secondary>
-          24h change
+          Pool
         </Txt>
       </Flex>
 
@@ -110,7 +108,7 @@ export default function TokenSearch({
         {showHint && (
           <Flex pInline={8} pBlock={6}>
             <Txt size="sm" secondary>
-              Type to search token
+              Type to search pool
             </Txt>
           </Flex>
         )}
@@ -128,36 +126,51 @@ export default function TokenSearch({
         )}
 
         {!searchResults.isLoading &&
-          tokens.length > 0 &&
-          tokens.map((token) => (
+          pools.length > 0 &&
+          pools.map((pool) => (
             <button
-              key={token.address}
+              key={pool.address}
               type="button"
               className={styles.item}
               onClick={() => {
                 setValue({
-                  address: token.address,
-                  symbol: token.symbol,
-                  name: token.name,
-                  imgUrl: token.imgUrl,
+                  address: pool.address,
+                  name: pool.name,
+                  baseTokenAddress: pool.baseTokenAddress,
+                  baseTokenSymbol: pool.baseTokenSymbol,
+                  baseTokenImg: pool.baseTokenImg,
+                  quoteTokenAddress: pool.quoteTokenAddress,
+                  quoteTokenSymbol: pool.quoteTokenSymbol,
+                  quoteTokenImg: pool.quoteTokenImg,
                 });
                 closePanel();
               }}
             >
               <Flex justify="between" align="center" pInline={8} pBlock={5}>
                 <Flex align="center" gap={4}>
-                  <TknImg size={24} src={token.imgUrl} alt={token.symbol} />
+                  <Flex align="center" gap={-2} style={{ zIndex: 2 }}>
+                    <TknImg
+                      size={24}
+                      src={pool.baseTokenImg}
+                      alt={pool.baseTokenSymbol}
+                    />
+                    <span style={{ marginLeft: -12 }}>
+                      <TknImg
+                        size={24}
+                        src={pool.quoteTokenImg}
+                        alt={pool.quoteTokenSymbol}
+                      />
+                    </span>
+                  </Flex>
                   <Flex dir="column" rowGap={1}>
-                    <span className={styles.symbol}>{token.symbol}</span>
-                    {token.name && (
-                      <span className={styles.name}>{token.name}</span>
+                    <span className={styles.symbol}>
+                      {pool.baseTokenSymbol}/{pool.quoteTokenSymbol}
+                    </span>
+                    {pool.name && (
+                      <span className={styles.name}>{pool.name}</span>
                     )}
                   </Flex>
                 </Flex>
-                <TrendNum
-                  value={token.priceChangePercentage24h}
-                  formatter={fmt.num.percent}
-                />
               </Flex>
             </button>
           ))}
