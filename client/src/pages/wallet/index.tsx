@@ -12,7 +12,6 @@ import {
 import {
   renderBase,
   renderCode,
-  renderCurrency,
   renderDateTime,
   renderHash,
   renderReducedNumber,
@@ -384,6 +383,9 @@ export default function WalletPage() {
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
+        const transferValueUsd =
+          transfer.amountUsd ??
+          (transfer.priceUsd != null ? tokenAmount * transfer.priceUsd : null);
         const tokenCell = {
           address: transfer.tokenAddress,
           amount: tokenAmount,
@@ -391,7 +393,7 @@ export default function WalletPage() {
           name: transfer.tokenName ?? null,
           logoUri: transfer.tokenLogoUri ?? fallbackLogoUri ?? null,
           priceUsd: transfer.priceUsd ?? 0,
-          valueUsd: transfer.amountUsd ?? tokenAmount * (transfer.priceUsd ?? 0),
+          valueUsd: transferValueUsd ?? 0,
           toString: () => {
             return tokenSymbol;
           },
@@ -405,6 +407,7 @@ export default function WalletPage() {
           transfer.from,
           transfer.to,
           tokenCell,
+          transferValueUsd,
         ];
       }),
     [loadedTransfers],
@@ -415,7 +418,7 @@ export default function WalletPage() {
     tr("walletPage.pair"),
     tr("walletPage.tokenSold"),
     tr("walletPage.tokenBought"),
-    tr("walletPage.totalValueUSD"),
+    tr("walletPage.value"),
   ];
 
   const transferHeaders = [
@@ -423,6 +426,7 @@ export default function WalletPage() {
     tr("walletPage.sender"),
     tr("walletPage.receiver"),
     tr("walletPage.token"),
+    tr("walletPage.value"),
   ];
 
   const portfolioHeaders = [
@@ -447,7 +451,7 @@ export default function WalletPage() {
 
   const isSortablePortfolio = [false, false, true, true, true];
   const isSortableSwaps = [true, false, true, true, true];
-  const isSortableTransfers = [true, false, false, true];
+  const isSortableTransfers = [true, false, false, true, true];
 
   const swapSortConfigs = {
     0: { type: SortType.Date },
@@ -458,6 +462,7 @@ export default function WalletPage() {
   const transferSortConfigs = {
     0: { type: SortType.Date },
     2: { type: SortType.Number },
+    4: { type: SortType.Number },
   };
   const portfolioSortConfig = {
     2: { type: SortType.Number },
@@ -516,10 +521,12 @@ export default function WalletPage() {
         "positive"
       )(String(token.symbol ?? ""), row ?? null);
     },
-    (value: string) =>
-      value === "—"
-        ? renderBase(value)
-        : renderReducedNumber(value, renderCurrency, bcp47),
+    (value: number | string) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return renderBase(fmt.num.currency(value));
+      }
+      return renderBase(String(value));
+    },
   ];
 
   const transferCellRenderers = [
@@ -551,6 +558,10 @@ export default function WalletPage() {
         30,
         true,
       )(String(value.symbol ?? ""), row);
+    },
+    (value: number | null) => {
+      if (value == null) return renderBase("—");
+      return renderBase(fmt.num.currency(value));
     },
   ];
 
@@ -634,7 +645,24 @@ export default function WalletPage() {
         logo: null,
       },
     },
-    2: { type: FilterType.Select },
+    2: {
+      type: FilterType.Composite,
+      filters: {
+        address: null,
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01
+        },
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: null
+      }
+    },
     3: {
       type: FilterType.Composite,
       filters: {
@@ -654,24 +682,6 @@ export default function WalletPage() {
       }
     },
     4: {
-      type: FilterType.Composite,
-      filters: {
-        address: null,
-        amount: {
-          type: FilterType.Range,
-          field: "amount",
-          min: 0,
-          max: 10_000,
-          step: 0.01
-        },
-        symbol: { type: FilterType.Select, field: "symbol" },
-        name: { type: FilterType.Select, field: "name" },
-        logoUri: null,
-        priceUsd: null,
-        valueUsd: null
-      }
-    },
-    5: {
       type: FilterType.Range,
       min: 0,
       max: 1_000_000,
@@ -700,6 +710,12 @@ export default function WalletPage() {
         priceUsd: null,
         valueUsd: null,
       },
+    },
+    4: {
+      type: FilterType.Range,
+      min: 0,
+      max: 1_000_000,
+      step: 0.01,
     },
   };
 
@@ -1216,6 +1232,7 @@ export default function WalletPage() {
           ? transfer.tokenSymbol
           : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
+        transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(
