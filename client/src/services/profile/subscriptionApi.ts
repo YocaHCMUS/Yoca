@@ -1,5 +1,46 @@
 import client from "@/api/main";
-import type { Subscription, PaymentHistory } from "./profileApi";
+
+// ── Types matching the server DB schema ───────────────────────────────────────
+
+export type PlanTier = "Lite" | "Plus" | "Pro";
+
+export type SubscriptionStatus =
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "incomplete"
+  | "trialing"
+  | "unpaid"
+  | "paused";
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  stripeSubscriptionId: string;
+  stripeCustomerId: string;
+  planTier: PlanTier;
+  status: SubscriptionStatus;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodStart: string | null; // ISO date string from JSON
+  currentPeriodEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentHistory {
+  id: string;
+  userId: string;
+  subscriptionId: string | null;
+  stripePaymentIntentId: string | null;
+  stripeInvoiceId: string | null;
+  amount: number;          // alias for amountCents (see profile.route for mapping)
+  amountCents: number;
+  currency: string;
+  status: "succeeded" | "failed" | "pending";
+  paymentMethodDetails: { brand?: string; last4?: string } | null;
+  createdAt: string;
+}
+
 
 export async function confirmPayment(paymentIntentId: string) {
     const resp = await client.api.payment.confirm.$post({

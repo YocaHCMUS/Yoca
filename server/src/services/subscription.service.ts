@@ -36,14 +36,13 @@ export async function upsertSubscription(stripeSub: any) {
       cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
     })
     .onConflictDoUpdate({
-      target: subscriptions.stripeCustomerId,
+      target: subscriptions.stripeSubscriptionId,
       set: {
         status: stripeSub.status,
         currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
         currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
         cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
         planTier: tier as any,
-        stripeSubscriptionId: stripeSub.id,
         updatedAt: new Date(),
       },
     })
@@ -61,19 +60,22 @@ export async function recordInvoicePayment(invoice: any) {
   if (!sub) return null;
 
   const paymentIntentId = typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent.id;
-  const brand = typeof invoice.payment_intent === 'object' ? invoice.payment_intent.payment_method_details?.card?.brand : undefined;
-  const last4 = typeof invoice.payment_intent === 'object' ? invoice.payment_intent.payment_method_details?.card?.last4 : undefined;
+  
+  let brand, last4;
+  if (typeof invoice.payment_intent === 'object' && invoice.payment_intent.payment_method_details) {
+    brand = invoice.payment_intent.payment_method_details?.card?.brand;
+    last4 = invoice.payment_intent.payment_method_details?.card?.last4;
+  }
 
   await db.insert(paymentHistory).values({
     userId: sub.userId,
     subscriptionId: sub.id,
     stripePaymentIntentId: paymentIntentId,
-    amount: invoice.amount_paid,
+    stripeInvoiceId: invoice.id,
+    amountCents: invoice.amount_paid,
     currency: invoice.currency,
     status: invoice.status === 'paid' ? 'succeeded' : 'failed',
-    paymentMethodDetails: {
-      brand,
-      last4,
-    },
+    paymentMethodDetails: brand || last4 ? { brand, last4 } : null,
   });
 }
+

@@ -32,6 +32,7 @@ import { deleteCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
 import { addAddressToWatchlist, addTokenToWatchlist, getAddressWatchlist, getTokenWatchlist, isAddressInWatchlist, isTokenInWatchlist, removeAddressFromWatchlist, removeTokenFromWatchlist } from "@sv/services/profile/watchlist.service.js";
+import { getUserSubscription, getUserPaymentHistory } from "@sv/services/subscription.service.js";
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
@@ -637,5 +638,31 @@ const app = new Hono()
                 return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
             }
         })
+    .get("/subscriptions", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+            if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+
+            const sub = await getUserSubscription(userId);
+            return c.json(sub, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get subscription", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
+    .get("/payment-history", honoJwt, async (c) => {
+        try {
+            const payload = c.get("jwtPayload") as { id?: string } | undefined;
+            const userId = getUserIdFromPayload(payload);
+            if (!userId) return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+
+            const history = await getUserPaymentHistory(userId);
+            return c.json(history, statusCode.Ok);
+        } catch (err) {
+            console.error("Failed to get payment history", err);
+            return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+        }
+    })
     ;
 export default app;

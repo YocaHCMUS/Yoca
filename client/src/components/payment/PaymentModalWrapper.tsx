@@ -19,13 +19,15 @@ type PaymentModalWrapperProps = {
 type IntentState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; clientSecret: string; stripePromise: ReturnType<typeof loadStripe> }
+  | { status: "ready"; clientSecret: string; tier: string; stripePromise: ReturnType<typeof loadStripe> }
   | { status: "error"; message: string };
 
 /**
  * Wraps the Stripe Elements provider.
- * Fetches a PaymentIntent clientSecret from the backend, then renders
- * CheckoutForm inside the Elements context.
+ * Uses the SetupIntent flow:
+ *   1. POST /api/payment/setup-intent  → get clientSecret (seti_...)
+ *   2. User fills card → CheckoutForm calls confirmSetup()
+ *   3. On success → CheckoutForm calls POST /api/payment/activate-subscription
  */
 export function PaymentModalWrapper({
   open,
@@ -41,20 +43,16 @@ export function PaymentModalWrapper({
       return;
     }
 
-    // Only fetch if tier is one that requires payment
     const paidTiers = ["Lite", "Plus", "Pro"];
     if (!paidTiers.includes(tier.name)) return;
 
     let cancelled = false;
     setIntentState({ status: "loading" });
 
-    async function fetchIntent() {
+    async function fetchSetupIntent() {
       try {
-        const resp = await client.api.payment["create-intent"].$post({
-          json: {
-            tier: tier!.name as "Lite" | "Plus" | "Pro",
-            saveCard: false,
-          },
+        const resp = await client.api.payment["setup-intent"].$post({
+          json: { tier: tier!.name as "Lite" | "Plus" | "Pro" },
         });
 
         if (cancelled) return;
@@ -68,7 +66,19 @@ export function PaymentModalWrapper({
           return;
         }
 
-        const data = await resp.json() as { clientSecret: string; publishableKey: string };
+        const data = await resp.json() as {
+          clientSecret: string;
+          setupIntentId: string;
+          publishableKey: string;
+          tier: string;
+        };
+
+        console.log("[PaymentModalWrapper] SetupIntent ready:", data.setupIntentId);
+
+        if (!data.clientSecret) {
+          setIntentState({ status: "error", message: "Stripe did not return a setup intent." });
+          return;
+        }
 
         const stripePromise = loadStripe(
           data.publishableKey ||
@@ -79,8 +89,10 @@ export function PaymentModalWrapper({
         setIntentState({
           status: "ready",
           clientSecret: data.clientSecret,
+          tier: data.tier,
           stripePromise,
         });
+
       } catch (err) {
         if (cancelled) return;
         console.error("[PaymentModalWrapper]", err);
@@ -91,7 +103,7 @@ export function PaymentModalWrapper({
       }
     }
 
-    fetchIntent();
+    fetchSetupIntent();
 
     return () => {
       cancelled = true;
@@ -102,14 +114,12 @@ export function PaymentModalWrapper({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal panel */}
       <div
         role="dialog"
         aria-modal="true"
@@ -117,7 +127,7 @@ export function PaymentModalWrapper({
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
         <div className="pointer-events-auto w-full max-w-xl bg-[#0f0f17] border border-white/5 shadow-[0_0_80px_rgba(20,241,149,0.12)] rounded-none overflow-hidden flex flex-col max-h-[90vh]">
-          {/* Header (Fixed) */}
+          {/* Header */}
           <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 border-b border-white/5">
             <div className="flex items-center justify-between">
               <div>
@@ -155,93 +165,94 @@ export function PaymentModalWrapper({
             </div>
           </div>
 
-          {/* Body (Scrollable) */}
+          {/* Body */}
           <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 overflow-y-auto custom-scrollbar">
             {intentState.status === "loading" && (
-                <div className="flex flex-col items-center gap-4 py-12 text-[#64748b]">
+              <div className="flex flex-col items-center gap-4 py-12 text-[#64748b]">
+                <svg
+                  className="w-8 h-8 animate-spin text-[#14F195]"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                <p className="text-sm">Preparing secure payment…</p>
+              </div>
+            )}
+
+            {intentState.status === "error" && (
+              <div className="flex flex-col items-center gap-4 py-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
                   <svg
-                    className="w-8 h-8 animate-spin text-[#14F195]"
+                    className="w-6 h-6 text-red-400"
                     fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
                     viewBox="0 0 24 24"
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
                     <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <p className="text-sm">Preparing secure payment…</p>
                 </div>
-              )}
-
-              {intentState.status === "error" && (
-                <div className="flex flex-col items-center gap-4 py-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 text-red-400"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-red-400 text-sm">{intentState.message}</p>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="text-sm text-[#78a9ff] hover:underline"
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-
-              {intentState.status === "ready" && (
-                <Elements
-                  key={intentState.clientSecret}
-                  stripe={intentState.stripePromise}
-                  options={{
-                    clientSecret: intentState.clientSecret,
-                    locale: "en",
-                    appearance: {
-                      theme: "night",
-                      variables: {
-                        colorPrimary: "#14F195",
-                        colorBackground: "#0f0f17",
-                        colorText: "#f8fafc",
-                        colorDanger: "#f87171",
-                        fontFamily: "Inter, sans-serif",
-                        borderRadius: "12px",
-                        spacingUnit: "5px",
-                      },
-                    },
-                  }}
+                <p className="text-red-400 text-sm">{intentState.message}</p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-sm text-[#78a9ff] hover:underline"
                 >
-                  <CheckoutForm
-                    tierName={tier.name}
-                    tierPrice={tier.price}
-                    onSuccess={onSuccess}
-                    onCancel={onClose}
-                  />
-                </Elements>
-              )}
-            </div>
+                  Close
+                </button>
+              </div>
+            )}
+
+            {intentState.status === "ready" && (
+              <Elements
+                key={intentState.clientSecret}
+                stripe={intentState.stripePromise}
+                options={{
+                  clientSecret: intentState.clientSecret,
+                  locale: "en",
+                  appearance: {
+                    theme: "night",
+                    variables: {
+                      colorPrimary: "#14F195",
+                      colorBackground: "#0f0f17",
+                      colorText: "#f8fafc",
+                      colorDanger: "#f87171",
+                      fontFamily: "Inter, sans-serif",
+                      borderRadius: "12px",
+                      spacingUnit: "5px",
+                    },
+                  },
+                }}
+              >
+                <CheckoutForm
+                  tierName={tier.name}
+                  tierPrice={tier.price}
+                  tierKey={intentState.tier as "Lite" | "Plus" | "Pro"}
+                  onSuccess={onSuccess}
+                  onCancel={onClose}
+                />
+              </Elements>
+            )}
           </div>
         </div>
-      </>
-    );
-  }
+      </div>
+    </>
+  );
+}

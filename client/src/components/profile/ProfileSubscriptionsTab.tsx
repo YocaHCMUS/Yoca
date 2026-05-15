@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { 
   getUserSubscription, 
-  getUserPaymentHistory, 
+  getUserPaymentHistory,
+  cancelSubscription,
+  upgradeSubscription,
   type Subscription, 
   type PaymentHistory 
-} from "@/services/profile/profileApi";
+} from "@/services/profile/subscriptionApi";
 import { formatPrice, formatTimestamp } from "@/util/format";
 import { Loading } from "@carbon/react";
 
@@ -67,7 +69,6 @@ export function ProfileSubscriptionsTab() {
 }
 
 import { Modal } from "@carbon/react";
-import { cancelSubscription, upgradeSubscription } from "@/services/profile/subscriptionApi";
 
 function SubscriptionsPanel({ subscription, onUpdate }: { subscription: Subscription | null, onUpdate: () => void }) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
