@@ -2,10 +2,7 @@ import type {
   WalletSwap,
   WalletSwapTokenChange,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import type {
-  HeliusEnhancedTransaction,
-  HeliusEnhancedNativeTransfer,
-} from "@sv/services/transactions.js";
+import type { HeliusEnhancedTransaction } from "@sv/services/transactions.js";
 import { toIsoTimestamp } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
 
 
@@ -39,29 +36,7 @@ function extractSwapProgramId(
   return null;
 }
 
-function findSwapNativeTransfer(
-  nativeTransfers: HeliusEnhancedNativeTransfer[] | undefined,
-  walletAddress: string,
-  direction: "from" | "to",
-): { lamports: number; counterparty: string } | null {
-  let bestLamports = 0;
-  let bestCounterparty = "";
-  for (const nt of nativeTransfers ?? []) {
-    const amount = Number(nt.amount ?? 0);
-    if (amount <= 0 || isRentExemptLikeLamports(amount)) continue;
-    const sender = String(nt.fromUserAccount ?? "").trim();
-    const receiver = String(nt.toUserAccount ?? "").trim();
-    if (direction === "from" && sender === walletAddress && amount > bestLamports) {
-      bestLamports = amount;
-      bestCounterparty = receiver;
-    }
-    if (direction === "to" && receiver === walletAddress && amount > bestLamports) {
-      bestLamports = amount;
-      bestCounterparty = sender;
-    }
-  }
-  return bestLamports > 0 ? { lamports: bestLamports, counterparty: bestCounterparty } : null;
-}
+
 
 function buildSwapLeg(mint: string, amount: number): WalletSwapTokenChange {
   return {
@@ -149,20 +124,34 @@ export function mapHeliusTxToSwap(
   const tokenTransfers = tx.tokenTransfers ?? [];
   const nativeTransfers = tx.nativeTransfers ?? [];
 
-  const outflows: Array<{ mint: string; amount: number; counterParty: string }> = [];
-  const inflows: Array<{ mint: string; amount: number; counterParty: string }> = [];
+  const NET_ZERO_THRESHOLD = 1e-10;
+  const netMap = new Map<string, number>();
 
   for (const t of tokenTransfers) {
     const mint = String(t.mint ?? "").trim();
     const amount = Number(t.tokenAmount ?? t.amount ?? 0);
-    const fromAccount = t.fromUserAccount || ""
-    const toAccount = t.toUserAccount || ""
     if (!mint || amount <= 0) continue;
-    if (fromAccount === signer) outflows.push({ mint, amount, counterParty: toAccount });
-    if (toAccount === signer) inflows.push({ mint, amount, counterParty: fromAccount });
+    if (t.fromUserAccount === signer) netMap.set(mint, (netMap.get(mint) ?? 0) - amount);
+    if (t.toUserAccount === signer) netMap.set(mint, (netMap.get(mint) ?? 0) + amount);
   }
 
-  let counterparty: string;
+  for (const nt of nativeTransfers) {
+    const amount = Number(nt.amount ?? 0);
+    if (amount <= 0 || isRentExemptLikeLamports(amount)) continue;
+    const solAmount = amount / 1e9;
+    if (nt.fromUserAccount === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) - solAmount);
+    if (nt.toUserAccount === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) + solAmount);
+  }
+
+  const outflows: Array<{ mint: string; amount: number }> = [];
+  const inflows: Array<{ mint: string; amount: number }> = [];
+  for (const [mint, net] of netMap) {
+    if (Math.abs(net) <= NET_ZERO_THRESHOLD) continue;
+    if (net < 0) outflows.push({ mint, amount: -net });
+    else inflows.push({ mint, amount: net });
+  }
+
+  let counterparty = "unknown";
   let bought: WalletSwapTokenChange | null = null;
   let sold: WalletSwapTokenChange | null = null;
 
@@ -171,21 +160,6 @@ export function mapHeliusTxToSwap(
     const maxIn = inflows.reduce((a, b) => (a.amount > b.amount ? a : b));
     sold = buildSwapLeg(maxOut.mint, maxOut.amount);
     bought = buildSwapLeg(maxIn.mint, maxIn.amount);
-    counterparty = maxOut.counterParty || maxIn.counterParty || "unknown";
-  } else if (outflows.length > 0) {
-    const nativeInflow = findSwapNativeTransfer(nativeTransfers, signer, "to");
-    if (!nativeInflow) return null;
-    const maxOut = outflows.reduce((a, b) => (a.amount > b.amount ? a : b));
-    sold = buildSwapLeg(maxOut.mint, maxOut.amount);
-    bought = buildSwapLeg(SOL_MINT, nativeInflow.lamports / 1e9);
-    counterparty = nativeInflow.counterparty;
-  } else if (inflows.length > 0) {
-    const nativeOutflow = findSwapNativeTransfer(nativeTransfers, signer, "from");
-    if (!nativeOutflow) return null;
-    const maxIn = inflows.reduce((a, b) => (a.amount > b.amount ? a : b));
-    bought = buildSwapLeg(maxIn.mint, maxIn.amount);
-    sold = buildSwapLeg(SOL_MINT, nativeOutflow.lamports / 1e9);
-    counterparty = nativeOutflow.counterparty;
   } else {
     return null;
   }

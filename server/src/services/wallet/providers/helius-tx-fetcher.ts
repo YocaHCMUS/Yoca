@@ -1,6 +1,6 @@
 import type { HeliusEnhancedTransaction } from "@sv/services/transactions.js";
 import { runCursorPagination } from "@sv/services/wallet/fetchers/walletPagination.js";
-import { getEndpoint, getNextkey, heliusFetch } from "@sv/util/util-helius.js";
+import { heliusGetJson } from "./helius.client.js";
 
 export type HeliusTxFetcherResult = {
   transactions: HeliusEnhancedTransaction[];
@@ -8,27 +8,6 @@ export type HeliusTxFetcherResult = {
   hasMore: boolean;
   pagesFetched: number;
 };
-
-async function heliusAddressFetch<T>(
-  path: string,
-  searchParams: Record<string, string | number | boolean>,
-): Promise<T> {
-  const url = getEndpoint(path);
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (value != null) {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  if (!url.searchParams.has("api-key")) {
-    const apiKey = getNextkey();
-    url.searchParams.set("api-key", apiKey);
-  }
-  const response = await heliusFetch(url, { method: "GET" });
-  if (!response.ok) {
-    throw new Error(`Helius API error ${response.status}: ${response.statusText}`);
-  }
-  return (await response.json()) as T;
-}
 
 export async function fetchHeliusAddressTransactions(
   address: string,
@@ -52,7 +31,7 @@ export async function fetchHeliusAddressTransactions(
       try {
         const params: Record<string, string | number | boolean> = { limit };
         if (cursor) params.before = cursor;
-        json = await heliusAddressFetch<unknown>(
+        json = await heliusGetJson<unknown>(
           `/v0/addresses/${address}/transactions`,
           params,
         );
