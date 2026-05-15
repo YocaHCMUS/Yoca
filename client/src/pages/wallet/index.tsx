@@ -345,9 +345,7 @@ export default function WalletPage() {
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(
-          (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
-        );
+        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
         return [
           String(swap.blockTimestampIso ?? ""), // time column
           formatSwapPair(swap), // pair column
@@ -1197,12 +1195,8 @@ export default function WalletPage() {
       const snap = await ensurePortfolioAndActivityForExport();
       const { rows: portfolioRows } = mapPortfolioItems(snap.portfolio);
       const swapSheetRows = snap.swaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(
-          (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
-        );
-        const baseQuotePrice = toOptionalFiniteNumber(
-          (swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice,
-        );
+        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
+        const baseQuotePrice = toOptionalFiniteNumber(swap.baseQuotePrice);
         return [
           String(swap.blockTimestampIso ?? ""),
           formatSwapPair(swap),
