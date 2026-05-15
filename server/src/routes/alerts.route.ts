@@ -1,12 +1,18 @@
 import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import { solanaBase58Schema, validate } from "@sv/middlewares/validation.js";
 import {
+  createAlertRule,
+  deleteAlertRule,
+  listActiveAlertRules,
+} from "@sv/services/alertRules.service.js";
+import {
   addFollowedWallet,
-  getUserDiscordUrl,
+  getUserAlertSettings,
   isUniqueViolation,
   listFollowedWallets,
   removeFollowedWallet,
   setUserDiscordUrl,
+  setUserEmailAlertSettings,
   syncHeliusWebhookAccountAddresses,
 } from "@sv/services/followedWallets.service.js";
 import { statusCode } from "@sv/util/responses.js";
@@ -25,18 +31,167 @@ const followWalletBodySchema = z.object({
   label: z.string().trim().max(120).optional().nullable(),
 });
 
-const discordSettingsSchema = z.object({
-  discordWebhookUrl: z
-    .string()
-    .trim()
-    .url()
-    .refine((v) => v.includes("discord.com/api/webhooks/"), {
-      message: "Must be a Discord webhook URL",
-    })
-    .nullable(),
-});
+const settingsPatchSchema = z
+  .object({
+    discordWebhookUrl: z
+      .string()
+      .trim()
+      .url()
+      .refine((v) => v.includes("discord.com/api/webhooks/"), {
+        message: "Must be a Discord webhook URL",
+      })
+      .nullable()
+      .optional(),
+    emailAlertsEnabled: z.boolean().optional(),
+    emailAlertsAddress: z
+      .string()
+      .trim()
+      .email()
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (v) =>
+      v.discordWebhookUrl !== undefined ||
+      v.emailAlertsEnabled !== undefined ||
+      v.emailAlertsAddress !== undefined,
+    { message: "At least one field must be provided" },
+  );
+
+const alertRuleBodySchema = z
+  .object({
+    name: z.string().trim().max(200).optional().nullable(),
+    walletAddress: solanaBase58Schema,
+    actionType: z.enum(["SWAP", "TRANSFER", "ALL"]),
+    minVolume: z.number().positive(),
+    maxVolume: z.number().positive().optional().nullable(),
+    volumeUnit: z.enum(["USD", "SOL"]),
+    triggerType: z.enum(["ONCE", "ALWAYS"]),
+    expiryDate: z.string(),
+    useDefaultDelivery: z.boolean(),
+    discordWebhookOverride: z.string().trim().optional().nullable(),
+    emailOverride: z.string().trim().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const exp = new Date(data.expiryDate);
+    if (Number.isNaN(+exp)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid expiryDate",
+        path: ["expiryDate"],
+      });
+      return;
+    }
+    if (exp <= new Date()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "expiryDate must be in the future",
+        path: ["expiryDate"],
+      });
+    }
+    if (data.maxVolume != null && data.maxVolume < data.minVolume) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "maxVolume must be >= minVolume",
+        path: ["maxVolume"],
+      });
+    }
+    if (!data.useDefaultDelivery) {
+      const discordOk =
+        !!data.discordWebhookOverride?.includes("discord.com/api/webhooks/");
+      const emailOk =
+        !!data.emailOverride?.trim() &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.emailOverride.trim());
+      if (!discordOk && !emailOk) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "When not using default delivery, set a Discord webhook URL and/or email override",
+          path: ["useDefaultDelivery"],
+        });
+      }
+    }
+    if (
+      data.discordWebhookOverride &&
+      !data.discordWebhookOverride.includes("discord.com/api/webhooks/")
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Must be a Discord webhook URL",
+        path: ["discordWebhookOverride"],
+      });
+    }
+    if (
+      data.emailOverride?.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.emailOverride.trim())
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid email",
+        path: ["emailOverride"],
+      });
+    }
+  });
 
 const app = new Hono()
+  // ── Advanced alert rules (predicate filtering on webhook) ──────
+  .get("/rules", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
+    try {
+      const rules = await listActiveAlertRules(userId);
+      return c.json(rules, statusCode.Ok);
+    } catch (err) {
+      console.error("[alerts] GET /rules failed:", err);
+      return c.json({ error: "Failed to load alert rules" }, 500);
+    }
+  })
+  .post(
+    "/rules",
+    honoJwt,
+    validate("json", alertRuleBodySchema),
+    async (c) => {
+      const { id: userId } = c.get("jwtPayload") as { id: string };
+      const body = c.req.valid("json");
+      try {
+        const rule = await createAlertRule(userId, {
+          name: body.name ?? null,
+          walletAddress: body.walletAddress,
+          actionType: body.actionType,
+          minVolume: body.minVolume,
+          maxVolume: body.maxVolume ?? null,
+          volumeUnit: body.volumeUnit,
+          triggerType: body.triggerType,
+          expiryDate: new Date(body.expiryDate),
+          useDefaultDelivery: body.useDefaultDelivery,
+          discordWebhookOverride: body.discordWebhookOverride ?? null,
+          emailOverride: body.emailOverride ?? null,
+        });
+        const heliusSync = await syncHeliusWebhookAccountAddresses();
+        return c.json({ rule, heliusSync }, statusCode.Created);
+      } catch (err) {
+        console.error("[alerts] POST /rules failed:", err);
+        return c.json({ error: "Failed to create alert rule" }, 500);
+      }
+    },
+  )
+  .delete("/rules/:ruleId", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
+    const ruleId = Number(c.req.param("ruleId"));
+    if (!Number.isFinite(ruleId) || ruleId <= 0) {
+      return c.json({ error: "Invalid rule id" }, 400);
+    }
+    try {
+      const deleted = await deleteAlertRule(ruleId, userId);
+      if (!deleted) {
+        return c.json({ error: "Rule not found" }, 404);
+      }
+      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      return c.json({ deleted: true, heliusSync }, statusCode.Ok);
+    } catch (err) {
+      console.error("[alerts] DELETE /rules/:ruleId failed:", err);
+      return c.json({ error: "Failed to delete alert rule" }, 500);
+    }
+  })
   // ── Wallet CRUD (auth-guarded) ───────────────────────────────
   .get("/", honoJwt, async (c) => {
     const { id: userId } = c.get("jwtPayload") as { id: string };
@@ -84,12 +239,15 @@ const app = new Hono()
       return c.json({ error: "Failed to remove wallet" }, 500);
     }
   })
-  // ── User Discord settings (auth-guarded) ─────────────────────
+  // ── User notification settings (auth-guarded) ────────────────
   .get("/settings", honoJwt, async (c) => {
     const { id: userId } = c.get("jwtPayload") as { id: string };
     try {
-      const discordWebhookUrl = await getUserDiscordUrl(userId);
-      return c.json({ discordWebhookUrl }, statusCode.Ok);
+      const settings = await getUserAlertSettings(userId);
+      if (!settings) {
+        return c.json({ error: "User not found" }, 404);
+      }
+      return c.json(settings, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] GET settings failed:", err);
       return c.json({ error: "Failed to load settings" }, 500);
@@ -98,13 +256,32 @@ const app = new Hono()
   .patch(
     "/settings",
     honoJwt,
-    validate("json", discordSettingsSchema),
+    validate("json", settingsPatchSchema),
     async (c) => {
       const { id: userId } = c.get("jwtPayload") as { id: string };
-      const { discordWebhookUrl } = c.req.valid("json");
+      const body = c.req.valid("json");
       try {
-        await setUserDiscordUrl(userId, discordWebhookUrl);
-        return c.json({ discordWebhookUrl }, statusCode.Ok);
+        if (body.discordWebhookUrl !== undefined) {
+          await setUserDiscordUrl(userId, body.discordWebhookUrl);
+        }
+        if (
+          body.emailAlertsEnabled !== undefined ||
+          body.emailAlertsAddress !== undefined
+        ) {
+          const current = await getUserAlertSettings(userId);
+          await setUserEmailAlertSettings(userId, {
+            emailAlertsEnabled:
+              body.emailAlertsEnabled ??
+              current?.emailAlertsEnabled ??
+              false,
+            emailAlertsAddress:
+              body.emailAlertsAddress !== undefined
+                ? body.emailAlertsAddress
+                : current?.emailAlertsAddress ?? null,
+          });
+        }
+        const updated = await getUserAlertSettings(userId);
+        return c.json(updated, statusCode.Ok);
       } catch (err) {
         console.error("[alerts] PATCH settings failed:", err);
         return c.json({ error: "Failed to save settings" }, 500);

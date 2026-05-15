@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import {
   GlobalPrices,
+  NewsTab,
   TokenHeader,
   TokenInsightTabs,
   TokenMarketsTable,
@@ -91,6 +92,7 @@ export default function TokenOverviewPage() {
 
   const overviewRef = useRef<HTMLDivElement>(null);
   const marketsRef = useRef<HTMLDivElement>(null);
+  const newsRef = useRef<HTMLDivElement>(null);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -101,6 +103,9 @@ export default function TokenOverviewPage() {
         break;
       case "markets":
         targetRef = marketsRef;
+        break;
+      case "news":
+        targetRef = newsRef;
         break;
     }
     if (targetRef?.current) {
@@ -261,6 +266,19 @@ export default function TokenOverviewPage() {
                 />
               </div>
             )}
+
+            <div
+              ref={newsRef}
+              className={`${styles.marketsSection} ${styles.scrollAnchor}`}
+            >
+              {address && details && (
+                <NewsTab
+                  address={address}
+                  symbol={details.symbol ?? ""}
+                  name={details.name ?? ""}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -21,6 +21,8 @@ export const ErrCodes = {
   dailyChartDailyExceeded365Days: "DAILY_CHART_DAILY_EXCEEDED_365_DAYS",
   notFound: "NOT_FOUND",
   unauthorized: "UNAUTHORIZED",
+  rateLimitExceeded: "RATE_LIMIT_EXCEEDED",
+  badGateway: "BAD_GATEWAY",
 } as const;
 
 export type ErrCode = (typeof ErrCodes)[keyof typeof ErrCodes];

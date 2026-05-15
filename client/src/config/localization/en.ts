@@ -113,6 +113,8 @@ const ERROR = {
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
   NOT_FOUND: "Not found.",
   UNAUTHORIZED: "Unauthorized",
+  RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -326,6 +328,194 @@ export const translation = {
     exportChartsZip: "Export Charts (.zip images)",
     exportingReport: "Exporting report...",
     exportReportPdf: "Export Report (.pdf)",
+    aiAnalysis: "AI Analysis",
+    aiAnalysisLoading: "Analyzing wallet with AI...",
+    aiAnalysisFailed: "Failed to load AI analysis",
+    aiAnalysisRetry: "Retry AI analysis",
+    aiNoData: "No AI analysis data",
+    aiSummary: "Summary",
+    aiStatusOk: "ok",
+    aiStatusInsufficientData: "insufficient_data",
+    aiDataReadiness: "Data Readiness",
+    aiDataAllAvailable: "All data available",
+    aiDataWaiting: "Waiting for required data",
+    aiDataSwaps: "Swaps",
+    aiDataPortfolio: "Portfolio",
+    aiDataFirstFunder: "First funder",
+    aiDataIdentity: "Identity",
+    aiDataIntelligence: "Intelligence",
+    aiDepStatusAvailable: "available",
+    aiDepStatusNoData: "no data",
+    aiDepStatusFetching: "fetching",
+    aiGenerateAnalysis: "Generate analysis",
+    aiGenerating: "Generating...",
+    aiLastUpdated: "Last updated",
+    aiActivityProfile: "Activity Profile",
+    aiArchetype: "Archetype",
+    aiActivityLevel: "Activity level",
+    aiLastActive: "Last active",
+    aiInteractionFingerprint: "Interaction Fingerprint",
+    aiPreferredProtocols: "Preferred protocols",
+    aiTransactionTiming: "Transaction timing",
+    aiPreferredTradingTokens: "Preferred trading tokens",
+    aiPreferredHoldingTokens: "Preferred holding tokens",
+    aiTradingVolumeRange: "Trading volume range",
+    aiFunder: "Funder",
+    aiFunderType: "Funder type",
+    aiNotes: "Notes",
+    aiWalletAge: "Wallet age",
+    aiAgeCategory: "Age category",
+    aiFirstSeen: "First seen",
+    aiConsistencyAssessment: "Consistency assessment",
+    aiSignals: "Signals",
+  },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Scalper",
+        description:
+          "Executes many short-horizon trades and prioritizes fast position turnover.",
+        benefit: {
+          fastTurnover: "Quickly recycles capital into new opportunities.",
+          adaptsVolatility: "Can react fast when market volatility spikes.",
+        },
+        risk: {
+          feeHeavy: "Frequent trading can heavily increase fee drag.",
+          emotionalPressure: "Requires constant monitoring and fast decisions.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          maxAvgHoldHours: "Maximum average holding hours",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Captures multi-day to multi-week moves and avoids overtrading noise.",
+        benefit: {
+          balancedPace:
+            "Balances opportunity capture with lower execution stress.",
+          trendCapture: "Works well in clear medium-term directional trends.",
+        },
+        risk: {
+          gapExposure: "Overnight or weekend gaps can bypass planned exits.",
+          lateReversal: "Delayed exits can erode gains after trend reversal.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          minAvgHoldHours: "Minimum average holding hours",
+        },
+      },
+      momentum: {
+        name: "Momentum Chaser",
+        description:
+          "Follows strong directional breakouts with acceleration in price and volume.",
+        benefit: {
+          strongTrendUpside: "Can scale returns in sustained trend expansions.",
+          quickInvalidation:
+            "Clear invalidation levels help disciplined exits.",
+        },
+        risk: {
+          falseBreakout: "False breakouts can trigger repeated quick losses.",
+          whipsawLosses: "Choppy conditions can cause rapid entry-exit losses.",
+        },
+        rule: {
+          minBuySellRatio: "Minimum buy/sell pressure ratio",
+          minTrades30d: "Minimum trades in last 30 days",
+        },
+      },
+      meanRevert: {
+        name: "Mean Reverter",
+        description:
+          "Looks for overextended moves and trades back toward average pricing.",
+        benefit: {
+          definedEntries:
+            "Entry conditions are often measurable and repeatable.",
+          riskControlled: "Structured position sizing can limit downside.",
+        },
+        risk: {
+          trendAgainst:
+            "Strong trends can remain irrational longer than expected.",
+          patienceRequired: "Setups may be infrequent and require discipline.",
+        },
+        rule: {
+          maxTrades30d: "Maximum trades in last 30 days",
+          minWinRate: "Minimum required win rate",
+        },
+      },
+      conviction: {
+        name: "Conviction Holder",
+        description:
+          "Builds concentrated positions and holds through broader market cycles.",
+        benefit: {
+          longCycleUpside:
+            "Can capture compounding upside from long trend cycles.",
+          lowNoise: "Fewer trades reduce reaction to short-term market noise.",
+        },
+        risk: {
+          concentration: "High concentration can amplify drawdowns.",
+          slowExit: "Large positions may be harder to unwind quickly.",
+        },
+        rule: {
+          maxTokensHeld: "Maximum distinct tokens held",
+          minAvgHoldDays: "Minimum average holding days",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Smart Money",
+        description:
+          "Historically profitable wallet with consistent risk-adjusted decisions.",
+      },
+      activeTrader: {
+        name: "Active Trader",
+        description:
+          "High activity wallet with frequent rotations and short response cycles.",
+      },
+      whale: {
+        name: "Whale",
+        description:
+          "Wallet with large capital base capable of moving thin-liquidity markets.",
+      },
+      newWallet: {
+        name: "New Wallet",
+        description:
+          "Recently active wallet with limited historical behavior footprint.",
+      },
+      riskWallet: {
+        name: "Risk Wallet",
+        description:
+          "Wallet that shows elevated volatility, adverse signals, or unstable patterns.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Centralized Exchange",
+        description:
+          "First inbound funding appears to come from a centralized exchange hot wallet.",
+      },
+      dexRouter: {
+        name: "DEX Router",
+        description:
+          "First inbound funding originates from decentralized swap router infrastructure.",
+      },
+      bridge: {
+        name: "Bridge",
+        description:
+          "First inbound funding indicates cross-chain bridge transfer behavior.",
+      },
+      otc: {
+        name: "OTC Desk",
+        description:
+          "First inbound funding likely from over-the-counter settlement wallet.",
+      },
+      unknown: {
+        name: "Unknown Source",
+        description:
+          "Funding source cannot be confidently classified from available on-chain signals.",
+      },
+    },
   },
   // Market Page
   marketPage: {
@@ -404,6 +594,39 @@ export const translation = {
     pdfWalletsCompared: "Wallets Compared",
     pdfWalletAddresses: "Wallet Addresses",
   },
+  // Wallet Report PDF Template
+  wallet_report: {
+    wallet_audit_report: "Wallet Audit Report",
+    export_date: "Export Date:",
+    first_funder: "First funder:",
+    wallet_age: "Wallet age:",
+    wallet_address: "WALLET ADDRESS",
+    executive_summary: "Executive Summary",
+    total_asset_value: "Total Asset Value",
+    total_pnl: "Total PnL",
+    total_trading_volume: "Total Trading Volume",
+    overview_details: "Overview Details",
+    metrics_period: "Metrics Period",
+    period_24h: "24H",
+    transaction_count: "Transaction Count",
+    buy_tx_count: "Buy Tx Count",
+    sell_tx_count: "Sell Tx Count",
+    buy_volume: "Buy Volume",
+    sell_volume: "Sell Volume",
+    realized_pnl: "Realized PnL",
+    unrealized_pnl: "Unrealized PnL",
+    tokens_holding: "Tokens Holding",
+    tokens_traded: "Tokens Traded",
+    overview: "Overview",
+    balance_trend: "Balance Trend",
+    profit_loss: "Profit & Loss",
+    daily_pnl: "Daily P&L",
+    cumulative_pnl: "Cumulative P&L",
+    holdings: "Holdings",
+    activity_risk: "Activity / Risk",
+    asset_change_24h: "Asset Change (24H)",
+    no_tags: "No Tags",
+  },
   // Navigation
   nav: {
     market: "Market",
@@ -465,16 +688,83 @@ export const translation = {
     deleteFailed: "Failed to remove wallet. Please try again.",
     deleteNotFound: "Wallet was already removed.",
     signInRequired: "Please sign in to manage your followed wallets.",
-  },
-  profilePage: {
-    title: "Profile settings",
-    subtitle: "Set your personal Discord webhook URL to receive wallet alerts.",
+    discordSectionTitle: "Discord notifications",
     discordLabel: "Discord Webhook URL",
     discordPlaceholder: "https://discord.com/api/webhooks/...",
-    saveButton: "Save",
-    savedSuccess: "Discord webhook URL saved.",
-    savedError: "Failed to save settings. Please try again.",
-    signInRequired: "Please sign in to access your profile settings.",
+    discordSaveButton: "Save",
+    discordSaved: "Discord webhook URL saved.",
+    discordSaveError: "Failed to save Discord URL. Please try again.",
+    emailSectionTitle: "Email notifications",
+    emailToggleLabel: "Email me alerts",
+    emailRegisteredHint: "Registered email: {{email}}",
+    emailNoRegistered:
+      "No registered email on file. Add an override email below.",
+    emailOverrideLabel: "Override email (optional)",
+    emailOverridePlaceholder: "Leave empty to use your registered email",
+    emailSaveButton: "Save",
+    emailSaved: "Email settings saved.",
+    emailSaveError: "Failed to save email settings. Please try again.",
+    emailNoDestination:
+      "Enable email alerts with either a registered email or an override address.",
+    ruleModalTitle: "Create new alert",
+    ruleModalLabel: "Alerts",
+    ruleStep1Indicator: "(1) Trading events — (2) Delivery",
+    ruleStep2Indicator: "(1) Trading events — (2) Delivery",
+    ruleTraderLabel: "Trader (wallet address)",
+    ruleActionLabel: "Action type",
+    ruleActionSwap: "Swap",
+    ruleActionTransfer: "Transfer",
+    ruleActionAll: "Any activity",
+    ruleVolFrom: "Volume from",
+    ruleVolTo: "Volume to",
+    ruleVolUnit: "Volume unit",
+    ruleUnitUsd: "USD (server converts SOL via WEBHOOK_SOL_PRICE_USD)",
+    ruleUnitSol: "SOL (on-chain)",
+    ruleTriggerLegend: "Trigger",
+    ruleTriggerOnce: "Only once",
+    ruleTriggerAlways: "Always",
+    ruleExpiry: "Expires",
+    ruleUseDefault: "Use default Discord & email settings",
+    ruleToggleOff: "Off",
+    ruleToggleOn: "On",
+    ruleDiscordOverride: "Discord webhook (override)",
+    ruleEmailOverride: "Email (override)",
+    ruleNameLabel: "Alert name",
+    rulePreviewLabel: "Message (auto)",
+    ruleBack: "Back",
+    ruleCancel: "Cancel",
+    ruleNext: "Next",
+    ruleSave: "Save",
+    ruleCreateOpen: "Create new alert",
+    ruleTableTitle: "Advanced alert rules",
+    ruleTableSubtitle:
+      "Helius streams events once; the server applies your predicates (observer + filter) before Discord or email.",
+    ruleTableEmpty: "No active alert rules.",
+    ruleTableName: "Name",
+    ruleTableWallet: "Wallet",
+    ruleTableAction: "Action",
+    ruleTableVolume: "Volume",
+    ruleTableTrigger: "Trigger",
+    ruleTableExpires: "Expires",
+    ruleDeleteSuccess: "Rule removed and Helius synced.",
+    rulePreviewBody: "Wallet {{wallet}} on Solana has {{verb}} with {{range}}.",
+    rulePreviewVerbSwap: "a swap",
+    rulePreviewVerbTransfer: "a transfer",
+    rulePreviewVerbAny: "activity",
+    rulePreviewRangeBoth:
+      "value greater than {{min}}{{sym}} and less than {{max}}{{sym}}",
+    rulePreviewRangeMin: "value greater than {{min}}{{sym}}",
+    rulePreviewWalletPlaceholder: "(wallet address)",
+    ruleErrorWallet: "Enter a valid Solana wallet address.",
+    ruleErrorMinVol: "Minimum volume must be a positive number.",
+    ruleErrorMaxVol:
+      "Maximum volume must be empty or greater than or equal to minimum.",
+    ruleErrorExpiry: "Choose a future expiry date.",
+    ruleErrorDelivery:
+      "Provide a Discord webhook URL and/or a valid email override.",
+    ruleSaveError: "Could not save this alert rule.",
+    ruleLoading: "Loading alert rules…",
+    ruleCreateSuccess: "Alert rule saved and address list sent to Helius.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
@@ -920,8 +1210,39 @@ export const translation = {
     tabs: {
       overview: "Overview",
       markets: "Markets",
+      news: "News",
       trending: "Trending",
       historicalData: "Historical Data",
+    },
+    news: {
+      title: "News & Updates",
+      cached: "Cached",
+      cachedTooltip: "Cached from recent fetch",
+      fetch: "Fetch news",
+      fetchTooltip: "Fetch news for this token",
+      refresh: "Refresh news",
+      refreshTooltip: "Refresh the latest news for this token",
+      loading: "Loading news...",
+      errorPrefix: "Error loading news:",
+      empty: "No news articles found for {{name}}.",
+      tryRefresh: "Try Refreshing",
+      showing: "Showing",
+      of: "of",
+      loadMore: "Load More",
+      expand: "Expand",
+      collapse: "Collapse",
+      snippetsTitle: "Extra snippets",
+      contextTitle: "Token context",
+      priceChartTitle: "Price",
+      marketCapChartTitle: "Market cap",
+      noSnippets: "No extra snippets available.",
+      noContext: "No cached token context available.",
+      loadingContext: "Loading context...",
+      tokenContextLabel: "Context for {{symbol}}",
+      posted: "Article posted",
+      sourceAlt: "News source favicon",
+      sourceFallback: "News",
+      openArticle: "Open article",
     },
     marketsTable: {
       rank: "Rank",

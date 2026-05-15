@@ -3,7 +3,6 @@ export {
   getDailyTokenMarketChart,
   getHourlyTokenMarketChart,
 } from "./token-chart.js";
-export { getTokenHistoricalData } from "./token-history.js";
 export { getTopTokenHolders } from "./token-holders.js";
 export {
   getTokenDetails,
@@ -12,6 +11,13 @@ export {
 } from "./token-info.js";
 export { getCoinGeckoIdsByAddresses as getCoinGeckoIdList } from "./token-list.js";
 export { getTokenMarketData } from "./token-market-data.js";
+export {
+  clearPoolValidationCache,
+  getNewMarketPools,
+  getTopGainerMarketPools,
+  getTopMarketPools,
+  getTrendingMarketPools,
+} from "./token-market-pools.js";
 export {
   getTokenPoolData,
   getTokenPoolDataList,

@@ -157,7 +157,6 @@ export function PageWrapper({
       <>
         <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
         <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
-        <HeaderMenuItem href="/profile">{tr("nav.profile")}</HeaderMenuItem>
       </>
     );
   }
@@ -409,6 +408,11 @@ export function PageWrapper({
       <Content
         id="main-content"
         className={isAnyExtraPanelOpen ? styles.contentDimmed : ""}
+        style={
+          {
+            "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",
+          } as React.CSSProperties
+        }
         onClick={
           isAnyExtraPanelOpen
             ? () => {

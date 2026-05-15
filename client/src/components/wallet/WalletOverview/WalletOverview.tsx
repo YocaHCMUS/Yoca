@@ -322,7 +322,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     };
 
     const handleCompare = () => {
-        navigate(`/comparision/wallets?wallets=${encodeURIComponent(walletAddress)}`);
+        window.location.assign(`/comparison/wallets?wallets=${encodeURIComponent(walletAddress)}`);
     };
 
     const handleOpenFirstFunder = (funderAddress: string) => {
@@ -439,6 +439,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     <div className={styles.utilityButtonsDefault}>
                         <Tooltip label={isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleBookmark}
                                 aria-label="Bookmark wallet"
@@ -449,6 +450,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </Tooltip>
                         <Tooltip label={tr('wallet.createAlert')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleCreateAlert}
                                 aria-label="Create alert"
@@ -458,6 +460,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </Tooltip>
                         <Tooltip label={tr('wallet.compareWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleCompare}
                                 aria-label="Compare wallet"
@@ -467,6 +470,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         </Tooltip>
                         <Tooltip label={tr('wallet.shareWallet')} align="bottom-left">
                             <button
+                                type="button"
                                 className={styles.iconButton}
                                 onClick={handleShare}
                                 aria-label="Share wallet"
@@ -478,6 +482,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 
                     <div className={styles.utilityButtonsMini} ref={utilityMenuRef}>
                         <button
+                            type="button"
                             className={styles.menuTrigger}
                             onClick={() => setIsUtilityMenuOpen(!isUtilityMenuOpen)}
                             aria-label="More options"
@@ -488,6 +493,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                         {isUtilityMenuOpen && (
                             <div className={styles.dropdownMenu}>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleBookmark();
@@ -499,6 +505,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     <span>{isBookmarked ? tr('wallet.bookmarked') : tr('wallet.bookmarkWallet')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleCreateAlert();
@@ -509,6 +516,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     <span>{tr('wallet.createAlert')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleCompare();
@@ -519,6 +527,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                     <span>{tr('wallet.compareWallet')}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     className={styles.menuItem}
                                     onClick={() => {
                                         handleShare();

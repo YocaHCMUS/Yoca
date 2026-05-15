@@ -5,7 +5,8 @@ export function getEndpoint(path: string): URL {
 }
 
 export function getOnchainEndpoint(path: string): URL {
-  return new URL(`${process.env.COINGECKO_API_BASE_URL}/onchain/${path}`);
+  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  return new URL(`${process.env.COINGECKO_API_BASE_URL}/onchain/${normalizedPath}`);
 }
 
 export function getRequiredHeaders(): Record<string, string> {

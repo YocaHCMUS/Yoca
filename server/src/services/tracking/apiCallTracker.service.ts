@@ -35,6 +35,9 @@ function detectProvider(url: string): TrackedProvider {
     if (host.includes("bitquery")) {
         return "bitquery";
     }
+    if (host.includes("dexpaprika")) {
+        return "dexpaprika";
+    }
     return "unknown";
 }
 

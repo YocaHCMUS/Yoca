@@ -1,5 +1,6 @@
-import { type ReactNode, useMemo } from "react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import type { WalletOverviewMultiPeriodResponse } from "@/services/wallet/walletApi";
+import { type ReactNode, useMemo } from "react";
 
 export type WalletReportSection = "overview" | "holdings" | "activity_risk";
 
@@ -14,10 +15,7 @@ interface WalletReportTemplateProps {
   reportDate?: Date;
 }
 
-type MetricItem = {
-  label: string;
-  value: number;
-};
+
 
 type OverviewDetailItem = {
   label: string;
@@ -35,18 +33,6 @@ const REPORT_PAGE_STYLE = {
   boxSizing: "border-box" as const,
   fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
 };
-
-function getSectionLabel(section: WalletReportSection): string {
-  switch (section) {
-    case "holdings":
-      return "Holdings";
-    case "activity_risk":
-      return "Activity / Risk";
-    case "overview":
-    default:
-      return "Overview";
-  }
-}
 
 function toFiniteNumber(value: number | null | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -82,34 +68,6 @@ function resolveTone(value: number): "positive" | "negative" | "neutral" {
   return "neutral";
 }
 
-function buildMetrics(overview: WalletOverviewMultiPeriodResponse | null): MetricItem[] {
-  const selectedPeriod = overview?.selectedPeriod;
-  const selectedStats = selectedPeriod
-    ? overview?.periods?.[selectedPeriod] ?? null
-    : null;
-
-  const totalAssetValue = toFiniteNumber(
-    overview?.holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd,
-  );
-  const totalPnl = toFiniteNumber(selectedStats?.pnl?.totalUsd ?? overview?.pnlUsdTotal);
-  const totalTradingVolume = toFiniteNumber(
-    selectedStats?.tradingVolumeUsd ?? overview?.tradingVolumeUsd24h,
-  );
-
-  const metrics: MetricItem[] = [];
-  if (totalAssetValue != null) {
-    metrics.push({ label: "Total Asset Value", value: totalAssetValue });
-  }
-  if (totalPnl != null) {
-    metrics.push({ label: "Total PnL", value: totalPnl });
-  }
-  if (totalTradingVolume != null) {
-    metrics.push({ label: "Total Trading Volume", value: totalTradingVolume });
-  }
-
-  return metrics;
-}
-
 export function WalletReportTemplate({
   walletAddress,
   tags,
@@ -120,12 +78,51 @@ export function WalletReportTemplate({
   activityRiskContent,
   reportDate,
 }: WalletReportTemplateProps) {
+  const { tr } = useLocalization();
+
   const dateToRender = reportDate instanceof Date && !Number.isNaN(reportDate.getTime())
     ? reportDate
     : new Date();
 
-  const sectionLabel = useMemo(() => getSectionLabel(activeSection), [activeSection]);
-  const metrics = useMemo(() => buildMetrics(overview), [overview]);
+  const sectionLabel = useMemo(() => {
+    switch (activeSection) {
+      case "holdings":
+        return String(tr("wallet_report.holdings"));
+      case "activity_risk":
+        return String(tr("wallet_report.activity_risk"));
+      case "overview":
+      default:
+        return String(tr("wallet_report.overview"));
+    }
+  }, [activeSection, tr]);
+
+  const metrics = useMemo(() => {
+    const selectedPeriod = overview?.selectedPeriod;
+    const selectedStats = selectedPeriod
+      ? overview?.periods?.[selectedPeriod] ?? null
+      : null;
+
+    const totalAssetValue = toFiniteNumber(
+      overview?.holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd,
+    );
+    const totalPnl = toFiniteNumber(selectedStats?.pnl?.totalUsd ?? overview?.pnlUsdTotal);
+    const totalTradingVolume = toFiniteNumber(
+      selectedStats?.tradingVolumeUsd ?? overview?.tradingVolumeUsd24h,
+    );
+
+    const items: { label: string; value: number }[] = [];
+    if (totalAssetValue != null) {
+      items.push({ label: String(tr("wallet_report.total_asset_value")), value: totalAssetValue });
+    }
+    if (totalPnl != null) {
+      items.push({ label: String(tr("wallet_report.total_pnl")), value: totalPnl });
+    }
+    if (totalTradingVolume != null) {
+      items.push({ label: String(tr("wallet_report.total_trading_volume")), value: totalTradingVolume });
+    }
+
+    return items;
+  }, [overview, tr]);
 
   const overviewDetailItems = useMemo<OverviewDetailItem[]>(() => {
     const selectedPeriod = overview?.selectedPeriod ?? null;
@@ -134,7 +131,7 @@ export function WalletReportTemplate({
 
     if (selectedPeriod) {
       detailItems.push({
-        label: "Metrics Period",
+        label: String(tr("wallet_report.metrics_period")),
         value: selectedPeriod,
         tone: "neutral",
       });
@@ -143,7 +140,7 @@ export function WalletReportTemplate({
     const assetChange24hPercent = toFiniteNumber(overview?.holdings?.change24hPercent ?? null);
     if (assetChange24hPercent != null) {
       detailItems.push({
-        label: "Asset Change (24H)",
+        label: String(tr("wallet_report.asset_change_24h")),
         value: formatPercent(assetChange24hPercent),
         tone: resolveTone(assetChange24hPercent),
       });
@@ -162,35 +159,35 @@ export function WalletReportTemplate({
     );
 
     if (totalTx != null) {
-      detailItems.push({ label: "Transaction Count", value: formatCount(totalTx), tone: "neutral" });
+      detailItems.push({ label: String(tr("wallet_report.transaction_count")), value: formatCount(totalTx), tone: "neutral" });
     }
     if (buyTx != null) {
-      detailItems.push({ label: "Buy Tx Count", value: formatCount(buyTx), tone: "neutral" });
+      detailItems.push({ label: String(tr("wallet_report.buy_tx_count")), value: formatCount(buyTx), tone: "neutral" });
     }
     if (sellTx != null) {
-      detailItems.push({ label: "Sell Tx Count", value: formatCount(sellTx), tone: "neutral" });
+      detailItems.push({ label: String(tr("wallet_report.sell_tx_count")), value: formatCount(sellTx), tone: "neutral" });
     }
     if (buyVolume != null) {
-      detailItems.push({ label: "Buy Volume", value: formatCurrency(buyVolume), tone: resolveTone(buyVolume) });
+      detailItems.push({ label: String(tr("wallet_report.buy_volume")), value: formatCurrency(buyVolume), tone: resolveTone(buyVolume) });
     }
     if (sellVolume != null) {
-      detailItems.push({ label: "Sell Volume", value: formatCurrency(sellVolume), tone: resolveTone(sellVolume) });
+      detailItems.push({ label: String(tr("wallet_report.sell_volume")), value: formatCurrency(sellVolume), tone: resolveTone(sellVolume) });
     }
     if (realizedPnl != null) {
-      detailItems.push({ label: "Realized PnL", value: formatCurrency(realizedPnl), tone: resolveTone(realizedPnl) });
+      detailItems.push({ label: String(tr("wallet_report.realized_pnl")), value: formatCurrency(realizedPnl), tone: resolveTone(realizedPnl) });
     }
     if (unrealizedPnl != null) {
-      detailItems.push({ label: "Unrealized PnL", value: formatCurrency(unrealizedPnl), tone: resolveTone(unrealizedPnl) });
+      detailItems.push({ label: String(tr("wallet_report.unrealized_pnl")), value: formatCurrency(unrealizedPnl), tone: resolveTone(unrealizedPnl) });
     }
     if (tokensTraded != null) {
-      detailItems.push({ label: "Tokens Traded", value: formatCount(tokensTraded), tone: "neutral" });
+      detailItems.push({ label: String(tr("wallet_report.tokens_traded")), value: formatCount(tokensTraded), tone: "neutral" });
     }
     if (tokensHolding != null) {
-      detailItems.push({ label: "Tokens Holding", value: formatCount(tokensHolding), tone: "neutral" });
+      detailItems.push({ label: String(tr("wallet_report.tokens_holding")), value: formatCount(tokensHolding), tone: "neutral" });
     }
 
     return detailItems;
-  }, [overview]);
+  }, [overview, tr]);
 
   const sectionContent = useMemo(() => {
     switch (activeSection) {
@@ -213,14 +210,14 @@ export function WalletReportTemplate({
         <header style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 16, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
             <div>
-              <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>Wallet Audit Report</h1>
+              <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>{String(tr("wallet_report.wallet_audit_report"))}</h1>
               <p style={{ margin: "8px 0 0", fontSize: 13, color: "#475569" }}>
-                Export Date: {dateToRender.toLocaleDateString("en-GB")}
+                {String(tr("wallet_report.export_date"))} {dateToRender.toLocaleDateString("en-GB")}
               </p>
             </div>
             <div style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px" }}>
               <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Wallet Address
+                {String(tr("wallet_report.wallet_address"))}
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{walletAddress}</div>
             </div>
@@ -244,7 +241,7 @@ export function WalletReportTemplate({
                 </span>
               ))
             ) : (
-              <span style={{ fontSize: 12, color: "#64748b" }}>No Tags</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>{String(tr("wallet_report.no_tags"))}</span>
             )}
           </div>
         </header>
@@ -253,7 +250,7 @@ export function WalletReportTemplate({
 
           {activeSection === "overview" && metrics.length > 0 ? (
             <section style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: "0 0 12px", fontSize: 20 }}>Executive Summary</h2>
+              <h2 style={{ margin: "0 0 12px", fontSize: 20 }}>{String(tr("wallet_report.executive_summary"))}</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
                 {metrics.map((metric) => (
                   <div
@@ -284,7 +281,7 @@ export function WalletReportTemplate({
 
           {activeSection === "overview" && overviewDetailItems.length > 0 ? (
             <section style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, background: "#ffffff", marginBottom: 20 }}>
-              <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 500 }}>Overview Details</h2>
+              <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 500 }}>{String(tr("wallet_report.overview_details"))}</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
                 {overviewDetailItems.map((item) => {
                   const color = item.tone === "positive"

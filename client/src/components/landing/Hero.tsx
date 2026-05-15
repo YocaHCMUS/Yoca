@@ -36,7 +36,7 @@ export function LandingHero() {
     <section
       className="relative overflow-hidden"
       style={{
-        paddingTop: SECTION_PADDING_Y + 80,
+        paddingTop: 96,
         paddingBottom: SECTION_PADDING_Y,
       }}
     >
@@ -113,9 +113,9 @@ export function LandingHero() {
                 maxWidth: "600px",
               }}
             >
-              The ultimate platform for tracking token flows, identifying whale
-              behaviors, and visualizing complex transaction graphs on the
-              Solana network.
+              The all-in-one suite for Solana traders. Track token trends,
+              visualize whale movements, and stay ahead of the market with
+              real-time on-chain alerts.
             </motion.p>
 
             <motion.div

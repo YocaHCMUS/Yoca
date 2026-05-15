@@ -2,11 +2,11 @@ import { AssetDistribution } from "@/components/charts/AssetDistribution";
 import { StablecoinRatioChart } from "@/components/charts/StablecoinRatio";
 import React from "react";
 import styles from "./GeneralTab.module.scss"; // Assuming we create this
-import type WalletComparisionProp from "./WalletComparisionProp";
+import type WalletComparisonProp from "./WalletComparisonProp";
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
-export const HoldingTab: React.FC<WalletComparisionProp> = ({
+export const HoldingTab: React.FC<WalletComparisonProp> = ({
   walletAddresses,
   fetchEnabled = true,
 }) => {

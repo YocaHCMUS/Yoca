@@ -294,6 +294,194 @@ export const translation = defineTranslation({
     exportChartsZip: "Xuất biểu đồ (.zip images)",
     exportingReport: "Đang xuất báo cáo...",
     exportReportPdf: "Xuất báo cáo (.pdf)",
+    aiAnalysis: "Phân tích AI",
+    aiAnalysisLoading: "AI đang phân tích ví...",
+    aiAnalysisFailed: "Không thể tải phân tích AI",
+    aiAnalysisRetry: "Thử lại phân tích AI",
+    aiNoData: "Không có dữ liệu phân tích AI",
+    aiSummary: "Tóm tắt",
+    aiStatusOk: "đủ dữ liệu",
+    aiStatusInsufficientData: "thiếu dữ liệu",
+    aiDataReadiness: "Mức sẵn sàng dữ liệu",
+    aiDataAllAvailable: "Đã đủ dữ liệu",
+    aiDataWaiting: "Đang chờ dữ liệu bắt buộc",
+    aiDataSwaps: "Hoán đổi",
+    aiDataPortfolio: "Danh mục",
+    aiDataFirstFunder: "Nguồn tài trợ đầu",
+    aiDataIdentity: "Định danh",
+    aiDataIntelligence: "Phân tích",
+    aiDepStatusAvailable: "có dữ liệu",
+    aiDepStatusNoData: "không có dữ liệu",
+    aiDepStatusFetching: "đang tải",
+    aiGenerateAnalysis: "Tạo phân tích",
+    aiGenerating: "Đang tạo...",
+    aiLastUpdated: "Cập nhật",
+    aiActivityProfile: "Hồ sơ hoạt động",
+    aiArchetype: "Kiểu hành vi",
+    aiActivityLevel: "Mức độ hoạt động",
+    aiLastActive: "Hoạt động gần nhất",
+    aiInteractionFingerprint: "Dấu vân tay tương tác",
+    aiPreferredProtocols: "Giao thức ưu tiên",
+    aiTransactionTiming: "Nhịp thời gian giao dịch",
+    aiPreferredTradingTokens: "Token giao dịch ưu tiên",
+    aiPreferredHoldingTokens: "Token nắm giữ ưu tiên",
+    aiTradingVolumeRange: "Biên độ khối lượng giao dịch",
+    aiFunder: "Nguồn tài trợ",
+    aiFunderType: "Loại nguồn tài trợ",
+    aiNotes: "Ghi chú",
+    aiWalletAge: "Tuổi ví",
+    aiAgeCategory: "Phân loại tuổi",
+    aiFirstSeen: "Lần xuất hiện đầu",
+    aiConsistencyAssessment: "Đánh giá độ nhất quán",
+    aiSignals: "Tín hiệu",
+  },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Lướt sóng nhanh",
+        description:
+          "Thực hiện nhiều giao dịch ngắn hạn và ưu tiên vòng quay vị thế nhanh.",
+        benefit: {
+          fastTurnover: "Xoay vòng vốn nhanh sang cơ hội mới.",
+          adaptsVolatility:
+            "Có thể phản ứng nhanh khi độ biến động thị trường tăng mạnh.",
+        },
+        risk: {
+          feeHeavy: "Giao dịch dày có thể làm chi phí phí giao dịch tăng cao.",
+          emotionalPressure:
+            "Cần theo dõi liên tục và ra quyết định rất nhanh.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          maxAvgHoldHours: "Số giờ nắm giữ trung bình tối đa",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Nắm bắt nhịp tăng/giảm theo chu kỳ vài ngày đến vài tuần và tránh nhiễu giao dịch quá mức.",
+        benefit: {
+          balancedPace:
+            "Cân bằng giữa bắt cơ hội và giảm áp lực khớp lệnh liên tục.",
+          trendCapture: "Phù hợp khi xu hướng trung hạn rõ ràng.",
+        },
+        risk: {
+          gapExposure:
+            "Khoảng trống giá qua đêm/cuối tuần có thể vượt điểm thoát dự kiến.",
+          lateReversal:
+            "Thoát lệnh chậm khi đảo chiều có thể bào mòn lợi nhuận.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          minAvgHoldHours: "Số giờ nắm giữ trung bình tối thiểu",
+        },
+      },
+      momentum: {
+        name: "Bám theo động lượng",
+        description:
+          "Theo các điểm bứt phá mạnh với gia tốc về giá và khối lượng.",
+        benefit: {
+          strongTrendUpside:
+            "Có thể mở rộng lợi nhuận khi xu hướng mạnh tiếp diễn.",
+          quickInvalidation: "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
+        },
+        risk: {
+          falseBreakout: "Phá vỡ giả có thể gây chuỗi thua lỗ nhanh.",
+          whipsawLosses:
+            "Thị trường nhiễu có thể gây lỗ liên tục do vào/ra nhanh.",
+        },
+        rule: {
+          minBuySellRatio: "Tỷ lệ áp lực mua/bán tối thiểu",
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+        },
+      },
+      meanRevert: {
+        name: "Hồi quy trung bình",
+        description:
+          "Tìm các nhịp đi quá xa và giao dịch theo hướng quay về vùng giá trung bình.",
+        benefit: {
+          definedEntries: "Điều kiện vào lệnh thường đo được và lặp lại được.",
+          riskControlled: "Quản trị quy mô vị thế giúp kiểm soát rủi ro.",
+        },
+        risk: {
+          trendAgainst: "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
+          patienceRequired: "Tín hiệu có thể thưa, cần kiên nhẫn và kỷ luật.",
+        },
+        rule: {
+          maxTrades30d: "Số lệnh tối đa trong 30 ngày",
+          minWinRate: "Tỷ lệ thắng tối thiểu",
+        },
+      },
+      conviction: {
+        name: "Nắm giữ niềm tin cao",
+        description:
+          "Xây vị thế tập trung và nắm giữ xuyên qua các chu kỳ thị trường rộng hơn.",
+        benefit: {
+          longCycleUpside: "Có thể hưởng lợi kép trong xu hướng dài hạn.",
+          lowNoise: "Ít giao dịch hơn giúp giảm nhiễu ngắn hạn của thị trường.",
+        },
+        risk: {
+          concentration: "Mức tập trung cao có thể khuếch đại drawdown.",
+          slowExit: "Vị thế lớn có thể khó thoát nhanh khi cần thiết.",
+        },
+        rule: {
+          maxTokensHeld: "Số token phân biệt nắm giữ tối đa",
+          minAvgHoldDays: "Số ngày nắm giữ trung bình tối thiểu",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Ví thông minh",
+        description:
+          "Ví có lịch sử lợi nhuận tốt và quyết định ổn định theo mức rủi ro.",
+      },
+      activeTrader: {
+        name: "Ví giao dịch tích cực",
+        description: "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
+      },
+      whale: {
+        name: "Ví cá voi",
+        description:
+          "Ví có quy mô vốn lớn, có thể ảnh hưởng thị trường thanh khoản mỏng.",
+      },
+      newWallet: {
+        name: "Ví mới",
+        description: "Ví mới hoạt động, dữ liệu hành vi lịch sử còn hạn chế.",
+      },
+      riskWallet: {
+        name: "Ví rủi ro",
+        description:
+          "Ví có tín hiệu biến động cao, bất lợi, hoặc hành vi thiếu ổn định.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Sàn tập trung",
+        description:
+          "Nguồn tiền nạp đầu tiên có dấu hiệu đến từ ví nóng của sàn tập trung.",
+      },
+      dexRouter: {
+        name: "Router DEX",
+        description:
+          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router hoán đổi phi tập trung.",
+      },
+      bridge: {
+        name: "Cầu nối",
+        description:
+          "Nguồn tiền nạp đầu tiên cho thấy hành vi chuyển tài sản liên chuỗi.",
+      },
+      otc: {
+        name: "Bàn OTC",
+        description:
+          "Nguồn tiền nạp đầu tiên có khả năng từ ví thanh toán OTC.",
+      },
+      unknown: {
+        name: "Nguồn chưa xác định",
+        description:
+          "Không đủ tín hiệu on-chain để phân loại nguồn tài trợ một cách tin cậy.",
+      },
+    },
   },
   // Market Page
   marketPage: {
@@ -372,6 +560,39 @@ export const translation = defineTranslation({
     pdfWalletsCompared: "Số ví so sánh",
     pdfWalletAddresses: "Địa chỉ ví",
   },
+  // Wallet Report PDF Template
+  wallet_report: {
+    wallet_audit_report: "Báo Cáo Kiểm Toán Ví",
+    export_date: "Ngày xuất:",
+    first_funder: "Nguồn nạp đầu tiên:",
+    wallet_age: "Tuổi ví:",
+    wallet_address: "ĐỊA CHỈ VÍ",
+    executive_summary: "Tóm Tắt Tổng Quan",
+    total_asset_value: "Tổng Giá Trị Tài Sản",
+    total_pnl: "Tổng Lời/Lỗ",
+    total_trading_volume: "Tổng Khối Lượng Giao Dịch",
+    overview_details: "Chi Tiết Tổng Quan",
+    metrics_period: "Kỳ Báo Cáo",
+    period_24h: "24H",
+    transaction_count: "Số Lượng Giao Dịch",
+    buy_tx_count: "Số Giao Dịch Mua",
+    sell_tx_count: "Số Giao Dịch Bán",
+    buy_volume: "Khối Lượng Mua",
+    sell_volume: "Khối Lượng Bán",
+    realized_pnl: "Lời/Lỗ Đã Chốt",
+    unrealized_pnl: "Lời/Lỗ Tạm Tính",
+    tokens_holding: "Token Đang Giữ",
+    tokens_traded: "Token Đã Giao Dịch",
+    overview: "Tổng Quan",
+    balance_trend: "Xu Hướng Số Dư",
+    profit_loss: "Lời & Lỗ",
+    daily_pnl: "Lời/Lỗ Hằng Ngày",
+    cumulative_pnl: "Lời/Lỗ Lũy Kế",
+    holdings: "Tài Sản Nắm Giữ",
+    activity_risk: "Hoạt Động / Rủi Ro",
+    asset_change_24h: "Biến Động Tài Sản (24H)",
+    no_tags: "Không có nhãn",
+  },
   // Navigation
   nav: {
     market: "Thị trường",
@@ -433,16 +654,83 @@ export const translation = defineTranslation({
     deleteFailed: "Không thể xoá ví. Vui lòng thử lại.",
     deleteNotFound: "Ví đã được xoá trước đó.",
     signInRequired: "Vui lòng đăng nhập để quản lý danh sách ví theo dõi.",
-  },
-  profilePage: {
-    title: "Cài đặt hồ sơ",
-    subtitle: "Nhập Discord Webhook URL cá nhân để nhận cảnh báo ví.",
+    discordSectionTitle: "Thông báo Discord",
     discordLabel: "Discord Webhook URL",
     discordPlaceholder: "https://discord.com/api/webhooks/...",
-    saveButton: "Lưu",
-    savedSuccess: "Đã lưu Discord Webhook URL.",
-    savedError: "Lưu cài đặt thất bại. Vui lòng thử lại.",
-    signInRequired: "Vui lòng đăng nhập để truy cập cài đặt hồ sơ.",
+    discordSaveButton: "Lưu",
+    discordSaved: "Đã lưu Discord Webhook URL.",
+    discordSaveError: "Lưu URL Discord thất bại. Vui lòng thử lại.",
+    emailSectionTitle: "Thông báo qua email",
+    emailToggleLabel: "Gửi cảnh báo qua email",
+    emailRegisteredHint: "Email đã đăng ký: {{email}}",
+    emailNoRegistered: "Chưa có email đăng ký. Nhập email thay thế bên dưới.",
+    emailOverrideLabel: "Email thay thế (tuỳ chọn)",
+    emailOverridePlaceholder: "Để trống để dùng email đã đăng ký",
+    emailSaveButton: "Lưu",
+    emailSaved: "Đã lưu cài đặt email.",
+    emailSaveError: "Lưu cài đặt email thất bại. Vui lòng thử lại.",
+    emailNoDestination:
+      "Bật thông báo email với email đã đăng ký hoặc email thay thế.",
+    ruleModalTitle: "Tạo cảnh báo mới",
+    ruleModalLabel: "Cảnh báo",
+    ruleStep1Indicator: "(1) Sự kiện giao dịch — (2) Gửi thông báo",
+    ruleStep2Indicator: "(1) Sự kiện giao dịch — (2) Gửi thông báo",
+    ruleTraderLabel: "Trader (địa chỉ ví)",
+    ruleActionLabel: "Loại hành động",
+    ruleActionSwap: "Swap",
+    ruleActionTransfer: "Chuyển",
+    ruleActionAll: "Mọi hoạt động",
+    ruleVolFrom: "Khối lượng từ",
+    ruleVolTo: "Khối lượng đến",
+    ruleVolUnit: "Đơn vị khối lượng",
+    ruleUnitUsd: "USD (server quy đổi SOL qua WEBHOOK_SOL_PRICE_USD)",
+    ruleUnitSol: "SOL (on-chain)",
+    ruleTriggerLegend: "Kích hoạt",
+    ruleTriggerOnce: "Một lần",
+    ruleTriggerAlways: "Luôn luôn",
+    ruleExpiry: "Hết hạn",
+    ruleUseDefault: "Dùng cài đặt Discord & email mặc định",
+    ruleToggleOff: "Tắt",
+    ruleToggleOn: "Bật",
+    ruleDiscordOverride: "Discord webhook (ghi đè)",
+    ruleEmailOverride: "Email (ghi đè)",
+    ruleNameLabel: "Tên cảnh báo",
+    rulePreviewLabel: "Tin nhắn (tự động)",
+    ruleBack: "Quay lại",
+    ruleCancel: "Huỷ",
+    ruleNext: "Tiếp",
+    ruleSave: "Lưu",
+    ruleCreateOpen: "Tạo cảnh báo mới",
+    ruleTableTitle: "Quy tắc cảnh báo nâng cao",
+    ruleTableSubtitle:
+      "Helius gửi luồng sự kiện một lần; máy chủ áp điều kiện của bạn trước khi Discord hoặc email.",
+    ruleTableEmpty: "Chưa có quy tắc cảnh báo đang hiệu lực.",
+    ruleTableName: "Tên",
+    ruleTableWallet: "Ví",
+    ruleTableAction: "Hành động",
+    ruleTableVolume: "Khối lượng",
+    ruleTableTrigger: "Kích hoạt",
+    ruleTableExpires: "Hết hạn",
+    ruleDeleteSuccess: "Đã xoá quy tắc và đồng bộ Helius.",
+    rulePreviewBody: "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
+    rulePreviewVerbSwap: "một giao dịch swap",
+    rulePreviewVerbTransfer: "một giao dịch chuyển",
+    rulePreviewVerbAny: "hoạt động",
+    rulePreviewRangeBoth:
+      "giá trị lớn hơn {{min}}{{sym}} và nhỏ hơn {{max}}{{sym}}",
+    rulePreviewRangeMin: "giá trị lớn hơn {{min}}{{sym}}",
+    rulePreviewWalletPlaceholder: "(địa chỉ ví)",
+    ruleErrorWallet: "Nhập địa chỉ ví Solana hợp lệ.",
+    ruleErrorMinVol: "Khối lượng tối thiểu phải là số dương.",
+    ruleErrorMaxVol:
+      "Khối lượng tối đa để trống hoặc lớn hơn hoặc bằng tối thiểu.",
+    ruleErrorExpiry: "Chọn thời điểm hết hạn trong tương lai.",
+    ruleErrorDelivery:
+      "Cung cấp URL Discord webhook và/hoặc email ghi đè hợp lệ.",
+    ruleSaveError: "Không thể lưu quy tắc cảnh báo.",
+    ruleLoading: "Đang tải quy tắc cảnh báo…",
+    ruleCreateSuccess:
+      "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
@@ -873,6 +1161,8 @@ export const translation = defineTranslation({
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     NOT_FOUND: "Không tìm thấy",
     UNAUTHORIZED: "Không được ủy quyền",
+    RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+    BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
   token: {
     overviewSectionTitle: "Tổng quan",
@@ -918,8 +1208,39 @@ export const translation = defineTranslation({
     tabs: {
       overview: "Tổng quan",
       markets: "Thị trường",
+      news: "Tin tức",
       trending: "Thịnh hành",
       historicalData: "Dữ liệu lịch sử",
+    },
+    news: {
+      title: "Tin tức & Cập nhật",
+      cached: "Đã lưu tạm",
+      cachedTooltip: "Lấy từ lần truy vấn gần đây",
+      fetch: "Lấy tin tức",
+      fetchTooltip: "Lấy tin tức cho token này",
+      refresh: "Làm mới tin tức",
+      refreshTooltip: "Làm mới tin tức mới nhất cho token này",
+      loading: "Đang tải tin tức...",
+      errorPrefix: "Lỗi khi tải tin tức:",
+      empty: "Không tìm thấy bài viết nào cho {{name}}.",
+      tryRefresh: "Thử làm mới",
+      showing: "Đang hiển thị",
+      of: "trên",
+      loadMore: "Tải thêm",
+      expand: "Mở rộng",
+      collapse: "Thu gọn",
+      snippetsTitle: "Đoạn trích thêm",
+      contextTitle: "Ngữ cảnh token",
+      priceChartTitle: "Giá",
+      marketCapChartTitle: "Vốn hóa thị trường",
+      noSnippets: "Không có đoạn trích thêm.",
+      noContext: "Không có dữ liệu ngữ cảnh token trong cache.",
+      loadingContext: "Đang tải ngữ cảnh...",
+      tokenContextLabel: "Ngữ cảnh cho {{symbol}}",
+      posted: "Bài viết được đăng",
+      sourceAlt: "Biểu tượng nguồn tin",
+      sourceFallback: "Tin tức",
+      openArticle: "Mở bài viết",
     },
     marketsTable: {
       rank: "Thứ hạng",

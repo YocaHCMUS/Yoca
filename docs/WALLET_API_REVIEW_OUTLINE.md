@@ -2,7 +2,7 @@
 
 ## 1. Phạm vi review
 - **Trang chi tiết ví:** `/wallets/:address` (client: `client/src/pages/wallet/index.tsx`)
-- **Trang so sánh ví:** `/comparision/wallets` (client: `client/src/pages/walletsComparision/index.tsx`)
+- **Trang so sánh ví:** `/comparison/wallets` (client: `client/src/pages/walletsComparison/index.tsx`)
 
 ## 2. Nguồn code đã quét
 - **Server routes:**  
@@ -11,11 +11,11 @@
   `server/src/routes/charts/*.ts` (balance, pnl, distribution, counterparties, exchanges, dailyTradingVolume, totalTradingVolume, tradingVolumeDistribution, tradingVolumePerTransaction, holdings, stablecoinRatio, rollingAnnualReturn, averageRollingAnnualReturn, winrate, drawdown).
 - **Client:**  
   `client/src/pages/wallet/index.tsx`,  
-  `client/src/pages/walletsComparision/index.tsx`,  
+  `client/src/pages/walletsComparison/index.tsx`,  
   `client/src/components/wallet/WalletOverview/WalletOverview.tsx`,  
-  `client/src/components/wallet/WalletComparision/GeneralTab.tsx`,  
-  `client/src/components/wallet/WalletComparision/HoldingTab.tsx`,  
-  `client/src/components/wallet/WalletComparision/RiskTab.tsx`,  
+  `client/src/components/wallet/WalletComparison/GeneralTab.tsx`,  
+  `client/src/components/wallet/WalletComparison/HoldingTab.tsx`,  
+  `client/src/components/wallet/WalletComparison/RiskTab.tsx`,  
   các component chart được dùng trên 2 trang.
 - **API client:**  
   `client/src/services/wallet/walletApi.ts`,  
