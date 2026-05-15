@@ -389,6 +389,31 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
+/**
+ * Token price cache for timestamp-aware enrichment.
+ *
+ * Stores price-at-timestamp lookups bucketed to 5-min intervals.
+ * Composite PK prevents duplicate (mint, bucket) entries.
+ * Populated by resolve-token-price.ts cache-first flow.
+ */
+export const tokenPriceCache = pgTable(
+  "token_price_cache",
+  {
+    mint: varchar("mint", { length: 44 }).notNull(),
+    timestampSec: bigint("timestamp_sec", { mode: "number" }).notNull(),
+    priceUsd: decimal("price_usd").notNull(),
+    source: varchar("source", { length: 20 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.mint, table.timestampSec] }),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,
@@ -703,6 +728,8 @@ export const walletSwapMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -712,6 +739,10 @@ export const walletTransferMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
+    coveredFromCursor: varchar("last_wallet_address", { length: 66 }),
+    coveredToCursor: varchar("first_wallet_address", { length: 66 })
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -730,6 +761,100 @@ export const walletHeliusTransactions = pgTable(
       .notNull(),
   },
   (t) => [primaryKey({ columns: [t.address, t.signature] })],
+);
+
+export const walletEnhancedTransactions = pgTable(
+  "wallet_enhanced_transactions",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    slot: bigint("slot", { mode: "number" }),
+    fee: bigint("fee", { mode: "number" }),
+    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    source: text("source"),
+    type: text("type"),
+    programId: varchar("program_id", { length: 66 }),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.signature] })],
+);
+
+export const walletEnhancedTokenTransfers = pgTable(
+  "wallet_enhanced_token_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    mint: varchar("mint", { length: 66 }).notNull(),
+    tokenAmount: decimal("token_amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    symbol: text("symbol"),
+    tokenSymbol: text("token_symbol"),
+    instructionIndex: integer("instruction_index").notNull(),
+  },
+  (t) => [uniqueIndex("uq_enh_token_tx").on(t.address, t.signature, t.instructionIndex)],
+);
+
+export const walletEnhancedNativeTransfers = pgTable(
+  "wallet_enhanced_native_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    amount: decimal("amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    transferIndex: integer("transfer_index").notNull(),
+  },
+  (t) => [uniqueIndex("uq_enh_native_tx").on(t.address, t.signature, t.transferIndex)],
+);
+
+export const walletEnhancedInstructions = pgTable(
+  "wallet_enhanced_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [uniqueIndex("uq_enh_ins_tx").on(t.address, t.signature, t.instructionIndex)],
+);
+
+export const walletEnhancedInnerInstructions = pgTable(
+  "wallet_enhanced_inner_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    innerIndex: integer("inner_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_inner_ins_tx").on(
+      t.address,
+      t.signature,
+      t.instructionIndex,
+      t.innerIndex,
+    ),
+  ],
+);
+
+export const walletEnhancedTxMeta = pgTable(
+  "wallet_enhanced_tx_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromMs: bigint("covered_from_ms", { mode: "number" }),
+    coveredToMs: bigint("covered_to_ms", { mode: "number" }),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletTransactions = pgTable(
@@ -770,9 +895,6 @@ export const walletSwap = pgTable(
 
     tokensInvoled: text("tokens_involved").notNull(),
 
-    exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
-    exchangeName: text("exchange_name").notNull(),
-    exchangeLogo: text("exchange_logo").notNull(),
 
     boughtTokenAddress: varchar("bought_token_address", {
       length: 66,
@@ -786,29 +908,10 @@ export const walletSwap = pgTable(
 
     totalValueUsd: decimal("total_value_usd"),
     baseQuotePrice: decimal("base_quote_price_usd"),
+
+    providerSource: text("provider_source"),
   },
   (t) => [primaryKey({ columns: [t.transactionHash] })],
-);
-
-export const walletExchangeCountsCache = pgTable(
-  "wallet_exchange_counts_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    data: jsonb("data")
-      .$type<{
-        exchanges: Array<{
-          name: string;
-          deposits: number;
-          withdrawals: number;
-          depositsVolume: number;
-          withdrawalsVolume: number;
-        }>;
-        metadata: { period: string; metric: string };
-      }>()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletIdentityCache = pgTable(
@@ -1089,6 +1192,69 @@ export const firstFunderCategoryDictionary = pgTable("first_funder_category_dict
   description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
 });
 
+// --- Wallet PnL Cache tables ---
+
+/**
+ * Daily wallet PnL cache (normalized: one row per day, not JSONB array).
+ * 
+ * Stores computed daily PnL data per wallet/period/aggregation combination.
+ * Each row represents a single day of data within the requested period.
+ * Primary key prevents duplicate daily entries for same wallet/period/aggregation/day combo.
+ */
+export const walletPnlDataCache = pgTable(
+  "wallet_pnl_data_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    dayStartMs: bigint("day_start_ms", { mode: "number" }).notNull(),
+    dailyPnl: decimal("daily_pnl").notNull(),
+    cumulativePnl: decimal("cumulative_pnl").notNull(),
+    dayOpen: decimal("day_open").notNull(),
+    dayClose: decimal("day_close").notNull(),
+    computedAt: timestamp("computed_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.address, t.timePeriod, t.aggregation, t.dayStartMs],
+    }),
+  ],
+);
+
+/**
+ * Wallet PnL cache metadata and coverage tracking.
+ *
+ * Stores coverage ranges (from/to ms), source data ranges for balance history
+ * and transfer data, and update timestamp. Used to determine cache validity
+ * and whether recomputation is needed for a requested range.
+ */
+export const walletPnlDataMeta = pgTable(
+  "wallet_pnl_data_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    coverageFromMs: bigint("coverage_from_ms", { mode: "number" }).notNull(),
+    coverageToMs: bigint("coverage_to_ms", { mode: "number" }).notNull(),
+    sourceBalanceRangeFromMs: bigint("source_balance_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceBalanceRangeToMs: bigint("source_balance_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeFromMs: bigint("source_transfer_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeToMs: bigint("source_transfer_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.address, t.timePeriod, t.aggregation] }),
+  ],
+);
+
 /**
  * AI Wallet Forensic Audit cache.
  *
@@ -1172,6 +1338,8 @@ export type TokenMarketChartDailyInsert =
 export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
+export type TokenPriceCacheInsert = typeof tokenPriceCache.$inferInsert;
+export type TokenPriceCacheRow = typeof tokenPriceCache.$inferSelect;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type RecentTradeInsert = typeof recentTrades.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
@@ -1187,8 +1355,7 @@ export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
-export type WalletExchangeCountsCacheInsert =
-  typeof walletExchangeCountsCache.$inferInsert;
+
 export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
 export type WalletBalanceHistoryCacheInsert =
   typeof walletBalanceHistoryCache.$inferInsert;
@@ -1196,6 +1363,18 @@ export type WalletTokenBalanceHistoryCacheInsert =
   typeof walletTokenBalanceHistoryCache.$inferInsert;
 export type walletHeliusTransactionsInsert =
   typeof walletHeliusTransactions.$inferInsert;
+export type WalletEnhancedTransactionsInsert =
+  typeof walletEnhancedTransactions.$inferInsert;
+export type WalletEnhancedTokenTransfersInsert =
+  typeof walletEnhancedTokenTransfers.$inferInsert;
+export type WalletEnhancedNativeTransfersInsert =
+  typeof walletEnhancedNativeTransfers.$inferInsert;
+export type WalletEnhancedInstructionsInsert =
+  typeof walletEnhancedInstructions.$inferInsert;
+export type WalletEnhancedInnerInstructionsInsert =
+  typeof walletEnhancedInnerInstructions.$inferInsert;
+export type WalletEnhancedTxMetaInsert =
+  typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
@@ -1208,6 +1387,10 @@ export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
+export type WalletPnlDataCacheInsert = typeof walletPnlDataCache.$inferInsert;
+export type WalletPnlDataCacheRow = typeof walletPnlDataCache.$inferSelect;
+export type WalletPnlDataMetaInsert = typeof walletPnlDataMeta.$inferInsert;
+export type WalletPnlDataMetaRow = typeof walletPnlDataMeta.$inferSelect;
 export type NewsBatchInsert = typeof newsBatches.$inferInsert;
 export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;

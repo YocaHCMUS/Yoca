@@ -139,6 +139,12 @@ export const translation = {
     itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
     nextPage: "Next Page",
     previousPage: "Previous Page",
+    searchPlaceholder: "Search table...",
+    filterLabel: "Filter: {{column}}",
+    apply: "Apply",
+    selectAll: "Select All",
+    from: "From",
+    to: "To",
   },
   // Authentication
   auth: {
@@ -258,6 +264,7 @@ export const translation = {
     seller: "Sender",
     sender: "Sender",
     receiver: "Receiver",
+    currentWallet: "Current wallet",
     type: "Type",
     token: "Token",
     amount: "Amount",
@@ -1036,7 +1043,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
-      both: "Both",
+      both: "Daily + Cumulative P&L",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",

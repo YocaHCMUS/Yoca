@@ -126,9 +126,6 @@ export interface WalletSwap {
     pairAddress: string,
 
     tokensInvolved: string,
-    exchangeAddress: string,
-    exchangeName: string,
-    exchangeLogo: string,
 
     bought: WalletSwapTokenChange,
     sold: WalletSwapTokenChange,
@@ -195,27 +192,6 @@ export interface WalletSwapsResponse {
     address: string;
     swaps: WalletSwap[];
     pageInfo: WalletPageInfo;
-}
-
-/** Exchange comparison item for chart (transaction count by platform). */
-export interface WalletExchangeCountItem {
-    name: string;
-    deposits: number;
-    withdrawals: number;
-    depositsVolume: number;
-    withdrawalsVolume: number;
-}
-
-export interface WalletExchangeCountsResponse {
-    exchanges: WalletExchangeCountItem[];
-    metadata: {
-        period?: "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
-        chain?: string;
-        metric: "count" | "volume";
-        source?: "cache" | "provider" | "mixed";
-        limit?: number;
-        truncated?: boolean;
-    };
 }
 
 export type WalletTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
@@ -337,55 +313,6 @@ export type WalletTokenBalanceChunkOptions = {
     chunkToSec?: number;
     limit?: number;
 };
-
-export type WalletExchangeCountsOptions = {
-    period?: string;
-    chain?: string;
-    limit?: number;
-    metric?: "count" | "volume";
-};
-
-export type WalletCounterpartyPeriod = "24h" | "7d";
-
-export interface WalletCounterpartyIdentity {
-    status: "known" | "unknown" | "unavailable";
-    name: string | null;
-    category: string | null;
-    type: string | null;
-}
-
-export interface WalletCounterpartyRow {
-    address: string;
-    identity: WalletCounterpartyIdentity;
-    uniqueTokenCount: number;
-    tokens: string[];
-    transactionCount: number;
-    totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartyRankingItem {
-    address: string;
-    label: string;
-    transactionCount: number;
-    totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartiesResponse {
-    counterparties: WalletCounterpartyRow[];
-    rankings: {
-        byTransactionCount: WalletCounterpartyRankingItem[];
-        byVolume: WalletCounterpartyRankingItem[];
-    };
-    metadata: {
-        period: WalletCounterpartyPeriod;
-        source: "cache" | "provider" | "mixed";
-        totals: {
-            counterparties: number;
-            transactions: number;
-            volume: number;
-        };
-    };
-}
 
 export type BirdeyeNetworthDirection = "back" | "forward";
 export type BirdeyeNetworthType = "1h" | "1d";

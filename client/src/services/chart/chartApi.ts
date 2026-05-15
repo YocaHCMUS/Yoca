@@ -82,68 +82,6 @@ export async function fetchAssetDistribution(
 }
 
 /**
- * Fetch exchange comparison data
- * GET /api/charts/exchanges
- * Type automatically inferred from server route via Hono RPC
- */
-export async function fetchExchangeComparison(
-  params?: Parameters<typeof client.api.charts.exchanges.$get>[0],
-) {
-  console.log("[fetchExchangeComparison] Requesting exchange data with params:", params);
-
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.exchanges.$get(honoParams);
-
-  await handleResponse(response);
-  const data = await response.json();
-
-  if ("error" in data) {
-    console.error("[fetchExchangeComparison] API returned error:", data.error);
-    throw new Error(`API error: ${data.error}`);
-  }
-
-  console.log("[fetchExchangeComparison] RAW API RESPONSE:", data);
-  console.log("[fetchExchangeComparison] Response structure - exchanges count:", data.exchanges?.length ?? 0);
-
-  if (data.exchanges && Array.isArray(data.exchanges)) {
-    console.log("[fetchExchangeComparison] FINAL CHART DATA:", JSON.stringify(data, null, 2));
-  }
-
-  return data;
-}
-
-/**
- * Fetch counterparty activity data
- * GET /api/charts/counterparties
- * Type automatically inferred from server route via Hono RPC
- */
-export async function fetchCounterpartyActivity(
-  params?: Parameters<typeof client.api.charts.counterparties.$get>[0],
-) {
-  console.log("[fetchCounterpartyActivity] Requesting counterparty data with params:", params);
-
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.counterparties.$get(honoParams);
-
-  await handleResponse(response);
-  const data = await response.json();
-
-  if ("error" in data) {
-    console.error("[fetchCounterpartyActivity] API returned error:", data.error);
-    throw new Error(`API error: ${data.error}`);
-  }
-
-  console.log("[fetchCounterpartyActivity] RAW API RESPONSE:", data);
-  console.log("[fetchCounterpartyActivity] Response structure - counterparties count:", data.counterparties?.length ?? 0);
-
-  if (data.counterparties && Array.isArray(data.counterparties)) {
-    console.log("[fetchCounterpartyActivity] FINAL CHART DATA:", JSON.stringify(data, null, 2));
-  }
-
-  return data;
-}
-
-/**
  * Fetch P&L chart data
  * GET /api/charts/pnl
  * Type automatically inferred from server route via Hono RPC
@@ -437,8 +375,6 @@ export async function fetchStablecoinRatio(
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
-  fetchExchangeComparison,
-  fetchCounterpartyActivity,
   fetchPnLChart,
   fetchTransactionDistribution,
   // fetchPriceHistory,
@@ -452,8 +388,6 @@ export const chartApi = {
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
-  getExchanges: fetchExchangeComparison,
-  getCounterparties: fetchCounterpartyActivity,
   getPnL: fetchPnLChart,
   getTransactionDistribution: fetchTransactionDistribution,
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,

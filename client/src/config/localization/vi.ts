@@ -106,6 +106,12 @@ export const translation = defineTranslation({
     itemRangeText: "{{min}}-{{max}} của {{count}} mục",
     nextPage: "Trang tiếp theo",
     previousPage: "Trang trước",
+    searchPlaceholder: "Tìm kiếm bảng...",
+    filterLabel: "Bộ lọc: {{column}}",
+    apply: "Áp dụng",
+    selectAll: "Chọn tất cả",
+    from: "Từ",
+    to: "Đến",
   },
   // Authentication
   auth: {
@@ -225,6 +231,7 @@ export const translation = defineTranslation({
     seller: "Người gửi",
     sender: "Người gửi",
     receiver: "Người nhận",
+    currentWallet: "Ví hiện tại",
     type: "Loại",
     token: "Token",
     amount: "Số lượng",
@@ -1010,7 +1017,7 @@ export const translation = defineTranslation({
       daily: "Hàng ngày",
       weekly: "Hàng tuần",
       monthly: "Hàng tháng",
-      both: "Cả hai",
+      both: "Lãi/Lỗ hàng ngày + tích lũy",
     },
     exchangeComparisonChart: {
       title: "So sánh hoạt động sàn giao dịch",

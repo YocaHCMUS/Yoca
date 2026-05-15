@@ -8,7 +8,7 @@
   grid-template-columns: 420px 4px minmax(0, 1fr);
   gap: 0;
   padding: 0;
-  height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
+  // height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
   min-height: 0;
   overflow: hidden;
 }
@@ -262,6 +262,12 @@
   gap: 36px;
 }
 
+.tableRow {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
 .chartStack {
   display: flex;
   flex-direction: column;
@@ -287,7 +293,7 @@
 // ===== Swap token cells =====
 .swapTokenCell {
   display: inline-flex;
-  align-items: flex-start;
+  // align-items: flex-start;
   gap: $spacing-03;
   min-width: 0;
 }

@@ -15,6 +15,8 @@ import {
 	walletTransferMeta,
 	walletBalanceHistoryCache,
 	walletFirstFund,
+	walletPnlDataCache,
+	walletPnlDataMeta,
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
@@ -87,15 +89,6 @@ function toEpochSec(value: unknown): number | null {
 	}
 
 	return null;
-}
-
-function toNullableFiniteNumber(value: unknown): number | null {
-	if (value == null) {
-		return null;
-	}
-
-	const parsed = Number(value);
-	return Number.isFinite(parsed) ? parsed : null;
 }
 
 function resolveRange(input: CachedRange | "24h" | "7d") {
@@ -294,30 +287,30 @@ export async function getCachedWalletTransactionsHelius(
 	};
 }
 
+export async function getCachedWalletTransfersMeta(address: string) {
+	return await db
+		.select()
+		.from(walletTransferMeta)
+		.where(eq(walletTransferMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletTransfers(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number
 ): Promise<WalletTransfer[] | null> {
-	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
-	if (!isFresh) {
-		return null;
-	}
+	const predicates = [eq(tokenTransfers.address, address)];
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000);
-	const toDate = new Date(range.toSec * 1000);
+	if (from != null && to != null) {
+		predicates.push(gte(tokenTransfers.blockTime, new Date(from)));
+		predicates.push(lte(tokenTransfers.blockTime, new Date(to)));
+	}
 
 	const rows = await db
 		.select()
 		.from(tokenTransfers)
-		.where(
-			and(
-				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-				gte(tokenTransfers.blockTime, fromDate),
-				lte(tokenTransfers.blockTime, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(tokenTransfers.blockTime));
 
 	if (rows.length === 0) {
@@ -328,6 +321,8 @@ export async function getCachedWalletTransfers(
 		from: r.fromOwner,
 		to: r.toOwner,
 		amount: r.amount,
+		amountUsd: Number(r.amountUsd) || undefined,
+		priceUsd: undefined,
 		timestamp: toIsoTimestamp(r.blockTime),
 		tokenAddress: r.tokenAddress,
 		tokenSymbol: r.tokenSymbol,
@@ -336,30 +331,30 @@ export async function getCachedWalletTransfers(
 	}));
 }
 
+export async function getCachedWalletSwapsMeta(address: string) {
+	return await db
+		.select()
+		.from(walletSwapMeta)
+		.where(eq(walletSwapMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletSwaps(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number
 ): Promise<WalletSwap[] | null> {
-	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
-	if (!isFresh) {
-		return null;
-	}
+	const predicates = [eq(walletSwap.walletAddress, address)];
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000).getTime();
-	const toDate = new Date(range.toSec * 1000).getTime();
+	if (from != null && to != null) {
+		predicates.push(gte(walletSwap.blockTimestampMs, from));
+		predicates.push(lte(walletSwap.blockTimestampMs, to));
+	}
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(
-			and(
-				eq(walletSwap.walletAddress, address),
-				gte(walletSwap.blockTimestampMs, fromDate),
-				lte(walletSwap.blockTimestampMs, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(walletSwap.blockTimestampMs));
 
 	if (rows.length === 0) {
@@ -375,9 +370,6 @@ export async function getCachedWalletSwaps(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,
@@ -405,6 +397,7 @@ export async function getCachedWalletSwaps(
 
 	}));
 }
+
 
 export async function getCachedWalletTransfersChunk(
 	address: string,
@@ -607,9 +600,6 @@ export async function getCachedWalletSwapsChunk(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,
@@ -696,6 +686,61 @@ export async function getCachedWalletFirstFund(
 		.from(walletFirstFund)
 		.where(
 			eq(walletFirstFund.reciepient, address),
+		)
+		.limit(1);
+
+	return row.length > 0 ? row[0] : null;
+}
+
+/**
+ * Retrieve wallet PnL cache rows for a given address/period/aggregation within a date range.
+ *
+ * Returns daily PnL records sorted by dayStartMs ascending.
+ * If no data is cached, returns an empty array.
+ */
+export async function getCachedWalletPnl(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+	fromMs: number,
+	toMs: number,
+) {
+	const rows = await db
+		.select()
+		.from(walletPnlDataCache)
+		.where(
+			and(
+				eq(walletPnlDataCache.address, address),
+				eq(walletPnlDataCache.timePeriod, timePeriod),
+				eq(walletPnlDataCache.aggregation, aggregation),
+				gte(walletPnlDataCache.dayStartMs, fromMs),
+				lt(walletPnlDataCache.dayStartMs, toMs),
+			),
+		)
+		.orderBy(walletPnlDataCache.dayStartMs);
+
+	return rows;
+}
+
+/**
+ * Retrieve wallet PnL cache metadata for a given address/period/aggregation.
+ *
+ * Returns metadata with coverage ranges and source data ranges, or null if not cached.
+ */
+export async function getWalletPnlMeta(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+) {
+	const row = await db
+		.select()
+		.from(walletPnlDataMeta)
+		.where(
+			and(
+				eq(walletPnlDataMeta.address, address),
+				eq(walletPnlDataMeta.timePeriod, timePeriod),
+				eq(walletPnlDataMeta.aggregation, aggregation),
+			),
 		)
 		.limit(1);
 

@@ -17,9 +17,7 @@ import {
 import type {
   ChartAggregation,
   PnLAggregation,
-  WalletExchangeCountsOptions,
   WalletPageInfo,
-  WalletExchangeCountsResponse,
   WalletOverview,
   WalletOverviewPeriodKey,
   WalletOverviewPeriodStats,
@@ -46,7 +44,7 @@ import {
   SOL_SYSTEM_PROGRAM_ADDRESS,
   WALLET_TABLE_PAGE_SIZE,
 } from "@sv/services/wallet/wallet.constants.js";
-import { getWalletExchangeCountsWithFetcher } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+
 import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
 
 export type { WalletOverviewTimePeriod, WalletTimePeriod };
@@ -999,25 +997,6 @@ export async function enrichWalletPortfolioMetadata(
 
 
 
-
-/**
- * PURPOSE: Aggregate per-exchange swap activity for a wallet.
- * RULES:
- * - Bucket priority: exchange -> pair -> Unknown.
- * - Dedup key: wallet + signature + exchange bucket.
- * - Counts map to side presence (bought/sold).
- * - Volumes use side USD values, with totalValueUsd fallback when needed.
- */
-export async function getWalletExchangeCounts(
-  address: string,
-  options?: WalletExchangeCountsOptions,
-): Promise<WalletExchangeCountsResponse> {
-  return getWalletExchangeCountsWithFetcher(
-    address,
-    options,
-    getWalletSwaps,
-  );
-}
 
 export function getRangeStartMs(
   nowMs: number,

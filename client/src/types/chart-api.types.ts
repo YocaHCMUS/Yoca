@@ -131,80 +131,6 @@ export interface AssetDistributionResponse extends ChartResponseBase {
 }
 
 /**
- * Exchange comparison API response
- * GET /api/charts/exchanges
- */
-export interface ExchangeComparisonResponse extends ChartResponseBase {
-  /** Data for each exchange */
-  exchanges: {
-    /** Exchange name */
-    name: string;
-
-    /** Deposit count */
-    deposits: number;
-
-    /** Withdrawal count */
-    withdrawals: number;
-
-    /** Deposit volume in USD */
-    depositsVolume: number;
-
-    /** Withdrawal volume in USD */
-    withdrawalsVolume: number;
-  }[];
-
-  /** Response metadata */
-  metadata: {
-    period: string;
-    metric: 'count' | 'volume';
-  };
-}
-
-/**
- * Counterparty activity API response
- * GET /api/charts/counterparties
- */
-export interface CounterpartyActivityResponse extends ChartResponseBase {
-  /** Data for each counterparty (legacy field, defaults to count ranking) */
-  counterparties: {
-    /** Counterparty identifier (address or name) */
-    id: string;
-
-    /** Display name */
-    name: string;
-
-    /** Transaction count */
-    transactionCount: number;
-
-    /** Total volume */
-    totalVolume: number;
-  }[];
-
-  /** Optional explicit ranking by transaction count */
-  counterpartiesByTransactionCount?: {
-    id: string;
-    name: string;
-    transactionCount: number;
-    totalVolume: number;
-  }[];
-
-  /** Optional explicit ranking by total volume */
-  counterpartiesByVolume?: {
-    id: string;
-    name: string;
-    transactionCount: number;
-    totalVolume: number;
-  }[];
-
-  /** Response metadata */
-  metadata: {
-    period: string;
-    transactionType: string;
-    limit?: number;
-  };
-}
-
-/**
  * P&L chart API response
  * GET /api/charts/pnl
  * 
@@ -578,61 +504,11 @@ export interface DistributionRequestParams extends ChartResponseBase {
 }
 
 /**
- * API request parameters for exchanges endpoint
- */
-export interface ExchangesRequestParams extends ChartResponseBase {
-  /** Time period filter */
-  period?: string;
-
-  /** Transaction type filter */
-  type?: string;
-
-  /** Metric type */
-  metric?: 'count' | 'volume';
-
-  [key: string]: string | number | undefined;
-}
-
-/**
- * API request parameters for counterparties endpoint
- */
-export interface CounterpartiesRequestParams extends ChartResponseBase {
-  /** Chart time period filter (legacy chart contract) */
-  timePeriod?: string;
-
-  /** Chart transaction type filter (legacy chart contract) */
-  transactionType?: string;
-
-  /** Time period filter */
-  period?: string;
-
-  /** Transaction type filter */
-  type?: string;
-
-  /** Optional comma-separated wallet addresses */
-  wallets?: string;
-
-  /** Optional single wallet override */
-  address?: string;
-
-  /** Optional timezone */
-  timezone?: string;
-
-  /** Limit to top N counterparties */
-  limit?: number;
-
-  [key: string]: string | number | undefined;
-}
-
-/**
  * API request parameters for P&L endpoint
  */
 export interface PnLRequestParams extends ChartResponseBase {
-  /** Time period filter */
-  period?: string;
-
-  /** Aggregation level */
-  aggregation?: 'daily' | 'weekly' | 'monthly';
+  /** Fixed time period for P&L endpoint */
+  period?: '7D' | '30D';
 
   /** Comma-separated wallet list */
   wallets?: string;

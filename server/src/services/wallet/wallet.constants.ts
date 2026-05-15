@@ -14,8 +14,6 @@ export const DEFAULT_SWAP_PROVIDER_SOURCE = "helius";
 export const DEFAULT_WALLET_PROVIDER_POLICY = "helius";
 
 export const WALLET_TABLE_PAGE_SIZE = 100;
-export const DEFAULT_EXCHANGE_LIMIT = 2000;
-export const MAX_EXCHANGE_LIMIT = 10000;
 
 export const DEFAULT_HELIUS_HISTORY_CHUNK_PAGES = 5;
 export const MAX_HELIUS_HISTORY_CHUNK_PAGES = 50;

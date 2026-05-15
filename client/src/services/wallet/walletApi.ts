@@ -41,12 +41,6 @@ export interface WalletSwapBalanceChange {
   valueUsd?: number | null;
 }
 
-export interface WalletSwapExchange {
-  name?: string | null;
-  address?: string | null;
-  logo?: string | null;
-}
-
 export interface WalletSwapPair {
   address?: string | null;
   label?: string | null;
@@ -65,9 +59,6 @@ export interface WalletSwap {
   pairAddress: string,
 
   tokensInvolved: string,
-  exchangeAddress: string,
-  exchangeName: string,
-  exchangeLogo: string,
 
   bought: WalletSwapTokenChange,
   sold: WalletSwapTokenChange,
@@ -138,47 +129,6 @@ export interface WalletTransfersResponse {
   pageInfo: WalletPageInfo;
 }
 
-export interface WalletCounterpartyIdentity {
-  status: "known" | "unknown" | "unavailable";
-  name: string | null;
-  category: string | null;
-  type: string | null;
-}
-
-export interface WalletCounterpartyRow {
-  address: string;
-  identity: WalletCounterpartyIdentity;
-  uniqueTokenCount: number;
-  tokens: string[];
-  transactionCount: number;
-  totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartyRankingItem {
-  address: string;
-  label: string;
-  transactionCount: number;
-  totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartiesResponse {
-  counterparties: WalletCounterpartyRow[];
-  rankings: {
-    byTransactionCount: WalletCounterpartyRankingItem[];
-    byVolume: WalletCounterpartyRankingItem[];
-  };
-  metadata: {
-    period: "24h" | "7d";
-    chain: string;
-    source: "cache" | "provider" | "mixed";
-    totals: {
-      counterparties: number;
-      transactions: number;
-      volume: number;
-    };
-  };
-}
-
 export interface WalletFirstFundInsight {
   targetAddress: string;
   funderAddress: string | null;
@@ -196,10 +146,6 @@ export interface WalletIdentityAnalysis {
   riskScore: number;
   riskLevel: "low" | "medium" | "high";
   signals: string[];
-  counterpartyProfile: {
-    exchangeInteractions24h: number;
-    uniqueKnownEntities7d: number;
-  };
   firstFund: WalletFirstFundInsight | null;
   userTags?: string[];
 }
@@ -442,57 +388,6 @@ export async function fetchWalletSwaps(
 }
 
 /**
- * Fetch wallet counterparties data
- * GET /api/wallets/counterparties
- */
-export async function fetchWalletCounterparties(
-  address: string,
-  params?: {
-    chain?: string;
-    period?: "24h" | "7d";
-    limit?: number;
-    includeTokens?: boolean;
-  }
-): Promise<WalletCounterpartiesResponse> {
-  const query = {
-    address,
-    ...(params?.chain && { chain: params.chain }),
-    ...(params?.period && { period: params.period }),
-    ...(params?.limit != null && { limit: params.limit }),
-    ...(params?.includeTokens != null && { includeTokens: String(params.includeTokens) }),
-  };
-
-  const response = await client.api.wallets.counterparties.$get({
-    query,
-  });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletCounterpartiesResponse;
-}
-
-/**
- * Fetch wallet exchange counts
- * GET /api/wallets/exchanges
- */
-export async function fetchWalletExchanges(
-  address: string,
-  params?: {
-    chain?: string;
-    period?: string;
-    limit?: number;
-    metric?: "count" | "volume";
-  }
-) {
-  const query = { address, ...params };
-  const response = await client.api.wallets.exchanges.$get({
-    query,
-  });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
-}
-
-/**
  * Fetch wallet balances
  * GET /api/balances
  */
@@ -679,8 +574,6 @@ export const walletApi = {
   fetchWalletPortfolio,
   fetchWalletTransfers,
   fetchWalletSwaps,
-  fetchWalletCounterparties,
-  fetchWalletExchanges,
   fetchWalletBalances,
   fetchWalletDistribution,
   fetchWalletIdentity,
@@ -693,8 +586,6 @@ export const walletApi = {
   getPortfolio: fetchWalletPortfolio,
   getTransfers: fetchWalletTransfers,
   getSwaps: fetchWalletSwaps,
-  getCounterparties: fetchWalletCounterparties,
-  getExchanges: fetchWalletExchanges,
   getBalances: fetchWalletBalances,
   getDistribution: fetchWalletDistribution,
   getIdentity: fetchWalletIdentity,
