@@ -350,9 +350,7 @@ export async function saveTransfersCache(
         fromOwner: t.from,
         toOwner: t.to,
         amount: t.amount,
-        // amountUsd is required by schema but not provided by API at fetch time.
-        // Set to 0 as placeholder; real-time pricing is handled via enrichWithSolanaTokenPrices.
-        amountUsd: 0,
+        amountUsd: t.amountUsd ?? 0,
         blockTime: new Date(Date.parse(t.timestamp) || Date.now()),
         tokenAddress: t.tokenAddress,
         tokenSymbol: t.tokenSymbol,

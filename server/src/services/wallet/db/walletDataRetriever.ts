@@ -321,6 +321,8 @@ export async function getCachedWalletTransfers(
 		from: r.fromOwner,
 		to: r.toOwner,
 		amount: r.amount,
+		amountUsd: Number(r.amountUsd) || undefined,
+		priceUsd: undefined,
 		timestamp: toIsoTimestamp(r.blockTime),
 		tokenAddress: r.tokenAddress,
 		tokenSymbol: r.tokenSymbol,

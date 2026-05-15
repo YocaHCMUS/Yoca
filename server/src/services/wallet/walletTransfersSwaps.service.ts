@@ -10,7 +10,7 @@ import { mapHeliusTxsToTransfers } from "@sv/services/wallet/providers/helius-to
 import { resolveRequestedRange, isMissingRangeSignificant, getMissingRanges } from "@sv/services/wallet/walletRange.utils.js";
 
 async function postEnrichTransfers(transfers: WalletTransfer[]): Promise<void> {
-    const pending = transfers.filter(t => t.amountUsd == null && t.timestamp);
+    const pending = transfers.filter(t => (t.priceUsd == null || t.amountUsd == null || t.amountUsd == 0) && t.timestamp);
     if (pending.length === 0) return;
 
     const lookupMap = new Map<string, { mint: string; bucket: number }>();
@@ -56,7 +56,7 @@ async function postEnrichSwaps(swaps: WalletSwap[]): Promise<void> {
         swap.tokensInvolved = uniqueSyms.join("/");
     }
 
-    const pending = swaps.filter(s => s.totalValueUsd == null && s.blockTimestampIso);
+    const pending = swaps.filter(s => (s.totalValueUsd == null || s.totalValueUsd == 0) && s.blockTimestampIso);
     if (pending.length === 0) return;
 
     await Promise.all(pending.map(async (swap) => {
@@ -202,9 +202,9 @@ export async function getWalletTransfers(
         0,
         0,
     )
-    await saveTransfersCache(address, combinedTransfers, cachefrom, cacheTo);
     await enrichWithSolanaTokenPrices(combinedTransfers);
     await postEnrichTransfers(combinedTransfers);
+    await saveTransfersCache(address, combinedTransfers, cachefrom, cacheTo);
 
     return {
         address,

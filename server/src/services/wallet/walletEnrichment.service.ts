@@ -281,14 +281,6 @@ export async function enrichWithSolanaTokenPrices(
         counters.invalidEntriesSkipped += 1;
     }
 
-    console.log("[enrichWithSolanaTokenPrices] Candidate collection summary", {
-        processed: transactions.length,
-        uniqueCandidates: candidateAddressesByKey.size,
-        candidatesCollected: counters.candidatesCollected,
-        invalidCandidatesDropped: counters.invalidCandidatesDropped,
-        invalidEntriesSkipped: counters.invalidEntriesSkipped,
-    });
-
     if (candidateAddressesByKey.size === 0) {
         return;
     }
@@ -477,27 +469,27 @@ export async function enrichWithSolanaTokenPrices(
                     counters.tokenMetaMisses += 1;
                 }
 
-                const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd != null) {
-                    counters.marketDataHits += 1;
-                    const hasPriceUsd = toOptionalFiniteNumber(transfer.priceUsd) != null;
-                    if (!hasPriceUsd) {
-                        transfer.priceUsd = priceUsd;
-                        changed = true;
-                    }
+                // const priceUsd = resolvePriceUsd(addressKey);
+                // if (priceUsd != null) {
+                //     counters.marketDataHits += 1;
+                //     const hasPriceUsd = toOptionalFiniteNumber(transfer.priceUsd) != null;
+                //     if (!hasPriceUsd) {
+                //         transfer.priceUsd = priceUsd;
+                //         changed = true;
+                //     }
 
-                    const hasAmountUsd = toOptionalFiniteNumber(transfer.amountUsd) != null;
-                    const amount = toOptionalFiniteNumber(transfer.amount);
-                    const basePrice = toOptionalFiniteNumber(transfer.priceUsd) ?? priceUsd;
-                    const amountUsd = amount != null ? amount * basePrice : undefined;
+                //     const hasAmountUsd = toOptionalFiniteNumber(transfer.amountUsd) != null;
+                //     const amount = toOptionalFiniteNumber(transfer.amount);
+                //     const basePrice = toOptionalFiniteNumber(transfer.priceUsd) ?? priceUsd;
+                //     const amountUsd = amount != null ? amount * basePrice : undefined;
 
-                    if (!hasAmountUsd && amountUsd != null && Number.isFinite(amountUsd)) {
-                        transfer.amountUsd = amountUsd;
-                        changed = true;
-                    }
-                } else {
-                    counters.marketDataMisses += 1;
-                }
+                //     if (!hasAmountUsd && amountUsd != null && Number.isFinite(amountUsd)) {
+                //         transfer.amountUsd = amountUsd;
+                //         changed = true;
+                //     }
+                // } else {
+                //     counters.marketDataMisses += 1;
+                // }
 
                 if (changed) {
                     counters.transferFieldFills += 1;
