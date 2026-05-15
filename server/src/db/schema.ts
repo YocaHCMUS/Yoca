@@ -895,9 +895,6 @@ export const walletSwap = pgTable(
 
     tokensInvoled: text("tokens_involved").notNull(),
 
-    exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
-    exchangeName: text("exchange_name").notNull(),
-    exchangeLogo: text("exchange_logo").notNull(),
 
     boughtTokenAddress: varchar("bought_token_address", {
       length: 66,
@@ -915,27 +912,6 @@ export const walletSwap = pgTable(
     providerSource: text("provider_source"),
   },
   (t) => [primaryKey({ columns: [t.transactionHash] })],
-);
-
-export const walletExchangeCountsCache = pgTable(
-  "wallet_exchange_counts_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    data: jsonb("data")
-      .$type<{
-        exchanges: Array<{
-          name: string;
-          deposits: number;
-          withdrawals: number;
-          depositsVolume: number;
-          withdrawalsVolume: number;
-        }>;
-        metadata: { period: string; metric: string };
-      }>()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletIdentityCache = pgTable(
@@ -1379,8 +1355,7 @@ export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
-export type WalletExchangeCountsCacheInsert =
-  typeof walletExchangeCountsCache.$inferInsert;
+
 export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
 export type WalletBalanceHistoryCacheInsert =
   typeof walletBalanceHistoryCache.$inferInsert;

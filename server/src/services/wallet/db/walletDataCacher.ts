@@ -3,22 +3,6 @@ import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransact
 import { eq, sql } from "drizzle-orm";
 import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
-/** Provider payloads sometimes omit exchange fields; DB columns are NOT NULL. */
-function walletSwapExchangeForDb(tx: WalletSwap): {
-  exchangeAddress: string;
-  exchangeName: string;
-  exchangeLogo: string;
-} {
-  const addr = (tx.exchangeAddress ?? "").trim().slice(0, 66);
-  const name = (tx.exchangeName ?? "").trim();
-  const logo = (tx.exchangeLogo ?? "").trim();
-  return {
-    exchangeAddress: addr,
-    exchangeName: name.length > 0 ? name : "Unknown",
-    exchangeLogo: logo,
-  };
-}
-
 export async function saveSwapsCache(
   address: string,
   transactions: WalletSwap[],
@@ -43,7 +27,6 @@ export async function saveSwapsCache(
 
       const uniqueTransactions = Array.from(uniqueBySignature.values());
       const rows = uniqueTransactions.map((tx) => {
-        const ex = walletSwapExchangeForDb(tx);
         return {
           transactionHash: tx.transactionHash,
           transactionType: tx.transactionType,
@@ -55,9 +38,6 @@ export async function saveSwapsCache(
           pairAddress: tx.pairAddress,
 
           tokensInvoled: tx.tokensInvolved,
-          exchangeAddress: ex.exchangeAddress,
-          exchangeName: ex.exchangeName,
-          exchangeLogo: ex.exchangeLogo,
 
           boughtTokenAddress: tx.bought.address,
           boughtTokenAmount: tx.bought.amount,

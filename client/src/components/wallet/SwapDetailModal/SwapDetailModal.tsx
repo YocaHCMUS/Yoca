@@ -313,14 +313,6 @@ export function SwapDetailModal({
             </div>
           )}
 
-          {swap.exchangeName && (
-            <div className={styles.detailRow}>
-              <span className={styles.detailKey}>Exchange</span>
-              <span className={styles.detailVal}>{swap.exchangeName}</span>
-            </div>
-          )}
-
-
           {swap.tokensInvolved && (
             <div className={styles.detailRow}>
               <span className={styles.detailKey}>Pair</span>

@@ -370,9 +370,6 @@ export async function getCachedWalletSwaps(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,
@@ -603,9 +600,6 @@ export async function getCachedWalletSwapsChunk(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,

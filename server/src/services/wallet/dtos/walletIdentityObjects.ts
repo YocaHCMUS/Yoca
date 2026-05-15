@@ -53,10 +53,6 @@ export interface WalletIdentityAnalysis {
     riskScore: number;
     riskLevel: "low" | "medium" | "high";
     signals: string[];
-    counterpartyProfile: {
-        exchangeInteractions24h: number;
-        uniqueKnownEntities7d: number;
-    };
     firstFund: WalletFirstFundInsight | null;
     userTags?: string[];
 }

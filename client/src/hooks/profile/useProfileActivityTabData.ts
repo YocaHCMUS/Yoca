@@ -59,7 +59,7 @@ function toActivityRows(walletAddress: string, swaps: WalletSwap[], transfers: W
         pairOrToken: formatSwapPair(swap),
         amountUsd: toAmountUsd(swap.totalValueUsd),
         timestamp: swap.blockTimestampIso,
-        exchange: swap.exchangeName || "Unknown",
+
         soldToken: swap.sold?.symbol || swap.sold?.name || "Unknown",
         boughtToken: swap.bought?.symbol || swap.bought?.name || "Unknown",
         baseQuotePrice: toAmountUsd(swap.baseQuotePrice),

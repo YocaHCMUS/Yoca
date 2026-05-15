@@ -7,7 +7,7 @@ import type {
   HeliusEnhancedNativeTransfer,
 } from "@sv/services/transactions.js";
 import { toIsoTimestamp } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { exchangeName, exchangeLogo } from "./exchange-registry.js";
+
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 const SYSTEM_PROGRAMS = new Set([
@@ -204,9 +204,6 @@ export function mapHeliusTxToSwap(
     walletAddress: signer,
     pairAddress: counterparty,
     tokensInvolved,
-    exchangeAddress: programId || source || "unknown",
-    exchangeName: exchangeName(source) || "Unknown",
-    exchangeLogo: exchangeLogo(source) || "",
     bought,
     sold,
     totalValueUsd: null,
