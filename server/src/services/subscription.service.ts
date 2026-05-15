@@ -31,16 +31,24 @@ export async function upsertSubscription(stripeSub: any) {
       stripeSubscriptionId: stripeSub.id,
       planTier: tier as any,
       status: stripeSub.status,
-      currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
-      currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+      currentPeriodStart: stripeSub.current_period_start
+        ? new Date(stripeSub.current_period_start * 1000)
+        : null,
+      currentPeriodEnd: stripeSub.current_period_end
+        ? new Date(stripeSub.current_period_end * 1000)
+        : null,
       cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
     })
     .onConflictDoUpdate({
       target: subscriptions.stripeSubscriptionId,
       set: {
         status: stripeSub.status,
-        currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
-        currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+        currentPeriodStart: stripeSub.current_period_start
+          ? new Date(stripeSub.current_period_start * 1000)
+          : null,
+        currentPeriodEnd: stripeSub.current_period_end
+          ? new Date(stripeSub.current_period_end * 1000)
+          : null,
         cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
         planTier: tier as any,
         updatedAt: new Date(),
