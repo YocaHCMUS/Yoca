@@ -129,7 +129,7 @@ export default function AlertsDemo() {
   );
 
   const tokenAlerts = useGet(
-    client.api.alerts.tokens,
+    client.api.alertsRoute.tokens,
     200,
     {},
     {
@@ -138,7 +138,7 @@ export default function AlertsDemo() {
   );
 
   const tradingAlerts = useGet(
-    client.api.alerts.trading,
+    client.api.alertsRoute.trading,
     200,
     {},
     {
