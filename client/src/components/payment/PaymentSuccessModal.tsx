@@ -86,10 +86,10 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
             showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}>
             <button
-              onClick={() => window.location.href = "/dashboard"}
+              onClick={() => window.location.href = "/profile"}
               className="w-full py-4 rounded-none bg-[#14F195] text-[#0a0a0f] font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#0fd484] transition-all duration-300 shadow-[0_10px_20px_rgba(20,241,149,0.2)]"
             >
-              Go to Dashboard
+              Go to Profile
             </button>
             <button
               onClick={onClose}
