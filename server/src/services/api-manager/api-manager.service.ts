@@ -63,12 +63,15 @@ export class ApiManagerService {
     // }
     // Phase C: Throttled Queue
     const queue = this.queues[provider];
-    const queuedFetcher = () => queue.push(fetcher);
+    const queuedFetcher = async () => {
+      const result = await queue.push(fetcher);
+      await this.cache.set(key, result);
+      return result;
+    };
     // Phase A: Coalescer
     const result = await coalesce(key, queuedFetcher);
     // Zod response validation
     if (opts?.responseSchema) opts.responseSchema.parse(result);
-    await this.cache.set(key, result);
     // if (!isTestEnv) {
     //     await db.insert(acmsApiCache).values({
     //         key,
