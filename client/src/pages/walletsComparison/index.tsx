@@ -7,7 +7,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TranslationKeyPath } from "@/config/localization";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
-import { ChartLine, Close, Download, SearchAdvanced, Wallet, User } from "@carbon/react/icons";
+import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch } from "@carbon/react/icons";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -69,7 +69,9 @@ function WalletComparisonSidebar({
     <div className={styles.sidebarContainer}>
       <div className={styles.sidebarHeaderRow}>
         <h3 className={styles.sidebarTitle}>
-          {tr("walletComparison.selectedWallets")}
+          {selectedWallets.length === 1
+            ? tr("walletComparison.activeWallet")
+            : tr("walletComparison.selectedWallets")}
         </h3>
         <Button
           kind="ghost"
@@ -100,17 +102,28 @@ function WalletComparisonSidebar({
           </p>
         ) : (
           selectedWallets.map((wallet) => (
-            <Button
-              className={styles.walletTag}
-              renderIcon={Close}
-              onClick={() => onRemoveWallet(wallet)}
-              kind="tertiary"
-              key={wallet}
-            >
-              <span className={styles.buttonTag}>
-                {wallet}
-              </span>
-            </Button>
+            <div key={wallet} className={styles.walletTagContainer}>
+              <Button
+                className={styles.walletTag}
+                renderIcon={Close}
+                onClick={() => onRemoveWallet(wallet)}
+                kind="tertiary"
+              >
+                <span className={styles.buttonTag}>
+                  {wallet}
+                </span>
+              </Button>
+              <Button
+                kind="ghost"
+                size="sm"
+                hasIconOnly
+                renderIcon={Launch}
+                iconDescription={tr("walletComparison.viewDeepDive")}
+                tooltipPosition="left"
+                onClick={() => window.open(`/wallets/${wallet}`, '_blank')}
+                className={styles.deepDiveButton}
+              />
+            </div>
           ))
         )}
       </Stack>
@@ -252,7 +265,9 @@ export default function WalletsComparisonPage() {
       return;
     }
 
-    const reportTitle = String(tr("walletComparison.pdfReportTitle"));
+    const reportTitle = selectedWallets.length === 1
+      ? String(tr("walletComparison.walletAnalysisReport"))
+      : String(tr("walletComparison.pdfReportTitle"));
     const generatedDateLabel = String(tr("walletComparison.pdfGeneratedDate"));
     const walletsComparedLabel = String(tr("walletComparison.pdfWalletsCompared"));
     const walletAddressesLabel = String(tr("walletComparison.pdfWalletAddresses"));

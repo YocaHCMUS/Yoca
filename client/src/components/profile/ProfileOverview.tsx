@@ -75,39 +75,39 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                         <Wallet size={16} />
                         Total net worth
                     </p>
-                    <p className={styles.metricValue}>
+                    <div className={styles.metricValue}>
                         {loading ? <SkeletonText width="6rem" /> : fmt.num.compact.currency(data.totalNetWorthUsd)}
-                    </p>
+                    </div>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <Activity size={16} />
                         Trades or transactions
                     </p>
-                    <p className={styles.metricValue}>
+                    <div className={styles.metricValue}>
                         {loading ? <SkeletonText width="4rem" /> : data.tradeOrTxCount.toLocaleString()}
-                    </p>
+                    </div>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <ChartLine size={16} />
                         Profit and loss
                     </p>
-                    <p
+                    <div
                         className={`${styles.metricValue} ${data.pnlUsd >= 0 ? styles.positive : styles.negative
                             }`}
                     >
                         {loading ? <SkeletonText width="7rem" /> : `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
-                    </p>
+                    </div>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <LinkIcon size={16} />
                         Linked wallets
                     </p>
-                    <p className={styles.metricValue}>
+                    <div className={styles.metricValue}>
                         {loading ? <SkeletonText width="3rem" /> : data.linkedWalletCount}
-                    </p>
+                    </div>
                 </div>
             </div>
         </section>

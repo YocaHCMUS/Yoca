@@ -640,6 +640,29 @@ export type WalletAuditPersona =
   | "Retail"
   | "Unknown";
 
+export interface WalletTokenDetails {
+  symbol: string;
+  address: string;
+  tokenAddress: string;
+  lastTradeUnixTime: number;
+  totalBuyCount: number;
+  totalSellCount: number;
+  totalTradeCount: number;
+  totalBoughtAmount: number;
+  totalSoldAmount: number;
+  balanceAmount: number;
+  costOfQuantitySold: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  currentValue: number;
+  realizedProfitUsd: number;
+  realizedProfitPercent: number;
+  unrealizedProfitUsd: number;
+  unrealizedProfitPercent: number;
+  avgBuyCost: number;
+  avgSellCost: number;
+}
+
 export interface WalletAuditReport {
   address: string;
   persona: WalletAuditPersona;
@@ -674,6 +697,19 @@ export async function fetchWalletAudit(
   return data as WalletAuditReport;
 }
 
+/**
+ * Fetch detailed token PNL metrics for a wallet
+ */
+export async function fetchWalletTokenDetails(address: string): Promise<WalletTokenDetails[]> {
+  const response = await client.api.wallets[":address"].tokens.$get({
+    param: { address }
+  });
+
+  await handleResponse(response);
+  const data = await response.json();
+  return data as unknown as WalletTokenDetails[];
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -688,6 +724,7 @@ export const walletApi = {
   fetchWalletIntelligence,
   fetchWalletAiAnalysis,
   fetchWalletAudit,
+  fetchWalletTokenDetails,
   // Aliases for convenience
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
@@ -702,4 +739,5 @@ export const walletApi = {
   getIntelligence: fetchWalletIntelligence,
   getAiAnalysis: fetchWalletAiAnalysis,
   getAudit: fetchWalletAudit,
+  getTokenDetails: fetchWalletTokenDetails,
 };

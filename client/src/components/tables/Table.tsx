@@ -671,20 +671,29 @@ export const Table: React.FC<TableProps> = ({
                                                                         className={styles.headerCell}
                                                                         ref={(el) => { filterButtonRefs.current[index] = el; }}
                                                                     >
-                                                                        <IconButton
-                                                                            label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
-                                                                            align="bottom-right"
+                                                                        <div
+                                                                            aria-label={activeFilter ? `Filter: ${activeFilter.displayText}` : `Filter ${header.header}`}
+                                                                            role="button"
+                                                                            tabIndex={0}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 openFilterForColumn(index);
                                                                             }}
-                                                                            kind='ghost'
-                                                                            size="sm"
-                                                                            className={activeFilter ? styles.activeFilterButton : undefined}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                                    e.stopPropagation();
+                                                                                    openFilterForColumn(index);
+                                                                                }
+                                                                            }}
+                                                                            className={[
+                                                                                'cds--btn cds--btn--ghost cds--btn--sm cds--btn--icon-only',
+                                                                                activeFilter ? styles.activeFilterButton : '',
+                                                                                styles.headerFilterTrigger
+                                                                            ].filter(Boolean).join(' ')}
                                                                             data-filter-button
                                                                         >
                                                                             <Filter />
-                                                                        </IconButton>
+                                                                        </div>
                                                                         {renderFilterPopup(index)}
                                                                     </div>
                                                                 )}

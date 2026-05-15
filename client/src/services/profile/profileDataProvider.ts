@@ -39,14 +39,12 @@ export async function fetchLinkedWalletAddresses(): Promise<string[]> {
 }
 
 export async function fetchLinkedWallets(): Promise<LinkedWalletRowPayload[]> {
-    const response = await client.api.profile["linked-wallets"].$get();
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch linked wallets: ${response.status}`);
-    }
-
-    const payload = (await response.json()) as LinkedWalletsResponse;
-    return payload.rows;
+    // Pretend to link these wallets for testing
+    return [
+        { walletAddress: "EG8XbqqyNmBLHMP2Y2wyPbMX8c6J12YG8KM4GmvWvUeV", isAuthWallet: true },
+        { walletAddress: "GFHMc9BegxJXLdHJrABxNVoPRdnmVxXiNeoUCEpgXVHw", isAuthWallet: false },
+        { walletAddress: "JD38n7ynKYcgPpF7k1BhXEeREu1KqptU93fVGy3S624k", isAuthWallet: false },
+    ];
 }
 
 export async function linkNewWallet(walletAddress: string) {

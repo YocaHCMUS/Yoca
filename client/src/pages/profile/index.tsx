@@ -62,14 +62,7 @@ export default function ProfilePage() {
       },
       {
         id: "dashboard",
-        node: profileData ? (
-          <ProfileDashboardTab data={profileData.dashboard} />
-        ) : (
-          <ProfileUnavailableState
-            title="Dashboard unavailable"
-            description="No dashboard data is available right now."
-          />
-        ),
+        node: <ProfileDashboardTab />,
       },
       {
         id: "alerts",

@@ -100,7 +100,10 @@ export const useTokenPageLogic = (address: string | undefined, poolAddress: stri
         if (selectedPool?.address) {
             (async () => {
                 try {
-                    const res = await $getPoolsDetails({ param: { addresses: selectedPool.address } });
+                    const res = await $getPoolsDetails({ 
+                        param: { addresses: selectedPool.address },
+                        query: { refresh: "false" }
+                    });
 
                     if (res.ok) {
                         const pools = await res.json();
