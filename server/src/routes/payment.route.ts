@@ -133,6 +133,27 @@ const app = new Hono()
         // Persist to our DB immediately (webhook will also fire, that's fine — upsert is idempotent)
         await upsertSubscription(subscription);
 
+        // Record the initial payment/invoice
+        try {
+          const { getStripe } = await import("@sv/services/stripe.service.js");
+          const stripeClient = getStripe();
+          
+          // Fetch invoices for this subscription to capture the initial payment
+          const invoices = await stripeClient.invoices.list({
+            subscription: subscription.id,
+            limit: 1,
+          });
+
+          if (invoices.data.length > 0) {
+            const invoice = invoices.data[0];
+            await recordInvoicePayment(invoice);
+            console.log("[payment/activate-subscription] Recorded initial payment for invoice:", invoice.id);
+          }
+        } catch (invoiceErr: any) {
+          console.warn("[payment/activate-subscription] Could not record initial payment:", invoiceErr.message);
+          // Don't fail the response if we can't record the invoice — the subscription was created successfully
+        }
+
         return c.json(
           {
             success: true,

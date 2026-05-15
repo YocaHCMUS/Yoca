@@ -41,8 +41,14 @@ export function formatChangePercent(value: number | null | undefined): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-export function formatTimestamp(time: string): string {
+export function formatTimestamp(time: string | null | undefined | Date): string {
+  if (!time) return "\u2013";
+  
   const date = new Date(time);
+  
+  // Check for invalid date (e.g., from null/undefined)
+  if (isNaN(date.getTime())) return "\u2013";
+  
   const now = new Date();
   const diffSeconds = (now.getTime() - date.getTime()) / 1000;
 

@@ -116,9 +116,17 @@ export async function activateSubscription(
       yocaUserId: opts.userId,
       tier: opts.tier,
     },
+    // Expand to ensure we get all fields
+    expand: ["latest_invoice", "latest_invoice.payment_intent"],
   });
 
-  console.log("[activateSubscription] Subscription created:", subscription.id, "Status:", subscription.status);
+  console.log("[activateSubscription] Subscription created:", {
+    id: subscription.id,
+    status: subscription.status,
+    current_period_start: subscription.current_period_start,
+    current_period_end: subscription.current_period_end,
+  });
+  
   return subscription;
 }
 
