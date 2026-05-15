@@ -1,13 +1,13 @@
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import type {
-  TokenBalanceSeriesResult,
-  WalletTimePeriod,
-} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { bds_WalletNetAssetsSchema } from "../_types/wallet-raw-responses.js";
 
 import { db } from "@sv/db/index.js";
-import { walletTokenBalanceHistory } from "@sv/db/schema.js";
+import {
+  walletTokenBalanceHistory,
+  WalletTokenBalanceHistoryInsert,
+} from "@sv/db/schema.js";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { and, eq, gte, lte } from "drizzle-orm";
@@ -26,8 +26,14 @@ function getUtcDatesFromNow(days: number): string[] {
   return results;
 }
 
-// export type WalletTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
-const toDayCount: Record<WalletTimePeriod, number> = {
+type WalletTokenBalanceHistory = {
+  tokenAddress: string;
+  value: number;
+  usdValue: number;
+  timestamp: number;
+}[];
+
+const dayCount: Record<WalletTimePeriod, number> = {
   "24H": 1,
   "7D": 7,
   "30D": 30,
@@ -41,8 +47,8 @@ export async function getWalletTokenBalanceHistory(
   address: string,
   tokenAddress: string,
   timePeriod: WalletTimePeriod = "30D",
-): Promise<TokenBalanceSeriesResult> {
-  const dates = getUtcDatesFromNow(toDayCount[timePeriod]);
+): Promise<WalletTokenBalanceHistory> {
+  const dates = getUtcDatesFromNow(dayCount[timePeriod]);
 
   const start = dayjs(dates[dates.length - 1]).valueOf();
   const end = dayjs(dates[0]).valueOf();
@@ -59,22 +65,13 @@ export async function getWalletTokenBalanceHistory(
       ),
     )
     .limit(1);
-
   if (res.length > 0) {
-    return {
-      tokenSeries: res.map((row) => ({
-        value: row.tokenBalance,
-        timestamp: row.timestampMs,
-        date: new Date(row.timestampMs).toISOString(),
-      })),
-      usdSeries: res.map((row) => ({
-        value: row.usdValue,
-        timestamp: row.timestampMs,
-        date: new Date(row.timestampMs).toISOString(),
-      })),
-      tokenSymbol: res[0].tokenSymbol ?? "",
-      tokenAddress,
-    };
+    return res.map((row) => ({
+      tokenAddress: row.tokenAddress,
+      value: row.tokenBalance,
+      usdValue: row.usdValue,
+      timestamp: row.timestampMs,
+    }));
   } else {
     return fetchWalletTokenBalanceHistory(address, tokenAddress, timePeriod);
   }
@@ -84,17 +81,35 @@ export async function fetchWalletTokenBalanceHistory(
   address: string,
   tokenAddress: string,
   timePeriod: WalletTimePeriod = "30D",
-): Promise<TokenBalanceSeriesResult> {
-  const dates = getUtcDatesFromNow(toDayCount[timePeriod]);
+): Promise<WalletTokenBalanceHistory> {
+  const dates = getUtcDatesFromNow(dayCount[timePeriod]);
   // TODO: rate limit here
-  const res = Promise.all(dates.map((date) => bdsFetchAssetsAt(address, date)));
+  const resArray = await Promise.all(
+    dates.map((date) => bdsFetchAssetsAt(address, date)),
+  );
+
+  const insertValues = resArray.flatMap(
+    (res) =>
+      res?.net_assets.map(
+        (tokBal): WalletTokenBalanceHistoryInsert => ({
+          address: address,
+          timestampMs: dayjs(res.resolved_timestamp).valueOf(),
+          tokenAddress: tokBal.token_address,
+          tokenBalance: Number(tokBal.balance),
+          usdValue: tokBal.value,
+        }),
+      ) || [],
+  );
+
+  // Write all tokens to db at once
+  db.insert(walletTokenBalanceHistory)
+    .values(insertValues)
+    .onConflictDoNothing();
+
+  return insertValues.find((val) => val.tokenAddress == tokenAddress) || null;
 }
 
-async function bdsFetchAssetsAt(
-  walletAddress: string,
-  tokenAddress: string,
-  timeIsoUtc: string,
-) {
+async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
   const url = bds.getEndpoint("/wallet/v2/net-worth-details");
 
   url.search = new URLSearchParams({

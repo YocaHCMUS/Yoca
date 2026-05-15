@@ -36,3 +36,8 @@ export const walletTokenBalanceHistory = pgTable(
     }),
   ],
 );
+
+export type WalletTokenBalanceHistorySelect =
+  typeof walletTokenBalanceHistory.$inferSelect;
+export type WalletTokenBalanceHistoryInsert =
+  typeof walletTokenBalanceHistory.$inferInsert;
