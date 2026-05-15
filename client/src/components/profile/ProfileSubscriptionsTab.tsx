@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { 
   getUserSubscription, 
+  getUserSubscriptions,
   getUserPaymentHistory,
   cancelSubscription,
   upgradeSubscription,
@@ -14,22 +15,40 @@ import { Loading } from "@carbon/react";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
 
+function formatAbsoluteTimestamp(time: string | null | undefined) {
+  if (!time) return "\u2013";
+  const date = new Date(time);
+  if (isNaN(date.getTime())) return "\u2013";
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
+
 export function ProfileSubscriptionsTab() {
   const [activeSubtab, setActiveSubtab] = useState<SubscriptionSubtab>(
     "subscriptions"
   );
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [history, setHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [sub, hist] = await Promise.all([
+      const [sub, subs, hist] = await Promise.all([
         getUserSubscription(),
+        getUserSubscriptions(),
         getUserPaymentHistory(),
       ]);
       setSubscription(sub);
+      setSubscriptions(subs);
       setHistory(hist);
     } catch (err) {
       console.error("Failed to fetch subscription data", err);
@@ -59,8 +78,8 @@ export function ProfileSubscriptionsTab() {
         activeTab={subtabIndex}
         names={subtabs.map((tab) => tab.label)}
         tabs={[
-          <SubscriptionsPanel key="subscriptions" subscription={subscription} onUpdate={fetchData} />,
-          <PaymentHistoryPanel key="payment-history" history={history} />,
+          <SubscriptionsPanel key="subscriptions" subscription={subscription} subscriptions={subscriptions} onUpdate={fetchData} />,
+          <PaymentHistoryPanel key="payment-history" history={history} subscriptions={subscriptions} />,
         ]}
         onTabChange={(index) => setActiveSubtab(subtabs[index].id)}
       />
@@ -70,10 +89,14 @@ export function ProfileSubscriptionsTab() {
 
 import { Modal } from "@carbon/react";
 
-function SubscriptionsPanel({ subscription, onUpdate }: { subscription: Subscription | null, onUpdate: () => void }) {
+function SubscriptionsPanel({ subscription, subscriptions, onUpdate }: { subscription: Subscription | null, subscriptions: Subscription[], onUpdate: () => void }) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const canceledSubscriptions = subscriptions.filter(
+    (item) => item.status === "canceled" && item.id !== subscription?.id,
+  );
 
   if (!subscription) {
     return (
@@ -196,6 +219,47 @@ function SubscriptionsPanel({ subscription, onUpdate }: { subscription: Subscrip
         </tbody>
       </table>
 
+      {canceledSubscriptions.length > 0 ? (
+        <>
+          <div className={styles.sectionHeader} style={{ marginTop: "1.5rem" }}>
+            <h3 className={styles.emptyStateTitle}>Canceled Plans</h3>
+          </div>
+          <table className={styles.simpleTable}>
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th>Status</th>
+                <th>Period Start</th>
+                <th>Period End</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {canceledSubscriptions.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.planTier}</td>
+                  <td>
+                    <span
+                      style={{
+                        textTransform: "uppercase",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "#64748b",
+                      }}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                  <td>{formatTimestamp(item.currentPeriodStart)}</td>
+                  <td>{formatTimestamp(item.currentPeriodEnd)}</td>
+                  <td>{formatAbsoluteTimestamp(item.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : null}
+
       <Modal
         open={isCancelModalOpen}
         danger
@@ -217,7 +281,15 @@ function SubscriptionsPanel({ subscription, onUpdate }: { subscription: Subscrip
   );
 }
 
-function PaymentHistoryPanel({ history }: { history: PaymentHistory[] }) {
+function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHistory[]; subscriptions: Subscription[] }) {
+  const planBySubscriptionId = new Map(
+    subscriptions.map((sub) => [sub.id, sub.planTier]),
+  );
+
+  const paymentIdLabel = (item: PaymentHistory) => {
+    return item.stripePaymentIntentId ?? item.stripeInvoiceId ?? "-";
+  };
+
   if (history.length === 0) {
     return (
       <div className={styles.emptyStateContainer}>
@@ -237,6 +309,7 @@ function PaymentHistoryPanel({ history }: { history: PaymentHistory[] }) {
         <thead>
           <tr>
             <th>Date</th>
+            <th>Plan</th>
             <th>Amount</th>
             <th>Status</th>
             <th>Payment ID</th>
@@ -246,7 +319,10 @@ function PaymentHistoryPanel({ history }: { history: PaymentHistory[] }) {
           {history.map((item) => (
             <tr key={item.id}>
               <td>{formatTimestamp(item.createdAt)}</td>
-              <td className={styles.metricValue}>{formatPrice(item.amount / 100)}</td>
+              <td>{item.planName ?? item.planTier ?? (item.subscriptionId ? (planBySubscriptionId.get(item.subscriptionId) ?? "-") : "-")}</td>
+              <td className={styles.metricValue}>
+                {formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100)}
+              </td>
               <td>
                 <span style={{ 
                   textTransform: "uppercase", 
@@ -257,7 +333,7 @@ function PaymentHistoryPanel({ history }: { history: PaymentHistory[] }) {
                   {item.status}
                 </span>
               </td>
-              <td style={{ fontSize: "11px", color: "#64748b" }}>{item.stripePaymentIntentId}</td>
+              <td style={{ fontSize: "11px", color: "#64748b" }}>{paymentIdLabel(item)}</td>
             </tr>
           ))}
         </tbody>

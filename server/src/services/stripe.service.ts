@@ -120,12 +120,7 @@ export async function activateSubscription(
     expand: ["latest_invoice", "latest_invoice.payment_intent"],
   });
 
-  console.log("[activateSubscription] Subscription created:", {
-    id: subscription.id,
-    status: subscription.status,
-    current_period_start: subscription.current_period_start,
-    current_period_end: subscription.current_period_end,
-  });
+  console.log("[activateSubscription] Subscription created:", subscription.id, "Status:", subscription.status);
   
   return subscription;
 }
@@ -160,6 +155,10 @@ export async function upgradeSubscription(subscriptionId: string, newTier: strin
     ],
     proration_behavior: "create_prorations",
     payment_behavior: "default_incomplete",
+    metadata: {
+      ...subscription.metadata,
+      tier: newTier,
+    },
     expand: ["latest_invoice.payment_intent"],
   });
 

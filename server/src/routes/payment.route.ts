@@ -145,7 +145,9 @@ const app = new Hono()
           });
 
           if (invoices.data.length > 0) {
-            const invoice = invoices.data[0];
+            const invoice = await stripeClient.invoices.retrieve(invoices.data[0].id, {
+              expand: ["payment_intent"],
+            });
             await recordInvoicePayment(invoice);
             console.log("[payment/activate-subscription] Recorded initial payment for invoice:", invoice.id);
           }

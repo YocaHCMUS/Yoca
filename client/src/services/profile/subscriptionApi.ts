@@ -33,10 +33,12 @@ export interface PaymentHistory {
   subscriptionId: string | null;
   stripePaymentIntentId: string | null;
   stripeInvoiceId: string | null;
-  amount: number;          // alias for amountCents (see profile.route for mapping)
+    amount?: number;
   amountCents: number;
   currency: string;
   status: "succeeded" | "failed" | "pending";
+    planTier?: PlanTier | null;
+    planName?: string | null;
   paymentMethodDetails: { brand?: string; last4?: string } | null;
   createdAt: string;
 }
@@ -56,6 +58,14 @@ export async function getUserSubscription(): Promise<Subscription | null> {
     const resp = await client.api.profile.subscriptions.$get();
     if (!resp.ok) {
         throw new Error(`Failed to fetch subscription: ${resp.status}`);
+    }
+    return resp.json();
+}
+
+export async function getUserSubscriptions(): Promise<Subscription[]> {
+    const resp = await client.api.profile.subscriptions.all.$get();
+    if (!resp.ok) {
+        throw new Error(`Failed to fetch subscriptions: ${resp.status}`);
     }
     return resp.json();
 }

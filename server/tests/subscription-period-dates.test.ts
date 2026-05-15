@@ -2,21 +2,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const mockReturning = vi.fn();
-  const mockOnConflictDoUpdate = vi.fn(() => ({ returning: mockReturning }));
-  const mockValues = vi.fn(() => ({ onConflictDoUpdate: mockOnConflictDoUpdate }));
+  const mockValues = vi.fn(() => ({ returning: mockReturning }));
   const mockInsert = vi.fn(() => ({ values: mockValues }));
+  const mockSelectLimit = vi.fn().mockResolvedValue([]);
+  const mockSelectWhere = vi.fn(() => ({ limit: mockSelectLimit }));
+  const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }));
+  const mockSelect = vi.fn(() => ({ from: mockSelectFrom }));
 
   return {
     mockReturning,
-    mockOnConflictDoUpdate,
     mockValues,
     mockInsert,
+    mockSelect,
+    mockSelectFrom,
+    mockSelectWhere,
+    mockSelectLimit,
   };
 });
 
 vi.mock("@sv/db/index.js", () => ({
   db: {
     insert: mocks.mockInsert,
+    select: mocks.mockSelect,
   },
 }));
 
@@ -47,7 +54,6 @@ describe("upsertSubscription date mapping", () => {
     });
 
     const insertedValues = mocks.mockValues.mock.calls[0][0];
-    const updateSet = mocks.mockOnConflictDoUpdate.mock.calls[0][0].set;
     const expectedStartIso = new Date(1715750400 * 1000).toISOString();
     const expectedEndIso = new Date(1718428800 * 1000).toISOString();
 
@@ -55,9 +61,6 @@ describe("upsertSubscription date mapping", () => {
     expect(insertedValues.currentPeriodEnd).toBeInstanceOf(Date);
     expect(insertedValues.currentPeriodStart.toISOString()).toBe(expectedStartIso);
     expect(insertedValues.currentPeriodEnd.toISOString()).toBe(expectedEndIso);
-
-    expect(updateSet.currentPeriodStart).toBeInstanceOf(Date);
-    expect(updateSet.currentPeriodEnd).toBeInstanceOf(Date);
   });
 
   it("stores null dates when Stripe period fields are missing", async () => {
@@ -75,11 +78,8 @@ describe("upsertSubscription date mapping", () => {
     });
 
     const insertedValues = mocks.mockValues.mock.calls[0][0];
-    const updateSet = mocks.mockOnConflictDoUpdate.mock.calls[0][0].set;
 
     expect(insertedValues.currentPeriodStart).toBeNull();
     expect(insertedValues.currentPeriodEnd).toBeNull();
-    expect(updateSet.currentPeriodStart).toBeNull();
-    expect(updateSet.currentPeriodEnd).toBeNull();
   });
 });

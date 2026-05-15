@@ -52,7 +52,8 @@ export function formatTimestamp(time: string | null | undefined | Date): string 
   const now = new Date();
   const diffSeconds = (now.getTime() - date.getTime()) / 1000;
 
-  if (diffSeconds < 5) {
+  // Only show "just now" for timestamps that are truly near the present.
+  if (Math.abs(diffSeconds) < 5) {
     return "just now";
   }
 
