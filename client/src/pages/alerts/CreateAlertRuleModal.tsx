@@ -83,24 +83,22 @@ export function CreateAlertRuleModal({
     const sym = volumeUnit === "USD" ? "$" : " SOL";
     const range =
       maxTrim.length > 0
-        ? tr("alertsPage.rulePreviewRangeBoth", { min, max: maxTrim, sym })
-        : tr("alertsPage.rulePreviewRangeMin", { min, sym });
+        ? tr("alertsPage.rulePreviewRangeBoth", {
+            min: Number(min),
+            max: Number(maxTrim),
+            sym,
+          })
+        : tr("alertsPage.rulePreviewRangeMin", { min: Number(min), sym });
 
-    let verb = tr("alertsPage.rulePreviewVerbAny");
+    let verb: string = tr("alertsPage.rulePreviewVerbAny");
     if (actionType === "SWAP") verb = tr("alertsPage.rulePreviewVerbSwap");
     else if (actionType === "TRANSFER")
       verb = tr("alertsPage.rulePreviewVerbTransfer");
 
-    const wa = walletAddress.trim() || tr("alertsPage.rulePreviewWalletPlaceholder");
+    const wa =
+      walletAddress.trim() || tr("alertsPage.rulePreviewWalletPlaceholder");
     return tr("alertsPage.rulePreviewBody", { wallet: wa, verb, range });
-  }, [
-    actionType,
-    maxVolume,
-    minVolume,
-    tr,
-    volumeUnit,
-    walletAddress,
-  ]);
+  }, [actionType, maxVolume, minVolume, tr, volumeUnit, walletAddress]);
 
   const validateStep1 = (): boolean => {
     const trimmed = walletAddress.trim();
@@ -161,7 +159,9 @@ export function CreateAlertRuleModal({
           discordWebhookOverride: useDefaultDelivery
             ? null
             : discordOverride.trim() || null,
-          emailOverride: useDefaultDelivery ? null : emailOverride.trim() || null,
+          emailOverride: useDefaultDelivery
+            ? null
+            : emailOverride.trim() || null,
         },
       });
 
@@ -182,8 +182,14 @@ export function CreateAlertRuleModal({
 
   return (
     <ComposedModal open={open} onClose={onClose} size="md">
-      <ModalHeader label={tr("alertsPage.ruleModalLabel")} title={tr("alertsPage.ruleModalTitle")} />
-      <ModalBody aria-label={tr("alertsPage.ruleModalTitle")} hasScrollingContent>
+      <ModalHeader
+        label={tr("alertsPage.ruleModalLabel")}
+        title={tr("alertsPage.ruleModalTitle")}
+      />
+      <ModalBody
+        aria-label={tr("alertsPage.ruleModalTitle")}
+        hasScrollingContent
+      >
         <Stack gap={6}>
           <p style={{ color: "var(--cds-text-secondary)", margin: 0 }}>
             {step === 1
@@ -218,7 +224,10 @@ export function CreateAlertRuleModal({
                   setActionType(e.target.value as typeof actionType)
                 }
               >
-                <SelectItem value="SWAP" text={tr("alertsPage.ruleActionSwap")} />
+                <SelectItem
+                  value="SWAP"
+                  text={tr("alertsPage.ruleActionSwap")}
+                />
                 <SelectItem
                   value="TRANSFER"
                   text={tr("alertsPage.ruleActionTransfer")}
@@ -321,7 +330,9 @@ export function CreateAlertRuleModal({
               />
 
               <div>
-                <p className="cds--label">{tr("alertsPage.rulePreviewLabel")}</p>
+                <p className="cds--label">
+                  {tr("alertsPage.rulePreviewLabel")}
+                </p>
                 <TextArea
                   labelText=""
                   hideLabel
@@ -338,7 +349,11 @@ export function CreateAlertRuleModal({
 
       <ModalFooter>
         {step === 2 ? (
-          <Button kind="secondary" renderIcon={ArrowLeft} onClick={() => setStep(1)}>
+          <Button
+            kind="secondary"
+            renderIcon={ArrowLeft}
+            onClick={() => setStep(1)}
+          >
             {tr("alertsPage.ruleBack")}
           </Button>
         ) : (
@@ -357,7 +372,11 @@ export function CreateAlertRuleModal({
             {tr("alertsPage.ruleNext")}
           </Button>
         ) : (
-          <Button kind="primary" disabled={submitting} onClick={() => void submit()}>
+          <Button
+            kind="primary"
+            disabled={submitting}
+            onClick={() => void submit()}
+          >
             {tr("alertsPage.ruleSave")}
           </Button>
         )}
