@@ -44,7 +44,10 @@ export async function getUserPaymentHistory(userId: string) {
       planTier: subscriptions.planTier,
     })
     .from(paymentHistory)
-    .leftJoin(subscriptions, eq(paymentHistory.subscriptionId, subscriptions.id))
+    .leftJoin(
+      subscriptions,
+      eq(paymentHistory.subscriptionId, subscriptions.id),
+    )
     .where(eq(paymentHistory.userId, userId))
     .orderBy(desc(paymentHistory.createdAt));
 }
@@ -153,7 +156,9 @@ export async function enrichPaymentHistoryWithStripeProduct(
           expand: ["subscription", "lines.data.price.product"],
         });
 
-        const { planName, planTier } = await resolvePlanFromInvoice(invoice as any);
+        const { planName, planTier } = await resolvePlanFromInvoice(
+          invoice as any,
+        );
 
         return {
           ...row,
@@ -190,7 +195,9 @@ async function getUserStripeCustomerId(userId: string): Promise<string | null> {
   return user?.stripeCustomerId ?? null;
 }
 
-function mapTierFromPriceId(priceId: string | undefined): "Lite" | "Plus" | "Pro" | undefined {
+function mapTierFromPriceId(
+  priceId: string | undefined,
+): "Lite" | "Plus" | "Pro" | undefined {
   if (!priceId) return undefined;
   if (priceId === process.env.STRIPE_PRICE_LITE) return "Lite";
   if (priceId === process.env.STRIPE_PRICE_PLUS) return "Plus";
@@ -213,16 +220,8 @@ function resolveSubscriptionPeriodUnix(stripeSub: any): {
   const invoiceLineStart = firstInvoiceLine?.period?.start;
   const invoiceLineEnd = firstInvoiceLine?.period?.end;
 
-  const start =
-    topLevelStart ??
-    itemLevelStart ??
-    invoiceLineStart ??
-    null;
-  const end =
-    topLevelEnd ??
-    itemLevelEnd ??
-    invoiceLineEnd ??
-    null;
+  const start = topLevelStart ?? itemLevelStart ?? invoiceLineStart ?? null;
+  const end = topLevelEnd ?? itemLevelEnd ?? invoiceLineEnd ?? null;
 
   return {
     start: typeof start === "number" ? start : null,
@@ -250,7 +249,9 @@ export async function syncUserSubscriptionsFromStripe(userId: string) {
 
 export async function upsertSubscription(stripeSub: any) {
   const stripeCustomerId = stripeSub.customer as string;
-  const yocaUserIdFromMetadata = stripeSub.metadata?.yocaUserId as string | undefined;
+  const yocaUserIdFromMetadata = stripeSub.metadata?.yocaUserId as
+    | string
+    | undefined;
   const tierFromMetadata = stripeSub.metadata?.tier as string | undefined;
 
   let yocaUserId = yocaUserIdFromMetadata;
@@ -347,20 +348,26 @@ export async function recordInvoicePayment(invoice: any) {
   if (!invoice.subscription && !invoice.customer) return null;
 
   // We need to find the user id from the subscription
-  const subId = typeof invoice.subscription === "string"
-    ? invoice.subscription
-    : invoice.subscription?.id;
+  const subId =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id;
   const [sub] = subId
-    ? await db.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, subId)).limit(1)
+    ? await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.stripeSubscriptionId, subId))
+        .limit(1)
     : [null];
 
   let userId = sub?.userId;
   let subscriptionId: string | null = sub?.id ?? null;
 
   if (!userId && invoice.customer) {
-    const stripeCustomerId = typeof invoice.customer === "string"
-      ? invoice.customer
-      : invoice.customer.id;
+    const stripeCustomerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer.id;
     const [user] = await db
       .select({ id: users.id })
       .from(users)
@@ -372,25 +379,33 @@ export async function recordInvoicePayment(invoice: any) {
   if (!userId) return null;
 
   const paymentIntentId = invoice.payment_intent
-    ? (typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent.id)
+    ? typeof invoice.payment_intent === "string"
+      ? invoice.payment_intent
+      : invoice.payment_intent.id
     : null;
-  
+
   let brand, last4;
-  if (typeof invoice.payment_intent === 'object' && invoice.payment_intent.payment_method_details) {
+  if (
+    typeof invoice.payment_intent === "object" &&
+    invoice.payment_intent.payment_method_details
+  ) {
     brand = invoice.payment_intent.payment_method_details?.card?.brand;
     last4 = invoice.payment_intent.payment_method_details?.card?.last4;
   }
 
-  await db.insert(paymentHistory).values({
-    userId,
-    subscriptionId,
-    stripePaymentIntentId: paymentIntentId,
-    stripeInvoiceId: invoice.id,
-    amountCents: invoice.amount_paid,
-    currency: invoice.currency,
-    status: invoice.status === 'paid' ? 'succeeded' : 'failed',
-    paymentMethodDetails: brand || last4 ? { brand, last4 } : null,
-  }).onConflictDoNothing({ target: paymentHistory.stripeInvoiceId });
+  await db
+    .insert(paymentHistory)
+    .values({
+      userId,
+      subscriptionId,
+      stripePaymentIntentId: paymentIntentId,
+      stripeInvoiceId: invoice.id,
+      amountCents: invoice.amount_paid,
+      currency: invoice.currency,
+      status: invoice.status === "paid" ? "succeeded" : "failed",
+      paymentMethodDetails: brand || last4 ? { brand, last4 } : null,
+    })
+    .onConflictDoNothing({ target: paymentHistory.stripeInvoiceId });
 }
 
 export async function backfillUserPaymentHistory(userId: string) {
@@ -514,4 +529,3 @@ export async function repairPaymentHistorySubscriptionLinks(userId: string) {
     }
   }
 }
-
