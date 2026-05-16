@@ -1,9 +1,9 @@
 // server/src/routes/payment.route.ts
-import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
+import userExtract from "@sv/middlewares/user-extract.js";
+import { honoJwt, validate } from "@sv/middlewares/validation.js";
 import { setErr } from "@sv/util/errors.js";
 import { db } from "@sv/db/index.js";
 import { users, subscriptions } from "@sv/db/schema.js";
-import { validate } from "@sv/middlewares/validation.js";
 import {
   createSetupIntent,
   activateSubscription,
@@ -18,14 +18,7 @@ import {
 import { statusCode } from "@sv/util/responses.js";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { jwt } from "hono/jwt";
 import z from "zod";
-
-const honoJwt = jwt({
-  alg: "HS256",
-  secret: process.env.JWT_SECRET!,
-  cookie: AUTH_COOKIE_NAME,
-});
 
 const app = new Hono()
   /**
@@ -38,16 +31,11 @@ const app = new Hono()
   .post(
     "/setup-intent",
     honoJwt,
+    userExtract,
     validate("json", z.object({ tier: z.enum(["Lite", "Plus", "Pro"]) })),
     async (c) => {
       try {
-        const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        const userId = payload?.id;
-        if (!userId)
-          return c.json(
-            setErr("INVALID_TOKEN_PAYLOAD"),
-            statusCode.Unauthorized,
-          );
+        const { id: userId } = c.get("userPayload");
 
         const user = await getUserById(userId);
         if (!user)
@@ -118,6 +106,7 @@ const app = new Hono()
   .post(
     "/activate-subscription",
     honoJwt,
+    userExtract,
     validate(
       "json",
       z.object({
@@ -127,13 +116,7 @@ const app = new Hono()
     ),
     async (c) => {
       try {
-        const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        const userId = payload?.id;
-        if (!userId)
-          return c.json(
-            setErr("INVALID_TOKEN_PAYLOAD"),
-            statusCode.Unauthorized,
-          );
+        const { id: userId } = c.get("userPayload");
 
         const user = await getUserById(userId);
         if (!user)
@@ -299,15 +282,11 @@ const app = new Hono()
   .post(
     "/cancel",
     honoJwt,
+    userExtract,
     validate("json", z.object({ subscriptionId: z.string() })),
     async (c) => {
       try {
-        const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        if (!payload?.id)
-          return c.json(
-            setErr("INVALID_TOKEN_PAYLOAD"),
-            statusCode.Unauthorized,
-          );
+        const { id: userId } = c.get("userPayload");
 
         const { subscriptionId } = c.req.valid("json");
 
@@ -315,7 +294,7 @@ const app = new Hono()
           .select()
           .from(subscriptions)
           .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
-        if (!sub || sub.userId !== payload.id) {
+        if (!sub || sub.userId !== userId) {
           return c.json(
             { errorCode: "NOT_FOUND", message: "Subscription not found" },
             statusCode.NotFound,
@@ -356,6 +335,7 @@ const app = new Hono()
   .post(
     "/upgrade",
     honoJwt,
+    userExtract,
     validate(
       "json",
       z.object({
@@ -365,12 +345,7 @@ const app = new Hono()
     ),
     async (c) => {
       try {
-        const payload = c.get("jwtPayload") as { id?: string } | undefined;
-        if (!payload?.id)
-          return c.json(
-            setErr("INVALID_TOKEN_PAYLOAD"),
-            statusCode.Unauthorized,
-          );
+        const { id: userId } = c.get("userPayload");
 
         const { subscriptionId, newTier } = c.req.valid("json");
 
@@ -378,7 +353,7 @@ const app = new Hono()
           .select()
           .from(subscriptions)
           .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
-        if (!sub || sub.userId !== payload.id) {
+        if (!sub || sub.userId !== userId) {
           return c.json(
             { errorCode: "NOT_FOUND", message: "Subscription not found" },
             statusCode.NotFound,
