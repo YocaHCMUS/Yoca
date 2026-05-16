@@ -492,7 +492,7 @@ export const tokenTransfers = pgTable(
     amountUsd: decimal("amount_usd").notNull(),
     blockTime: timestamp("block_time").notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    tokenSymbol: varchar("token_symbol", { length: 10 }).notNull(),
+    tokenSymbol: varchar("token_symbol", { length: 64 }).notNull(),
     transactionSignature: varchar("transaction_signature", {
       length: 88,
     }).notNull(),
