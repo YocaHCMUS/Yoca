@@ -69,7 +69,9 @@ function formatSmallCompact(value: number): string {
   if (!match) return value.toString();
 
   const zeroCount = match[0].length - 2;
-  const significant = str.slice(match[0].length, match[0].length + 3);
+  // Extract all significant digits (up to decimal precision limit)
+  const remaining = str.slice(match[0].length);
+  const significant = remaining.replace(/0+$/, ""); // Remove trailing zeros
 
   return `0.0${toSubscript(zeroCount)}${significant}`;
 }
