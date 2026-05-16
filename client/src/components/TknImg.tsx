@@ -23,7 +23,7 @@ export function TknImg({ size, alt, loading = false, src }: TknImgProps) {
       src={error ? appLogoPlaceHolder : (src ?? appLogoPlaceHolder)}
       alt={alt || undefined}
       onError={() => setError(true)}
-      style={{ objectFit: "cover", borderRadius: "50%" }}
+      style={{ objectFit: "cover", borderRadius: "50%", width: size, height: size }}
     />
   );
 }

@@ -3,7 +3,7 @@ import { Button, Checkbox } from '@carbon/react';
 import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
 import SparklineChart from '@/components/charts/SparklineChart';
 import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
-import { TranslateFunction, useLocalization } from '@/contexts/LocalizationContext.tsx';
+import { TranslateFunction } from '@/contexts/LocalizationContext.tsx';
 import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
 import TrendNumWithSign, { ForceSign } from '../TrendNumWithSign.tsx';
 export interface SparklineCellValue {
@@ -217,6 +217,7 @@ export const renderHash = (
 
 export const renderTokenCell = (
   token: WalletSwapTokenInfo,
+  formatAmount: (value: number | null) => string,
   classNames?: {
     container?: string;
     amount?: string;
@@ -230,19 +231,17 @@ export const renderTokenCell = (
       return renderCode(value);
     }
 
-    const { fmt } = useLocalization()
-
     return (
       <span className={classNames?.container}>
         {colorCoded ? (
           <TrendNumWithSign
             prefixes="none"
             value={token.amount}
-            formatter={fmt.num.compact.decimal}
+            formatter={formatAmount}
             forceSign={forceSign}
           />
         ) : (
-          <span className={classNames?.amount}>{fmt.num.compact.decimal(token.amount)}</span>
+          <span className={classNames?.amount}>{formatAmount(token.amount)}</span>
         )}
         <TokenIdentityCell
           symbol={token.symbol || "Unknown"}
