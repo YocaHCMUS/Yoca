@@ -405,7 +405,7 @@ export function TradingEventsConfig({
   async function onSubmit(data: TradingAlertForm) {
     setSubmitting(true);
     try {
-      const resp = await client.api.alertsRoute.trading.$post({
+      const resp = await client.api.alertsHp.trading.$post({
         json: {
           alertType: "trading",
           conditions: data.tradingConditions.map((cond) => ({

@@ -348,7 +348,7 @@ export default function TokenStatsConfig({
   async function onSubmit(data: TokenAlertForm) {
     setSubmitting(true);
     try {
-      const resp = await client.api.alertsRoute.tokens.$post({
+      const resp = await client.api.alertsHp.tokens.$post({
         json: {
           alertType: "token",
           conditions: data.tokenConditions.map((cond) => ({

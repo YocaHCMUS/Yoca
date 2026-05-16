@@ -2,7 +2,7 @@
 // the client type has been broken into smaller modules for each
 // route
 import { hc } from "hono/client";
-import type { AppRouteOf, AppRoutes } from "@sv/main.js";
+import type { AppRouteOf, AppRoutes, ErrCode } from "@sv/main.js";
 
 const apiDomain: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 
@@ -31,6 +31,7 @@ type TradesClient = ClientTypeOf<"/api/trades">;
 type WalletsRouteClient = ClientTypeOf<"/api/wallets">;
 type WalletTagsRouteClient = ClientTypeOf<"/api/walletTags">;
 type AlertsClient = ClientTypeOf<"/api/alerts">;
+type AlertsHpClient = ClientTypeOf<"/api/alertsHp">;
 type NewsClient = ClientTypeOf<"/api/news">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 
@@ -49,6 +50,7 @@ export type ApiClient = {
     wallets: WalletsRouteClient;
     walletTags: WalletTagsRouteClient;
     alerts: AlertsClient;
+    alertsHp: AlertsHpClient;
     news: NewsClient;
     payment: PaymentClient;
   };
@@ -69,9 +71,11 @@ const client: ApiClient = {
     wallets: hcc("/api/wallets"),
     walletTags: hcc("/api/walletTags"),
     alerts: hcc("/api/alerts"),
+    alertsHp: hcc("/api/alertsHp"),
     news: hcc("/api/news"),
     payment: hcc("/api/payment"),
   },
 };
 
 export default client;
+export type ApiErrCode = ErrCode;

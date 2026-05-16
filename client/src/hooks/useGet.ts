@@ -13,13 +13,6 @@ type GetInput<T> =
       : {}
     : {};
 
-type GetEndpoint<T> =
-  T extends ClientRequest<any, any, infer S>
-    ? S extends { $get: infer E }
-      ? E
-      : never
-    : never;
-
 type HasRequiredKeys<T> = T extends object
   ? {
       [K in keyof T]-?: {} extends Pick<T, K> ? never : K;

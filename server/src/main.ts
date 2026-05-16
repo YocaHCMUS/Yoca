@@ -6,7 +6,7 @@ import users, { type UsersAppType } from "@sv/routes/users.js";
 import tokens, { type TokenAppType } from "@sv/routes/tokens.js";
 import balances, { type BalancesAppType } from "@sv/routes/balances.js";
 import alerts, { type AlertsRouteAppType } from "@sv/routes/alerts.route.js";
-import alertsToken, { type AlertsAppType } from "@sv/routes/alerts.js";
+import alertsHp, { type AlertsAppType } from "@sv/routes/alerts.js";
 import chartRoutes, { type ChartRouteAppType } from "@sv/routes/chart.route.js";
 import misc, { type MiscAppType } from "@sv/routes/misc.js";
 import news, { type NewsAppType } from "@sv/routes/news.js";
@@ -68,7 +68,7 @@ export type AppRoutes = {
   "/api/walletTags": WalletTagsAppType;
   "/api/alerts": AlertsRouteAppType;
   "/api/trades": TradesAppType;
-  "/api/alertsToken": AlertsAppType;
+  "/api/alertsHp": AlertsAppType;
   "/api/news": NewsAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
@@ -89,7 +89,7 @@ const routes: AppRoutes = {
   "/api/walletTags": walletTags,
   "/api/alerts": alerts,
   "/api/trades": trades,
-  "/api/alertsToken": alertsToken,
+  "/api/alertsHp": alertsHp,
   "/api/news": news,
   "/api/payment": payment,
   "/webhook": webhook,
@@ -101,3 +101,4 @@ Object.entries(routes).forEach(([path, route]) => {
 
 export type { Hono as HonoAppType } from "hono";
 export type AppRouteOf<T extends keyof AppRoutes> = AppRoutes[T];
+export type { ErrCode } from "@sv/config/errors.js";

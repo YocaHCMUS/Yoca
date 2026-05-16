@@ -47,7 +47,7 @@ export default function TokenSearch({
   }, []);
 
   const searchResults = useGet(
-    client.api.search,
+    client.api.search.index,
     200,
     { query: { q: debouncedQuery } },
     {

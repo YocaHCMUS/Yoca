@@ -48,7 +48,7 @@ export default function PoolSearch({ setValue, closePanel }: PoolSearchProps) {
   }, []);
 
   const searchResults = useGet(
-    client.api.search,
+    client.api.search.index,
     200,
     { query: { q: debouncedQuery } },
     {

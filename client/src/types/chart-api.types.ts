@@ -8,6 +8,25 @@
 
 import type { DistributionPoint, TimeSeriesPoint } from "./chart-data.types";
 
+export interface BalanceRequestParams extends ChartResponseBase {
+  /** Time period filter */
+  timePeriod?: string;
+
+  /** Comma-separated token list */
+  tokens?: string;
+
+  /** Comma-separated wallet list */
+  wallets?: string;
+
+  /** Timezone for timestamp formatting */
+  timezone?: string;
+
+  /** Aggregation level */
+  aggregation?: "hourly" | "daily" | "weekly" | "monthly";
+
+  [key: string]: string | number | undefined;
+}
+
 /**
  * Base interface for all responses
  */

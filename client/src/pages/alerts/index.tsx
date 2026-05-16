@@ -209,7 +209,7 @@ export default function AlertsPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await client.api.alerts.$get();
+      const res = await client.api.alerts.index.$get();
       if (!res.ok) throw new Error("list_failed");
       const data = (await res.json()) as FollowedWalletRow[];
       setRows(Array.isArray(data) ? data : []);
@@ -277,7 +277,7 @@ export default function AlertsPage() {
     }
     setSubmitting(true);
     try {
-      const res = await client.api.alerts.$post({
+      const res = await client.api.alerts.index.$post({
         json: { address: trimmed, label: label.trim() || undefined },
       });
       const body = (await res.json()) as
