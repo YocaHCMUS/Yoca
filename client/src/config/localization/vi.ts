@@ -885,7 +885,7 @@ export const translation = defineTranslation({
 
     // Chart specific
     balanceChart: {
-      title: "Xu hướng số dư",
+      title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
       date: "Ngày",

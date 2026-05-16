@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
 import { Layer, MultiSelect } from "@carbon/react";
-import { TknImg } from "@/components/TknImg";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 import { ChartWrapper } from "../shared";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
@@ -128,9 +128,9 @@ export function BalanceChartV2({ address }: { address: string }) {
         ? [totalBalance.data]
         : []
       : [
-          ...(tokenBalances.data ?? []),
-          ...(totalBalance.data ? [totalBalance.data] : []),
-        ];
+        ...(tokenBalances.data ?? []),
+        ...(totalBalance.data ? [totalBalance.data] : []),
+      ];
 
   return (
     <ChartWrapper title={tr("charts.balanceChart.title")}>
@@ -143,15 +143,12 @@ export function BalanceChartV2({ address }: { address: string }) {
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <Flex gap={4} align="center">
-                  <TknImg
-                    size={20}
-                    alt={account.symbol || account.tokenAddress}
-                    loading={portfolio.isLoading}
-                    src={account.logoUri}
-                  />
-                  <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
-                </Flex>
+                <TokenIdentityCell
+                  symbol={account.symbol || account.tokenAddress}
+                  fullName={account.name}
+                  imageUrl={account.logoUri}
+                  imageSize={18}
+                />
               )}
               selectionFeedback="top-after-reopen"
               onChange={(v) =>
