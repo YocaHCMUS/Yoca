@@ -1,15 +1,18 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Button, Checkbox, IconButton } from '@carbon/react';
-import { Cube, Grid } from '@carbon/icons-react';
+import { Checkbox } from '@carbon/react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import {
+    CHART_COLOR_PALETTE,
+    useCarbonChartBaseOption,
+} from '@/util/carbon-chart-base';
+import { useCarbonTokens } from '@/hooks/useCarbonToken';
+import { cds } from '@/util/carbon-theme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
-import { getPieLegend } from '@/util/chart-legend-config';
 import type { DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper } from '@/components/charts/shared';
@@ -18,10 +21,11 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
+import { Flex } from '@/components/Flex';
+import { FilterSwitch } from '@/components/FilterSwitch';
 import { FilterType, SortType, Table } from '@/components/tables/Table';
 import type { TableColumnHeader } from '@/components/tables/Table';
 import tableStyles from '@/components/tables/Table.module.scss';
-import sharedStyles from '../shared/ChartStyle.module.scss';
 import styles from './AggregatedAssetDistribution.module.scss';
 import { renderBase } from '@/components/tables/TableCellRenderer';
 
@@ -158,9 +162,10 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
     className,
 }) => {
     const { tr, fmt } = useLocalization();
-    const chartTheme = useChartTheme();
+    const baseOption = useCarbonChartBaseOption();
     const { selectedTimezone: timezone } = useChartContext();
 
+    const tokens = useCarbonTokens({ background: cds.background });
     const chartTitle = tr('charts.aggregatedAssetDistributionChart.title');
     const othersLabel = tr('charts.aggregatedAssetDistributionChart.others');
 
@@ -360,14 +365,12 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
     ]);
 
     const option = useMemo<EChartsOption>(() => {
-        const base = getThemedChartBaseOption(chartTheme);
-
         return {
-            ...base,
+            ...baseOption,
             xAxis: undefined,
             yAxis: undefined,
             tooltip: {
-                ...base.tooltip,
+                ...baseOption.tooltip,
                 trigger: 'item',
                 formatter: (p: any) => {
                     const isOthers = p.name === othersLabel;
@@ -395,24 +398,30 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     return html;
                 },
             },
+            // legend: {
+            //     show: true,
+            //     orient: 'horizontal',
+            //     bottom: 0,
+            //     left: 'center',
+            //     data: groupedTokens.map(token => token.name),
+            //     icon: 'circle',
+            //     textStyle: { color: baseOption.textStyle.color, fontSize: 12 },
+            //     tooltip: {
+            //         show: true,
+            //         formatter: (params: any) => {
+            //             const name = params.name ?? params;
+            //             const item = groupedTokens.find(g => g.name === name);
+            //             const hidden: string[] = (item as any)?.hiddenNames ?? [];
+            //             if (name !== othersLabel || hidden.length === 0) return name;
+            //             return (
+            //                 `<strong>${name}</strong><br/>` +
+            //                 hidden.map(n => `• ${n}`).join('<br/>')
+            //             );
+            //         },
+            //     } as any,
+            // },
             legend: {
-                ...getPieLegend(
-                    chartTheme,
-                    groupedTokens.map(token => token.name),
-                    true,
-                ),
-                tooltip: {
-                    show: true,
-                    formatter: (name: string) => {
-                        const item = groupedTokens.find(g => g.name === name);
-                        const hidden: string[] = (item as any)?.hiddenNames ?? [];
-                        if (name !== othersLabel || hidden.length === 0) return name;
-                        return (
-                            `<strong>${name}</strong><br/>` +
-                            hidden.map(n => `• ${n}`).join('<br/>')
-                        );
-                    },
-                },
+                show: false
             },
             series: [
                 {
@@ -427,8 +436,8 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         logoUri: token.logoUri,
                         itemStyle: {
                             color: token.name === othersLabel
-                                ? chartTheme.textColorSecondary
-                                : token.color ?? chartTheme.colorPalette[index % chartTheme.colorPalette.length],
+                                ? '#6f6f6f'
+                                : token.color ?? CHART_COLOR_PALETTE[index % CHART_COLOR_PALETTE.length],
                             borderColor: '#ffffff',
                             borderWidth: 2,
                             borderRadius: 6,
@@ -436,6 +445,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     })),
                     label: {
                         formatter: (p: any) => `${p.name}\n${p.data.percentage.toFixed(1)}%`,
+                        color: baseOption.textStyle.color,
                         fontSize: 11,
                     },
                 },
@@ -447,8 +457,9 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     top: '46%',
                     style: {
                         text: tr('charts.aggregatedAssetDistributionChart.totalValue'),
-                        fill: chartTheme.textColorSecondary,
+                        fill: baseOption.textStyle.color,
                         fontSize: 14,
+                        opacity: 0.7,
                     },
                 },
                 {
@@ -457,14 +468,14 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     top: '50%',
                     style: {
                         text: fmt.num.compact.currency(displayTotal),
-                        fill: chartTheme.textColor,
+                        fill: baseOption.textStyle.color,
                         fontSize: 18,
                         fontWeight: 'bold',
                     },
                 },
             ],
         };
-    }, [chartTheme, groupedTokens, othersLabel, tr, displayTotal, fmt]);
+    }, [baseOption, tokens, groupedTokens, othersLabel, tr, displayTotal, fmt]);
 
     const toggleWalletSelected = useCallback((walletAddress: string, checked: boolean) => {
         setSelectedWallets((prev) => {
@@ -595,94 +606,35 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
 
     const isEmpty = !data || walletRows.length === 0 || groupedTokens.length === 0 || (filters.wallets && filters.wallets.length === 0);
 
+    const modeOptions = [
+        { value: 'single' as const, label: tr('charts.aggregatedAssetDistributionChart.mode.single') },
+        { value: 'aggregate' as const, label: tr('charts.aggregatedAssetDistributionChart.mode.aggregate') },
+    ];
+
     const headerControls = (
-        <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--start']} ${sharedStyles['chartControls--withBackground']} ${styles.modeFiltersRow}`}>
-            <div className={styles.modeToggleGroup}>
-                <span className={styles.modeToggleLabel}>{tr('charts.aggregatedAssetDistributionChart.mode.label')}</span>
-                <div
-                    className={sharedStyles.chartToggle}
-                    role="group"
-                    aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.modeToggle')}
-                >
-                    {/* <IconButton
-                        kind="ghost"
-                        onClick={() => setMode('single')}
-                        label={tr('charts.aggregatedAssetDistributionChart.mode.single')}>
-                        <Cube
-                            size={20} />
-                    </IconButton>
-                    <IconButton
-                        kind="ghost"
-                        onClick={() => setMode('aggregate')}
-                        label={tr('charts.aggregatedAssetDistributionChart.mode.aggregate')}>
-                        <Grid size={20} />
-                    </IconButton> */}
-
-                    <button
-                        type="button"
-                        className={`${sharedStyles.chartToggleButton} ${mode === 'single' ? sharedStyles.active : ''}`}
-                        aria-pressed={mode === 'single'}
-                        onClick={() => setMode('single')}
-                    >
-                        {tr('charts.aggregatedAssetDistributionChart.mode.single')}
-                    </button>
-                    <button
-                        type="button"
-                        className={`${sharedStyles.chartToggleButton} ${mode === 'aggregate' ? sharedStyles.active : ''}`}
-                        aria-pressed={mode === 'aggregate'}
-                        onClick={() => setMode('aggregate')}
-                    >
-                        {tr('charts.aggregatedAssetDistributionChart.mode.aggregate')}
-                    </button>
-                </div>
+        <Flex gap={8} align="center" wrap="wrap">
+            <div style={{ width: 160 }}>
+                <FilterSwitch
+                    options={modeOptions}
+                    value={mode}
+                    onChange={(v) => setMode(v as Mode)}
+                />
             </div>
-
-            <label className={sharedStyles.filterField}>
-                <span className={sharedStyles.filterLabelSmall}>
-                    {tr('charts.aggregatedAssetDistributionChart.filters.topN')}
-                </span>
-                <div
-                    className={sharedStyles.filterSegmentedGroup}
-                    role="group"
-                    aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.topNFilter')}
-                >
-                    {topNOptions.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setTopN(option.value)}
-                            className={`${sharedStyles.filterSegmentedButton} ${topN === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-                            aria-pressed={topN === option.value}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-            </label>
-
-            <label className={sharedStyles.filterField}>
-                <span className={sharedStyles.filterLabelSmall}>
-                    {tr('charts.aggregatedAssetDistributionChart.filters.minValue')}
-                </span>
-                <div
-                    className={sharedStyles.filterSegmentedGroup}
-                    role="group"
-                    aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.minPctFilter')}
-                >
-                    {minPctOptions.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setMinPct(option.value)}
-                            className={`${sharedStyles.filterSegmentedButton} ${minPct === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-                            aria-pressed={minPct === option.value}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-            </label>
-        </div >
+            <div style={{ width: 180 }}>
+                <FilterSwitch
+                    options={topNOptions}
+                    value={topN}
+                    onChange={(v) => setTopN(v as TopNOption)}
+                />
+            </div>
+            <div style={{ width: 200 }}>
+                <FilterSwitch
+                    options={minPctOptions}
+                    value={minPct}
+                    onChange={(v) => setMinPct(v as MinPctOption)}
+                />
+            </div>
+        </Flex>
     );
 
     return (
@@ -697,7 +649,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             actions={headerControls}
         >
             <div className={styles.layout}>
-                <div className={styles.tablePanel}>
+                <div className={styles.panel}>
                     <Table
                         title={walletTableTitle}
                         headers={tableHeaders}
@@ -758,7 +710,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     />
                 </div>
 
-                <div className={styles.chartPanel}>
+                <div className={styles.panel}>
                     {
                         isEmpty && (
                             <div className={styles.emptyState}>

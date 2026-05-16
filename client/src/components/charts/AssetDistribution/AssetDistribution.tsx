@@ -22,11 +22,15 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
+import {
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from '@/util/carbon-chart-base';
+import { useCarbonTokens } from '@/hooks/useCarbonToken';
+import { cds } from '@/util/carbon-theme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
-import { getPieLegend } from '@/util/chart-legend-config';
 import type { DistributionRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
@@ -35,7 +39,8 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
-import sharedStyles from '../shared/ChartStyle.module.scss';
+import { Flex } from '@/components/Flex';
+import { FilterSwitch } from '@/components/FilterSwitch';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -120,7 +125,8 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const othersLabel = tr('charts.assetDistributionChart.others');
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
+  const tokens = useCarbonTokens({ background: cds.background });
   const { selectedTimezone: timezone } = useChartContext();
 
   // Track selected assets for legend filtering
@@ -232,21 +238,16 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     walletLabel?: string,
     isMultiWallet?: boolean
   ): EChartsOption => {
-    const base = getThemedChartBaseOption(chartTheme);
-
-    // Filter data based on selected assets in multi-wallet view
     const preGrouped = isMultiWallet && selectedAssets.size > 0
       ? distributionData.filter(a => selectedAssets.has(a.name))
       : distributionData;
 
-    // Apply Top-N and min-% grouping
     const grouped = applyGrouping(preGrouped as AssetItem[], topN, minPct, othersLabel);
 
-    // Total used for the centre label: sum of grouped data
     const displayTotal = grouped.reduce((s, a) => s + a.value, 0);
 
     return {
-      ...base,
+      ...baseOption,
       xAxis: undefined,
       yAxis: undefined,
       title: walletLabel ? {
@@ -254,18 +255,17 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         left: 8,
         top: 8,
         textStyle: {
-          color: chartTheme.textColor,
+          color: baseOption.textStyle.color,
           fontSize: 16,
           fontWeight: 'bold',
         },
       } : undefined,
       tooltip: {
-        ...base.tooltip,
+        ...baseOption.tooltip,
         trigger: 'item',
         formatter: (p: any) => {
           const isOthers = p.name === othersLabel;
           const logoUri: string | undefined = p.data.logoUri;
-          // Build header: optional logo image followed by the token name
           const logoHtml = logoUri
             ? `<img src="${logoUri}" alt="${p.name}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">`
             : '';
@@ -288,27 +288,29 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           return html;
         },
       },
-      legend: {
-        ...getPieLegend(
-          chartTheme,
-          grouped.map(d => d.name),
-          !isMultiWallet
-        ),
-        // ECharts 5: show a tooltip when hovering a legend item.
-        // For "Others" we list the constituent token names.
-        tooltip: {
-          show: true,
-          formatter: (name: string) => {
-            const item = grouped.find(g => g.name === name);
-            const hidden: string[] = (item as any)?.hiddenNames ?? [];
-            if (name !== othersLabel || hidden.length === 0) return name;
-            return (
-              `<strong>${name}</strong><br/>` +
-              hidden.map(n => `• ${n}`).join('<br/>')
-            );
-          },
-        },
-      },
+      // legend: {
+      //   show: !isMultiWallet,
+      //   orient: 'horizontal',
+      //   bottom: 0,
+      //   left: 'center',
+      //   data: grouped.map(d => d.name),
+      //   icon: 'circle',
+      //   textStyle: { color: baseOption.textStyle.color, fontSize: 12 },
+      //   tooltip: {
+      //     show: true,
+      //     formatter: (params: any) => {
+      //       const name = params.name ?? params;
+      //       const item = grouped.find(g => g.name === name);
+      //       const hidden: string[] = (item as any)?.hiddenNames ?? [];
+      //       if (name !== othersLabel || hidden.length === 0) return name;
+      //       return (
+      //         `<strong>${name}</strong><br/>` +
+      //         hidden.map(n => `• ${n}`).join('<br/>')
+      //       );
+      //     },
+      //   } as any,
+      // },
+      legend: { show: false },
       series: [
         {
           type: 'pie',
@@ -319,14 +321,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             value: a.value,
             percentage: a.percentage,
             hiddenNames: (a as any).hiddenNames,
-            // Forward logoUri so the tooltip formatter can render it
             logoUri: (a as AssetItem).logoUri,
             itemStyle: {
               color:
                 a.name === othersLabel
-                  ? chartTheme.textColorSecondary   // neutral grey for Others
+                  ? '#6f6f6f'
                   : (a as any).color ??
-                  chartTheme.colorPalette[i % chartTheme.colorPalette.length],
+                  CHART_COLOR_PALETTE[i % CHART_COLOR_PALETTE.length],
               borderColor: '#ffffff',
               borderWidth: 2,
               borderRadius: 6,
@@ -334,6 +335,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           })),
           label: {
             formatter: (p: any) => `${p.name}\n${p.data.percentage.toFixed(1)}%`,
+            color: baseOption.textStyle.color,
             fontSize: 11,
           },
         },
@@ -345,8 +347,9 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           top: '46%',
           style: {
             text: tr('charts.assetDistributionChart.totalValue'),
-            fill: chartTheme.textColorSecondary,
+            fill: baseOption.textStyle.color,
             fontSize: 14,
+            opacity: 0.7,
           },
         },
         {
@@ -355,14 +358,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           top: '50%',
           style: {
             text: fmt.num.compact.currency(displayTotal),
-            fill: chartTheme.textColor,
+            fill: baseOption.textStyle.color,
             fontSize: 18,
             fontWeight: 'bold',
           },
         },
       ],
     };
-  }, [chartTheme, tr, selectedAssets, topN, minPct, fmt]);
+  }, [baseOption, tokens, tr, selectedAssets, topN, minPct, fmt]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
@@ -377,14 +380,14 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         if (!uniqueAssets.has(asset.name)) {
           uniqueAssets.set(asset.name, {
             name: asset.name,
-            color: (asset as any).color ?? chartTheme.colorPalette[assetIndex % chartTheme.colorPalette.length],
+            color: (asset as any).color ?? CHART_COLOR_PALETTE[assetIndex % CHART_COLOR_PALETTE.length],
           });
         }
       });
     });
 
     return Array.from(uniqueAssets.values());
-  }, [data, chartTheme.colorPalette]);
+  }, [data]);
 
   /**
    * Initialize selected assets when data changes
@@ -455,56 +458,22 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   ];
 
   const filterControls = (
-    <div
-      className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--start']} ${sharedStyles['chartControls--withBackground']}`}
-      data-html2canvas-ignore="true"
-    >
-      <label className={sharedStyles.filterField}>
-        <span className={sharedStyles.filterLabelSmall}>
-          {tr('charts.assetDistributionChart.filters.topN')}
-        </span>
-        <div
-          className={sharedStyles.filterSegmentedGroup}
-          role="group"
-          aria-label={tr('charts.assetDistributionChart.ariaLabels.topNFilter')}
-        >
-          {topNOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setTopN(option.value)}
-              className={`${sharedStyles.filterSegmentedButton} ${topN === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-              aria-pressed={topN === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </label>
-
-      <label className={sharedStyles.filterField}>
-        <span className={sharedStyles.filterLabelSmall}>
-          {tr('charts.assetDistributionChart.filters.minPct')}
-        </span>
-        <div
-          className={sharedStyles.filterSegmentedGroup}
-          role="group"
-          aria-label={tr('charts.assetDistributionChart.ariaLabels.minPctFilter')}
-        >
-          {minPctOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setMinPct(option.value)}
-              className={`${sharedStyles.filterSegmentedButton} ${minPct === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-              aria-pressed={minPct === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </label>
-    </div>
+    <Flex gap={8} align="center" wrap="wrap">
+      <div style={{ width: 180 }}>
+        <FilterSwitch
+          options={topNOptions}
+          value={topN}
+          onChange={(v) => setTopN(v as TopNOption)}
+        />
+      </div>
+      <div style={{ width: 200 }}>
+        <FilterSwitch
+          options={minPctOptions}
+          value={minPct}
+          onChange={(v) => setMinPct(v as MinPctOption)}
+        />
+      </div>
+    </Flex>
   );
 
   return (
@@ -569,7 +538,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                     <span
                       style={{
                         fontSize: '14px',
-                        color: chartTheme.textColor,
+                        color: baseOption.textStyle.color,
                       }}
                     >
                       {asset.name}

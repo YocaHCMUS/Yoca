@@ -1,92 +1,37 @@
-/**
- * TransactionDistribution Component
- * 
- * Displays dual chart view showing transaction counts by date and unique tokens traded,
- * segmented by wallet, delivering activity pattern insights.
- * 
- * @module TransactionDistribution
- */
-
 import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useLocalization } from '@/contexts/LocalizationContext';
-import { BaseChart } from '@/components/charts/Base/BaseChart';
-import { ChartGridItem } from '@/components/charts/shared';
-import { useChartFiltersSync } from '../../../hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '../../../hooks/useChartTheme';
-import { useChartContext } from '../../../contexts/ChartContext';
-import { fetchTransactionDistribution, type InferFetcherData } from '../../../services/chart/chartApi';
-import { formatDate, isChartSuccess } from '../../../util/chart-helpers';
+import { ChartWrapper, ChartGridItem } from '@/components/charts/shared';
+import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
+import {
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from '@/util/carbon-chart-base';
+import { useChartContext } from '@/contexts/ChartContext';
+import { fetchTransactionDistribution, type InferFetcherData } from '@/services/chart/chartApi';
+import { formatDate, isChartSuccess } from '@/util/chart-helpers';
 import { formatAxisTooltip } from '@/util/tooltip-helpers';
-import { getMultiSeriesLegend } from '@/util/chart-legend-config';
-import type { TransactionDistributionRequestParams } from '../../../types/chart-api.types';
+import type { TransactionDistributionRequestParams } from '@/types/chart-api.types';
 
-// Infer response type from fetcher
 type TransactionDistributionData = InferFetcherData<typeof fetchTransactionDistribution>;
-import type { TimePeriod, TransactionType } from '../../../types/chart-filters.types';
-import { useStandardChartController } from '../../../hooks/useChartController';
-import sharedStyles from '../shared/ChartStyle.module.scss';
+import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
+import { useStandardChartController } from '@/hooks/useChartController';
+import { Flex } from '@/components/Flex';
+import { FilterSwitch } from '@/components/FilterSwitch';
 
-/**
- * Props for TransactionDistribution component
- */
-export interface TransactionDistributionProps {
-  /** Chart title */
+interface TransactionDistributionProps {
   title?: string;
-
-  /** Chart minimum height in pixels for each sub-chart */
   minHeight?: number;
-
-  /** Initial time period (default: 30D) */
   initialTimePeriod?: TimePeriod;
-
-  /** Initial transaction type filter */
   initialTransactionType?: TransactionType;
-
-  /** Display mode for transaction counts chart */
   chartMode?: 'stacked' | 'grouped';
-
-  /** Wallet IDs to display (empty array = all wallets) */
   walletIds?: string[];
-
-  /** Enable auto-refresh (default: true) */
   autoRefresh?: boolean;
-
-  /** Auto-refresh interval in milliseconds (default: 30000) */
   refreshInterval?: number;
-
-  /** Callback when data is loaded */
   onDataLoaded?: (data: TransactionDistributionData) => void;
-
-  /** Additional CSS class */
   className?: string;
 }
 
-/**
- * TransactionDistribution Component
- * 
- * User Story 7: Analyze Transaction Distribution by Type (Priority: P3)
- * 
- * Displays dual chart view with:
- * - Transaction counts by date segmented by wallet (stacked/grouped bars)
- * - Unique tokens traded per day (line chart)
- * - Color distinction for different wallets
- * - Time period and transaction type filtering
- * - Wallet selection filtering
- * - Data labels on bars/points
- * - Auto-refresh every 30 seconds
- * 
- * @example
- * ```tsx
- * <TransactionDistribution
- *   title="Transaction Activity Analysis"
- *   height={300}
- *   initialTimePeriod="30D"
- *   chartMode="stacked"
- *   autoRefresh={true}
- * />
- * ```
- */
 export function TransactionDistribution({
   title,
   minHeight = 400,
@@ -99,24 +44,17 @@ export function TransactionDistribution({
   onDataLoaded,
   className,
 }: TransactionDistributionProps) {
-  // i18n
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.transactionDistributionChart.title');
 
-  // State for chart mode
   const [selectedChartMode, setSelectedChartMode] = useState<'stacked' | 'grouped'>(chartMode);
 
-  // Chart instance refs for export
   const transactionChartRef = useRef<ReactECharts>(null);
   const tokenChartRef = useRef<ReactECharts>(null);
 
-  // Get timezone from context
   const { selectedTimezone: timezone } = useChartContext();
+  const baseOption = useCarbonChartBaseOption();
 
-  // Get theme configuration
-  const chartTheme = useChartTheme();
-
-  // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters: {
       timePeriod: initialTimePeriod,
@@ -126,9 +64,6 @@ export function TransactionDistribution({
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query to prevent unnecessary re-fetches
-   */
   const query = useMemo<TransactionDistributionRequestParams>(
     () => ({
       timePeriod: filters.timePeriod,
@@ -139,9 +74,6 @@ export function TransactionDistribution({
     [filters.timePeriod, filters.transactionType, walletsString, timezone]
   );
 
-  /**
-   * Centralized lifecycle handling
-   */
   const { data, loadingState, refetch } =
     useStandardChartController<TransactionDistributionData, TransactionDistributionRequestParams>({
       fetcher: fetchTransactionDistribution,
@@ -151,21 +83,11 @@ export function TransactionDistribution({
       onDataLoaded,
     });
 
-  /**
-   * Generate eCharts options for transaction counts chart
-   */
   const transactionCountsOptions = useMemo(() => {
     if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
 
-    // Get base theme configuration
-    const baseOption = getThemedChartBaseOption(chartTheme);
-
-    // Use theme color palette
-    const colorPalette = chartTheme.colorPalette;
-
-    // Create series for each wallet
     const series = data.transactionCounts.map((wallet, index) => ({
       name: wallet.walletName,
       type: 'bar' as const,
@@ -180,7 +102,7 @@ export function TransactionDistribution({
         },
         fontSize: 10,
       },
-      color: colorPalette[index % colorPalette.length],
+      color: CHART_COLOR_PALETTE[index % CHART_COLOR_PALETTE.length],
       emphasis: {
         focus: 'series',
       },
@@ -188,7 +110,6 @@ export function TransactionDistribution({
 
     return {
       ...baseOption,
-      ...getChartGridConfig,
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'axis',
@@ -224,11 +145,11 @@ export function TransactionDistribution({
           return tooltipContent;
         },
       },
-      legend: getMultiSeriesLegend(
-        chartTheme,
-        data.transactionCounts.map(w => w.walletName),
-        false
-      ),
+      legend: {
+        show: true,
+        data: data.transactionCounts.map(w => w.walletName),
+        textStyle: { color: baseOption.textStyle.color },
+      },
       xAxis: {
         ...baseOption.xAxis,
         type: 'time',
@@ -263,22 +184,15 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, selectedChartMode, timezone, chartTheme, tr]);
+  }, [data, selectedChartMode, timezone, baseOption]);
 
-  /**
-   * Generate eCharts options for unique token counts chart
-   */
   const uniqueTokenCountsOptions = useMemo(() => {
     if (!isChartSuccess(data, 'transactionCounts')) {
       return {};
     }
 
-    // Get base theme configuration
-    const baseOption = getThemedChartBaseOption(chartTheme);
-
     return {
       ...baseOption,
-      ...getChartGridConfig,
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -305,7 +219,6 @@ export function TransactionDistribution({
         ...baseOption.yAxis,
         type: 'value',
         name: 'Unique token traded',
-        // nameLocation: 'middle',
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
           formatter: (value: number) => value.toFixed(0),
@@ -320,7 +233,7 @@ export function TransactionDistribution({
           showSymbol: data.uniqueTokenCounts.length <= 50,
           symbolSize: 6,
           itemStyle: {
-            color: chartTheme.colorPalette[1], // Use theme green
+            color: CHART_COLOR_PALETTE[1],
           },
           areaStyle: {
             color: {
@@ -330,8 +243,8 @@ export function TransactionDistribution({
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: `${chartTheme.colorPalette[1]}4D` }, // 30% opacity
-                { offset: 1, color: `${chartTheme.colorPalette[1]}0D` }, // 5% opacity
+                { offset: 0, color: `${CHART_COLOR_PALETTE[1]}4D` },
+                { offset: 1, color: `${CHART_COLOR_PALETTE[1]}0D` },
               ],
             },
           },
@@ -359,141 +272,65 @@ export function TransactionDistribution({
         },
       ],
     };
-  }, [data, timezone, chartTheme, tr]);
+  }, [data, timezone, baseOption, tr]);
 
-  // Export functionality
-  // const { exportPNG, exportSVG, exportCSV } = useChartExport({
-  //   chartTitle,
-  //   timezone,
-  //   baseFilename: 'transaction-distribution',
-  // });
-
-  // /**
-  //  * Handle export based on format
-  //  */
-  // const handleExport = async (format: ExportFormat) => {
-  //   const transactionChartInstance = transactionChartRef.current?.getEchartsInstance();
-  //   if (!transactionChartInstance) {
-  //     console.error('Transaction chart instance not available for export');
-  //     return;
-  //   }
-
-  //   if (format === 'png') {
-  //     exportPNG(transactionChartInstance as any, filters);
-  //   } else if (format === 'svg') {
-  //     exportSVG(transactionChartInstance as any, filters);
-  //   } else if (format === 'csv' && data) {
-  //     // Convert data to ChartDataSeries format for CSV export
-  //     const csvData: Array<{
-  //       id: string;
-  //       name: string;
-  //       type: 'bar' | 'line';
-  //       data: Array<{ name: string; value: number }>;
-  //       visible: boolean;
-  //     }> = data.transactionCounts.map(wallet => ({
-  //       id: wallet.walletId,
-  //       name: wallet.walletName,
-  //       type: 'bar' as const,
-  //       data: wallet.data.map(point => ({
-  //         name: new Date(point.timestamp).toISOString(),
-  //         value: point.value,
-  //       })),
-  //       visible: true,
-  //     }));
-
-  //     // Add unique token counts as a separate series
-  //     csvData.push({
-  //       id: 'unique-tokens',
-  //       name: t('charts.transactionDistributionChart.tokens'),
-  //       type: 'line' as const,
-  //       data: data.uniqueTokenCounts.map(point => ({
-  //         name: new Date(point.timestamp).toISOString(),
-  //         value: point.value,
-  //       })),
-  //       visible: true,
-  //     });
-
-  //     exportCSV(csvData, filters);
-  //   }
-  // };
-
-  /**
-   * Handle chart mode toggle
-   */
   const handleChartModeChange = (mode: 'stacked' | 'grouped') => {
     setSelectedChartMode(mode);
   };
 
-  /**
-   * Handle retry on error
-   */
   const handleRetry = () => {
     refetch(false);
   };
 
+  const chartModeOptions = [
+    { value: 'stacked' as const, label: tr('charts.transactionDistributionChart.stacked') },
+    { value: 'grouped' as const, label: tr('charts.transactionDistributionChart.grouped') },
+  ];
+
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      // height={height * 2 + 40}
       onRetry={handleRetry}
       isEmpty={!isChartSuccess(data, 'transactionCounts') || (data.transactionCounts.length === 0 && data.uniqueTokenCounts.length === 0)}
+      toolbarLayout="stacked"
+      actions={
+        <Flex gap={8} align="center">
+          <div style={{ width: 160 }}>
+            <FilterSwitch
+              options={chartModeOptions}
+              value={selectedChartMode}
+              onChange={(v) => handleChartModeChange(v as 'stacked' | 'grouped')}
+            />
+          </div>
+        </Flex>
+      }
     >
-      {/* <div className={styles.transactionDistribution}>
-      </div> */}
-      {/* Chart mode selector */}
-      <div className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--withBorder']} ${sharedStyles['chartControls--end']}`}>
-        <div className={sharedStyles['chartToggle--padded']}>
-          <button
-            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'stacked' ? sharedStyles.active : ''}`}
-            onClick={() => handleChartModeChange('stacked')}
-            aria-label={tr('charts.transactionDistributionChart.stacked')}
-            title={tr('charts.transactionDistributionChart.stacked')}
-          >
-            {tr('charts.transactionDistributionChart.stacked')}
-          </button>
-          <button
-            className={`${sharedStyles.chartToggleButton} ${selectedChartMode === 'grouped' ? sharedStyles.active : ''}`}
-            onClick={() => handleChartModeChange('grouped')}
-            aria-label={tr('charts.transactionDistributionChart.grouped')}
-            title={tr('charts.transactionDistributionChart.grouped')}
-          >
-            {tr('charts.transactionDistributionChart.grouped')}
-          </button>
-        </div>
-      </div>
-
-      {/* Transaction counts chart */}
       {data && (
-        <div className={sharedStyles.chartSection}>
-          <ChartGridItem minHeight={minHeight}>
-            <ReactECharts
-              ref={transactionChartRef}
-              option={transactionCountsOptions}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </ChartGridItem>
-        </div>
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={transactionChartRef}
+            option={transactionCountsOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
 
-      {/* Unique token counts chart */}
       {data && (
-        <div className={sharedStyles.chartSection}>
-          <ChartGridItem minHeight={minHeight}>
-            <ReactECharts
-              ref={tokenChartRef}
-              option={uniqueTokenCountsOptions}
-              style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-              opts={{ renderer: 'canvas' }}
-              notMerge={true}
-              lazyUpdate={true}
-            />
-          </ChartGridItem>
-        </div>
+        <ChartGridItem minHeight={minHeight}>
+          <ReactECharts
+            ref={tokenChartRef}
+            option={uniqueTokenCountsOptions}
+            style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+            opts={{ renderer: 'canvas' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
+        </ChartGridItem>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 }
