@@ -63,15 +63,15 @@ function toSubscript(num: number): string {
 }
 
 function formatSmallCompact(value: number): string {
-  const str = value.toFixed(20);
-  const match = str.match(/^0\.0+/);
+  const str = value.toPrecision(16);
 
+  const match = str.match(/^0\.0+/);
   if (!match) return value.toString();
 
   const zeroCount = match[0].length - 2;
-  // Extract all significant digits (up to decimal precision limit)
+
   const remaining = str.slice(match[0].length);
-  const significant = remaining.replace(/0+$/, ""); // Remove trailing zeros
+  const significant = remaining.replace(/0+$/, "").slice(0, 4);
 
   return `0.0${toSubscript(zeroCount)}${significant}`;
 }

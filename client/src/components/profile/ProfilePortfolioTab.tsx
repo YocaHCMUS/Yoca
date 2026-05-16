@@ -102,7 +102,7 @@ export function ProfilePortfolioTab({
     () =>
       walletOverviews.map((overview) => {
         const walletMeta = linkedWalletByAddress.get(overview.address);
-        const walletLabel = formatAddress(overview.address);
+        const walletLabel = fmt.text.address(overview.address);
         const authStatus = walletMeta?.isAuthWallet
           ? tr("profileTabs.portfolio.authWalletLabel")
           : tr("profileTabs.portfolio.linkedWalletLabel");

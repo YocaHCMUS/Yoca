@@ -4,7 +4,7 @@ import { CaretDown, CaretUp } from "@carbon/react/icons";
 export function TrendNum({
   value,
   prefixes = "arrow",
-  epsilon = 1e-8,
+  epsilon = 1e-20,
   formatter,
 }: {
   value: number | null;
@@ -15,9 +15,10 @@ export function TrendNum({
   if (value == null) {
     return <span>{formatter(value)}</span>;
   }
-  if (Math.abs(value) < epsilon) {
-    return <span>{formatter(0)}</span>;
-  }
+  // Temporarily removed this feature
+  // if (Math.abs(value) < epsilon) {
+  //   return <span>{formatter(0)}</span>;
+  // }
 
   let prefix: React.ReactNode = null;
   const formattedValue = formatter(Math.abs(value));

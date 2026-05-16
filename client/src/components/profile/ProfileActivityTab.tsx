@@ -216,7 +216,7 @@ export function ProfileActivityTab({
                     className={styles.walletAddressLink}
                     title={card.walletAddress}
                   >
-                    {formatAddress(card.walletAddress)}
+                    {fmt.text.address(card.walletAddress)}
                   </a>
                   {/* <CopyButton 
                                         onClick={() => navigator.clipboard.writeText(card.walletAddress)}
