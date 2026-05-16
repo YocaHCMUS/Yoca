@@ -133,14 +133,14 @@ export function BalanceChartV2({ address }: { address: string }) {
         ];
 
   return (
-    <ChartWrapper title="Balance History">
+    <ChartWrapper title={tr("charts.balanceChart.title")}>
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
             <MultiSelect
               id="token-selector"
               items={portfolio.data || []}
-              label="Select tokens"
+              label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
                 <Flex gap={4} align="center">
@@ -164,8 +164,8 @@ export function BalanceChartV2({ address }: { address: string }) {
 
           <FilterSwitch
             options={[
-              { value: "7D", label: "7D" },
-              { value: "30D", label: "30D" },
+              { value: "7D", label: tr("charts.balanceChart.window7d") },
+              { value: "30D", label: tr("charts.balanceChart.window30d") },
             ]}
             value={timePeriod}
             onChange={(v) => setTimePeriod(v)}
@@ -176,7 +176,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         {change24h && (
           <Flex align="center" gap={4}>
             <Txt size="md" secondary>
-              24h Total:
+              {tr("charts.balanceChart.change")}
             </Txt>
             <Flex gap={4}>
               <TrendNum
