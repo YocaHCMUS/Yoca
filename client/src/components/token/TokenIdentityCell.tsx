@@ -33,16 +33,26 @@ export function TokenIdentityCell({
         <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
             <TknImg src={source} alt={normalizedSymbol} size={imageSize} />
             <span>
-                <Tooltip label={tooltipLabel} align={tooltipAlign}>
+                <Tooltip label={tooltipLabel.toUpperCase()} align={tooltipAlign}>
                     {emphasizeSymbol ? (
-                        <strong>{normalizedSymbol}</strong>
+                        <strong>{normalizedSymbol.toUpperCase()}</strong>
                     ) : (
-                        <span>{normalizedSymbol}</span>
+                        <span>{normalizedSymbol.toUpperCase()}</span>
                     )}
                 </Tooltip>
             </span>
         </Stack>
     );
 }
+
+// export function TokenPairCell({
+//     symbols,
+//     fullNames,
+//     imageUrls,
+//     imageSize = 30,
+//     tooltipAlign = "right",
+//     emphasizeSymbol = false,
+
+// })
 
 export default TokenIdentityCell;
