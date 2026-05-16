@@ -4,7 +4,7 @@ import { FilterType, SortType } from "@/components/tables/Table";
 import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
-import type { ProfileOverviewData } from "@/types/profile";
+import type { ProfileAccountTier, ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { AddLarge, Repeat } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +14,7 @@ import {
     requestLinkWalletChallenge,
     unlinkWalletAddress,
 } from "@/services/profile/profileApi";
+import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
 import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
@@ -35,6 +36,13 @@ function formatAddress(address: string): string {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+function mapPlanTierToAccountTier(planTier: PlanTier | null): ProfileAccountTier {
+    if (planTier === "Pro") return "pro";
+    if (planTier === "Plus") return "premium";
+    if (planTier === "Lite") return "basic";
+    return "basic";
+}
+
 export function ProfilePortfolioTab({
     linkedWallets,
     period,
@@ -53,12 +61,41 @@ export function ProfilePortfolioTab({
         [linkedWalletRows],
     );
     const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
+    const [currentPlanTier, setCurrentPlanTier] = useState<PlanTier | null>(null);
     const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
 
     useEffect(() => {
         setLinkedWalletRows(linkedWallets);
     }, [linkedWallets]);
+
+    useEffect(() => {
+        let active = true;
+
+        async function loadCurrentPlanTier() {
+            if (!user?.userId) {
+                setCurrentPlanTier(null);
+                return;
+            }
+
+            try {
+                const subscription = await getUserSubscription();
+                if (!active) return;
+                setCurrentPlanTier(subscription?.planTier ?? null);
+            } catch (error) {
+                console.error("[ProfilePortfolioTab] Failed to load current subscription:", error);
+                if (active) {
+                    setCurrentPlanTier(null);
+                }
+            }
+        }
+
+        loadCurrentPlanTier();
+
+        return () => {
+            active = false;
+        };
+    }, [user?.userId]);
 
     const navigateToWalletDetail = (walletAddress: string) => {
         const nextPath = `/wallets/${encodeURIComponent(walletAddress)}`;
@@ -84,7 +121,7 @@ export function ProfilePortfolioTab({
             avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
             displayName: user?.displayName?.trim() || "Guest",
             userId: user?.userId,
-            accountTier: "pro",
+            accountTier: mapPlanTierToAccountTier(currentPlanTier),
             period,
             totalNetWorthUsd,
             tradeOrTxCount,
@@ -92,7 +129,7 @@ export function ProfilePortfolioTab({
             pnlPct: totalNetWorthUsd > 0 ? (pnlUsd / totalNetWorthUsd) * 100 : 0,
             linkedWalletCount: linkedWalletAddresses.length,
         };
-    }, [period, user?.displayName, user?.userId, linkedWalletAddresses, walletOverviews]);
+    }, [currentPlanTier, period, user?.displayName, user?.userId, linkedWalletAddresses, walletOverviews]);
 
     const tableRows = useMemo(
         () =>
