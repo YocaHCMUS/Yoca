@@ -96,7 +96,7 @@ export function BalanceChartV2({ address }: { address: string }) {
       },
     },
     {
-      enabled: !!portfolio.data && selectedTokens != null,
+      enabled: !!portfolio.data && selectedTokens != null && selectedTokens.length > 0,
       select: (data) =>
         [
           ...new Map(
