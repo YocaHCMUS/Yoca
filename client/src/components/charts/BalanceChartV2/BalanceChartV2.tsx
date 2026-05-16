@@ -11,6 +11,7 @@ import { ONE_DAY_MS } from "@/config/constants";
 import { Layer, MultiSelect } from "@carbon/react";
 import { TknImg } from "@/components/TknImg";
 import { ChartWrapper } from "../shared";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -138,6 +139,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
             <MultiSelect
+              className={overwriteStyles.smallPaddingMenuItem}
               id="token-selector"
               items={portfolio.data || []}
               label="Select tokens"
@@ -145,7 +147,7 @@ export function BalanceChartV2({ address }: { address: string }) {
               itemToElement={(account) => (
                 <Flex gap={4} align="center">
                   <TknImg
-                    size={20}
+                    size={25}
                     alt={account.symbol || account.tokenAddress}
                     loading={portfolio.isLoading}
                     src={account.logoUri}
