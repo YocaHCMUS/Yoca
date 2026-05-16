@@ -1,158 +1,159 @@
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/theme" as *;
 
 .container {
-    width: 100%;
-    background: transparent;
-    padding: 12px 16px;
-    position: relative;
-    font-family: 'Inter', sans-serif;
+  width: 100%;
+  background: transparent;
+  padding: 12px 16px;
+  position: relative;
 }
 
 .label {
-    font-size: 12px;
-    color: $text-secondary;
-    margin-bottom: 6px;
-    font-weight: 500;
+  font-size: 12px;
+  color: $text-secondary;
+  margin-bottom: 6px;
+  font-weight: 500;
 }
 
 .selector {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    background: $background;
-    border: 1px solid $border-subtle;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: $text-primary;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: $background;
+  border: 1px solid $border-subtle;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: $text-primary;
 
-    &:hover {
-        border-color: $text-helper;
-    }
+  &:hover {
+    border-color: $text-helper;
+  }
 
-    &.active {
-        border-color: $focus;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-    }
+  &.active {
+    border-color: $focus;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  }
 }
 
 .selectedContent {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .selectedName {
-    font-size: 14px;
-    font-weight: 600;
-    color: $text-primary;
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
 }
 
 .sourceTag {
-    font-size: 11px;
-    color: $text-secondary;
-    background: $layer-accent-01;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
+  font-size: 11px;
+  color: $text-secondary;
+  background: $layer-accent-01;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 // Dropdown
 .dropdown {
-    position: absolute;
-    top: calc(100% - 5px);
-    left: 16px;
-    right: 16px;
-    background: $background;
-    border: 1px solid $border-subtle;
-    border-radius: 8px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    z-index: 1000;
-    overflow: hidden;
+  position: absolute;
+  top: calc(100% - 5px);
+  left: 16px;
+  right: 16px;
+  background: $background;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .headerRow {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr;
-    padding: 10px 12px;
-    background: $layer-02;
-    border-bottom: 1px solid $border-subtle;
-    align-items: center;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  padding: 10px 12px;
+  background: $layer-02;
+  border-bottom: 1px solid $border-subtle;
+  align-items: center;
 
-    span {
-        font-size: 11px;
-        font-weight: 600;
-        color: $text-secondary;
-        text-transform: uppercase;
-    }
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    color: $text-secondary;
+    text-transform: uppercase;
+  }
 }
 
 .colPair {
-    text-align: left;
+  text-align: left;
 }
 
 .colVol,
 .colLiq {
-    text-align: right;
+  text-align: right;
 }
 
 .list {
-    max-height: 240px;
-    overflow-y: auto;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .listItem {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr;
-    padding: 10px 12px;
-    align-items: center;
-    cursor: pointer;
-    border-bottom: 1px solid $border-subtle;
-    transition: background 0.15s;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  padding: 10px 12px;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid $border-subtle;
+  transition: background 0.15s;
 
-    &:last-child {
-        border-bottom: none;
-    }
+  &:last-child {
+    border-bottom: none;
+  }
 
-    &:hover {
-        background: $layer-02;
-    }
+  &:hover {
+    background: $layer-02;
+  }
 
-    &.selected {
-        background: $layer-selected-01;
-    }
+  &.selected {
+    background: $layer-selected-01;
+  }
 }
 
 // Inside List Item
 .pairInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .pairName {
-    font-size: 13px;
-    font-weight: 600;
-    color: $text-primary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pairSource {
-    font-size: 11px;
-    color: $text-secondary;
+  font-size: 11px;
+  color: $text-secondary;
 }
 
 .colVol,
 .colLiq {
-    font-size: 13px;
-    color: $text-primary;
-    font-weight: 500;
+  font-size: 13px;
+  color: $text-primary;
+  font-weight: 500;
 }
 
 // Global override for dropdown behavior if needed
 :global(.cds--dropdown) {
-    display: none; // Hide old carbon dropdown if any remains
+  display: none; // Hide old carbon dropdown if any remains
 }

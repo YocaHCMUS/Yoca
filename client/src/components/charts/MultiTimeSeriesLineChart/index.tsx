@@ -1,6 +1,7 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { cds } from "@/util/carbon-theme";
+import { hashColor } from "@/util/color";
 import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
@@ -154,8 +155,9 @@ export function MultiTimeSeriesLineChart({
         min: (v) => v.min - (v.max - v.min) * 0.15,
         max: (v) => v.max + (v.max - v.min) * 0.15,
       },
-      series: prepared.map((s, i) => {
-        const color = s.color ?? palette[i % palette.length];
+      series: prepared.map((s) => {
+        const color = s.color ?? hashColor(s.key);
+
         return {
           name: s.label ?? s.key,
           type: "line",
@@ -164,6 +166,7 @@ export function MultiTimeSeriesLineChart({
           smooth: 0.1,
           lineStyle: { width: 2, color },
           areaStyle: { opacity: 0 },
+          color,
         } as const;
       }),
     };

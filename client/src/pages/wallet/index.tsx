@@ -578,6 +578,7 @@ export default function WalletPage() {
       const token = value;
       return renderTokenCell(
         token,
+        fmt.num.compact.decimal,
         renderSwapTokenInfoClassnames,
         30,
         true,
@@ -589,6 +590,7 @@ export default function WalletPage() {
       const token = value;
       return renderTokenCell(
         token,
+        fmt.num.compact.decimal,
         renderSwapTokenInfoClassnames,
         30,
         true,
@@ -629,6 +631,7 @@ export default function WalletPage() {
       // neccessary evil
       return renderTokenCell(
         value,
+        fmt.num.compact.decimal,
         renderSwapTokenInfoClassnames,
         30,
         true,
