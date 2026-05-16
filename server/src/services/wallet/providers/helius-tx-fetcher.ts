@@ -1,6 +1,7 @@
 import type { HeliusEnhancedTransaction } from "@sv/services/transactions.js";
 import { runCursorPagination } from "@sv/services/wallet/fetchers/walletPagination.js";
 import { heliusGetJson } from "./helius.client.js";
+import { TRANSACTION_FETCH_MAX_ITEM_COUNT, TRANSACTION_FETCH_MAX_PAGE_COUNT } from "@sv/config/constants.js";
 
 export type HeliusTxFetcherResult = {
   transactions: HeliusEnhancedTransaction[];
@@ -24,8 +25,8 @@ export async function fetchHeliusAddressTransactions(
 
   const paged = await runCursorPagination<HeliusEnhancedTransaction>({
     initialCursor: options?.before ?? null,
-    maxPages: 50,
-    maxItems: 1000,
+    maxPages: TRANSACTION_FETCH_MAX_PAGE_COUNT,
+    maxItems: TRANSACTION_FETCH_MAX_ITEM_COUNT, // 
     fetchPage: async (cursor) => {
       let json: unknown;
       try {
