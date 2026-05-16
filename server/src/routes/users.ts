@@ -5,7 +5,6 @@ import {
 } from "@sv/config/constants.js";
 import {
   googleTokenSchema,
-  honoJwt,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
@@ -295,3 +294,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type UsersAppType = typeof app;

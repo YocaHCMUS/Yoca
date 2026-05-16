@@ -1408,7 +1408,9 @@ export const userSources = pgTable(
 
 // #region Types
 export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
+export type TokenMetaSelect = typeof tokenMeta.$inferSelect;
 export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
+export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type UserInsert = typeof users.$inferInsert;

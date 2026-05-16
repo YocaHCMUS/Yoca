@@ -37,11 +37,9 @@ import {
   getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
 import { z } from "zod";
+import { Hono } from "hono";
 import { setErr } from "@sv/util/errors";
-
-const router = new Hono();
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -192,7 +190,7 @@ function mapSwapToTokenTradeRow(
   };
 }
 
-const routes = router
+const app = new Hono()
   .get("/overview", async (c) => {
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
@@ -214,10 +212,13 @@ const routes = router
 
     try {
       const portfolio = await getWalletPortfolio(address);
-      return c.json(portfolio);
-    } catch (err) {
-      console.error("Failed to get wallet portfolio", err);
-      return c.json({ error: "Failed to get wallet portfolio" }, 500);
+      return c.json(portfolio, statusCode.Ok);
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { error: "Failed to get wallet portfolio" },
+        statusCode.InternalServerError,
+      );
     }
   })
   .get("/swap", async (c) => {
@@ -564,4 +565,6 @@ const routes = router
     }
   });
 
-export default routes;
+export default app;
+
+export type WalletsAppType = typeof app;

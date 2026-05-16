@@ -1,29 +1,32 @@
 import env from "@sv/util/load-env.js";
-
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
-import alerts from "@sv/routes/alerts.route.js";
-import alertsRoute from "@sv/routes/alerts.js";
-import balances from "@sv/routes/balances.js";
-import chartRoutes from "@sv/routes/chart.route.js";
-import misc from "@sv/routes/misc.js";
-import payment from "@sv/routes/payment.route.js";
-import profile from "@sv/routes/profile.js";
-import search from "@sv/routes/search.js";
-import transactions from "@sv/routes/transactions.js";
-import tokens from "@sv/routes/tokens.js";
-import trades from "@sv/routes/trades.js";
-import transfers from "@sv/routes/transfers.js";
-import users from "@sv/routes/users.js";
-import wallets from "@sv/routes/wallets.route.js";
-import walletTags from "@sv/routes/walletTags.route.js";
-import webhook from "@sv/routes/webhook.js";
-import news from "@sv/routes/news.js";
+import users, { type UsersAppType } from "@sv/routes/users.js";
+import tokens, { type TokenAppType } from "@sv/routes/tokens.js";
+import balances, { type BalancesAppType } from "@sv/routes/balances.js";
+import alerts, { type AlertsRouteAppType } from "@sv/routes/alerts.route.js";
+import alertsToken, { type AlertsAppType } from "@sv/routes/alerts.js";
+import chartRoutes, { type ChartRouteAppType } from "@sv/routes/chart.route.js";
+import misc, { type MiscAppType } from "@sv/routes/misc.js";
+import news, { type NewsAppType } from "@sv/routes/news.js";
+import profile, { type ProfileAppType } from "@sv/routes/profile.js";
+import search, { type SearchAppType } from "@sv/routes/search.js";
+import trades, { type TradesAppType } from "@sv/routes/trades.js";
+import transactions, {
+  type TransactionsAppType,
+} from "@sv/routes/transactions.js";
+import transfers, { type TransfersAppType } from "@sv/routes/transfers.js";
+import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
+import walletTags, {
+  type WalletTagsAppType,
+} from "@sv/routes/walletTags.route.js";
+import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import payment, { PaymentAppType } from "./routes/payment.route";
 
 const app = new Hono()
   .use("*", logger())
@@ -34,24 +37,7 @@ const app = new Hono()
     ...(env.NODE_ENV == "development" ? [csrf({ origin: clientDomains })] : []),
   )
   .get("/", (c) => c.redirect("/api"))
-  .get("/api", (c) => c.json({ status: "ok" }))
-  .route("/api/users", users)
-  .route("/api/tokens", tokens)
-  .route("/api/misc", misc)
-  .route("/api/search", search)
-  .route("/api/transactions", transactions)
-  .route("/api/balances", balances)
-  .route("/api/transfers", transfers)
-  .route("/api/charts", chartRoutes)
-  .route("/api/profile", profile)
-  .route("/api/wallets", wallets)
-  .route("/api/walletTags", walletTags)
-  .route("/api/alertsRoute", alertsRoute)
-  .route("/api/trades", trades)
-  .route("/api/alerts", alerts)
-  .route("/api/news", news)
-  .route("/api/payment", payment)
-  .route("/webhook", webhook);
+  .get("/api", (c) => c.json({ status: "ok" }));
 
 // startTokenPolling();
 
@@ -67,6 +53,51 @@ serve(
   },
 );
 
-// RPC for client
-export type AppType = typeof app;
-export type { ErrCode } from "@sv/config/errors.js";
+// Define here first
+export type AppRoutes = {
+  "/api/users": UsersAppType;
+  "/api/tokens": TokenAppType;
+  "/api/misc": MiscAppType;
+  "/api/search": SearchAppType;
+  "/api/transactions": TransactionsAppType;
+  "/api/balances": BalancesAppType;
+  "/api/transfers": TransfersAppType;
+  "/api/charts": ChartRouteAppType;
+  "/api/profile": ProfileAppType;
+  "/api/wallets": WalletsAppType;
+  "/api/walletTags": WalletTagsAppType;
+  "/api/alerts": AlertsRouteAppType;
+  "/api/trades": TradesAppType;
+  "/api/alertsToken": AlertsAppType;
+  "/api/news": NewsAppType;
+  "/webhook": WebhookAppType;
+  "/payment": PaymentAppType;
+};
+
+// Then here
+const routes: AppRoutes = {
+  "/api/users": users,
+  "/api/tokens": tokens,
+  "/api/misc": misc,
+  "/api/search": search,
+  "/api/transactions": transactions,
+  "/api/balances": balances,
+  "/api/transfers": transfers,
+  "/api/charts": chartRoutes,
+  "/api/profile": profile,
+  "/api/wallets": wallets,
+  "/api/walletTags": walletTags,
+  "/api/alerts": alerts,
+  "/api/trades": trades,
+  "/api/alertsToken": alertsToken,
+  "/api/news": news,
+  "/webhook": webhook,
+  "/payment": payment,
+};
+
+Object.entries(routes).forEach(([path, route]) => {
+  app.route(path, route);
+});
+
+export type { Hono as HonoAppType } from "hono";
+export type AppRouteOf<T extends keyof AppRoutes> = AppRoutes[T];

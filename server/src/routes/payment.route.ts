@@ -420,3 +420,4 @@ const app = new Hono()
   );
 
 export default app;
+export type PaymentAppType = typeof app;

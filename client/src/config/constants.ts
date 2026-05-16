@@ -1,6 +1,9 @@
 export const THEME_LOCAL_STORAGE_KEY = "yoca_theme";
 export const ID_MODAL_ROOT = "modal-root";
 
+// Time constants (in milliseconds)
+export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 // External blockchain explorer URLs
 export const SOLSCAN_ACCOUNT_URL = "https://solscan.io/account";
 export const SOLSCAN_TX_URL = "https://solscan.io/tx";

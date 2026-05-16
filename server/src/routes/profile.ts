@@ -881,3 +881,5 @@ const app = new Hono()
     }
   });
 export default app;
+
+export type ProfileAppType = typeof app;

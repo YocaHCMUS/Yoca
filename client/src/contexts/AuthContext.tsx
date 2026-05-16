@@ -27,32 +27,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const resp = await client.api.users.auth.me.$get();
-      const status = Number(resp.status);
 
-      if (status == 200) {
+      if (resp.ok) {
         const res = await resp.json();
-        const userId = res?.id || res?.userId || (res as any)?.Id;
 
-        if (userId) {
+        if (res) {
           setUser({
-            userId: String(userId),
-            displayName:
-              res &&
-              typeof res == "object" &&
-              "displayName" in res &&
-              typeof (res as { displayName?: unknown }).displayName == "string"
-                ? ((res as { displayName: string }).displayName ?? null)
-                : null,
+            userId: res.id,
+            displayName: res.displayName,
           });
         } else {
           // API may return null for unauthenticated sessions.
           setUser(null);
         }
-      } else if (status == 401) {
-        setUser(null);
-      } else if (status == 500) {
-        console.error("Server error while fetching current user");
       } else {
+        setUser(null);
         console.error("Unexpected response while fetching current user:", resp);
       }
     } catch (err) {

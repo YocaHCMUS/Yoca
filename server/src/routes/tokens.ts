@@ -430,4 +430,5 @@ const app = new Hono()
     },
   );
 
+export type TokenAppType = typeof app;
 export default app;

@@ -80,8 +80,9 @@ export function useGet<
     },
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
+      // keepPreviousData: true,
+      // revalidateOnReconnect: false,
+      // revalidateIfStale: false,
     },
   );
 }

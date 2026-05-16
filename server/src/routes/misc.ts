@@ -20,9 +20,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (CG updates every 5 min)
 function isPrivateHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase();
   if (
-    normalized === "localhost"
-    || normalized === "127.0.0.1"
-    || normalized === "::1"
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1"
   ) {
     return true;
   }
@@ -37,7 +37,11 @@ function isPrivateHost(hostname: string): boolean {
   const match172 = normalized.match(/^172\.(\d+)\./);
   if (match172) {
     const secondOctet = Number(match172[1]);
-    if (Number.isFinite(secondOctet) && secondOctet >= 16 && secondOctet <= 31) {
+    if (
+      Number.isFinite(secondOctet) &&
+      secondOctet >= 16 &&
+      secondOctet <= 31
+    ) {
       return true;
     }
   }
@@ -47,37 +51,37 @@ function isPrivateHost(hostname: string): boolean {
 
 const app = new Hono()
   .get("/exchange-rates", async (c) => {
-  const now = Date.now();
+    const now = Date.now();
 
-  if (cachedRates && now - cachedAt < CACHE_TTL_MS) {
-    return c.json(cachedRates);
-  }
-
-  try {
-    const endpoint = cg.getEndpoint("/exchange_rates");
-    const resp = await trackedFetch({
-      provider: "unknown",
-      url: endpoint,
-      init: {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      },
-      serviceFile: "server/src/routes/misc.ts",
-      functionName: "GET /exchange-rates",
-    });
-    if (!resp.ok) {
-      if (cachedRates) return c.json(cachedRates); // serve stale on error
-      return c.json({ error: "Failed to fetch exchange rates" }, 502);
+    if (cachedRates && now - cachedAt < CACHE_TTL_MS) {
+      return c.json(cachedRates);
     }
 
-    cachedRates = (await resp.json()) as ExchangeRatesResponse;
-    cachedAt = now;
-    return c.json(cachedRates);
-  } catch (err) {
-    console.error(err);
-    if (cachedRates) return c.json(cachedRates);
-    return c.json({ error: "Internal server error" }, 500);
-  }
+    try {
+      const endpoint = cg.getEndpoint("/exchange_rates");
+      const resp = await trackedFetch({
+        provider: "unknown",
+        url: endpoint,
+        init: {
+          method: "GET",
+          headers: cg.getRequiredHeaders(),
+        },
+        serviceFile: "server/src/routes/misc.ts",
+        functionName: "GET /exchange-rates",
+      });
+      if (!resp.ok) {
+        if (cachedRates) return c.json(cachedRates); // serve stale on error
+        return c.json({ error: "Failed to fetch exchange rates" }, 502);
+      }
+
+      cachedRates = (await resp.json()) as ExchangeRatesResponse;
+      cachedAt = now;
+      return c.json(cachedRates);
+    } catch (err) {
+      console.error(err);
+      if (cachedRates) return c.json(cachedRates);
+      return c.json({ error: "Internal server error" }, 500);
+    }
   })
   .get("/image-proxy", async (c) => {
     const rawUrl = c.req.query("url") ?? "";
@@ -110,7 +114,8 @@ const app = new Hono()
         return c.json({ error: "Failed to fetch image" }, 502);
       }
 
-      const contentType = response.headers.get("content-type") ?? "application/octet-stream";
+      const contentType =
+        response.headers.get("content-type") ?? "application/octet-stream";
       if (!contentType.startsWith("image/")) {
         return c.json({ error: "Target is not an image" }, 415);
       }
@@ -127,3 +132,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type MiscAppType = typeof app;

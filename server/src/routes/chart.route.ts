@@ -27,3 +27,5 @@ const app = new Hono()
   .route("/stablecoinRatio", chartStablecoinRatio);
 
 export default app;
+
+export type ChartRouteAppType = typeof app;

@@ -7,3 +7,5 @@ const app = new Hono()
   .route("/trading", alertsTrading);
 
 export default app;
+
+export type AlertsAppType = typeof app;

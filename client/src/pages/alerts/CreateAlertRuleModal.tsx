@@ -78,17 +78,12 @@ export function CreateAlertRuleModal({
   }, [open]);
 
   const messagePreview = useMemo(() => {
-    const min = minVolume.trim() || "?";
-    const maxTrim = maxVolume.trim();
+    const min = Number(minVolume);
+    const maxTrim = Number(maxVolume);
     const sym = volumeUnit === "USD" ? "$" : " SOL";
-    const range =
-      maxTrim.length > 0
-        ? tr("alertsPage.rulePreviewRangeBoth", {
-            min: Number(min),
-            max: Number(maxTrim),
-            sym,
-          })
-        : tr("alertsPage.rulePreviewRangeMin", { min: Number(min), sym });
+    const range = Number.isFinite(maxTrim)
+      ? tr("alertsPage.rulePreviewRangeBoth", { min, max: maxTrim, sym })
+      : tr("alertsPage.rulePreviewRangeMin", { min, sym });
 
     let verb: string = tr("alertsPage.rulePreviewVerbAny");
     if (actionType === "SWAP") verb = tr("alertsPage.rulePreviewVerbSwap");

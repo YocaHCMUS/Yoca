@@ -19,8 +19,6 @@ import {
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TknImg } from "@/components/TknImg";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
-import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import {
   AiAnalysisTab,
   type AiAnalysisDependencyItem,
@@ -56,7 +54,17 @@ import {
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { chunkArray } from "@/util/format";
-import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, User, Wallet } from "@carbon/icons-react";
+import {
+  Activity,
+  AiGenerate,
+  ChartLine,
+  ChevronDown,
+  Download,
+  Star,
+  StarFilled,
+  User,
+  Wallet,
+} from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -133,11 +141,7 @@ function PageSection({ children }: { children: ReactNode }) {
 export default function WalletPage() {
   const { user } = useAuth();
   const { tr, fmt, lang } = useLocalization();
-  const {
-    tokenWatchlist,
-    tokenPending,
-    toggleToken,
-  } = useWatchlist();
+  const { tokenWatchlist, tokenPending, toggleToken } = useWatchlist();
   const bcp47 = locale[lang].langCode;
   const navigate = useNavigate();
   const { address } = useParams<{ address: string }>();
@@ -159,7 +163,6 @@ export default function WalletPage() {
   >({});
   const [transferLoading, setTransferLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
-
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [overviewReport, setOverviewReport] =
@@ -379,7 +382,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-            transfer.tokenSymbol.trim().length > 0
+          transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -477,37 +480,93 @@ export default function WalletPage() {
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
     (value: string, row?: any[]) => {
-      const soldToken = Array.isArray(row) ? (row[2] as WalletSwapTokenChange | undefined) : undefined;
-      const boughtToken = Array.isArray(row) ? (row[3] as WalletSwapTokenChange | undefined) : undefined;
-      const soldSymbol = soldToken?.symbol ? String(soldToken.symbol).toUpperCase() : "UNK";
-      const boughtSymbol = boughtToken?.symbol ? String(boughtToken.symbol).toUpperCase() : "UNK";
+      const soldToken = Array.isArray(row)
+        ? (row[2] as WalletSwapTokenChange | undefined)
+        : undefined;
+      const boughtToken = Array.isArray(row)
+        ? (row[3] as WalletSwapTokenChange | undefined)
+        : undefined;
+      const soldSymbol = soldToken?.symbol
+        ? String(soldToken.symbol).toUpperCase()
+        : "UNK";
+      const boughtSymbol = boughtToken?.symbol
+        ? String(boughtToken.symbol).toUpperCase()
+        : "UNK";
       const pairLabel = String(value || "").replace(/,/g, " → ");
 
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <span style={{ position: "relative", width: 30, height: 30, flexShrink: 0 }}>
-            <span style={{ position: "absolute", inset: 0, borderRadius: 999, overflow: "hidden", boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.45)" }}>
-              <TknImg src={soldToken?.logoUri ?? null} alt={soldToken?.name ?? soldSymbol} size={30} />
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              position: "relative",
+              width: 30,
+              height: 30,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: 999,
+                overflow: "hidden",
+                boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.45)",
+              }}
+            >
+              <TknImg
+                src={soldToken?.logoUri ?? null}
+                alt={soldToken?.name ?? soldSymbol}
+                size={30}
+              />
             </span>
-            <span style={{ position: "absolute", right: -2, bottom: -2, borderRadius: 999, overflow: "hidden", boxShadow: "0 0 0 2px var(--cds-layer, #fff)" }}>
-              <TknImg src={boughtToken?.logoUri ?? null} alt={boughtToken?.name ?? boughtSymbol} size={14} />
+            <span
+              style={{
+                position: "absolute",
+                right: -2,
+                bottom: -2,
+                borderRadius: 999,
+                overflow: "hidden",
+                boxShadow: "0 0 0 2px var(--cds-layer, #fff)",
+              }}
+            >
+              <TknImg
+                src={boughtToken?.logoUri ?? null}
+                alt={boughtToken?.name ?? boughtSymbol}
+                size={14}
+              />
             </span>
           </span>
-          <span style={{ display: "inline-flex", flexDirection: "column", minWidth: 0, lineHeight: 1.2 }}>
-            <span style={{ color: "var(--cds-text-primary)" }}>{pairLabel}</span>
+          <span
+            style={{
+              display: "inline-flex",
+              flexDirection: "column",
+              minWidth: 0,
+              lineHeight: 1.2,
+            }}
+          >
+            <span style={{ color: "var(--cds-text-primary)" }}>
+              {pairLabel}
+            </span>
           </span>
         </span>
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
       if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value
+      const token = value;
       return renderTokenCell(
         token,
         renderSwapTokenInfoClassnames,
         30,
         true,
-        "negative"
+        "negative",
       )(String(token.symbol ?? ""), row ?? null);
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -518,7 +577,7 @@ export default function WalletPage() {
         renderSwapTokenInfoClassnames,
         30,
         true,
-        "positive"
+        "positive",
       )(String(token.symbol ?? ""), row ?? null);
     },
     (value: number | string) => {
@@ -551,7 +610,8 @@ export default function WalletPage() {
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
       );
     },
-    (value: WalletSwapTokenInfo, row?: any) => { // neccessary evil
+    (value: WalletSwapTokenInfo, row?: any) => {
+      // neccessary evil
       return renderTokenCell(
         value,
         renderSwapTokenInfoClassnames,
@@ -654,14 +714,14 @@ export default function WalletPage() {
           field: "amount",
           min: 0,
           max: 10_000,
-          step: 0.01
+          step: 0.01,
         },
         symbol: { type: FilterType.Select, field: "symbol" },
         name: { type: FilterType.Select, field: "name" },
         logoUri: null,
         priceUsd: null,
-        valueUsd: null
-      }
+        valueUsd: null,
+      },
     },
     3: {
       type: FilterType.Composite,
@@ -672,14 +732,14 @@ export default function WalletPage() {
           field: "amount",
           min: 0,
           max: 10_000,
-          step: 0.01
+          step: 0.01,
         },
         symbol: { type: FilterType.Select, field: "symbol" },
         name: { type: FilterType.Select, field: "name" },
         logoUri: null,
         priceUsd: null,
-        valueUsd: null
-      }
+        valueUsd: null,
+      },
     },
     4: {
       type: FilterType.Range,
@@ -828,11 +888,10 @@ export default function WalletPage() {
     setSwapLoading(true);
     setTransferLoading(true);
     try {
-      const [swapsResult, transfersResult] =
-        await Promise.allSettled([
-          fetchWalletSwaps(address),
-          fetchWalletTransfers(address),
-        ]);
+      const [swapsResult, transfersResult] = await Promise.allSettled([
+        fetchWalletSwaps(address),
+        fetchWalletTransfers(address),
+      ]);
 
       let swaps: WalletSwap[] = [];
       let transfers: WalletTransfer[] = [];
@@ -1227,10 +1286,11 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
+        `${
+          typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1402,12 +1462,12 @@ export default function WalletPage() {
                 }
               }}
               loading={swapLoading && loadedSwaps.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: swapHasMore,
-            //   isLoading: swapLoading,
-            //   onPageChange: handleSwapPageChange,
-            // }}
+              // serverPagination={{
+              //   enabled: true,
+              //   hasMore: swapHasMore,
+              //   isLoading: swapLoading,
+              //   onPageChange: handleSwapPageChange,
+              // }}
             />
           </div>
           <div className={styles.chartSection}>
@@ -1423,17 +1483,16 @@ export default function WalletPage() {
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
               loading={transferLoading && loadedTransfers.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: transferHasMore,
-            //   isLoading: transferLoading,
-            //   onPageChange: handleTransferPageChange,
-            // }}
+              // serverPagination={{
+              //   enabled: true,
+              //   hasMore: transferHasMore,
+              //   isLoading: transferLoading,
+              //   onPageChange: handleTransferPageChange,
+              // }}
             />
           </div>
         </div>
       </PageSection>
-
     </div>
   );
 
@@ -1452,27 +1511,33 @@ export default function WalletPage() {
             //   : null
           }
           dependencyItems={((): AiAnalysisDependencyItem[] => {
-            const portfolioAvailable = Array.isArray(portfolio) && portfolio.length > 0;
-            const swapsAvailable = Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
+            const portfolioAvailable =
+              Array.isArray(portfolio) && portfolio.length > 0;
+            const swapsAvailable =
+              Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
             const intelligenceAvailable = intelligenceReport != null;
 
-            const portfolioStatus: AiAnalysisDependencyItem["status"] = portfolioAvailable
-              ? "available"
-              : portfolioLoading
-                ? "fetching"
-                : "no_data";
+            const portfolioStatus: AiAnalysisDependencyItem["status"] =
+              portfolioAvailable
+                ? "available"
+                : portfolioLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const swapsStatus: AiAnalysisDependencyItem["status"] = swapsAvailable
-              ? "available"
-              : swapLoading
-                ? "fetching"
-                : "no_data";
+            const swapsStatus: AiAnalysisDependencyItem["status"] =
+              swapsAvailable
+                ? "available"
+                : swapLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const intelligenceStatus: AiAnalysisDependencyItem["status"] = intelligenceAvailable
-              ? "available"
-              : intelligenceLoading || (intelligenceEnabled && intelligenceReport == null)
-                ? "fetching"
-                : "no_data";
+            const intelligenceStatus: AiAnalysisDependencyItem["status"] =
+              intelligenceAvailable
+                ? "available"
+                : intelligenceLoading ||
+                    (intelligenceEnabled && intelligenceReport == null)
+                  ? "fetching"
+                  : "no_data";
 
             return [
               {
@@ -1480,7 +1545,11 @@ export default function WalletPage() {
                 label: String(tr("walletPage.aiDataPortfolio")),
                 status: portfolioStatus,
               },
-              { id: "swaps", label: String(tr("walletPage.aiDataSwaps")), status: swapsStatus },
+              {
+                id: "swaps",
+                label: String(tr("walletPage.aiDataSwaps")),
+                status: swapsStatus,
+              },
               {
                 id: "intelligence",
                 label: String(tr("walletPage.aiDataIntelligence")),
@@ -1736,8 +1805,7 @@ export default function WalletPage() {
               flexDirection: "column",
               gap: 20,
             }}
-          >
-          </div>
+          ></div>
         </section>
       </div>
 
@@ -1770,10 +1838,11 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
+          `${
+            typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+              ? transfer.tokenSymbol
+              : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1797,7 +1866,6 @@ export default function WalletPage() {
           </div>
         )}
       />
-
     </>
   );
 
@@ -1863,7 +1931,8 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper noMarketTickers
+    <PageWrapper
+      noMarketTickers
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (

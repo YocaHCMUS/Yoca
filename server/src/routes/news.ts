@@ -70,3 +70,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type NewsAppType = typeof app;
