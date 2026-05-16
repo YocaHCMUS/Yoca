@@ -1,10 +1,10 @@
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
   const { theme, themeRef } = useUserTheme();
 
-  const values = useMemo(() => {
+  const recalculateTokens = useCallback(() => {
     if (!themeRef.current) {
       return {} as { [K in keyof T]: string };
     }
@@ -22,7 +22,13 @@ export function useCarbonTokens<T extends Record<string, string>>(tokens: T) {
     }
 
     return resolved as { [K in keyof T]: string };
-  }, [theme, tokens]);
+  }, [tokens]);
+
+  const [values, setValues] = useState(recalculateTokens);
+
+  useEffect(() => {
+    setValues(recalculateTokens());
+  }, [theme]);
 
   return values;
 }
