@@ -919,7 +919,7 @@ export const translation = {
 
     // Chart specific
     balanceChart: {
-      title: "Balance Trend",
+      title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
       date: "Date",
