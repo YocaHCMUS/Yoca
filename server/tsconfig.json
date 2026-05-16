@@ -13,6 +13,7 @@
       "node",
       "vitest/globals"
     ],
+    "rootDir": "./src",
     "outDir": "./build",
     "paths": {
       "@sv/*": [

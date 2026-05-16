@@ -71,7 +71,7 @@ export type AppRoutes = {
   "/api/alertsToken": AlertsAppType;
   "/api/news": NewsAppType;
   "/webhook": WebhookAppType;
-  "/payment": PaymentAppType;
+  "/api/payment": PaymentAppType;
 };
 
 // Then here
@@ -91,8 +91,8 @@ const routes: AppRoutes = {
   "/api/trades": trades,
   "/api/alertsToken": alertsToken,
   "/api/news": news,
+  "/api/payment": payment,
   "/webhook": webhook,
-  "/payment": payment,
 };
 
 Object.entries(routes).forEach(([path, route]) => {

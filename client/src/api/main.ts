@@ -1,3 +1,6 @@
+// Due to IDE performance issue on massive type inferrence,
+// the client type has been broken into smaller modules for each
+// route
 import { hc } from "hono/client";
 import type { AppRouteOf, AppRoutes } from "@sv/main.js";
 
@@ -29,6 +32,7 @@ type WalletsRouteClient = ClientTypeOf<"/api/wallets">;
 type WalletTagsRouteClient = ClientTypeOf<"/api/walletTags">;
 type AlertsClient = ClientTypeOf<"/api/alerts">;
 type NewsClient = ClientTypeOf<"/api/news">;
+type PaymentClient = ClientTypeOf<"/api/payment">;
 
 export type ApiClient = {
   api: {
@@ -46,6 +50,7 @@ export type ApiClient = {
     walletTags: WalletTagsRouteClient;
     alerts: AlertsClient;
     news: NewsClient;
+    payment: PaymentClient;
   };
 };
 
@@ -65,6 +70,7 @@ const client: ApiClient = {
     walletTags: hcc("/api/walletTags"),
     alerts: hcc("/api/alerts"),
     news: hcc("/api/news"),
+    payment: hcc("/api/payment"),
   },
 };
 
