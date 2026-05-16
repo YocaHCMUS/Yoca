@@ -4,47 +4,11 @@
 // ===== Two-column layout (matching token overview) =====
 .walletGrid {
   display: grid;
-  // grid-template-columns is set via inline style (resizable)
-  grid-template-columns: 420px 4px minmax(0, 1fr);
+  grid-template-columns: 420px minmax(0, 1fr);
   gap: 0;
   padding: 0;
-  // height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
   min-height: 0;
   overflow: hidden;
-}
-
-// ===== Resize Divider =====
-.resizeDivider {
-  position: relative;
-  width: 4px;
-  height: 100%;
-  background: $border-subtle;
-  cursor: col-resize;
-  flex-shrink: 0;
-  z-index: 20;
-  transition: background 0.15s;
-
-  &:hover,
-  &:active {
-    background: $border-strong;
-  }
-}
-
-.resizeHandle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 32px;
-  border-radius: 6px;
-  background: $border-strong;
-  opacity: 0;
-  transition: opacity 0.15s;
-
-  .resizeDivider:hover & {
-    opacity: 1;
-  }
 }
 
 // ===== Left Column (sidebar) =====
@@ -112,8 +76,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 16px;
+  padding: 20px;
   overflow-y: auto;
   min-height: 0;
 }
@@ -131,7 +95,7 @@
 .tabPane {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -180,7 +144,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  padding-top: 36px;
+  padding-top: 24px;
 }
 
 .sectionTitle {
@@ -253,13 +217,13 @@
 .sectionStack {
   display: flex;
   flex-direction: column;
-  gap: 36px;
+  gap: 20px;
 }
 
 .tableStack {
   display: flex;
   flex-direction: column;
-  gap: 36px;
+  gap: 20px;
 }
 
 .tableRow {
@@ -271,7 +235,7 @@
 .chartStack {
   display: flex;
   flex-direction: column;
-  gap: 36px;
+  gap: 20px;
   overflow: hidden;
 }
 

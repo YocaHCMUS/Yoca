@@ -201,11 +201,6 @@ export default function WalletPage() {
   /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
   const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
 
-  const [leftWidth, setLeftWidth] = useState(420);
-  const isDragging = useRef(false);
-  const dragStartX = useRef(0);
-  const dragStartWidth = useRef(420);
-
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
     symbol: string;
@@ -245,41 +240,6 @@ export default function WalletPage() {
     { param: { addresses: tokenAddresses || "" } },
     { enabled: !!tokenAddresses },
   );
-
-  const handleDividerMouseDown = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      isDragging.current = true;
-      dragStartX.current = event.clientX;
-      dragStartWidth.current = leftWidth;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [leftWidth],
-  );
-
-  useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
-      if (!isDragging.current) return;
-      const delta = event.clientX - dragStartX.current;
-      const next = Math.min(700, Math.max(280, dragStartWidth.current + delta));
-      setLeftWidth(next);
-    };
-
-    const onMouseUp = () => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, []);
 
   useEffect(() => {
     const onOutsideClick = (event: MouseEvent) => {
@@ -1888,22 +1848,12 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div
-        className={styles.walletGrid}
-        style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
-      >
+      <div className={styles.walletGrid}>
         <div className={styles.leftColumn}>
           <WalletOverview
             walletAddress={walletAddress}
             enableIntelligence={intelligenceEnabled}
           />
-        </div>
-
-        <div
-          className={styles.resizeDivider}
-          onMouseDown={handleDividerMouseDown}
-        >
-          <div className={styles.resizeHandle} />
         </div>
 
         <div className={styles.rightColumn}>
