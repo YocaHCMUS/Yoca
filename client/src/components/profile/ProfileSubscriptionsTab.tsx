@@ -290,6 +290,23 @@ function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHisto
     return item.stripePaymentIntentId ?? item.stripeInvoiceId ?? "-";
   };
 
+  const resolvePlanLabel = (item: PaymentHistory) => {
+    const directPlan = item.planName ?? item.planTier;
+    if (directPlan) return directPlan;
+
+    if (item.subscriptionId) {
+      const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
+      if (mappedPlan) return mappedPlan;
+    }
+
+    const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
+    if (amountCents === 3900) return "Lite";
+    if (amountCents === 19900) return "Plus";
+    if (amountCents === 49900) return "Pro";
+
+    return "-";
+  };
+
   if (history.length === 0) {
     return (
       <div className={styles.emptyStateContainer}>
@@ -319,7 +336,7 @@ function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHisto
           {history.map((item) => (
             <tr key={item.id}>
               <td>{formatTimestamp(item.createdAt)}</td>
-              <td>{item.planName ?? item.planTier ?? (item.subscriptionId ? (planBySubscriptionId.get(item.subscriptionId) ?? "-") : "-")}</td>
+              <td>{resolvePlanLabel(item)}</td>
               <td className={styles.metricValue}>
                 {formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100)}
               </td>
