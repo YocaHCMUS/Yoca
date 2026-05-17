@@ -23,6 +23,7 @@ import { ContentSwitcher, IconSwitch } from "@carbon/react";
 import { ChartBar, ChartCombo, ChartLine } from "@carbon/icons-react";
 import { Flex } from "@/components/Flex";
 import { FilterSwitch } from "@/components/FilterSwitch";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
 
 type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 
@@ -363,6 +364,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       actions={
         <Flex gap={8} align="center">
           <ContentSwitcher
+            className={overwriteStyles.fltrOpt}
+            style={{ minWidth: 'auto' }}
             selectedIndex={displayModeIcons.findIndex(o => o.value === displayMode)}
             onChange={({ name }) => {
               if (name) handleDisplayModeChange(name as "daily" | "cumulative" | "both");
