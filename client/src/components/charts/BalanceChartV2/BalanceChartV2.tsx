@@ -12,6 +12,7 @@ import { Layer, MultiSelect, Tag } from "@carbon/react";
 import { TknImg } from "@/components/TknImg";
 import { ChartWrapper } from "../shared";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -150,15 +151,21 @@ export function BalanceChartV2({ address }: { address: string }) {
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <Flex gap={4} align="center">
-                  <TknImg
-                    size={25}
-                    alt={account.symbol || account.tokenAddress}
-                    loading={portfolio.isLoading}
-                    src={account.logoUri}
-                  />
-                  <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
-                </Flex>
+                // <Flex gap={4} align="center">
+                //   <TknImg
+                //     size={25}
+                //     alt={account.symbol || account.tokenAddress}
+                //     loading={portfolio.isLoading}
+                //     src={account.logoUri}
+                //   />
+                //   <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
+                // </Flex>
+                <TokenIdentityCell
+                  symbol={account.symbol || account.tokenAddress}
+                  fullName={account.name}
+                  imageUrl={account.logoUri}
+                  imageSize={20}
+                />
               )}
               selectionFeedback="top-after-reopen"
               onChange={(v) =>

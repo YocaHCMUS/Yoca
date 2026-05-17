@@ -2,6 +2,7 @@ import type { HeliusEnhancedTransaction } from "@sv/services/transactions.js";
 import { runCursorPagination } from "@sv/services/wallet/fetchers/walletPagination.js";
 import { heliusGetJson } from "./helius.client.js";
 import { TRANSACTION_FETCH_MAX_ITEM_COUNT, TRANSACTION_FETCH_MAX_PAGE_COUNT } from "@sv/config/constants.js";
+import { getNextkey } from "@sv/util/util-helius.js";
 
 export type HeliusTxFetcherResult = {
   transactions: HeliusEnhancedTransaction[];
@@ -22,15 +23,16 @@ export async function fetchHeliusAddressTransactions(
   const limit = Math.min(Math.max(options?.limit ?? 100, 1), 100);
   const rangeToMs = options?.toMs ?? Date.now();
   const rangeFromMs = options?.fromMs ?? 0;
+  const apikey = getNextkey()
 
   const paged = await runCursorPagination<HeliusEnhancedTransaction>({
     initialCursor: options?.before ?? null,
     maxPages: TRANSACTION_FETCH_MAX_PAGE_COUNT,
-    maxItems: TRANSACTION_FETCH_MAX_ITEM_COUNT, // 
+    maxItems: TRANSACTION_FETCH_MAX_ITEM_COUNT,
     fetchPage: async (cursor) => {
       let json: unknown;
       try {
-        const params: Record<string, string | number | boolean> = { limit };
+        const params: Record<string, string | number | boolean> = { limit, "api-key": apikey };
         if (cursor) params.before = cursor;
         json = await heliusGetJson<unknown>(
           `/v0/addresses/${address}/transactions`,
