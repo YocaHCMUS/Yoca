@@ -105,7 +105,7 @@ function NotificationSeverityIcon({
 export function PageWrapper({
   children,
   extraHeaderPanel,
-  noMarketTickers,
+  noMarketTickers = true,
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();

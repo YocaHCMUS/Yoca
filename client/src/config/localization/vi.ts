@@ -1501,6 +1501,11 @@ export const translation = defineTranslation({
       portfolioTableTitle: "Bảng danh mục đầu tư",
       balanceChartTitle: "Cân bằng",
       drawdownChartTitle: "Rút ngắn",
+      section: {
+        performance: "Hiệu suất ví",
+        activity: "Dòng tiền và hoạt động",
+        risk: "Cấu trúc rủi ro",
+      },
     },
     watchlist: {
       title: "Danh sách theo dõi",

@@ -66,6 +66,7 @@ export function ProfilePortfolioTab({
     };
 
     const overviewData = useMemo<ProfileOverviewData>(() => {
+        const authWalletCount = linkedWalletRows.filter((wallet) => wallet.isAuthWallet).length;
         const totalNetWorthUsd = walletOverviews.reduce(
             (sum, overview) => sum + overview.totalAssetValueUsd,
             0,
@@ -91,8 +92,9 @@ export function ProfilePortfolioTab({
             pnlUsd,
             pnlPct: totalNetWorthUsd > 0 ? (pnlUsd / totalNetWorthUsd) * 100 : 0,
             linkedWalletCount: linkedWalletAddresses.length,
+            authWalletCount,
         };
-    }, [period, user?.displayName, user?.userId, linkedWalletAddresses, walletOverviews]);
+    }, [linkedWalletRows, period, user?.displayName, user?.userId, linkedWalletAddresses, walletOverviews]);
 
     const tableRows = useMemo(
         () =>

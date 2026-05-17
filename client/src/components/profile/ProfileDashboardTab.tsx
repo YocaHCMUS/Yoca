@@ -1,4 +1,4 @@
-import { ContentSwitcher, InlineLoading, Switch } from "@carbon/react";
+import { Button, ContentSwitcher, InlineLoading, Switch } from "@carbon/react";
 import {
   Activity,
   ChartColumn,
@@ -70,6 +70,44 @@ function fmtUsd(value: number): string {
 function fmtNum(value: number): string {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
+
+const CHART_COLORS = {
+  primary: "#0f62fe",
+  success: "#4589ff",
+  danger: "#0043ce",
+  accent: "#6fa8ff",
+  warning: "#8ab6ff",
+  neutral: "#6f6f6f",
+  text: "#161616",
+  textSub: "#6f6f6f",
+  axis: "rgba(0,0,0,0.12)",
+  grid: "rgba(0,0,0,0.06)",
+  tooltipBg: "rgba(255,255,255,0.96)",
+  tooltipBorder: "rgba(0,0,0,0.08)",
+};
+
+const CHART_PALETTE = [
+  CHART_COLORS.primary,
+  CHART_COLORS.success,
+  CHART_COLORS.accent,
+  CHART_COLORS.warning,
+  CHART_COLORS.danger,
+];
+
+const DONUT_COLORS = [
+  CHART_COLORS.primary,
+  CHART_COLORS.success,
+  CHART_COLORS.accent,
+  CHART_COLORS.warning,
+  CHART_COLORS.danger,
+];
+
+const TOOLTIP_LIGHT = {
+  backgroundColor: CHART_COLORS.tooltipBg,
+  borderColor: CHART_COLORS.tooltipBorder,
+  borderWidth: 1,
+  textStyle: { color: CHART_COLORS.text, fontSize: 12 },
+};
 
 // ── Types ────────────────────────────────────────────────
 
@@ -151,10 +189,20 @@ export default function ProfileDashboardTab() {
 
   // ── Aggregated KPIs ──────────────────────────────────────
   const kpis = useMemo(() => {
-    const totalAssets = walletData.reduce(
+    const portfolioTotal = walletData.reduce((sum, w) => {
+      const walletTotal = w.portfolio.reduce(
+        (walletSum, token) => walletSum + (token.valueUsd ?? 0),
+        0,
+      );
+      return sum + walletTotal;
+    }, 0);
+
+    const overviewTotal = walletData.reduce(
       (sum, w) => sum + (w.overview?.totalAssetValueUsd ?? 0),
-      0
+      0,
     );
+
+    const totalAssets = portfolioTotal > 0 ? portfolioTotal : overviewTotal;
 
     const totalTx = walletData.reduce(
       (sum, w) => sum + (w.overview?.periods?.[period]?.transactionCount ?? 0),
@@ -240,17 +288,14 @@ export default function ProfileDashboardTab() {
       tooltip: {
         trigger: "axis" as const,
         axisPointer: { type: "shadow" as const },
-        backgroundColor: "rgba(15,15,15,0.92)",
-        borderColor: "rgba(255,255,255,0.08)",
-        borderWidth: 1,
-        textStyle: { color: "#f4f4f4", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any) => {
           const p = params[0];
           const val = p.value as number;
-          const color = val >= 0 ? "#42be65" : "#ee5396";
+          const color = val >= 0 ? CHART_COLORS.success : CHART_COLORS.danger;
           return `<div style="padding:4px 2px">
-            <span style="font-size:13px;font-weight:700;color:#fff">${p.name}</span><br/>
-            <span style="color:#8d8d8d">Total PNL</span> 
+            <span style="font-size:13px;font-weight:700;color:${CHART_COLORS.text}">${p.name}</span><br/>
+            <span style="color:${CHART_COLORS.textSub}">Total PNL</span> 
             <span style="font-weight:600;color:${color}">${fmtUsd(val)}</span>
           </div>`;
         },
@@ -260,16 +305,16 @@ export default function ProfileDashboardTab() {
         type: "value" as const,
         splitNumber: 3,
         axisLabel: {
-          color: "#8d8d8d",
+          color: CHART_COLORS.neutral,
           fontSize: 10,
           formatter: (v: number) => fmtUsd(v),
         },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)", type: "dashed" } },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
       },
       yAxis: {
         type: "category" as const,
         data: symbols,
-        axisLabel: { color: "#161616", fontSize: 12, fontWeight: 600 },
+        axisLabel: { color: CHART_COLORS.text, fontSize: 12, fontWeight: 600 },
         axisLine: { show: false },
         axisTick: { show: false },
       },
@@ -280,13 +325,13 @@ export default function ProfileDashboardTab() {
             value: v,
             itemStyle: {
               color: v >= 0 ? new echarts.graphic.LinearGradient(1, 0, 0, 0, [
-                { offset: 0, color: "#42be65" },
-                { offset: 1, color: "#42be6555" },
+                { offset: 0, color: CHART_COLORS.success },
+                { offset: 1, color: `${CHART_COLORS.success}55` },
               ]) : new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                { offset: 0, color: "#ee5396" },
-                { offset: 1, color: "#ee539655" },
+                { offset: 0, color: CHART_COLORS.danger },
+                { offset: 1, color: `${CHART_COLORS.danger}55` },
               ]),
-              borderRadius: v >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4],
+              borderRadius: 0,
             }
           })),
           barWidth: 20,
@@ -309,38 +354,35 @@ export default function ProfileDashboardTab() {
   const barChartOption = useMemo(() => {
     const labels = walletData.map((w) => shortAddr(w.address));
     const assets = walletData.map((w) => Math.max(1, w.overview?.totalAssetValueUsd ?? 1));
-    const COLORS = ["#4e94ff", "#42be65", "#a56eff", "#ff832b", "#ee5396"];
+    const COLORS = CHART_PALETTE;
 
     return {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(15,15,15,0.92)",
-        borderColor: "rgba(255,255,255,0.08)",
-        borderWidth: 1,
-        textStyle: { color: "#f4f4f4", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: Array<{ name: string; value: number; dataIndex: number }>) => {
           const p = params[0];
-          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:#fff">${p.name}</span><br/><span style="color:#8d8d8d">Asset Value</span>  <span style="font-weight:600;color:#4e94ff">${fmtUsd(p.value)}</span></div>`;
+          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${CHART_COLORS.text}">${p.name}</span><br/><span style="color:${CHART_COLORS.textSub}">Asset Value</span>  <span style="font-weight:600;color:${CHART_COLORS.primary}">${fmtUsd(p.value)}</span></div>`;
         },
       },
       grid: { left: 72, right: 24, top: 12, bottom: 44 },
       xAxis: {
         type: "category" as const,
         data: labels,
-        axisLabel: { color: "#8d8d8d", fontSize: 11, fontFamily: "inherit" },
-        axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11, fontFamily: "inherit" },
+        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
         axisTick: { show: false },
       },
       yAxis: {
         type: "log" as const,
         logBase: 10,
         axisLabel: {
-          color: "#8d8d8d",
+          color: CHART_COLORS.neutral,
           fontSize: 11,
           formatter: (v: number) => fmtUsd(v),
         },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)", type: "dashed" } },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
         axisLine: { show: false },
         axisTick: { show: false },
         min: 1,
@@ -351,7 +393,7 @@ export default function ProfileDashboardTab() {
           data: assets.map((v, i) => ({
             value: v,
             itemStyle: {
-              borderRadius: [6, 6, 0, 0],
+              borderRadius: 0,
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: COLORS[i % COLORS.length] },
                 { offset: 1, color: COLORS[i % COLORS.length] + "55" },
@@ -362,7 +404,7 @@ export default function ProfileDashboardTab() {
           emphasis: {
             itemStyle: {
               shadowBlur: 12,
-              shadowColor: "rgba(78,148,255,0.4)",
+              shadowColor: "rgba(15,98,254,0.3)",
             },
           },
         },
@@ -395,7 +437,7 @@ export default function ProfileDashboardTab() {
     return {
       rows: sortedTokens,
       maxTotal: sortedTokens.length > 0 ? sortedTokens[0].total : 0,
-      overallTotal
+      overallTotal,
     };
   }, [walletData]);
 
@@ -414,32 +456,29 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(255,255,255,0.96)",
-        borderColor: "#e0e0e0",
-        borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
       },
       legend: {
         data: ["Buy Volume", "Sell Volume"],
-        textStyle: { color: "#6f6f6f", fontSize: 11 },
+        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 },
         top: 0,
       },
       grid: { left: 72, right: 24, top: 36, bottom: 44 },
       xAxis: {
         type: "category" as const,
         data: labels,
-        axisLabel: { color: "#8d8d8d", fontSize: 11 },
-        axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } },
+        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
+        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
         axisTick: { show: false },
       },
       yAxis: {
         type: "value" as const,
         axisLabel: {
-          color: "#8d8d8d",
+          color: CHART_COLORS.neutral,
           fontSize: 11,
           formatter: (v: number) => fmtUsd(v),
         },
-        splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
         axisLine: { show: false },
         axisTick: { show: false },
       },
@@ -450,8 +489,8 @@ export default function ProfileDashboardTab() {
           stack: "vol",
           data: buyVols,
           itemStyle: {
-            color: "#42be65",
-            borderRadius: [0, 0, 0, 0],
+            color: CHART_COLORS.success,
+            borderRadius: 0,
           },
           barWidth: "40%",
         },
@@ -461,8 +500,8 @@ export default function ProfileDashboardTab() {
           stack: "vol",
           data: sellVols,
           itemStyle: {
-            color: "#ee5396",
-            borderRadius: [4, 4, 0, 0],
+            color: CHART_COLORS.danger,
+            borderRadius: 0,
           },
           barWidth: "40%",
         },
@@ -510,25 +549,24 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any[]) => {
           const i = labels.indexOf(params[0]?.name ?? "");
           const tot = totalRaw[i] ?? 0;
-          const col = tot >= 0 ? "#24a148" : "#da1e28";
+          const col = tot >= 0 ? CHART_COLORS.success : CHART_COLORS.danger;
           return `<div style="padding:4px 2px"><strong>${params[0]?.name}</strong><br/>` +
-            `<span style="color:#6f6f6f">Total</span>  <strong style="color:${col}">${tot >= 0 ? "+" : ""}${fmtUsd(tot)}</strong><br/>` +
-            `<span style="color:#6f6f6f">Realized</span>  <span style="color:#4e94ff">${fmtUsd(realizedRaw[i])}</span><br/>` +
-            `<span style="color:#a56eff">Unrealized</span>  <span style="color:#a56eff">${fmtUsd(unrealizedRaw[i])}</span></div>`;
+            `<span style="color:${CHART_COLORS.textSub}">Total</span>  <strong style="color:${col}">${tot >= 0 ? "+" : ""}${fmtUsd(tot)}</strong><br/>` +
+            `<span style="color:${CHART_COLORS.textSub}">Realized</span>  <span style="color:${CHART_COLORS.primary}">${fmtUsd(realizedRaw[i])}</span><br/>` +
+            `<span style="color:${CHART_COLORS.textSub}">Unrealized</span>  <span style="color:${CHART_COLORS.accent}">${fmtUsd(unrealizedRaw[i])}</span></div>`;
         },
       },
-      legend: { data: ["Realized", "Unrealized"], textStyle: { color: "#6f6f6f", fontSize: 11 }, top: 0 },
+      legend: { data: ["Realized", "Unrealized"], textStyle: { color: CHART_COLORS.neutral, fontSize: 11 }, top: 0 },
       grid: { left: 76, right: 24, top: 32, bottom: 44 },
-      xAxis: { type: "category" as const, data: labels, axisLabel: { color: "#8d8d8d", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } }, axisTick: { show: false } },
-      yAxis: { type: "value" as const, axisLabel: { color: "#8d8d8d", fontSize: 10, formatter: formatAxis }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
+      xAxis: { type: "category" as const, data: labels, axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 }, axisLine: { lineStyle: { color: CHART_COLORS.axis } }, axisTick: { show: false } },
+      yAxis: { type: "value" as const, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10, formatter: formatAxis }, splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
       series: [
-        { name: "Realized", type: "bar" as const, barMaxWidth: 28, data: realizedRaw.map((v) => ({ value: compress(v), itemStyle: { color: "#4e94ff", borderRadius: v >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4] } })) },
-        { name: "Unrealized", type: "bar" as const, barMaxWidth: 28, data: unrealizedRaw.map((v) => ({ value: compress(v), itemStyle: { color: "#a56eff", borderRadius: v >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4] } })) },
+        { name: "Realized", type: "bar" as const, barMaxWidth: 28, data: realizedRaw.map((v) => ({ value: compress(v), itemStyle: { color: CHART_COLORS.primary, borderRadius: 0 } })) },
+        { name: "Unrealized", type: "bar" as const, barMaxWidth: 28, data: unrealizedRaw.map((v) => ({ value: compress(v), itemStyle: { color: CHART_COLORS.accent, borderRadius: 0 } })) },
       ],
     };
   }, [walletData, period]);
@@ -555,14 +593,11 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "item" as const,
-        backgroundColor: "rgba(15,15,15,0.92)",
-        borderColor: "rgba(255,255,255,0.08)",
-        borderWidth: 1,
-        textStyle: { color: "#f4f4f4", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any) => {
           const txs = params.name === "Buy" ? totalBuyTx : totalSellTx;
           const pct = total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
-          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${params.color}">● ${params.name}</span><br/><span style="color:#8d8d8d">Volume</span>  <span style="font-weight:600;color:#fff">${fmtUsd(params.value)}</span><br/><span style="color:#8d8d8d">Share</span>  <span style="font-weight:700;color:#fff">${pct}%</span><br/><span style="color:#8d8d8d">Transactions</span>  <span style="font-weight:600;color:#fff">${fmtNum(txs)}</span></div>`;
+          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${params.color}">● ${params.name}</span><br/><span style="color:${CHART_COLORS.textSub}">Volume</span>  <span style="font-weight:600;color:${CHART_COLORS.text}">${fmtUsd(params.value)}</span><br/><span style="color:${CHART_COLORS.textSub}">Share</span>  <span style="font-weight:700;color:${CHART_COLORS.text}">${pct}%</span><br/><span style="color:${CHART_COLORS.textSub}">Transactions</span>  <span style="font-weight:600;color:${CHART_COLORS.text}">${fmtNum(txs)}</span></div>`;
         },
       },
       legend: {
@@ -572,12 +607,8 @@ export default function ProfileDashboardTab() {
         itemWidth: 10,
         itemHeight: 10,
         borderRadius: 50,
-        textStyle: { color: "#8d8d8d", fontSize: 11 },
-        formatter: (name: string) => {
-          const val = name === "Buy" ? totalBuy : totalSell;
-          const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-          return `${name} ${pct}%`;
-        },
+        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 },
+        formatter: (name: string) => name,
       },
       series: [
         {
@@ -586,7 +617,7 @@ export default function ProfileDashboardTab() {
           center: ["50%", "42%"],
           avoidLabelOverlap: true,
           padAngle: 4,
-          itemStyle: { borderRadius: 4, borderWidth: 0 },
+          itemStyle: { borderRadius: 0, borderWidth: 0 },
           label: { show: false },
           emphasis: {
             scale: true,
@@ -595,14 +626,19 @@ export default function ProfileDashboardTab() {
               show: true,
               fontSize: 14,
               fontWeight: "bold" as const,
-              color: "#161616",
+              color: CHART_COLORS.text,
               formatter: (p: any) => `${p.name}\n${p.percent}%`,
             },
           },
           data: [
-            { name: "Buy", value: totalBuy, itemStyle: { color: "#24a148" } },
-            { name: "Sell", value: totalSell, itemStyle: { color: "#da1e28" } },
-          ],
+            { name: "Buy", value: totalBuy },
+            { name: "Sell", value: totalSell },
+          ]
+            .sort((a, b) => b.value - a.value)
+            .map((item, i) => ({
+              ...item,
+              itemStyle: { color: DONUT_COLORS[i % DONUT_COLORS.length] },
+            })),
         },
       ],
     };
@@ -620,8 +656,8 @@ export default function ProfileDashboardTab() {
       };
     });
 
-    // 2. Sort from smallest to largest volume
-    rawData.sort((a, b) => a.volume - b.volume);
+    // 2. Sort from largest to smallest volume
+    rawData.sort((a, b) => b.volume - a.volume);
 
     const labels = rawData.map(d => d.label);
     const volumeData = rawData.map(d => d.volume);
@@ -638,25 +674,24 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any[]) => {
           const i = params[0]?.dataIndex ?? 0;
           return `<div style="padding:4px 2px"><strong>${labels[i]}</strong><br/>` +
-            `<span style="color:#6f6f6f">Volume</span>  <strong style="color:#4e94ff">${fmtUsd(volumeData[i])}</strong><br/>` +
-            `<span style="color:#6f6f6f">Cumulative %</span>  <strong style="color:#ff832b">${cumulativePcts[i]}%</strong></div>`;
+            `<span style="color:${CHART_COLORS.textSub}">Volume</span>  <strong style="color:${CHART_COLORS.primary}">${fmtUsd(volumeData[i])}</strong><br/>` +
+            `<span style="color:${CHART_COLORS.textSub}">Cumulative %</span>  <strong style="color:${CHART_COLORS.warning}">${cumulativePcts[i]}%</strong></div>`;
         },
       },
-      legend: { data: ["Volume", "Cumulative %"], textStyle: { color: "#6f6f6f", fontSize: 11 }, top: 0, right: 0 },
+      legend: { data: ["Volume", "Cumulative %"], textStyle: { color: CHART_COLORS.neutral, fontSize: 11 }, top: 0, right: 0 },
       grid: { left: 76, right: 60, top: 32, bottom: 44 },
-      xAxis: { type: "category" as const, data: labels, axisLabel: { color: "#8d8d8d", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } }, axisTick: { show: false } },
+      xAxis: { type: "category" as const, data: labels, axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 }, axisLine: { lineStyle: { color: CHART_COLORS.axis } }, axisTick: { show: false } },
       yAxis: [
-        { type: "log" as const, logBase: 10, min: 1, name: "Volume", nameTextStyle: { color: "#8d8d8d", fontSize: 10 }, axisLabel: { color: "#8d8d8d", fontSize: 10, formatter: (v: number) => fmtUsd(v) }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
-        { type: "value" as const, name: "Cumul %", max: 100, nameTextStyle: { color: "#8d8d8d", fontSize: 10 }, axisLabel: { color: "#8d8d8d", fontSize: 10, formatter: (v: number) => `${v}%` }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } },
+        { type: "log" as const, logBase: 10, min: 1, name: "Volume", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10, formatter: (v: number) => fmtUsd(v) }, splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
+        { type: "value" as const, name: "Cumul %", max: 100, nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10, formatter: (v: number) => `${v}%` }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false } },
       ],
       series: [
-        { name: "Volume", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 44, data: volumeData.map((v) => ({ value: Math.max(1, v), itemStyle: { color: "#4e94ff", borderRadius: [4, 4, 0, 0] } })) },
-        { name: "Cumulative %", type: "line" as const, yAxisIndex: 1, data: cumulativePcts, smooth: true, lineStyle: { color: "#ff832b", width: 2 }, itemStyle: { color: "#ff832b" }, symbol: "circle", symbolSize: 8 },
+        { name: "Volume", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 44, data: volumeData.map((v) => ({ value: Math.max(1, v), itemStyle: { color: CHART_COLORS.primary, borderRadius: 0 } })) },
+        { name: "Cumulative %", type: "line" as const, yAxisIndex: 1, data: cumulativePcts, smooth: true, lineStyle: { color: CHART_COLORS.warning, width: 2 }, itemStyle: { color: CHART_COLORS.warning }, symbol: "circle", symbolSize: 8 },
       ],
     };
   }, [walletData, period]);
@@ -722,32 +757,31 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
       },
       legend: {
         bottom: 0,
         left: 'center',
         orient: 'horizontal' as const,
-        data: ["Transactions", "USERS"],
-        textStyle: { color: "#6f6f6f", fontSize: 11 }
+        data: ["Transactions", "Traders"],
+        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 }
       },
       grid: { left: 48, right: 48, top: 32, bottom: 40 },
-      xAxis: { type: "category" as const, data: labels, axisLabel: { color: "#8d8d8d", fontSize: 11, fontWeight: "bold" }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } }, axisTick: { show: false } },
+      xAxis: { type: "category" as const, data: labels, axisLabel: { color: CHART_COLORS.neutral, fontSize: 11, fontWeight: "bold" }, axisLine: { lineStyle: { color: CHART_COLORS.axis } }, axisTick: { show: false } },
       yAxis: [
-        { type: "value" as const, name: "Transactions", nameTextStyle: { color: "#8d8d8d", fontSize: 10 }, axisLabel: { color: "#8d8d8d", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
-        { type: "value" as const, name: "USERS", nameTextStyle: { color: "#8d8d8d", fontSize: 10 }, axisLabel: { color: "#8d8d8d", fontSize: 10 }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
+        { type: "value" as const, name: "Transactions", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10 }, splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
+        { type: "value" as const, name: "Traders", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10 }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
       ],
       series: [
-        { name: "Transactions", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 60, data: dailyTxs, itemStyle: { color: "#7b2cbf", borderRadius: [4, 4, 0, 0] } },
-        { name: "USERS", type: "line" as const, yAxisIndex: 1, data: dailyUsers, smooth: true, lineStyle: { color: "#20c997", width: 2 }, itemStyle: { color: "#20c997" }, symbol: "circle", symbolSize: 5 },
+        { name: "Transactions", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 60, data: dailyTxs, itemStyle: { color: CHART_COLORS.warning, borderRadius: 0 } },
+        { name: "Traders", type: "line" as const, yAxisIndex: 1, data: dailyUsers, smooth: true, lineStyle: { color: CHART_COLORS.danger, width: 2 }, itemStyle: { color: CHART_COLORS.danger }, symbol: "circle", symbolSize: 5 },
       ],
     };
   }, [walletData, period]);
 
   // ── Token Diversity: count bar + top-holding % line ───────
   const tokenDiversityOption = useMemo(() => {
-    const COLORS = ["#4e94ff", "#42be65", "#a56eff"];
+    const COLORS = CHART_PALETTE.slice(0, 3);
     const labels = walletData.map((w) => shortAddr(w.address));
     const counts = walletData.map((w) => w.portfolio.length);
     const topPcts = walletData.map((w) => {
@@ -764,48 +798,49 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis" as const,
-        backgroundColor: "rgba(255,255,255,0.96)", borderColor: "#e0e0e0", borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any[]) => {
           const i = labels.indexOf(params[0]?.name ?? "");
           return `<div style="padding:4px 2px"><strong>${params[0]?.name}</strong><br/>` +
-            `<span style="color:#6f6f6f">Tokens held</span>  <strong>${counts[i]}</strong><br/>` +
-            `<span style="color:#6f6f6f">Top token</span>  <strong>${topSymbols[i]} · ${topPcts[i]}% of portfolio</strong></div>`;
+            `<span style="color:${CHART_COLORS.textSub}">Tokens held</span>  <strong>${counts[i]}</strong><br/>` +
+            `<span style="color:${CHART_COLORS.textSub}">Top token</span>  <strong>${topSymbols[i]} · ${topPcts[i]}% of portfolio</strong></div>`;
         },
       },
       legend: { show: false },
       grid: { left: 40, right: 24, top: 32, bottom: 44 },
-      xAxis: [{ type: "category" as const, data: labels, axisLabel: { color: "#8d8d8d", fontSize: 11 }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } }, axisTick: { show: false } }],
+      xAxis: [{ type: "category" as const, data: labels, axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 }, axisLine: { lineStyle: { color: CHART_COLORS.axis } }, axisTick: { show: false } }],
       yAxis: [
-        { type: "value" as const, name: "# Tokens", nameTextStyle: { color: "#8d8d8d", fontSize: 10 }, axisLabel: { color: "#8d8d8d", fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
+        { type: "value" as const, name: "# Tokens", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10 }, splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false } },
       ],
       series: [
-        { name: "Token Count", type: "bar" as const, barMaxWidth: 44, data: counts.map((v, i) => ({ value: v, itemStyle: { color: COLORS[i % COLORS.length], borderRadius: [4, 4, 0, 0] } })), label: { show: true, position: "top" as const, color: "#6f6f6f", fontSize: 11 } },
+        { name: "Token Count", type: "bar" as const, barMaxWidth: 44, data: counts.map((v, i) => ({ value: v, itemStyle: { color: COLORS[i % COLORS.length], borderRadius: 0 } })), label: { show: true, position: "top" as const, color: CHART_COLORS.neutral, fontSize: 11 } },
       ],
     };
   }, [walletData]);
 
   // ── Wallet contribution donut ──────────────────────────
   const contributionDonutOption = useMemo(() => {
-    const COLORS = ["#4e94ff", "#42be65", "#a56eff", "#ff832b", "#ee5396"];
+    const COLORS = DONUT_COLORS;
     const total = walletData.reduce((s, w) => s + (w.overview?.totalAssetValueUsd ?? 0), 0);
-    const data = walletData.map((w, i) => ({
+    const rawData = walletData.map((w) => ({
       name: shortAddr(w.address),
       value: w.overview?.totalAssetValueUsd ?? 0,
-      itemStyle: { color: COLORS[i % COLORS.length] },
     }));
+    const data = [...rawData]
+      .sort((a, b) => b.value - a.value)
+      .map((item, i) => ({
+        ...item,
+        itemStyle: { color: COLORS[i % COLORS.length] },
+      }));
 
     return {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "item" as const,
-        backgroundColor: "rgba(15,15,15,0.92)",
-        borderColor: "rgba(255,255,255,0.08)",
-        borderWidth: 1,
-        textStyle: { color: "#f4f4f4", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any) => {
           const pct = total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
-          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:#fff">${params.name}</span><br/><span style="color:#8d8d8d">Share</span>  <span style="font-weight:700;color:${params.color}">${pct}%</span><br/><span style="color:#8d8d8d">Value</span>  <span style="font-weight:600;color:#fff">${fmtUsd(params.value)}</span></div>`;
+          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${CHART_COLORS.text}">${params.name}</span><br/><span style="color:${CHART_COLORS.textSub}">Share</span>  <span style="font-weight:700;color:${params.color}">${pct}%</span><br/><span style="color:${CHART_COLORS.textSub}">Value</span>  <span style="font-weight:600;color:${CHART_COLORS.text}">${fmtUsd(params.value)}</span></div>`;
         },
       },
       legend: {
@@ -815,12 +850,8 @@ export default function ProfileDashboardTab() {
         itemWidth: 8,
         itemHeight: 8,
         borderRadius: 50,
-        textStyle: { color: "#8d8d8d", fontSize: 10 },
-        formatter: (name: string) => {
-          const item = data.find((d) => d.name === name);
-          const pct = item && total > 0 ? ((item.value / total) * 100).toFixed(1) : "0";
-          return `${name} ${pct}%`;
-        },
+        textStyle: { color: CHART_COLORS.neutral, fontSize: 10 },
+        formatter: (name: string) => name,
       },
       series: [
         {
@@ -838,7 +869,7 @@ export default function ProfileDashboardTab() {
               show: true,
               fontSize: 13,
               fontWeight: "bold" as const,
-              color: "#fff",
+              color: CHART_COLORS.text,
               formatter: (p: any) => `${p.name}\n${p.percent}%`,
             },
           },
@@ -868,7 +899,6 @@ export default function ProfileDashboardTab() {
           const d = new Date(t);
           d.setHours(0, 0, 0, 0);
           const tDay = d.getTime();
-          // Always overwrite with the latest point for the day
           walletDays.set(tDay, v);
           allDays.add(tDay);
         }
@@ -919,29 +949,26 @@ export default function ProfileDashboardTab() {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(255,255,255,0.96)",
-        borderColor: "#e0e0e0",
-        borderWidth: 1,
-        textStyle: { color: "#161616", fontSize: 12 },
+        ...TOOLTIP_LIGHT,
         formatter: (params: any[]) => {
           const pt = params[0];
           if (!pt) return '';
           const dateStr = new Date(pt.value[0]).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
           return `<div style="padding:4px 2px"><strong>${dateStr}</strong><br/>` +
-            `<span style="color:#6f6f6f">Total Balance</span>  <strong style="color:#4e94ff">${fmtUsd(pt.value[1])}</strong></div>`;
+            `<span style="color:${CHART_COLORS.textSub}">Total Balance</span>  <strong style="color:${CHART_COLORS.primary}">${fmtUsd(pt.value[1])}</strong></div>`;
         },
       },
       grid: { left: 72, right: 24, top: 16, bottom: 24 },
       xAxis: {
         type: "time",
-        axisLabel: { color: "#8d8d8d", fontSize: 11 },
-        axisLine: { lineStyle: { color: "rgba(0,0,0,0.1)" } },
+        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
+        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
         splitLine: { show: false }
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: "#8d8d8d", fontSize: 11, formatter: (v: number) => fmtUsd(v) },
-        splitLine: { lineStyle: { color: "rgba(0,0,0,0.06)", type: "dashed" } },
+        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11, formatter: (v: number) => fmtUsd(v) },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
         axisLine: { show: false },
         axisTick: { show: false }
       },
@@ -953,12 +980,12 @@ export default function ProfileDashboardTab() {
           showSymbol: false,
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(78,148,255,0.3)" },
-              { offset: 1, color: "rgba(78,148,255,0.05)" },
+              { offset: 0, color: "rgba(15,98,254,0.3)" },
+              { offset: 1, color: "rgba(15,98,254,0.05)" },
             ]),
           },
-          lineStyle: { color: "#4e94ff", width: 2 },
-          itemStyle: { color: "#4e94ff" },
+          lineStyle: { color: CHART_COLORS.primary, width: 2 },
+          itemStyle: { color: CHART_COLORS.primary },
           data: filteredData
         }
       ]
@@ -979,9 +1006,9 @@ export default function ProfileDashboardTab() {
     return (
       <div className={styles.errorState}>
         <p>Failed to load dashboard: {error}</p>
-        <button type="button" onClick={fetchAllData}>
+        <Button kind="secondary" size="sm" onClick={fetchAllData}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -990,7 +1017,7 @@ export default function ProfileDashboardTab() {
     <ChartProvider>
       <section className={styles.dashboardRoot}>
         {/* ── Header Controls ───────────────────────────────── */}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div className={styles.headerRow}>
           <ContentSwitcher
             onChange={(e) => setPeriod(e.name as WalletOverviewPeriodKey)}
             selectedIndex={["24H", "7D", "30D", "90D"].indexOf(period)}
@@ -1009,36 +1036,36 @@ export default function ProfileDashboardTab() {
             <div className={`${styles.kpiIcon} ${styles.kpiIconBlue}`}>
               <Currency size={22} />
             </div>
-            <span className={styles.kpiLabel}>Net Worth</span>
+            <span className={styles.kpiLabel}>Total Balance</span>
             <span className={styles.kpiValue}>{fmtUsd(kpis.totalAssets)}</span>
-            <span className={styles.kpiSub}>Combined equity value</span>
+            <span className={styles.kpiSub}>All wallets total</span>
           </article>
 
           <article className={`${styles.kpiCard} ${styles.kpiCardGreen}`}>
             <div className={`${styles.kpiIcon} ${styles.kpiIconGreen}`}>
               <Activity size={22} />
             </div>
-            <span className={styles.kpiLabel}>Total Operations</span>
+            <span className={styles.kpiLabel}>Transactions</span>
             <span className={styles.kpiValue}>{fmtNum(kpis.totalTx)}</span>
-            <span className={styles.kpiSub}>Activity in {period}</span>
+            <span className={styles.kpiSub}>Total count</span>
           </article>
 
           <article className={`${styles.kpiCard} ${styles.kpiCardPurple}`}>
             <div className={`${styles.kpiIcon} ${styles.kpiIconPurple}`}>
               <ChartColumn size={22} />
             </div>
-            <span className={styles.kpiLabel}>Trading Flow</span>
+            <span className={styles.kpiLabel}>Trading Volume</span>
             <span className={styles.kpiValue}>{fmtUsd(kpis.totalVolume)}</span>
-            <span className={styles.kpiSub}>Volume over {period}</span>
+            <span className={styles.kpiSub}>Total volume</span>
           </article>
 
           <article className={`${styles.kpiCard} ${styles.kpiCardOrange}`}>
             <div className={`${styles.kpiIcon} ${styles.kpiIconOrange}`}>
               <Wallet size={22} />
             </div>
-            <span className={styles.kpiLabel}>Asset Variety</span>
+            <span className={styles.kpiLabel}>Unique Tokens</span>
             <span className={styles.kpiValue}>{fmtNum(kpis.totalTokens)}</span>
-            <span className={styles.kpiSub}>Unique token positions</span>
+            <span className={styles.kpiSub}>Across all wallets</span>
           </article>
         </div>
 
@@ -1123,9 +1150,9 @@ export default function ProfileDashboardTab() {
                     <tr key={row.symbol}>
                       <td>
                         {row.logoUri ? (
-                          <img src={row.logoUri} alt={row.symbol} style={{ width: 20, height: 20, borderRadius: "50%", background: "#f0f0f0" }} />
+                          <img src={row.logoUri} alt={row.symbol} className={styles.tokenAvatar} />
                         ) : (
-                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#e0e0e0" }} />
+                          <div className={styles.tokenAvatarPlaceholder} />
                         )}
                         {row.symbol}
                       </td>
@@ -1145,7 +1172,7 @@ export default function ProfileDashboardTab() {
                   ))}
                   {matrixData.rows.length === 0 && (
                     <tr>
-                      <td colSpan={3} style={{ textAlign: "center", padding: "24px 0", color: "#6f6f6f" }}>
+                      <td colSpan={3} className={styles.emptyState}>
                         No asset data available
                       </td>
                     </tr>

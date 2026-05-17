@@ -1493,6 +1493,11 @@ export const translation = {
       portfolioTableTitle: "Portfolio table",
       balanceChartTitle: "Balance",
       drawdownChartTitle: "Drawdown",
+      section: {
+        performance: "Wallet performance",
+        activity: "Flow and activity",
+        risk: "Risk mix",
+      },
     },
     watchlist: {
       title: "Watchlist",

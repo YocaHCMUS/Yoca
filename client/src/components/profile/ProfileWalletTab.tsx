@@ -1,11 +1,14 @@
 import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart";
 import { DrawdownChart } from "@/components/charts/Drawdown";
+import { TradingVolumeDistribution } from "@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution";
+import { PnLChart } from "@/components/charts/PnLChart/PnLChart";
 import styles from "./profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { AggregatedAssetDistribution } from "@/components/charts/AggregatedAssetDistribution";
+import { Select, SelectItem } from "@carbon/react";
+import { useEffect, useMemo, useState } from "react";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -16,6 +19,28 @@ interface ProfileWalletTabProps {
 export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabProps) {
     const { tr } = useLocalization();
     const { data, error } = useProfileWalletTabData({ walletAddresses, period });
+    const [selectedWalletId, setSelectedWalletId] = useState<string>("");
+
+    const walletOptions = useMemo(
+        () => data.linkedWalletRows.map((row) => ({
+            id: row.walletAddress,
+            label: row.walletLabel,
+        })),
+        [data.linkedWalletRows],
+    );
+
+    useEffect(() => {
+        if (walletOptions.length === 0) {
+            setSelectedWalletId("");
+            return;
+        }
+
+        if (selectedWalletId && walletOptions.some((option) => option.id === selectedWalletId)) {
+            return;
+        }
+
+        setSelectedWalletId(walletOptions[0].id);
+    }, [selectedWalletId, walletOptions]);
 
     if (error) {
         return (
@@ -38,21 +63,32 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
 
 
 
-    const chartWallets = data.linkedWalletRows.map((row) => row.walletAddress);
+    const chartWallets = selectedWalletId ? [selectedWalletId] : [];
+    const chartKey = selectedWalletId || "all-wallets";
 
     return (
         <section className={styles.contentStack}>
-
             <div className={styles.sectionCard}>
-                <AggregatedAssetDistribution
-                    initialFilters={{ wallets: chartWallets }}
-                    minHeight={300}
-                    fetchEnabled={true}
-                />
+                <div className={styles.sectionHeader}>
+                    <h3>{tr("walletPage.wallet")}</h3>
+                    <Select
+                        id="profile-wallet-selector"
+                        hideLabel={true}
+                        labelText={tr("walletPage.wallet")}
+                        value={selectedWalletId}
+                        onChange={(event) => setSelectedWalletId(event.target.value)}
+                    >
+                        {walletOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id} text={option.label} />
+                        ))}
+                    </Select>
+                </div>
             </div>
 
             <div className={styles.sectionCard}>
                 <WalletSingleBalanceChart
+                    key={`balance-${chartKey}`}
+                    title={tr("walletPage.balanceHistory")}
                     minHeight={360}
                     initialFilters={{
                         timePeriod: "7D",
@@ -63,11 +99,33 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
 
             <div className={styles.sectionCard}>
                 <DrawdownChart
+                    key={`drawdown-${chartKey}`}
                     minHeight={360}
                     initialFilters={{
                         timePeriod: "30D",
                         wallets: chartWallets,
                     }}
+                />
+            </div>
+
+            <div className={styles.sectionCard}>
+                <TradingVolumeDistribution
+                    key={`volume-distribution-${chartKey}`}
+                    minHeight={360}
+                    initialFilters={{
+                        timePeriod: period,
+                        wallets: chartWallets,
+                    }}
+                    autoRefresh={false}
+                />
+            </div>
+
+            <div className={styles.sectionCard}>
+                <PnLChart
+                    key={`pnl-${chartKey}`}
+                    minHeight={360}
+                    initialFilters={{ timePeriod: period, wallets: chartWallets }}
+                    autoRefresh={false}
                 />
             </div>
         </section>

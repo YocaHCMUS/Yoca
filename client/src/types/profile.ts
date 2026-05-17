@@ -14,6 +14,7 @@ export interface ProfileOverviewData {
     pnlUsd: number;
     pnlPct: number;
     linkedWalletCount: number;
+    authWalletCount: number;
 }
 
 export interface DashboardKpi {

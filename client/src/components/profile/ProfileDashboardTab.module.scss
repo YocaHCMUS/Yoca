@@ -3,26 +3,30 @@
 
 /* ── Layout ─────────────────────────────────────────────── */
 /* ── Design Tokens ───────────────────────────────────────── */
-:root {
-  --grad-blue: linear-gradient(135deg, #4e94ff 0%, #0043ce 100%);
-  --grad-green: linear-gradient(135deg, #42be65 0%, #0e6027 100%);
-  --grad-purple: linear-gradient(135deg, #a56eff 0%, #6929c4 100%);
-  --grad-orange: linear-gradient(135deg, #ff832b 0%, #a2191f 100%);
-  --panel-bg: #ffffff;
-  --panel-border: 1px solid #e0e0e0;
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --glass-border: 1px solid #e0e0e0;
-  --text-main: #161616;
-  --text-sub: #6f6f6f;
-  --split-line: rgba(0, 0, 0, 0.06);
-}
-
 .dashboardRoot {
+  --grad-blue: linear-gradient(135deg, #0f62fe 0%, #002d9c 100%);
+  --grad-green: linear-gradient(135deg, #1192e8 0%, #0043ce 100%);
+  --grad-purple: linear-gradient(135deg, #3ddbd9 0%, #0f62fe 100%);
+  --grad-orange: linear-gradient(135deg, #4589ff 0%, #002d9c 100%);
+  --panel-bg: #{$layer-01};
+  --panel-border: 1px solid #{$border-subtle-01};
+  --card-shadow: none;
+  --glass-border: 1px solid #{$border-subtle-01};
+  --text-main: #{$text-primary};
+  --text-sub: #{$text-secondary};
+  --split-line: #{$border-subtle-01};
+
   display: flex;
   flex-direction: column;
   gap: $spacing-07;
   padding: $spacing-05;
-  background: #f4f4f4;
+  background: var(--cds-background);
+}
+
+.headerRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* ── KPI strip ──────────────────────────────────────────── */
@@ -34,7 +38,7 @@
 
 .kpiCard {
   border: var(--glass-border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--panel-bg);
   padding: $spacing-06;
   display: flex;
@@ -70,7 +74,7 @@
 .kpiIcon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,7 +144,7 @@
 .panel {
   background: var(--panel-bg);
   border: var(--glass-border);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: $spacing-06;
   box-shadow: var(--card-shadow);
 }
@@ -451,9 +455,9 @@
 .matrixTableWrapper {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid $border-subtle-01;
+  border-radius: 8px;
+  background: $layer-01;
 }
 
 .matrixTable {
@@ -463,13 +467,13 @@
   text-align: right;
 
   thead {
-    background: #f4f4f4;
-    border-bottom: 2px solid #d0d0d0;
+    background: $layer-02;
+    border-bottom: 1px solid $border-subtle-01;
 
     th {
       padding: 10px 12px;
       font-weight: 600;
-      color: #393939;
+      color: $text-secondary;
       white-space: nowrap;
 
       &:first-child {
@@ -480,16 +484,16 @@
 
   tbody {
     tr {
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid $border-subtle-01;
       transition: background 0.15s ease;
 
       &:hover {
-        background: #f8f8f8;
+        background: $layer-hover-01;
       }
 
       td {
         padding: 8px 12px;
-        color: #161616;
+        color: $text-primary;
         vertical-align: middle;
 
         &:first-child {
@@ -519,14 +523,35 @@
   top: 50%;
   transform: translateY(-50%);
   height: 24px;
-  background: rgba(78, 148, 255, 0.15);
-  border-right: 2px solid #4e94ff;
+  background: rgba(15, 98, 254, 0.16);
+  border-right: 2px solid #0f62fe;
   z-index: 0;
-  border-radius: 2px 0 0 2px;
+  border-radius: 0;
 }
 
 .dataBarText {
   position: relative;
   z-index: 1;
   font-weight: 600;
+}
+
+.tokenAvatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: $layer-02;
+  object-fit: cover;
+}
+
+.tokenAvatarPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: $layer-02;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 24px 0;
+  color: $text-secondary;
 }

@@ -5,13 +5,7 @@ import {
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
-import {
-    Wallet,
-    Activity,
-    ChartLine,
-    Link as LinkIcon,
-} from "@carbon/react/icons";
-import { useLocalization } from "@/contexts/LocalizationContext";
+import { Link as LinkIcon, Wallet } from "@carbon/react/icons";
 import styles from "./profile.module.scss";
 import { PeriodSelector } from "../common/PeriodSelector/PeriodSelector";
 
@@ -22,14 +16,7 @@ interface ProfileOverviewProps {
     loading: boolean;
 }
 
-function formatPct(value: number): string {
-    const sign = value > 0 ? "+" : "";
-    return `${sign}${value.toFixed(2)}%`;
-}
-
 export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOverviewProps) {
-    const { fmt } = useLocalization();
-
     return (
         <section className={styles.sectionCard}>
             <div className={styles.overviewHeader}>
@@ -73,40 +60,19 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <Wallet size={16} />
-                        Total net worth
+                        Linked wallets
                     </p>
                     <div className={styles.metricValue}>
-                        {loading ? <SkeletonText width="6rem" /> : fmt.num.compact.currency(data.totalNetWorthUsd)}
-                    </div>
-                </div>
-                <div className={styles.metricCard}>
-                    <p className={styles.metricLabel}>
-                        <Activity size={16} />
-                        Trades or transactions
-                    </p>
-                    <div className={styles.metricValue}>
-                        {loading ? <SkeletonText width="4rem" /> : data.tradeOrTxCount.toLocaleString()}
-                    </div>
-                </div>
-                <div className={styles.metricCard}>
-                    <p className={styles.metricLabel}>
-                        <ChartLine size={16} />
-                        Profit and loss
-                    </p>
-                    <div
-                        className={`${styles.metricValue} ${data.pnlUsd >= 0 ? styles.positive : styles.negative
-                            }`}
-                    >
-                        {loading ? <SkeletonText width="7rem" /> : `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`}
+                        {loading ? <SkeletonText width="3rem" /> : data.linkedWalletCount}
                     </div>
                 </div>
                 <div className={styles.metricCard}>
                     <p className={styles.metricLabel}>
                         <LinkIcon size={16} />
-                        Linked wallets
+                        Authorized wallets
                     </p>
                     <div className={styles.metricValue}>
-                        {loading ? <SkeletonText width="3rem" /> : data.linkedWalletCount}
+                        {loading ? <SkeletonText width="3rem" /> : data.authWalletCount}
                     </div>
                 </div>
             </div>
