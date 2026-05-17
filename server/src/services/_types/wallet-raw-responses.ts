@@ -148,3 +148,54 @@ export type BDS_WalletTokenDetails = z.infer<
   typeof bds_WalletTokenDetailsSchema
 >;
 export type MRL_WalletTokenSwaps = z.infer<typeof mrl_WalletTokenSwapsSchema>;
+
+export const bds_WalletNetAssetsSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    wallet_address: z.string(),
+    currency: z.string(),
+    net_worth: z.number(),
+    requested_timestamp: z.string(),
+    resolved_timestamp: z.string(),
+    net_assets: z.array(
+      z.object({
+        symbol: z.string(),
+        token_address: z.string(),
+        decimal: z.number(),
+        balance: z.string(),
+        price: z.number(),
+        value: z.number(),
+      }),
+    ),
+  }),
+  pagination: z.object({
+    limit: z.number(),
+    offset: z.number(),
+    total: z.number(),
+  }),
+});
+
+export type BDS_WalletNetAssets = z.infer<typeof bds_WalletNetAssetsSchema>;
+
+export const schema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    wallet_address: z.string(),
+    currency: z.string(),
+    current_timestamp: z.string(),
+    past_timestamp: z.string(),
+    history: z.array(
+      z.object({
+        timestamp: z.string(),
+        net_worth: z.number(),
+        net_worth_change: z.number(),
+        net_worth_change_percent: z.number(),
+      }),
+    ),
+  }),
+});
+
+export const bds_WalletNetworthHistorySchema = schema;
+export type BDS_WalletNetworthHistory = z.infer<
+  typeof bds_WalletNetworthHistorySchema
+>;

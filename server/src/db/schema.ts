@@ -20,6 +20,7 @@ import { users } from "./users.js";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";
+export * from "./wallets";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -50,20 +51,6 @@ export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
 // #endregion
 
 // #region Table definitions
-
-// --- ACMS API call cache table ---
-export const acmsApiCache = pgTable("acms_api_cache", {
-  key: varchar("key", { length: 128 }).primaryKey(),
-  provider: varchar("provider", { length: 32 }).notNull(),
-  endpoint: varchar("endpoint", { length: 128 }).notNull(),
-  params: jsonb("params").notNull(),
-  result: jsonb("result").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
