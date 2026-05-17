@@ -133,13 +133,15 @@ export async function getStablecoinRatio(
             4,
             async (token) => {
               try {
+                const tokenAddress = token.tokenAddress;
                 const series = await getWalletTokenBalanceHistory(wallet, [
-                  token.tokenAddress,
+                  tokenAddress,
                 ]);
-                const usdSeries = (series ?? []).map((point) => ({
-                  timestamp: point.timestampMs,
-                  value: point.usdValue,
-                }));
+                const usdSeries =
+                  series?.[tokenAddress].map((point) => ({
+                    timestamp: point.timestampMs,
+                    value: point.usdValue,
+                  })) || [];
                 return {
                   symbol: token.symbol,
                   usdSeries,

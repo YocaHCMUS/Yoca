@@ -1,6 +1,6 @@
 import { solanaBase58Schema, validate } from "@sv/middlewares/validation";
 import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service";
-import { fetchWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service";
+import { getWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service";
 import { serverErr, setErr } from "@sv/util/errors";
 import { statusCode } from "@sv/util/responses";
 import { Hono } from "hono";
@@ -28,21 +28,21 @@ const app = new Hono()
     try {
       const { wallets, timePeriod } = c.req.valid("query");
 
-      const result: Record<
+      const res: Record<
         string,
         Awaited<ReturnType<typeof getWalletBalanceHistory>>
       > = {};
-
+      // Seq fetch to not exceed rate lim
       for (const walletAddress of wallets) {
-        result[walletAddress] = await getWalletBalanceHistory(
+        res[walletAddress] = await getWalletBalanceHistory(
           walletAddress,
           timePeriod,
         );
       }
 
-      return c.json(result, statusCode.Ok);
+      return c.json(res, statusCode.Ok);
     } catch (e) {
-      serverErr(c, e);
+      return serverErr(c, e);
     }
   })
   .get(
@@ -52,7 +52,7 @@ const app = new Hono()
       try {
         const { wallet, tokens, timePeriod } = c.req.valid("query");
 
-        const res = await fetchWalletTokenBalanceHistory(
+        const res = await getWalletTokenBalanceHistory(
           wallet,
           tokens,
           timePeriod,
@@ -64,7 +64,8 @@ const app = new Hono()
 
         return c.json(res, statusCode.Ok);
       } catch (e) {
-        serverErr(c, e);
+        console.log("error getting : ", e);
+        return serverErr(c, e);
       }
     },
   );
