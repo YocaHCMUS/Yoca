@@ -17,8 +17,8 @@ import {
   renderReducedNumber,
   renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
-import { TknImg } from "@/components/TknImg";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
+import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
   AiAnalysisTab,
   type AiAnalysisDependencyItem,
@@ -489,76 +489,14 @@ export default function WalletPage() {
       const boughtToken = Array.isArray(row)
         ? (row[3] as WalletSwapTokenChange | undefined)
         : undefined;
-      const soldSymbol = soldToken?.symbol
-        ? String(soldToken.symbol).toUpperCase()
-        : "UNK";
-      const boughtSymbol = boughtToken?.symbol
-        ? String(boughtToken.symbol).toUpperCase()
-        : "UNK";
       const pairLabel = String(value || "").replace(/,/g, " → ");
 
       return (
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            minWidth: 0,
-          }}
-        >
-          <span
-            style={{
-              position: "relative",
-              width: 30,
-              height: 30,
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: 999,
-                overflow: "hidden",
-                boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.45)",
-              }}
-            >
-              <TknImg
-                src={soldToken?.logoUri ?? null}
-                alt={soldToken?.name ?? soldSymbol}
-                size={30}
-              />
-            </span>
-            <span
-              style={{
-                position: "absolute",
-                right: -2,
-                bottom: -2,
-                borderRadius: 999,
-                overflow: "hidden",
-                boxShadow: "0 0 0 2px var(--cds-layer, #fff)",
-              }}
-            >
-              <TknImg
-                src={boughtToken?.logoUri ?? null}
-                alt={boughtToken?.name ?? boughtSymbol}
-                size={14}
-              />
-            </span>
-          </span>
-          <span
-            style={{
-              display: "inline-flex",
-              flexDirection: "column",
-              minWidth: 0,
-              lineHeight: 1.2,
-            }}
-          >
-            <span style={{ color: "var(--cds-text-primary)" }}>
-              {pairLabel}
-            </span>
-          </span>
-        </span>
+        <SwapPairCell
+          soldToken={soldToken ?? null}
+          boughtToken={boughtToken ?? null}
+          pairLabel={pairLabel}
+        />
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
