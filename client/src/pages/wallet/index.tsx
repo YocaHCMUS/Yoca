@@ -603,6 +603,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
       );
     },
     (value: string) => {
@@ -613,6 +614,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {

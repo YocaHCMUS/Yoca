@@ -157,7 +157,8 @@ export const renderHash = (
   prefixLen: number = 6,
   suffixLen: number = 4,
   specialIcon?: React.ReactNode,
-  extraContext?: string
+  extraContext?: string,
+  bold?: boolean
 ) => {
   const truncated =
     value.length > prefixLen + suffixLen + 3
@@ -206,6 +207,7 @@ export const renderHash = (
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
+          ...(bold ? { fontWeight: 800 } : { fontWeight: 300 }),
         }}
       >
         {truncated}
