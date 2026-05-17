@@ -19,6 +19,8 @@ import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import React, { useCallback, useMemo, useRef, useState } from "react";
+import { ContentSwitcher, IconSwitch } from "@carbon/react";
+import { ChartBar, ChartCombo, ChartLine } from "@carbon/icons-react";
 import { Flex } from "@/components/Flex";
 import { FilterSwitch } from "@/components/FilterSwitch";
 
@@ -340,10 +342,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         !displayData.dailyPnL ||
         displayData.dailyPnL.length === 0));
 
-  const displayModeOptions = [
-    { value: "daily" as const, label: tr("charts.pnlChart.dailyPnL") },
-    { value: "cumulative" as const, label: tr("charts.pnlChart.cumulativePnL") },
-    { value: "both" as const, label: tr("charts.pnlChart.both") },
+  const displayModeIcons = [
+    { value: "daily" as const, icon: ChartBar, label: tr("charts.pnlChart.dailyPnL") },
+    { value: "cumulative" as const, icon: ChartLine, label: tr("charts.pnlChart.cumulativePnL") },
+    { value: "both" as const, icon: ChartCombo, label: tr("charts.pnlChart.both") },
   ];
 
   const periodOptions = [
@@ -360,12 +362,19 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       toolbarLayout="stacked"
       actions={
         <Flex gap={8} align="center">
-          <FilterSwitch
-            options={displayModeOptions}
-            value={displayMode}
-            onChange={(v) => handleDisplayModeChange(v as "daily" | "cumulative" | "both")}
-            width={200}
-          />
+          <ContentSwitcher
+            selectedIndex={displayModeIcons.findIndex(o => o.value === displayMode)}
+            onChange={({ name }) => {
+              if (name) handleDisplayModeChange(name as "daily" | "cumulative" | "both");
+            }}
+            size="md"
+          >
+            {displayModeIcons.map(opt => (
+              <IconSwitch key={opt.value} name={opt.value} text={opt.label}>
+                <opt.icon size={16} />
+              </IconSwitch>
+            ))}
+          </ContentSwitcher>
           <FilterSwitch
             options={periodOptions}
             value={chartTimePeriod}
