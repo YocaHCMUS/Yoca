@@ -11,14 +11,15 @@
 .tabBtn {
   background-color: var(--cds-layer-01, #262626);
   border: none;
-  font-family: "Inter", -apple-system, sans-serif;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--cds-text-primary, #f4f4f4);
   padding: 0 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -38,7 +39,6 @@
   border-radius: 8px;
   padding: 4px 4px 4px 14px;
   color: #ffffff;
-  font-family: "Inter", -apple-system, sans-serif;
   height: 38px;
   box-sizing: border-box;
   box-shadow: 0 4px 12px rgba(75, 107, 250, 0.3);
@@ -73,7 +73,6 @@
   background-color: rgba(0, 0, 0, 0.2);
   border: none;
   color: rgba(255, 255, 255, 0.9);
-  font-family: "Inter", -apple-system, sans-serif;
   font-size: 0.8125rem;
   font-weight: 700;
   padding: 0 12px;
@@ -103,7 +102,8 @@
   z-index: 100;
 }
 
-.rankContainer, .filterContainer {
+.rankContainer,
+.filterContainer {
   position: relative;
 }
 
@@ -158,8 +158,14 @@
 }
 
 @keyframes dropdownIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dropdownSection {
@@ -226,7 +232,7 @@
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid var(--cds-border-subtle, #262626);
-  
+
   span {
     font-weight: 600;
     font-size: 1rem;
@@ -236,7 +242,9 @@
   .closeIcon {
     cursor: pointer;
     color: var(--cds-text-secondary);
-    &:hover { color: var(--cds-text-primary); }
+    &:hover {
+      color: var(--cds-text-primary);
+    }
   }
 }
 
@@ -287,7 +295,7 @@
     border-radius: 4px;
     color: var(--cds-text-primary, #ffffff);
     padding: 6px 8px;
-    padding-left: 20px; 
+    padding-left: 20px;
     font-size: 0.8125rem;
     outline: none;
     transition: border-color 0.2s;
@@ -320,13 +328,17 @@
     background: transparent;
     border: 1px solid var(--cds-border-strong, #525252);
     color: var(--cds-text-primary);
-    &:hover { background: var(--cds-layer-hover, #353535); }
+    &:hover {
+      background: var(--cds-layer-hover, #353535);
+    }
   }
 
   .applyBtn {
     background: var(--cds-link-primary, #0f62fe);
     border: none;
     color: #ffffff;
-    &:hover { background: var(--cds-link-primary-hover, #0353e9); }
+    &:hover {
+      background: var(--cds-link-primary-hover, #0353e9);
+    }
   }
 }

@@ -8,9 +8,10 @@ import { Txt } from "@/components/Txt";
 import { useMemo, useState } from "react";
 import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
-import { Layer, MultiSelect } from "@carbon/react";
-import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
+import { Layer, MultiSelect, Tag } from "@carbon/react";
+import { TknImg } from "@/components/TknImg";
 import { ChartWrapper } from "../shared";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -117,11 +118,6 @@ export function BalanceChartV2({ address }: { address: string }) {
     },
   );
 
-  const change24h = useMemo(
-    () => (totalBalance.data ? compute24hChange(totalBalance.data.data) : null),
-    [totalBalance.data],
-  );
-
   const balanceSeries =
     selectedTokens == null
       ? totalBalance.data
@@ -132,23 +128,37 @@ export function BalanceChartV2({ address }: { address: string }) {
         ...(totalBalance.data ? [totalBalance.data] : []),
       ];
 
+  const series24hChanges = useMemo(() => {
+    return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
+      (acc, series) => {
+        acc[series.label] = compute24hChange(series.data);
+        return acc;
+      },
+      {},
+    );
+  }, [balanceSeries]);
+
   return (
     <ChartWrapper title={tr("charts.balanceChart.title")}>
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
             <MultiSelect
+              className={overwriteStyles.smallPaddingMenuItem}
               id="token-selector"
               items={portfolio.data || []}
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <TokenIdentityCell
-                  symbol={account.symbol || account.tokenAddress}
-                  fullName={account.name}
-                  imageUrl={account.logoUri}
-                  imageSize={18}
-                />
+                <Flex gap={4} align="center">
+                  <TknImg
+                    size={25}
+                    alt={account.symbol || account.tokenAddress}
+                    loading={portfolio.isLoading}
+                    src={account.logoUri}
+                  />
+                  <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
+                </Flex>
               )}
               selectionFeedback="top-after-reopen"
               onChange={(v) =>
@@ -170,25 +180,44 @@ export function BalanceChartV2({ address }: { address: string }) {
           />
         </Flex>
 
-        {change24h && (
-          <Flex align="center" gap={4}>
-            <Txt size="md" secondary>
-              {tr("charts.balanceChart.change")}
-            </Txt>
-            <Flex gap={4}>
-              <TrendNum
-                value={change24h.pct}
-                prefixes="plus-minus"
-                formatter={fmt.num.percent}
-              />
-              <TrendNum
-                value={change24h.delta}
-                prefixes="plus-minus"
-                formatter={fmt.num.currency}
-              />
-            </Flex>
+        <Flex dir="row" gap={4} align="center">
+          <Txt size="md" secondary>
+            24h Change:
+          </Txt>
+          <Flex dir="row" gap={2}>
+            {balanceSeries.map((series) => {
+              const change = series24hChanges[series.label];
+
+              if (!change) return null;
+
+              return (
+                <Tag size="lg" title={series.label}>
+                  <Flex
+                    key={series.key}
+                    align="center"
+                    justify="between"
+                    gap={2}
+                  >
+                    <Txt size="sm" secondary>
+                      {series.label}
+                    </Txt>
+                    <TrendNum
+                      value={change.pct}
+                      prefixes="plus-minus"
+                      formatter={fmt.num.percent}
+                    />
+
+                    {/* <TrendNum
+                    value={change.delta}
+                    prefixes="plus-minus"
+                    formatter={fmt.num.currency}
+                  /> */}
+                  </Flex>
+                </Tag>
+              );
+            })}
           </Flex>
-        )}
+        </Flex>
 
         <MultiTimeSeriesLineChart
           series={balanceSeries}

@@ -21,7 +21,6 @@
 .dexTable {
   width: 100%;
   border-collapse: collapse;
-  font-family: "Inter", -apple-system, sans-serif;
   font-size: 0.8125rem; /* ~13px */
   text-align: right;
   white-space: nowrap;
@@ -43,16 +42,19 @@
     text-transform: uppercase;
     font-weight: 700;
     color: var(--cds-text-secondary, #c6c6c6);
-    background-color: var(--cds-layer-01, #262626); /* Back to layer-01 (Grey) */
+    background-color: var(
+      --cds-layer-01,
+      #262626
+    ); /* Back to layer-01 (Grey) */
     cursor: pointer;
     user-select: none;
     transition: background-color 0.1s ease;
     font-size: 0.8125rem;
     letter-spacing: 0.3px;
-    height: 48px; 
+    height: 48px;
     text-align: right;
     color: var(--cds-text-secondary, #c6c6c6);
-    
+
     /* Ensure right alignment with flex if needed for sorting icon */
     & > span {
       display: inline-flex;
@@ -61,10 +63,12 @@
     }
 
     /* Target specific columns to save space */
-    &:nth-last-child(1) { /* Liquidity col */
-      max-width: 80px; 
+    &:nth-last-child(1) {
+      /* Liquidity col */
+      max-width: 80px;
     }
-    &:nth-last-child(2) { /* 24h col */
+    &:nth-last-child(2) {
+      /* 24h col */
       max-width: 60px;
     }
 
@@ -74,8 +78,11 @@
   }
 
   tbody tr {
-    height: 48px; 
-    background-color: var(--cds-layer-02, #ffffff); /* Back to layer-02 (White/Pure) */
+    height: 48px;
+    background-color: var(
+      --cds-layer-02,
+      #ffffff
+    ); /* Back to layer-02 (White/Pure) */
     transition: background-color 0.1s ease;
     &:hover {
       background-color: var(--cds-layer-hover, #262626);
@@ -126,7 +133,7 @@
   z-index: 3;
   border-radius: 50%;
   border: 1.5px solid var(--cds-layer, #161616); /* matches table row bg */
-  background-color: var(--cds-layer, #161616); 
+  background-color: var(--cds-layer, #161616);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -143,7 +150,7 @@
   color: var(--cds-text-primary, #ffffff);
   font-size: 0.8125rem;
   transition: color 0.1s;
-  
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -196,7 +203,7 @@
   margin-left: 6px;
   opacity: 0;
   transition: opacity 0.2s;
-  
+
   &.active {
     opacity: 1;
     color: var(--cds-text-primary, #fff);
@@ -268,7 +275,8 @@ th:hover .sortIndicator {
   }
 }
 
-.rankContainer, .filterContainer {
+.rankContainer,
+.filterContainer {
   position: relative;
 }
 
@@ -346,7 +354,7 @@ th:hover .sortIndicator {
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid var(--cds-border-subtle, #262626);
-  
+
   span {
     font-weight: 600;
     font-size: 1rem;
@@ -355,7 +363,9 @@ th:hover .sortIndicator {
   .closeIcon {
     cursor: pointer;
     color: var(--cds-text-secondary);
-    &:hover { color: var(--cds-text-primary); }
+    &:hover {
+      color: var(--cds-text-primary);
+    }
   }
 }
 
@@ -415,10 +425,10 @@ th:hover .sortIndicator {
       border-color: var(--cds-link-primary, #0f62fe);
     }
 
-    &::-webkit-inner-spin-button, 
-    &::-webkit-outer-spin-button { 
-      -webkit-appearance: none; 
-      margin: 0; 
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
   }
 }
@@ -445,14 +455,17 @@ th:hover .sortIndicator {
     background: transparent;
     border: 1px solid var(--cds-border-strong, #525252);
     color: var(--cds-text-primary);
-    &:hover { background: var(--cds-layer-hover, #353535); }
+    &:hover {
+      background: var(--cds-layer-hover, #353535);
+    }
   }
 
   .applyBtn {
     background: var(--cds-link-primary, #0f62fe);
     border: none;
     color: #ffffff;
-    &:hover { background: var(--cds-link-primary-hover, #0353e9); }
+    &:hover {
+      background: var(--cds-link-primary-hover, #0353e9);
+    }
   }
 }
-
