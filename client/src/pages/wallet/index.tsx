@@ -385,7 +385,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
+            transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -1292,11 +1292,10 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${
-          typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+          ? transfer.tokenSymbol
+          : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1464,12 +1463,12 @@ export default function WalletPage() {
                 }
               }}
               loading={swapLoading && loadedSwaps.length === 0}
-              // serverPagination={{
-              //   enabled: true,
-              //   hasMore: swapHasMore,
-              //   isLoading: swapLoading,
-              //   onPageChange: handleSwapPageChange,
-              // }}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: swapHasMore,
+            //   isLoading: swapLoading,
+            //   onPageChange: handleSwapPageChange,
+            // }}
             />
           </div>
           <div className={styles.chartSection}>
@@ -1485,12 +1484,12 @@ export default function WalletPage() {
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
               loading={transferLoading && loadedTransfers.length === 0}
-              // serverPagination={{
-              //   enabled: true,
-              //   hasMore: transferHasMore,
-              //   isLoading: transferLoading,
-              //   onPageChange: handleTransferPageChange,
-              // }}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: transferHasMore,
+            //   isLoading: transferLoading,
+            //   onPageChange: handleTransferPageChange,
+            // }}
             />
           </div>
         </div>
@@ -1537,7 +1536,7 @@ export default function WalletPage() {
               intelligenceAvailable
                 ? "available"
                 : intelligenceLoading ||
-                    (intelligenceEnabled && intelligenceReport == null)
+                  (intelligenceEnabled && intelligenceReport == null)
                   ? "fetching"
                   : "no_data";
 
@@ -1840,11 +1839,10 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${
-            typeof transfer.tokenSymbol === "string" &&
+          `${typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-              ? transfer.tokenSymbol
-              : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1984,7 +1982,7 @@ export default function WalletPage() {
               names={[
                 tr("walletPage.overview"),
                 tr("walletPage.holdings"),
-                tr("walletPage.activityRisk"),
+                tr("walletPage.activity"),
                 tr("walletPage.aiAnalysis"),
               ]}
               tabIcons={[

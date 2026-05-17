@@ -980,6 +980,7 @@ export const translation = {
         topNFilter: "Top N filter",
         minPctFilter: "Min % filter",
       },
+      filtersMenu: "Filters",
       legend: {
         clickToHide: "Click to hide {name}",
         clickToShow: "Click to show {name}",

@@ -39,8 +39,8 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
-import { Flex } from '@/components/Flex';
-import { FilterSwitch } from '@/components/FilterSwitch';
+import { Dropdown } from '@carbon/react';
+import { SettingsAdjust } from '@carbon/icons-react';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -457,23 +457,99 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     { value: 10, label: tr('charts.assetDistributionChart.filters.minPct10') },
   ];
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        filterMenuRef.current && filterBtnRef.current &&
+        !filterMenuRef.current.contains(e.target as Node) &&
+        !filterBtnRef.current.contains(e.target as Node)
+      ) {
+        setFilterOpen(false);
+      }
+    };
+    if (filterOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
+
+  const handleFilterKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { setFilterOpen(false); filterBtnRef.current?.focus(); }
+  }, []);
+
   const filterControls = (
-    <Flex gap={8} align="center" wrap="wrap">
-      <div style={{ width: 180 }}>
-        <FilterSwitch
-          options={topNOptions}
-          value={topN}
-          onChange={(v) => setTopN(v as TopNOption)}
-        />
-      </div>
-      <div style={{ width: 200 }}>
-        <FilterSwitch
-          options={minPctOptions}
-          value={minPct}
-          onChange={(v) => setMinPct(v as MinPctOption)}
-        />
-      </div>
-    </Flex>
+    <div style={{ position: 'relative' }}>
+      <button
+        ref={filterBtnRef}
+        className="filterTrigger"
+        onClick={() => setFilterOpen(o => !o)}
+        aria-label={tr('charts.assetDistributionChart.filtersMenu')}
+        aria-haspopup="menu"
+        aria-expanded={filterOpen}
+        title={tr('charts.assetDistributionChart.filtersMenu')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          border: '1px solid var(--cds-border-subtle)',
+          borderRadius: 4,
+          background: 'transparent',
+          cursor: 'pointer',
+          color: 'var(--cds-text-primary)',
+        }}
+      >
+        <SettingsAdjust size={20} />
+      </button>
+      {filterOpen && (
+        <div
+          ref={filterMenuRef}
+          role="menu"
+          onKeyDown={handleFilterKeyDown}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 'calc(100% + 4px)',
+            minWidth: 220,
+            background: 'var(--cds-layer)',
+            border: '1px solid var(--cds-border-subtle)',
+            borderRadius: 8,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 100,
+            padding: 12,
+          }}
+        >
+          <Dropdown
+            id="asset-dist-topn"
+            titleText={tr('charts.assetDistributionChart.filters.topN')}
+            label={tr('charts.assetDistributionChart.filters.topN')}
+            items={topNOptions}
+            itemToString={(item) => item?.label ?? ''}
+            selectedItem={topNOptions.find(o => o.value === topN)}
+            onChange={({ selectedItem }) => {
+              if (selectedItem) setTopN(selectedItem.value as TopNOption);
+            }}
+            size="sm"
+          />
+          <div style={{ height: 12 }} />
+          <Dropdown
+            id="asset-dist-minpct"
+            titleText={tr('charts.assetDistributionChart.filters.minPct')}
+            label={tr('charts.assetDistributionChart.filters.minPct')}
+            items={minPctOptions}
+            itemToString={(item) => item?.label ?? ''}
+            selectedItem={minPctOptions.find(o => o.value === minPct)}
+            onChange={({ selectedItem }) => {
+              if (selectedItem) setMinPct(selectedItem.value as MinPctOption);
+            }}
+            size="sm"
+          />
+        </div>
+      )}
+    </div>
   );
 
   return (

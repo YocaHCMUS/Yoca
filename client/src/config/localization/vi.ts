@@ -945,6 +945,7 @@ export const translation = defineTranslation({
         topNFilter: "Bộ lọc Top N",
         minPctFilter: "Bộ lọc Min %",
       },
+      filtersMenu: "Bộ lọc",
       legend: {
         clickToHide: "Nhấp để ẩn {name}",
         clickToShow: "Nhấp để hiển thị {name}",
