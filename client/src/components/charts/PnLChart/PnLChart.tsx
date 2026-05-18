@@ -18,7 +18,7 @@ import {
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContentSwitcher, IconSwitch } from "@carbon/react";
 import { ChartBar, ChartCombo, ChartLine } from "@carbon/icons-react";
 import { Flex } from "@/components/Flex";
@@ -39,6 +39,7 @@ export interface PnLChartProps {
     wallets?: string[];
   };
   fetchEnabled?: boolean;
+  onDayClick?: (walletAddress: string, timestamp: number) => void;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -51,6 +52,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   initialViewMode = "both",
   initialFilters,
   fetchEnabled = true,
+  onDayClick,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
@@ -332,6 +334,34 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
     return [];
   }, [displayData, createChartOption]);
+
+  useEffect(() => {
+    if (!onDayClick || !chartRef.current) return;
+
+    const chartInstance = chartRef.current.getEchartsInstance();
+    const handler = (params: any) => {
+      if (params.componentType !== "series" || params.dataIndex == null) return;
+
+      const chartEntry = chartOptions[params.seriesIndex ?? 0];
+      if (!chartEntry) return;
+
+      const timestamps = displayData && "wallets" in displayData
+        ? displayData.wallets[params.seriesIndex ?? 0]?.dailyPnL.map((p) => p.timestamp)
+        : displayData && "dailyPnL" in displayData
+          ? displayData.dailyPnL.map((p) => p.timestamp)
+          : [];
+
+      const ts = timestamps[params.dataIndex];
+      if (ts != null) {
+        onDayClick(chartEntry.walletAddress, ts);
+      }
+    };
+
+    chartInstance.on("click", handler);
+    return () => {
+      chartInstance.off("click", handler);
+    };
+  }, [onDayClick, chartOptions, displayData]);
 
   const isEmpty =
     !displayData ||

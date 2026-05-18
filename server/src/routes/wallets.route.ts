@@ -12,6 +12,11 @@ import {
   getWalletFirstFund,
 } from "@sv/services/wallet/index.js";
 import {
+  getWalletDayActivitySummary,
+  getWalletTxDetail,
+  getWalletTxInstructionDetail,
+} from "@sv/services/wallet/walletDayActivity.service.js";
+import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
   getWalletOverview,
@@ -562,6 +567,68 @@ const app = new Hono()
         setErr("INTERNAL_SERVER_ERR"),
         statusCode.InternalServerError,
       );
+    }
+  })
+  .get("/day-activity", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const summary = await getWalletDayActivitySummary(address, dayMs);
+      return c.json(summary, 200);
+    } catch (err) {
+      console.error("Failed to get wallet day activity", err);
+      return c.json({ error: "Failed to get wallet day activity" }, 500);
+    }
+  })
+  .get("/tx-detail", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx detail", err);
+      return c.json({ error: "Failed to get wallet tx detail" }, 500);
+    }
+  })
+  .get("/tx-instructions", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxInstructionDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx instructions", err);
+      return c.json({ error: "Failed to get wallet tx instructions" }, 500);
     }
   });
 

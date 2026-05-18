@@ -1,0 +1,175 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.card {
+  position: fixed;
+  z-index: 8000;
+  background-color: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  width: 420px;
+  max-width: calc(100vw - #{$spacing-09});
+  max-height: 60vh;
+  padding: $spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  transition: box-shadow 0.15s;
+
+  &.dragging {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    opacity: 0.92;
+  }
+}
+
+/* ── Header ──────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.dragIcon {
+  color: $icon-secondary;
+  flex-shrink: 0;
+}
+
+.title {
+  @include type-style('heading-03');
+  color: $text-primary;
+  margin: 0;
+}
+
+.date {
+  @include type-style('body-01');
+  color: $text-secondary;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+/* ── Loading / Error ─────────────────────────── */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-07 0;
+}
+
+.errorContainer {
+  text-align: center;
+  padding: $spacing-05 0;
+}
+
+.errorText {
+  @include type-style('body-01');
+  color: $support-error;
+}
+
+/* ── Body ────────────────────────────────────── */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+/* ── Summary Cards ───────────────────────────── */
+.summaryCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-04;
+}
+
+.summaryCard {
+  background-color: $layer-02;
+  border-radius: 6px;
+  padding: $spacing-04;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.cardLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cardValue {
+  @include type-style('heading-04');
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardSub {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+}
+
+/* ── Section ─────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.sectionTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding-top: $spacing-03;
+  border-top: 1px solid $border-subtle;
+}
+
+/* ── Transaction List ────────────────────────── */
+.txList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.emptyText {
+  @include type-style('body-01');
+  color: $text-secondary;
+  text-align: center;
+  padding: $spacing-04 0;
+}

@@ -89,6 +89,7 @@ import {
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 
@@ -306,6 +307,9 @@ export default function WalletPage() {
 
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
+
+  const [dayPopupOpen, setDayPopupOpen] = useState(false);
+  const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
@@ -1320,6 +1324,10 @@ export default function WalletPage() {
               minHeight={400}
               autoRefresh
               initialFilters={{ wallets: [walletAddress] }}
+              onDayClick={(_wallet, ts) => {
+                setDayPopupTimestamp(ts);
+                setDayPopupOpen(true);
+              }}
             />
           </div>
         </div>
@@ -1960,6 +1968,13 @@ export default function WalletPage() {
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         swap={selectedSwap}
+      />
+
+      <DayActivityPopup
+        isOpen={dayPopupOpen}
+        onClose={() => setDayPopupOpen(false)}
+        wallets={[walletAddress]}
+        dayTimestamp={dayPopupTimestamp}
       />
     </PageWrapper>
   );

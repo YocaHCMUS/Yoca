@@ -550,3 +550,88 @@ export type HeliusWalletFirstFund = {
     explorerUrl: string
 };
 
+export interface WalletDayToken {
+    address: string;
+    symbol: string;
+    logoUri: string | null;
+    volumeUsd: number;
+}
+
+export interface WalletDayActivitySummary {
+    walletAddress: string;
+    date: string;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    buyTxCount: number;
+    sellTxCount: number;
+    topTokens: WalletDayToken[];
+    totalTokensTraded: number;
+    swaps: WalletDaySwapSummary[];
+}
+
+export interface WalletDaySwapSummary {
+    transactionHash: string;
+    timestamp: string;
+    pair: string;
+    valueUsd: number;
+    action: "buy" | "sell";
+    soldSymbol: string | null;
+    boughtSymbol: string | null;
+}
+
+export interface WalletTxTransfer {
+    from: string;
+    to: string;
+    mint: string;
+    symbol: string | null;
+    name: string | null;
+    logoUri: string | null;
+    amount: number;
+    amountUsd: number | null;
+}
+
+export interface WalletFeeReceiver {
+    address: string;
+    amount: number;
+    amountUsd: number | null;
+    label: string | null;
+}
+
+export interface WalletTxDetail {
+    transactionHash: string;
+    timestamp: string;
+    pair: string;
+    valueUsd: number;
+    action: "buy" | "sell";
+    transfers: WalletTxTransfer[];
+    feePaid: number;
+    feePaidUsd: number | null;
+    feePayer: string;
+    feeReceivers: WalletFeeReceiver[];
+}
+
+export interface WalletInnerInstruction {
+    index: number;
+    programId: string;
+    programLabel: string | null;
+    accounts: string[];
+}
+
+export interface WalletInstruction {
+    index: number;
+    programId: string;
+    programLabel: string | null;
+    accounts: string[];
+    innerInstructions: WalletInnerInstruction[];
+}
+
+export interface WalletTxInstructionDetail {
+    transactionHash: string;
+    instructions: WalletInstruction[];
+}
+
+export interface WalletDayActivityMultiResponse {
+    wallets: WalletDayActivitySummary[];
+    combined?: WalletDayActivitySummary;
+}
+
