@@ -88,6 +88,7 @@ export async function fetchWalletTokenBalanceHistory(
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
   const dates = getUtcDatesFromNow(timePeriod);
+  console.log("dates: ", dates);
   // TODO: rate limit here
   const resArray = await Promise.all(
     dates.map((date) => bdsFetchAssetsAt(address, date)),
@@ -96,12 +97,12 @@ export async function fetchWalletTokenBalanceHistory(
   const insertValues = resArray.flatMap(
     (res) =>
       res?.net_assets.map(
-        (tokBal): WalletTokenBalanceHistoryInsert => ({
+        (tokenBalance): WalletTokenBalanceHistoryInsert => ({
           address: address,
           timestampMs: dayjs(res.resolved_timestamp).valueOf(),
-          tokenAddress: tokBal.token_address,
-          tokenBalance: Number(tokBal.balance),
-          usdValue: tokBal.value,
+          tokenAddress: tokenBalance.token_address,
+          tokenBalance: Number(tokenBalance.balance),
+          usdValue: tokenBalance.value,
         }),
       ) || [],
   );
@@ -148,12 +149,8 @@ async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
     headers: bds.getRequiredHeaders(),
   });
 
-  if (!resp.ok) {
-    console.log(resp.status, resp.statusText, await resp.json());
-    return null;
-  }
-  // console.log("res json: ", resp.json());
-  const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp);
+  const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp, true);
+
   if (!res || !res.data) {
     return null;
   }

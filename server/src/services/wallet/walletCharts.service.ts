@@ -213,10 +213,6 @@ async function fetchWalletBalanceHistory(
     headers: bds.getRequiredHeaders(),
   });
 
-  if (!resp.ok) {
-    return null;
-  }
-
   const res = await getTrackedApiResult(bds_WalletNetworthHistorySchema, resp);
 
   if (!res || !res.data || !res.success) {

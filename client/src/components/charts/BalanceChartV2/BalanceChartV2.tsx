@@ -115,9 +115,8 @@ export function BalanceChartV2({ address }: { address: string }) {
         : []
       : [
           ...(tokenBalances.data ?? []),
-          ...(totalBalance.data ? [totalBalance.data] : []),
+          // ...(totalBalance.data ? [totalBalance.data] : []),
         ];
-  console.log(selectedTokens);
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -128,8 +127,6 @@ export function BalanceChartV2({ address }: { address: string }) {
       {},
     );
   }, [balanceSeries]);
-
-  console.log("bl", balanceSeries);
 
   return (
     <ChartWrapper title="Balance History">
