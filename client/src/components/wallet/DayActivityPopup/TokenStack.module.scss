@@ -10,6 +10,12 @@
 .stack {
   display: flex;
   align-items: center;
+  cursor: pointer;
+}
+
+.emptySpace {
+  width: 100%;
+  flex: 1
 }
 
 .tokenIcon {
@@ -53,7 +59,7 @@
   @include type-style('label-01');
   font-weight: 600;
   flex-shrink: 0;
-  margin-left: -10px;
+  margin-left: 0;
 }
 
 .tooltip {

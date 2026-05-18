@@ -1,6 +1,7 @@
 import type { WalletDayToken } from "@/services/wallet/walletApi";
 import React, { useState } from "react";
 import styles from "./TokenStack.module.scss";
+import { ChevronDown, ChevronUp } from "@carbon/react/icons";
 
 interface TokenStackProps {
   tokens: WalletDayToken[];
@@ -15,18 +16,18 @@ const fmtCompact = new Intl.NumberFormat(undefined, {
 
 export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) => {
   const [hovered, setHovered] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  if (tokens.length === 0) return null;
+  if (totalTokens === 0) return null;
 
-  const remaining = totalTokens - tokens.length;
+  const remaining = totalTokens - 3;
 
   return (
     <div
       className={styles.stackContainer}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+
     >
-      <div className={styles.stack}>
+      <div className={styles.stack} onClick={() => setExpanded(!expanded)}>
         {tokens.slice(0, 3).map((token, i) => (
           <div
             key={token.address}
@@ -45,10 +46,13 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
             +{remaining}
           </div>
         )}
+        <div className={styles.emptySpace}></div>
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </div>
 
-      {hovered && (
-        <div className={styles.tooltip}>
+      {expanded && (
+        // <div className={styles.tooltip}>
+        <div>
           <div className={styles.tooltipHeader}>
             <span>All Tokens ({totalTokens})</span>
           </div>
