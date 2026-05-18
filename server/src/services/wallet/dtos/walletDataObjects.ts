@@ -562,6 +562,8 @@ export interface WalletDayToken {
     logoUri: string | null;
     buyVolumeUsd: number;
     sellVolumeUsd: number;
+    buyAmount: number;
+    sellAmount: number;
     totalVolumeUsd: number;
     hourlyVolumes: TokenHourlyVolume[];
 }

@@ -95,7 +95,7 @@
   grid-template-columns: auto 1fr;
   gap: $spacing-03;
   align-items: center;
-  padding: $spacing-02 $spacing-04;
+  padding: $spacing-03 $spacing-04;
   border-bottom: 1px solid $border-subtle-00;
 
   &:last-child {
@@ -148,12 +148,43 @@
   white-space: nowrap;
 }
 
-.tokenVolumes {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  text-align: right;
+.tokenMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-02;
   min-width: 0;
+}
+
+.tokenChange {
+  @include type-style('label-01');
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.positive {
+  color: #24a148;
+}
+
+.negative {
+  color: #da1e28;
+}
+
+.neutral {
+  color: $text-secondary;
+}
+
+.tokenVolumes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: 2px $spacing-03;
+  justify-content: end;
+  justify-items: end;
+  min-width: 0;
+}
+
+.volRow {
+  display: contents;
 }
 
 .buyVol {
@@ -161,6 +192,14 @@
   color: #24a148;
   font-variant-numeric: tabular-nums;
   font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.buyAmt {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6rem;
 }
 
 .sellVol {
@@ -168,6 +207,14 @@
   color: #da1e28;
   font-variant-numeric: tabular-nums;
   font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.sellAmt {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6rem;
 }
 
 .tooltipMore {

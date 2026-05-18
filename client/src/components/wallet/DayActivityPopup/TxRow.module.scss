@@ -10,7 +10,7 @@
 
 .txHeader {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: $spacing-03;
   align-items: center;
   padding: $spacing-03 $spacing-04;

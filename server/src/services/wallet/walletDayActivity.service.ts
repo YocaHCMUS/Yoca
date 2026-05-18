@@ -26,6 +26,8 @@ interface TokenAccumulator {
     logoUri: string | null;
     buyVolumeUsd: number;
     sellVolumeUsd: number;
+    buyAmount: number;
+    sellAmount: number;
     hourlyMap: Map<number, { buy: number; sell: number }>;
 }
 
@@ -63,6 +65,8 @@ export async function getWalletDayActivitySummary(
                 logoUri,
                 buyVolumeUsd: 0,
                 sellVolumeUsd: 0,
+                buyAmount: 0,
+                sellAmount: 0,
                 hourlyMap: new Map(),
             };
             tokenMap.set(addr, acc);
@@ -113,11 +117,13 @@ export async function getWalletDayActivitySummary(
             if (swap.sold?.address) {
                 const acc = getOrCreateToken(swap.sold.address, swap.sold.symbol, swap.sold.logoUri);
                 acc.sellVolumeUsd += valueUsd;
+                acc.sellAmount += swap.sold.amount;
                 addHourlyVolume(swap.sold.address, hour, false, valueUsd);
             }
             if (swap.bought?.address) {
                 const acc = getOrCreateToken(swap.bought.address, swap.bought.symbol, swap.bought.logoUri);
                 acc.buyVolumeUsd += valueUsd;
+                acc.buyAmount += swap.bought.amount;
                 addHourlyVolume(swap.bought.address, hour, true, valueUsd);
             }
         }
@@ -143,9 +149,11 @@ export async function getWalletDayActivitySummary(
                 );
                 if (isInflow) {
                     acc.buyVolumeUsd += valueUsd;
+                    acc.buyAmount += transfer.amount;
                     addHourlyVolume(transfer.tokenAddress, hour, true, valueUsd);
                 } else {
                     acc.sellVolumeUsd += valueUsd;
+                    acc.sellAmount += transfer.amount;
                     addHourlyVolume(transfer.tokenAddress, hour, false, valueUsd);
                 }
             }
@@ -168,6 +176,8 @@ export async function getWalletDayActivitySummary(
                     logoUri: acc.logoUri,
                     buyVolumeUsd: roundUsd(acc.buyVolumeUsd),
                     sellVolumeUsd: roundUsd(acc.sellVolumeUsd),
+                    buyAmount: acc.buyAmount,
+                    sellAmount: acc.sellAmount,
                     totalVolumeUsd: roundUsd(acc.buyVolumeUsd + acc.sellVolumeUsd),
                     hourlyVolumes,
                 };

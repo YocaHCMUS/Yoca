@@ -30,8 +30,6 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
     minute: "2-digit",
   });
 
-  const actionColor = swap.action === "buy" ? "var(--cds-support-success)" : "var(--cds-support-error)";
-
   const handleExpand = async () => {
     if (expanded) {
       setExpanded(false);
@@ -78,9 +76,6 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
         <span className={styles.txTime}>{timeStr}</span>
         <span className={styles.txPair}>{swap.pair}</span>
         <span className={styles.txValue}>{fmt.num.currency(swap.valueUsd)}</span>
-        <span className={styles.txBadge} style={{ color: actionColor }}>
-          {swap.action.toUpperCase()}
-        </span>
         {loading ? (
           <Loading withOverlay={false} small className={styles.spinner} />
         ) : (
