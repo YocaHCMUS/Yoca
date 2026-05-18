@@ -98,19 +98,18 @@
   gap: $spacing-05;
 }
 
-.loadingSummaryCards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $spacing-04;
-}
-
-.loadingSummaryCard {
-  background-color: $layer-02;
-  border-radius: 6px;
-  padding: $spacing-04;
+.loadingStatRows {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: $spacing-03;
+}
+
+.loadingStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-03 $spacing-04;
+  border-bottom: 1px solid $border-subtle;
 }
 
 .errorContainer {
@@ -130,38 +129,39 @@
   gap: $spacing-05;
 }
 
-/* ── Summary Cards ───────────────────────────── */
-.summaryCards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $spacing-04;
-}
-
-.summaryCard {
-  background-color: $layer-02;
-  border-radius: 6px;
-  padding: $spacing-04;
+/* ── Stats Section ───────────────────────────── */
+.statsSection {
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
 }
 
-.cardLabel {
-  @include type-style('label-01');
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-03 $spacing-04;
+}
+
+.statLabel {
+  @include type-style('body-01');
   color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.cardValue {
-  @include type-style('heading-04');
-  color: $text-primary;
-  font-variant-numeric: tabular-nums;
-}
-
-.cardSub {
+.statValue {
   @include type-style('body-compact-01');
-  color: $text-secondary;
+  color: $text-primary;
+  font-weight: 600;
+  text-align: right;
+}
+
+.subStatValuePositive {
+  color: #24a148;
+  font-weight: 600;
+}
+
+.subStatValueNegative {
+  color: #da1e28;
+  font-weight: 600;
 }
 
 /* ── Section ─────────────────────────────────── */

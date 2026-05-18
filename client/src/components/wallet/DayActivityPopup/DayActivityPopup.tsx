@@ -4,7 +4,7 @@ import {
   type WalletDayActivitySummary,
 } from "@/services/wallet/walletApi";
 import { Close, Draggable } from "@carbon/icons-react";
-import { SkeletonPlaceholder, SkeletonText, TextAreaSkeleton } from "@carbon/react";
+import { SkeletonText, TextAreaSkeleton } from "@carbon/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { TokenStack } from "./TokenStack";
 import { TxRow } from "./TxRow";
@@ -26,7 +26,7 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
   wallets,
   dayTimestamp,
 }) => {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   const [selectedWallet, setSelectedWallet] = useState(wallets[0] ?? "");
   const [summary, setSummary] = useState<WalletDayActivitySummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,11 +123,11 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
         <div className={styles.headerLeft}>
           <div className={styles.titleRow}>
             <Draggable size={16} className={styles.dragIcon} />
-            <h2 className={styles.title}>Trading Activity</h2>
+            <h2 className={styles.title}>{tr("walletPage.activity")}</h2>
+            <h3 className={styles.date}>{fmt.datetime.date(dateStr)}</h3>
           </div>
-          <span className={styles.date}>{dateStr}</span>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={tr("common.cancel")}>
           <Close size={20} />
         </button>
       </div>
@@ -142,16 +142,18 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
 
       {loading && (
         <div className={styles.loadingOverlay}>
-          <div className={styles.loadingSummaryCards}>
-            <div className={styles.loadingSummaryCard}>
-              <SkeletonText width="5rem" />
-              <SkeletonText heading width="7rem" />
-              <SkeletonText width="3.5rem" />
+          <div className={styles.loadingStatRows}>
+            <div className={styles.loadingStatRow}>
+              <SkeletonText width="6rem" />
+              <SkeletonText width="4rem" />
             </div>
-            <div className={styles.loadingSummaryCard}>
-              <SkeletonText width="5rem" />
-              <SkeletonText heading width="7rem" />
-              <SkeletonText width="3.5rem" />
+            <div className={styles.loadingStatRow}>
+              <SkeletonText width="8rem" />
+              <SkeletonText width="6rem" />
+            </div>
+            <div className={styles.loadingStatRow}>
+              <SkeletonText width="8rem" />
+              <SkeletonText width="4rem" />
             </div>
           </div>
           <TextAreaSkeleton />
@@ -167,21 +169,37 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
 
       {summary && !loading && (
         <div className={styles.body}>
-          <div className={styles.summaryCards}>
-            <div className={styles.summaryCard}>
-              <span className={styles.cardLabel}>Buy Volume</span>
-              <span className={styles.cardValue}>{fmt.num.currency(summary.buyVolumeUsd)}</span>
-              <span className={styles.cardSub}>{summary.buyTxCount} txs</span>
+          <div className={styles.statsSection}>
+            <div className={styles.statRow}>
+              <span className={styles.statLabel}>{tr("wallet.tradingVolume")}</span>
+              <span className={styles.statValue}>
+                {fmt.num.compact.currency(summary.buyVolumeUsd + summary.sellVolumeUsd)}
+              </span>
             </div>
-            <div className={styles.summaryCard}>
-              <span className={styles.cardLabel}>Sell Volume</span>
-              <span className={styles.cardValue}>{fmt.num.currency(summary.sellVolumeUsd)}</span>
-              <span className={styles.cardSub}>{summary.sellTxCount} txs</span>
+            <div className={styles.statRow}>
+              <span className={styles.statLabel}>
+                {tr("wallet.tradingVolume")} ({tr("walletPage.buy")}/{tr("walletPage.sell")})
+              </span>
+              <span className={styles.statValue}>
+                <span className={styles.subStatValuePositive}>{fmt.num.compact.currency(summary.buyVolumeUsd)}</span>
+                {" / "}
+                <span className={styles.subStatValueNegative}>{fmt.num.compact.currency(summary.sellVolumeUsd)}</span>
+              </span>
+            </div>
+            <div className={styles.statRow}>
+              <span className={styles.statLabel}>
+                {tr("wallet.transactionCount")} ({tr("walletPage.buy")}/{tr("walletPage.sell")})
+              </span>
+              <span className={styles.statValue}>
+                <span className={styles.subStatValuePositive}>{fmt.num.decimal(summary.buyTxCount)}</span>
+                {" / "}
+                <span className={styles.subStatValueNegative}>{fmt.num.decimal(summary.sellTxCount)}</span>
+              </span>
             </div>
           </div>
 
           <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Tokens Traded</h3>
+            <h3 className={styles.sectionTitle}>{tr("wallet.tokensTraded")}</h3>
             <TokenStack
               tokens={summary.allTokens}
               totalTokens={summary.totalTokensTraded}
@@ -189,10 +207,10 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
           </div>
 
           <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Transactions</h3>
+            <h3 className={styles.sectionTitle}>{tr("walletPage.transactions")}</h3>
             <div className={styles.txList}>
               {summary.swaps.length === 0 ? (
-                <p className={styles.emptyText}>No transactions found for this day</p>
+                <p className={styles.emptyText}>{tr("common.noData")}</p>
               ) : (
                 summary.swaps.map((swap) => (
                   <TxRow

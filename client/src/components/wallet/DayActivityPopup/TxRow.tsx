@@ -17,7 +17,7 @@ interface TxRowProps {
 }
 
 export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   const [expanded, setExpanded] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [detail, setDetail] = useState<WalletTxDetail | null>(null);
@@ -86,7 +86,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
       {expanded && detail && (
         <div className={styles.txDetail}>
           <div className={styles.detailSection}>
-            <h4 className={styles.detailTitle}>Transfers</h4>
+            <h4 className={styles.detailTitle}>{tr("profileTabs.activity.transfersTableTitle")}</h4>
             <div className={styles.transferList}>
               {detail.transfers.map((t, i) => {
                 const isOut = t.from === walletAddress;
@@ -104,18 +104,18 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
           </div>
 
           <div className={styles.detailSection}>
-            <h4 className={styles.detailTitle}>Fee</h4>
+            <h4 className={styles.detailTitle}>{tr("walletPage.feeInLamports")}</h4>
             <div className={styles.feeRow}>
-              <span className={styles.feeLabel}>Paid</span>
+              <span className={styles.feeLabel}>{tr("walletPage.feePaid")}</span>
               <span className={styles.feeValue}>{(detail.feePaid / 1e9).toFixed(6)} SOL</span>
             </div>
             <div className={styles.feeRow}>
-              <span className={styles.feeLabel}>Payer</span>
+              <span className={styles.feeLabel}>{tr("walletPage.feePayer")}</span>
               <span className={styles.feeValue}>{detail.feePayer.slice(0, 8)}...{detail.feePayer.slice(-4)}</span>
             </div>
             {detail.feeReceivers.length > 0 && (
               <div className={styles.feeRow}>
-                <span className={styles.feeLabel}>Receivers</span>
+                <span className={styles.feeLabel}>{tr("walletPage.feeReceivers")}</span>
                 <span className={styles.feeValue}>
                   {detail.feeReceivers
                     .filter((r) => r.label)
@@ -127,13 +127,13 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
           </div>
 
           <button className={styles.instructionsBtn} onClick={handleLoadInstructions}>
-            {showInstructions ? "Hide" : "View"} Instructions
+            {showInstructions ? tr("walletPage.hide") : tr("walletPage.view")} {tr("walletPage.instructions")}
             {loadingInstructions && <Loading withOverlay={false} small className={styles.btnSpinner} />}
           </button>
 
           {showInstructions && instructions && (
             <div className={styles.instructionsSection}>
-              <h4 className={styles.detailTitle}>Instructions ({instructions.instructions.length})</h4>
+              <h4 className={styles.detailTitle}>{tr("walletPage.instructions")} ({instructions.instructions.length})</h4>
               <div className={styles.instructionsList}>
                 {instructions.instructions.map((ins) => (
                   <div key={ins.index} className={styles.instructionItem}>
@@ -142,7 +142,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                       {ins.programLabel || ins.programId.slice(0, 8)}...
                     </span>
                     <span className={styles.instructionAccounts}>
-                      {ins.accounts.length} account{ins.accounts.length !== 1 ? "s" : ""}
+                      {ins.accounts.length} {tr("walletPage.account")}{ins.accounts.length !== 1 ? "s" : ""}
                     </span>
                     {ins.innerInstructions.length > 0 && (
                       <div className={styles.innerInstructions}>

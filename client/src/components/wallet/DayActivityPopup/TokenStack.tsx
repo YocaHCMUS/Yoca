@@ -2,35 +2,12 @@ import type { WalletDayToken } from "@/services/wallet/walletApi";
 import React, { useState } from "react";
 import styles from "./TokenStack.module.scss";
 import { ChevronDown, ChevronUp } from "@carbon/react/icons";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface TokenStackProps {
   tokens: WalletDayToken[];
   totalTokens: number;
 }
-
-const fmtCompact = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-});
-
-const fmtAmount = new Intl.NumberFormat(undefined, {
-  maximumFractionDigits: 4,
-  notation: "compact",
-});
-
-const fmtSignedAmount = new Intl.NumberFormat(undefined, {
-  maximumFractionDigits: 4,
-  notation: "compact",
-  signDisplay: "always",
-});
-
-const fmtSignedUsd = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  signDisplay: "always",
-});
 
 const getDeltaClassName = (delta: number) => {
   if (delta > 0) return styles.positive;
@@ -39,6 +16,7 @@ const getDeltaClassName = (delta: number) => {
 };
 
 export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) => {
+  const { tr, fmt } = useLocalization();
   const [expanded, setExpanded] = useState(false);
 
   if (totalTokens === 0) return null;
@@ -77,7 +55,7 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
         // <div className={styles.tooltip}>
         <div>
           <div className={styles.tooltipHeader}>
-            <span>All Tokens ({totalTokens})</span>
+            <span>{tr("walletPage.tokenList")} ({totalTokens})</span>
           </div>
           <div className={styles.tooltipList}>
             {tokens.map((token) => {
@@ -101,33 +79,26 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
                       <span
                         className={`${styles.tokenChange} ${getDeltaClassName(amountDelta)}`}
                       >
-                        {fmtSignedAmount.format(amountDelta)}
+                        {amountDelta > 0 ? "+" : ""}{fmt.num.compact.decimal(amountDelta)} {token.symbol}
                       </span>
                     </div>
 
                   </div>
                   <div className={styles.tokenVolumes}>
                     <div className={styles.volRow}>
-
-                      <span className={styles.buyVol}>{fmtCompact.format(token.buyVolumeUsd)}</span>
-                      <span className={styles.buyAmt}>{fmtAmount.format(token.buyAmount)}</span>
-                      <span className={styles.buyAmt}>{fmtCompact.format(token.buyAmount > 0 ? token.buyVolumeUsd / token.buyAmount : 0)}/token</span>
+                      <span className={styles.buyVol}>{fmt.num.compact.currency(token.buyVolumeUsd)}</span>
+                      <span className={styles.buyAmt}>{fmt.num.compact.decimal(token.buyAmount)}</span>
+                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.buyAmount > 0 ? token.buyVolumeUsd / token.buyAmount : 0)}{""}{tr("walletPage.perToken")}</span>
                     </div>
                     <div className={styles.volRow}>
-
-                      <span className={styles.sellVol}>{fmtCompact.format(token.sellVolumeUsd)}</span>
-                      <span className={styles.sellAmt}>{fmtAmount.format(token.sellAmount)}</span>
-                      <span className={styles.buyAmt}>{fmtCompact.format(token.sellAmount > 0 ? token.sellVolumeUsd / token.sellAmount : 0)}/token</span>
+                      <span className={styles.sellVol}>{fmt.num.compact.currency(token.sellVolumeUsd)}</span>
+                      <span className={styles.sellAmt}>{fmt.num.compact.decimal(token.sellAmount)}</span>
+                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.sellAmount > 0 ? token.sellVolumeUsd / token.sellAmount : 0)}{""}{tr("walletPage.perToken")}</span>
                     </div>
                   </div>
                 </div>
               );
             })}
-            {remaining > 0 && (
-              <div className={styles.tooltipMore}>
-                +{remaining} more token{remaining > 1 ? "s" : ""}
-              </div>
-            )}
           </div>
         </div>
       )}
