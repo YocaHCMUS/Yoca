@@ -88,12 +88,12 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
                     <div className={styles.volRow}>
                       <span className={styles.buyVol}>{fmt.num.compact.currency(token.buyVolumeUsd)}</span>
                       <span className={styles.buyAmt}>{fmt.num.compact.decimal(token.buyAmount)}</span>
-                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.buyAmount > 0 ? token.buyVolumeUsd / token.buyAmount : 0)}{""}{tr("walletPage.perToken")}</span>
+                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.buyAmount > 0 ? token.buyVolumeUsd / token.buyAmount : 0)}{"/"}{token.symbol}</span>
                     </div>
                     <div className={styles.volRow}>
                       <span className={styles.sellVol}>{fmt.num.compact.currency(token.sellVolumeUsd)}</span>
                       <span className={styles.sellAmt}>{fmt.num.compact.decimal(token.sellAmount)}</span>
-                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.sellAmount > 0 ? token.sellVolumeUsd / token.sellAmount : 0)}{""}{tr("walletPage.perToken")}</span>
+                      <span className={styles.buyAmt}>{fmt.num.compact.currency(token.sellAmount > 0 ? token.sellVolumeUsd / token.sellAmount : 0)}{"/"}{token.symbol}</span>
                     </div>
                   </div>
                 </div>

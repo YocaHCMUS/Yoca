@@ -16,6 +16,17 @@ import { roundUsd } from "./walletNormalization.utils.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
+const STABLE_MINTS = new Set([
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "Es9vMFrzaCERmJfrF4H2FYD4h4H8o3A8rM6jD5M3j6Q",
+]);
+
+function isBaseAsset(mint: string | undefined): boolean {
+    if (!mint) return false;
+    const lower = mint.toLowerCase();
+    return lower === SOL_MINT.toLowerCase() || STABLE_MINTS.has(lower);
+}
+
 function getUtcStartOfDayMs(tsMs: number): number {
     const d = new Date(tsMs);
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
@@ -86,13 +97,24 @@ export async function getWalletDayActivitySummary(
 
         for (const swap of swaps) {
             const valueUsd = swap.totalValueUsd ?? 0;
-            const isBuy = swap.transactionType?.toLowerCase() === "buy"
-                || swap.bought?.address?.toLowerCase() === SOL_MINT;
 
-            if (isBuy) {
+            const soldIsBase = isBaseAsset(swap.sold?.address);
+            const boughtIsBase = isBaseAsset(swap.bought?.address);
+
+            let action: "buy" | "sell" | "both";
+            if (soldIsBase && !boughtIsBase) {
+                action = "buy";
+            } else if (!soldIsBase && boughtIsBase) {
+                action = "sell";
+            } else {
+                action = "both";
+            }
+
+            if (action === "buy" || action === "both") {
                 buyVolumeUsd += valueUsd;
                 buyTxCount++;
-            } else {
+            }
+            if (action === "sell" || action === "both") {
                 sellVolumeUsd += valueUsd;
                 sellTxCount++;
             }
@@ -106,7 +128,7 @@ export async function getWalletDayActivitySummary(
                 timestamp: swap.blockTimestampIso,
                 pair,
                 valueUsd,
-                action: isBuy ? "buy" : "sell",
+                action: action === "both" ? "buy" : action,
                 soldSymbol: soldSymbol?.toUpperCase() ?? null,
                 boughtSymbol: boughtSymbol?.toUpperCase() ?? null,
             });

@@ -133,7 +133,6 @@
 
   span {
     @include type-style('label-01');
-    font-size: 0.6rem;
     font-weight: 600;
     color: $text-primary;
   }
@@ -157,7 +156,7 @@
 
 .tokenChange {
   @include type-style('label-01');
-  font-size: 0.625rem;
+  font-size: 0.825rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -191,7 +190,6 @@
   @include type-style('body-compact-01');
   color: #24a148;
   font-variant-numeric: tabular-nums;
-  font-size: 0.7rem;
   font-weight: 500;
 }
 
@@ -199,14 +197,12 @@
   @include type-style('label-01');
   color: $text-secondary;
   font-variant-numeric: tabular-nums;
-  font-size: 0.6rem;
 }
 
 .sellVol {
   @include type-style('body-compact-01');
   color: #da1e28;
   font-variant-numeric: tabular-nums;
-  font-size: 0.7rem;
   font-weight: 500;
 }
 
@@ -214,7 +210,6 @@
   @include type-style('label-01');
   color: $text-secondary;
   font-variant-numeric: tabular-nums;
-  font-size: 0.6rem;
 }
 
 .tooltipMore {

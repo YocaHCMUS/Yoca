@@ -8,9 +8,9 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 8px;
-  width: 420px;
+  width: 560px;
   max-width: calc(100vw - #{$spacing-09});
-  max-height: 60vh;
+  max-height: 72vh;
   padding: $spacing-06;
   display: flex;
   flex-direction: column;
@@ -145,6 +145,9 @@
 .statLabel {
   @include type-style('body-01');
   color: $text-secondary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
 }
 
 .statValue {

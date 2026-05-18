@@ -10,6 +10,7 @@ import { TokenStack } from "./TokenStack";
 import { TxRow } from "./TxRow";
 import { WalletSelector } from "./WalletSelector";
 import styles from "./DayActivityPopup.module.scss";
+import { ChartColumn } from '@carbon/react/icons';
 
 interface DayActivityPopupProps {
   isOpen: boolean;
@@ -171,7 +172,10 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
         <div className={styles.body}>
           <div className={styles.statsSection}>
             <div className={styles.statRow}>
-              <span className={styles.statLabel}>{tr("wallet.tradingVolume")}</span>
+              <span className={styles.statLabel}>
+                <ChartColumn />
+                {tr("wallet.tradingVolume")}
+              </span>
               <span className={styles.statValue}>
                 {fmt.num.compact.currency(summary.buyVolumeUsd + summary.sellVolumeUsd)}
               </span>
