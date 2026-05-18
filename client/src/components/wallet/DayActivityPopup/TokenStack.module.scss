@@ -64,35 +64,109 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 6px;
-  padding: $spacing-03;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 10;
-  min-width: 180px;
+  width: 300px;
+  max-width: calc(100vw - #{$spacing-09});
+  overflow: hidden;
 }
 
-.tooltipRow {
+.tooltipHeader {
+  @include type-style('label-01');
+  color: $text-secondary;
+  padding: $spacing-03 $spacing-04;
+  border-bottom: 1px solid $border-subtle;
+  font-weight: 600;
+}
+
+.tooltipList {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.tokenRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: $spacing-03;
+  align-items: center;
+  padding: $spacing-02 $spacing-04;
+  border-bottom: 1px solid $border-subtle-00;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.tokenInfo {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: $spacing-02 0;
+  gap: $spacing-02;
+  min-width: 0;
 }
 
-.tooltipSymbol {
+.tokenIconSmall {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  span {
+    @include type-style('label-01');
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.tokenSymbol {
   @include type-style('body-compact-01');
   font-weight: 600;
   color: $text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tooltipVolume {
+.tokenVolumes {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: right;
+  min-width: 0;
+}
+
+.buyVol {
   @include type-style('body-compact-01');
-  color: $text-secondary;
+  color: #24a148;
   font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+}
+
+.sellVol {
+  @include type-style('body-compact-01');
+  color: #da1e28;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
 }
 
 .tooltipMore {
   @include type-style('label-01');
   color: $text-secondary;
-  padding-top: $spacing-02;
-  margin-top: $spacing-02;
+  padding: $spacing-03 $spacing-04;
   border-top: 1px solid $border-subtle;
 }

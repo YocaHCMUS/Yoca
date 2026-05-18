@@ -2,6 +2,7 @@ import type {
     WalletDayActivitySummary,
     WalletDaySwapSummary,
     WalletDayToken,
+    TokenHourlyVolume,
     WalletTxDetail,
     WalletTxTransfer,
     WalletFeeReceiver,
@@ -18,6 +19,14 @@ const SOL_MINT = "So11111111111111111111111111111111111111112";
 function getUtcStartOfDayMs(tsMs: number): number {
     const d = new Date(tsMs);
     return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+interface TokenAccumulator {
+    symbol: string;
+    logoUri: string | null;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    hourlyMap: Map<number, { buy: number; sell: number }>;
 }
 
 export async function getWalletDayActivitySummary(
@@ -43,8 +52,33 @@ export async function getWalletDayActivitySummary(
         let buyTxCount = 0;
         let sellTxCount = 0;
 
-        const tokenVolumeMap = new Map<string, { symbol: string; logoUri: string | null; volumeUsd: number }>();
+        const tokenMap = new Map<string, TokenAccumulator>();
         const swapsSummary: WalletDaySwapSummary[] = [];
+
+        function getOrCreateToken(addr: string, symbol: string | null, logoUri: string | null): TokenAccumulator {
+            const existing = tokenMap.get(addr);
+            if (existing) return existing;
+            const acc: TokenAccumulator = {
+                symbol: (symbol ?? "Unknown").toUpperCase(),
+                logoUri,
+                buyVolumeUsd: 0,
+                sellVolumeUsd: 0,
+                hourlyMap: new Map(),
+            };
+            tokenMap.set(addr, acc);
+            return acc;
+        }
+
+        function addHourlyVolume(addr: string, hour: number, isBuy: boolean, volume: number) {
+            const acc = getOrCreateToken(addr, null, null);
+            const entry = acc.hourlyMap.get(hour) ?? { buy: 0, sell: 0 };
+            if (isBuy) {
+                entry.buy += volume;
+            } else {
+                entry.sell += volume;
+            }
+            acc.hourlyMap.set(hour, entry);
+        }
 
         for (const swap of swaps) {
             const valueUsd = swap.totalValueUsd ?? 0;
@@ -61,7 +95,7 @@ export async function getWalletDayActivitySummary(
 
             const soldSymbol = swap.sold?.symbol ?? null;
             const boughtSymbol = swap.bought?.symbol ?? null;
-            const pair = [soldSymbol, boughtSymbol].filter(Boolean).join(" → ") || "Unknown";
+            const pair = [soldSymbol, boughtSymbol].filter(Boolean).map((s) => s?.toUpperCase()).join(" → ") || "Unknown";
 
             swapsSummary.push({
                 transactionHash: swap.transactionHash,
@@ -69,33 +103,22 @@ export async function getWalletDayActivitySummary(
                 pair,
                 valueUsd,
                 action: isBuy ? "buy" : "sell",
-                soldSymbol,
-                boughtSymbol,
+                soldSymbol: soldSymbol?.toUpperCase() ?? null,
+                boughtSymbol: boughtSymbol?.toUpperCase() ?? null,
             });
 
+            const tsMs = Date.parse(swap.blockTimestampIso);
+            const hour = Number.isFinite(tsMs) ? Math.floor((tsMs - fromMs) / 3600000) : 0;
+
             if (swap.sold?.address) {
-                const existing = tokenVolumeMap.get(swap.sold.address);
-                if (existing) {
-                    existing.volumeUsd += valueUsd;
-                } else {
-                    tokenVolumeMap.set(swap.sold.address, {
-                        symbol: swap.sold.symbol ?? "Unknown",
-                        logoUri: swap.sold.logoUri,
-                        volumeUsd: valueUsd,
-                    });
-                }
+                const acc = getOrCreateToken(swap.sold.address, swap.sold.symbol, swap.sold.logoUri);
+                acc.sellVolumeUsd += valueUsd;
+                addHourlyVolume(swap.sold.address, hour, false, valueUsd);
             }
             if (swap.bought?.address) {
-                const existing = tokenVolumeMap.get(swap.bought.address);
-                if (existing) {
-                    existing.volumeUsd += valueUsd;
-                } else {
-                    tokenVolumeMap.set(swap.bought.address, {
-                        symbol: swap.bought.symbol ?? "Unknown",
-                        logoUri: swap.bought.logoUri,
-                        volumeUsd: valueUsd,
-                    });
-                }
+                const acc = getOrCreateToken(swap.bought.address, swap.bought.symbol, swap.bought.logoUri);
+                acc.buyVolumeUsd += valueUsd;
+                addHourlyVolume(swap.bought.address, hour, true, valueUsd);
             }
         }
 
@@ -109,29 +132,47 @@ export async function getWalletDayActivitySummary(
                 sellVolumeUsd += valueUsd;
             }
 
+            const tsMs = Date.parse(transfer.timestamp);
+            const hour = Number.isFinite(tsMs) ? Math.floor((tsMs - fromMs) / 3600000) : 0;
+
             if (transfer.tokenAddress) {
-                const existing = tokenVolumeMap.get(transfer.tokenAddress);
-                if (existing) {
-                    existing.volumeUsd += valueUsd;
+                const acc = getOrCreateToken(
+                    transfer.tokenAddress,
+                    transfer.tokenSymbol,
+                    transfer.tokenLogoUri ?? null,
+                );
+                if (isInflow) {
+                    acc.buyVolumeUsd += valueUsd;
+                    addHourlyVolume(transfer.tokenAddress, hour, true, valueUsd);
                 } else {
-                    tokenVolumeMap.set(transfer.tokenAddress, {
-                        symbol: transfer.tokenSymbol ?? "Unknown",
-                        logoUri: transfer.tokenLogoUri ?? null,
-                        volumeUsd: valueUsd,
-                    });
+                    acc.sellVolumeUsd += valueUsd;
+                    addHourlyVolume(transfer.tokenAddress, hour, false, valueUsd);
                 }
             }
         }
 
-        const topTokens: WalletDayToken[] = Array.from(tokenVolumeMap.entries())
-            .map(([address, data]) => ({
-                address,
-                symbol: data.symbol,
-                logoUri: data.logoUri,
-                volumeUsd: roundUsd(data.volumeUsd),
-            }))
-            .sort((a, b) => b.volumeUsd - a.volumeUsd)
-            .slice(0, 3);
+        const allTokens: WalletDayToken[] = Array.from(tokenMap.entries())
+            .map(([addr, acc]) => {
+                const hourlyVolumes: TokenHourlyVolume[] = Array.from({ length: 24 }, (_, h) => {
+                    const entry = acc.hourlyMap.get(h);
+                    return {
+                        hour: h,
+                        buyVolumeUsd: roundUsd(entry?.buy ?? 0),
+                        sellVolumeUsd: roundUsd(entry?.sell ?? 0),
+                    };
+                });
+
+                return {
+                    address: addr,
+                    symbol: acc.symbol,
+                    logoUri: acc.logoUri,
+                    buyVolumeUsd: roundUsd(acc.buyVolumeUsd),
+                    sellVolumeUsd: roundUsd(acc.sellVolumeUsd),
+                    totalVolumeUsd: roundUsd(acc.buyVolumeUsd + acc.sellVolumeUsd),
+                    hourlyVolumes,
+                };
+            })
+            .sort((a, b) => b.totalVolumeUsd - a.totalVolumeUsd);
 
         swapsSummary.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
@@ -142,8 +183,8 @@ export async function getWalletDayActivitySummary(
             sellVolumeUsd: roundUsd(sellVolumeUsd),
             buyTxCount,
             sellTxCount,
-            topTokens,
-            totalTokensTraded: tokenVolumeMap.size,
+            allTokens,
+            totalTokensTraded: tokenMap.size,
             swaps: swapsSummary,
         };
     } catch (error) {
@@ -155,7 +196,7 @@ export async function getWalletDayActivitySummary(
             sellVolumeUsd: 0,
             buyTxCount: 0,
             sellTxCount: 0,
-            topTokens: [],
+            allTokens: [],
             totalTokensTraded: 0,
             swaps: [],
         };
@@ -204,7 +245,7 @@ export async function getWalletTxDetail(
                 from: String(tt.fromUserAccount ?? tt.fromWallet ?? ""),
                 to: String(tt.toUserAccount ?? tt.toWallet ?? ""),
                 mint,
-                symbol: tt.symbol ?? tt.tokenSymbol ?? null,
+                symbol: (tt.symbol ?? tt.tokenSymbol)?.toUpperCase() ?? null,
                 name: null,
                 logoUri: null,
                 amount,
@@ -238,12 +279,11 @@ export async function getWalletTxDetail(
             const programId = String(ins.programId ?? "").trim();
             if (!programId) continue;
 
-            const label = null;
             feeReceivers.push({
                 address: programId,
                 amount: 0,
                 amountUsd: null,
-                label,
+                label: null,
             });
         }
 

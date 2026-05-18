@@ -170,7 +170,7 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Tokens Traded</h3>
             <TokenStack
-              tokens={summary.topTokens}
+              tokens={summary.allTokens}
               totalTokens={summary.totalTokensTraded}
             />
           </div>

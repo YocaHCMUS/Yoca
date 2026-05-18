@@ -95,11 +95,20 @@ export interface WalletPageInfo {
   source: "cache" | "provider" | "mixed";
 }
 
+export interface TokenHourlyVolume {
+  hour: number;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+}
+
 export interface WalletDayToken {
   address: string;
   symbol: string;
   logoUri: string | null;
-  volumeUsd: number;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  totalVolumeUsd: number;
+  hourlyVolumes: TokenHourlyVolume[];
 }
 
 export interface WalletDaySwapSummary {
@@ -119,7 +128,7 @@ export interface WalletDayActivitySummary {
   sellVolumeUsd: number;
   buyTxCount: number;
   sellTxCount: number;
-  topTokens: WalletDayToken[];
+  allTokens: WalletDayToken[];
   totalTokensTraded: number;
   swaps: WalletDaySwapSummary[];
 }
