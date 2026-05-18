@@ -92,6 +92,27 @@
   padding: $spacing-07 0;
 }
 
+.loadingOverlay {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.loadingSummaryCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-04;
+}
+
+.loadingSummaryCard {
+  background-color: $layer-02;
+  border-radius: 6px;
+  padding: $spacing-04;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
 .errorContainer {
   text-align: center;
   padding: $spacing-05 0;

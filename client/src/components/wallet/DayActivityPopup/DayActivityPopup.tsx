@@ -4,7 +4,7 @@ import {
   type WalletDayActivitySummary,
 } from "@/services/wallet/walletApi";
 import { Close, Draggable } from "@carbon/icons-react";
-import { Loading } from "@carbon/react";
+import { SkeletonPlaceholder, SkeletonText, TextAreaSkeleton } from "@carbon/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { TokenStack } from "./TokenStack";
 import { TxRow } from "./TxRow";
@@ -141,8 +141,21 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
       )}
 
       {loading && (
-        <div className={styles.loadingContainer}>
-          <Loading withOverlay={false} small />
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingSummaryCards}>
+            <div className={styles.loadingSummaryCard}>
+              <SkeletonText width="5rem" />
+              <SkeletonText heading width="7rem" />
+              <SkeletonText width="3.5rem" />
+            </div>
+            <div className={styles.loadingSummaryCard}>
+              <SkeletonText width="5rem" />
+              <SkeletonText heading width="7rem" />
+              <SkeletonText width="3.5rem" />
+            </div>
+          </div>
+          <TextAreaSkeleton />
+          <TextAreaSkeleton />
         </div>
       )}
 
