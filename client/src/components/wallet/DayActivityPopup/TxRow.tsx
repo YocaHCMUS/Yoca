@@ -56,8 +56,8 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
   const timeStr = new Date(swap.timestamp).toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
   });
-
   useEffect(() => {
     if (!detail || detail.transfers.length === 0) return;
 
@@ -143,7 +143,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
   return (
     <div className={styles.txRow}>
       <div className={styles.txHeader} onClick={handleExpand}>
-        <span className={styles.txTime}>{timeStr}</span>
+        <span className={styles.txTime}>UTC-{timeStr}</span>
         <span className={styles.txPair}>{swap.pair}</span>
         <span className={styles.txSigGroup}>
           <a
