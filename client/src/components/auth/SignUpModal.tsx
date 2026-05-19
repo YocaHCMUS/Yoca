@@ -1,89 +1,134 @@
 import client from "@/api/main";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { ArrowRight } from "@carbon/icons-react";
-import {
-  Button,
-  ComposedModal,
-  Form,
-  InlineNotification,
-  Link,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  PasswordInput,
-  Stack,
-  TextInput,
-} from "@carbon/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import z from "zod";
-import { Divider } from "../partials/Divider/Divider";
 import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { WalletAuthButton } from "./WalletAuthButton";
 
-type SignUpModalProps = {
+type AuthModalProps = {
   open: boolean;
   onClose: () => void;
+  redirectUrl?: string;
+  initialMode?: "login" | "register";
 };
 
-export function SignUpModal({ open, onClose }: SignUpModalProps) {
-  const { tr, fmt } = useLocalization();
+// Component xử lý chính bao gồm cả Login & Register 
+export function AuthModalBase({
+  open,
+  onClose,
+  redirectUrl,
+  initialMode = "login",
+}: AuthModalProps) {
+  const { tr } = useLocalization();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  
+  // Quản lý trạng thái Animation Slide (false = Login, true = Register)
+  const [isRegisterMode, setIsRegisterMode] = useState(initialMode === "register");
 
-  const formSchema = z
+  useEffect(() => {
+    setIsRegisterMode(initialMode === "register");
+  }, [initialMode, open]);
+
+  const resolvedRedirectUrl = typeof redirectUrl === "string" && redirectUrl.length > 0 ? redirectUrl : "/";
+
+  // ====== SCHEMA & LOGIC LOGIN ======
+  const loginSchema = z.object({
+    email: z.email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+  });
+  type LoginSchema = z.infer<typeof loginSchema>;
+  const {
+    register: registerLogin,
+    handleSubmit: handleLoginSubmit,
+    clearErrors: clearLoginErrors,
+    formState: { errors: loginErrors },
+  } = useForm<LoginSchema>({ resolver: zodResolver(loginSchema) });
+
+  // ====== SCHEMA & LOGIC REGISTER ======
+  const registerSchema = z
     .object({
-      email: z.email(tr("validation.invalidEmail")),
+      email: z.email("Invalid email address"),
       displayName: z.string().min(1).optional(),
-      password: z
-        .string()
-        .min(8, tr("validation.passwordTooShort", { min: 8 })),
+      password: z.string().min(8, "Password must be at least 8 characters"),
       retypePassword: z.string(),
     })
-    .refine((data) => data.password == data.retypePassword, {
-      message: tr("validation.passwordsDoNotMatch"),
+    .refine((data) => data.password === data.retypePassword, {
+      message: "Passwords do not match",
       path: ["retypePassword"],
     });
-
-  type FormSchema = z.infer<typeof formSchema>;
-
+  type RegisterSchema = z.infer<typeof registerSchema>;
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormSchema>({
-    resolver: zodResolver(formSchema),
-    mode: "onSubmit",
-  });
+    register: registerSignup,
+    handleSubmit: handleRegisterSubmit,
+    clearErrors: clearRegisterErrors,
+    formState: { errors: registerErrors },
+  } = useForm<RegisterSchema>({ resolver: zodResolver(registerSchema) });
 
-  const onSubmit = async (data: FormSchema) => {
+
+  // ====== HANDLERS ======
+  function handleClose() {
+    setErrMsg(null);
+    clearLoginErrors();
+    clearRegisterErrors();
+    onClose();
+  }
+
+  function toggleMode() {
+    setIsRegisterMode((prev) => !prev);
+    setErrMsg(null);
+  }
+
+  async function onLogin(data: LoginSchema) {
     setIsSubmitting(true);
     setErrMsg(null);
-
     try {
-      const resp = await client.api.users.auth.password.register.$post({
-        json: {
-          email: data.email,
-          displayName: data.displayName,
-          password: data.password,
-        },
+      const resp = await client.api.users.auth.password.login.$post({
+        json: { email: data.email, password: data.password },
       });
 
-      if (resp.status == 201) {
+      if (resp.status === 200) {
         await refreshUser();
-        onClose();
-        navigate("/");
-      } else if (resp.status == 400 || resp.status == 422) {
+        handleClose();
+        navigate(resolvedRedirectUrl, { replace: true });
+      } else if (resp.status === 401 || resp.status === 422) {
         const res = await resp.json();
-        const errorCode = res.errorCode;
-        setErrMsg(tr(`ERROR.${errorCode}`));
-      } else if (resp.status == 500) {
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
+      } else {
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
+      }
+    } catch (error) {
+      console.error(error);
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function onSignup(data: RegisterSchema) {
+    setIsSubmitting(true);
+    setErrMsg(null);
+    try {
+      const resp = await client.api.users.auth.password.register.$post({
+        json: { email: data.email, displayName: data.displayName, password: data.password },
+      });
+
+      if (resp.status === 201) {
+        await refreshUser();
+        handleClose();
+        navigate("/");
+      } else if (resp.status === 400 || resp.status === 422) {
+        const res = await resp.json();
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
+      } else if (resp.status === 500) {
         setErrMsg(tr("ERROR.INTERNAL_SERVER_ERR"));
       } else {
         setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
@@ -94,111 +139,137 @@ export function SignUpModal({ open, onClose }: SignUpModalProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
+
+  if (!open) return null;
 
   return (
-    <ComposedModal className={styles.modalLayer} open={open} onClose={onClose}>
-      <ModalHeader label={tr("nav.account")} title={tr("auth.signUp")} />
-      <ModalBody hasScrollingContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Stack gap={6}>
-            <TextInput
-              id="email"
-              labelText={tr("auth.email")}
-              placeholder={tr("auth.email")}
-              type="email"
-              {...register("email")}
-              invalid={!!errors.email}
-              invalidText={errors.email?.message || ""}
-              disabled={isSubmitting}
-            />
+    <div className={styles.overlay} onClick={handleClose}>
+      <div 
+        className={`${styles.container} ${isRegisterMode ? styles.active : ""}`} 
+        onClick={(e) => e.stopPropagation()} /* Chặn click ra ngoài để không tự tắt modal */
+      >
+        
+        {/* ========= LOGIN FORM ========= */}
+        <div className={`${styles.formBox} ${styles.login}`}>
+          <form onSubmit={handleLoginSubmit(onLogin)}>
+            <h1>{tr("auth.signIn")}</h1>
+            {errMsg && !isRegisterMode && <p className={styles.globalError}>{errMsg}</p>}
 
-            <TextInput
-              id="displayName"
-              labelText={tr("auth.displayName")}
-              placeholder={tr("auth.displayName")}
-              {...register("displayName")}
-              invalid={!!errors.displayName}
-              invalidText={errors.displayName?.message || ""}
-              disabled={isSubmitting}
-            />
+            <div className={styles.inputBox}>
+              <input type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerLogin("email")} />
+              <i className="bx bxs-envelope"></i>
+            </div>
+            {loginErrors.email && <span className={styles.errorText}>{loginErrors.email.message}</span>}
 
-            <PasswordInput
-              id="password"
-              labelText={tr("auth.password")}
-              placeholder={tr("auth.password")}
-              {...register("password")}
-              invalid={!!errors.password}
-              invalidText={errors.password?.message || ""}
-              disabled={isSubmitting}
-            />
+            <div className={styles.inputBox}>
+              <input type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerLogin("password")} />
+              <i className="bx bxs-lock-alt"></i>
+            </div>
+            {loginErrors.password && <span className={styles.errorText}>{loginErrors.password.message}</span>}
 
-            <PasswordInput
-              id="retypePassword"
-              labelText={tr("auth.confirmPassword")}
-              placeholder={tr("auth.confirmPassword")}
-              {...register("retypePassword")}
-              invalid={!!errors.retypePassword}
-              invalidText={errors.retypePassword?.message || ""}
-              disabled={isSubmitting}
-            />
+            <div className={styles.forgotLink}>
+              <a href="#">{tr("auth.forgotPassword")}</a>
+            </div>
 
-            {errMsg && (
-              <InlineNotification
-                kind="error"
-                title="Error"
-                lowContrast
-                subtitle={errMsg}
+            <button type="submit" className={styles.btn} disabled={isSubmitting}>
+              {isSubmitting ? tr("common.loading") : tr("auth.signIn")}
+            </button>
+
+            <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
+            <div className={styles.socialIcons}>
+              <GoogleAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={() => setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"))}
               />
-            )}
+              <WalletAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={(err) => setErrMsg(err)}
+              />
+            </div>
+          </form>
+        </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              size="lg"
-              renderIcon={ArrowRight}
-              style={{
-                inlineSize: "100%",
-                maxInlineSize: "100%",
-              }}
-            >
-              {isSubmitting
-                ? tr("common.loading")
-                : tr("auth.continueWithPassword")}
-            </Button>
-          </Stack>
-        </Form>
-        <Divider text={tr("common.or")} />
-        <Stack gap={4} style={{ marginBottom: "2rem" }}>
-          <GoogleAuthButton
-            onSuccess={async (_userId) => {
-              await refreshUser();
-              onClose();
-              navigate("/");
-            }}
-            onError={(msg) => setErrMsg(msg)}
-            disabled={isSubmitting}
-          />
+        {/* ========= REGISTER FORM ========= */}
+        <div className={`${styles.formBox} ${styles.register}`}>
+          <form onSubmit={handleRegisterSubmit(onSignup)}>
+            <h1>{tr("auth.signUp")}</h1>
+            {errMsg && isRegisterMode && <p className={styles.globalError}>{errMsg}</p>}
 
-          <WalletAuthButton
-            disabled={isSubmitting}
-            onSuccess={async (_userId) => {
-              await refreshUser();
-              onClose();
-              navigate("/");
-            }}
-            onError={(msg) => setErrMsg(msg)}
-          />
-        </Stack>
-      </ModalBody>
-      <ModalFooter>
-        <span className={styles.bottomInfo}>
-          {tr("auth.termsAndPrivacy", {
-            $terms: <Link href="/terms">{tr("auth.termsOfService")} </Link>,
-            $privacy: <Link href="/privacy">{tr("auth.privacyPolicy")}</Link>,
-          })}
-        </span>
-      </ModalFooter>
-    </ComposedModal>
+            <div className={styles.inputBox}>
+              <input type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerSignup("email")} />
+              <i className="bx bxs-envelope"></i>
+            </div>
+            {registerErrors.email && <span className={styles.errorText}>{registerErrors.email.message}</span>}
+
+            <div className={styles.inputBox}>
+              <input type="text" placeholder={tr("auth.displayName")} disabled={isSubmitting} {...registerSignup("displayName")} />
+              <i className="bx bxs-user"></i>
+            </div>
+            {registerErrors.displayName && <span className={styles.errorText}>{registerErrors.displayName.message}</span>}
+
+            <div className={styles.inputBox}>
+              <input type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerSignup("password")} />
+              <i className="bx bxs-lock-alt"></i>
+            </div>
+            {registerErrors.password && <span className={styles.errorText}>{registerErrors.password.message}</span>}
+
+            <div className={styles.inputBox}>
+              <input type="password" placeholder={tr("auth.confirmPassword")} disabled={isSubmitting} {...registerSignup("retypePassword")} />
+              <i className="bx bxs-lock-alt"></i>
+            </div>
+            {registerErrors.retypePassword && <span className={styles.errorText}>{registerErrors.retypePassword.message}</span>}
+
+            <button type="submit" className={styles.btn} disabled={isSubmitting}>
+              {isSubmitting ? tr("common.loading") : tr("auth.signUp")}
+            </button>
+
+            <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
+            <div className={styles.socialIcons}>
+              <GoogleAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate("/"); }}
+                onError={(msg) => setErrMsg(msg)}
+              />
+              <WalletAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate("/"); }}
+                onError={(msg) => setErrMsg(msg)}
+              />
+            </div>
+          </form>
+        </div>
+
+        {/* ========= ANIMATION TOGGLE BOX ========= */}
+        <div className={styles.toggleBox}>
+          <div className={`${styles.togglePanel} ${styles.toggleLeft}`}>
+            <h1>Welcome!</h1>
+            <p>Don't have an account?</p>
+            <button className={`${styles.btn} ${styles.registerBtn}`} onClick={toggleMode}>
+              Register
+            </button>
+          </div>
+
+          <div className={`${styles.togglePanel} ${styles.toggleRight}`}>
+            <h1>Welcome Back!</h1>
+            <p>Already have an account?</p>
+            <button className={`${styles.btn} ${styles.loginBtn}`} onClick={toggleMode}>
+              Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
+
+// ==== EXPORT WRAPPERS ĐỂ KHÔNG LÀM HỎNG CÁC IMPORT CŨ ====
+export const SignInModal = (props: Omit<AuthModalProps, "initialMode">) => (
+  <AuthModalBase {...props} initialMode="login" />
+);
+
+export const SignUpModal = (props: Omit<AuthModalProps, "initialMode">) => (
+  <AuthModalBase {...props} initialMode="register" />
+);

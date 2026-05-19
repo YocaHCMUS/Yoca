@@ -245,7 +245,7 @@ export function AuthModalBase({
         {/* ========= ANIMATION TOGGLE BOX ========= */}
         <div className={styles.toggleBox}>
           <div className={`${styles.togglePanel} ${styles.toggleLeft}`}>
-            <h1>Welcome!</h1>
+            <h1><b>Welcome!</b></h1>
             <p>Don't have an account?</p>
             <button className={`${styles.btn} ${styles.registerBtn}`} onClick={toggleMode}>
               Register
@@ -253,7 +253,7 @@ export function AuthModalBase({
           </div>
 
           <div className={`${styles.togglePanel} ${styles.toggleRight}`}>
-            <h1>Welcome Back!</h1>
+            <h1><b>Welcome to Yoca!</b></h1>
             <p>Already have an account?</p>
             <button className={`${styles.btn} ${styles.loginBtn}`} onClick={toggleMode}>
               Login
