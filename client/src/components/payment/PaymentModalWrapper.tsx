@@ -9,6 +9,8 @@ type Tier = {
   price: string;
 };
 
+type PaymentMethod = "card" | "bank" | "solana";
+
 type PaymentModalWrapperProps = {
   open: boolean;
   tier: Tier | null;
@@ -39,12 +41,15 @@ export function PaymentModalWrapper({
   onSuccess,
 }: PaymentModalWrapperProps) {
   const [intentState, setIntentState] = useState<IntentState>({ status: "idle" });
+  const [activeMethod, setActiveMethod] = useState<PaymentMethod>("card");
 
   useEffect(() => {
     if (!open || !tier) {
       setIntentState({ status: "idle" });
       return;
     }
+
+    setActiveMethod("card");
 
     const paidTiers = ["Lite", "Plus", "Pro"];
     if (!paidTiers.includes(tier.name)) return;
@@ -158,11 +163,14 @@ export function PaymentModalWrapper({
 
             {intentState.status === "ready" && (
               <Elements
+                key={`elements-${activeMethod === "bank" ? "bank" : "card"}`}
                 stripe={intentState.stripePromise}
                 options={{
                   mode: "setup",
                   currency: "usd",
                   locale: "en",
+                  paymentMethodTypes:
+                    activeMethod === "bank" ? ["us_bank_account"] : ["card"],
                   appearance: {
                     theme: "night",
                     variables: {
@@ -181,6 +189,8 @@ export function PaymentModalWrapper({
                   tierName={tier.name}
                   tierPrice={tier.price}
                   tierKey={intentState.tier as "Lite" | "Plus" | "Pro"}
+                  activeMethod={activeMethod}
+                  onMethodChange={setActiveMethod}
                   onSuccess={onSuccess}
                   onCancel={onClose}
                 />

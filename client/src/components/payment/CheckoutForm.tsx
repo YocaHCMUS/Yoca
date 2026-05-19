@@ -7,6 +7,8 @@ type CheckoutFormProps = {
   tierName: string;
   tierPrice: string;
   tierKey: "Lite" | "Plus" | "Pro";
+  activeMethod: PaymentMethod;
+  onMethodChange: (method: PaymentMethod) => void;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -35,13 +37,13 @@ export function CheckoutForm({
   tierName,
   tierPrice,
   tierKey,
+  activeMethod,
+  onMethodChange,
   onSuccess,
   onCancel,
 }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
-
-  const [activeMethod, setActiveMethod] = useState<PaymentMethod>("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -158,7 +160,7 @@ export function CheckoutForm({
         <button
           type="button"
           onClick={() => {
-            setActiveMethod("card");
+            onMethodChange("card");
             setErrorMsg(null);
           }}
           className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
@@ -189,7 +191,7 @@ export function CheckoutForm({
         <button
           type="button"
           onClick={() => {
-            setActiveMethod("bank");
+            onMethodChange("bank");
             setErrorMsg(null);
           }}
           className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
@@ -229,7 +231,7 @@ export function CheckoutForm({
         <button
           type="button"
           onClick={() => {
-            setActiveMethod("solana");
+            onMethodChange("solana");
             setErrorMsg(null);
           }}
           className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
