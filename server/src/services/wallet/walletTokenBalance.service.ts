@@ -8,9 +8,10 @@ import {
   walletTokenBalanceHistory,
   WalletTokenBalanceHistoryInsert,
 } from "@sv/db/schema.js";
+import { getUtcDatesFromNow } from "@sv/util/date.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
-import { getUtcDatesFromNow } from "@sv/util/date.js";
 
 type WalletTokenBalanceHistory = Record<
   string,
@@ -108,7 +109,8 @@ export async function fetchWalletTokenBalanceHistory(
   );
 
   // Write all tokens to db at once
-  db.insert(walletTokenBalanceHistory)
+  await db
+    .insert(walletTokenBalanceHistory)
     .values(insertValues)
     .onConflictDoNothing();
 
@@ -133,6 +135,7 @@ export async function fetchWalletTokenBalanceHistory(
 
 async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
   const formattedTime = dayjs.utc(timeIsoUtc).format("YYYY-MM-DD HH:mm:ss");
+
   const url = bds.getEndpoint("/wallet/v2/net-worth-details");
 
   url.search = new URLSearchParams({
@@ -144,9 +147,10 @@ async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
     time: formattedTime,
   }).toString();
 
-  const resp = await fetch(url, {
+  const resp = await rlFetch(url, {
     method: "GET",
     headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limitter,
   });
 
   const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp, true);
