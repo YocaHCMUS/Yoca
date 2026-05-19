@@ -275,7 +275,7 @@ export function CheckoutForm({
             <PaymentElement
               id="stripe-payment-element-card"
               options={{
-                layout: "accordion",
+                layout: { type: "accordion", defaultCollapsed: false },
                 paymentMethodOrder: ["card"],
                 wallets: { link: "never", applePay: "never", googlePay: "never" },
               }}
