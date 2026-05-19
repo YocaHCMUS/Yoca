@@ -262,7 +262,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
             </div>
           </div>
 
-          <button className={styles.instructionsBtn} onClick={handleLoadInstructions}>
+          {/* <button className={styles.instructionsBtn} onClick={handleLoadInstructions}>
             {showInstructions ? tr("walletPage.hide") : tr("walletPage.view")} {tr("walletPage.instructions")}
             {loadingInstructions && <Loading withOverlay={false} small className={styles.btnSpinner} />}
           </button>
@@ -296,7 +296,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
         </div>
       )
       }
