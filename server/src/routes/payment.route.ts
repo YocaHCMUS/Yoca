@@ -2,7 +2,7 @@
 import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import { setErr } from "@sv/util/errors.js";
 import { db } from "@sv/db/index.js";
-import { users, subscriptions } from "@sv/db/schema.js";
+import { users, subscriptions, paymentHistory } from "@sv/db/schema.js";
 import { validate } from "@sv/middlewares/validation.js";
 import {
   createSetupIntent,
@@ -34,11 +34,16 @@ const app = new Hono()
    * Step 1 of the SetupIntent flow.
    * Creates a Stripe SetupIntent so the frontend can collect a card via
    * Stripe Elements and confirmSetup(). Returns the client_secret.
+   * 
+   * Now supports deferred intent creation by accepting the selected paymentMethod.
    */
   .post(
     "/setup-intent",
     honoJwt,
-    validate("json", z.object({ tier: z.enum(["Lite", "Plus", "Pro"]) })),
+    validate("json", z.object({ 
+      tier: z.enum(["Lite", "Plus", "Pro"]),
+      paymentMethod: z.enum(["card", "us_bank_account"]).optional(),
+    })),
     async (c) => {
       try {
         const payload = c.get("jwtPayload") as { id?: string } | undefined;
@@ -56,7 +61,7 @@ const app = new Hono()
             statusCode.Unauthorized,
           );
 
-        const { tier } = c.req.valid("json");
+        const { tier, paymentMethod } = c.req.valid("json");
 
         const stripeCustomerId = await findOrCreateStripeCustomer(
           userId,
@@ -72,7 +77,10 @@ const app = new Hono()
             .where(eq(users.id, userId));
         }
 
-        const setupIntent = await createSetupIntent(stripeCustomerId);
+        const setupIntent = await createSetupIntent(
+          stripeCustomerId,
+          paymentMethod ? (paymentMethod as "card" | "us_bank_account") : undefined
+        );
         const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY ?? "";
 
         console.log(
@@ -413,6 +421,129 @@ const app = new Hono()
         console.error("[payment/upgrade]", err);
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
+      }
+    },
+  )
+
+  /**
+   * POST /api/payments/verify-solana
+   * 
+   * Verify a Solana Devnet transaction and create subscription.
+   * 
+   * Flow:
+   *  1. Frontend sends txId (transaction signature)
+   *  2. Backend fetches parsed transaction from Helius RPC
+   *  3. Backend verifies:
+   *     - Transaction was successful
+   *     - Correct recipient (merchant address)
+   *     - Correct amount of lamports transferred
+   *  4. Backend creates subscription for user
+   */
+  .post(
+    "/verify-solana",
+    honoJwt,
+    validate(
+      "json",
+      z.object({
+        txId: z.string().min(64).max(128), // Solana tx signature
+        tier: z.enum(["Lite", "Plus", "Pro"]),
+      })
+    ),
+    async (c) => {
+      try {
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = payload?.id;
+        if (!userId)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
+
+        const user = await getUserById(userId);
+        if (!user)
+          return c.json(
+            setErr("INVALID_TOKEN_PAYLOAD"),
+            statusCode.Unauthorized,
+          );
+
+        const { txId, tier } = c.req.valid("json");
+
+        // Import Solana verification service
+        const { verifySolanaTransaction } = await import(
+          "@sv/services/solana-payment.service.js"
+        );
+
+        // Verify transaction
+        const verification = await verifySolanaTransaction(txId, tier);
+
+        if (!verification.valid) {
+          console.warn("[payment/verify-solana] Transaction verification failed:", {
+            txId,
+            tier,
+            reason: verification.reason,
+          });
+          return c.json(
+            {
+              errorCode: "PAYMENT_VERIFICATION_FAILED",
+              message: verification.reason || "Transaction could not be verified.",
+            },
+            statusCode.BadRequest,
+          );
+        }
+
+        // Create subscription in database
+        const subscription = {
+          userId,
+          stripeSubscriptionId: `solana-${txId}`, // Use txId as unique identifier
+          stripeCustomerId: `solana-${user.id}`, // Use user ID for Solana
+          planTier: tier as any,
+          status: "active" as const,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        };
+
+        const result = await upsertSubscription(subscription as any);
+
+        // Record payment in history
+        try {
+          await db.insert(paymentHistory).values({
+            userId,
+            subscriptionId: undefined, // Solana payments don't have subscription FK for now
+            amountCents: Math.floor(verification.amountUsd * 100),
+            currency: "usd",
+            status: "succeeded",
+            paymentMethodDetails: {
+              type: "solana_transfer",
+              txId,
+              amount: verification.amountSol,
+              merchant: verification.merchantAddress,
+            },
+          });
+        } catch (histErr: any) {
+          console.warn("[payment/verify-solana] Could not record payment history:", histErr.message);
+          // Don't fail the response if we can't record history
+        }
+
+        console.log("[payment/verify-solana] Subscription created:", result.stripeSubscriptionId);
+
+        return c.json(
+          {
+            success: true,
+            subscriptionId: result.stripeSubscriptionId,
+            status: result.status,
+            txId,
+          },
+          statusCode.Ok,
+        );
+      } catch (err: any) {
+        console.error("[payment/verify-solana]", err);
+        return c.json(
+          {
+            errorCode: "INTERNAL_SERVER_ERR",
+            message: err.message || "An unknown error occurred.",
+          },
           statusCode.InternalServerError,
         );
       }

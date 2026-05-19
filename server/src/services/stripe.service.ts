@@ -68,13 +68,24 @@ function getPriceIdForTier(tier: string): string {
  * Step 1 of the new flow.
  * Creates a SetupIntent so the frontend can securely collect a payment method.
  * The client_secret is passed to Stripe Elements → confirmSetup().
+ * 
+ * @param stripeCustomerId - Stripe customer ID
+ * @param paymentMethod - Optional specific payment method to include ('card' or 'us_bank_account').
+ *                        If omitted, both are included.
  */
-export async function createSetupIntent(stripeCustomerId: string): Promise<Stripe.SetupIntent> {
+export async function createSetupIntent(
+  stripeCustomerId: string,
+  paymentMethod?: "card" | "us_bank_account"
+): Promise<Stripe.SetupIntent> {
   const stripe = getStripe();
+  const paymentMethodTypes = paymentMethod
+    ? [paymentMethod]
+    : ["card", "us_bank_account"];
+
   return stripe.setupIntents.create({
     customer: stripeCustomerId,
     usage: "off_session",           // will be reused for recurring charges
-    payment_method_types: ["card"],
+    payment_method_types: paymentMethodTypes,
   });
 }
 
