@@ -8,7 +8,8 @@ import {
   type WalletTxInstructionDetail,
 } from "@/services/wallet/walletApi";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
-import { ChevronDown, ChevronUp } from "@carbon/icons-react";
+import { CpyBtn } from "@/components/CpyBtn";
+import { ChevronDown, ChevronUp, Launch } from "@carbon/icons-react";
 import { Loading } from "@carbon/react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -144,6 +145,19 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
       <div className={styles.txHeader} onClick={handleExpand}>
         <span className={styles.txTime}>{timeStr}</span>
         <span className={styles.txPair}>{swap.pair}</span>
+        <span className={styles.txSigGroup}>
+          <a
+            className={styles.txSignature}
+            href={`https://solscan.io/tx/${swap.transactionHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {formatAddress(swap.transactionHash)}
+            <Launch size={12} />
+          </a>
+          {/* <CpyBtn size="sm" copyWhat={swap.transactionHash} align="bottom" /> */}
+        </span>
         <span className={styles.txValue}>{fmt.num.currency(swap.valueUsd)}</span>
         {loading ? (
           <Loading withOverlay={false} small className={styles.spinner} />
@@ -180,24 +194,27 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                     />
                     <span className={styles.transferSpacer} />
                     <span className={styles.transferAddrLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
-                    <span
-                      className={styles.transferAddress}
-                      title={otherAddr}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                    <span className={styles.addressWithCopy}>
+                      <span
+                        className={styles.transferAddress}
+                        title={otherAddr}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
                           e.stopPropagation();
-                          e.preventDefault();
                           navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                        }
-                      }}
-                    >
-                      {formatAddress(otherAddr)}
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
+                          }
+                        }}
+                      >
+                        {formatAddress(otherAddr)}
+                      </span>
+                      <CpyBtn size="sm" copyWhat={otherAddr} align="top" />
                     </span>
                   </div>
                 );
@@ -220,7 +237,28 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
             </div>
             <div className={styles.feeRow}>
               <span className={styles.feeLabel}>{tr("walletPage.feePayer")}</span>
-              <span className={styles.feeValue}>{detail.feePayer.slice(0, 8)}...{detail.feePayer.slice(-4)}</span>
+              <span className={styles.addressWithCopy}>
+                <span
+                  className={`${styles.feeValue} ${styles.feeValueLink}`}
+                  title={detail.feePayer}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/wallets/${encodeURIComponent(detail.feePayer)}`);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      navigate(`/wallets/${encodeURIComponent(detail.feePayer)}`);
+                    }
+                  }}
+                >
+                  {formatAddress(detail.feePayer)}
+                </span>
+                <CpyBtn size="sm" copyWhat={detail.feePayer} align="top" />
+              </span>
             </div>
           </div>
 
@@ -260,7 +298,8 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
             </div>
           )}
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };

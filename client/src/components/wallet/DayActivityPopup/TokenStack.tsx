@@ -33,7 +33,7 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
           <div
             key={token.address}
             className={styles.tokenIcon}
-            style={{ zIndex: 3 - i }}
+            style={{ zIndex: 3 - i, userSelect: "none" }}
           >
             {token.logoUri ? (
               <img src={token.logoUri} alt={token.symbol} />

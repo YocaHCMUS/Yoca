@@ -10,7 +10,7 @@
 
 .txHeader {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   gap: $spacing-03;
   align-items: center;
   padding: $spacing-03 $spacing-04;
@@ -42,6 +42,29 @@
   @include type-style('body-compact-01');
   color: $text-primary;
   font-variant-numeric: tabular-nums;
+}
+
+.txSigGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.txSignature {
+  @include type-style('body-compact-01');
+  color: $link-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-01;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary-hover;
+    text-decoration: underline;
+  }
 }
 
 .txBadge {
@@ -143,6 +166,22 @@
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.65rem;
+}
+
+.addressWithCopy {
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
+}
+
+.feeValueLink {
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
 }
 
 .feeRow {
