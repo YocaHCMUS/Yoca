@@ -89,6 +89,7 @@ import {
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
@@ -307,6 +308,9 @@ export default function WalletPage() {
 
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
+
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
@@ -1431,6 +1435,13 @@ export default function WalletPage() {
               dataEntries={transferData}
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
+              onRowClick={(_row, rowIndex) => {
+                const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                if (transfer) {
+                  setSelectedTransfer(transfer);
+                  setTransferModalOpen(true);
+                }
+              }}
               loading={transferLoading && loadedTransfers.length === 0}
             // serverPagination={{
             //   enabled: true,
@@ -1968,6 +1979,14 @@ export default function WalletPage() {
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         swap={selectedSwap}
+        walletAddress={walletAddress}
+      />
+
+      <TransferDetailModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        transfer={selectedTransfer}
+        walletAddress={walletAddress}
       />
 
       <DayActivityPopup

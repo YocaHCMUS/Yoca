@@ -184,7 +184,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                   <div key={i} className={styles.transferItem}>
                     <span className={styles.transferDir}>{isOut ? "→" : "←"}</span>
                     <span className={`${styles.transferAmount} ${isOut ? styles.transferAmountOut : styles.transferAmountIn}`}>
-                      {isOut ? "-" : "+"}{new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(t.amount)}
+                      {isOut ? "-" : "+"}{fmt.num.compact.decimal(t.amount)}
                     </span>
                     <TokenIdentityCell
                       symbol={symbol.toUpperCase()}

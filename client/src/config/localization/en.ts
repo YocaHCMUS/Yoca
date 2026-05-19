@@ -387,6 +387,17 @@ export const translation = {
     aiSignals: "Signals",
     from: "From",
     to: "To",
+    swapDetails: "Swap Details",
+    transferDetails: "Transfer Details",
+    sold: "Sold",
+    bought: "Bought",
+    swapped: "Swapped",
+    forSwap: "for",
+    totalValue: "Total Value",
+    transactionFee: "Transaction Fee",
+    sent: "Sent",
+    received: "Received",
+    transfersInTransaction: "Transfers in This Transaction ({{count}})",
   },
   dictionary: {
     tradingStrategy: {
