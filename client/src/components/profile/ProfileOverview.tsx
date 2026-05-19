@@ -1,6 +1,8 @@
 import {
     ACCOUNT_TIER_LABELS,
     ACCOUNT_TIER_TAG_KIND,
+    SUBSCRIPTION_TIER_LABELS,
+    SUBSCRIPTION_TIER_TAG_KIND,
 } from "@/components/profile/profile.constants";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
@@ -12,6 +14,8 @@ import {
     Link as LinkIcon,
 } from "@carbon/react/icons";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
+import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { PeriodSelector } from "../common/PeriodSelector/PeriodSelector";
 
@@ -29,6 +33,24 @@ function formatPct(value: number): string {
 
 export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOverviewProps) {
     const { fmt } = useLocalization();
+    const [subscriptionTier, setSubscriptionTier] = useState<PlanTier | "Standard">("Standard");
+    const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSubscription = async () => {
+            try {
+                const subscription = await getUserSubscription();
+                setSubscriptionTier(subscription?.planTier ?? "Standard");
+            } catch (error) {
+                console.error("Failed to fetch subscription:", error);
+                setSubscriptionTier("Standard");
+            } finally {
+                setSubscriptionLoading(false);
+            }
+        };
+
+        fetchSubscription();
+    }, []);
 
     return (
         <section className={styles.sectionCard}>
@@ -55,8 +77,8 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
                             <>
                                 <h2>{data.displayName}</h2>
                                 {data.userId ? <p className={styles.overviewUid}>UID: {data.userId}</p> : null}
-                                <Tag type={ACCOUNT_TIER_TAG_KIND[data.accountTier]}>
-                                    {ACCOUNT_TIER_LABELS[data.accountTier]}
+                                <Tag type={SUBSCRIPTION_TIER_TAG_KIND[subscriptionTier]}>
+                                    {SUBSCRIPTION_TIER_LABELS[subscriptionTier]}
                                 </Tag>
                             </>
                         )}
