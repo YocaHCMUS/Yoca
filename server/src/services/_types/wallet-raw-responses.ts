@@ -155,6 +155,7 @@ export const bds_WalletNetAssetsSchema = z.object({
     wallet_address: z.string(),
     currency: z.string(),
     net_worth: z.number(),
+    // Request and resolved timestamp are. server time not historical time of the wallet
     requested_timestamp: z.string(),
     resolved_timestamp: z.string(),
     net_assets: z.array(

@@ -94,7 +94,7 @@ export function normalizeBirdeyeTimeParam(time?: string): string | undefined {
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
 
-export const limitter = new Bottleneck({
+export const limiter = new Bottleneck({
   reservoir: 15, // initial tokens
   reservoirRefreshAmount: 15,
   reservoirRefreshInterval: 1000, // every second

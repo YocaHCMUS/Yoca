@@ -89,8 +89,7 @@ export async function fetchWalletTokenBalanceHistory(
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
   const dates = getUtcDatesFromNow(timePeriod);
-  console.log("dates: ", dates);
-  // TODO: rate limit here
+
   const resArray = await Promise.all(
     dates.map((date) => bdsFetchAssetsAt(address, date)),
   );
@@ -100,7 +99,7 @@ export async function fetchWalletTokenBalanceHistory(
       res?.net_assets.map(
         (tokenBalance): WalletTokenBalanceHistoryInsert => ({
           address: address,
-          timestampMs: dayjs(res.resolved_timestamp).valueOf(),
+          timestampMs: dayjs(res.date).valueOf(),
           tokenAddress: tokenBalance.token_address,
           tokenBalance: Number(tokenBalance.balance),
           usdValue: tokenBalance.value,
@@ -135,7 +134,7 @@ export async function fetchWalletTokenBalanceHistory(
 
 async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
   const formattedTime = dayjs.utc(timeIsoUtc).format("YYYY-MM-DD HH:mm:ss");
-
+  console.log("date: ", formattedTime);
   const url = bds.getEndpoint("/wallet/v2/net-worth-details");
 
   url.search = new URLSearchParams({
@@ -150,7 +149,7 @@ async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
   const resp = await rlFetch(url, {
     method: "GET",
     headers: bds.getRequiredHeaders(),
-    rlLimiter: bds.limitter,
+    rlLimiter: bds.limiter,
   });
 
   const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp, true);
@@ -159,5 +158,5 @@ async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
     return null;
   }
 
-  return res.data;
+  return { ...res.data, date: timeIsoUtc };
 }
