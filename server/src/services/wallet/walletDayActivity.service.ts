@@ -13,6 +13,7 @@ import type {
 import { getWalletSwaps, getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { resolveEnhancedTransactions } from "./providers/walletEnhancedTx.service.js";
 import { roundUsd } from "./walletNormalization.utils.js";
+import { isRentExemptLikeLamports } from "./providers/helius-to-swap.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -286,6 +287,8 @@ export async function getWalletTxDetail(
         }
 
         const nativeTransfers = tx.nativeTransfers ?? [];
+        const feeReceivers: WalletFeeReceiver[] = [];
+        const feePayer = String(tx.feePayer ?? tx.info?.feePayer ?? address);
         for (const nt of nativeTransfers) {
             const amount = Number(nt.amount ?? 0);
             if (amount <= 0) continue;
@@ -300,24 +303,18 @@ export async function getWalletTxDetail(
                 amount: amount / 1e9,
                 amountUsd: null,
             });
+
+            if (amount === tx.fee) {
+                feeReceivers.push({
+                    address: String(nt.toUserAccount ?? nt.toWallet ?? ""),
+                    amount: amount / 1e9,
+                    amountUsd: null,
+                    label: String(nt.toUserAccount ?? nt.toWallet ?? ""),
+                });
+            }
         }
 
         const feePaid = Number(tx.fee ?? tx.info?.fee ?? 0);
-        const feePayer = String(tx.feePayer ?? tx.info?.feePayer ?? address);
-
-        const feeReceivers: WalletFeeReceiver[] = [];
-        const instructions = tx.instructions ?? [];
-        for (const ins of instructions) {
-            const programId = String(ins.programId ?? "").trim();
-            if (!programId) continue;
-
-            feeReceivers.push({
-                address: programId,
-                amount: 0,
-                amountUsd: null,
-                label: null,
-            });
-        }
 
         const soldSymbol = transfers.find((t) => t.from === address)?.symbol ?? null;
         const boughtSymbol = transfers.find((t) => t.to === address)?.symbol ?? null;

@@ -102,14 +102,47 @@
 
 .transferAmount {
   @include type-style('body-compact-01');
-  color: $text-primary;
   font-variant-numeric: tabular-nums;
+}
+
+.transferAmountIn {
+  color: $support-success;
+}
+
+.transferAmountOut {
+  color: $support-error;
 }
 
 .transferSymbol {
   @include type-style('body-compact-01');
   color: $text-secondary;
   font-weight: 600;
+}
+
+.transferSpacer {
+  flex: 1;
+}
+
+.transferAddress {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
+}
+
+.transferAddrLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
 }
 
 .feeRow {

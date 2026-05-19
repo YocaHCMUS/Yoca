@@ -317,6 +317,8 @@ export const translation = {
     feePaid: "Paid",
     feePayer: "Payer",
     feeReceivers: "Receivers",
+    baseFee: "Base fee",
+    priorityFee: "Priority fee",
     perToken: "/token",
     account: "Account",
     totalVolume: "Total volume",
@@ -383,6 +385,8 @@ export const translation = {
     aiFirstSeen: "First seen",
     aiConsistencyAssessment: "Consistency assessment",
     aiSignals: "Signals",
+    from: "From",
+    to: "To",
   },
   dictionary: {
     tradingStrategy: {

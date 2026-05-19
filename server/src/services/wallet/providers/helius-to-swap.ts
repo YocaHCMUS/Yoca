@@ -16,7 +16,7 @@ const SYSTEM_PROGRAMS = new Set([
 ]);
 const RENT_LIKE_LAMPORTS = [2_039_280, 2_074_080];
 
-function isRentExemptLikeLamports(amountLamports: number): boolean {
+export function isRentExemptLikeLamports(amountLamports: number): boolean {
   if (!Number.isFinite(amountLamports) || amountLamports <= 0) return false;
   return RENT_LIKE_LAMPORTS.some(
     (rent) => Math.abs(amountLamports - rent) <= 120_000,

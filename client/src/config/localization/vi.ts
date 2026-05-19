@@ -283,6 +283,8 @@ export const translation = defineTranslation({
     feePaid: "Đã trả",
     feePayer: "Người trả",
     feeReceivers: "Người nhận",
+    baseFee: "Phí cơ bản",
+    priorityFee: "Phí ưu tiên",
     perToken: "/token",
     account: "Tài khoản",
     totalVolume: "Tổng khối lượng",
@@ -349,6 +351,8 @@ export const translation = defineTranslation({
     aiFirstSeen: "Lần xuất hiện đầu",
     aiConsistencyAssessment: "Đánh giá độ nhất quán",
     aiSignals: "Tín hiệu",
+    from: "Từ ví",
+    to: "Đến ví",
   },
   dictionary: {
     tradingStrategy: {

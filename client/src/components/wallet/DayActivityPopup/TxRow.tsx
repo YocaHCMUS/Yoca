@@ -1,4 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatAddress } from "@/util/format";
 import {
   fetchTxDetail,
   fetchTxInstructions,
@@ -6,29 +7,95 @@ import {
   type WalletTxDetail,
   type WalletTxInstructionDetail,
 } from "@/services/wallet/walletApi";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import { Loading } from "@carbon/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import client from "@/api/main";
 import styles from "./TxRow.module.scss";
+
+const WSOL_MINT = "So11111111111111111111111111111111111111112";
+const BASE_FEE_LAMPORTS = 5_000;
 
 interface TxRowProps {
   walletAddress: string;
   swap: WalletDaySwapSummary;
 }
 
+interface TokenMetaEntry {
+  symbol: string;
+  name: string | null;
+  logoUri: string | null;
+}
+
+function resolveTokenMetaLookupAddress(tokenAddress: string): string {
+  const normalized = tokenAddress.trim().toLowerCase();
+  if (
+    normalized === "native" ||
+    normalized === "sol" ||
+    normalized === "11111111111111111111111111111111"
+  ) {
+    return WSOL_MINT;
+  }
+  return tokenAddress;
+}
+
 export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
   const { fmt, tr } = useLocalization();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [detail, setDetail] = useState<WalletTxDetail | null>(null);
   const [instructions, setInstructions] = useState<WalletTxInstructionDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingInstructions, setLoadingInstructions] = useState(false);
+  const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMetaEntry>>({});
 
   const timeStr = new Date(swap.timestamp).toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  useEffect(() => {
+    if (!detail || detail.transfers.length === 0) return;
+
+    const mintsToFetch = detail.transfers
+      .map((t) => resolveTokenMetaLookupAddress(t.mint))
+      .filter((mint, i, arr) => {
+        if (!mint) return false;
+        const existing = detail.transfers.find((t) => resolveTokenMetaLookupAddress(t.mint) === mint);
+        if (existing?.symbol && existing?.logoUri) return false;
+        return arr.indexOf(mint) === i;
+      });
+
+    if (mintsToFetch.length === 0) return;
+
+    let cancelled = false;
+    client.api.tokens.meta[":addresses"]
+      .$get({ param: { addresses: mintsToFetch.join(",") } })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            const map: Record<string, TokenMetaEntry> = {};
+            for (const item of data) {
+              map[item.address] = {
+                symbol: item.symbol ?? "",
+                name: item.name ?? null,
+                logoUri: item.imageUrl ?? null,
+              };
+            }
+            setTokenMetaMap(map);
+          }
+        }
+      })
+      .catch(() => { /* ignore */ });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detail]);
 
   const handleExpand = async () => {
     if (expanded) {
@@ -70,6 +137,8 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
     setShowInstructions(true);
   };
 
+  const priorityFee = Math.max(0, detail ? detail.feePaid - BASE_FEE_LAMPORTS : 0);
+
   return (
     <div className={styles.txRow}>
       <div className={styles.txHeader} onClick={handleExpand}>
@@ -90,13 +159,46 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
             <div className={styles.transferList}>
               {detail.transfers.map((t, i) => {
                 const isOut = t.from === walletAddress;
+                const otherAddr = isOut ? t.to : t.from;
+                const lookupMint = resolveTokenMetaLookupAddress(t.mint);
+                const meta = tokenMetaMap[lookupMint];
+                const symbol = meta?.symbol || t.symbol || t.mint.slice(0, 8);
+                const name = meta?.name ?? t.name;
+                const logoUri = meta?.logoUri ?? t.logoUri;
+
                 return (
                   <div key={i} className={styles.transferItem}>
                     <span className={styles.transferDir}>{isOut ? "→" : "←"}</span>
-                    <span className={styles.transferAmount}>
+                    <span className={`${styles.transferAmount} ${isOut ? styles.transferAmountOut : styles.transferAmountIn}`}>
                       {isOut ? "-" : "+"}{new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(t.amount)}
                     </span>
-                    <span className={styles.transferSymbol}>{t.symbol ?? t.mint.slice(0, 8)}</span>
+                    <TokenIdentityCell
+                      symbol={symbol.toUpperCase()}
+                      fullName={name}
+                      imageUrl={logoUri}
+                      imageSize={16}
+                    />
+                    <span className={styles.transferSpacer} />
+                    <span className={styles.transferAddrLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
+                    <span
+                      className={styles.transferAddress}
+                      title={otherAddr}
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
+                        }
+                      }}
+                    >
+                      {formatAddress(otherAddr)}
+                    </span>
                   </div>
                 );
               })}
@@ -104,26 +206,22 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
           </div>
 
           <div className={styles.detailSection}>
-            <h4 className={styles.detailTitle}>{tr("walletPage.feeInLamports")}</h4>
             <div className={styles.feeRow}>
-              <span className={styles.feeLabel}>{tr("walletPage.feePaid")}</span>
-              <span className={styles.feeValue}>{(detail.feePaid / 1e9).toFixed(6)} SOL</span>
+              <h4 className={styles.detailTitle}>{tr("walletPage.feeInLamports")}</h4>
+              <h4 className={styles.feeValue}>{detail.feePaid / 1e9} SOL</h4>
+            </div>
+            <div className={styles.feeRow}>
+              <span className={styles.feeLabel}>{tr("walletPage.baseFee")}</span>
+              <span className={styles.feeValue}>{(BASE_FEE_LAMPORTS / 1e9).toFixed(9)} SOL</span>
+            </div>
+            <div className={styles.feeRow}>
+              <span className={styles.feeLabel}>{tr("walletPage.priorityFee")}</span>
+              <span className={styles.feeValue}>{(priorityFee / 1e9).toFixed(9)} SOL</span>
             </div>
             <div className={styles.feeRow}>
               <span className={styles.feeLabel}>{tr("walletPage.feePayer")}</span>
               <span className={styles.feeValue}>{detail.feePayer.slice(0, 8)}...{detail.feePayer.slice(-4)}</span>
             </div>
-            {detail.feeReceivers.length > 0 && (
-              <div className={styles.feeRow}>
-                <span className={styles.feeLabel}>{tr("walletPage.feeReceivers")}</span>
-                <span className={styles.feeValue}>
-                  {detail.feeReceivers
-                    .filter((r) => r.label)
-                    .map((r) => r.label)
-                    .join(", ") || detail.feeReceivers.map((r) => r.address.slice(0, 6)).join(", ")}
-                </span>
-              </div>
-            )}
           </div>
 
           <button className={styles.instructionsBtn} onClick={handleLoadInstructions}>
