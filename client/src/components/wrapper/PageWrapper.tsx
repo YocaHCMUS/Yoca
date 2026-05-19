@@ -40,6 +40,7 @@ import {
   Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
@@ -198,16 +199,18 @@ export function PageWrapper({
           onClick={toggleSideNav}
         />
 
-        <HeaderName href="#" prefix="">
-          <Stack
-            gap={3}
-            orientation="horizontal"
-            style={{ alignItems: "center", fontWeight: "bold" }}
-          >
-            <img src={appLogo} alt="Logo" style={{ height: 36 }} />
-            <strong style={{ fontSize: 21 }}>YOCA</strong>
-          </Stack>
-        </HeaderName>
+        <Link to="/market" style={{ textDecoration: "none" }}>
+          <HeaderName href="#" prefix="">
+            <Stack
+              gap={3}
+              orientation="horizontal"
+              style={{ alignItems: "center", fontWeight: "bold" }}
+            >
+              <img src={appLogo} alt="Logo" style={{ height: 36 }} />
+              <strong style={{ fontSize: 21 }}>YOCA</strong>
+            </Stack>
+          </HeaderName>
+        </Link>
 
         <HeaderNavigation>
           <NavHeaderItems />
