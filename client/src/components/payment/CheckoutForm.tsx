@@ -79,7 +79,6 @@ export function CheckoutForm({
       }
 
       // Step 2: Confirm the SetupIntent with Stripe
-      // redirect: "if_required" keeps us in-page for cards (no 3DS redirect needed in test mode).
       const { error, setupIntent } = await stripe.confirmSetup({
         elements,
         clientSecret,
@@ -154,74 +153,65 @@ export function CheckoutForm({
       </div>
 
       {/* Payment Method Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Card Payment Method */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Cash Payment Method */}
         <button
           type="button"
           onClick={() => {
             setActiveMethod("card");
             setErrorMsg(null);
           }}
-          className={`relative px-4 py-3 rounded-2xl border-2 transition-all duration-300 flex flex-row items-center justify-start gap-4 ${
+          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
             activeMethod === "card"
               ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10"
+              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
           }`}
         >
           <div
-            className={`text-3xl shrink-0 ${
+            className={`text-3xl ${
               activeMethod === "card" ? "text-[#0a0a0f]" : "text-[#64748b]"
             }`}
           >
             💳
           </div>
-          <div className="text-left">
+          <div>
             <p
               className={`text-sm font-bold tracking-wide ${
                 activeMethod === "card" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              Card
-            </p>
-            <p
-              className={`text-xs ${
-                activeMethod === "card"
-                  ? "text-[#0a0a0f]/70"
-                  : "text-[#64748b]"
-              }`}
-            >
-              Credit or Debit
+              Cash
             </p>
           </div>
         </button>
 
-        {/* Bank Account Payment Method */}
+        {/* Bank Payment Method */}
         <button
           type="button"
           onClick={() => {
             setActiveMethod("bank");
             setErrorMsg(null);
           }}
-          className={`relative px-4 py-3 rounded-2xl border-2 transition-all duration-300 flex flex-row items-center justify-start gap-4 ${
+          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
             activeMethod === "bank"
               ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10"
+              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
           }`}
         >
           <div
-            className={`text-3xl shrink-0 ${
+            className={`text-3xl ${
               activeMethod === "bank" ? "text-[#0a0a0f]" : "text-[#64748b]"
             }`}
           >
             🏦
           </div>
-          <div className="text-left">
+          <div>
             <p
               className={`text-sm font-bold tracking-wide ${
                 activeMethod === "bank" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              Bank Account
+              Bank
             </p>
             <p
               className={`text-xs ${
@@ -235,33 +225,33 @@ export function CheckoutForm({
           </div>
         </button>
 
-        {/* Solana Payment Method */}
+        {/* Wallet Payment Method */}
         <button
           type="button"
           onClick={() => {
             setActiveMethod("solana");
             setErrorMsg(null);
           }}
-          className={`relative px-4 py-3 rounded-2xl border-2 transition-all duration-300 flex flex-row items-center justify-start gap-4 ${
+          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
             activeMethod === "solana"
               ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10"
+              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
           }`}
         >
           <div
-            className={`text-3xl shrink-0 ${
+            className={`text-3xl ${
               activeMethod === "solana" ? "text-[#0a0a0f]" : "text-[#64748b]"
             }`}
           >
             ◎
           </div>
-          <div className="text-left">
+          <div>
             <p
               className={`text-sm font-bold tracking-wide ${
                 activeMethod === "solana" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              SOL
+              Wallet
             </p>
             <p
               className={`text-xs ${
@@ -285,7 +275,7 @@ export function CheckoutForm({
               options={{
                 layout: "accordion",
                 paymentMethodOrder: ["card"],
-                wallets: { link: "never" },
+                wallets: { link: "never", applePay: "never", googlePay: "never" },
               }}
             />
           </div>
