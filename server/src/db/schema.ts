@@ -1,21 +1,6 @@
-// --- ACMS API call cache table ---
-// export const acmsApiCache = pgTable("acms_api_cache", {
-//   key: varchar("key", { length: 128 }).primaryKey(),
-//   provider: varchar("provider", { length: 32 }).notNull(),
-//   endpoint: varchar("endpoint", { length: 128 }).notNull(),
-//   params: jsonb("params").notNull(),
-//   result: jsonb("result").notNull(),
-//   createdAt: timestamp("created_at").notNull().defaultNow(),
-//   updatedAt: timestamp("updated_at")
-//     .notNull()
-//     .defaultNow()
-//     .$onUpdate(() => new Date()),
-// });
-import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
-  check,
   decimal as dec,
   integer,
   jsonb,
@@ -31,7 +16,11 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { users } from "./users.js";
 export * from "./alerts";
+export * from "./users";
+export * from "./payment";
+export * from "./wallets";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -41,14 +30,6 @@ function decimal(name: string) {
 }
 
 // #region Enums
-export const enumAuthProvider = pgEnum("auth_provider", [
-  "password",
-  "google",
-  "github",
-  "solana",
-  "other",
-]);
-
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
 export const enumAlertRuleAction = pgEnum("alert_rule_action", [
@@ -67,170 +48,9 @@ export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
   "SOL",
 ]);
 
-export const enumPlanTier = pgEnum("plan_tier", ["Lite", "Plus", "Pro"]);
-
-export const enumSubscriptionStatus = pgEnum("subscription_status", [
-  "active",
-  "past_due",
-  "canceled",
-  "incomplete",
-  "trialing",
-  "unpaid",
-  "paused",
-]);
-
-export const enumPaymentStatus = pgEnum("payment_status", [
-  "succeeded",
-  "failed",
-  "pending",
-]);
-
 // #endregion
 
 // #region Table definitions
-
-// --- ACMS API call cache table ---
-export const acmsApiCache = pgTable("acms_api_cache", {
-  key: varchar("key", { length: 128 }).primaryKey(),
-  provider: varchar("provider", { length: 32 }).notNull(),
-  endpoint: varchar("endpoint", { length: 128 }).notNull(),
-  params: jsonb("params").notNull(),
-  result: jsonb("result").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const users = pgTable(
-  "users",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    displayName: varchar("display_name"),
-    // Email is not needed for wallet users, see it as contact
-    email: varchar("email"),
-    discordWebhookUrl: text("discord_webhook_url"),
-    emailAlertsEnabled: boolean("email_alerts_enabled")
-      .notNull()
-      .default(false),
-    /** Optional override: if set, alerts go here instead of users.email */
-    emailAlertsAddress: text("email_alerts_address"),
-    /** Stripe Customer ID — created lazily on first payment attempt */
-    stripeCustomerId: varchar("stripe_customer_id"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    uniqueIndex("users_email_uq")
-      .on(table.email)
-      .where(sql`${table.email} IS NOT NULL`),
-  ],
-);
-
-export const subscriptions = pgTable("subscriptions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  stripeSubscriptionId: varchar("stripe_subscription_id").notNull().unique(),
-  stripeCustomerId: varchar("stripe_customer_id").notNull(),
-  planTier: enumPlanTier("plan_tier").notNull(),
-  status: enumSubscriptionStatus("status").notNull(),
-  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-  currentPeriodStart: timestamp("current_period_start"),
-  currentPeriodEnd: timestamp("current_period_end"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
-export const paymentHistory = pgTable("payment_history", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  subscriptionId: uuid("subscription_id").references(() => subscriptions.id, {
-    onDelete: "set null",
-  }),
-  stripePaymentIntentId: varchar("stripe_payment_intent_id").unique(),
-  stripeInvoiceId: varchar("stripe_invoice_id").unique(),
-  amountCents: integer("amount_cents").notNull(),
-  currency: varchar("currency", { length: 3 }).notNull().default("usd"),
-  status: enumPaymentStatus("status").notNull(),
-  paymentMethodDetails: jsonb("payment_method_details"), // e.g. { brand: 'visa', last4: '4242' }
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const userLinkedWallets = pgTable(
-  "user_linked_wallets",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
-    isAuthWallet: boolean("is_auth_wallet").notNull().default(false),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.userId, table.walletAddress],
-    }),
-  ],
-);
-
-export const userTokenWatchlist = pgTable(
-  "user_token_watch_list",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.tokenAddress] })],
-);
-
-export const userWalletWatchlist = pgTable(
-  "user_wallet_watch_list",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.walletAddress] })],
-);
-
-export const authAccounts = pgTable(
-  "auth_accounts",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    provider: enumAuthProvider("provider").notNull(),
-    providerUserId: varchar("provider_user_id").notNull(),
-    hashedPassword: varchar("hashed_password"),
-    loginNounce: varchar("login_nounce"),
-    nounceExpiredAt: timestamp("nounce_expired_at"),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.provider, table.providerUserId],
-    }),
-    uniqueIndex("auth_accounts_user_provider_uq").on(
-      table.userId,
-      table.provider,
-    ),
-    check(
-      "provider_password",
-      sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
-          OR
-          (${table.provider} <> 'password' AND ${table.hashedPassword} IS NULL)`,
-    ),
-  ],
-);
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -1413,8 +1233,6 @@ export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
 export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
-export type UserInsert = typeof users.$inferInsert;
-export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
@@ -1467,7 +1285,6 @@ export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
-export type UserLinkedWalletInsert = typeof userLinkedWallets.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
 export type AlertRuleInsert = typeof alertRules.$inferInsert;

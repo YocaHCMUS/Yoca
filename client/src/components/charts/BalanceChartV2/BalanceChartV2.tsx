@@ -72,48 +72,38 @@ export function BalanceChartV2({ address }: { address: string }) {
     },
     {
       select: (data) => ({
-        key: "total-balance",
+        key: "total",
         label: "Total Balance",
-        data: data.series
-          .filter(
-            (series) => series.unit == "USD" && series.seriesType == "line",
-          )[0]
-          .data.map((point) => ({
-            unixTimeMs: point.timestamp,
-            value: point.value,
-          })),
+        data:
+          data?.[address]?.map((point) => ({
+            unixTimeMs: point.timestampMs,
+            value: point.usdValue,
+          })) || [],
       }),
     },
   );
 
   const tokenBalances = useGet(
-    client.api.charts.balance,
+    client.api.charts.balance.tokens,
     200,
     {
       query: {
         timePeriod,
-        wallets: address,
-        tokens: selectedTokens?.join(",") || undefined,
+        wallet: address,
+        tokens: selectedTokens?.join(",") || "",
       },
     },
     {
       enabled: !!portfolio.data && selectedTokens != null,
       select: (data) =>
-        [
-          ...new Map(
-            data.series
-              .filter(
-                (series) => series.unit == "USD" && series.seriesType == "bar",
-              )
-              .map((series) => [series.name, series]),
-          ).values(),
-        ].map((series, index) => ({
-          key: String(index),
-          label: series.name,
-          data: series.data.map((point) => ({
-            unixTimeMs: point.timestamp,
-            value: point.value,
-          })),
+        Object.entries(data).map(([tokenAddress, points]) => ({
+          key: tokenAddress,
+          label: tokenAddress,
+          data:
+            points?.map((p) => ({
+              unixTimeMs: p.timestampMs,
+              value: p.usdValue,
+            })) ?? [],
         })),
     },
   );
@@ -125,7 +115,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         : []
       : [
           ...(tokenBalances.data ?? []),
-          ...(totalBalance.data ? [totalBalance.data] : []),
+          // ...(totalBalance.data ? [totalBalance.data] : []),
         ];
 
   const series24hChanges = useMemo(() => {
