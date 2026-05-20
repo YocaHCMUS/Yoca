@@ -4,15 +4,15 @@ import type { EChartsOption } from "echarts";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  CHART_COLOR_PALETTE,
-  useCarbonChartBaseOption,
+    CHART_COLOR_PALETTE,
+    useCarbonChartBaseOption,
 } from "@/util/carbon-chart-base";
 import { useChartContext } from "@/contexts/ChartContext";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 import type { PeriodOption } from "@/config/periodOptions";
 import {
-  fetchBalanceTrend,
-  type InferFetcherData,
+    fetchBalanceTrend,
+    type InferFetcherData,
 } from "@/services/chart/chartApi";
 import { formatTimestampWithTimezone } from "@/util/chart-helpers";
 import { formatAxisTooltip } from "@/util/tooltip-helpers";
@@ -25,7 +25,6 @@ import { Table } from "@/components/tables/Table";
 import type { TableColumnHeader } from "@/components/tables/Table";
 import tableStyles from "@/components/tables/Table.module.scss";
 import styles from "./WalletSingleBalanceChart.module.scss";
-import { getChartGridConfig } from "@/hooks/useChartTheme";
 
 type BalanceTrendData = InferFetcherData<typeof fetchBalanceTrend>;
 
@@ -210,7 +209,7 @@ export function WalletSingleBalanceChart({
     fetcher: (query) =>
       fetchBalanceTrend({
         query: {
-          wallets: query.wallets,
+          wallets: query.wallets || "",
           tokens: query.tokens,
           timePeriod: query.timePeriod as any,
         },

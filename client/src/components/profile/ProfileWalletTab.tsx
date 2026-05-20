@@ -1,4 +1,3 @@
-import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart";
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import styles from "./profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
@@ -6,6 +5,7 @@ import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { AggregatedAssetDistribution } from "@/components/charts/AggregatedAssetDistribution";
+import { MultiWalletBalanceChart } from "../charts/BalanceChartMultiV2";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -52,13 +52,7 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
             </div>
 
             <div className={styles.sectionCard}>
-                <WalletSingleBalanceChart
-                    minHeight={360}
-                    initialFilters={{
-                        timePeriod: "7D",
-                        wallets: chartWallets,
-                    }}
-                />
+                <MultiWalletBalanceChart addresses={chartWallets} />  
             </div>
 
             <div className={styles.sectionCard}>

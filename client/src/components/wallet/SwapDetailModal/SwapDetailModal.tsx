@@ -9,9 +9,9 @@ import { CpyBtn } from "@/components/CpyBtn";
 import { Launch } from "@carbon/icons-react";
 import { useNavigate } from "react-router";
 import {
-  fetchTxDetail,
-  type WalletSwap,
-  type WalletTxDetail,
+    fetchTxDetail,
+    type WalletSwap,
+    type WalletTxDetail,
 } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
 
