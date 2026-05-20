@@ -203,7 +203,7 @@ export function TokenPriceChart({
     return {
       ...baseOption,
       legend: { show: false },
-      grid: { left: 8, right: 8, top: 8, bottom: 24, containLabel: true },
+      grid: { left: 8, right: 8, top: 8, bottom: 24 },
       xAxis: {
         ...baseOption.xAxis,
         type: "time",
