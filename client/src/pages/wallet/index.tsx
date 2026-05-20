@@ -27,6 +27,7 @@ import {
   WalletReportTemplate,
   type WalletReportSection,
 } from "@/components/WalletReportTemplate";
+import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useAuth } from "@/contexts/AuthContext.tsx";
@@ -175,7 +176,7 @@ export default function WalletPage() {
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 AI Analysis — data loads when each tab is first visited. */
+  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 Forensic Audit, 4 AI Analysis — data loads when each tab is first visited. */
   const [activeTab, setActiveTab] = useState(0);
   /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
   const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
@@ -1090,7 +1091,7 @@ export default function WalletPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 3 && !aiAnalysisRequestedRef.current) {
+    if (activeTab === 4 && !aiAnalysisRequestedRef.current) {
       aiAnalysisRequestedRef.current = true;
       void loadAiAnalysisData();
     }
@@ -1494,6 +1495,17 @@ export default function WalletPage() {
             />
           </div>
         </div>
+      </PageSection>
+    </div>
+  );
+
+  const auditTab = (
+    <div className={styles.tabPane}>
+      <PageSection>
+        <WalletAuditPanel
+          walletAddress={walletAddress}
+          enabled={activeTab === 3}
+        />
       </PageSection>
     </div>
   );
@@ -1985,15 +1997,17 @@ export default function WalletPage() {
                 tr("walletPage.overview"),
                 tr("walletPage.holdings"),
                 tr("walletPage.activityRisk"),
+                "Forensic Audit",
                 tr("walletPage.aiAnalysis"),
               ]}
               tabIcons={[
                 <ChartLine key="wallet-overview-icon" size={16} />,
                 <Wallet key="wallet-holdings-icon" size={16} />,
                 <Activity key="wallet-activity-icon" size={16} />,
+                <User key="wallet-audit-icon" size={16} />,
                 <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
               ]}
-              tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab]}
+              tabs={[overviewTab, holdingsTab, activityTab, auditTab, aiAnalysisTab]}
               onTabChange={(index) => setActiveTab(index)}
               actions={tabActions}
             />
