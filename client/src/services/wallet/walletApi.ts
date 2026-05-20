@@ -121,6 +121,8 @@ export interface WalletDaySwapSummary {
   action: "buy" | "sell";
   soldSymbol: string | null;
   boughtSymbol: string | null;
+  soldAmount: number;
+  boughtAmount: number;
 }
 
 export interface WalletDayActivitySummary {
@@ -673,6 +675,28 @@ export async function fetchDayActivitySummary(
   return data as WalletDayActivitySummary;
 }
 
+export interface TokenPriceChartPoint {
+  timestampMs: number;
+  price: number;
+}
+
+export interface TokenPriceChartResponse {
+  items: TokenPriceChartPoint[];
+}
+
+export async function fetchTokenPriceChartForDay(
+  tokenAddress: string,
+  dayMs: number,
+): Promise<TokenPriceChartResponse> {
+  const url = client.api.wallets["token-price-chart"].$url({
+    query: { address: tokenAddress, dayMs: String(dayMs) },
+  });
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as TokenPriceChartResponse;
+}
+
 export async function fetchTxDetail(
   address: string,
   signature: string,
@@ -712,6 +736,7 @@ export const walletApi = {
   fetchWalletAiAnalysis,
   fetchWalletAudit,
   fetchDayActivitySummary,
+  fetchTokenPriceChartForDay,
   fetchTxDetail,
   fetchTxInstructions,
   getOverview: fetchWalletOverview,
@@ -726,6 +751,7 @@ export const walletApi = {
   getAiAnalysis: fetchWalletAiAnalysis,
   getAudit: fetchWalletAudit,
   getDayActivitySummary: fetchDayActivitySummary,
+  getTokenPriceChartForDay: fetchTokenPriceChartForDay,
   getTxDetail: fetchTxDetail,
   getTxInstructions: fetchTxInstructions,
 };

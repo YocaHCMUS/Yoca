@@ -7,6 +7,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 interface TokenStackProps {
   tokens: WalletDayToken[];
   totalTokens: number;
+  onTokenClick?: (token: WalletDayToken) => void;
 }
 
 const getDeltaClassName = (delta: number) => {
@@ -15,7 +16,7 @@ const getDeltaClassName = (delta: number) => {
   return styles.neutral;
 };
 
-export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) => {
+export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens, onTokenClick }) => {
   const { tr, fmt } = useLocalization();
   const [expanded, setExpanded] = useState(false);
 
@@ -62,7 +63,19 @@ export const TokenStack: React.FC<TokenStackProps> = ({ tokens, totalTokens }) =
               const amountDelta = token.buyAmount - token.sellAmount;
 
               return (
-                <div key={token.address} className={styles.tokenRow}>
+                <div
+                  key={token.address}
+                  className={styles.tokenRow}
+                  onClick={() => onTokenClick?.(token)}
+                  role={onTokenClick ? "button" : undefined}
+                  tabIndex={onTokenClick ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (onTokenClick && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      onTokenClick(token);
+                    }
+                  }}
+                >
                   <div className={styles.tokenInfo}>
                     <div className={styles.tokenIconSmall}>
                       {token.logoUri ? (

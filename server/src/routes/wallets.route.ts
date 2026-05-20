@@ -16,6 +16,7 @@ import {
   getWalletTxDetail,
   getWalletTxInstructionDetail,
 } from "@sv/services/wallet/walletDayActivity.service.js";
+import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -629,6 +630,30 @@ const app = new Hono()
     } catch (err) {
       console.error("Failed to get wallet tx instructions", err);
       return c.json({ error: "Failed to get wallet tx instructions" }, 500);
+    }
+  })
+  .get("/token-price-chart", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const items = await getTokenPriceChartForDay(address, dayMs);
+      return c.json({ items: items ?? [] }, 200);
+    } catch (err) {
+      console.error("Failed to get token price chart", err);
+      return c.json({ error: "Failed to get token price chart" }, 500);
     }
   });
 

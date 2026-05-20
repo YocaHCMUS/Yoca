@@ -773,7 +773,7 @@ export async function fetchAllTransactionHistory(
   return paged.items;
 }
 
-async function fetchBirdeyeJson(
+export async function fetchBirdeyeJson(
   path: string,
   method: "GET" | "POST",
   options?: {

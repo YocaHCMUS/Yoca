@@ -17,11 +17,32 @@
   gap: $spacing-05;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, width 0.2s;
 
   &.dragging {
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
     opacity: 0.92;
+  }
+
+  &.cardWithCharts {
+    width: 900px;
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+  }
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  padding: $spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  overflow-y: auto;
+
+  .cardWithCharts & {
+    border-right: 1px solid $border-subtle;
   }
 }
 
@@ -64,6 +85,30 @@
 .date {
   @include type-style('body-01');
   color: $text-secondary;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
+}
+
+.clearChartsBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
 }
 
 .closeBtn {
@@ -196,4 +241,32 @@
   color: $text-secondary;
   text-align: center;
   padding: $spacing-04 0;
+}
+
+/* ── Chart Panel ─────────────────────────────── */
+.chartPanel {
+  width: 340px;
+  flex-shrink: 0;
+  padding: $spacing-05;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  max-height: 72vh;
+}
+
+.chartPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: $spacing-03;
+  border-bottom: 1px solid $border-subtle;
+}
+
+.chartPanelTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }

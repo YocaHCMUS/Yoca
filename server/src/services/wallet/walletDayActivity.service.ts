@@ -132,6 +132,8 @@ export async function getWalletDayActivitySummary(
                 action: action === "both" ? "buy" : action,
                 soldSymbol: soldSymbol?.toUpperCase() ?? null,
                 boughtSymbol: boughtSymbol?.toUpperCase() ?? null,
+                soldAmount: swap.sold?.amount ?? 0,
+                boughtAmount: swap.bought?.amount ?? 0,
             });
 
             const tsMs = Date.parse(swap.blockTimestampIso);
