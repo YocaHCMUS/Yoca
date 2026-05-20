@@ -1,17 +1,17 @@
 import client from "@/api/main.ts";
-import { useLocalization } from "@/contexts/LocalizationContext";
-import { useGet } from "@/hooks/useGet";
-import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { FilterSwitch } from "@/components/FilterSwitch";
+import { Flex } from "@/components/Flex";
+import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
-import { useMemo, useState } from "react";
-import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
-import { Layer, MultiSelect, Tag } from "@carbon/react";
-import { TknImg } from "@/components/TknImg";
-import { ChartWrapper } from "../shared";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { Layer, MultiSelect, Tag } from "@carbon/react";
+import { useMemo, useState } from "react";
+import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
+import { ChartWrapper } from "../shared";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -52,7 +52,7 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
 export function BalanceChartV2({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
 
-  const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
+  const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("7D");
   const [selectedTokens, setSelectedTokens] = useState<string[] | null>(null);
 
   const portfolio = useGet(client.api.wallets.portfolio, 200, {
@@ -72,48 +72,40 @@ export function BalanceChartV2({ address }: { address: string }) {
     },
     {
       select: (data) => ({
-        key: "total-balance",
+        key: "total",
         label: "Total Balance",
-        data: data.series
-          .filter(
-            (series) => series.unit == "USD" && series.seriesType == "line",
-          )[0]
-          .data.map((point) => ({
-            unixTimeMs: point.timestamp,
-            value: point.value,
-          })),
+        data:
+          data?.[address]?.map((point) => ({
+            unixTimeMs: point.timestampMs,
+            value: point.usdValue,
+          })) || [],
       }),
     },
   );
 
   const tokenBalances = useGet(
-    client.api.charts.balance,
+    client.api.charts.balance.tokens,
     200,
     {
       query: {
         timePeriod,
-        wallets: address,
-        tokens: selectedTokens?.join(",") || undefined,
+        wallet: address,
+        tokens: selectedTokens?.join(",") || "",
       },
     },
     {
       enabled: !!portfolio.data && selectedTokens != null,
       select: (data) =>
-        [
-          ...new Map(
-            data.series
-              .filter(
-                (series) => series.unit == "USD" && series.seriesType == "bar",
-              )
-              .map((series) => [series.name, series]),
-          ).values(),
-        ].map((series, index) => ({
-          key: String(index),
-          label: series.name,
-          data: series.data.map((point) => ({
-            unixTimeMs: point.timestamp,
-            value: point.value,
-          })),
+        Object.entries(data).map(([tokenAddress, points]) => ({
+          key: tokenAddress,
+          label:
+            portfolio.data?.find((token) => token.tokenAddress == tokenAddress)
+              ?.symbol || tokenAddress,
+          data:
+            points?.map((p) => ({
+              unixTimeMs: p.timestampMs,
+              value: p.usdValue,
+            })) ?? [],
         })),
     },
   );
@@ -125,7 +117,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         : []
       : [
           ...(tokenBalances.data ?? []),
-          ...(totalBalance.data ? [totalBalance.data] : []),
+          // ...(totalBalance.data ? [totalBalance.data] : []),
         ];
 
   const series24hChanges = useMemo(() => {
@@ -222,7 +214,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading}
+          loading={tokenBalances.isLoading && portfolio.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>
