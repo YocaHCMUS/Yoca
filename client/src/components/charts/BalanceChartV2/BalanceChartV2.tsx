@@ -98,7 +98,9 @@ export function BalanceChartV2({ address }: { address: string }) {
       select: (data) =>
         Object.entries(data).map(([tokenAddress, points]) => ({
           key: tokenAddress,
-          label: tokenAddress,
+          label:
+            portfolio.data?.find((token) => token.tokenAddress == tokenAddress)
+              ?.symbol || tokenAddress,
           data:
             points?.map((p) => ({
               unixTimeMs: p.timestampMs,
