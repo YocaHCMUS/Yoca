@@ -20,9 +20,9 @@ const MERCHANT_ADDRESS = process.env.SOLANA_MERCHANT_ADDRESS || "YourMerchantAdd
  * Tier pricing in SOL for Devnet payments
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
-  Lite: 0.1, // 0.1 SOL
-  Plus: 0.5, // 0.5 SOL
-  Pro: 1.0, // 1.0 SOL
+  Lite: 0.0001, // 0.0001 SOL
+  Plus: 0.0005, // 0.0005 SOL
+  Pro: 0.001, // 0.001 SOL
 };
 
 // Convert SOL to lamports
@@ -41,9 +41,14 @@ interface TransactionVerification {
  * Uses HELIUS_API_KEY environment variable.
  */
 function createHeliusConnection(): Connection {
-  const apiKey = process.env.HELIUS_API_KEY;
-  if (!apiKey) {
+  const apiKeyRaw = process.env.HELIUS_API_KEY;
+  if (!apiKeyRaw) {
     throw new Error("HELIUS_API_KEY is not configured");
+  }
+  // HELIUS_API_KEY may be a comma-separated list of keys; use the first valid one
+  const apiKey = apiKeyRaw.split(",").map((k) => k.trim()).find((k) => k.length > 0);
+  if (!apiKey) {
+    throw new Error("HELIUS_API_KEY contains no valid key");
   }
   // Use Helius Devnet endpoint
   const rpcUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
@@ -131,6 +136,7 @@ export async function verifySolanaTransaction(
       };
     }
 
+    // TODO: Hardcoded small amounts for Devnet testing. Replace with actual SOL conversion logic for Mainnet.
     const expectedAmountSol = TIER_SOL_AMOUNTS[tier];
     const expectedAmountLamports = Math.floor(expectedAmountSol * LAMPORTS_PER_SOL);
 
@@ -139,12 +145,15 @@ export async function verifySolanaTransaction(
 
     // Fetch parsed transaction
     console.log("[verifySolanaTransaction] Fetching transaction:", txId);
-    const transaction = await connection.getParsedTransaction(txId, "confirmed");
+    const transaction = await connection.getParsedTransaction(txId, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
 
     if (!transaction) {
       return {
         valid: false,
-        reason: "Transaction not found or not confirmed",
+        reason: "Transaction not found or not confirmed yet",
       };
     }
 
@@ -183,7 +192,8 @@ export async function verifySolanaTransaction(
       const innerInstructions = meta.innerInstructions || [];
 
       // Check for SystemProgram transfer in parsed format
-      for (const instruction of instructions) {
+      for (const inst of instructions) {
+        const instruction = inst as any;
         if (
           instruction.program === "system" &&
           instruction.parsed?.type === "transfer"
@@ -204,7 +214,8 @@ export async function verifySolanaTransaction(
       // If not found in top-level, check inner instructions
       if (!transferFound && innerInstructions.length > 0) {
         for (const inner of innerInstructions) {
-          for (const instruction of inner.instructions || []) {
+          for (const inst of inner.instructions || []) {
+            const instruction = inst as any;
             if (
               instruction.program === "system" &&
               instruction.parsed?.type === "transfer"

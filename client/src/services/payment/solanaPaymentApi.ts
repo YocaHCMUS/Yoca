@@ -29,20 +29,29 @@ export type VerifySolanaPaymentResponse = {
 export async function verifySolanaPayment(
   request: VerifySolanaPaymentRequest
 ): Promise<VerifySolanaPaymentResponse> {
-  const response = await fetch(`${import.meta.env.VITE_CLIENT_API_DOMAIN}/api/payments/verify-solana`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include", // Include auth cookies
-    body: JSON.stringify(request),
-  });
+  // NOTE: The backend mounts this router at /api/payment (singular).
+  // Do NOT change to /api/payments — that path does not exist.
+  const response = await fetch(
+    `${import.meta.env.VITE_CLIENT_API_DOMAIN}/api/payment/verify-solana`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // Include auth cookies
+      body: JSON.stringify(request),
+    }
+  );
 
-  const data = await response.json() as VerifySolanaPaymentResponse;
+  // Safely parse the response body — a non-JSON 404/500 page would crash .json()
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const data = isJson
+    ? (await response.json() as VerifySolanaPaymentResponse)
+    : ({ message: await response.text() } as Partial<VerifySolanaPaymentResponse>);
 
   if (!response.ok) {
-    throw new Error(data.message || "Failed to verify Solana payment");
+    const message = (data as any).message || `Verification API failed (HTTP ${response.status})`;
+    console.error("[verifySolanaPayment] Error response:", response.status, data);
+    throw new Error(message);
   }
 
-  return data;
+  return data as VerifySolanaPaymentResponse;
 }

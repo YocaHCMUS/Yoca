@@ -493,31 +493,61 @@ const app = new Hono()
           );
         }
 
-        // Create subscription in database
-        const subscription = {
-          userId,
-          stripeSubscriptionId: `solana-${txId}`, // Use txId as unique identifier
-          stripeCustomerId: `solana-${user.id}`, // Use user ID for Solana
-          planTier: tier as any,
-          status: "active" as const,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        };
+        // Create subscription in database directly (bypasses Stripe-specific upsertSubscription)
+        const solanaTxKey = `solana-${txId}`;
+        const solanaCustomerKey = `solana-${userId}`;
+        const periodStart = new Date();
+        const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-        const result = await upsertSubscription(subscription as any);
+        const [existing] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, solanaTxKey))
+          .limit(1);
+
+        let result;
+        if (!existing) {
+          const [inserted] = await db
+            .insert(subscriptions)
+            .values({
+              userId,
+              stripeSubscriptionId: solanaTxKey,
+              stripeCustomerId: solanaCustomerKey,
+              planTier: tier as any,
+              status: "active",
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
+              cancelAtPeriodEnd: false,
+            })
+            .returning();
+          result = inserted;
+        } else {
+          const [updated] = await db
+            .update(subscriptions)
+            .set({
+              planTier: tier as any,
+              status: "active",
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
+              updatedAt: new Date(),
+            })
+            .where(eq(subscriptions.stripeSubscriptionId, solanaTxKey))
+            .returning();
+          result = updated;
+        }
 
         // Record payment in history
         try {
           await db.insert(paymentHistory).values({
             userId,
-            subscriptionId: undefined, // Solana payments don't have subscription FK for now
-            amountCents: Math.floor(verification.amountUsd * 100),
+            // subscriptionId intentionally omitted — Solana payments use solanaTxKey, not a UUID FK
+            amountCents: Math.floor((verification.amountUsd ?? 0) * 100),
             currency: "usd",
             status: "succeeded",
             paymentMethodDetails: {
               type: "solana_transfer",
               txId,
-              amount: verification.amountSol,
+              amount: verification.amountSol ?? 0,
               merchant: verification.merchantAddress,
             },
           });
