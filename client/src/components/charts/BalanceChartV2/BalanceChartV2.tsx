@@ -1,17 +1,17 @@
 import client from "@/api/main.ts";
-import { useLocalization } from "@/contexts/LocalizationContext";
-import { useGet } from "@/hooks/useGet";
-import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { FilterSwitch } from "@/components/FilterSwitch";
+import { Flex } from "@/components/Flex";
+import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
-import { useMemo, useState } from "react";
-import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
-import { Layer, MultiSelect, Tag } from "@carbon/react";
-import { TknImg } from "@/components/TknImg";
-import { ChartWrapper } from "../shared";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
+import { Layer, MultiSelect, Tag } from "@carbon/react";
+import { useMemo, useState } from "react";
+import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
+import { ChartWrapper } from "../shared";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -52,7 +52,7 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
 export function BalanceChartV2({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
 
-  const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
+  const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("7D");
   const [selectedTokens, setSelectedTokens] = useState<string[] | null>(null);
 
   const portfolio = useGet(client.api.wallets.portfolio, 200, {
