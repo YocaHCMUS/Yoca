@@ -305,12 +305,21 @@ function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHisto
       const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
       if (mappedPlan) return mappedPlan;
     }
+    // If this was a Solana transfer, the backend stores transfer details
+    // in `paymentMethodDetails` (type, txId, amount (SOL)). Try to map
+    // the Solana tx -> subscription (stripeSubscriptionId = `solana-${txId}`)
+    // to recover the planTier.
+    const pm = item.paymentMethodDetails as any;
+    const solTxId = pm?.txId;
+    if (solTxId) {
+      const solSub = subscriptions.find((s) => s.stripeSubscriptionId === `solana-${solTxId}`);
+      if (solSub) return solSub.planTier;
+    }
 
     const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
     if (amountCents === 3900) return "Lite";
     if (amountCents === 19900) return "Plus";
     if (amountCents === 49900) return "Pro";
-
     return "-";
   };
 
@@ -345,7 +354,18 @@ function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHisto
               <td>{formatTimestamp(item.createdAt)}</td>
               <td>{resolvePlanLabel(item)}</td>
               <td className={styles.metricValue}>
-                {formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100)}
+                {
+                  // If Solana transfer, show SOL amount (more meaningful than tiny USD test values)
+                  ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId)
+                    ? (() => {
+                        const pm = item.paymentMethodDetails as any;
+                        const solAmt = pm?.amount;
+                        if (typeof solAmt === "number") return `${solAmt} SOL`;
+                        // fallback to USD if SOL amount missing
+                        return formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100);
+                      })()
+                    : formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100)
+                }
               </td>
               <td>
                 <span style={{ 
