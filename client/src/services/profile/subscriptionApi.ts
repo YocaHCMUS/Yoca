@@ -39,7 +39,17 @@ export interface PaymentHistory {
   status: "succeeded" | "failed" | "pending";
     planTier?: PlanTier | null;
     planName?: string | null;
-  paymentMethodDetails: { brand?: string; last4?: string } | null;
+    // For card payments this will include `brand`/`last4`.
+    // For Solana payments the backend stores a transfer object with `txId` and other fields.
+    paymentMethodDetails:
+        | { brand?: string; last4?: string }
+        | {
+                type: string;
+                txId?: string;
+                amount?: number;
+                merchant?: string;
+            }
+        | null;
   createdAt: string;
 }
 

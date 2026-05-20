@@ -287,7 +287,14 @@ function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHisto
   );
 
   const paymentIdLabel = (item: PaymentHistory) => {
-    return item.stripePaymentIntentId ?? item.stripeInvoiceId ?? "-";
+    // Prefer Stripe identifiers, but fall back to on-chain txId for Solana payments
+    return (
+      item.stripePaymentIntentId ??
+      item.stripeInvoiceId ??
+      // paymentMethodDetails may contain a Solana transfer object with txId
+      ((item.paymentMethodDetails as any)?.txId as string | undefined) ??
+      "-"
+    );
   };
 
   const resolvePlanLabel = (item: PaymentHistory) => {
