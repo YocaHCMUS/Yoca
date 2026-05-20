@@ -1,6 +1,9 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatAddress } from "@/util/format";
-import { BUBBLEMAPS_SOL_URL, SOLSCAN_ACCOUNT_URL, SOLSCAN_TX_URL } from "@/config/constants";
+import {
+  BUBBLEMAPS_SOL_URL,
+  SOLSCAN_ACCOUNT_URL,
+  SOLSCAN_TX_URL,
+} from "@/config/constants";
 import { Launch } from "@carbon/icons-react";
 import { useState } from "react";
 import styles from "./RecentTransactions.module.scss";
@@ -47,7 +50,7 @@ export const RecentTransactions = ({
       <div className={styles.tabsHeader}>
         <div
           className={`${styles.tab} ${styles.active}`}
-        // Always active since it's the main view now
+          // Always active since it's the main view now
         >
           {tr("token.recentTransactions.transactions")}
         </div>
@@ -87,7 +90,9 @@ export const RecentTransactions = ({
                   <td
                     className={`${styles.type} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {trade.kind == "buy" ? tr("token.recentTransactions.buy") : tr("token.recentTransactions.sell")}
+                    {trade.kind == "buy"
+                      ? tr("token.recentTransactions.buy")
+                      : tr("token.recentTransactions.sell")}
                   </td>
                   <td
                     className={`${styles.price} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
@@ -97,7 +102,10 @@ export const RecentTransactions = ({
                   <td
                     className={`${styles.amount} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
                   >
-                    {fmt.num.compact.unit(trade.amount, baseMeta.symbol.toUpperCase())}
+                    {fmt.num.compact.unit(
+                      trade.amount,
+                      baseMeta.symbol.toUpperCase(),
+                    )}
                   </td>
                   <td
                     className={`${styles.value} ${trade.kind == "buy" ? styles.buy : styles.sell}`}
@@ -111,7 +119,7 @@ export const RecentTransactions = ({
                       rel="noreferrer"
                       className={styles.link}
                     >
-                      {formatAddress(trade.fromAddress)}
+                      {fmt.text.address(trade.fromAddress)}
                     </a>
                   </td>
                   <td>
