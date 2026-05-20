@@ -69,6 +69,8 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  min-height: calc(100vh - var(--page-content-top-offset) - #{$spacing-07} - #{$spacing-05});
+  height: calc(100vh - var(--page-content-top-offset) - #{$spacing-07} - #{$spacing-05});
 }
 
 .loadingState,

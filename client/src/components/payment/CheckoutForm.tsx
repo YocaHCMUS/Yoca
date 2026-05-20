@@ -120,6 +120,8 @@ export function CheckoutForm({
           options={{
             layout: "tabs",
             paymentMethodOrder: ["card"],
+            terms: { card: "never" },
+            wallets: { link: "never" },
           }}
         />
       </div>
@@ -157,9 +159,6 @@ export function CheckoutForm({
         </button>
       </div>
 
-      <p className="text-center text-[11px] text-[#475569] mt-2">
-        🔒 Stripe test mode — use card <span className="font-mono text-[#64748b]">4242 4242 4242 4242</span>
-      </p>
     </form>
   );
 }

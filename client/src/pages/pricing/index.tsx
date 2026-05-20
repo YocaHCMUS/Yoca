@@ -16,10 +16,10 @@ const LITE_DATA = {
   name: "Lite",
   price: "$39",
   period: "/ month",
-  included: "1,500,000 CUs/MO",
-  apiLimit: "15 RPS",
-  overage: "$23/1M CUs",
-  websocket: "No",
+  included: "To be updated",
+  apiLimit: "To be updated",
+  overage: "To be updated",
+  websocket: "To be updated",
   cta: "Buy Now",
 };
 
@@ -27,10 +27,10 @@ const STANDARD_DATA = {
   name: "Standard",
   price: "FREE",
   period: "",
-  included: "30,000 CUs/MO",
-  apiLimit: "1 RPS",
-  overage: "Not Allowed",
-  websocket: "No",
+  included: "To be updated",
+  apiLimit: "To be updated",
+  overage: "To be updated",
+  websocket: "To be updated",
   cta: "Try For Free",
 };
 
@@ -38,14 +38,14 @@ const PLUS_TIER = {
   name: "Plus",
   price: "$199",
   period: "/ month",
-  included: "15,000,000 CUs/MO",
-  apiLimit: "50 RPS",
-  overage: "$9.9/1M CUs",
+  included: "To be updated",
+  apiLimit: "To be updated",
+  overage: "To be updated",
   features: [
-    "Unlimited API Keys & Custom API Access",
-    "Max 100 Million Compute Units/month",
-    "WebSocket: 500 concurrent connections",
-    "Priority Support",
+    "To be updated",
+    "To be updated",
+    "To be updated",
+    "To be updated",
   ],
   isMostPopular: true,
   accentColor: "#14F195" as const,
@@ -55,15 +55,15 @@ const PRO_TIER = {
   name: "Pro",
   price: "$499",
   period: "/ month",
-  included: "60,000,000 CUs/MO",
-  apiLimit: "100 RPS",
-  overage: "$6.9/1M CUs",
+  included: "To be updated",
+  apiLimit: "To be updated",
+  overage: "To be updated",
   features: [
-    "Unlimited API Keys & Custom API Access",
-    "Batch tokens API access",
-    "Unlimited Compute Units/month",
-    "WebSocket: 2,000 concurrent connections",
-    "Dedicated Support",
+    "To be updated",
+    "To be updated",
+    "To be updated",
+    "To be updated",
+    "To be updated",
   ],
   isMostPopular: false,
   accentColor: "#14F195" as const,
@@ -250,11 +250,8 @@ export default function PricingPage() {
                 </div>
 
                 {/* Metrics */}
-                <div className="space-y-5 flex-1">
-                  <MetricRow label="Included" value={col1.included} accent color="#14F195" />
-                  <MetricRow label="API Rate Limit" value={col1.apiLimit} />
-                  <MetricRow label="Overage Cost" value={col1.overage} accent color="#14F195" />
-                  <MetricRow label="WebSocket Access" value={col1.websocket} />
+                <div className="flex-1">
+                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
                 </div>
 
                 {/* Toggle + CTA */}
@@ -321,22 +318,9 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                {/* Metrics */}
-                <div className="space-y-5">
-                  <MetricRow label="Included" value={PLUS_TIER.included} accent color="#14F195" />
-                  <MetricRow label="API Rate Limit" value={PLUS_TIER.apiLimit} />
-                  <MetricRow label="Overage Cost" value={PLUS_TIER.overage} accent color="#14F195" />
+                <div className="flex-1">
+                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
                 </div>
-
-                {/* Features */}
-                <ul className="space-y-3 pt-4 border-t border-white/5 flex-1">
-                  {PLUS_TIER.features.map((f, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-[#cbd5e1] leading-relaxed">
-                      <CheckIcon color="#14F195" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
 
                 {/* CTA */}
                 <div className="pt-4 border-t border-white/10">
@@ -367,22 +351,9 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                {/* Metrics */}
-                <div className="space-y-5">
-                  <MetricRow label="Included" value={PRO_TIER.included} accent color="#14F195" />
-                  <MetricRow label="API Rate Limit" value={PRO_TIER.apiLimit} />
-                  <MetricRow label="Overage Cost" value={PRO_TIER.overage} accent color="#14F195" />
+                <div className="flex-1">
+                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
                 </div>
-
-                {/* Features */}
-                <ul className="space-y-3 pt-4 border-t border-white/5 flex-1">
-                  {PRO_TIER.features.map((f, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-[#cbd5e1] leading-relaxed">
-                      <CheckIcon color="#14F195" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
 
                 {/* CTA */}
                 <div className="pt-4 border-t border-white/10">

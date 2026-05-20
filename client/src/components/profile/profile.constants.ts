@@ -38,8 +38,8 @@ export const PROFILE_ACTIVITY_NAV_LABELS: Record<ProfileActivityNav, string> = {
 };
 
 export const ACCOUNT_TIER_LABELS: Record<ProfileAccountTier, string> = {
-    basic: "Basic",
-    premium: "Premium",
+    basic: "Lite",
+    premium: "Plus",
     pro: "Pro",
     enterprise: "Enterprise",
 };

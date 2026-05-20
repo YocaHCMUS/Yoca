@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
-  getUserSubscription,
-  getUserSubscriptions,
-  getUserPaymentHistory,
-  cancelSubscription,
-  upgradeSubscription,
-  type Subscription,
-  type PaymentHistory,
+    getUserSubscription,
+    getUserSubscriptions,
+    getUserPaymentHistory,
+    cancelSubscription,
+    upgradeSubscription,
+    type Subscription,
+    type PaymentHistory,
 } from "@/services/profile/subscriptionApi";
 import { Loading } from "@carbon/react";
 
@@ -355,6 +355,23 @@ function PaymentHistoryPanel({
     return item.stripePaymentIntentId ?? item.stripeInvoiceId ?? "-";
   };
 
+  const resolvePlanLabel = (item: PaymentHistory) => {
+    const directPlan = item.planName ?? item.planTier;
+    if (directPlan) return directPlan;
+
+    if (item.subscriptionId) {
+      const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
+      if (mappedPlan) return mappedPlan;
+    }
+
+    const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
+    if (amountCents === 3900) return "Lite";
+    if (amountCents === 19900) return "Plus";
+    if (amountCents === 49900) return "Pro";
+
+    return "-";
+  };
+
   if (history.length === 0) {
     return (
       <div className={styles.emptyStateContainer}>
@@ -384,13 +401,7 @@ function PaymentHistoryPanel({
           {history.map((item) => (
             <tr key={item.id}>
               <td>{fmt.datetime.datetime(item.createdAt)}</td>
-              <td>
-                {item.planName ??
-                  item.planTier ??
-                  (item.subscriptionId
-                    ? (planBySubscriptionId.get(item.subscriptionId) ?? "-")
-                    : "-")}
-              </td>
+              <td>{resolvePlanLabel(item)}</td>
               <td className={styles.metricValue}>
                 {fmt.num.currency(item.amountCents / 100)}
               </td>

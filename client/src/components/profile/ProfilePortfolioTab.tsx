@@ -11,10 +11,11 @@ import {
   requestLinkWalletChallenge,
   unlinkWalletAddress,
 } from "@/services/profile/profileApi";
+import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
+import type { ProfileAccountTier, ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import type { ProfileOverviewData } from "@/types/profile";
 import { AddLarge } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -24,6 +25,13 @@ interface ProfilePortfolioTabProps {
   linkedWallets: LinkedWalletRowPayload[];
   period: TimePeriod;
   onPeriodChange: (period: TimePeriod) => void;
+}
+
+function mapPlanTierToAccountTier(planTier: PlanTier | null): ProfileAccountTier {
+  if (planTier === "Pro") return "pro";
+  if (planTier === "Plus") return "premium";
+  if (planTier === "Lite") return "basic";
+  return "basic";
 }
 
 export function ProfilePortfolioTab({
@@ -44,12 +52,44 @@ export function ProfilePortfolioTab({
     () => linkedWalletRows.map((wallet) => wallet.walletAddress),
     [linkedWalletRows],
   );
+  const [currentPlanTier, setCurrentPlanTier] = useState<PlanTier | null>(null);
   const { walletOverviews, setWalletOverviews, loading } =
     useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
   useEffect(() => {
     setLinkedWalletRows(linkedWallets);
   }, [linkedWallets]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCurrentPlanTier() {
+      if (!user?.userId) {
+        setCurrentPlanTier(null);
+        return;
+      }
+
+      try {
+        const subscription = await getUserSubscription();
+        if (!active) return;
+        setCurrentPlanTier(subscription?.planTier ?? null);
+      } catch (error) {
+        console.error(
+          "[ProfilePortfolioTab] Failed to load current subscription:",
+          error,
+        );
+        if (active) {
+          setCurrentPlanTier(null);
+        }
+      }
+    }
+
+    loadCurrentPlanTier();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.userId]);
 
   const navigateToWalletDetail = (walletAddress: string) => {
     const nextPath = `/wallets/${encodeURIComponent(walletAddress)}`;
@@ -77,7 +117,7 @@ export function ProfilePortfolioTab({
       avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
       displayName: user?.displayName?.trim() || "Guest",
       userId: user?.userId,
-      accountTier: "pro",
+      accountTier: mapPlanTierToAccountTier(currentPlanTier),
       period,
       totalNetWorthUsd,
       tradeOrTxCount,
@@ -86,6 +126,7 @@ export function ProfilePortfolioTab({
       linkedWalletCount: linkedWalletAddresses.length,
     };
   }, [
+    currentPlanTier,
     period,
     user?.displayName,
     user?.userId,

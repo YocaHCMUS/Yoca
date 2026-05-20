@@ -187,13 +187,13 @@ export function LandingNavbar() {
                     </>
                   ) : (
                     <Link
-                      to="/market"
+                      to="/profile"
                       style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
                       onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
                       onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
                       onClick={() => setMobileOpen(false)}
                     >
-                      Go to Market
+                      Go to Profile
                     </Link>
                   )}
                 </li>
@@ -292,12 +292,12 @@ export function LandingNavbar() {
             ) : (
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 <Link
-                  to="/market"
+                  to="/profile"
                   style={{ ...btnPrimaryBase, border: "none", cursor: "pointer", textDecoration: "none" }}
                   onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
                   onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
                 >
-                  Go to Market
+                  Go to Profile
                 </Link>
                 <button
                   onClick={signOut}
