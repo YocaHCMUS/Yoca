@@ -25,7 +25,7 @@ export function TokenIdentityCell({
     emphasizeSymbol = false,
 
 }: TokenIdentityCellProps): React.ReactElement {
-    const normalizedSymbol = symbol?.trim() || "Unknown";
+    const normalizedSymbol = symbol?.trim().toUpperCase() || "UNKNOWN";
     const tooltipLabel = fullName?.trim() || normalizedSymbol;
     const source = imageUrl || null;
 

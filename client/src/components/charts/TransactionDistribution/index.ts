@@ -5,4 +5,3 @@
  */
 
 export { TransactionDistribution } from './TransactionDistribution';
-export type { TransactionDistributionProps } from './TransactionDistribution';

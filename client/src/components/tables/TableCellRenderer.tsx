@@ -2,14 +2,14 @@ import SparklineChart from "@/components/charts/SparklineChart";
 import { TranslateFunction } from "@/contexts/LocalizationContext.tsx";
 import type { WalletSwapTokenInfo } from "@/services/wallet/walletApi.ts";
 import {
-  CaretDown,
-  CaretUp,
-  Checkmark,
-  CheckmarkFilled,
-  CloseFilled,
-  Copy,
-  Login,
-  Subtract,
+    CaretDown,
+    CaretUp,
+    Checkmark,
+    CheckmarkFilled,
+    CloseFilled,
+    Copy,
+    Login,
+    Subtract,
 } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import React, { useState } from "react";
@@ -172,6 +172,7 @@ export const renderHash = (
   suffixLen: number = 4,
   specialIcon?: React.ReactNode,
   extraContext?: string,
+  bold?: boolean
 ) => {
   const truncated =
     value.length > prefixLen + suffixLen + 3
@@ -224,11 +225,12 @@ export const renderHash = (
       <code
         title={title}
         style={{
-          color: "var(--cds-text-secondary)",
-          fontSize: "0.75rem",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
+          color: 'var(--cds-text-secondary)',
+          fontSize: '0.75rem',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          ...(bold ? { fontWeight: 800 } : { fontWeight: 300 }),
         }}
       >
         {truncated}

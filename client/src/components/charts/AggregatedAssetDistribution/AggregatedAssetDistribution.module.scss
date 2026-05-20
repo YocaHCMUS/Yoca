@@ -7,11 +7,7 @@
     width: 100%;
 }
 
-.tablePanel {
-    min-width: 0;
-}
-
-.chartPanel {
+.panel {
     min-width: 0;
     display: flex;
     border: 1px solid var(--cds-border-subtle);

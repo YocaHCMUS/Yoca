@@ -18,7 +18,7 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 8px;
-  width: 920px;
+  width: 1040px;
   max-width: calc(100vw - #{$spacing-09});
   max-height: 85vh;
   overflow: hidden;
@@ -27,6 +27,37 @@
   flex-direction: column;
   gap: $spacing-05;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.rightColumn {
+  padding-left: $spacing-05;
+  padding-right: $spacing-01;
+  border-left: 1px solid $border-subtle;
+  height: 100%;
+  max-height: calc(85vh - #{$spacing-06} * 2 - #{$spacing-05} * 2);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border-subtle transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $border-subtle;
+    border-radius: 3px;
+  }
 }
 
 /* ── Header ──────────────────────────────────── */
@@ -58,8 +89,8 @@
   }
 }
 
-/* ── Swap visual row ─────────────────────────── */
-.swapRow {
+/* ── Transfer visual ─────────────────────────── */
+.transferVisual {
   display: flex;
   align-items: center;
   gap: $spacing-04;
@@ -74,7 +105,7 @@
   flex-direction: column;
   align-items: center;
   gap: $spacing-02;
-  min-width: 0; // allows text children to shrink below their natural size
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -90,17 +121,6 @@
   color: $text-primary;
   font-variant-numeric: tabular-nums;
   word-break: break-all;
-  text-align: center;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tokenSym {
-  @include type-style('body-compact-02');
-  color: $text-secondary;
-  font-weight: 600;
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -186,75 +206,6 @@
   gap: $spacing-01;
 }
 
-/* ── Balance Changes Section ────────────────── */
-.balanceChanges {
-  border-top: 1px solid $border-subtle;
-  padding-top: $spacing-05;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-04;
-}
-
-.sectionTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0;
-}
-
-.changesList {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-02;
-}
-
-.changeItem {
-  display: grid;
-  grid-template-columns: auto auto minmax(7.5rem, 1fr) auto;
-  gap: $spacing-03;
-  align-items: center;
-  padding: $spacing-03;
-  background-color: $layer-02;
-  border-radius: 4px;
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-.changeDirection {
-  @include type-style('body-compact-01');
-  font-weight: 600;
-  width: 1.25rem;
-  text-align: center;
-
-  &:has(+.changeAmount) {
-    color: $support-success;
-  }
-}
-
-.changeAmount {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-variant-numeric: tabular-nums;
-}
-
-.changeSymbol {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-weight: 600;
-}
-
-.changeTokenIdentity {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.changeMint {
-  @include type-style('body-compact-01');
-  color: $text-secondary;
-  font-size: 0.75rem;
-}
-
 /* ── Two-column layout ───────────────────────── */
 .twoColumnLayout {
   display: grid;
@@ -266,29 +217,6 @@
 @media (max-width: 640px) {
   .twoColumnLayout {
     grid-template-columns: 1fr;
-  }
-}
-
-.rightColumn {
-  padding-left: $spacing-05;
-  border-left: 1px solid $border-subtle;
-  height: 100%;
-  max-height: calc(85vh - #{$spacing-06} * 2 - #{$spacing-05} * 2);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: $border-subtle transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: $border-subtle;
-    border-radius: 3px;
   }
 }
 
@@ -323,6 +251,11 @@
   font-family: 'IBM Plex Mono', monospace;
 }
 
+.transferItem.highlighted {
+  outline: 1px solid $link-primary;
+  background-color: $layer-hover-02;
+}
+
 .transferDir {
   font-weight: 700;
   width: 1rem;
@@ -344,6 +277,21 @@
 
 .transferSpacer {
   flex: 1;
+}
+
+.transferFromTo {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  gap: 0;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.transferArrowSep {
+  color: $text-secondary;
+  font-size: 0.65rem;
+  flex-shrink: 0;
 }
 
 .transferAddrLabel {
@@ -372,6 +320,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-01;
+
 }
 
 /* ── Fee section ─────────────────────────────── */

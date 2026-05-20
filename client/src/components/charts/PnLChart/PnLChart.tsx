@@ -1,13 +1,12 @@
-import { ChartGrid, ChartGridItem } from "@/components/charts/shared";
+import { ChartGrid, ChartGridItem, ChartWrapper } from "@/components/charts/shared";
 import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  getChartGridConfig,
-  getThemedChartBaseOption,
-  useChartTheme,
-} from "@/hooks/useChartTheme";
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import {
   fetchPnLChart,
   type InferFetcherData,
@@ -19,10 +18,12 @@ import {
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ChartColumn, ChartCombo, ChartLineData } from "@carbon/react/icons";
-import { BaseChart } from "../Base/BaseChart";
-import sharedStyles from "@/components/charts/shared/ChartStyle.module.scss";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContentSwitcher, IconSwitch } from "@carbon/react";
+import { ChartBar, ChartCombo, ChartLine } from "@carbon/icons-react";
+import { Flex } from "@/components/Flex";
+import { FilterSwitch } from "@/components/FilterSwitch";
+import overwriteStyles from "@/styles/_overwrite.module.scss";
 
 type PnLChartData = InferFetcherData<typeof fetchPnLChart>;
 
@@ -37,9 +38,8 @@ export interface PnLChartProps {
   initialFilters?: {
     wallets?: string[];
   };
-
-  /** When false, no chart fetch (inactive comparison tab). */
   fetchEnabled?: boolean;
+  onDayClick?: (walletAddress: string, timestamp: number) => void;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -52,12 +52,13 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   initialViewMode = "both",
   initialFilters,
   fetchEnabled = true,
+  onDayClick,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
   const { selectedTimezone: timezone } = useChartContext();
   const [displayMode, setDisplayMode] = useState<"daily" | "cumulative" | "both">(
     initialViewMode,
@@ -105,7 +106,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         refetch(true);
         return;
       }
-
       setChartTimePeriod(nextPeriod);
     },
     [chartTimePeriod, refetch],
@@ -117,10 +117,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       cumulativePnLData: Array<{ timestamp: number; value: number }>,
       walletLabel?: string,
     ): EChartsOption => {
-      const profitColor = chartTheme.colorPalette[1];
-      const lossColor = chartTheme.colorPalette[2];
-      const cumulativeColor = chartTheme.colorPalette[0];
-      const baseOption = getThemedChartBaseOption(chartTheme);
+      const profitColor = CHART_COLOR_PALETTE[1];
+      const lossColor = CHART_COLOR_PALETTE[2];
+      const cumulativeColor = CHART_COLOR_PALETTE[0];
 
       const timestamps = dailyPnLData.map((item) => item.timestamp);
       const dailyValues = dailyPnLData.map((item) => item.value);
@@ -135,7 +134,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           Math.max(Math.abs(minValue), Math.abs(maxValue)) ||
           1;
         const padding = spread * 0.12;
-
         return {
           min: minValue - padding,
           max: maxValue + padding,
@@ -233,19 +231,23 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
       return {
         ...baseOption,
+        legend: undefined,
         title: walletLabel
           ? {
             text: walletLabel,
             left: 8,
             top: 8,
             textStyle: {
-              color: chartTheme.textColor,
+              color: baseOption.textStyle.color,
               fontSize: 16,
               fontWeight: "bold",
             },
           }
           : undefined,
-        ...getChartGridConfig,
+        grid: {
+          ...baseOption.grid,
+          top: walletLabel ? "3rem" : "1.5rem",
+        },
         tooltip: {
           ...baseOption.tooltip,
           trigger: "axis",
@@ -290,10 +292,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         ],
         yAxis,
         series,
-        legend: undefined
       };
     },
-    [chartTheme, timezone, tr, displayMode, fmt],
+    [baseOption, timezone, tr, displayMode, fmt],
   );
 
   const chartOptions = useMemo(() => {
@@ -334,6 +335,34 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     return [];
   }, [displayData, createChartOption]);
 
+  useEffect(() => {
+    if (!onDayClick || !chartRef.current) return;
+
+    const chartInstance = chartRef.current.getEchartsInstance();
+    const handler = (params: any) => {
+      if (params.componentType !== "series" || params.dataIndex == null) return;
+
+      const chartEntry = chartOptions[params.seriesIndex ?? 0];
+      if (!chartEntry) return;
+
+      const timestamps = displayData && "wallets" in displayData
+        ? displayData.wallets[params.seriesIndex ?? 0]?.dailyPnL.map((p) => p.timestamp)
+        : displayData && "dailyPnL" in displayData
+          ? displayData.dailyPnL.map((p) => p.timestamp)
+          : [];
+
+      const ts = timestamps[params.dataIndex];
+      if (ts != null) {
+        onDayClick(chartEntry.walletAddress, ts);
+      }
+    };
+
+    chartInstance.on("click", handler);
+    return () => {
+      chartInstance.off("click", handler);
+    };
+  }, [onDayClick, chartOptions, displayData]);
+
   const isEmpty =
     !displayData ||
     "error" in displayData ||
@@ -343,70 +372,51 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       (!("dailyPnL" in displayData) ||
         !displayData.dailyPnL ||
         displayData.dailyPnL.length === 0));
-  //  <span>{tr("charts.pnlChart.displayedData")}</span>
+
+  const displayModeIcons = [
+    { value: "daily" as const, icon: ChartBar, label: tr("charts.pnlChart.dailyPnL") },
+    { value: "cumulative" as const, icon: ChartLine, label: tr("charts.pnlChart.cumulativePnL") },
+    { value: "both" as const, icon: ChartCombo, label: tr("charts.pnlChart.both") },
+  ];
+
+  const periodOptions = [
+    { value: "7D" as const, label: tr("charts.balanceChart.window7d") },
+    { value: "30D" as const, label: tr("charts.balanceChart.window30d") },
+  ];
+
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={isEmpty}
       onRetry={() => refetch(false)}
+      toolbarLayout="stacked"
+      actions={
+        <Flex gap={8} align="center">
+          <ContentSwitcher
+            className={overwriteStyles.fltrOpt}
+            style={{ minWidth: 'auto' }}
+            selectedIndex={displayModeIcons.findIndex(o => o.value === displayMode)}
+            onChange={({ name }) => {
+              if (name) handleDisplayModeChange(name as "daily" | "cumulative" | "both");
+            }}
+            size="md"
+          >
+            {displayModeIcons.map(opt => (
+              <IconSwitch key={opt.value} name={opt.value} text={opt.label}>
+                <opt.icon size={16} />
+              </IconSwitch>
+            ))}
+          </ContentSwitcher>
+          <FilterSwitch
+            options={periodOptions}
+            value={chartTimePeriod}
+            onChange={(v) => handleChartPeriodChange(v as "7D" | "30D")}
+            width={120}
+          />
+        </Flex>
+      }
     >
-      <div className={`${sharedStyles.chartControls} ${sharedStyles.balanceChartControlArea}`}>
-        <div className={sharedStyles.balanceChartControlTopRow} data-html2canvas-ignore="true">
-          <div className={sharedStyles.balanceChartControlInputGroup}>
-            <button
-              type="button"
-              className={`${sharedStyles.chartToggleButton} ${displayMode === "daily" ? sharedStyles.active : ""}`}
-              onClick={() => handleDisplayModeChange("daily")}
-              aria-label={tr("charts.pnlChart.dailyPnL")}
-              title={tr("charts.pnlChart.dailyPnL")}
-              aria-pressed={displayMode === "daily"}
-            >
-              <ChartColumn size={18} />
-            </button>
-            <button
-              type="button"
-              className={`${sharedStyles.chartToggleButton} ${displayMode === "cumulative" ? sharedStyles.active : ""}`}
-              onClick={() => handleDisplayModeChange("cumulative")}
-              aria-label={tr("charts.pnlChart.cumulativePnL")}
-              title={tr("charts.pnlChart.cumulativePnL")}
-              aria-pressed={displayMode === "cumulative"}
-            >
-              <ChartLineData size={18} />
-            </button>
-            <button
-              type="button"
-              className={`${sharedStyles.chartToggleButton} ${displayMode === "both" ? sharedStyles.active : ""}`}
-              onClick={() => handleDisplayModeChange("both")}
-              aria-label={tr("charts.pnlChart.both")}
-              title={tr("charts.pnlChart.both")}
-              aria-pressed={displayMode === "both"}
-            >
-              <ChartCombo size={18} />
-            </button>
-          </div>
-
-          <div className={sharedStyles.balanceChartWindowToggleGroup}>
-            <button
-              type="button"
-              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartTimePeriod === "7D" ? sharedStyles.balanceChartWindowButtonActive : ""}`}
-              onClick={() => handleChartPeriodChange("7D")}
-              aria-pressed={chartTimePeriod === "7D"}
-            >
-              {tr("charts.balanceChart.window7d")}
-            </button>
-            <button
-              type="button"
-              className={`${sharedStyles.chartToggleButton} ${sharedStyles.balanceChartWindowButton} ${chartTimePeriod === "30D" ? sharedStyles.balanceChartWindowButtonActive : ""}`}
-              onClick={() => handleChartPeriodChange("30D")}
-              aria-pressed={chartTimePeriod === "30D"}
-            >
-              {tr("charts.balanceChart.window30d")}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {chartOptions.length > 0 && (
         <div
           style={{ display: "flex", flexDirection: "column", width: "100%" }}
@@ -434,6 +444,6 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           </ChartGrid>
         </div>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 };

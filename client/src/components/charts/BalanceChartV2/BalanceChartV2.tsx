@@ -1,7 +1,6 @@
 import client from "@/api/main.ts";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import { Flex } from "@/components/Flex";
-import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
 import { ONE_DAY_MS } from "@/config/constants";
@@ -12,6 +11,7 @@ import { Layer, MultiSelect, Tag } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { ChartWrapper } from "../shared";
+import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 
 // TODO: Design - clarify how many days of approximation is acceptable for "24h" change label
 type ChangeMetric = {
@@ -94,7 +94,8 @@ export function BalanceChartV2({ address }: { address: string }) {
       },
     },
     {
-      enabled: !!portfolio.data && selectedTokens != null,
+      enabled:
+        !!portfolio.data && selectedTokens != null && selectedTokens.length > 0,
       select: (data) =>
         Object.entries(data).map(([tokenAddress, points]) => ({
           key: tokenAddress,
@@ -117,7 +118,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         : []
       : [
           ...(tokenBalances.data ?? []),
-          // ...(totalBalance.data ? [totalBalance.data] : []),
+          ...(totalBalance.data ? [totalBalance.data] : []),
         ];
 
   const series24hChanges = useMemo(() => {
@@ -131,7 +132,7 @@ export function BalanceChartV2({ address }: { address: string }) {
   }, [balanceSeries]);
 
   return (
-    <ChartWrapper title="Balance History">
+    <ChartWrapper title={tr("charts.balanceChart.title")}>
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
@@ -139,18 +140,24 @@ export function BalanceChartV2({ address }: { address: string }) {
               className={overwriteStyles.smallPaddingMenuItem}
               id="token-selector"
               items={portfolio.data || []}
-              label="Select tokens"
+              label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <Flex gap={4} align="center">
-                  <TknImg
-                    size={25}
-                    alt={account.symbol || account.tokenAddress}
-                    loading={portfolio.isLoading}
-                    src={account.logoUri}
-                  />
-                  <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
-                </Flex>
+                // <Flex gap={4} align="center">
+                //   <TknImg
+                //     size={25}
+                //     alt={account.symbol || account.tokenAddress}
+                //     loading={portfolio.isLoading}
+                //     src={account.logoUri}
+                //   />
+                //   <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
+                // </Flex>
+                <TokenIdentityCell
+                  symbol={account.symbol || account.tokenAddress}
+                  fullName={account.name}
+                  imageUrl={account.logoUri}
+                  imageSize={20}
+                />
               )}
               selectionFeedback="top-after-reopen"
               onChange={(v) =>
@@ -163,8 +170,8 @@ export function BalanceChartV2({ address }: { address: string }) {
 
           <FilterSwitch
             options={[
-              { value: "7D", label: "7D" },
-              { value: "30D", label: "30D" },
+              { value: "7D", label: tr("charts.balanceChart.window7d") },
+              { value: "30D", label: tr("charts.balanceChart.window30d") },
             ]}
             value={timePeriod}
             onChange={(v) => setTimePeriod(v)}

@@ -11,6 +11,7 @@ const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 export const RiskTab: React.FC<WalletComparisonProp> = ({
   walletAddresses,
   fetchEnabled = true,
+  onDayClick,
 }) => {
   if (!walletAddresses || walletAddresses.length === 0) {
     return (
@@ -51,7 +52,7 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
 
       {/* Profit and loss */}
       <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
-        <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} />
+        <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} onDayClick={onDayClick} />
       </div>
 
       {/* Winrate */}

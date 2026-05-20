@@ -1,10 +1,10 @@
 import { TabContainer } from "@/components/tabContainer/tabContainer";
+import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup";
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { TranslationKeyPath } from "@/config/localization";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
 import { Button, Column, Grid, Search, Stack } from "@carbon/react";
 import { ChartLine, Close, Download, SearchAdvanced, Wallet, User } from "@carbon/react/icons";
@@ -160,6 +160,14 @@ export default function WalletsComparisonPage() {
   const { tr, lang } = useLocalization();
   const [searchParams] = useSearchParams();
 
+  const [dayPopupOpen, setDayPopupOpen] = useState(false);
+  const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
+  const handleDayClick = (walletAddress: string, timestamp: number) => {
+    setDayPopupTimestamp(timestamp);
+    setDayPopupOpen(true);
+  };
+
   useEffect(() => {
     setVisitedTabs((prev) => new Set(prev).add(activeTab));
   }, [activeTab]);
@@ -224,6 +232,7 @@ export default function WalletsComparisonPage() {
           key="wc-risk"
           walletAddresses={selectedWallets}
           fetchEnabled={activeTab === 2}
+          onDayClick={handleDayClick}
         />
       </div>,
     ],
@@ -454,6 +463,13 @@ export default function WalletsComparisonPage() {
           />
         </Column>
       </Grid>
+
+      <DayActivityPopup
+        isOpen={dayPopupOpen}
+        onClose={() => setDayPopupOpen(false)}
+        wallets={selectedWallets}
+        dayTimestamp={dayPopupTimestamp}
+      />
     </PageWrapper>
   );
 }

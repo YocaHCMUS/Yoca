@@ -220,8 +220,8 @@ export const translation = defineTranslation({
     balanceHistory: "Lịch sử số dư",
     tokenBalanceHistory: "Lịch sử số dư Token",
     profitLoss: "Lãi & Lỗ",
-    transfer: "Chuyển khoản",
-    swap: "Hoán đổi",
+    transfer: "Giao dịch chuyển",
+    swap: "Giao dịch swap",
     inflow: "Tiền vào",
     outflow: "Tiền ra",
     counterparties: "Đối tác",
@@ -277,6 +277,17 @@ export const translation = defineTranslation({
     identity: "Định danh",
     uniqueTokensTraded: "Token duy nhất đã giao dịch",
     tokenList: "Danh sách token",
+    trade: "{{count}} Giao dịch",
+    instructions: "Instructions",
+    view: "Xem",
+    hide: "Ẩn",
+    feePaid: "Đã trả",
+    feePayer: "Người trả",
+    feeReceivers: "Người nhận",
+    baseFee: "Phí cơ bản",
+    priorityFee: "Phí ưu tiên",
+    perToken: "/token",
+    account: "Tài khoản",
     totalVolume: "Tổng khối lượng",
     unknown: "Không xác định",
     unknownEntity: "Thực thể không xác định",
@@ -312,7 +323,7 @@ export const translation = defineTranslation({
     aiDataReadiness: "Mức sẵn sàng dữ liệu",
     aiDataAllAvailable: "Đã đủ dữ liệu",
     aiDataWaiting: "Đang chờ dữ liệu bắt buộc",
-    aiDataSwaps: "Hoán đổi",
+    aiDataSwaps: "Giao dịch swap",
     aiDataPortfolio: "Danh mục",
     aiDataFirstFunder: "Nguồn tài trợ đầu",
     aiDataIdentity: "Định danh",
@@ -341,6 +352,19 @@ export const translation = defineTranslation({
     aiFirstSeen: "Lần xuất hiện đầu",
     aiConsistencyAssessment: "Đánh giá độ nhất quán",
     aiSignals: "Tín hiệu",
+    from: "Từ ví",
+    to: "Đến ví",
+    swapDetails: "Chi tiết hoán đổi",
+    transferDetails: "Chi tiết chuyển",
+    sold: "Đã bán",
+    bought: "Đã mua",
+    swapped: "Đã hoán đổi",
+    forSwap: "sang",
+    totalValue: "Tổng giá trị",
+    transactionFee: "Phí giao dịch",
+    sent: "Đã gửi",
+    received: "Đã nhận",
+    transfersInTransaction: "Các lệnh chuyển trong giao dịch này ({{count}})",
   },
   dictionary: {
     tradingStrategy: {
@@ -471,7 +495,7 @@ export const translation = defineTranslation({
       dexRouter: {
         name: "Router DEX",
         description:
-          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router hoán đổi phi tập trung.",
+          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router swap phi tập trung.",
       },
       bridge: {
         name: "Cầu nối",
@@ -508,7 +532,7 @@ export const translation = defineTranslation({
       "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
     recentTrades: "Giao dịch gần đây",
     recentTradesDesc:
-      "Các giao dịch hoán đổi token gần nhất trên các sàn giao dịch.",
+      "Các giao dịch Giao dịch swap token gần nhất trên các sàn giao dịch.",
     marketHeatmapDescription: "Bản đồ nhiệt các token theo vốn hóa",
     marketCap: "Vốn hóa",
     volume24h: "Khối lượng 24h",
@@ -543,7 +567,7 @@ export const translation = defineTranslation({
       "Theo dõi các token yêu thích của bạn và giám sát hiệu suất của chúng ở một nơi duy nhất.",
     tradesTitle: "Hoạt động thị trường & Điểm nổi bật",
     tradesSubtitle:
-      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch hoán đổi mới nhất trên các sàn giao dịch phi tập trung.",
+      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch Giao dịch swap mới nhất trên các sàn giao dịch phi tập trung.",
     filterAll: "Tất cả",
     filterGreaterThan: ">{{val}}",
     selectToken: "Chọn một token để xem chi tiết",
@@ -867,7 +891,7 @@ export const translation = defineTranslation({
     transactionType: "Loại giao dịch",
     allTypes: "Tất cả loại",
     trades: "Giao dịch",
-    transfers: "Chuyển khoản",
+    transfers: "Giao dịch chuyển",
     deposits: "Nạp tiền",
     withdrawals: "Rút tiền",
     wallets: "Ví",
@@ -885,7 +909,7 @@ export const translation = defineTranslation({
 
     // Chart specific
     balanceChart: {
-      title: "Xu hướng số dư",
+      title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
       date: "Ngày",
@@ -945,6 +969,7 @@ export const translation = defineTranslation({
         topNFilter: "Bộ lọc Top N",
         minPctFilter: "Bộ lọc Min %",
       },
+      filtersMenu: "Bộ lọc",
       legend: {
         clickToHide: "Nhấp để ẩn {name}",
         clickToShow: "Nhấp để hiển thị {name}",
@@ -1423,8 +1448,8 @@ export const translation = defineTranslation({
       title: "Hoạt động",
       unavailableTitle: "Hoạt động không có sẵn",
       unavailableDescription: "Không thể tải dữ liệu hoạt động ngay bây giờ.",
-      swapsTableTitle: "Giao dịch hoán đổi",
-      transfersTableTitle: "Chuyển khoản",
+      swapsTableTitle: "Giao dịch swap",
+      transfersTableTitle: "Giao dịch chuyển",
       tableHeaders: {
         swaps: {
           wallet: "Ví",

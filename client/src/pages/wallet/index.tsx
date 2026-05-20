@@ -3,29 +3,29 @@ import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDi
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
-  FilterType,
-  type FilterConfig,
-  SortType,
-  Table,
-  tableHeaderLabel,
+    FilterType,
+    type FilterConfig,
+    SortType,
+    Table,
+    tableHeaderLabel,
 } from "@/components/tables/Table.tsx";
 import {
-  renderBase,
-  renderCode,
-  renderDateTime,
-  renderHash,
-  renderReducedNumber,
-  renderTokenCell,
+    renderBase,
+    renderCode,
+    renderDateTime,
+    renderHash,
+    renderReducedNumber,
+    renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
-import { TknImg } from "@/components/TknImg";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
+import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
-  AiAnalysisTab,
-  type AiAnalysisDependencyItem,
+    AiAnalysisTab,
+    type AiAnalysisDependencyItem,
 } from "@/components/wallet/AiAnalysis/index.ts";
 import {
-  WalletReportTemplate,
-  type WalletReportSection,
+    WalletReportTemplate,
+    type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -36,59 +36,61 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  fetchWalletPortfolio,
-  fetchWalletOverview,
-  fetchWalletIntelligence,
-  fetchWalletAiAnalysis,
-  type WalletSwap,
-  type WalletTransfer,
-  type WalletPortfolioItem,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
-  type WalletSwapTokenChange,
-  type WalletSwapTokenInfo,
-  type WalletAiAnalysisLanguage,
-  type WalletAiAnalysisResponse,
+    fetchWalletSwaps,
+    fetchWalletTransfers,
+    fetchWalletPortfolio,
+    fetchWalletOverview,
+    fetchWalletIntelligence,
+    fetchWalletAiAnalysis,
+    type WalletSwap,
+    type WalletTransfer,
+    type WalletPortfolioItem,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletPageInfo,
+    type WalletSwapTokenChange,
+    type WalletSwapTokenInfo,
+    type WalletAiAnalysisLanguage,
+    type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
-  Activity,
-  AiGenerate,
-  ChartLine,
-  ChevronDown,
-  Download,
-  Star,
-  StarFilled,
-  User,
-  Wallet,
+    Activity,
+    AiGenerate,
+    ChartLine,
+    ChevronDown,
+    Download,
+    Star,
+    StarFilled,
+    User,
+    Wallet,
 } from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
+    buildPortfolioMetaMap,
+    mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-  TokenAverageTradePrice,
-  TokenDetailsDemo,
+    TokenAverageTradePrice,
+    TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
+import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 
@@ -320,6 +322,12 @@ export default function WalletPage() {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
+
+  const [dayPopupOpen, setDayPopupOpen] = useState(false);
+  const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
     () => flattenLoadedPages(transferPages),
@@ -398,7 +406,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
+            transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -502,76 +510,14 @@ export default function WalletPage() {
       const boughtToken = Array.isArray(row)
         ? (row[3] as WalletSwapTokenChange | undefined)
         : undefined;
-      const soldSymbol = soldToken?.symbol
-        ? String(soldToken.symbol).toUpperCase()
-        : "UNK";
-      const boughtSymbol = boughtToken?.symbol
-        ? String(boughtToken.symbol).toUpperCase()
-        : "UNK";
       const pairLabel = String(value || "").replace(/,/g, " → ");
 
       return (
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            minWidth: 0,
-          }}
-        >
-          <span
-            style={{
-              position: "relative",
-              width: 30,
-              height: 30,
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: 999,
-                overflow: "hidden",
-                boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.45)",
-              }}
-            >
-              <TknImg
-                src={soldToken?.logoUri ?? null}
-                alt={soldToken?.name ?? soldSymbol}
-                size={30}
-              />
-            </span>
-            <span
-              style={{
-                position: "absolute",
-                right: -2,
-                bottom: -2,
-                borderRadius: 999,
-                overflow: "hidden",
-                boxShadow: "0 0 0 2px var(--cds-layer, #fff)",
-              }}
-            >
-              <TknImg
-                src={boughtToken?.logoUri ?? null}
-                alt={boughtToken?.name ?? boughtSymbol}
-                size={14}
-              />
-            </span>
-          </span>
-          <span
-            style={{
-              display: "inline-flex",
-              flexDirection: "column",
-              minWidth: 0,
-              lineHeight: 1.2,
-            }}
-          >
-            <span style={{ color: "var(--cds-text-primary)" }}>
-              {pairLabel}
-            </span>
-          </span>
-        </span>
+        <SwapPairCell
+          soldToken={soldToken ?? null}
+          boughtToken={boughtToken ?? null}
+          pairLabel={pairLabel}
+        />
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -616,6 +562,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
       );
     },
     (value: string) => {
@@ -626,6 +573,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -1305,11 +1253,10 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${
-          typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+          ? transfer.tokenSymbol
+          : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1394,6 +1341,10 @@ export default function WalletPage() {
               minHeight={400}
               autoRefresh
               initialFilters={{ wallets: [walletAddress] }}
+              onDayClick={(_wallet, ts) => {
+                setDayPopupTimestamp(ts);
+                setDayPopupOpen(true);
+              }}
             />
           </div>
         </div>
@@ -1477,12 +1428,12 @@ export default function WalletPage() {
                 }
               }}
               loading={swapLoading && loadedSwaps.length === 0}
-              // serverPagination={{
-              //   enabled: true,
-              //   hasMore: swapHasMore,
-              //   isLoading: swapLoading,
-              //   onPageChange: handleSwapPageChange,
-              // }}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: swapHasMore,
+            //   isLoading: swapLoading,
+            //   onPageChange: handleSwapPageChange,
+            // }}
             />
           </div>
           <div className={styles.chartSection}>
@@ -1497,13 +1448,20 @@ export default function WalletPage() {
               dataEntries={transferData}
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
+              onRowClick={(_row, rowIndex) => {
+                const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                if (transfer) {
+                  setSelectedTransfer(transfer);
+                  setTransferModalOpen(true);
+                }
+              }}
               loading={transferLoading && loadedTransfers.length === 0}
-              // serverPagination={{
-              //   enabled: true,
-              //   hasMore: transferHasMore,
-              //   isLoading: transferLoading,
-              //   onPageChange: handleTransferPageChange,
-              // }}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: transferHasMore,
+            //   isLoading: transferLoading,
+            //   onPageChange: handleTransferPageChange,
+            // }}
             />
           </div>
         </div>
@@ -1561,7 +1519,7 @@ export default function WalletPage() {
               intelligenceAvailable
                 ? "available"
                 : intelligenceLoading ||
-                    (intelligenceEnabled && intelligenceReport == null)
+                  (intelligenceEnabled && intelligenceReport == null)
                   ? "fetching"
                   : "no_data";
 
@@ -1864,11 +1822,10 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${
-            typeof transfer.tokenSymbol === "string" &&
+          `${typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-              ? transfer.tokenSymbol
-              : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -2008,8 +1965,7 @@ export default function WalletPage() {
               names={[
                 tr("walletPage.overview"),
                 tr("walletPage.holdings"),
-                tr("walletPage.activityRisk"),
-                "Forensic Audit",
+                tr("walletPage.activity"),
                 tr("walletPage.aiAnalysis"),
               ]}
               tabIcons={[
@@ -2048,6 +2004,21 @@ export default function WalletPage() {
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         swap={selectedSwap}
+        walletAddress={walletAddress}
+      />
+
+      <TransferDetailModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        transfer={selectedTransfer}
+        walletAddress={walletAddress}
+      />
+
+      <DayActivityPopup
+        isOpen={dayPopupOpen}
+        onClose={() => setDayPopupOpen(false)}
+        wallets={[walletAddress]}
+        dayTimestamp={dayPopupTimestamp}
       />
     </PageWrapper>
   );

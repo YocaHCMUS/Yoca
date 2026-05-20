@@ -4,10 +4,9 @@ import type { EChartsOption } from "echarts";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  useChartTheme,
-  getThemedChartBaseOption,
-  getChartGridConfig,
-} from "@/hooks/useChartTheme";
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import { useChartContext } from "@/contexts/ChartContext";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 import type { PeriodOption } from "@/config/periodOptions";
@@ -26,6 +25,7 @@ import { Table } from "@/components/tables/Table";
 import type { TableColumnHeader } from "@/components/tables/Table";
 import tableStyles from "@/components/tables/Table.module.scss";
 import styles from "./WalletSingleBalanceChart.module.scss";
+import { getChartGridConfig } from "@/hooks/useChartTheme";
 
 type BalanceTrendData = InferFetcherData<typeof fetchBalanceTrend>;
 
@@ -150,7 +150,7 @@ export function WalletSingleBalanceChart({
   const chartTitle = title || tr("charts.walletSingleBalanceChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
   const { selectedTimezone: timezone } = useChartContext();
 
   const [chartWindowDays, setChartWindowDays] = useState<7 | 30>(() =>
@@ -326,33 +326,31 @@ export function WalletSingleBalanceChart({
       return null;
     }
 
-    const base = getThemedChartBaseOption(chartTheme);
-    const color = chartTheme.colorPalette[0] ?? "#1890ff";
+    const color = CHART_COLOR_PALETTE[0];
 
     return {
-      ...base,
-      ...getChartGridConfig,
+      ...baseOption,
       legend: { show: false },
       xAxis: {
-        ...base.xAxis,
+        ...baseOption.xAxis,
         type: "time",
         boundaryGap: false as never,
         axisLabel: {
-          ...base.xAxis?.axisLabel,
+          ...baseOption.xAxis?.axisLabel,
           formatter: (value: number) =>
             formatTimestampWithTimezone(value, timezone, "MMM dd"),
         },
       },
       yAxis: {
-        ...base.yAxis,
+        ...baseOption.yAxis,
         type: "value",
         axisLabel: {
-          ...base.yAxis?.axisLabel,
+          ...baseOption.yAxis?.axisLabel,
           formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       tooltip: {
-        ...base.tooltip,
+        ...baseOption.tooltip,
         trigger: "axis",
         formatter: (params) =>
           formatAxisTooltip(
@@ -366,7 +364,7 @@ export function WalletSingleBalanceChart({
         {
           name: selectedWallet.walletLabel,
           type: "line",
-          smooth: true,
+          smooth: false,
           data: windowedPoints.map((point) => [point.timestamp, point.value]),
           showSymbol: windowedPoints.length <= 1,
           symbolSize: windowedPoints.length <= 1 ? 8 : 4,
@@ -393,7 +391,7 @@ export function WalletSingleBalanceChart({
         },
       ],
     };
-  }, [selectedWallet, windowedPoints, chartTheme, fmt, timezone]);
+  }, [selectedWallet, windowedPoints, baseOption, fmt, timezone]);
 
   const tableHeaders = useMemo<TableColumnHeader[]>(
     () => [

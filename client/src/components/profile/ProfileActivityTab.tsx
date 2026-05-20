@@ -274,6 +274,7 @@ export function ProfileActivityTab({
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         swap={selectedSwap}
+        walletAddress={selectedSwap?.walletAddress ?? walletAddresses[0] ?? ""}
       />
     </section>
   );

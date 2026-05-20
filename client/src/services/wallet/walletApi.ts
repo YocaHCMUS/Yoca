@@ -95,6 +95,99 @@ export interface WalletPageInfo {
   source: "cache" | "provider" | "mixed";
 }
 
+export interface TokenHourlyVolume {
+  hour: number;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+}
+
+export interface WalletDayToken {
+  address: string;
+  symbol: string;
+  logoUri: string | null;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  buyAmount: number;
+  sellAmount: number;
+  totalVolumeUsd: number;
+  hourlyVolumes: TokenHourlyVolume[];
+}
+
+export interface WalletDaySwapSummary {
+  transactionHash: string;
+  timestamp: string;
+  pair: string;
+  valueUsd: number;
+  action: "buy" | "sell";
+  soldSymbol: string | null;
+  boughtSymbol: string | null;
+  soldAmount: number;
+  boughtAmount: number;
+}
+
+export interface WalletDayActivitySummary {
+  walletAddress: string;
+  date: string;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  buyTxCount: number;
+  sellTxCount: number;
+  allTokens: WalletDayToken[];
+  totalTokensTraded: number;
+  swaps: WalletDaySwapSummary[];
+}
+
+export interface WalletTxTransfer {
+  from: string;
+  to: string;
+  mint: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  amount: number;
+  amountUsd: number | null;
+}
+
+export interface WalletFeeReceiver {
+  address: string;
+  amount: number;
+  amountUsd: number | null;
+  label: string | null;
+}
+
+export interface WalletTxDetail {
+  transactionHash: string;
+  timestamp: string;
+  pair: string;
+  valueUsd: number;
+  action: "buy" | "sell";
+  transfers: WalletTxTransfer[];
+  feePaid: number;
+  feePaidUsd: number | null;
+  feePayer: string;
+  feeReceivers: WalletFeeReceiver[];
+}
+
+export interface WalletInnerInstruction {
+  index: number;
+  programId: string;
+  programLabel: string | null;
+  accounts: string[];
+}
+
+export interface WalletInstruction {
+  index: number;
+  programId: string;
+  programLabel: string | null;
+  accounts: string[];
+  innerInstructions: WalletInnerInstruction[];
+}
+
+export interface WalletTxInstructionDetail {
+  transactionHash: string;
+  instructions: WalletInstruction[];
+}
+
 // export interface WalletSwapsResponse {
 //   address: string;
 //   chain?: string;
@@ -569,6 +662,67 @@ export async function fetchWalletAudit(
   return data as WalletAuditReport;
 }
 
+export async function fetchDayActivitySummary(
+  address: string,
+  dayMs: number,
+): Promise<WalletDayActivitySummary> {
+  const url = client.api.wallets["day-activity"].$url({
+    query: { address, dayMs: String(dayMs) },
+  });
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as WalletDayActivitySummary;
+}
+
+export interface TokenPriceChartPoint {
+  timestampMs: number;
+  price: number;
+}
+
+export interface TokenPriceChartResponse {
+  items: TokenPriceChartPoint[];
+}
+
+export async function fetchTokenPriceChartForDay(
+  tokenAddress: string,
+  dayMs: number,
+): Promise<TokenPriceChartResponse> {
+  const url = client.api.wallets["token-price-chart"].$url({
+    query: { address: tokenAddress, dayMs: String(dayMs) },
+  });
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as TokenPriceChartResponse;
+}
+
+export async function fetchTxDetail(
+  address: string,
+  signature: string,
+): Promise<WalletTxDetail> {
+  const url = client.api.wallets["tx-detail"].$url({
+    query: { address, signature },
+  });
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as WalletTxDetail;
+}
+
+export async function fetchTxInstructions(
+  address: string,
+  signature: string,
+): Promise<WalletTxInstructionDetail> {
+  const url = client.api.wallets["tx-instructions"].$url({
+    query: { address, signature },
+  });
+  const response = await fetch(url.toString(), { credentials: "include" });
+  await handleResponse(response);
+  const data = await response.json();
+  return data as WalletTxInstructionDetail;
+}
+
 export const walletApi = {
   fetchWalletOverview,
   fetchWalletPortfolio,
@@ -581,7 +735,10 @@ export const walletApi = {
   fetchWalletIntelligence,
   fetchWalletAiAnalysis,
   fetchWalletAudit,
-  // Aliases for convenience
+  fetchDayActivitySummary,
+  fetchTokenPriceChartForDay,
+  fetchTxDetail,
+  fetchTxInstructions,
   getOverview: fetchWalletOverview,
   getPortfolio: fetchWalletPortfolio,
   getTransfers: fetchWalletTransfers,
@@ -593,4 +750,8 @@ export const walletApi = {
   getIntelligence: fetchWalletIntelligence,
   getAiAnalysis: fetchWalletAiAnalysis,
   getAudit: fetchWalletAudit,
+  getDayActivitySummary: fetchDayActivitySummary,
+  getTokenPriceChartForDay: fetchTokenPriceChartForDay,
+  getTxDetail: fetchTxDetail,
+  getTxInstructions: fetchTxInstructions,
 };

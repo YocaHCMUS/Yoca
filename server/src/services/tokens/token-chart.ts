@@ -20,6 +20,7 @@ import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gte, lte } from "drizzle-orm";
 import type { CG_TokenMarketChart } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
+import { fetchBirdeyeJson } from "../wallet/fetchers/walletDataFetcher.service.js";
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
 export async function fetch24hTokenMarketChart(
@@ -346,4 +347,134 @@ export async function getDailyTokenMarketChart(
   }
 
   return cached;
+}
+
+async function fetchAndCacheHistoricalRange(
+  tokenAddress: string,
+  fromSec: number,
+  toSec: number,
+): Promise<void> {
+  const json = await fetchBirdeyeJson("/defi/history_price", "GET", {
+    searchParams: {
+      address: tokenAddress,
+      address_type: "token",
+      type: "15m",
+      time_from: fromSec,
+      time_to: toSec,
+      ui_amount_mode: "raw",
+    },
+  });
+
+  if (!json?.success || !Array.isArray(json?.data?.items)) return;
+
+  const items = json.data.items as { unixTime: number; value: number }[];
+  if (items.length === 0) return;
+
+  const nowMs = Date.now();
+  const points: TokenMarketChartHourlyInsert[] = items.map((item) => ({
+    address: tokenAddress,
+    unixTimestampMs: item.unixTime * 1000,
+    price: item.value,
+    marketCap: 0,
+    totalVolume: 0,
+    unixUpdatedAtMs: nowMs,
+  }));
+
+  await db
+    .insert(tokenMarketChartHourly)
+    .values(points)
+    .onConflictDoUpdate({
+      target: [tokenMarketChartHourly.address, tokenMarketChartHourly.unixTimestampMs],
+      set: {
+        price: excluded(tokenMarketChartHourly.price),
+        marketCap: excluded(tokenMarketChartHourly.marketCap),
+        totalVolume: excluded(tokenMarketChartHourly.totalVolume),
+        unixUpdatedAtMs: excluded(tokenMarketChartHourly.unixUpdatedAtMs),
+      },
+    });
+}
+
+
+function isHourlyChartComplete(
+  rows: { unixTimestampMs: number; unixUpdatedAtMs: number }[],
+  _fromMs: number,
+  _toMs: number,
+): boolean {
+  if (rows.length < 8) return false;
+  const span = rows[rows.length - 1].unixTimestampMs - rows[0].unixTimestampMs;
+  return span >= 18 * 60 * 60 * 1000;
+}
+
+export async function getTokenPriceChartForDay(
+  tokenAddress: string,
+  dayMs: number,
+): Promise<{ timestampMs: number; price: number }[] | null> {
+  if (!tokenAddress) return null;
+
+  const fromMs = Math.floor(dayMs / 86_400_000) * 86_400_000;
+  const toMs = fromMs + 86_400_000;
+
+  const cached = await db
+    .select({
+      unixTimestampMs: tokenMarketChartHourly.unixTimestampMs,
+      price: tokenMarketChartHourly.price,
+      unixUpdatedAtMs: tokenMarketChartHourly.unixUpdatedAtMs,
+    })
+    .from(tokenMarketChartHourly)
+    .where(
+      and(
+        eq(tokenMarketChartHourly.address, tokenAddress),
+        gte(tokenMarketChartHourly.unixTimestampMs, fromMs),
+        lte(tokenMarketChartHourly.unixTimestampMs, toMs),
+      ),
+    )
+    .orderBy(tokenMarketChartHourly.unixTimestampMs);
+
+  if (isHourlyChartComplete(cached, fromMs, toMs)) {
+    return cached.map((r) => ({
+      timestampMs: r.unixTimestampMs,
+      price: Number(r.price),
+    }));
+  }
+
+  const latestUpdatedAt = cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
+  const isStale = Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
+
+  if (cached.length === 0 || isStale) {
+    await fetchAndCacheHistoricalRange(
+      tokenAddress,
+      Math.floor(fromMs / 1000),
+      Math.floor(toMs / 1000),
+    );
+
+    const refreshed = await db
+      .select({
+        unixTimestampMs: tokenMarketChartHourly.unixTimestampMs,
+        price: tokenMarketChartHourly.price,
+        unixUpdatedAtMs: tokenMarketChartHourly.unixUpdatedAtMs,
+      })
+      .from(tokenMarketChartHourly)
+      .where(
+        and(
+          eq(tokenMarketChartHourly.address, tokenAddress),
+          gte(tokenMarketChartHourly.unixTimestampMs, fromMs),
+          lte(tokenMarketChartHourly.unixTimestampMs, toMs),
+        ),
+      )
+      .orderBy(tokenMarketChartHourly.unixTimestampMs);
+
+    if (!isHourlyChartComplete(refreshed, fromMs, toMs)) {
+      return null;
+    }
+
+    return refreshed.map((r) => ({
+      timestampMs: r.unixTimestampMs,
+      price: Number(r.price),
+    }));
+  }
+
+  return cached.map((r) => ({
+    timestampMs: r.unixTimestampMs,
+    price: Number(r.price),
+  }));
 }
