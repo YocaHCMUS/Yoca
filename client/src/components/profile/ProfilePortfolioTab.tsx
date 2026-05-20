@@ -7,9 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import {
-  linkWalletAddress,
-  requestLinkWalletChallenge,
-  unlinkWalletAddress,
+    linkWalletAddress,
+    requestLinkWalletChallenge,
+    unlinkWalletAddress,
 } from "@/services/profile/profileApi";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";

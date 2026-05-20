@@ -118,7 +118,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         : []
       : [
           ...(tokenBalances.data ?? []),
-          ...(totalBalance.data ? [totalBalance.data] : []),
+          // ...(totalBalance.data ? [totalBalance.data] : []),
         ];
 
   const series24hChanges = useMemo(() => {
