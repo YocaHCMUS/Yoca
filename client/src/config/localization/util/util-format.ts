@@ -49,6 +49,35 @@ export function defineTextFormat() {
         }
       }
     },
+    txHash(
+      hash: string | null | undefined,
+      opts: AddressFormattingOptions = {},
+    ): string {
+      if (!hash) return nullDisplay;
+
+      const maxLength = opts.maxLength ?? 16;
+      const position = opts.position ?? "middle";
+
+      if (hash.length <= maxLength) {
+        return hash;
+      }
+
+      const ellipsis = ELLIPSIS;
+
+      switch (position) {
+        case "start": {
+          return `${ellipsis}${hash.slice(-maxLength)}`;
+        }
+        case "end": {
+          return `${hash.slice(0, maxLength)}${ellipsis}`;
+        }
+        case "middle":
+        default: {
+          const sideLength = Math.floor(maxLength / 2);
+          return `${hash.slice(0, sideLength)}${ellipsis}${hash.slice(-sideLength)}`;
+        }
+      }
+    },
   };
 }
 

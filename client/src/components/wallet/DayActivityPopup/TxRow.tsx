@@ -1,11 +1,10 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatAddress } from "@/util/format";
 import {
-  fetchTxDetail,
-  fetchTxInstructions,
-  type WalletDaySwapSummary,
-  type WalletTxDetail,
-  type WalletTxInstructionDetail,
+    fetchTxDetail,
+    fetchTxInstructions,
+    type WalletDaySwapSummary,
+    type WalletTxDetail,
+    type WalletTxInstructionDetail,
 } from "@/services/wallet/walletApi";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 import { CpyBtn } from "@/components/CpyBtn";
@@ -153,7 +152,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
           >
-            {formatAddress(swap.transactionHash)}
+            {fmt.text.txHash(swap.transactionHash)}
             <Launch size={12} />
           </a>
           {/* <CpyBtn size="sm" copyWhat={swap.transactionHash} align="bottom" /> */}
@@ -212,7 +211,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                           }
                         }}
                       >
-                        {formatAddress(otherAddr)}
+                        {fmt.text.address(otherAddr)}
                       </span>
                       <CpyBtn size="sm" copyWhat={otherAddr} align="top" />
                     </span>
@@ -255,7 +254,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                     }
                   }}
                 >
-                  {formatAddress(detail.feePayer)}
+                  {fmt.text.address(detail.feePayer)}
                 </span>
                 <CpyBtn size="sm" copyWhat={detail.feePayer} align="top" />
               </span>

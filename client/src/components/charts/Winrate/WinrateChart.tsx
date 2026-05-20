@@ -10,7 +10,6 @@ import {
 } from '@/util/carbon-chart-base';
 import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
 import { isChartSuccess } from '@/util/chart-helpers';
-import { formatAddress } from '@/util/format';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
@@ -65,11 +64,11 @@ export function WinrateChart({
   });
 
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) {
+    if (!isChartSuccess(data, 'wallets') || data.wallets.length == 0) {
       return null;
     }
 
-    const categories = data.wallets.map(w => formatAddress(w.walletAddress));
+    const categories = data.wallets.map(w => fmt.text.address(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
 
     return {
@@ -141,7 +140,7 @@ export function WinrateChart({
       const option: EChartsOption = {
         ...baseOption,
         title: wallet.walletAddress ? {
-          text: formatAddress(wallet.walletAddress),
+          text: fmt.text.address(wallet.walletAddress),
           left: 8,
           top: 8,
           textStyle: {
