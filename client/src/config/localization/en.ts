@@ -311,6 +311,7 @@ export const translation = {
     identity: "Identity",
     uniqueTokensTraded: "Unique tokens traded",
     tokenList: "Token list",
+    trade: "{{count}} Transactions(s)",
     instructions: "Instructions",
     view: "View",
     hide: "Hide",

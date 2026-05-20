@@ -16,6 +16,15 @@ export interface TradeIndicator {
   symbol: string;
 }
 
+interface AggregatedTradeBucket {
+  buyCount: number;
+  sellCount: number;
+  buyTotalAmount: number;
+  sellTotalAmount: number;
+  midpointMs: number;
+  matchedPrice: number;
+}
+
 interface TokenPriceChartProps {
   tokenAddress: string;
   tokenSymbol: string;
@@ -80,9 +89,14 @@ export function TokenPriceChart({
     const startTime = chartData[0][0] as number;
     const endTime = chartData[chartData.length - 1][0] as number;
 
+    const allPrices = chartData.map((d) => d[1] as number);
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
+    const priceRange = maxPrice - minPrice || 1;
+
     const color = CHART_COLOR_PALETTE[0];
 
-    function findClosestPrice(timestampMs: number): number | null {
+    function findClosestPrice(timestampMs: number): number {
       let closest = sorted[0];
       let minDiff = Math.abs(sorted[0].timestampMs - timestampMs);
       for (let i = 1; i < sorted.length; i++) {
@@ -92,34 +106,99 @@ export function TokenPriceChart({
           closest = sorted[i];
         }
       }
-      return closest ? closest.price : null;
+      return closest.price;
     }
 
-    const tradeMarkPoints = trades
-      .filter((t) => {
-        return t.timestampMs >= startTime && t.timestampMs <= endTime;
-      })
-      .map((t) => {
-        const matchedPrice = findClosestPrice(t.timestampMs);
-        return {
-          name: "",
-          coord: [t.timestampMs, matchedPrice ?? t.price],
-          value: `${t.type === "buy" ? "B" : "S"}`,
-          itemStyle: {
-            color: t.type === "buy" ? "#24a148" : "#da1e28",
-          },
+    const bucketSizeMs = 15 * 60 * 1000;
+    const bucketMap = new Map<number, AggregatedTradeBucket>();
+
+    for (const t of trades) {
+      if (t.timestampMs < startTime || t.timestampMs > endTime) continue;
+      const bucketIdx = Math.floor((t.timestampMs - startTime) / bucketSizeMs);
+      const existing = bucketMap.get(bucketIdx);
+      if (existing) {
+        if (t.type === "buy") {
+          existing.buyCount += 1;
+          existing.buyTotalAmount += t.amount;
+        } else {
+          existing.sellCount += 1;
+          existing.sellTotalAmount += t.amount;
+        }
+      } else {
+        const bucketStart = startTime + bucketIdx * bucketSizeMs;
+        bucketMap.set(bucketIdx, {
+          buyCount: t.type === "buy" ? 1 : 0,
+          sellCount: t.type === "sell" ? 1 : 0,
+          buyTotalAmount: t.type === "buy" ? t.amount : 0,
+          sellTotalAmount: t.type === "sell" ? t.amount : 0,
+          midpointMs: bucketStart + bucketSizeMs / 2,
+          matchedPrice: findClosestPrice(t.timestampMs),
+        });
+      }
+    }
+
+    const offset = priceRange * 0.06;
+    const highThreshold = maxPrice - priceRange * 0.2;
+
+    const markPointData: Array<{
+      name: string;
+      coord: [number, number];
+      value: string;
+      itemStyle: { color: string };
+      symbol: string;
+      symbolSize: number;
+      label: { show: boolean; formatter: string; position: "inside"; fontSize: number; fontWeight: "bold"; color: string };
+    }> = [];
+
+    for (const bucket of bucketMap.values()) {
+      const { buyCount, sellCount, midpointMs, matchedPrice } = bucket;
+      const isTooHigh = matchedPrice > highThreshold;
+
+      if (buyCount > 0 && sellCount === 0) {
+        const y = isTooHigh ? matchedPrice - offset * 1.5 : matchedPrice + offset * 1.5;
+        markPointData.push({
+          name: tr("walletPage.buy"),
+          coord: [midpointMs, y],
+          value: "",
+          itemStyle: { color: "#24a148" },
           symbol: "circle",
-          symbolSize: 12,
-          label: {
-            show: true,
-            formatter: "{b}",
-            position: "inside" as const,
-            fontSize: 9,
-            fontWeight: "bold" as const,
-            color: "#fff",
-          },
-        };
-      });
+          symbolSize: 10,
+          label: { show: true, formatter: "{c}", position: "inside", fontSize: 9, fontWeight: "bold", color: "#fff" },
+        });
+      } else if (sellCount > 0 && buyCount === 0) {
+        const y = isTooHigh ? matchedPrice - offset * 1.5 : matchedPrice + offset * 1.5;
+        markPointData.push({
+          name: tr("walletPage.sell"),
+          coord: [midpointMs, y],
+          value: "",
+          itemStyle: { color: "#da1e28" },
+          symbol: "circle",
+          symbolSize: 10,
+          label: { show: true, formatter: "{c}", position: "inside", fontSize: 9, fontWeight: "bold", color: "#fff" },
+        });
+      } else if (buyCount > 0 && sellCount > 0) {
+        const buyY = isTooHigh ? matchedPrice - offset : matchedPrice + offset * 2;
+        const sellY = isTooHigh ? matchedPrice - offset * 2 : matchedPrice + offset;
+        markPointData.push({
+          name: tr("walletPage.buy"),
+          coord: [midpointMs, buyY],
+          value: String(buyCount),
+          itemStyle: { color: "#24a148" },
+          symbol: "circle",
+          symbolSize: 10,
+          label: { show: true, formatter: "{c}", position: "inside", fontSize: 9, fontWeight: "bold", color: "#fff" },
+        });
+        markPointData.push({
+          name: tr("walletPage.sell"),
+          coord: [midpointMs, sellY],
+          value: String(sellCount),
+          itemStyle: { color: "#da1e28" },
+          symbol: "circle",
+          symbolSize: 10,
+          label: { show: true, formatter: "{c}", position: "inside", fontSize: 9, fontWeight: "bold", color: "#fff" },
+        });
+      }
+    }
 
     return {
       ...baseOption,
@@ -158,19 +237,20 @@ export function TokenPriceChart({
           const price = (params[0].data as [number, number])[1];
           const dateStr = formatUtcTime(ts);
 
-          const tradesAtTime = trades.filter((t) => {
-            const diff = Math.abs(t.timestampMs - ts);
-            return diff < 15 * 60 * 1000;
-          });
+          const bucketIdx = Math.floor((ts - startTime) / bucketSizeMs);
+          const bucket = bucketMap.get(bucketIdx);
 
           let tradeInfo = "";
-          if (tradesAtTime.length > 0) {
-            tradeInfo = tradesAtTime
-              .map((t) => {
-                const tradeColor = t.type === "buy" ? "#24a148" : "#da1e28";
-                return `<div style="color:${tradeColor};font-size:11px;margin-top:4px">${t.type === "buy" ? "▲" : "▼"} ${t.type.toUpperCase()} ${fmt.num.decimal(t.amount)} ${t.symbol}</div>`;
-              })
-              .join("");
+          if (bucket && (bucket.buyCount > 0 || bucket.sellCount > 0)) {
+            const parts: string[] = [];
+            if (bucket.buyCount > 0) {
+              parts.push(`${bucket.buyCount} ${bucket.buyCount === 1 ? tr("walletPage.buy").toLowerCase() : tr("walletPage.buy").toLowerCase() + "s"}`);
+            }
+            if (bucket.sellCount > 0) {
+              parts.push(`${bucket.sellCount} ${bucket.sellCount === 1 ? tr("walletPage.sell").toLowerCase() : tr("walletPage.sell").toLowerCase() + "s"}`);
+            }
+            const totalAmount = bucket.buyTotalAmount + bucket.sellTotalAmount;
+            tradeInfo = `<div style="font-size:11px;margin-top:4px;">${parts.join(", ")} · ${fmt.num.decimal(totalAmount)} ${trades[0]?.symbol ?? ""}</div>`;
           }
 
           return `
@@ -204,10 +284,10 @@ export function TokenPriceChart({
             },
           },
           markPoint: {
-            data: tradeMarkPoints,
+            data: markPointData,
             symbolOffset: [0, 0],
             label: {
-              show: false,
+              show: true,
             },
           },
         },

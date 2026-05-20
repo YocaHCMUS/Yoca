@@ -6,6 +6,7 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 6px;
+  width: 100%;
   // overflow: hidden;
 }
 
@@ -60,6 +61,7 @@
 
 .chartContent {
   padding: $spacing-02;
+  width: 360px;
   min-height: 180px;
 }
 

@@ -277,6 +277,7 @@ export const translation = defineTranslation({
     identity: "Định danh",
     uniqueTokensTraded: "Token duy nhất đã giao dịch",
     tokenList: "Danh sách token",
+    trade: "{{count}} Giao dịch",
     instructions: "Instructions",
     view: "Xem",
     hide: "Ẩn",
