@@ -214,7 +214,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading}
+          loading={tokenBalances.isLoading && portfolio.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>

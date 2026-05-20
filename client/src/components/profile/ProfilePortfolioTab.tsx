@@ -1,25 +1,24 @@
-import { ProfileOverview } from "@/components/profile/ProfileOverview";
-import { Table } from "@/components/tables/Table";
-import { FilterType, SortType } from "@/components/tables/Table";
-import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
+import { ProfileOverview } from "@/components/profile/ProfileOverview";
+import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import { FilterType, SortType, Table } from "@/components/tables/Table";
+import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
-import type { ProfileOverviewData } from "@/types/profile";
-import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge, Repeat } from "@carbon/icons-react";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 import {
   linkWalletAddress,
   requestLinkWalletChallenge,
   unlinkWalletAddress,
 } from "@/services/profile/profileApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
-import styles from "./profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
-import { useAuth } from "@/contexts/AuthContext";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
-import { useLocalization } from "@/contexts/LocalizationContext";
+import type { TimePeriod } from "@/types/chart-filters.types";
+import type { ProfileOverviewData } from "@/types/profile";
+import { AddLarge } from "@carbon/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import styles from "./profile.module.scss";
 
 interface ProfilePortfolioTabProps {
   linkedWallets: LinkedWalletRowPayload[];
@@ -45,10 +44,6 @@ export function ProfilePortfolioTab({
     () => linkedWalletRows.map((wallet) => wallet.walletAddress),
     [linkedWalletRows],
   );
-  const [
-    selectedComparisonWalletAddresses,
-    setSelectedComparisonWalletAddresses,
-  ] = useState<string[]>([]);
   const { walletOverviews, setWalletOverviews, loading } =
     useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
@@ -103,31 +98,17 @@ export function ProfilePortfolioTab({
       walletOverviews.map((overview) => {
         const walletMeta = linkedWalletByAddress.get(overview.address);
         const walletLabel = fmt.text.address(overview.address);
-        const authStatus = walletMeta?.isAuthWallet
-          ? tr("profileTabs.portfolio.authWalletLabel")
-          : tr("profileTabs.portfolio.linkedWalletLabel");
 
         return [
           overview.address,
           walletLabel,
           overview.address,
           overview.totalAssetValueUsd,
-          authStatus,
           walletMeta?.isAuthWallet,
         ];
       }),
-    [linkedWalletByAddress, walletOverviews, tr],
+    [linkedWalletByAddress, walletOverviews, fmt],
   );
-
-  const handleComparisonToggle = (walletId: string, checked: boolean) => {
-    setSelectedComparisonWalletAddresses((current) => {
-      if (checked) {
-        return current.includes(walletId) ? current : [...current, walletId];
-      }
-
-      return current.filter((address) => address !== walletId);
-    });
-  };
 
   const handleUnlinkWallet = async (walletAddress: string) => {
     try {
@@ -140,32 +121,17 @@ export function ProfilePortfolioTab({
       setLinkedWalletRows((current) =>
         current.filter((wallet) => wallet.walletAddress !== walletAddress),
       );
-      setSelectedComparisonWalletAddresses((current) =>
-        current.filter((address) => address !== walletAddress),
-      );
     } catch (error) {
       console.error("[ProfilePortfolioTab] Failed to unlink wallet:", error);
     }
   };
 
   const portfolioCellRenderers = createProfilePortfolioCellRenderers({
-    selectedComparisonWalletAddresses,
-    onComparisonToggle: handleComparisonToggle,
     onUnlinkWallet: handleUnlinkWallet,
     formatAddress: (address: string) => fmt.text.address(address),
     formatCurrency: (value: number) => fmt.num.compact.currency(value),
     t: tr,
   });
-
-  const handleCompareClick = () => {
-    if (selectedComparisonWalletAddresses.length < 2) {
-      return;
-    }
-
-    window.location.assign(
-      `/comparison/wallets?wallets=${encodeURIComponent(selectedComparisonWalletAddresses.join(","))}`,
-    );
-  };
 
   return (
     <section className={styles.contentStack}>
@@ -178,31 +144,29 @@ export function ProfilePortfolioTab({
         <Table
           title={tr("profileTabs.portfolio.linkedWalletsList")}
           headers={[
-            tr("profileTabs.portfolio.compare"),
-            tr("profileTabs.portfolio.wallet"),
+            tr("profileTabs.portfolio.label"),
             tr("profileTabs.portfolio.address"),
-            tr("profileTabs.portfolio.netWorth"),
-            tr("profileTabs.portfolio.auth"),
+            tr("profileTabs.portfolio.totalValue"),
             tr("profileTabs.portfolio.actions"),
           ]}
           initialFilters={{}}
           fetcher={Promise.resolve([])}
           filterSchema={{
+            0: { type: FilterType.Select },
             1: { type: FilterType.Select },
-            2: { type: FilterType.Select },
-            3: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
-            4: { type: FilterType.Select },
+            2: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
           }}
           dataEntries={tableRows}
           cellRenderers={portfolioCellRenderers}
-          isSortable={[true, true, true, true, true, false]}
+          isSortable={[true, true, true, false]}
           sortConfigs={{
-            3: { type: SortType.Number },
+            2: { type: SortType.Number },
           }}
+          enableExport={false}
           actions={
             <div className={styles.inlineActions}>
               <WalletActionButton<string>
-                label="Add or link wallet"
+                label="Link wallet"
                 kind="ghost"
                 renderIcon={AddLarge}
                 className={styles.triggerButton}
@@ -243,14 +207,6 @@ export function ProfilePortfolioTab({
                   resolveSuccess(publicKey);
                 }}
               />
-              <button
-                onClick={handleCompareClick}
-                disabled={selectedComparisonWalletAddresses.length < 2}
-                className={styles.triggerButton}
-              >
-                <Repeat size={20} />
-                Compare selected wallets
-              </button>
             </div>
           }
           loading={loading}

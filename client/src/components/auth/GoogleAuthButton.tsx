@@ -99,7 +99,7 @@ export function GoogleAuthButton({
       >
         {tr("auth.continueWithGoogle")}
       </Button>
-      <div ref={googleButtonContainerRef} style={{}}>
+      <div ref={googleButtonContainerRef} style={{ display: "none" }}>
         <GoogleLogin
           onSuccess={onGoogleSignInSuccess}
           onError={onGoogleSignInError}
