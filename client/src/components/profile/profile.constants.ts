@@ -4,6 +4,7 @@ import type {
     ProfileActivityNav,
     ProfileWalletNav,
 } from "@/types/profile";
+import type { PlanTier } from "@/services/profile/subscriptionApi";
 
 export const PROFILE_TABS = [
     { id: "overview", label: "Overview" },
@@ -52,4 +53,39 @@ export const ACCOUNT_TIER_TAG_KIND: Record<
     premium: "green",
     pro: "cyan",
     enterprise: "purple",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subscription Tier Mappings (for dynamic badge display)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SubscriptionTierDisplay = "Standard" | PlanTier;
+
+/**
+ * Map subscription tier to display label
+ * - null/undefined → "Standard" (free tier)
+ * - "Lite" | "Plus" | "Pro" → as-is
+ */
+export const SUBSCRIPTION_TIER_LABELS: Record<PlanTier | "Standard", string> = {
+    Standard: "Standard",
+    Lite: "Lite",
+    Plus: "Plus",
+    Pro: "Pro",
+};
+
+/**
+ * Map subscription tier to Carbon Tag color
+ * - Standard (free) → gray (neutral)
+ * - Lite → emerald (green)
+ * - Plus → blue (cyan)
+ * - Pro → purple
+ */
+export const SUBSCRIPTION_TIER_TAG_KIND: Record<
+    PlanTier | "Standard",
+    "gray" | "green" | "cyan" | "purple"
+> = {
+    Standard: "gray",
+    Lite: "green",
+    Plus: "cyan",
+    Pro: "purple",
 };

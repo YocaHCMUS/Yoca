@@ -9,6 +9,8 @@ type Tier = {
   price: string;
 };
 
+type PaymentMethod = "card" | "bank" | "solana";
+
 type PaymentModalWrapperProps = {
   open: boolean;
   tier: Tier | null;
@@ -18,16 +20,19 @@ type PaymentModalWrapperProps = {
 
 type IntentState =
   | { status: "idle" }
-  | { status: "loading" }
-  | { status: "ready"; clientSecret: string; tier: string; stripePromise: ReturnType<typeof loadStripe> }
+  | { status: "ready"; tier: string; stripePromise: ReturnType<typeof loadStripe> }
   | { status: "error"; message: string };
 
 /**
- * Wraps the Stripe Elements provider.
- * Uses the SetupIntent flow:
- *   1. POST /api/payment/setup-intent  → get clientSecret (seti_...)
- *   2. User fills card → CheckoutForm calls confirmSetup()
- *   3. On success → CheckoutForm calls POST /api/payment/activate-subscription
+ * Wraps the Stripe Elements provider using Deferred Intent Creation.
+ * 
+ * Instead of creating the SetupIntent upfront:
+ *   1. Load Stripe immediately
+ *   2. Create Elements without clientSecret (deferred mode)
+ *   3. User selects a payment method card
+ *   4. On "Subscribe Now", CheckoutForm creates the SetupIntent with the selected paymentMethodTypes
+ *   5. CheckoutForm then confirms with confirmSetup()
+ *   6. On success → CheckoutForm calls POST /api/payment/activate-subscription
  */
 export function PaymentModalWrapper({
   open,
@@ -36,6 +41,7 @@ export function PaymentModalWrapper({
   onSuccess,
 }: PaymentModalWrapperProps) {
   const [intentState, setIntentState] = useState<IntentState>({ status: "idle" });
+  const [activeMethod, setActiveMethod] = useState<PaymentMethod>("card");
 
   useEffect(() => {
     if (!open || !tier) {
@@ -43,71 +49,31 @@ export function PaymentModalWrapper({
       return;
     }
 
+    setActiveMethod("card");
+
     const paidTiers = ["Lite", "Plus", "Pro"];
     if (!paidTiers.includes(tier.name)) return;
 
-    let cancelled = false;
-    setIntentState({ status: "loading" });
+    try {
+      // Load Stripe immediately (no need to wait for SetupIntent)
+      const stripePromise = loadStripe(
+        import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string || "",
+      );
 
-    async function fetchSetupIntent() {
-      try {
-        const resp = await client.api.payment["setup-intent"].$post({
-          json: { tier: tier!.name as "Lite" | "Plus" | "Pro" },
-        });
+      setIntentState({
+        status: "ready",
+        tier: tier.name,
+        stripePromise,
+      });
 
-        if (cancelled) return;
-
-        if (!resp.ok) {
-          const body = await resp.json();
-          const msg =
-            (body as { message?: string }).message ??
-            "Failed to initialise payment. Please try again.";
-          setIntentState({ status: "error", message: msg });
-          return;
-        }
-
-        const data = await resp.json() as {
-          clientSecret: string;
-          setupIntentId: string;
-          publishableKey: string;
-          tier: string;
-        };
-
-        console.log("[PaymentModalWrapper] SetupIntent ready:", data.setupIntentId);
-
-        if (!data.clientSecret) {
-          setIntentState({ status: "error", message: "Stripe did not return a setup intent." });
-          return;
-        }
-
-        const stripePromise = loadStripe(
-          data.publishableKey ||
-          (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string) ||
-          "",
-        );
-
-        setIntentState({
-          status: "ready",
-          clientSecret: data.clientSecret,
-          tier: data.tier,
-          stripePromise,
-        });
-
-      } catch (err) {
-        if (cancelled) return;
-        console.error("[PaymentModalWrapper]", err);
-        setIntentState({
-          status: "error",
-          message: "A network error occurred. Please try again.",
-        });
-      }
+      console.log("[PaymentModalWrapper] Stripe loaded for deferred intent creation");
+    } catch (err) {
+      console.error("[PaymentModalWrapper]", err);
+      setIntentState({
+        status: "error",
+        message: "Failed to load Stripe. Please try again.",
+      });
     }
-
-    fetchSetupIntent();
-
-    return () => {
-      cancelled = true;
-    };
   }, [open, tier]);
 
   if (!open || !tier) return null;
@@ -167,31 +133,6 @@ export function PaymentModalWrapper({
 
           {/* Body */}
           <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 overflow-y-auto custom-scrollbar">
-            {intentState.status === "loading" && (
-              <div className="flex flex-col items-center gap-4 py-12 text-[#64748b]">
-                <svg
-                  className="w-8 h-8 animate-spin text-[#14F195]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                <p className="text-sm">Preparing secure payment…</p>
-              </div>
-            )}
-
             {intentState.status === "error" && (
               <div className="flex flex-col items-center gap-4 py-8 text-center">
                 <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -222,11 +163,14 @@ export function PaymentModalWrapper({
 
             {intentState.status === "ready" && (
               <Elements
-                key={intentState.clientSecret}
+                key={`elements-${activeMethod === "bank" ? "bank" : "card"}`}
                 stripe={intentState.stripePromise}
                 options={{
-                  clientSecret: intentState.clientSecret,
+                  mode: "setup",
+                  currency: "usd",
                   locale: "en",
+                  paymentMethodTypes:
+                    activeMethod === "bank" ? ["us_bank_account"] : ["card"],
                   appearance: {
                     theme: "night",
                     variables: {
@@ -245,6 +189,8 @@ export function PaymentModalWrapper({
                   tierName={tier.name}
                   tierPrice={tier.price}
                   tierKey={intentState.tier as "Lite" | "Plus" | "Pro"}
+                  activeMethod={activeMethod}
+                  onMethodChange={setActiveMethod}
                   onSuccess={onSuccess}
                   onCancel={onClose}
                 />
