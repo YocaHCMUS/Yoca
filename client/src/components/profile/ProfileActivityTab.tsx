@@ -17,6 +17,14 @@ interface ProfileActivityTabProps {
   period: TimePeriod;
 }
 
+function formatAddress(address: string): string {
+  if (address.length <= 10) {
+    return address;
+  }
+
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export function ProfileActivityTab({
   walletAddresses,
   period,
@@ -157,7 +165,7 @@ export function ProfileActivityTab({
               <span
                 style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
               >
-                {fmt.text.address(address)}
+                {formatAddress(address)}
                 {isLinked ? (
                   <Link
                     size={16}
@@ -176,7 +184,7 @@ export function ProfileActivityTab({
               <span
                 style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
               >
-                {fmt.text.address(address)}
+                {formatAddress(address)}
                 {isLinked ? (
                   <Link
                     size={16}
@@ -216,7 +224,7 @@ export function ProfileActivityTab({
                     className={styles.walletAddressLink}
                     title={card.walletAddress}
                   >
-                    {fmt.text.address(card.walletAddress)}
+                    {formatAddress(card.walletAddress)}
                   </a>
                   {/* <CopyButton 
                                         onClick={() => navigator.clipboard.writeText(card.walletAddress)}

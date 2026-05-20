@@ -1,16 +1,16 @@
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
-import { useLocalization } from "@/contexts/LocalizationContext";
-import {
-  getUserSubscription,
+import { 
+  getUserSubscription, 
   getUserSubscriptions,
   getUserPaymentHistory,
   cancelSubscription,
   upgradeSubscription,
-  type Subscription,
-  type PaymentHistory,
+  type Subscription, 
+  type PaymentHistory 
 } from "@/services/profile/subscriptionApi";
+import { formatPrice, formatTimestamp } from "@/util/format";
 import { Loading } from "@carbon/react";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
@@ -31,9 +31,9 @@ function formatAbsoluteTimestamp(time: string | null | undefined) {
 }
 
 export function ProfileSubscriptionsTab() {
-  const { fmt } = useLocalization();
-  const [activeSubtab, setActiveSubtab] =
-    useState<SubscriptionSubtab>("subscriptions");
+  const [activeSubtab, setActiveSubtab] = useState<SubscriptionSubtab>(
+    "subscriptions"
+  );
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [history, setHistory] = useState<PaymentHistory[]>([]);
@@ -69,11 +69,7 @@ export function ProfileSubscriptionsTab() {
   const subtabIndex = subtabs.findIndex((tab) => tab.id === activeSubtab);
 
   if (loading) {
-    return (
-      <div className={styles.emptyStateContainer}>
-        <Loading withOverlay={false} />
-      </div>
-    );
+    return <div className={styles.emptyStateContainer}><Loading withOverlay={false} /></div>;
   }
 
   return (
@@ -82,17 +78,8 @@ export function ProfileSubscriptionsTab() {
         activeTab={subtabIndex}
         names={subtabs.map((tab) => tab.label)}
         tabs={[
-          <SubscriptionsPanel
-            key="subscriptions"
-            subscription={subscription}
-            subscriptions={subscriptions}
-            onUpdate={fetchData}
-          />,
-          <PaymentHistoryPanel
-            key="payment-history"
-            history={history}
-            subscriptions={subscriptions}
-          />,
+          <SubscriptionsPanel key="subscriptions" subscription={subscription} subscriptions={subscriptions} onUpdate={fetchData} />,
+          <PaymentHistoryPanel key="payment-history" history={history} subscriptions={subscriptions} />,
         ]}
         onTabChange={(index) => setActiveSubtab(subtabs[index].id)}
       />
@@ -102,16 +89,7 @@ export function ProfileSubscriptionsTab() {
 
 import { Modal } from "@carbon/react";
 
-function SubscriptionsPanel({
-  subscription,
-  subscriptions,
-  onUpdate,
-}: {
-  subscription: Subscription | null;
-  subscriptions: Subscription[];
-  onUpdate: () => void;
-}) {
-  const { fmt } = useLocalization();
+function SubscriptionsPanel({ subscription, subscriptions, onUpdate }: { subscription: Subscription | null, subscriptions: Subscription[], onUpdate: () => void }) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -128,9 +106,9 @@ function SubscriptionsPanel({
           <p className={styles.emptyStateDescription}>
             No active subscriptions found. View pricing plans to upgrade.
           </p>
-          <button
+          <button 
             className={styles.primaryButton}
-            onClick={() => (window.location.href = "/pricing")}
+            onClick={() => window.location.href = "/pricing"}
           >
             View Pricing Plans
           </button>
@@ -156,10 +134,7 @@ function SubscriptionsPanel({
   const handleUpgrade = async (newTier: "Lite" | "Plus" | "Pro") => {
     setIsUpgrading(true);
     try {
-      const res = await upgradeSubscription(
-        subscription.stripeSubscriptionId,
-        newTier,
-      );
+      const res = await upgradeSubscription(subscription.stripeSubscriptionId, newTier);
       if (res.clientSecret) {
         // Option A fallback: require further authentication via checkout
         // For now, redirect to a generic payment confirmation or show an alert.
@@ -177,39 +152,26 @@ function SubscriptionsPanel({
     }
   };
 
-  const availableUpgrades = ["Lite", "Plus", "Pro"].filter((tier) => {
-    const tiers = { Lite: 1, Plus: 2, Pro: 3 };
-    return (
-      tiers[tier as keyof typeof tiers] >
-      tiers[subscription.planTier as keyof typeof tiers]
-    );
-  });
+  const availableUpgrades = ["Lite", "Plus", "Pro"].filter(
+    tier => {
+      const tiers = { Lite: 1, Plus: 2, Pro: 3 };
+      return tiers[tier as keyof typeof tiers] > tiers[subscription.planTier as keyof typeof tiers];
+    }
+  );
 
   return (
     <div className={styles.sectionCard}>
-      <div
-        className={styles.sectionHeader}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div className={styles.sectionHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className={styles.emptyStateTitle}>Current Plan</h3>
-        {subscription.status === "active" &&
-          !subscription.cancelAtPeriodEnd && (
-            <button
-              className={styles.primaryButton}
-              style={{
-                backgroundColor: "#ff4d4d",
-                padding: "0.5rem 1rem",
-                fontSize: "0.875rem",
-              }}
-              onClick={() => setIsCancelModalOpen(true)}
-            >
-              Cancel Subscription
-            </button>
-          )}
+        {subscription.status === "active" && !subscription.cancelAtPeriodEnd && (
+          <button 
+            className={styles.primaryButton} 
+            style={{ backgroundColor: "#ff4d4d", padding: "0.5rem 1rem", fontSize: "0.875rem" }}
+            onClick={() => setIsCancelModalOpen(true)}
+          >
+            Cancel Subscription
+          </button>
+        )}
       </div>
       <table className={styles.simpleTable}>
         <thead>
@@ -223,41 +185,27 @@ function SubscriptionsPanel({
         </thead>
         <tbody>
           <tr>
-            <td className={styles.metricValue} style={{ color: "#14F195" }}>
-              {subscription.planTier}
-            </td>
+            <td className={styles.metricValue} style={{ color: "#14F195" }}>{subscription.planTier}</td>
             <td>
-              <span
-                style={{
-                  textTransform: "uppercase",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color:
-                    subscription.status === "active"
-                      ? subscription.cancelAtPeriodEnd
-                        ? "#f59e0b"
-                        : "#14F195"
-                      : "#64748b",
-                }}
-              >
-                {subscription.status}{" "}
-                {subscription.cancelAtPeriodEnd && "(Cancels at end of period)"}
+              <span style={{ 
+                textTransform: "uppercase", 
+                fontSize: "12px", 
+                fontWeight: "bold",
+                color: subscription.status === "active" ? (subscription.cancelAtPeriodEnd ? "#f59e0b" : "#14F195") : "#64748b" 
+              }}>
+                {subscription.status} {subscription.cancelAtPeriodEnd && "(Cancels at end of period)"}
               </span>
             </td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodStart)}</td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodEnd)}</td>
+            <td>{formatTimestamp(subscription.currentPeriodStart)}</td>
+            <td>{formatTimestamp(subscription.currentPeriodEnd)}</td>
             {availableUpgrades.length > 0 && (
               <td>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {availableUpgrades.map((tier) => (
-                    <button
+                  {availableUpgrades.map(tier => (
+                    <button 
                       key={tier}
                       className={styles.primaryButton}
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        minHeight: "auto",
-                        fontSize: "0.75rem",
-                      }}
+                      style={{ padding: "0.25rem 0.5rem", minHeight: "auto", fontSize: "0.75rem" }}
                       disabled={isUpgrading}
                       onClick={() => handleUpgrade(tier as any)}
                     >
@@ -302,8 +250,8 @@ function SubscriptionsPanel({
                       {item.status}
                     </span>
                   </td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodStart)}</td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodEnd)}</td>
+                  <td>{formatTimestamp(item.currentPeriodStart)}</td>
+                  <td>{formatTimestamp(item.currentPeriodEnd)}</td>
                   <td>{formatAbsoluteTimestamp(item.updatedAt)}</td>
                 </tr>
               ))}
@@ -322,31 +270,18 @@ function SubscriptionsPanel({
         onRequestSubmit={handleCancel}
         primaryButtonDisabled={isCanceling}
       >
-        <p style={{ marginBottom: "1rem", color: "#e0e0e0" }}>
-          Are you sure you want to cancel your {subscription.planTier}{" "}
-          subscription?
+        <p style={{ marginBottom: '1rem', color: '#e0e0e0' }}>
+          Are you sure you want to cancel your {subscription.planTier} subscription?
         </p>
-        <p style={{ color: "#a8a29e" }}>
-          You will continue to have access to all {subscription.planTier}{" "}
-          features until the end of your current billing period on{" "}
-          <strong>
-            {fmt.datetime.datetime(subscription.currentPeriodEnd)}
-          </strong>
-          .
+        <p style={{ color: '#a8a29e' }}>
+          You will continue to have access to all {subscription.planTier} features until the end of your current billing period on <strong>{formatTimestamp(subscription.currentPeriodEnd)}</strong>.
         </p>
       </Modal>
     </div>
   );
 }
 
-function PaymentHistoryPanel({
-  history,
-  subscriptions,
-}: {
-  history: PaymentHistory[];
-  subscriptions: Subscription[];
-}) {
-  const { fmt } = useLocalization();
+function PaymentHistoryPanel({ history, subscriptions }: { history: PaymentHistory[]; subscriptions: Subscription[] }) {
   const planBySubscriptionId = new Map(
     subscriptions.map((sub) => [sub.id, sub.planTier]),
   );
@@ -383,32 +318,22 @@ function PaymentHistoryPanel({
         <tbody>
           {history.map((item) => (
             <tr key={item.id}>
-              <td>{fmt.datetime.datetime(item.createdAt)}</td>
-              <td>
-                {item.planName ??
-                  item.planTier ??
-                  (item.subscriptionId
-                    ? (planBySubscriptionId.get(item.subscriptionId) ?? "-")
-                    : "-")}
-              </td>
+              <td>{formatTimestamp(item.createdAt)}</td>
+              <td>{item.planName ?? item.planTier ?? (item.subscriptionId ? (planBySubscriptionId.get(item.subscriptionId) ?? "-") : "-")}</td>
               <td className={styles.metricValue}>
-                {fmt.num.currency(item.amountCents / 100)}
+                {formatPrice(((item.amountCents ?? item.amount ?? 0) as number) / 100)}
               </td>
               <td>
-                <span
-                  style={{
-                    textTransform: "uppercase",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    color: item.status === "succeeded" ? "#14F195" : "#ff4d4d",
-                  }}
-                >
+                <span style={{ 
+                  textTransform: "uppercase", 
+                  fontSize: "11px", 
+                  fontWeight: "bold",
+                  color: item.status === "succeeded" ? "#14F195" : "#ff4d4d" 
+                }}>
                   {item.status}
                 </span>
               </td>
-              <td style={{ fontSize: "11px", color: "#64748b" }}>
-                {paymentIdLabel(item)}
-              </td>
+              <td style={{ fontSize: "11px", color: "#64748b" }}>{paymentIdLabel(item)}</td>
             </tr>
           ))}
         </tbody>

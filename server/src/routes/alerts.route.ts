@@ -1,9 +1,5 @@
-import userExtract from "@sv/middlewares/user-extract.js";
-import {
-  honoJwt,
-  solanaBase58Schema,
-  validate,
-} from "@sv/middlewares/validation.js";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
+import { solanaBase58Schema, validate } from "@sv/middlewares/validation.js";
 import {
   createAlertRule,
   deleteAlertRule,
@@ -21,7 +17,14 @@ import {
 } from "@sv/services/followedWallets.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
+import { jwt } from "hono/jwt";
 import { z } from "zod";
+
+const honoJwt = jwt({
+  alg: "HS256",
+  secret: process.env.JWT_SECRET!,
+  cookie: AUTH_COOKIE_NAME,
+});
 
 const followWalletBodySchema = z.object({
   address: solanaBase58Schema,
@@ -128,8 +131,8 @@ const alertRuleBodySchema = z
 
 const app = new Hono()
   // ── Advanced alert rules (predicate filtering on webhook) ──────
-  .get("/rules", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
+  .get("/rules", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
     try {
       const rules = await listActiveAlertRules(userId);
       return c.json(rules, statusCode.Ok);
@@ -138,38 +141,32 @@ const app = new Hono()
       return c.json({ error: "Failed to load alert rules" }, 500);
     }
   })
-  .post(
-    "/rules",
-    honoJwt,
-    userExtract,
-    validate("json", alertRuleBodySchema),
-    async (c) => {
-      const { id: userId } = c.get("userPayload");
-      const body = c.req.valid("json");
-      try {
-        const rule = await createAlertRule(userId, {
-          name: body.name ?? null,
-          walletAddress: body.walletAddress,
-          actionType: body.actionType,
-          minVolume: body.minVolume,
-          maxVolume: body.maxVolume ?? null,
-          volumeUnit: body.volumeUnit,
-          triggerType: body.triggerType,
-          expiryDate: new Date(body.expiryDate),
-          useDefaultDelivery: body.useDefaultDelivery,
-          discordWebhookOverride: body.discordWebhookOverride ?? null,
-          emailOverride: body.emailOverride ?? null,
-        });
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
-        return c.json({ rule, heliusSync }, statusCode.Created);
-      } catch (err) {
-        console.error("[alerts] POST /rules failed:", err);
-        return c.json({ error: "Failed to create alert rule" }, 500);
-      }
-    },
-  )
-  .delete("/rules/:ruleId", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
+  .post("/rules", honoJwt, validate("json", alertRuleBodySchema), async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
+    const body = c.req.valid("json");
+    try {
+      const rule = await createAlertRule(userId, {
+        name: body.name ?? null,
+        walletAddress: body.walletAddress,
+        actionType: body.actionType,
+        minVolume: body.minVolume,
+        maxVolume: body.maxVolume ?? null,
+        volumeUnit: body.volumeUnit,
+        triggerType: body.triggerType,
+        expiryDate: new Date(body.expiryDate),
+        useDefaultDelivery: body.useDefaultDelivery,
+        discordWebhookOverride: body.discordWebhookOverride ?? null,
+        emailOverride: body.emailOverride ?? null,
+      });
+      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      return c.json({ rule, heliusSync }, statusCode.Created);
+    } catch (err) {
+      console.error("[alerts] POST /rules failed:", err);
+      return c.json({ error: "Failed to create alert rule" }, 500);
+    }
+  })
+  .delete("/rules/:ruleId", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
     const ruleId = Number(c.req.param("ruleId"));
     if (!Number.isFinite(ruleId) || ruleId <= 0) {
       return c.json({ error: "Invalid rule id" }, 400);
@@ -187,8 +184,8 @@ const app = new Hono()
     }
   })
   // ── Wallet CRUD (auth-guarded) ───────────────────────────────
-  .get("/", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
+  .get("/", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
     try {
       const rows = await listFollowedWallets(userId);
       return c.json(rows, statusCode.Ok);
@@ -197,36 +194,30 @@ const app = new Hono()
       return c.json({ error: "Failed to load followed wallets" }, 500);
     }
   })
-  .post(
-    "/",
-    honoJwt,
-    userExtract,
-    validate("json", followWalletBodySchema),
-    async (c) => {
-      const { id: userId } = c.get("userPayload");
-      const { address, label } = c.req.valid("json");
-      try {
-        const wallet = await addFollowedWallet(
-          userId,
-          address,
-          label ?? undefined,
+  .post("/", honoJwt, validate("json", followWalletBodySchema), async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
+    const { address, label } = c.req.valid("json");
+    try {
+      const wallet = await addFollowedWallet(
+        userId,
+        address,
+        label ?? undefined,
+      );
+      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      return c.json({ wallet, heliusSync }, statusCode.Created);
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        return c.json(
+          { error: "This wallet address is already being followed" },
+          409,
         );
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
-        return c.json({ wallet, heliusSync }, statusCode.Created);
-      } catch (err) {
-        if (isUniqueViolation(err)) {
-          return c.json(
-            { error: "This wallet address is already being followed" },
-            409,
-          );
-        }
-        console.error("[alerts] POST failed:", err);
-        return c.json({ error: "Failed to follow wallet" }, 500);
       }
-    },
-  )
-  .delete("/:id", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
+      console.error("[alerts] POST failed:", err);
+      return c.json({ error: "Failed to follow wallet" }, 500);
+    }
+  })
+  .delete("/:id", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
     const id = Number(c.req.param("id"));
     if (!Number.isFinite(id) || id <= 0) {
       return c.json({ error: "Invalid wallet ID" }, 400);
@@ -244,8 +235,8 @@ const app = new Hono()
     }
   })
   // ── User notification settings (auth-guarded) ────────────────
-  .get("/settings", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
+  .get("/settings", honoJwt, async (c) => {
+    const { id: userId } = c.get("jwtPayload") as { id: string };
     try {
       const settings = await getUserAlertSettings(userId);
       if (!settings) {
@@ -260,10 +251,9 @@ const app = new Hono()
   .patch(
     "/settings",
     honoJwt,
-    userExtract,
     validate("json", settingsPatchSchema),
     async (c) => {
-      const { id: userId } = c.get("userPayload");
+      const { id: userId } = c.get("jwtPayload") as { id: string };
       const body = c.req.valid("json");
       try {
         if (body.discordWebhookUrl !== undefined) {

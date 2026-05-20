@@ -74,7 +74,7 @@ export function useGet<
     {
       revalidateOnFocus: false,
       // keepPreviousData: true,
-      revalidateOnReconnect: false,
+      // revalidateOnReconnect: false,
       // revalidateIfStale: false,
     },
   );

@@ -67,9 +67,13 @@ export function MultiTimeSeriesLineChart({
   const option = useMemo((): EChartsOption => {
     if (allPoints.length == 0) return {};
 
-    const startTime = allPoints[0][0];
-    const endTime = allPoints[allPoints.length - 1][0];
+    const startTime = allPoints[0][0] as number;
+    const endTime = allPoints[allPoints.length - 1][0] as number;
     const range = endTime - startTime;
+
+    // Random colors for those series, please add more or kill yourself
+    // Or prefer hashing the series key
+    const palette = [tokens.interactive, tokens.success, tokens.error];
 
     return {
       backgroundColor: "transparent",
@@ -158,22 +162,10 @@ export function MultiTimeSeriesLineChart({
           name: s.label ?? s.key,
           type: "line",
           data: s.chartData,
-          showSymbol: true,
+          showSymbol: false,
           smooth: 0.1,
           lineStyle: { width: 2, color },
-          areaStyle: {
-            color: {
-              type: "linear" as const,
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: `${color}4D` },
-                { offset: 1, color: `${color}0D` },
-              ],
-            },
-          },
+          areaStyle: { opacity: 0 },
           color,
         } as const;
       }),

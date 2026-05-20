@@ -1,14 +1,12 @@
 import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
-import userExtract from "@sv/middlewares/user-extract.js";
+import { setErr } from "@sv/util/errors.js";
 import {
   deleteAccountSchema,
-  honoJwt,
   passwordUpdateSchema,
   profileIdentityUpdateSchema,
   solanaBase58Schema,
   validate,
 } from "@sv/middlewares/validation.js";
-import { setErr } from "@sv/util/errors.js";
 import {
   getUserLinkedWallets,
   linkWalletToUser,
@@ -31,7 +29,7 @@ import {
 } from "@solana/kit";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
-import { sign } from "hono/jwt";
+import { jwt, sign } from "hono/jwt";
 import { z } from "zod";
 import {
   addAddressToWatchlist,
@@ -55,6 +53,12 @@ import {
 
 const jwtSecret = process.env.JWT_SECRET!;
 const authCookieTtlMs = 7 * 24 * 60 * 60 * 1000;
+
+const honoJwt = jwt({
+  alg: "HS256",
+  secret: process.env.JWT_SECRET!,
+  cookie: AUTH_COOKIE_NAME,
+});
 
 const linkedWalletSchema = z.object({
   walletAddress: solanaBase58Schema,
@@ -94,6 +98,12 @@ const PASSWORD_UPDATE_STATE = {
   added: "PASSWORD_ADDED",
 } as const;
 
+function getUserIdFromPayload(
+  payload: { id?: string } | undefined,
+): string | null {
+  return payload?.id ?? null;
+}
+
 function challengeKey(userId: string, walletAddress: string): string {
   return `${userId}:${walletAddress}`;
 }
@@ -121,9 +131,11 @@ async function verifySolanaMessageSignature(
 }
 
 const app = new Hono()
-  .get("/settings", honoJwt, userExtract, async (c) => {
+  .get("/settings", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -141,11 +153,12 @@ const app = new Hono()
   .patch(
     "/settings/identity",
     honoJwt,
-    userExtract,
     validate("json", profileIdentityUpdateSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -186,11 +199,12 @@ const app = new Hono()
   .patch(
     "/settings/password",
     honoJwt,
-    userExtract,
     validate("json", passwordUpdateSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -266,9 +280,11 @@ const app = new Hono()
       }
     },
   )
-  .get("/settings/auth-methods", honoJwt, userExtract, async (c) => {
+  .get("/settings/auth-methods", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -283,9 +299,11 @@ const app = new Hono()
       );
     }
   })
-  .post("/settings/account/challenge", honoJwt, userExtract, async (c) => {
+  .post("/settings/account/challenge", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -308,11 +326,12 @@ const app = new Hono()
   .delete(
     "/settings/account",
     honoJwt,
-    userExtract,
     validate("json", deleteAccountSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -364,9 +383,11 @@ const app = new Hono()
       }
     },
   )
-  .get("/linked-wallets", honoJwt, userExtract, async (c) => {
+  .get("/linked-wallets", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -384,11 +405,12 @@ const app = new Hono()
   .post(
     "/linked-wallets/challenge",
     honoJwt,
-    userExtract,
     validate("json", solanaWalletAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = payload?.id;
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -426,11 +448,12 @@ const app = new Hono()
   .post(
     "/linked-wallets",
     honoJwt,
-    userExtract,
     validate("json", linkedWalletSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -502,11 +525,12 @@ const app = new Hono()
   .delete(
     "/linked-wallets",
     honoJwt,
-    userExtract,
     validate("json", solanaWalletAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -555,9 +579,11 @@ const app = new Hono()
       }
     },
   )
-  .get("/watchlist/addresses", honoJwt, userExtract, async (c) => {
+  .get("/watchlist/addresses", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -571,9 +597,11 @@ const app = new Hono()
       );
     }
   })
-  .get("/watchlist/tokens", honoJwt, userExtract, async (c) => {
+  .get("/watchlist/tokens", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
+
       if (!userId) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
@@ -590,11 +618,12 @@ const app = new Hono()
   .get(
     "/watchlist/addresses-check",
     honoJwt,
-    userExtract,
     validate("json", solanaWalletAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -617,11 +646,12 @@ const app = new Hono()
   .get(
     "/watchlist/tokens-check",
     honoJwt,
-    userExtract,
     validate("json", solanaTokenAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -643,11 +673,12 @@ const app = new Hono()
   .post(
     "/watchlist/tokens-update",
     honoJwt,
-    userExtract,
     validate("json", solanaTokenAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -672,11 +703,12 @@ const app = new Hono()
   .delete(
     "/watchlist/tokens-update",
     honoJwt,
-    userExtract,
     validate("json", solanaTokenAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -701,11 +733,12 @@ const app = new Hono()
   .post(
     "/watchlist/addresses-update",
     honoJwt,
-    userExtract,
     validate("json", solanaWalletAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -730,11 +763,12 @@ const app = new Hono()
   .delete(
     "/watchlist/addresses-update",
     honoJwt,
-    userExtract,
     validate("json", solanaWalletAddressParamSchema),
     async (c) => {
       try {
-        const { id: userId } = c.get("userPayload");
+        const payload = c.get("jwtPayload") as { id?: string } | undefined;
+        const userId = getUserIdFromPayload(payload);
+
         if (!userId) {
           return c.json(
             setErr("INVALID_TOKEN_PAYLOAD"),
@@ -756,9 +790,10 @@ const app = new Hono()
       }
     },
   )
-  .get("/subscriptions", honoJwt, userExtract, async (c) => {
+  .get("/subscriptions", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
       if (!userId)
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
 
@@ -778,9 +813,10 @@ const app = new Hono()
       );
     }
   })
-  .get("/subscriptions/all", honoJwt, userExtract, async (c) => {
+  .get("/subscriptions/all", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
       if (!userId)
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
 
@@ -800,9 +836,10 @@ const app = new Hono()
       );
     }
   })
-  .get("/payment-history", honoJwt, userExtract, async (c) => {
+  .get("/payment-history", honoJwt, async (c) => {
     try {
-      const { id: userId } = c.get("userPayload");
+      const payload = c.get("jwtPayload") as { id?: string } | undefined;
+      const userId = getUserIdFromPayload(payload);
       if (!userId)
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
 

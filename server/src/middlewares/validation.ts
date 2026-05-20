@@ -283,7 +283,6 @@ export const honoJwt = async (c: Context, next: Next) => {
 export async function getTrackedApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
-  logActualResponse: boolean = false,
 ) {
   try {
     const rawRes = await resp.json();
@@ -291,9 +290,6 @@ export async function getTrackedApiResult<T extends z.ZodType>(
     if (!parseRes.success) {
       console.log("Unexpected response!");
       console.log("Zod errors:", parseRes.error.issues);
-    }
-
-    if (logActualResponse || !parseRes.success) {
       console.log(`Actual response (${resp.status}):`);
       const safeStr = (() => {
         try {
@@ -311,9 +307,9 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       } else {
         console.log(safeStr);
       }
+      return;
     }
-
-    return parseRes.success ? parseRes.data : undefined;
+    return parseRes.data;
   } catch (err) {
     console.log("Unexpected Error:", err);
     return;

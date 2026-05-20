@@ -10,7 +10,6 @@ import {
 import { getWalletOverview } from "./walletOverview.service.js";
 import { getWalletPortfolio } from "./walletPortfolio.service.js";
 import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service.js";
-import dayjs from "dayjs";
 
 export interface StablecoinRatioRequest {
   wallets: string[];
@@ -133,18 +132,13 @@ export async function getStablecoinRatio(
             4,
             async (token) => {
               try {
-                const tokenAddress = token.tokenAddress;
-                const series = await getWalletTokenBalanceHistory(wallet, [
-                  tokenAddress,
-                ]);
-                const usdSeries =
-                  series?.[tokenAddress].map((point) => ({
-                    timestamp: point.timestampMs,
-                    value: point.usdValue,
-                  })) || [];
+                const series = await getWalletTokenBalanceHistory(
+                  wallet,
+                  token.tokenAddress,
+                );
                 return {
                   symbol: token.symbol,
-                  usdSeries,
+                  usdSeries: series.usdSeries,
                 };
               } catch {
                 return {
@@ -388,16 +382,10 @@ export async function getDrawdown(
     wallets,
     5, // MAX_WALLET_CHART_CONCURRENCY,
     async (wallet) => {
-      const balanceHistoryRaw = await getWalletBalanceHistory(wallet);
-      if (!balanceHistoryRaw || balanceHistoryRaw.length === 0) {
+      const balanceHistory = await getWalletBalanceHistory(wallet);
+      if (!balanceHistory || balanceHistory.length === 0) {
         return { drawdownResult: [], walletAddress: wallet };
       }
-
-      const balanceHistory = balanceHistoryRaw.map((point) => ({
-        timestamp: point.timestampMs,
-        date: dayjs.utc(point.timestampMs).toISOString(),
-        value: point.usdValue,
-      }));
 
       let peak = balanceHistory[0].value;
       let trough = balanceHistory[0].value;

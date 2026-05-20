@@ -54,6 +54,7 @@ import {
   type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
+import { chunkArray } from "@/util/format";
 import {
   Activity,
   AiGenerate,
@@ -91,19 +92,6 @@ import {
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
-
-function chunkArray<T>(items: T[], size: number): T[][] {
-  if (size <= 0 || items.length === 0) {
-    return [];
-  }
-
-  const output: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    output.push(items.slice(index, index + size));
-  }
-
-  return output;
-}
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)

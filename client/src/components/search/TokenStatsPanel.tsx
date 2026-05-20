@@ -1,7 +1,7 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatChange } from "@/util/format";
 import type { TokenResult } from "./TokenResultItem";
 import styles from "./TokenStatsPanel.module.scss";
-import { TrendNum } from "../TrendNum";
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
 
@@ -56,6 +56,7 @@ export function TokenStatsPanel({ token }: TokenStatsPanelProps) {
     );
   }
 
+  const change = formatChange(token.priceChangePercentage24h);
   const sparkData = token.sparkline7d;
 
   return (
@@ -73,11 +74,13 @@ export function TokenStatsPanel({ token }: TokenStatsPanelProps) {
         </div>
         <div className={styles.statsRow}>
           <span className={styles.label}>24h%</span>
-          <TrendNum
-            value={token.priceChangePercentage24h}
-            prefixes="arrow"
-            formatter={fmt.num.percent}
-          />
+          <span
+            className={`${styles.value} ${
+              change.positive ? styles.positive : styles.negative
+            }`}
+          >
+            {change.positive ? "▲" : "▼"} {change.text}
+          </span>
         </div>
         <div className={styles.statsRow}>
           <span className={styles.label}>{tr("nav.searchMarketCap")}</span>
@@ -95,10 +98,7 @@ export function TokenStatsPanel({ token }: TokenStatsPanelProps) {
 
       <div className={styles.chartContainer}>
         <span className={styles.label}>{tr("nav.searchLast7Days")}</span>
-        <Sparkline
-          data={sparkData}
-          positive={token.priceChangePercentage24h > 0}
-        />
+        <Sparkline data={sparkData} positive={change.positive} />
       </div>
     </aside>
   );

@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatAddress } from "@/util/format";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
 import type { InferResponseType } from "hono/client";
@@ -32,7 +33,7 @@ const shortenAddress = (address: string) => {
 };
 
 export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
-  const { tr, fmt } = useLocalization();
+  const { tr } = useLocalization();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!holders || holders.length === 0) {
@@ -85,11 +86,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             headers={[
               { key: "rank", header: "#" },
               { key: "address", header: tr("token.topHolders.address") },
-              {
-                key: "percentage",
-                header: tr("token.topHolders.percent"),
-                align: "end",
-              },
+              { key: "percentage", header: tr("token.topHolders.percent"), align: "end" },
             ]}
             loading={false}
             height="auto"
@@ -104,7 +101,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                     rel="noopener noreferrer"
                     className={styles.addressLink}
                   >
-                    {fmt.text.address(holder.holderAddress)}
+                    {formatAddress(holder.holderAddress)}
                   </a>
                   <div
                     role="button"

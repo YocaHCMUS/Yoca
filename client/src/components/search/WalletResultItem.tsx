@@ -1,4 +1,4 @@
-import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatAddress } from "@/util/format";
 import styles from "./WalletResultItem.module.scss";
 
 export type WalletResult = {
@@ -20,7 +20,6 @@ export function WalletResultItem({
   onMouseEnter,
   onMouseLeave,
 }: WalletResultItemProps) {
-  const { fmt } = useLocalization();
   return (
     <div
       className={`${styles.resultItem} ${isFocused ? styles.focused : ""}`}
@@ -32,9 +31,7 @@ export function WalletResultItem({
 
       <div className={styles.walletMeta}>
         {/* <p className={styles.walletLabel}>{wallet.label || "Wallet"}</p> */}
-        <p className={styles.walletAddress}>
-          {fmt.text.address(wallet.address)}
-        </p>
+        <p className={styles.walletAddress}>{formatAddress(wallet.address)}</p>
       </div>
     </div>
   );

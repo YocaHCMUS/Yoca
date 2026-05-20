@@ -1,6 +1,7 @@
 import Tble from "@/components/Tble";
 import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { formatAddress } from "@/util/format";
 import { Link } from "@carbon/react";
 import { useMemo } from "react";
 import styles from "./TopHoldersTable.module.scss";
@@ -19,7 +20,7 @@ export function TopHoldersTable({
   holders,
   loading = false,
 }: TopHoldersTableProps) {
-  const { tr, fmt } = useLocalization();
+  const { tr } = useLocalization();
 
   const rows = useMemo(() => {
     if (!holders) return [];
@@ -34,7 +35,7 @@ export function TopHoldersTable({
           rel="noopener noreferrer"
           className={styles.addressLink}
         >
-          {fmt.text.address(holder.holderAddress)}
+          {formatAddress(holder.holderAddress)}
         </Link>
       ),
       percentage: <span>{Number(holder.percentage).toFixed(2)}%</span>,

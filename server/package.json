@@ -29,7 +29,6 @@
     "@solana/instruction-plans": "^6.5.0",
     "@solana/kit": "^6.5.0",
     "bcryptjs": "^3.0.3",
-    "bottleneck": "^2.19.5",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "drizzle-seed": "^0.3.1",
