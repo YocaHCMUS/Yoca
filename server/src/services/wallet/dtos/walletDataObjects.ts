@@ -604,6 +604,8 @@ export interface WalletTxTransfer {
     logoUri: string | null;
     amount: number;
     amountUsd: number | null;
+    fromTokenAccount?: string;
+    toTokenAccount?: string;
 }
 
 export interface WalletFeeReceiver {

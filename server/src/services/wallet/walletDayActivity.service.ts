@@ -255,6 +255,8 @@ export async function getWalletTxDetail(
                 logoUri: null,
                 amount,
                 amountUsd: null,
+                fromTokenAccount: tt.fromTokenAccount ?? undefined,
+                toTokenAccount: tt.toTokenAccount ?? undefined,
             });
         }
 

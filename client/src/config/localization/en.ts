@@ -399,6 +399,7 @@ export const translation = {
     sent: "Sent",
     received: "Received",
     transfersInTransaction: "Transfers in This Transaction ({{count}})",
+    internal: "Internal",
   },
   dictionary: {
     tradingStrategy: {
