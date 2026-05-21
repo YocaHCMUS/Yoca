@@ -2,10 +2,10 @@ import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanc
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import { TradingVolumeDistribution } from "@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart";
-import styles from "./profile.module.scss";
+import styles from "@/components/profile/shared/profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Select, SelectItem } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";

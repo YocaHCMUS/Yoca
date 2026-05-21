@@ -1,13 +1,13 @@
 import {
     ACCOUNT_TIER_LABELS,
     ACCOUNT_TIER_TAG_KIND,
-} from "@/components/profile/profile.constants";
+} from "@/components/profile/shared/profile.constants";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
 import { Link as LinkIcon, Wallet } from "@carbon/react/icons";
-import styles from "./profile.module.scss";
-import { PeriodSelector } from "../common/PeriodSelector/PeriodSelector";
+import styles from "@/components/profile/shared/profile.module.scss";
+import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 
 
 interface ProfileOverviewProps {

@@ -1,12 +1,12 @@
-import { ProfileOverview } from "@/components/profile/ProfileOverview";
+import { ProfileOverview } from "@/components/profile/overview/ProfileOverview";
 import { Table } from "@/components/tables/Table";
 import { FilterType, SortType } from "@/components/tables/Table";
-import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
+import { renderLongCode } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge, Repeat } from "@carbon/icons-react";
+import { AddLarge, Checkmark, Close, Edit } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -15,11 +15,18 @@ import {
     unlinkWalletAddress,
 } from "@/services/profile/profileApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
-import styles from "./profile.module.scss";
+import styles from "@/components/profile/shared/profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
 import { useAuth } from "@/contexts/AuthContext";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { Button, IconButton, TextInput } from "@carbon/react";
+import {
+    getWalletLabel,
+    loadWalletLabels,
+    setWalletLabel,
+    type WalletLabelMap,
+} from "@/components/profile/shared/walletLabels";
 
 interface ProfilePortfolioTabProps {
     linkedWallets: LinkedWalletRowPayload[];
@@ -52,13 +59,21 @@ export function ProfilePortfolioTab({
         () => linkedWalletRows.map((wallet) => wallet.walletAddress),
         [linkedWalletRows],
     );
-    const [selectedComparisonWalletAddresses, setSelectedComparisonWalletAddresses] = useState<string[]>([]);
+    const [labelMap, setLabelMap] = useState<WalletLabelMap>(() => loadWalletLabels());
+    const [editingAddress, setEditingAddress] = useState<string | null>(null);
+    const [draftLabel, setDraftLabel] = useState("");
     const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
 
 
     useEffect(() => {
         setLinkedWalletRows(linkedWallets);
     }, [linkedWallets]);
+
+    useEffect(() => {
+        const handleLabelsUpdate = () => setLabelMap(loadWalletLabels());
+        window.addEventListener("wallet-labels-updated", handleLabelsUpdate);
+        return () => window.removeEventListener("wallet-labels-updated", handleLabelsUpdate);
+    }, []);
 
     const navigateToWalletDetail = (walletAddress: string) => {
         const nextPath = `/wallets/${encodeURIComponent(walletAddress)}`;
@@ -100,32 +115,21 @@ export function ProfilePortfolioTab({
         () =>
             walletOverviews.map((overview) => {
                 const walletMeta = linkedWalletByAddress.get(overview.address);
-                const walletLabel = formatAddress(overview.address);
                 const authStatus = walletMeta?.isAuthWallet
                     ? tr("profileTabs.portfolio.authWalletLabel")
                     : tr("profileTabs.portfolio.linkedWalletLabel");
 
                 return [
                     overview.address,
-                    walletLabel,
+                    getWalletLabel(labelMap, overview.address) ?? formatAddress(overview.address),
                     overview.address,
                     overview.totalAssetValueUsd,
                     authStatus,
                     walletMeta?.isAuthWallet,
                 ];
             }),
-        [linkedWalletByAddress, walletOverviews, tr],
+        [linkedWalletByAddress, walletOverviews, tr, labelMap],
     );
-
-    const handleComparisonToggle = (walletId: string, checked: boolean) => {
-        setSelectedComparisonWalletAddresses((current) => {
-            if (checked) {
-                return current.includes(walletId) ? current : [...current, walletId];
-            }
-
-            return current.filter((address) => address !== walletId);
-        });
-    };
 
     const handleUnlinkWallet = async (walletAddress: string) => {
         try {
@@ -134,31 +138,25 @@ export function ProfilePortfolioTab({
             setLinkedWalletRows((current) =>
                 current.filter((wallet) => wallet.walletAddress !== walletAddress),
             );
-            setSelectedComparisonWalletAddresses((current) =>
-                current.filter((address) => address !== walletAddress),
-            );
         } catch (error) {
             console.error("[ProfilePortfolioTab] Failed to unlink wallet:", error);
         }
     };
 
-    const portfolioCellRenderers = createProfilePortfolioCellRenderers({
-        selectedComparisonWalletAddresses,
-        onComparisonToggle: handleComparisonToggle,
-        onUnlinkWallet: handleUnlinkWallet,
-        formatAddress,
-        formatCurrency: (value: number) => fmt.num.compact.currency(value),
-        t: tr,
-    });
+    const handleStartEdit = (address: string) => {
+        setEditingAddress(address);
+        setDraftLabel(getWalletLabel(labelMap, address) ?? "");
+    };
 
-    const handleCompareClick = () => {
-        if (selectedComparisonWalletAddresses.length < 2) {
-            return;
-        }
+    const handleCancelEdit = () => {
+        setEditingAddress(null);
+        setDraftLabel("");
+    };
 
-        window.location.assign(
-            `/comparison/wallets?wallets=${encodeURIComponent(selectedComparisonWalletAddresses.join(","))}`,
-        );
+    const handleSaveLabel = (address: string) => {
+        setLabelMap((prev) => setWalletLabel(prev, address, draftLabel));
+        setEditingAddress(null);
+        setDraftLabel("");
     };
 
     return (
@@ -172,8 +170,7 @@ export function ProfilePortfolioTab({
                 <Table
                     title={tr("profileTabs.portfolio.linkedWalletsList")}
                     headers={[
-                        tr("profileTabs.portfolio.compare"),
-                        tr("profileTabs.portfolio.wallet"),
+                        "Label",
                         tr("profileTabs.portfolio.address"),
                         tr("profileTabs.portfolio.netWorth"),
                         tr("profileTabs.portfolio.auth"),
@@ -182,16 +179,106 @@ export function ProfilePortfolioTab({
                     initialFilters={{}}
                     fetcher={Promise.resolve([])}
                     filterSchema={{
+                        0: { type: FilterType.Select },
                         1: { type: FilterType.Select },
-                        2: { type: FilterType.Select },
-                        3: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
-                        4: { type: FilterType.Select },
+                        2: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+                        3: { type: FilterType.Select },
                     }}
                     dataEntries={tableRows}
-                    cellRenderers={portfolioCellRenderers}
-                    isSortable={[true, true, true, true, true, false]}
+                    cellRenderers={[
+                        (_value, row) => {
+                            const walletAddress = String(row[0] ?? "");
+                            const label = String(row[1] ?? "");
+                            const isEditing = editingAddress === walletAddress;
+
+                            if (isEditing) {
+                                return (
+                                    <div
+                                        className={styles.labelEditRow}
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <TextInput
+                                            id={`wallet-label-${walletAddress}`}
+                                            value={draftLabel}
+                                            onChange={(event) => setDraftLabel(event.target.value)}
+                                            size="sm"
+                                            placeholder="Add label"
+                                            hideLabel
+                                            labelText="Wallet label"
+                                            className={styles.labelInput}
+                                        />
+                                        <div className={styles.labelEditActions}>
+                                            <IconButton
+                                                kind="ghost"
+                                                size="sm"
+                                                label="Save"
+                                                onClick={() => handleSaveLabel(walletAddress)}
+                                            >
+                                                <Checkmark />
+                                            </IconButton>
+                                            <IconButton
+                                                kind="ghost"
+                                                size="sm"
+                                                label="Cancel"
+                                                onClick={handleCancelEdit}
+                                            >
+                                                <Close />
+                                            </IconButton>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className={styles.labelCell}>
+                                    <span className={styles.labelText}>{label}</span>
+                                    <IconButton
+                                        kind="ghost"
+                                        size="sm"
+                                        label="Edit label"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleStartEdit(walletAddress);
+                                        }}
+                                    >
+                                        <Edit />
+                                    </IconButton>
+                                </div>
+                            );
+                        },
+                        (_value, row) => renderLongCode(String(row[2] ?? ""), 8),
+                        (_value, row) => fmt.num.compact.currency(Number(row[3] ?? 0)),
+                        (_value, row) => String(row[4] ?? ""),
+                        (_value, row) => {
+                            const isAuthWallet = row[5];
+                            if (typeof isAuthWallet !== "boolean") {
+                                return null;
+                            }
+
+                            const walletAddress = String(row[0] ?? "");
+
+                            return (
+                                <div onClick={(event) => event.stopPropagation()}>
+                                    <Button
+                                        size="sm"
+                                        kind="ghost"
+                                        disabled={isAuthWallet}
+                                        title={
+                                            isAuthWallet
+                                                ? tr("profileTabs.portfolio.authWalletCannotBeUnlinked")
+                                                : tr("profileTabs.portfolio.unlinkWallet")
+                                        }
+                                        onClick={() => handleUnlinkWallet(walletAddress)}
+                                    >
+                                        {tr("profileTabs.portfolio.unlinkWallet")}
+                                    </Button>
+                                </div>
+                            );
+                        },
+                    ]}
+                    isSortable={[true, true, true, true, false]}
                     sortConfigs={{
-                        3: { type: SortType.Number },
+                        2: { type: SortType.Number },
                     }}
                     actions={
                         <div className={styles.inlineActions}>
@@ -220,14 +307,6 @@ export function ProfilePortfolioTab({
                                     resolveSuccess(publicKey);
                                 }}
                             />
-                            <button
-                                onClick={handleCompareClick}
-                                disabled={selectedComparisonWalletAddresses.length < 2}
-                                className={styles.triggerButton}
-                            >
-                                <Repeat size={20} />
-                                Compare selected wallets
-                            </button>
                         </div>
                     }
                     loading={loading}

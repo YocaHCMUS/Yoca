@@ -343,7 +343,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 
       {chartOptions.length > 0 && (
         <div
-          style={{ display: "flex", flexDirection: "column", width: "100%" }}
+          style={{ display: "flex", flexDirection: "column", width: "100%", minWidth: 0 }}
         >
           <ChartGrid itemCount={chartOptions.length} multiItemColumns={2}>
             {chartOptions.map((chartData, index) => (

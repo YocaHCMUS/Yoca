@@ -1,4 +1,4 @@
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
@@ -10,7 +10,7 @@ import type { WalletSwap } from "@/services/wallet/walletApi";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { Copy, Link } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
-import styles from "./profile.module.scss";
+import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileActivityTabProps {
   walletAddresses: string[];

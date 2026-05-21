@@ -100,6 +100,33 @@
     flex-wrap: wrap;
 }
 
+.labelCell {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-03;
+}
+
+.labelText {
+    font-weight: 600;
+}
+
+.labelEditRow {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-03;
+    width: 100%;
+}
+
+.labelInput {
+    min-width: 180px;
+}
+
+.labelEditActions {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-02;
+}
+
 .triggerButton {
     display: flex;
     align-items: center;

@@ -312,7 +312,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       series: [
         {
           type: 'pie',
-          radius: ['26%', '56%'],
+          radius: ['22%', '48%'],
           center: ['50%', '50%'],
           data: grouped.map((a, i) => ({
             name: a.name,

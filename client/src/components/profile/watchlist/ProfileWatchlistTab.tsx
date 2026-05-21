@@ -1,6 +1,6 @@
 import client from "@/api/main";
 import { CpyBtn } from "@/components/CpyBtn";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { SortType, Table } from "@/components/tables/Table";
 import { renderSparkline } from "@/components/tables/TableCellRenderer";
@@ -15,7 +15,7 @@ import { IconButton, Link, Stack } from "@carbon/react";
 import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import styles from "./profile.module.scss";
+import styles from "@/components/profile/shared/profile.module.scss";
 
 interface LinkedWalletsResponse {
     userId: string;

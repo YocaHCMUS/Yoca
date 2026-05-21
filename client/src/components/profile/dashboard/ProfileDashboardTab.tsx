@@ -16,9 +16,9 @@ import {
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 
 import { ChartProvider } from "@/contexts/ChartContext";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import {
   fetchWalletAudit,
   fetchWalletDistribution,
@@ -30,6 +30,7 @@ import {
   type WalletOverviewMultiPeriodResponse,
   type WalletOverviewPeriodKey,
   type WalletPortfolioItem,
+  type WalletTokenDetails,
 } from "@/services/wallet/walletApi";
 
 import styles from "./ProfileDashboardTab.module.scss";
@@ -55,6 +56,8 @@ const TRACKED_WALLETS = [
   "JD38n7ynKYcgPpF7k1BhXEeREu1KqptU93fVGy3S624k",
 ];
 
+const PERIOD_OPTIONS: WalletOverviewPeriodKey[] = ["24H", "7D", "30D", "90D"];
+
 // ── Helpers ──────────────────────────────────────────────
 
 function shortAddr(addr: string): string {
@@ -73,10 +76,10 @@ function fmtNum(value: number): string {
 
 const CHART_COLORS = {
   primary: "#0f62fe",
-  success: "#4589ff",
-  danger: "#0043ce",
+  success: "#24a148",
+  danger: "#da1e28",
   accent: "#6fa8ff",
-  warning: "#8ab6ff",
+  warning: "#f1c21b",
   neutral: "#6f6f6f",
   text: "#161616",
   textSub: "#6f6f6f",
@@ -101,6 +104,11 @@ const DONUT_COLORS = [
   CHART_COLORS.warning,
   CHART_COLORS.danger,
 ];
+
+const BUY_SELL_COLORS = {
+  buy: CHART_COLORS.success,
+  sell: CHART_COLORS.danger,
+};
 
 const TOOLTIP_LIGHT = {
   backgroundColor: CHART_COLORS.tooltipBg,
@@ -129,10 +137,17 @@ interface WalletDashboardData {
   balanceTrend: any | null;
 }
 
+interface ProfileDashboardTabProps {
+  walletAddresses?: string[];
+}
+
 // ── Main component ───────────────────────────────────────
 
-export default function ProfileDashboardTab() {
-  const navigate = useNavigate();
+export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboardTabProps) {
+  const trackedWallets = useMemo(
+    () => (walletAddresses && walletAddresses.length > 0 ? walletAddresses : TRACKED_WALLETS),
+    [walletAddresses],
+  );
   const [walletData, setWalletData] = useState<WalletDashboardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,8 +160,9 @@ export default function ProfileDashboardTab() {
     setError(null);
 
     try {
+      const { fetchBalanceTrend } = await import("@/services/chart/chartApi");
       const results = await Promise.all(
-        TRACKED_WALLETS.map(async (address) => {
+        trackedWallets.map(async (address) => {
           const [overview, portfolio, distribution, audit, intelligence, balanceTrend] = await Promise.allSettled([
             fetchWalletOverview(address),
             fetchWalletPortfolio(address),
@@ -155,7 +171,7 @@ export default function ProfileDashboardTab() {
             ),
             fetchWalletAudit(address),
             fetchWalletIntelligence(address),
-            import("@/services/chart/chartApi").then(m => m.fetchBalanceTrend({ wallets: address, timePeriod: "90D" }))
+            fetchBalanceTrend({ wallets: address, timePeriod: "90D" }),
           ]);
 
           return {
@@ -179,7 +195,11 @@ export default function ProfileDashboardTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [trackedWallets]);
+
+  useEffect(() => {
+    fetchedRef.current = false;
+  }, [trackedWallets]);
 
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -228,21 +248,29 @@ export default function ProfileDashboardTab() {
   }, [walletData, period]);
 
   // ── Token Performance & Win Rate Logic ──────────────────
-  const [tokenDetails, setTokenDetails] = useState<any[]>([]);
+  const [tokenDetails, setTokenDetails] = useState<WalletTokenDetails[]>([]);
 
   useEffect(() => {
+    let isActive = true;
+
     import("@/services/wallet/walletApi").then(async (m) => {
       try {
         const results = await Promise.all(
-          TRACKED_WALLETS.map((addr) => m.walletApi.getTokenDetails(addr))
+          trackedWallets.map((addr) => m.walletApi.getTokenDetails(addr))
         );
         const allTokens = results.flat().filter(Boolean);
-        setTokenDetails(allTokens);
+        if (isActive) {
+          setTokenDetails(allTokens);
+        }
       } catch (err) {
         console.error("Failed to fetch token details for PNL analysis", err);
       }
     });
-  }, []);
+
+    return () => {
+      isActive = false;
+    };
+  }, [trackedWallets]);
 
   const winRateStats = useMemo(() => {
     if (!tokenDetails.length) return { top5: [] };
@@ -257,16 +285,18 @@ export default function ProfileDashboardTab() {
 
     const filteredByTime = tokenDetails.filter(t => t.lastTradeUnixTime >= cutoffUnix);
 
-    const aggMap = new Map<string, any>();
+    const aggMap = new Map<string, WalletTokenDetails>();
     filteredByTime.forEach(t => {
+      if (!t?.tokenAddress) return;
       if (!aggMap.has(t.tokenAddress)) {
         aggMap.set(t.tokenAddress, { ...t });
-      } else {
-        const existing = aggMap.get(t.tokenAddress);
-        existing.realizedProfitUsd += t.realizedProfitUsd;
-        existing.unrealizedProfitUsd += t.unrealizedProfitUsd;
-        existing.totalTradeCount += t.totalTradeCount;
+        return;
       }
+      const existing = aggMap.get(t.tokenAddress);
+      if (!existing) return;
+      existing.realizedProfitUsd += t.realizedProfitUsd;
+      existing.unrealizedProfitUsd += t.unrealizedProfitUsd;
+      existing.totalTradeCount += t.totalTradeCount;
     });
 
     const tokens = Array.from(aggMap.values());
@@ -417,13 +447,13 @@ export default function ProfileDashboardTab() {
   // ── Asset Composition Intelligence (Power BI Matrix Table) ─
   const matrixData = useMemo(() => {
     // Collect all tokens and build matrix
-    const tokens = new Map<string, { symbol: string, total: number, wallets: Record<string, number>, logoUri?: string }>();
+    const tokens = new Map<string, { key: string; symbol: string; total: number; wallets: Record<string, number>; logoUri?: string }>();
 
     for (const w of walletData) {
       for (const item of w.portfolio) {
-        const key = item.symbol || item.name || "Unknown";
+        const key = item.tokenAddress || item.symbol || item.name || "Unknown";
         if (!tokens.has(key)) {
-          tokens.set(key, { symbol: key, total: 0, wallets: {}, logoUri: item.logoUri });
+          tokens.set(key, { key, symbol: item.symbol || item.name || "Unknown", total: 0, wallets: {}, logoUri: item.logoUri });
         }
         const t = tokens.get(key)!;
         t.wallets[w.address] = (t.wallets[w.address] || 0) + (item.valueUsd ?? 0);
@@ -520,6 +550,7 @@ export default function ProfileDashboardTab() {
     for (const w of walletData) {
       for (const token of w.portfolio) {
         const key = token.tokenAddress;
+        if (!key) continue;
         const existing = map.get(key);
         map.set(key, {
           symbol: token.symbol || "???",
@@ -631,13 +662,13 @@ export default function ProfileDashboardTab() {
             },
           },
           data: [
-            { name: "Buy", value: totalBuy },
-            { name: "Sell", value: totalSell },
+            { name: "Buy", value: totalBuy, itemStyle: { color: BUY_SELL_COLORS.buy } },
+            { name: "Sell", value: totalSell, itemStyle: { color: BUY_SELL_COLORS.sell } },
           ]
             .sort((a, b) => b.value - a.value)
             .map((item, i) => ({
               ...item,
-              itemStyle: { color: DONUT_COLORS[i % DONUT_COLORS.length] },
+              itemStyle: item.itemStyle ?? { color: DONUT_COLORS[i % DONUT_COLORS.length] },
             })),
         },
       ],
@@ -709,9 +740,8 @@ export default function ProfileDashboardTab() {
       labels.push(`${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}`);
     }
 
-    // We will distribute the total txs and users for each wallet across the days realistically
+    // We will distribute the total txs for each wallet across the days realistically
     const dailyTxs = new Array(actualDays).fill(0);
-    const dailyUsers = new Array(actualDays).fill(0);
 
     walletData.forEach((w) => {
       // Get totals for this period
@@ -744,12 +774,7 @@ export default function ProfileDashboardTab() {
           remainingTx -= tx;
         }
 
-        // Realistic number of unique users/traders interacting per day (typically 60-90% of total txs)
-        const userRatio = 0.6 + (random() * 0.3);
-        const users = tx > 0 ? Math.max(1, Math.round(tx * userRatio)) : 0;
-
         dailyTxs[i] += tx;
-        dailyUsers[i] += users;
       }
     });
 
@@ -761,20 +786,18 @@ export default function ProfileDashboardTab() {
       },
       legend: {
         bottom: 0,
-        left: 'center',
-        orient: 'horizontal' as const,
-        data: ["Transactions", "Traders"],
+        left: "center",
+        orient: "horizontal" as const,
+        data: ["Transactions"],
         textStyle: { color: CHART_COLORS.neutral, fontSize: 11 }
       },
-      grid: { left: 48, right: 48, top: 32, bottom: 40 },
+      grid: { left: 48, right: 32, top: 32, bottom: 40 },
       xAxis: { type: "category" as const, data: labels, axisLabel: { color: CHART_COLORS.neutral, fontSize: 11, fontWeight: "bold" }, axisLine: { lineStyle: { color: CHART_COLORS.axis } }, axisTick: { show: false } },
       yAxis: [
         { type: "value" as const, name: "Transactions", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10 }, splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
-        { type: "value" as const, name: "Traders", nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 }, axisLabel: { color: CHART_COLORS.neutral, fontSize: 10 }, splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false }, minInterval: 1 },
       ],
       series: [
-        { name: "Transactions", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 60, data: dailyTxs, itemStyle: { color: CHART_COLORS.warning, borderRadius: 0 } },
-        { name: "Traders", type: "line" as const, yAxisIndex: 1, data: dailyUsers, smooth: true, lineStyle: { color: CHART_COLORS.danger, width: 2 }, itemStyle: { color: CHART_COLORS.danger }, symbol: "circle", symbolSize: 5 },
+        { name: "Transactions", type: "bar" as const, yAxisIndex: 0, barMaxWidth: 60, data: dailyTxs, itemStyle: { color: CHART_COLORS.primary, borderRadius: 0 } },
       ],
     };
   }, [walletData, period]);
@@ -1013,23 +1036,18 @@ export default function ProfileDashboardTab() {
     );
   }
 
+  if (trackedWallets.length === 0) {
+    return (
+      <ProfileUnavailableState
+        title="Dashboard unavailable"
+        description="No linked wallets were found to build this dashboard."
+      />
+    );
+  }
+
   return (
     <ChartProvider>
       <section className={styles.dashboardRoot}>
-        {/* ── Header Controls ───────────────────────────────── */}
-        <div className={styles.headerRow}>
-          <ContentSwitcher
-            onChange={(e) => setPeriod(e.name as WalletOverviewPeriodKey)}
-            selectedIndex={["24H", "7D", "30D", "90D"].indexOf(period)}
-            size="sm"
-          >
-            <Switch name="24H" text="24H" />
-            <Switch name="7D" text="7D" />
-            <Switch name="30D" text="30D" />
-            <Switch name="90D" text="90D" />
-          </ContentSwitcher>
-        </div>
-
         {/* ── KPI Cards ─────────────────────────────────────── */}
         <div className={styles.kpiStrip}>
           <article className={styles.kpiCard}>
@@ -1067,6 +1085,23 @@ export default function ProfileDashboardTab() {
             <span className={styles.kpiValue}>{fmtNum(kpis.totalTokens)}</span>
             <span className={styles.kpiSub}>Across all wallets</span>
           </article>
+        </div>
+
+        {/* ── Header Controls ───────────────────────────────── */}
+        <div className={styles.headerRow}>
+          <div className={styles.periodSwitcher}>
+            <span className={styles.periodLabel}>Timeframe</span>
+            <ContentSwitcher
+              onChange={(e) => setPeriod(e.name as WalletOverviewPeriodKey)}
+              selectedIndex={Math.max(0, PERIOD_OPTIONS.indexOf(period))}
+              size="sm"
+            >
+              <Switch name="24H" text="24H" />
+              <Switch name="7D" text="7D" />
+              <Switch name="30D" text="30D" />
+              <Switch name="90D" text="90D" />
+            </ContentSwitcher>
+          </div>
         </div>
 
         {/* ── HÀNG 1: 3 biểu đồ đầu tiên ────────────────────────── */}
@@ -1147,7 +1182,7 @@ export default function ProfileDashboardTab() {
                 </thead>
                 <tbody>
                   {matrixData.rows.map((row) => (
-                    <tr key={row.symbol}>
+                    <tr key={row.key}>
                       <td>
                         {row.logoUri ? (
                           <img src={row.logoUri} alt={row.symbol} className={styles.tokenAvatar} />
