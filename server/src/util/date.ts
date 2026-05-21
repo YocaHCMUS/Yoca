@@ -26,3 +26,15 @@ export function getUtcDatesFromNow(dayPeriod: DayPeriodLike): string[] {
   }
   return results;
 }
+
+export function getUtcDatesFromNowMs(dayPeriod: DayPeriodLike): number[] {
+  const nowUtc = dayjs.utc();
+  const todayStart = nowUtc.startOf("day");
+  const results: number[] = [];
+
+  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
+    const date = todayStart.subtract(i, "day");
+    results.push(date.valueOf());
+  }
+  return results;
+}

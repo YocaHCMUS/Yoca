@@ -1,8 +1,10 @@
 import {
+  DAY_MS,
   TOKEN_CHART_24H_UPDATE_THRESHOLD,
-  TOKEN_CHART_DAILY_FETCH_RANGE_MS,
-  TOKEN_CHART_DAILY_UPDATE_THRESHOLD,
-  TOKEN_CHART_HOURLY_FETCH_RANGE_MS,
+  TOKEN_CHART_DAILY_INTERVAL_MS,
+  TOKEN_CHART_HOURLY_INTERVAL_MS,
+  TOKEN_CHART_HOURLY_MIN_POINTS,
+  TOKEN_CHART_HOURLY_MIN_SPAN_MS,
   TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
@@ -17,10 +19,11 @@ import {
 import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import type { CG_TokenMarketChart } from "../_types/token-raw-responses.js";
-import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchBirdeyeJson } from "../wallet/fetchers/walletDataFetcher.service.js";
+import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
 export async function fetch24hTokenMarketChart(
@@ -41,7 +44,7 @@ export async function fetch24hTokenMarketChart(
   const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
 
   const to = new Date().getTime();
-  let from = to - 86_400_000;
+  let from = to - DAY_MS;
 
   if (latestUpdateUnixMs && from < latestUpdateUnixMs) {
     from = latestUpdateUnixMs;
@@ -104,7 +107,7 @@ export async function fetch24hTokenMarketChart(
 
 export async function get24hTokenMarketChart(tokenAddress: string) {
   const to = new Date().getTime();
-  const from = to - 86_400_000;
+  const from = to - DAY_MS;
 
   const chartData = await db
     .select()
@@ -175,20 +178,19 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
 //   };
 // }
 
-async function fetchAndCacheRangedChart(
+// Fetch chart data from CoinGecko for a specific time range and store in DB
+async function fetchAndCacheChartRange(
   tokenAddress: string,
   cgId: string,
   table: typeof tokenMarketChartHourly | typeof tokenMarketChartDaily,
-  fetchRangeMs: number,
+  fromMs: number,
+  toMs: number,
 ): Promise<void> {
-  const now = Date.now();
-  const from = now - fetchRangeMs;
-
   const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
   cgEndpoint.search = new URLSearchParams({
     vs_currency: "usd",
-    from: from.toString(),
-    to: now.toString(),
+    from: fromMs.toString(),
+    to: toMs.toString(),
   }).toString();
 
   const resp = await trackedFetch({
@@ -199,14 +201,14 @@ async function fetchAndCacheRangedChart(
       headers: cg.getRequiredHeaders(),
     },
     serviceFile: "server/src/services/tokens/token-chart.ts",
-    functionName: "fetchAndCacheRangedChart",
+    functionName: "fetchAndCacheChartRange",
   });
   if (!resp.ok) return;
 
   const res = (await resp.json()) as CG_TokenMarketChart;
   if (res.prices.length == 0) return;
 
-  const unixUpdatedAtMs = now;
+  const unixUpdatedAtMs = Date.now();
   const points = res.prices.map(
     (
       [timestamp, price],
@@ -251,45 +253,59 @@ export async function getHourlyTokenMarketChart(
   }
   if (!cgId) return [];
 
-  const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const requestedFromMs = now - days * DAY_MS;
 
-  const cached = await db
+  // Query existing hourly data in requested range
+  const existing = await db
     .select()
     .from(tokenMarketChartHourly)
     .where(
       and(
         eq(tokenMarketChartHourly.address, tokenAddress),
-        gte(tokenMarketChartHourly.unixTimestampMs, requestedFrom),
+        gte(tokenMarketChartHourly.unixTimestampMs, requestedFromMs),
       ),
     )
     .orderBy(tokenMarketChartHourly.unixTimestampMs);
 
-  const latestUpdatedAt =
-    cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
-  const isStale =
-    Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
+  // Build set of existing timestamps for gap detection
+  const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
 
-  if (cached.length == 0 || isStale) {
-    await fetchAndCacheRangedChart(
+  // Detect gaps by checking if any expected hourly timestamp is missing
+  const hasGaps = Array.from(
+    {
+      length: Math.ceil(
+        (now - requestedFromMs) / TOKEN_CHART_HOURLY_INTERVAL_MS,
+      ),
+    },
+    (_, i) => requestedFromMs + i * TOKEN_CHART_HOURLY_INTERVAL_MS,
+  ).some((ts) => !existingSet.has(ts));
+
+  // If gaps detected or no data exists, fetch the missing range
+  if (hasGaps || existing.length == 0) {
+    // Fetch from requested start to now to fill gaps
+    await fetchAndCacheChartRange(
       tokenAddress,
       cgId,
       tokenMarketChartHourly,
-      TOKEN_CHART_HOURLY_FETCH_RANGE_MS,
+      requestedFromMs,
+      now,
     );
 
+    // Re-query after fetch to return combined data
     return db
       .select()
       .from(tokenMarketChartHourly)
       .where(
         and(
           eq(tokenMarketChartHourly.address, tokenAddress),
-          gte(tokenMarketChartHourly.unixTimestampMs, requestedFrom),
+          gte(tokenMarketChartHourly.unixTimestampMs, requestedFromMs),
         ),
       )
       .orderBy(tokenMarketChartHourly.unixTimestampMs);
   }
 
-  return cached;
+  return existing;
 }
 
 export async function getDailyTokenMarketChart(
@@ -308,45 +324,58 @@ export async function getDailyTokenMarketChart(
   }
   if (!cgId) return [];
 
-  const requestedFrom = Date.now() - days * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const requestedFromMs = now - days * DAY_MS;
 
-  const cached = await db
+  // Query existing daily data in requested range
+  const existing = await db
     .select()
     .from(tokenMarketChartDaily)
     .where(
       and(
         eq(tokenMarketChartDaily.address, tokenAddress),
-        gte(tokenMarketChartDaily.unixTimestampMs, requestedFrom),
+        gte(tokenMarketChartDaily.unixTimestampMs, requestedFromMs),
       ),
     )
     .orderBy(tokenMarketChartDaily.unixTimestampMs);
 
-  const latestUpdatedAt =
-    cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
-  const isStale =
-    Date.now() - latestUpdatedAt > TOKEN_CHART_DAILY_UPDATE_THRESHOLD;
+  const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
 
-  if (cached.length == 0 || isStale) {
-    await fetchAndCacheRangedChart(
+  // Detect gaps by checking if any expected daily timestamp is missing
+  const hasGaps = Array.from(
+    {
+      length: Math.ceil(
+        (now - requestedFromMs) / TOKEN_CHART_DAILY_INTERVAL_MS,
+      ),
+    },
+    (_, i) => requestedFromMs + i * TOKEN_CHART_DAILY_INTERVAL_MS,
+  ).some((ts) => !existingSet.has(ts));
+
+  // If gaps detected or no data exists, fetch the missing range
+  if (hasGaps || existing.length == 0) {
+    // Fetch from requested start to now to fill gaps
+    await fetchAndCacheChartRange(
       tokenAddress,
       cgId,
       tokenMarketChartDaily,
-      TOKEN_CHART_DAILY_FETCH_RANGE_MS,
+      requestedFromMs,
+      now,
     );
 
+    // Re-query after fetch to return combined data
     return db
       .select()
       .from(tokenMarketChartDaily)
       .where(
         and(
           eq(tokenMarketChartDaily.address, tokenAddress),
-          gte(tokenMarketChartDaily.unixTimestampMs, requestedFrom),
+          gte(tokenMarketChartDaily.unixTimestampMs, requestedFromMs),
         ),
       )
       .orderBy(tokenMarketChartDaily.unixTimestampMs);
   }
 
-  return cached;
+  return existing;
 }
 
 async function fetchAndCacheHistoricalRange(
@@ -368,7 +397,7 @@ async function fetchAndCacheHistoricalRange(
   if (!json?.success || !Array.isArray(json?.data?.items)) return;
 
   const items = json.data.items as { unixTime: number; value: number }[];
-  if (items.length === 0) return;
+  if (items.length == 0) return;
 
   const nowMs = Date.now();
   const points: TokenMarketChartHourlyInsert[] = items.map((item) => ({
@@ -384,7 +413,10 @@ async function fetchAndCacheHistoricalRange(
     .insert(tokenMarketChartHourly)
     .values(points)
     .onConflictDoUpdate({
-      target: [tokenMarketChartHourly.address, tokenMarketChartHourly.unixTimestampMs],
+      target: [
+        tokenMarketChartHourly.address,
+        tokenMarketChartHourly.unixTimestampMs,
+      ],
       set: {
         price: excluded(tokenMarketChartHourly.price),
         marketCap: excluded(tokenMarketChartHourly.marketCap),
@@ -394,27 +426,19 @@ async function fetchAndCacheHistoricalRange(
     });
 }
 
-
-function isHourlyChartComplete(
-  rows: { unixTimestampMs: number; unixUpdatedAtMs: number }[],
-  _fromMs: number,
-  _toMs: number,
-): boolean {
-  if (rows.length < 8) return false;
-  const span = rows[rows.length - 1].unixTimestampMs - rows[0].unixTimestampMs;
-  return span >= 18 * 60 * 60 * 1000;
-}
-
 export async function getTokenPriceChartForDay(
   tokenAddress: string,
   dayMs: number,
 ): Promise<{ timestampMs: number; price: number }[] | null> {
   if (!tokenAddress) return null;
 
-  const fromMs = Math.floor(dayMs / 86_400_000) * 86_400_000;
-  const toMs = fromMs + 86_400_000;
+  // Use dayjs to handle day boundary calculation with timezone awareness
+  const dayStart = dayjs(dayMs).startOf("day");
+  const fromMs = dayStart.valueOf();
+  const toMs = dayStart.add(1, "day").valueOf();
 
-  const cached = await db
+  // Query existing data for the day
+  const existing = await db
     .select({
       unixTimestampMs: tokenMarketChartHourly.unixTimestampMs,
       price: tokenMarketChartHourly.price,
@@ -430,23 +454,34 @@ export async function getTokenPriceChartForDay(
     )
     .orderBy(tokenMarketChartHourly.unixTimestampMs);
 
-  if (isHourlyChartComplete(cached, fromMs, toMs)) {
-    return cached.map((r) => ({
+  // Check if we have complete hourly data for the day using functional check
+  const isComplete =
+    existing.length >= TOKEN_CHART_HOURLY_MIN_POINTS &&
+    (existing.at(-1)?.unixTimestampMs ?? 0) -
+      (existing.at(0)?.unixTimestampMs ?? 0) >=
+      TOKEN_CHART_HOURLY_MIN_SPAN_MS;
+
+  if (isComplete) {
+    return existing.map((r) => ({
       timestampMs: r.unixTimestampMs,
       price: Number(r.price),
     }));
   }
 
-  const latestUpdatedAt = cached.length > 0 ? cached[cached.length - 1].unixUpdatedAtMs : 0;
-  const isStale = Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
+  // Check if existing data is stale
+  const latestUpdatedAt = existing.at(-1)?.unixUpdatedAtMs ?? 0;
+  const isStale =
+    Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
 
-  if (cached.length === 0 || isStale) {
+  // If incomplete or stale, fetch from Birdeye for this specific day
+  if (existing.length == 0 || isStale) {
     await fetchAndCacheHistoricalRange(
       tokenAddress,
       Math.floor(fromMs / 1000),
       Math.floor(toMs / 1000),
     );
 
+    // Re-query after fetch
     const refreshed = await db
       .select({
         unixTimestampMs: tokenMarketChartHourly.unixTimestampMs,
@@ -463,7 +498,13 @@ export async function getTokenPriceChartForDay(
       )
       .orderBy(tokenMarketChartHourly.unixTimestampMs);
 
-    if (!isHourlyChartComplete(refreshed, fromMs, toMs)) {
+    // Verify completeness after fetch
+    if (
+      refreshed.length < TOKEN_CHART_HOURLY_MIN_POINTS ||
+      (refreshed.at(-1)?.unixTimestampMs ?? 0) -
+        (refreshed.at(0)?.unixTimestampMs ?? 0) <
+        TOKEN_CHART_HOURLY_MIN_SPAN_MS
+    ) {
       return null;
     }
 
@@ -473,7 +514,7 @@ export async function getTokenPriceChartForDay(
     }));
   }
 
-  return cached.map((r) => ({
+  return existing.map((r) => ({
     timestampMs: r.unixTimestampMs,
     price: Number(r.price),
   }));
