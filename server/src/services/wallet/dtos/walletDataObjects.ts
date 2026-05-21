@@ -588,8 +588,11 @@ export interface WalletDaySwapSummary {
     action: "buy" | "sell";
     soldSymbol: string | null;
     boughtSymbol: string | null;
+    soldTokenAddress: string | null;
+    boughtTokenAddress: string | null;
     soldAmount: number;
     boughtAmount: number;
+
 }
 
 export interface WalletTxTransfer {

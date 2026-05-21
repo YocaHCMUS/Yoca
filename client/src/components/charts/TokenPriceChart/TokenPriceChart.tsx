@@ -7,6 +7,7 @@ import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./TokenPriceChart.module.scss";
+import { da } from "date-fns/locale";
 
 export interface TradeIndicator {
   timestampMs: number;
@@ -86,8 +87,9 @@ export function TokenPriceChart({
     const sorted = [...priceData].sort((a, b) => a.timestampMs - b.timestampMs);
     const chartData = sorted.map((p) => [p.timestampMs, p.price]);
 
-    const startTime = chartData[0][0] as number;
-    const endTime = chartData[chartData.length - 1][0] as number;
+
+    const startTime = dayMs;
+    const endTime = startTime + 24 * 60 * 60 * 1000;
 
     const allPrices = chartData.map((d) => d[1] as number);
     const minPrice = Math.min(...allPrices);
@@ -113,7 +115,7 @@ export function TokenPriceChart({
     const bucketMap = new Map<number, AggregatedTradeBucket>();
 
     for (const t of trades) {
-      if (t.timestampMs < startTime || t.timestampMs > endTime) continue;
+      // if (t.timestampMs < startTime || t.timestampMs > endTime) continue;
       const bucketIdx = Math.floor((t.timestampMs - startTime) / bucketSizeMs);
       const existing = bucketMap.get(bucketIdx);
       if (existing) {
@@ -136,6 +138,10 @@ export function TokenPriceChart({
         });
       }
     }
+
+    console.log("Bucketed trades for chart:", Array.from(bucketMap.values()));
+    console.log("trades:", trades);
+    console.log("startTime:", new Date(startTime).toISOString(), "endTime:", new Date(endTime).toISOString());
 
     const offset = priceRange * 0.06;
     const highThreshold = maxPrice - priceRange * 0.2;

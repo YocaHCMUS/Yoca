@@ -15,6 +15,7 @@ import styles from "./DayActivityPopup.module.scss";
 import { ChartColumn } from '@carbon/react/icons';
 import { TokenPriceChart } from "@/components/charts/TokenPriceChart/TokenPriceChart";
 import type { TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
+import TokenIdentityCell from "@/components/token/TokenIdentityCell";
 
 interface DayActivityPopupProps {
   isOpen: boolean;
@@ -141,16 +142,27 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
   const aggregatedTxs = useMemo((): AggregatedTxGroup[] => {
     if (!summary) return [];
 
+    const logoMap = new Map<string, string | null>();
+    for (const token of summary.allTokens) {
+      logoMap.set(token.address, token.logoUri);
+    }
+
     const groupMap = new Map<string, AggregatedTxGroup>();
 
     for (const swap of summary.swaps) {
+      const boughtAddr = swap.boughtTokenAddress;
+      const soldAddr = swap.soldTokenAddress;
+
       const boughtSym = swap.boughtSymbol;
       const soldSym = swap.soldSymbol;
       const isBuy = swap.action === "buy";
+
+      const tokenAddr = isBuy ? boughtAddr : soldAddr;
+      if (!tokenAddr) continue;
       const tokenSymbol = isBuy ? boughtSym : soldSym;
       if (!tokenSymbol) continue;
 
-      const key = `${swap.action}-${tokenSymbol}`;
+      const key = `${swap.action}-${tokenAddr}`;
       const existing = groupMap.get(key);
       if (existing) {
         existing.totalAmount += isBuy ? swap.boughtAmount : swap.soldAmount;
@@ -161,7 +173,7 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
         groupMap.set(key, {
           action: swap.action,
           tokenSymbol,
-          tokenLogoUri: null,
+          tokenLogoUri: logoMap.get(tokenAddr) ?? null,
           totalAmount: isBuy ? swap.boughtAmount : swap.soldAmount,
           totalVolumeUsd: swap.valueUsd,
           tradeCount: 1,
@@ -177,29 +189,33 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
     });
   }, [summary]);
 
-  const getTradesForToken = useCallback((token: WalletDayToken): TradeIndicator[] => {
+  const getTradesForToken = useCallback((token: WalletDayToken) => {
     if (!summary) return [];
+    const tokenAddr = token.address;
     const tokenSym = token.symbol.toLowerCase();
     return summary.swaps
       .filter((swap) => {
-        const boughtSym = swap.boughtSymbol?.toLowerCase();
-        const soldSym = swap.soldSymbol?.toLowerCase();
-        if (boughtSym === tokenSym || soldSym === tokenSym) return true;
-        const pairLower = swap.pair.toLowerCase();
-        if (pairLower.includes(tokenSym)) return true;
+        const boughtAddr = swap.boughtTokenAddress;
+        const soldAddr = swap.soldTokenAddress;
+        if (boughtAddr === tokenAddr || soldAddr === tokenAddr) return true;
         return false;
       })
       .map((swap) => {
+        const boughtAddr = swap.boughtTokenAddress;
+        const soldAddr = swap.soldTokenAddress;
         const boughtSym = swap.boughtSymbol?.toLowerCase();
         const soldSym = swap.soldSymbol?.toLowerCase();
-        const isBoughtMatch = boughtSym === tokenSym;
-        const isSoldMatch = soldSym === tokenSym;
+        const isBoughtMatch = boughtAddr === tokenAddr || boughtSym === tokenSym;
+        const isSoldMatch = soldAddr === tokenAddr || soldSym === tokenSym;
         const tradeType: "buy" | "sell" = isBoughtMatch ? "buy" : isSoldMatch ? "sell" : "buy";
         const amount = isBoughtMatch ? swap.boughtAmount : isSoldMatch ? swap.soldAmount : swap.valueUsd;
+        const price = isBoughtMatch
+          ? (swap.valueUsd / swap.boughtAmount) || 0
+          : (swap.valueUsd / swap.soldAmount) || 0;
         return {
           timestampMs: Date.parse(swap.timestamp),
           type: tradeType,
-          price: 0,
+          price,
           amount,
           symbol: token.symbol,
         };
@@ -349,12 +365,16 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
                               }
                             }}
                           >
+                            {/* {group.tokenLogoUri && (
+                              <img src={group.tokenLogoUri} alt={group.tokenSymbol} className={styles.aggregatedTxIcon} />
+                            )} */}
                             <span className={`${styles.aggregatedTxAction} ${actionClass}`}>
                               {actionLabel}
                             </span>
                             <span className={styles.aggregatedTxAmount}>
-                              {fmt.num.compact.decimal(group.totalAmount)} {group.tokenSymbol}
+                              {fmt.num.compact.decimal(group.totalAmount)}
                             </span>
+                            <TokenIdentityCell symbol={group.tokenSymbol} imageUrl={group.tokenLogoUri} imageSize={18} tooltipAlign="right" />
                             <span className={styles.aggregatedTxCount}>
                               {tr("walletPage.trade", { count: group.tradeCount })}
                             </span>
