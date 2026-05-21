@@ -16,7 +16,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { users } from "./users.js";
+import { users } from "./users";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";

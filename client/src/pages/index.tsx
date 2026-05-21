@@ -5,12 +5,13 @@ import {
   LandingFooter,
   LandingHero,
   MarketIntelligenceSection,
-  LandingNavbar,
   LandingNewsSection,
   LandingProducts,
   LandingStatsBar,
   LandingTestimonials,
 } from "@/components/landing";
+import { createLandingThemeStyles } from "@/components/landing/tokens";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router";
 
 const MAPS = {
@@ -23,11 +24,14 @@ const MOCK_UNAUTHORIZED_STATE = {
 
 function Index() {
   const navigate = useNavigate();
+  const { theme } = useUserTheme();
 
   return (
-    <div className="landing-page min-h-screen bg-[#0a0a0f] text-base text-[#f8fafc] antialiased selection:bg-[#9945FF]/35 selection:text-[#f8fafc]">
-      <LandingNavbar />
-      <main>
+    <div
+      className="landing-page relative isolate min-h-full overflow-hidden bg-(--landing-bg) text-(--landing-foreground) antialiased selection:bg-(--landing-accent)/25 selection:text-(--landing-bg)"
+      style={createLandingThemeStyles(theme)}
+    >
+      <main className="relative flex flex-col">
         {import.meta.env.DEV && (
           <div className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
             <button
@@ -37,7 +41,7 @@ function Index() {
                   state: MOCK_UNAUTHORIZED_STATE,
                 })
               }
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+              className="rounded-md border border-(--landing-border) bg-(--landing-surface) px-4 py-2 text-sm font-medium text-(--landing-foreground) transition-colors hover:bg-(--landing-surface-strong)"
             >
               Test Unauthorized UI
             </button>

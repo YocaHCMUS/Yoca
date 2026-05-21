@@ -33,11 +33,11 @@ export function LandingNewsSection() {
     >
       <div style={grid12Shell}>
         <header style={{ gridColumn: "1 / -1", marginBottom: "3rem" }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#94a3b8]">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-(--landing-muted)">
             Latest news
           </p>
           <h2
-            className="mt-3 text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
+            className="mt-3 text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
             Hear the latest
@@ -67,7 +67,7 @@ export function LandingNewsSection() {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+                e.currentTarget.style.borderColor = "var(--landing-card-border)";
               }}
             >
               <time
@@ -78,13 +78,13 @@ export function LandingNewsSection() {
                 News &middot; {post.date}
               </time>
               <h3
-                className="mt-4 text-lg font-semibold text-[#f8fafc]"
+                className="mt-4 text-lg font-semibold text-(--landing-foreground)"
                 style={{ lineHeight: 1.35 }}
               >
                 {post.title}
               </h3>
               <p
-                className="mt-3 flex-1 text-sm text-[#94a3b8]"
+                className="mt-3 flex-1 text-sm text-(--landing-muted)"
                 style={{ lineHeight: 1.65 }}
               >
                 {post.excerpt}

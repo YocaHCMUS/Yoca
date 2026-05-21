@@ -150,7 +150,7 @@ export function MarketIntelligenceSection() {
             Market Intelligence
           </p>
           <h2
-            className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
+            className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
             See the market the way professionals do.
