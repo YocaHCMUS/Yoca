@@ -667,6 +667,8 @@ export const walletEnhancedTokenTransfers = pgTable(
     tokenAmount: decimal("token_amount").notNull(),
     fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
     toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    fromTokenAccount: varchar("from_token_account", { length: 66 }),
+    toTokenAccount: varchar("to_token_account", { length: 66 }),
     symbol: text("symbol"),
     tokenSymbol: text("token_symbol"),
     instructionIndex: integer("instruction_index").notNull(),
