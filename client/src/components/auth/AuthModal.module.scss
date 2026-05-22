@@ -10,7 +10,7 @@
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px); // Tăng độ blur một chút cho mượt
+  backdrop-filter: blur(6px); 
   z-index: 9999;
 }
 
@@ -18,11 +18,10 @@
   position: relative;
   width: 850px;
   height: 550px;
-  background: #131b26; // Nền có tone xanh dương tối mượt hơn (khớp ảnh 2)
+  background: #131b26; 
   margin: 20px;
   border-radius: 30px;
-  /* Thêm một lớp shadow có ánh sáng xanh viền nhẹ bao quanh toàn bộ form */
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 242, 254, 0.15);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(153, 69, 255, 0.15);
   overflow: hidden;
 
   h1 {
@@ -43,7 +42,7 @@
   right: 0;
   width: 50%;
   height: 100%;
-  background: #131b26; // Đồng bộ với nền container
+  background: #131b26; 
   display: flex;
   align-items: center;
   color: #ffffff;
@@ -76,9 +75,9 @@
   input {
     width: 100%;
     padding: 13px 50px 13px 20px;
-    background: rgba(255, 255, 255, 0.04); // Đổi khung input sang dạng kính mờ (glassmorphism) thay vì nền xám đặc
+    background: rgba(255, 255, 255, 0.04); 
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08); // Viền mỏng và nhẹ hơn
+    border: 1px solid rgba(255, 255, 255, 0.08); 
     outline: none;
     font-size: 16px;
     color: #ffffff;
@@ -86,8 +85,8 @@
     transition: all 0.3s ease;
 
     &:focus {
-      border-color: #00f2fe;
-      background: rgba(255, 255, 255, 0.08);
+      border-color: rgb(153, 69, 255); 
+      background: rgba(153, 69, 255, 0.05);
     }
 
     &::placeholder {
@@ -102,7 +101,7 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 20px;
-    color: #00e1d9;
+    color: rgb(20, 241, 149); 
   }
 }
 
@@ -131,7 +130,7 @@
     transition: 0.2s ease;
     
     &:hover {
-      color: #00f2fe;
+      color: rgb(20, 241, 149); 
     }
   }
 }
@@ -139,19 +138,18 @@
 .btn {
   width: 100%;
   height: 48px;
-  // Dải màu từ Cyan sang Đậm Blue (khớp dải màu trong Ảnh 2)
-  background: linear-gradient(to right, #00f2fe, #0066ff); 
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 150, 255, 0.3); // Tỏa bóng xanh xanh đồng màu
+  background: linear-gradient(120deg, rgb(153, 69, 255) 0%, rgb(125, 95, 255) 52%, rgb(20, 241, 149) 100%);
+  box-shadow: rgba(153, 69, 255, 0.25) 0px 0px 14px;
+  border-radius: 8px; 
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #fff;
+  color: rgb(5, 5, 9); 
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
 
   &:hover {
-    box-shadow: 0 4px 20px rgba(0, 150, 255, 0.5);
+    box-shadow: rgba(153, 69, 255, 0.4) 0px 0px 20px;
     transform: translateY(-1px);
   }
 
@@ -179,7 +177,7 @@
     width: 160px !important;
     height: 44px !important;
     background-color: transparent !important;
-    border: 1px solid rgba(0, 242, 254, 0.4) !important; // Cập nhật viền social màu cyan (khớp ảnh 2)
+    border: 1px solid rgba(153, 69, 255, 0.4) !important; 
     border-radius: 10px !important;
     font-size: 14.5px !important;
     font-weight: 500 !important;
@@ -191,8 +189,8 @@
     padding: 0 12px !important;
 
     &:hover {
-      background-color: rgba(0, 242, 254, 0.05) !important;
-      border-color: #00f2fe !important; // Tăng độ sáng viền khi hover
+      background-color: rgba(153, 69, 255, 0.08) !important; 
+      border-color: rgb(153, 69, 255) !important; 
       transform: translateY(-1px);
     }
 
@@ -225,8 +223,26 @@
     left: -250%;
     width: 300%;
     height: 100%;
-    /* Gradient tạo hiệu ứng glow xanh lam rực rỡ và fade mềm mại hơn (khớp ảnh 2) */
-    background: linear-gradient(135deg, rgba(0, 200, 255, 0.4) 0%, rgba(13, 33, 56, 0.9) 45%, #131b26 100%); 
+    
+    /* Đã tối ưu lại Color Stops: Nén toàn bộ gradient pha Tím -> Xanh vào vừa khớp 
+      khung hiển thị (16.66%) ở cả bên trái và bên phải để không bị loãng màu.
+    */
+    background: linear-gradient(120deg, 
+      /* Khung hiển thị khi form Register mở (mép bên trái) */
+      rgb(153, 69, 255) 0%, 
+      rgb(125, 95, 255) 12%, 
+      rgb(20, 241, 149) 25%, 
+      
+      /* Quá trình chuyển cảnh khi lướt (quét qua mượt mà) */
+      rgb(20, 241, 149) 25%,
+      rgb(153, 69, 255) 75%, 
+      
+      /* Khung hiển thị khi form Login mở (mép bên phải) */
+      rgb(153, 69, 255) 75%, 
+      rgb(125, 95, 255) 91.99%, 
+      rgb(20, 241, 149) 100%
+    ); 
+
     border-radius: 150px;
     z-index: 2;
     transition: 1.8s ease-in-out;
@@ -251,18 +267,20 @@
 
   p {
     margin-bottom: 20px;
-    color: #e2e8f0;
+    color: #ffffff; 
+    font-weight: 500; 
   }
 
   .btn {
     width: 160px;
     height: 46px;
     background: transparent !important;
-    border: 1px solid #00f2fe !important; // Chuyển từ 2px xuống 1px để thanh mảnh như Ảnh 2
+    color: #fff !important; 
+    border: 2px solid #ffffff !important; 
     box-shadow: none;
     
     &:hover {
-      background: rgba(0, 242, 254, 0.1) !important;
+      background: rgba(255, 255, 255, 0.15) !important; 
     }
   }
 }
