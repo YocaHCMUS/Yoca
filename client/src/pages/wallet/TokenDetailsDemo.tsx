@@ -1,10 +1,10 @@
 import client from "@/api/main";
 import {
-  getDefaultAggregationForDayRange,
-  mapTradesWithFallbackPrice,
-  TimeSeriesTradesScatterChart,
-  type TimeSeriesDataPoint,
-  type TradePoint,
+    getDefaultAggregationForDayRange,
+    mapTradesWithFallbackPrice,
+    TimeSeriesTradesScatterChart,
+    type TimeSeriesDataPoint,
+    type TradePoint,
 } from "@/components/charts/TimeSeriesTradesScatterChart";
 import { CpyBtn } from "@/components/CpyBtn";
 import { FilterSwitch } from "@/components/FilterSwitch";
@@ -175,14 +175,14 @@ export function TokenAverageTradePrice({
     },
   );
 
-  const mappedTradePoints = useMemo(() => {
+  const mappedTradePoints: TradePoint[] = useMemo(() => {
     if (!recentTrades.data) {
-      return [] as TradePoint[];
+      return [];
     }
 
     const normalizedTrades = recentTrades.data
-      .map((trade) => {
-        const side = trade.tradeAction === "buy" ? "buy" : "sell";
+      .map((trade): TradePoint => {
+        const side = trade.tradeAction == "buy" ? "buy" : "sell";
         const price = getTradeRowPrice(trade as Record<string, unknown>);
 
         return {
@@ -190,9 +190,9 @@ export function TokenAverageTradePrice({
           side,
           volumeUsd: trade.volumeUsd,
           price,
-          priceSource: price === null ? "missing" : "trade",
+          priceSource: price == null ? "missing" : "trade",
           transactionHash: trade.transactionHash,
-        } as TradePoint;
+        };
       })
       .filter((trade) => Number.isFinite(trade.unixTimeMs));
 
