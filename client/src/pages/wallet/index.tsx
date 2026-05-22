@@ -1213,8 +1213,8 @@ export default function WalletPage() {
     try {
       await ensurePortfolioAndActivityForExport();
       const [ov, intel] = await Promise.all([
-        fetchWalletOverview(address, "solana"),
-        fetchWalletIntelligence(address, "solana"),
+        fetchWalletOverview(address),
+        fetchWalletIntelligence(address),
       ]);
       flushSync(() => {
         setOverviewReport(ov ?? null);

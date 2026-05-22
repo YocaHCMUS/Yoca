@@ -152,7 +152,7 @@ export function TokenAverageTradePrice({
     {
       param: { address: tokenAddress },
       query: {
-        days: selectedTimeRange,
+        days: selectedTimeRange.toString(),
       },
     },
     {

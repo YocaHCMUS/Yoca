@@ -1,18 +1,20 @@
 /**
  * Wallet API Service
- * 
+ *
  * Provides functions to fetch wallet data from backend API endpoints.
  * Types are automatically inferred from the backend Hono routes via RPC client.
- * 
+ *
  * @module services/wallet/walletApi
  */
 
-import client from '@/api/main';
+import client from "@/api/main";
 
 /**
  * Utility type to extract the inferred response type from a fetcher function
  */
-export type InferFetcherData<T extends (...args: unknown[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
+export type InferFetcherData<
+  T extends (...args: unknown[]) => Promise<unknown>,
+> = Awaited<ReturnType<T>>;
 
 /**
  * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
@@ -49,19 +51,19 @@ export interface WalletSwapPair {
 }
 
 export interface WalletSwap {
-  transactionHash: string,
-  transactionType: string,
-  blockTimestampIso: string,
+  transactionHash: string;
+  transactionType: string;
+  blockTimestampIso: string;
 
-  subcategory: string | null,
+  subcategory: string | null;
 
-  walletAddress: string,
-  pairAddress: string,
+  walletAddress: string;
+  pairAddress: string;
 
-  tokensInvolved: string,
+  tokensInvolved: string;
 
-  bought: WalletSwapTokenChange,
-  sold: WalletSwapTokenChange,
+  bought: WalletSwapTokenChange;
+  sold: WalletSwapTokenChange;
 
   totalValueUsd: number | null;
   baseQuotePrice: number | null;
@@ -76,7 +78,6 @@ export interface WalletSwapTokenChange {
   priceUsd: number;
   valueUsd: number;
 }
-
 
 export interface WalletSwapTokenInfo {
   address: string;
@@ -351,7 +352,11 @@ export interface WalletOverviewHoldingsStats {
   totalAssetValueUsd: number;
   change24hPercent: number | null;
   tokensHoldingCount: number;
-  source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+  source:
+    | "birdeye-portfolio"
+    | "helius-portfolio-fallback"
+    | "overview-cache"
+    | "none";
 }
 
 export interface WalletOverviewMultiPeriodResponse {
@@ -395,10 +400,13 @@ async function handleResponse(response: Response) {
         errorMessage = errorData.error;
       }
     } catch (e) {
-      console.error('[walletApi] Failed to parse error response:', e);
+      console.error("[walletApi] Failed to parse error response:", e);
     }
     const error = new Error(errorMessage);
-    console.error('[walletApi] Request failed:', { status: response.status, error });
+    console.error("[walletApi] Request failed:", {
+      status: response.status,
+      error,
+    });
     throw error;
   }
 }
@@ -409,14 +417,12 @@ async function handleResponse(response: Response) {
  */
 export async function fetchWalletOverview(
   address: string,
-  chain?: string,
 ): Promise<WalletOverviewMultiPeriodResponse> {
-  const query = {
-    address,
-    ...(chain && { chain }),
-  };
   const response = await client.api.wallets.overview.$get({
-    query,
+    query: {
+      address,
+      period: "24H",
+    },
   });
   await handleResponse(response);
   const data = await response.json();
@@ -429,7 +435,7 @@ export async function fetchWalletOverview(
  */
 export async function fetchWalletPortfolio(
   address: string,
-  chain?: string
+  chain?: string,
 ): Promise<WalletPortfolioItem[]> {
   const query = { address, ...(chain && { chain }) };
   const response = await client.api.wallets.portfolio.$get({
@@ -451,7 +457,7 @@ export async function fetchWalletTransfers(
     limit?: number;
     cursor?: string;
     before?: string;
-  }
+  },
 ): Promise<WalletTransfersResponse> {
   const query = { address, ...params };
   const response = await client.api.wallets.transfers.$get({
@@ -473,7 +479,7 @@ export async function fetchWalletSwaps(
     limit?: number;
     cursor?: string;
     before?: string;
-  }
+  },
 ): Promise<WalletSwapsResponse> {
   const query = { address, ...params };
   const response = await client.api.wallets.swap.$get({
@@ -501,10 +507,7 @@ export async function fetchWalletBalances(address: string) {
  * Fetch wallet asset distribution
  * GET /api/wallets/distribution
  */
-export async function fetchWalletDistribution(
-  address: string,
-  chain?: string
-) {
+export async function fetchWalletDistribution(address: string, chain?: string) {
   const query = { address, ...(chain && { chain }) };
   const response = await client.api.wallets.distribution.$get({
     query,
@@ -518,13 +521,11 @@ export async function fetchWalletDistribution(
  * Fetch wallet identity data
  * GET /api/wallets/identity
  */
-export async function fetchWalletIdentity(
-  address: string,
-  chain?: string,
-) {
-  const query = { address, ...(chain && { chain }) };
+export async function fetchWalletIdentity(address: string) {
   const response = await client.api.wallets.identity.$get({
-    query,
+    query: {
+      address
+    },
   });
   await handleResponse(response);
   const data = await response.json();
@@ -583,7 +584,7 @@ export async function fetchWalletAiAnalysis(
     let message = `Failed to fetch wallet AI analysis (${response.status})`;
 
     try {
-      const errorData = await response.json() as {
+      const errorData = (await response.json()) as {
         error?: string;
         message?: string;
         code?: string;
@@ -601,13 +602,22 @@ export async function fetchWalletAiAnalysis(
           missing.length > 0
             ? `AI analysis dependencies are not ready: ${missing}`
             : "AI analysis dependencies are not ready";
-      } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
+      } else if (
+        typeof errorData?.message === "string" &&
+        errorData.message.trim()
+      ) {
         message = errorData.message;
-      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+      } else if (
+        typeof errorData?.error === "string" &&
+        errorData.error.trim()
+      ) {
         message = errorData.error;
       }
     } catch (e) {
-      console.error("[walletApi] Failed to parse AI analysis error response:", e);
+      console.error(
+        "[walletApi] Failed to parse AI analysis error response:",
+        e,
+      );
     }
 
     throw new Error(message);
@@ -656,10 +666,9 @@ export async function fetchWalletAudit(
 ): Promise<WalletAuditReport> {
   const url = client.api.wallets[":address"].audit.$url({
     param: { address },
+    query: { force: "true" },
   });
-  if (options?.force) {
-    url.searchParams.set("force", "1");
-  }
+
   const response = await fetch(url.toString(), { credentials: "include" });
   await handleResponse(response);
   const data = await response.json();
