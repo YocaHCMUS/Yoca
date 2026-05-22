@@ -21,7 +21,10 @@ import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
-import type { CG_TokenMarketChart } from "../_types/token-raw-responses.js";
+import {
+  cg_TokenMarketChartSchema,
+  type CG_TokenMarketChart,
+} from "../_types/token-raw-responses.js";
 import { fetchBirdeyeJson } from "../wallet/fetchers/walletDataFetcher.service.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
@@ -143,41 +146,6 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
   return chartData;
 }
 
-// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart
-// For the overview page chart (multiple day ranges, proxied directly)
-// export async function getTokenMarketChart(
-//   tokenAddress: string,
-//   days: number = 1,
-// ) {
-//   if (!tokenAddress) return null;
-
-//   const cgIdLookup = await getCoinGeckoIdList([tokenAddress]);
-//   const cgId = cgIdLookup ? cgIdLookup[tokenAddress] : null;
-
-//   if (!cgId) return null;
-
-//   const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart`);
-//   cgEndpoint.search = new URLSearchParams({
-//     vs_currency: "usd",
-//     days: days.toString(),
-//   }).toString();
-
-//   const req = new Request(cgEndpoint, {
-//     method: "GET",
-//     headers: cg.getRequiredHeaders(),
-//   });
-
-//   const resp = await fetch(req);
-//   if (!resp.ok) return null;
-
-//   const res: CG_TokenMarketChart = await resp.json();
-
-//   return {
-//     prices: res.prices,
-//     marketCaps: res.market_caps,
-//   };
-// }
-
 // Fetch chart data from CoinGecko for a specific time range and store in DB
 async function fetchAndCacheChartRange(
   tokenAddress: string,
@@ -186,27 +154,16 @@ async function fetchAndCacheChartRange(
   fromMs: number,
   toMs: number,
 ): Promise<void> {
-  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
-  cgEndpoint.search = new URLSearchParams({
-    vs_currency: "usd",
-    from: fromMs.toString(),
-    to: toMs.toString(),
-  }).toString();
+  const res = await cg.safeClient(
+    cg.client.coins.marketChart.getRange(cgId, {
+      from: dayjs(fromMs).utc().toISOString(),
+      to: dayjs(toMs).utc().toISOString(),
+      vs_currency: "usd",
+    }),
+    cg_TokenMarketChartSchema,
+  );
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-chart.ts",
-    functionName: "fetchAndCacheChartRange",
-  });
-  if (!resp.ok) return;
-
-  const res = (await resp.json()) as CG_TokenMarketChart;
-  if (res.prices.length == 0) return;
+  if (!res || res.prices.length == 0) return;
 
   const unixUpdatedAtMs = Date.now();
   const points = res.prices.map(
@@ -268,18 +225,20 @@ export async function getHourlyTokenMarketChart(
     )
     .orderBy(tokenMarketChartHourly.unixTimestampMs);
 
-  // Build set of existing timestamps for gap detection
   const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
 
-  // Detect gaps by checking if any expected hourly timestamp is missing
-  const hasGaps = Array.from(
-    {
-      length: Math.ceil(
-        (now - requestedFromMs) / TOKEN_CHART_HOURLY_INTERVAL_MS,
-      ),
-    },
-    (_, i) => requestedFromMs + i * TOKEN_CHART_HOURLY_INTERVAL_MS,
-  ).some((ts) => !existingSet.has(ts));
+  let hasGaps = false;
+
+  for (
+    let ts = requestedFromMs;
+    ts < now;
+    ts += TOKEN_CHART_HOURLY_INTERVAL_MS
+  ) {
+    if (!existingSet.has(ts)) {
+      hasGaps = true;
+      break;
+    }
+  }
 
   // If gaps detected or no data exists, fetch the missing range
   if (hasGaps || existing.length == 0) {

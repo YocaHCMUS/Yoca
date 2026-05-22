@@ -283,41 +283,54 @@ export const honoJwt = async (c: Context, next: Next) => {
 export async function getTrackedApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
-  logActualResponse: boolean = false,
+  logSuccessResponse: boolean = false,
 ) {
   try {
-    const rawRes = await resp.json();
-    const parseRes = schema.safeParse(rawRes);
-    if (!parseRes.success) {
-      console.log("Unexpected response!");
-      console.log("Zod errors:", parseRes.error.issues);
-    }
-
-    if (logActualResponse || !parseRes.success) {
-      console.log(`Actual response (${resp.status}):`);
-      const safeStr = (() => {
-        try {
-          return JSON.stringify(rawRes, null, 2);
-        } catch {
-          return String(rawRes);
-        }
-      })();
-      const maxLog = 1000;
-      if (safeStr.length > maxLog) {
-        console.log(
-          safeStr.slice(0, maxLog) +
-            `\n... (truncated ${safeStr.length - maxLog} chars)`,
-        );
-      } else {
-        console.log(safeStr);
-      }
-    }
-
-    return parseRes.success ? parseRes.data : undefined;
+    const jsonResp = await resp.json();
+    return validateResponseDataSchema(
+      resp.status,
+      jsonResp,
+      schema,
+      logSuccessResponse,
+    );
   } catch (err) {
-    console.log("Unexpected Error:", err);
+    console.error("Unexpected Error:", err);
     return;
   }
+}
+
+export async function validateResponseDataSchema<T extends z.ZodType>(
+  status: number,
+  jsonResp: any,
+  schema: T,
+  logSuccessResponse: boolean,
+) {
+  const parseRes = schema.safeParse(jsonResp);
+  if (!parseRes.success) {
+    console.error("Unexpected response!\nZod errors:", parseRes.error.issues);
+  }
+
+  if (logSuccessResponse || !parseRes.success) {
+    console.log(`Actual response (${status}):`);
+    const safeStr = (() => {
+      try {
+        return JSON.stringify(jsonResp, null, 2);
+      } catch {
+        return String(jsonResp);
+      }
+    })();
+    const maxLog = 1000;
+    if (safeStr.length > maxLog) {
+      console.log(
+        safeStr.slice(0, maxLog) +
+          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+      );
+    } else {
+      console.log(safeStr);
+    }
+  }
+
+  return parseRes.success ? parseRes.data : undefined;
 }
 
 export const envSchema = z.object({

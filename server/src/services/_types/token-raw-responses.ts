@@ -7,11 +7,13 @@ export interface CG_Token {
   platforms: { solana?: string };
 }
 
-export interface CG_TokenMarketChart {
-  prices: [number, number][];
-  market_caps: [number, number][];
-  total_volumes: [number, number][];
-}
+export const cg_TokenMarketChartSchema = z.object({
+  prices: z.array(z.tuple([z.number(), z.number()])),
+  market_caps: z.array(z.tuple([z.number(), z.number()])),
+  total_volumes: z.array(z.tuple([z.number(), z.number()])),
+});
+
+export type CG_TokenMarketChart = z.infer<typeof cg_TokenMarketChartSchema>;
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 type MarketItem = MarketGetResponse[number];
