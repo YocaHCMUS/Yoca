@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import { ArrowRight, Close } from "@carbon/react/icons";
+import { ArrowRight, Close, Wallet } from "@carbon/react/icons";
 import { Loading } from "@carbon/react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -390,48 +390,92 @@ export function SwapDetailModal({
                     {txDetail.transfers.map((t, i) => {
                       const isOut = t.from === walletAddress;
                       const otherAddr = isOut ? t.to : t.from;
+                      const isInternal = t.from === t.to;
                       const lookupMint = resolveTokenMetaLookupAddress(t.mint);
                       const meta = tokenMetaMap[lookupMint];
                       const symbol = meta?.symbol || t.symbol || t.mint.slice(0, 8);
                       const name = meta?.name ?? t.name;
                       const logoUri = meta?.logoUri ?? t.logoUri;
+                      const leftTA = isOut ? t.fromTokenAccount : t.toTokenAccount;
+                      const rightTA = isOut ? t.toTokenAccount : t.fromTokenAccount;
 
                       return (
-                        <div key={i} className={styles.transferItem}>
-                          <span className={styles.transferDir}>{isOut ? "→" : "←"}</span>
-                          <span className={`${styles.transferAmount} ${isOut ? styles.transferAmountOut : styles.transferAmountIn}`}>
-                            {fmt.num.compact.decimal(t.amount)}
-                          </span>
-                          <TokenIdentityCell
-                            symbol={symbol.toUpperCase()}
-                            fullName={name}
-                            imageUrl={logoUri}
-                            imageSize={16}
-                          />
-                          <span className={styles.transferSpacer} />
-                          <span className={styles.transferAddrLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
-                          <span className={styles.addressWithCopy}>
-                            <span
-                              className={styles.transferAddress}
-                              title={otherAddr}
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                                }
-                              }}
-                            >
-                              {truncateAddr(otherAddr)}
+                        <div key={i} className={styles.transferGroup}>
+                          <div className={styles.transferItem}>
+                            <span className={styles.transferDir}>{isOut ? "→" : "←"}</span>
+                            <span className={`${styles.transferAmount} ${isOut ? styles.transferAmountOut : styles.transferAmountIn}`}>
+                              {fmt.num.compact.decimal(t.amount)}
                             </span>
-                            <CpyBtn size="sm" copyWhat={otherAddr} align="top" />
-                          </span>
+                            <TokenIdentityCell
+                              symbol={symbol.toUpperCase()}
+                              fullName={name}
+                              imageUrl={logoUri}
+                              imageSize={16}
+                            />
+                            <span className={styles.transferSpacer} />
+                            <span className={styles.transferAddrLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
+                            <span className={styles.addressWithCopy}>
+                              <span
+                                className={styles.transferAddress}
+                                title={otherAddr}
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
+                                  }
+                                }}
+                              >
+                                {isInternal ? tr("walletPage.internal") : truncateAddr(otherAddr)}
+                              </span>
+                              {!isInternal && <CpyBtn size="sm" copyWhat={otherAddr} align="top" />}
+                            </span>
+                          </div>
+                          {!isInternal && leftTA && rightTA && (
+                            <div className={styles.transferSubRow}>
+                              <span className={styles.transferTokenAddr} title={leftTA}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/wallets/${encodeURIComponent(leftTA)}`);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    navigate(`/wallets/${encodeURIComponent(leftTA)}`);
+                                  }
+                                }}
+                              >
+                                <Wallet size={12} />
+                                {truncateAddr(leftTA)}
+                                <CpyBtn size="xs" copyWhat={leftTA} align="top" />
+                              </span>
+                              <span className={styles.transferSpacer} />
+                              <span className={styles.transferTokenAddr} title={rightTA}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/wallets/${encodeURIComponent(rightTA)}`);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    navigate(`/wallets/${encodeURIComponent(rightTA)}`);
+                                  }
+                                }}
+                              >
+                                <Wallet size={12} />
+                                {truncateAddr(rightTA)}
+                                <CpyBtn size="xs" copyWhat={rightTA} align="top" />
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

@@ -317,10 +317,40 @@
   display: flex;
   align-items: center;
   gap: $spacing-02;
+}
+
+.transferGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   padding: $spacing-02 $spacing-03;
   background-color: $layer-02;
   border-radius: 4px;
+}
+
+.transferSubRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  padding: 0 $spacing-02 $spacing-02 $spacing-06;
   font-family: 'IBM Plex Mono', monospace;
+}
+
+.transferTokenAddr {
+  @include type-style('label-01');
+  color: $text-placeholder;
+  font-size: 0.625rem;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-01;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
 }
 
 .transferDir {

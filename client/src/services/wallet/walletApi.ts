@@ -121,6 +121,8 @@ export interface WalletDaySwapSummary {
   action: "buy" | "sell";
   soldSymbol: string | null;
   boughtSymbol: string | null;
+  soldTokenAddress: string | null;
+  boughtTokenAddress: string | null;
   soldAmount: number;
   boughtAmount: number;
 }
@@ -146,6 +148,8 @@ export interface WalletTxTransfer {
   logoUri: string | null;
   amount: number;
   amountUsd: number | null;
+  fromTokenAccount?: string;
+  toTokenAccount?: string;
 }
 
 export interface WalletFeeReceiver {
