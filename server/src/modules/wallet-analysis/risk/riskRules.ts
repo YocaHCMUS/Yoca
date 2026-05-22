@@ -1,8 +1,13 @@
 import type { EvidenceBundle, RiskFactor, WalletBehaviorProfile, WalletRiskProfile } from "../types/walletBehaviorProfile";
+import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
+import { isBuyLikeSwapDirection, isPositionTokenMint, isSellLikeSwapDirection } from "../utils/pnlUtils";
 import { clamp } from "../utils/mathUtils";
+import { diffHours, getUtcHourKey, sortEventsByTimestampAsc } from "../utils/timeUtils";
+import { isSolLikeMint, isStablecoinMint } from "../utils/tokenUtils";
 
 export type RiskRuleContext = {
     profile: WalletBehaviorProfile;
+    events?: NormalizedWalletEvent[];
 };
 
 export type RiskRuleResult = {
@@ -10,6 +15,7 @@ export type RiskRuleResult = {
     impact: number;
     evidence?: EvidenceBundle;
     description: string;
+    relatedEvidenceIds?: string[];
 };
 
 export type RiskEvaluation = {
@@ -37,12 +43,16 @@ function createEvidence(
     value: number | string | null,
     threshold: number | string | null,
     severity: EvidenceBundle["severity"],
+    relatedSignatures?: string[],
+    relatedTokenMints?: string[],
 ): EvidenceBundle {
     return {
         id,
         type,
         title,
         description,
+        relatedSignatures,
+        relatedTokenMints,
         value,
         threshold,
         severity,
@@ -51,6 +61,165 @@ function createEvidence(
 
 function cap(impact: number, limit: number): number {
     return Math.max(0, Math.min(impact, limit));
+}
+
+function limitUnique(values: string[], limit: number): string[] {
+    const seen = new Set<string>();
+    const limited: string[] = [];
+
+    for (const value of values) {
+        if (seen.has(value)) {
+            continue;
+        }
+
+        seen.add(value);
+        limited.push(value);
+
+        if (limited.length >= limit) {
+            break;
+        }
+    }
+
+    return limited;
+}
+
+function getSwapEvents(events: NormalizedWalletEvent[]): NormalizedWalletEvent[] {
+    return sortEventsByTimestampAsc(events).filter((event) => event.type === "SWAP" && event.swap != null);
+}
+
+function getBusiestUtcHour(events: NormalizedWalletEvent[]): { hourKey: string; count: number; signatures: string[] } | null {
+    const buckets = new Map<string, { count: number; signatures: string[] }>();
+
+    for (const event of events) {
+        const hourKey = getUtcHourKey(event.timestamp);
+        const current = buckets.get(hourKey) ?? { count: 0, signatures: [] };
+        current.count += 1;
+        current.signatures.push(event.signature);
+        buckets.set(hourKey, current);
+    }
+
+    let winner: { hourKey: string; count: number; signatures: string[] } | null = null;
+    for (const [hourKey, bucket] of buckets.entries()) {
+        if (winner == null || bucket.count > winner.count || (bucket.count === winner.count && hourKey < winner.hourKey)) {
+            winner = { hourKey, count: bucket.count, signatures: bucket.signatures };
+        }
+    }
+
+    return winner;
+}
+
+type ClosedTradeSignaturePair = {
+    buySignature: string;
+    sellSignature: string;
+    holdingHours: number;
+};
+
+function getClosedTradeSignaturePairs(events: NormalizedWalletEvent[]): ClosedTradeSignaturePair[] {
+    const lotsByToken = new Map<string, Array<{ buySignature: string; amount: number; boughtAt: string }>>();
+    const pairs: ClosedTradeSignaturePair[] = [];
+
+    for (const event of getSwapEvents(events)) {
+        const swap = event.swap;
+        if (swap == null) {
+            continue;
+        }
+
+        if (isBuyLikeSwapDirection(swap.tradeDirectionForWallet) && isPositionTokenMint(swap.outputMint) && swap.outputAmount > 0) {
+            const existingLots = lotsByToken.get(swap.outputMint) ?? [];
+            existingLots.push({ buySignature: event.signature, amount: swap.outputAmount, boughtAt: event.timestamp });
+            lotsByToken.set(swap.outputMint, existingLots);
+            continue;
+        }
+
+        if (!isSellLikeSwapDirection(swap.tradeDirectionForWallet) || !isPositionTokenMint(swap.inputMint) || swap.inputAmount <= 0) {
+            continue;
+        }
+
+        const existingLots = lotsByToken.get(swap.inputMint);
+        if (existingLots == null || existingLots.length === 0) {
+            continue;
+        }
+
+        let sellRemaining = swap.inputAmount;
+        while (sellRemaining > 0 && existingLots.length > 0) {
+            const lot = existingLots[0];
+            const consumedAmount = Math.min(lot.amount, sellRemaining);
+            if (consumedAmount <= 0) {
+                break;
+            }
+
+            pairs.push({
+                buySignature: lot.buySignature,
+                sellSignature: event.signature,
+                holdingHours: diffHours(lot.boughtAt, event.timestamp),
+            });
+
+            lot.amount -= consumedAmount;
+            sellRemaining -= consumedAmount;
+
+            if (lot.amount <= 1e-12) {
+                existingLots.shift();
+            }
+        }
+
+        if (existingLots.length > 0) {
+            lotsByToken.set(swap.inputMint, existingLots);
+        } else {
+            lotsByToken.delete(swap.inputMint);
+        }
+    }
+
+    return pairs;
+}
+
+function getShortHoldingEvidenceSignatures(events: NormalizedWalletEvent[]): string[] {
+    const shortPairs = getClosedTradeSignaturePairs(events).filter((pair) => pair.holdingHours <= 24);
+
+    if (shortPairs.length > 0) {
+        return limitUnique(shortPairs.flatMap((pair) => [pair.buySignature, pair.sellSignature]), 5);
+    }
+
+    return limitUnique(
+        getSwapEvents(events)
+            .filter((event) => isSellLikeSwapDirection(event.swap!.tradeDirectionForWallet) || isBuyLikeSwapDirection(event.swap!.tradeDirectionForWallet))
+            .map((event) => event.signature),
+        5,
+    );
+}
+
+function getClosedPnlSellSignatures(events: NormalizedWalletEvent[]): string[] {
+    const closedPairs = getClosedTradeSignaturePairs(events);
+    if (closedPairs.length > 0) {
+        return limitUnique(closedPairs.map((pair) => pair.sellSignature), 5);
+    }
+
+    return limitUnique(
+        getSwapEvents(events)
+            .filter((event) => isSellLikeSwapDirection(event.swap!.tradeDirectionForWallet))
+            .map((event) => event.signature),
+        5,
+    );
+}
+
+function getNonStableNonSolTradeMints(events: NormalizedWalletEvent[]): string[] {
+    const mints: string[] = [];
+
+    for (const event of getSwapEvents(events)) {
+        const swap = event.swap;
+        if (swap == null) {
+            continue;
+        }
+
+        for (const mint of [swap.inputMint, swap.outputMint]) {
+            if (!isPositionTokenMint(mint) || isStablecoinMint(mint) || isSolLikeMint(mint)) {
+                continue;
+            }
+
+            mints.push(mint);
+        }
+    }
+
+    return limitUnique(mints, 8);
 }
 
 function buildFactor(
@@ -79,7 +248,7 @@ function buildFactor(
     };
 }
 
-function evaluateHighFrequencyActivity(profile: WalletBehaviorProfile): RiskRuleResult {
+function evaluateHighFrequencyActivity(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 
     if (profile.activity.activityLevel === "EXTREME") {
@@ -97,25 +266,34 @@ function evaluateHighFrequencyActivity(profile: WalletBehaviorProfile): RiskRule
 
     impact = cap(impact, 20);
 
+    const busiestHour = events != null && events.length > 0 ? getBusiestUtcHour(events) : null;
+    const relatedSignatures = busiestHour != null ? limitUnique(busiestHour.signatures, 5) : undefined;
+    const description = busiestHour != null
+        ? `Activity is concentrated with a ${profile.activity.activityLevel.toLowerCase()} activity level, a burst score of ${Math.round(profile.activity.burstActivityScore)}, and a busiest UTC hour containing ${busiestHour.count} transactions.`
+        : `Activity is concentrated with a ${profile.activity.activityLevel.toLowerCase()} activity level and a burst score of ${Math.round(profile.activity.burstActivityScore)}.`;
+
     return {
         code: "HIGH_FREQUENCY_ACTIVITY",
         impact,
-        description: `Activity is concentrated with a ${profile.activity.activityLevel.toLowerCase()} activity level and a burst score of ${Math.round(profile.activity.burstActivityScore)}.`,
+        description,
         evidence: impact > 0
             ? createEvidence(
                 "ev_risk_high_frequency_activity",
-                "METRIC_THRESHOLD",
+                relatedSignatures != null ? "TRANSACTION_SIGNATURES" : "METRIC_THRESHOLD",
                 "High frequency activity",
-                `Activity level ${profile.activity.activityLevel}, burst score ${Math.round(profile.activity.burstActivityScore)}, max transactions in one hour ${profile.activity.maxTransactionsInOneHour}.`,
+                busiestHour != null
+                    ? `Activity level ${profile.activity.activityLevel}, burst score ${Math.round(profile.activity.burstActivityScore)}, max transactions in one hour ${profile.activity.maxTransactionsInOneHour}, busiest UTC hour count ${busiestHour.count}.`
+                    : `Activity level ${profile.activity.activityLevel}, burst score ${Math.round(profile.activity.burstActivityScore)}, max transactions in one hour ${profile.activity.maxTransactionsInOneHour}.`,
                 profile.activity.burstActivityScore,
                 70,
                 severityFromImpact(impact),
+                relatedSignatures,
             )
             : undefined,
     };
 }
 
-function evaluateShortHoldingPeriod(profile: WalletBehaviorProfile): RiskRuleResult {
+function evaluateShortHoldingPeriod(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 
     if (profile.trading.shortTermTradeRatio != null && profile.trading.shortTermTradeRatio >= 0.5) {
@@ -133,6 +311,8 @@ function evaluateShortHoldingPeriod(profile: WalletBehaviorProfile): RiskRuleRes
 
     impact = cap(impact, 22);
 
+    const relatedSignatures = events != null && events.length > 0 ? getShortHoldingEvidenceSignatures(events) : undefined;
+
     return {
         code: "SHORT_HOLDING_PERIOD",
         impact,
@@ -142,18 +322,19 @@ function evaluateShortHoldingPeriod(profile: WalletBehaviorProfile): RiskRuleRes
         evidence: impact > 0
             ? createEvidence(
                 "ev_risk_short_holding",
-                "METRIC_THRESHOLD",
+                relatedSignatures != null ? "TRANSACTION_SIGNATURES" : "METRIC_THRESHOLD",
                 "Short holding period risk",
                 `Short-term trade ratio ${profile.trading.shortTermTradeRatio ?? "unknown"}, median holding period ${profile.trading.medianHoldingPeriodHours ?? "unknown"} hours, trading style ${profile.trading.tradingStyle}.`,
                 profile.trading.shortTermTradeRatio ?? null,
                 0.5,
                 severityFromImpact(impact),
+                relatedSignatures,
             )
             : undefined,
     };
 }
 
-function evaluateNegativePnl(profile: WalletBehaviorProfile): RiskRuleResult {
+function evaluateNegativePnl(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 
     if (profile.pnl.realizedPnlUsd != null && profile.pnl.realizedPnlUsd < 0) {
@@ -168,6 +349,8 @@ function evaluateNegativePnl(profile: WalletBehaviorProfile): RiskRuleResult {
 
     impact = cap(impact, 18);
 
+    const relatedSignatures = events != null && events.length > 0 ? getClosedPnlSellSignatures(events) : undefined;
+
     return {
         code: "NEGATIVE_PNL",
         impact,
@@ -177,18 +360,19 @@ function evaluateNegativePnl(profile: WalletBehaviorProfile): RiskRuleResult {
         evidence: impact > 0
             ? createEvidence(
                 "ev_risk_negative_pnl",
-                "PNL_RESULT",
+                relatedSignatures != null ? "TRANSACTION_SIGNATURES" : "PNL_RESULT",
                 "Negative realized PnL",
                 `Realized PnL is ${profile.pnl.realizedPnlUsd?.toFixed(2) ?? "unknown"} USD.`,
                 profile.pnl.realizedPnlUsd ?? null,
                 0,
                 severityFromImpact(impact),
+                relatedSignatures,
             )
             : undefined,
     };
 }
 
-function evaluateLowWinRate(profile: WalletBehaviorProfile): RiskRuleResult {
+function evaluateLowWinRate(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 
     if (profile.pnl.closedPositionCount >= 5 && profile.pnl.winRate != null && profile.pnl.winRate < 0.45) {
@@ -200,6 +384,8 @@ function evaluateLowWinRate(profile: WalletBehaviorProfile): RiskRuleResult {
 
     impact = cap(impact, 14);
 
+    const relatedSignatures = events != null && events.length > 0 ? getClosedPnlSellSignatures(events) : undefined;
+
     return {
         code: "LOW_WIN_RATE",
         impact,
@@ -209,18 +395,19 @@ function evaluateLowWinRate(profile: WalletBehaviorProfile): RiskRuleResult {
         evidence: impact > 0
             ? createEvidence(
                 "ev_risk_low_win_rate",
-                "PNL_RESULT",
+                relatedSignatures != null ? "TRANSACTION_SIGNATURES" : "PNL_RESULT",
                 "Low win rate",
                 `Win rate ${profile.pnl.winRate ?? "unknown"} across ${profile.pnl.closedPositionCount} closed positions.`,
                 profile.pnl.winRate ?? null,
                 0.45,
                 severityFromImpact(impact),
+                relatedSignatures,
             )
             : undefined,
     };
 }
 
-function evaluateHighTokenDiversity(profile: WalletBehaviorProfile): RiskRuleResult {
+function evaluateHighTokenDiversity(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 
     if (profile.trading.uniqueTokensTraded >= 20) {
@@ -231,6 +418,8 @@ function evaluateHighTokenDiversity(profile: WalletBehaviorProfile): RiskRuleRes
     }
 
     impact = cap(impact, 15);
+
+    const relatedTokenMints = events != null && events.length > 0 ? getNonStableNonSolTradeMints(events) : undefined;
 
     return {
         code: "HIGH_TOKEN_DIVERSITY",
@@ -245,6 +434,8 @@ function evaluateHighTokenDiversity(profile: WalletBehaviorProfile): RiskRuleRes
                 profile.trading.uniqueTokensTraded,
                 20,
                 severityFromImpact(impact),
+                undefined,
+                relatedTokenMints,
             )
             : undefined,
     };
@@ -302,11 +493,13 @@ function evaluateWashTradingSuspicion(profile: WalletBehaviorProfile): RiskRuleR
     }
 
     impact = cap(impact, 30);
+    const signalEvidenceIds = limitUnique(profile.washTrading.signals.flatMap((signal) => signal.evidenceIds), 10);
 
     return {
         code: "WASH_TRADING_SUSPECTED",
         impact,
         description: `Wash trading suspicion is ${profile.washTrading.suspicionLevel.toLowerCase()} with score ${Math.round(profile.washTrading.suspicionScore)}.`,
+        relatedEvidenceIds: signalEvidenceIds.length > 0 ? signalEvidenceIds : undefined,
         evidence: impact > 0
             ? createEvidence(
                 "ev_risk_wash_trading_suspected",
@@ -357,13 +550,13 @@ function evaluateMissingData(profile: WalletBehaviorProfile): RiskRuleResult {
     };
 }
 
-export function evaluateRiskCategories(profile: WalletBehaviorProfile): RiskRuleResult[] {
+export function evaluateRiskCategories(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult[] {
     return [
-        evaluateHighFrequencyActivity(profile),
-        evaluateShortHoldingPeriod(profile),
-        evaluateNegativePnl(profile),
-        evaluateLowWinRate(profile),
-        evaluateHighTokenDiversity(profile),
+        evaluateHighFrequencyActivity(profile, events),
+        evaluateShortHoldingPeriod(profile, events),
+        evaluateNegativePnl(profile, events),
+        evaluateLowWinRate(profile, events),
+        evaluateHighTokenDiversity(profile, events),
         evaluatePortfolioConcentration(profile),
         evaluateWashTradingSuspicion(profile),
         evaluateMissingData(profile),
@@ -413,8 +606,9 @@ export function buildRiskExplanation(params: {
     return `The wallet is classified as ${params.riskLevel} risk mainly due to ${joined}.${caution}`;
 }
 
-export function evaluateWalletRisk(profile: WalletBehaviorProfile): RiskEvaluation {
-    const categoryResults = evaluateRiskCategories(profile);
+export function evaluateWalletRisk(context: RiskRuleContext): RiskEvaluation {
+    const { profile, events } = context;
+    const categoryResults = evaluateRiskCategories(profile, events);
     const factors: RiskFactor[] = [];
     const evidence: EvidenceBundle[] = [];
     const topFactorDescriptions: string[] = [];
@@ -423,13 +617,17 @@ export function evaluateWalletRisk(profile: WalletBehaviorProfile): RiskEvaluati
     for (const result of categoryResults) {
         rawScore += result.impact;
         if (result.impact > 0 && result.evidence != null) {
+            const evidenceIds = result.relatedEvidenceIds != null
+                ? [...new Set([result.evidence.id, ...result.relatedEvidenceIds])]
+                : [result.evidence.id];
+
             evidence.push(result.evidence);
             factors.push({
                 code: result.code,
                 severity: severityFromImpact(result.impact),
                 scoreImpact: result.impact,
                 description: result.description,
-                evidenceIds: [result.evidence.id],
+                evidenceIds,
             });
             topFactorDescriptions.push(result.description);
         }

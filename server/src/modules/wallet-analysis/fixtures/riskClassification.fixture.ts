@@ -1,8 +1,78 @@
 import { WalletBehaviorProfileSchema } from "../schemas/walletBehaviorProfile.schema";
 import { enrichProfileWithRisk } from "../analyzers/enrichProfileWithRisk";
+import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
 import type { WalletBehaviorProfile } from "../types/walletBehaviorProfile";
 
 const WALLET_ADDRESS = "9xRiskFixtureWallet111111111111111111111111111111";
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
+function createSwapEvent(params: {
+    signature: string;
+    timestamp: string;
+    inputMint: string;
+    outputMint: string;
+    tradeDirectionForWallet: "BUY" | "SELL" | "TOKEN_TO_TOKEN" | "STABLE_TO_TOKEN" | "TOKEN_TO_STABLE" | "UNKNOWN";
+    estimatedSwapValueUsd: number;
+}): NormalizedWalletEvent {
+    return {
+        id: `${params.signature}:${WALLET_ADDRESS}`,
+        walletAddress: WALLET_ADDRESS,
+        signature: params.signature,
+        slot: null,
+        timestamp: params.timestamp,
+        status: "SUCCESS",
+        type: "SWAP",
+        direction: "BOTH",
+        protocol: {
+            name: "Jupiter",
+            category: "DEX",
+            programId: null,
+        },
+        nativeTransfers: [],
+        tokenTransfers: [],
+        swap: {
+            inputMint: params.inputMint,
+            outputMint: params.outputMint,
+            inputSymbol: null,
+            outputSymbol: null,
+            inputAmount: 100,
+            outputAmount: 100,
+            inputValueUsd: params.estimatedSwapValueUsd,
+            outputValueUsd: params.estimatedSwapValueUsd,
+            estimatedSwapValueUsd: params.estimatedSwapValueUsd,
+            route: ["Jupiter"],
+            dex: "Jupiter",
+            tradeDirectionForWallet: params.tradeDirectionForWallet,
+        },
+        nftEvent: null,
+        fee: {
+            feeLamports: 5000,
+            feeSol: 0.000005,
+            priorityFeeLamports: 0,
+            priorityFeeSol: 0,
+            payer: WALLET_ADDRESS,
+        },
+        summary: "Fixture swap event for risk evidence validation.",
+        rawSource: {
+            provider: "CUSTOM",
+            parserVersion: "risk-fixture-1.0.0",
+        },
+        warnings: [],
+    };
+}
+
+const RISK_CLASSIFICATION_FIXTURE_EVENTS: NormalizedWalletEvent[] = [
+    createSwapEvent({ signature: "sig-risk-001", timestamp: "2026-05-22T10:05:00.000Z", inputMint: USDC_MINT, outputMint: "TokenAlpha1111111111111111111111111111111111", tradeDirectionForWallet: "BUY", estimatedSwapValueUsd: 100 }),
+    createSwapEvent({ signature: "sig-risk-002", timestamp: "2026-05-22T10:18:00.000Z", inputMint: "TokenAlpha1111111111111111111111111111111111", outputMint: USDC_MINT, tradeDirectionForWallet: "SELL", estimatedSwapValueUsd: 80 }),
+    createSwapEvent({ signature: "sig-risk-003", timestamp: "2026-05-22T10:22:00.000Z", inputMint: USDC_MINT, outputMint: "TokenBeta1111111111111111111111111111111111", tradeDirectionForWallet: "BUY", estimatedSwapValueUsd: 140 }),
+    createSwapEvent({ signature: "sig-risk-004", timestamp: "2026-05-22T10:41:00.000Z", inputMint: "TokenBeta1111111111111111111111111111111111", outputMint: USDC_MINT, tradeDirectionForWallet: "SELL", estimatedSwapValueUsd: 90 }),
+    createSwapEvent({ signature: "sig-risk-005", timestamp: "2026-05-22T10:43:00.000Z", inputMint: USDC_MINT, outputMint: "TokenGamma111111111111111111111111111111111", tradeDirectionForWallet: "BUY", estimatedSwapValueUsd: 120 }),
+    createSwapEvent({ signature: "sig-risk-006", timestamp: "2026-05-22T10:49:00.000Z", inputMint: "TokenGamma111111111111111111111111111111111", outputMint: USDC_MINT, tradeDirectionForWallet: "SELL", estimatedSwapValueUsd: 70 }),
+    createSwapEvent({ signature: "sig-risk-007", timestamp: "2026-05-22T10:52:00.000Z", inputMint: USDC_MINT, outputMint: "TokenDelta1111111111111111111111111111111111", tradeDirectionForWallet: "BUY", estimatedSwapValueUsd: 110 }),
+    createSwapEvent({ signature: "sig-risk-008", timestamp: "2026-05-22T10:57:00.000Z", inputMint: "TokenDelta1111111111111111111111111111111111", outputMint: USDC_MINT, tradeDirectionForWallet: "SELL", estimatedSwapValueUsd: 60 }),
+    createSwapEvent({ signature: "sig-risk-009", timestamp: "2026-05-22T10:59:00.000Z", inputMint: USDC_MINT, outputMint: "TokenEpsilon11111111111111111111111111111111", tradeDirectionForWallet: "BUY", estimatedSwapValueUsd: 95 }),
+    createSwapEvent({ signature: "sig-risk-010", timestamp: "2026-05-22T10:59:30.000Z", inputMint: "TokenEpsilon11111111111111111111111111111111", outputMint: USDC_MINT, tradeDirectionForWallet: "SELL", estimatedSwapValueUsd: 55 }),
+];
 
 const baseProfile: WalletBehaviorProfile = {
     schemaVersion: "1.0.0",
@@ -158,6 +228,6 @@ const baseProfile: WalletBehaviorProfile = {
     },
 };
 
-export const RISK_CLASSIFICATION_FIXTURE_PROFILE = enrichProfileWithRisk({ profile: baseProfile });
+export const RISK_CLASSIFICATION_FIXTURE_PROFILE = enrichProfileWithRisk({ profile: baseProfile, events: RISK_CLASSIFICATION_FIXTURE_EVENTS });
 
 export const RISK_CLASSIFICATION_FIXTURE_VALIDATED = WalletBehaviorProfileSchema.parse(RISK_CLASSIFICATION_FIXTURE_PROFILE);

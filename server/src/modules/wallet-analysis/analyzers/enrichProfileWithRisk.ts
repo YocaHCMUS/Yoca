@@ -1,13 +1,16 @@
 import { WalletBehaviorProfileSchema } from "../schemas/walletBehaviorProfile.schema";
+import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
 import type { WalletBehaviorProfile } from "../types/walletBehaviorProfile";
 import { calculateWalletRisk } from "../risk/calculateWalletRisk";
 import { uniqueEvidenceBundles } from "../risk/riskEvidence";
 
 export function enrichProfileWithRisk(params: {
     profile: WalletBehaviorProfile;
+    events?: NormalizedWalletEvent[];
 }): WalletBehaviorProfile {
     const riskResult = calculateWalletRisk({
         profile: params.profile,
+        events: params.events,
     });
 
     const topDescriptions = riskResult.risk.riskFactors
