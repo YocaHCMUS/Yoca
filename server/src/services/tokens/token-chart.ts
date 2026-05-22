@@ -1,7 +1,6 @@
 import {
   DAY_MS,
   TOKEN_CHART_24H_UPDATE_THRESHOLD,
-  TOKEN_CHART_DAILY_INTERVAL_MS,
   TOKEN_CHART_HOURLY_INTERVAL_MS,
   TOKEN_CHART_HOURLY_MIN_POINTS,
   TOKEN_CHART_HOURLY_MIN_SPAN_MS,
@@ -16,16 +15,19 @@ import {
   type TokenMarketChartDailyInsert,
   type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excluded } from "@sv/util/orm-sql.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
+  bds_HistoryPriceSchema,
   cg_TokenMarketChartSchema,
   type CG_TokenMarketChart,
 } from "../_types/token-raw-responses.js";
-import { fetchBirdeyeJson } from "../wallet/fetchers/walletDataFetcher.service.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
@@ -300,15 +302,18 @@ export async function getDailyTokenMarketChart(
 
   const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
 
-  // Detect gaps by checking if any expected daily timestamp is missing
-  const hasGaps = Array.from(
-    {
-      length: Math.ceil(
-        (now - requestedFromMs) / TOKEN_CHART_DAILY_INTERVAL_MS,
-      ),
-    },
-    (_, i) => requestedFromMs + i * TOKEN_CHART_DAILY_INTERVAL_MS,
-  ).some((ts) => !existingSet.has(ts));
+  let hasGaps = false;
+
+  for (
+    let ts = requestedFromMs;
+    ts < now;
+    ts += TOKEN_CHART_HOURLY_INTERVAL_MS
+  ) {
+    if (!existingSet.has(ts)) {
+      hasGaps = true;
+      break;
+    }
+  }
 
   // If gaps detected or no data exists, fetch the missing range
   if (hasGaps || existing.length == 0) {
@@ -337,25 +342,34 @@ export async function getDailyTokenMarketChart(
   return existing;
 }
 
-async function fetchAndCacheHistoricalRange(
+async function fetchHistoricalRange(
   tokenAddress: string,
   fromSec: number,
   toSec: number,
 ): Promise<void> {
-  const json = await fetchBirdeyeJson("/defi/history_price", "GET", {
-    searchParams: {
-      address: tokenAddress,
-      address_type: "token",
-      type: "15m",
-      time_from: fromSec,
-      time_to: toSec,
-      ui_amount_mode: "raw",
-    },
+  const url = bds.getEndpoint("/defi/history_price");
+  url.searchParams.set("address", tokenAddress);
+
+  url.search = new URLSearchParams({
+    address: tokenAddress,
+    address_type: "token",
+    type: "15m",
+    time_from: fromSec.toString(),
+    time_to: toSec.toString(),
+    ui_amount_mode: "raw",
+  }).toString();
+
+  const resp = await rlFetch(url, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limiter,
   });
 
-  if (!json?.success || !Array.isArray(json?.data?.items)) return;
+  const res = await getTrackedApiResult(bds_HistoryPriceSchema, resp);
 
-  const items = json.data.items as { unixTime: number; value: number }[];
+  if (!res) return;
+
+  const items = res.data.items;
   if (items.length == 0) return;
 
   const nowMs = Date.now();
@@ -434,7 +448,7 @@ export async function getTokenPriceChartForDay(
 
   // If incomplete or stale, fetch from Birdeye for this specific day
   if (existing.length == 0 || isStale) {
-    await fetchAndCacheHistoricalRange(
+    await fetchHistoricalRange(
       tokenAddress,
       Math.floor(fromMs / 1000),
       Math.floor(toMs / 1000),
