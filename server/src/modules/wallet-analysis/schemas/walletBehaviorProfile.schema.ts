@@ -337,6 +337,8 @@ export const walletBehaviorProfileSchema: z.ZodType<WalletBehaviorProfile> = z
     })
     .strict();
 
+export const WalletBehaviorProfileSchema = walletBehaviorProfileSchema;
+
 export function validateWalletBehaviorProfile(input: unknown): WalletBehaviorProfile {
     return walletBehaviorProfileSchema.parse(input);
 }
