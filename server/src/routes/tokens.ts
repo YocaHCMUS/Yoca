@@ -1,4 +1,3 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   addressListSchema,
   addressSchema,
@@ -6,6 +5,7 @@ import {
   validate,
 } from "@sv/middlewares/validation.js";
 import * as tokenService from "@sv/services/tokens/index.js";
+import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import z from "zod";
@@ -15,10 +15,7 @@ const marketPoolsTrendingQuerySchema = z.object({
 });
 
 const marketPoolsTopQuerySchema = z.object({
-  sortBy: z
-    .enum(["volume", "txns", "marketCap"])
-    .default("volume")
-    .optional(),
+  sortBy: z.enum(["volume", "txns", "marketCap"]).default("volume").optional(),
 });
 
 const poolListQuerySchema = z.object({
@@ -251,9 +248,12 @@ const app = new Hono()
       try {
         const { addresses } = c.req.valid("param");
         const { refresh = false } = c.req.valid("query");
-  
-        const pools = await tokenService.getTokenPoolDataList(addresses, refresh);
-  
+
+        const pools = await tokenService.getTokenPoolDataList(
+          addresses,
+          refresh,
+        );
+
         if (pools) {
           return c.json(pools, statusCode.Ok);
         } else {
@@ -357,7 +357,10 @@ const app = new Hono()
   })
   .delete("/market-pools/cache", async (c) => {
     tokenService.clearPoolValidationCache();
-    return c.json({ ok: true, message: "Pool validation cache cleared" }, statusCode.Ok);
+    return c.json(
+      { ok: true, message: "Pool validation cache cleared" },
+      statusCode.Ok,
+    );
   })
   .get("/market-pools/new-pairs", async (c) => {
     try {
@@ -427,4 +430,5 @@ const app = new Hono()
     },
   );
 
+export type TokenAppType = typeof app;
 export default app;

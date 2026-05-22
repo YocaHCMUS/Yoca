@@ -1,29 +1,18 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletTransactions, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletBalanceHistoryCache, walletFirstFund, walletPnlDataCache, walletPnlDataMeta } from "@sv/db/schema.js";
 import { eq, sql } from "drizzle-orm";
 import type { WalletSwap, WalletOverview, WalletTransaction, WalletTransfer, WalletTransactionHelius, BalanceDataPoint, WalletTimePeriod, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
-
-/** Provider payloads sometimes omit exchange fields; DB columns are NOT NULL. */
-function walletSwapExchangeForDb(tx: WalletSwap): {
-  exchangeAddress: string;
-  exchangeName: string;
-  exchangeLogo: string;
-} {
-  const addr = (tx.exchangeAddress ?? "").trim().slice(0, 66);
-  const name = (tx.exchangeName ?? "").trim();
-  const logo = (tx.exchangeLogo ?? "").trim();
-  return {
-    exchangeAddress: addr,
-    exchangeName: name.length > 0 ? name : "Unknown",
-    exchangeLogo: logo,
-  };
-}
 
 export async function saveSwapsCache(
   address: string,
   transactions: WalletSwap[],
+  from: number,
+  to: number
 ) {
   try {
+    // let coverageFromMs: number | undefined;
+    // let coverageToMs: number | undefined;
+
     if (transactions.length > 0) {
       // Deduplicate by transaction hash to avoid multiple rows with the same
       // (address, signature) primary key when providers return several
@@ -37,9 +26,7 @@ export async function saveSwapsCache(
       }
 
       const uniqueTransactions = Array.from(uniqueBySignature.values());
-
       const rows = uniqueTransactions.map((tx) => {
-        const ex = walletSwapExchangeForDb(tx);
         return {
           transactionHash: tx.transactionHash,
           transactionType: tx.transactionType,
@@ -51,9 +38,6 @@ export async function saveSwapsCache(
           pairAddress: tx.pairAddress,
 
           tokensInvoled: tx.tokensInvolved,
-          exchangeAddress: ex.exchangeAddress,
-          exchangeName: ex.exchangeName,
-          exchangeLogo: ex.exchangeLogo,
 
           boughtTokenAddress: tx.bought.address,
           boughtTokenAmount: tx.bought.amount,
@@ -65,8 +49,29 @@ export async function saveSwapsCache(
 
           totalValueUsd: tx.totalValueUsd,
           baseQuotePrice: tx.baseQuotePrice,
+          providerSource: (tx as unknown as Record<string, unknown>).providerSource as string | undefined ?? "helius",
         };
       });
+
+      // const coverageBounds = rows.length > 0
+      //   ? rows.reduce(
+      //     (bounds, row) => ({
+      //       fromMs: Math.min(bounds.fromMs, row.blockTimestampMs),
+      //       toMs: Math.max(bounds.toMs, row.blockTimestampMs),
+      //     }),
+      //     {
+      //       fromMs: Number.POSITIVE_INFINITY,
+      //       toMs: Number.NEGATIVE_INFINITY,
+      //     },
+      //   )
+      //   : null;
+
+      // coverageFromMs = coverageBounds
+      //   ? coverageBounds.fromMs
+      //   : undefined;
+      // coverageToMs = coverageBounds
+      //   ? coverageBounds.toMs
+      //   : undefined;
 
       await db.insert(walletSwap).values(rows).onConflictDoNothing();
     }
@@ -75,7 +80,11 @@ export async function saveSwapsCache(
       .values({ address })
       .onConflictDoUpdate({
         target: [walletSwapMeta.address],
-        set: { fetchedAt: new Date() },
+        set: {
+          fetchedAt: new Date(),
+          coveredFromSec: Math.floor(from / 1000),
+          coveredToSec: Math.floor(to / 1000),
+        },
       });
   } catch (err) {
     console.error("Failed to save wallet transactions cache", err);
@@ -224,61 +233,6 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
   }
 }
 
-export async function saveTransactionsCache(
-  address: string,
-  transactions: WalletTransaction[],
-): Promise<void> {
-  try {
-    await db.delete(walletTransactions).where(
-      eq(walletTransactions.address, address)
-    );
-
-    if (transactions.length > 0) {
-      // Deduplicate by transaction hash to avoid multiple rows with the same
-      // (address, hash) primary key when providers return several
-      // legs for a single on-chain transaction.
-      const uniqueByHash = new Map<string, WalletTransaction>();
-      for (const tx of transactions) {
-        if (!uniqueByHash.has(tx.hash)) {
-          uniqueByHash.set(tx.hash, tx);
-        }
-      }
-
-      const uniqueTransactions = Array.from(uniqueByHash.values());
-
-      const rows = uniqueTransactions.map((tx) => ({
-        address,
-        hash: tx.hash,
-        blockTimestamp: new Date(Date.parse(tx.timestamp) || Date.now()),
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        receiptStatus: tx.status === true ? 1 : tx.status === false ? 0 : null,
-        fee: tx.fee ?? null,
-        mainAction: tx.mainAction ?? null,
-        direction: tx.direction ?? null,
-        primaryTokenSymbol: tx.primaryTokenSymbol ?? null,
-        primaryTokenAmount: tx.primaryTokenAmount ?? null,
-        primaryTokenAddress: tx.primaryTokenAddress ?? null,
-        // Price fields are response-time enrichments and are not persisted.
-        priceUsd: null,
-        totalUsd: null,
-        tokens: tx.tokens ?? null,
-      }));
-
-      await db.insert(walletTransactions).values(rows);
-    }
-    await db
-      .insert(walletTransactionsMeta)
-      .values({ address })
-      .onConflictDoUpdate({
-        target: [walletTransactionsMeta.address],
-        set: { fetchedAt: new Date() },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transactions cache", err);
-  }
-}
-
 // not very optimised I know, this will have some overlap with swap db
 export async function saveTransactionsHeliusCache(
   address: string,
@@ -347,8 +301,16 @@ export async function saveTransactionsHeliusCache(
 export async function saveTransfersCache(
   address: string,
   transfers: WalletTransfer[],
+  from: number,
+  to: number
 ): Promise<void> {
   try {
+    // let coverageFromMs: number | undefined;
+    // let coverageToMs: number | undefined;
+    let firstAddress: string | undefined;
+    let lastAddress: string | undefined;
+
+
     if (transfers.length > 0) {
       // Deduplicate by transaction signature + instruction index to avoid multiple rows
       // with the same primary key when providers return duplicate transfer records.
@@ -368,9 +330,7 @@ export async function saveTransfersCache(
         fromOwner: t.from,
         toOwner: t.to,
         amount: t.amount,
-        // amountUsd is required by schema but not provided by API at fetch time.
-        // Set to 0 as placeholder; real-time pricing is handled via enrichWithSolanaTokenPrices.
-        amountUsd: 0,
+        amountUsd: t.amountUsd ?? 0,
         blockTime: new Date(Date.parse(t.timestamp) || Date.now()),
         tokenAddress: t.tokenAddress,
         tokenSymbol: t.tokenSymbol,
@@ -378,14 +338,55 @@ export async function saveTransfersCache(
         instructionIndex: t.instructionIndex,
       }));
 
+      const coverageBounds = rows.length > 0
+        ? rows.reduce(
+          (bounds, row) => (
+            {
+              fromMs: Math.min(bounds.fromMs, row.blockTime.getTime()),
+              toMs: Math.max(bounds.toMs, row.blockTime.getTime()),
+              lastAddress: bounds.fromMs < row.blockTime.getTime() ? bounds.lastAddress : row.address,
+              firstAddress: bounds.toMs < row.blockTime.getTime() ? row.address : bounds.firstAddress
+            }),
+          {
+            fromMs: Number.POSITIVE_INFINITY,
+            toMs: Number.NEGATIVE_INFINITY,
+            lastAddress: "",
+            firstAddress: ""
+          },
+        )
+        : null;
+
+      // coverageFromMs = coverageBounds
+      //   ? coverageBounds.fromMs
+      //   : undefined;
+      // coverageToMs = coverageBounds
+      //   ? coverageBounds.toMs
+      //   : undefined;
+
+      firstAddress = coverageBounds
+        ? coverageBounds.firstAddress
+        : undefined;
+
+      lastAddress = coverageBounds
+        ? coverageBounds.lastAddress
+        : undefined;
+
+
       await db.insert(tokenTransfers).values(rows).onConflictDoNothing();
     }
+
     await db
       .insert(walletTransferMeta)
       .values({ address })
       .onConflictDoUpdate({
         target: [walletTransferMeta.address],
-        set: { fetchedAt: new Date() },
+        set: {
+          fetchedAt: new Date(),
+          coveredFromSec: Math.floor(from / 1000),
+          coveredToSec: Math.floor(to / 1000),
+          coveredFromCursor: lastAddress,
+          coveredToCursor: firstAddress
+        },
       });
   } catch (err) {
     console.error("Failed to save wallet transfers cache", err);
@@ -456,5 +457,87 @@ export async function saveWalletFirstFundCache(
       });
   } catch (err) {
     console.error("Failed to save wallet first fund cache", err);
+  }
+}
+
+/**
+ * Save wallet PnL data cache and metadata.
+ *
+ * Accepts:
+ * - address: wallet address
+ * - timePeriod: e.g. "7D"
+ * - aggregation: e.g. "daily", "hourly"
+ * - dailyData: array of daily PnL records with {dayStartMs, dailyPnl, cumulativePnl, dayOpen, dayClose}
+ * - coverageFromMs, coverageToMs: PnL cache coverage range
+ * - sourceBalanceRangeFromMs, sourceBalanceRangeToMs: balance history source range
+ * - sourceTransferRangeFromMs, sourceTransferRangeToMs: transfer history source range
+ *
+ * Upserts both walletPnlDataCache (per-day rows) and walletPnlDataMeta (coverage) in two operations.
+ */
+export async function saveWalletPnlCache(
+  address: string,
+  timePeriod: string,
+  aggregation: string,
+  dailyData: Array<{
+    dayStartMs: number;
+    dailyPnl: number | string;
+    cumulativePnl: number | string;
+    dayOpen: number | string;
+    dayClose: number | string;
+  }>,
+  coverageFromMs: number,
+  coverageToMs: number,
+  sourceBalanceRangeFromMs: number,
+  sourceBalanceRangeToMs: number,
+  sourceTransferRangeFromMs: number,
+  sourceTransferRangeToMs: number,
+): Promise<void> {
+  try {
+    // Insert/upsert daily PnL rows. Each day gets its own row with (address, timePeriod, aggregation, dayStartMs) as PK.
+    if (dailyData.length > 0) {
+      const rows = dailyData.map((d) => ({
+        address,
+        timePeriod,
+        aggregation,
+        dayStartMs: d.dayStartMs,
+        dailyPnl: Number(d.dailyPnl),
+        cumulativePnl: Number(d.cumulativePnl),
+        dayOpen: Number(d.dayOpen),
+        dayClose: Number(d.dayClose),
+        computedAt: new Date(),
+      }));
+
+      await db.insert(walletPnlDataCache).values(rows).onConflictDoNothing();
+    }
+
+    // Upsert metadata to track coverage and source ranges.
+    await db
+      .insert(walletPnlDataMeta)
+      .values({
+        address,
+        timePeriod,
+        aggregation,
+        coverageFromMs,
+        coverageToMs,
+        sourceBalanceRangeFromMs,
+        sourceBalanceRangeToMs,
+        sourceTransferRangeFromMs,
+        sourceTransferRangeToMs,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [walletPnlDataMeta.address, walletPnlDataMeta.timePeriod, walletPnlDataMeta.aggregation],
+        set: {
+          coverageFromMs,
+          coverageToMs,
+          sourceBalanceRangeFromMs,
+          sourceBalanceRangeToMs,
+          sourceTransferRangeFromMs,
+          sourceTransferRangeToMs,
+          updatedAt: new Date(),
+        },
+      });
+  } catch (err) {
+    console.error("Failed to save wallet PnL cache", err);
   }
 }

@@ -5,7 +5,7 @@ import {
 } from "@sv/util/util-birdeye.js";
 import { getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
 
-type HeliusEnhancedTokenTransfer = {
+export type HeliusEnhancedTokenTransfer = {
   mint?: string;
   tokenAmount?: number;
   amount?: number;
@@ -22,7 +22,7 @@ type HeliusEnhancedTokenTransfer = {
   toWallet?: string;
 };
 
-type HeliusEnhancedNativeTransfer = {
+export type HeliusEnhancedNativeTransfer = {
   amount?: number;
   fromUserAccount?: string;
   toUserAccount?: string;
@@ -30,6 +30,19 @@ type HeliusEnhancedNativeTransfer = {
   toWallet?: string;
   valueUsd?: number;
   valueUsdSource?: "historical" | "inferred" | "none";
+};
+
+export type HeliusEnhancedInnerInstruction = {
+  accounts?: string[];
+  data?: string;
+  programId?: string;
+};
+
+export type HeliusEnhancedInstruction = {
+  accounts?: string[];
+  data?: string;
+  programId?: string;
+  innerInstructions?: HeliusEnhancedInnerInstruction[];
 };
 
 type HeliusSwapTokenAmount = {
@@ -45,6 +58,14 @@ type HeliusSwapLeg = {
 type HeliusSwapEvent = {
   tokenInputs?: HeliusSwapLeg[];
   tokenOutputs?: HeliusSwapLeg[];
+  source?: string;
+  programId?: string;
+  innerSwaps?: Array<{
+    tokenInputs?: HeliusSwapLeg[];
+    tokenOutputs?: HeliusSwapLeg[];
+    source?: string;
+    programId?: string;
+  }>;
 };
 
 export type HeliusEnhancedTransaction = {
@@ -53,7 +74,11 @@ export type HeliusEnhancedTransaction = {
   fee?: number;
   slot?: number;
   timestamp?: number;
-  instructions?: unknown[];
+  source?: string;
+  type?: string;
+  description?: string;
+  programName?: string;
+  instructions?: HeliusEnhancedInstruction[];
   events?: {
     swap?: HeliusSwapEvent;
   };

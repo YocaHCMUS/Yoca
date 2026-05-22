@@ -112,6 +112,7 @@ const ERROR = {
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
   NOT_FOUND: "Not found.",
+  UNAUTHORIZED: "Unauthorized",
   RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
   BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
@@ -139,6 +140,12 @@ export const translation = {
     itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
     nextPage: "Next Page",
     previousPage: "Previous Page",
+    searchPlaceholder: "Search table...",
+    filterLabel: "Filter: {{column}}",
+    apply: "Apply",
+    selectAll: "Select All",
+    from: "From",
+    to: "To",
   },
   // Authentication
   auth: {
@@ -258,6 +265,7 @@ export const translation = {
     seller: "Sender",
     sender: "Sender",
     receiver: "Receiver",
+    currentWallet: "Current wallet",
     type: "Type",
     token: "Token",
     amount: "Amount",
@@ -303,6 +311,17 @@ export const translation = {
     identity: "Identity",
     uniqueTokensTraded: "Unique tokens traded",
     tokenList: "Token list",
+    trade: "{{count}} Transactions(s)",
+    instructions: "Instructions",
+    view: "View",
+    hide: "Hide",
+    feePaid: "Paid",
+    feePayer: "Payer",
+    feeReceivers: "Receivers",
+    baseFee: "Base fee",
+    priorityFee: "Priority fee",
+    perToken: "/token",
+    account: "Account",
     totalVolume: "Total volume",
     unknown: "Unknown",
     unknownEntity: "Unknown Entity",
@@ -367,6 +386,19 @@ export const translation = {
     aiFirstSeen: "First seen",
     aiConsistencyAssessment: "Consistency assessment",
     aiSignals: "Signals",
+    from: "From",
+    to: "To",
+    swapDetails: "Swap Details",
+    transferDetails: "Transfer Details",
+    sold: "Sold",
+    bought: "Bought",
+    swapped: "Swapped",
+    forSwap: "for",
+    totalValue: "Total Value",
+    transactionFee: "Transaction Fee",
+    sent: "Sent",
+    received: "Received",
+    transfersInTransaction: "Transfers in This Transaction ({{count}})",
   },
   dictionary: {
     tradingStrategy: {
@@ -392,7 +424,8 @@ export const translation = {
         description:
           "Captures multi-day to multi-week moves and avoids overtrading noise.",
         benefit: {
-          balancedPace: "Balances opportunity capture with lower execution stress.",
+          balancedPace:
+            "Balances opportunity capture with lower execution stress.",
           trendCapture: "Works well in clear medium-term directional trends.",
         },
         risk: {
@@ -410,7 +443,8 @@ export const translation = {
           "Follows strong directional breakouts with acceleration in price and volume.",
         benefit: {
           strongTrendUpside: "Can scale returns in sustained trend expansions.",
-          quickInvalidation: "Clear invalidation levels help disciplined exits.",
+          quickInvalidation:
+            "Clear invalidation levels help disciplined exits.",
         },
         risk: {
           falseBreakout: "False breakouts can trigger repeated quick losses.",
@@ -426,11 +460,13 @@ export const translation = {
         description:
           "Looks for overextended moves and trades back toward average pricing.",
         benefit: {
-          definedEntries: "Entry conditions are often measurable and repeatable.",
+          definedEntries:
+            "Entry conditions are often measurable and repeatable.",
           riskControlled: "Structured position sizing can limit downside.",
         },
         risk: {
-          trendAgainst: "Strong trends can remain irrational longer than expected.",
+          trendAgainst:
+            "Strong trends can remain irrational longer than expected.",
           patienceRequired: "Setups may be infrequent and require discipline.",
         },
         rule: {
@@ -695,7 +731,8 @@ export const translation = {
     emailSectionTitle: "Email notifications",
     emailToggleLabel: "Email me alerts",
     emailRegisteredHint: "Registered email: {{email}}",
-    emailNoRegistered: "No registered email on file. Add an override email below.",
+    emailNoRegistered:
+      "No registered email on file. Add an override email below.",
     emailOverrideLabel: "Override email (optional)",
     emailOverridePlaceholder: "Leave empty to use your registered email",
     emailSaveButton: "Save",
@@ -744,8 +781,7 @@ export const translation = {
     ruleTableTrigger: "Trigger",
     ruleTableExpires: "Expires",
     ruleDeleteSuccess: "Rule removed and Helius synced.",
-    rulePreviewBody:
-      "Wallet {{wallet}} on Solana has {{verb}} with {{range}}.",
+    rulePreviewBody: "Wallet {{wallet}} on Solana has {{verb}} with {{range}}.",
     rulePreviewVerbSwap: "a swap",
     rulePreviewVerbTransfer: "a transfer",
     rulePreviewVerbAny: "activity",
@@ -755,7 +791,8 @@ export const translation = {
     rulePreviewWalletPlaceholder: "(wallet address)",
     ruleErrorWallet: "Enter a valid Solana wallet address.",
     ruleErrorMinVol: "Minimum volume must be a positive number.",
-    ruleErrorMaxVol: "Maximum volume must be empty or greater than or equal to minimum.",
+    ruleErrorMaxVol:
+      "Maximum volume must be empty or greater than or equal to minimum.",
     ruleErrorExpiry: "Choose a future expiry date.",
     ruleErrorDelivery:
       "Provide a Discord webhook URL and/or a valid email override.",
@@ -909,7 +946,7 @@ export const translation = {
 
     // Chart specific
     balanceChart: {
-      title: "Balance Trend",
+      title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
       date: "Date",
@@ -970,6 +1007,7 @@ export const translation = {
         topNFilter: "Top N filter",
         minPctFilter: "Min % filter",
       },
+      filtersMenu: "Filters",
       legend: {
         clickToHide: "Click to hide {name}",
         clickToShow: "Click to show {name}",
@@ -1039,7 +1077,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
-      both: "Both",
+      both: "Daily + Cumulative P&L",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",
@@ -1471,9 +1509,9 @@ export const translation = {
       linkWalletButton: "Link wallet",
       linkedWalletsLabel: "Linked wallets",
       linkedWalletsList: "Linked wallets list",
-      wallet: "Wallet",
+      label: "Label",
       address: "Address",
-      netWorth: "Net worth",
+      totalValue: "Total Value",
       auth: "Auth",
       actions: "Actions",
       authWallet: "Auth wallet",

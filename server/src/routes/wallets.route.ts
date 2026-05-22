@@ -1,12 +1,22 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   addressSchema,
   validate,
   walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
-import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import type { WalletPortfolioItem, WalletSwap } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { getTokenDetails, getWalletFirstFund } from "@sv/services/wallet/index.js";
+import type {
+  WalletPortfolioItem,
+  WalletSwap,
+} from "@sv/services/wallet/dtos/walletDataObjects.js";
+import {
+  getTokenDetails,
+  getWalletFirstFund,
+} from "@sv/services/wallet/index.js";
+import {
+  getWalletDayActivitySummary,
+  getWalletTxDetail,
+  getWalletTxInstructionDetail,
+} from "@sv/services/wallet/walletDayActivity.service.js";
+import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
 import {
   // fetchTestTransaction,
   // getWalletExchangeCounts,
@@ -17,8 +27,6 @@ import {
   getWalletSwaps,
   getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
-// import { getWalletCounterparties } from "@sv/services/wallet/counterparties.service.js";
-import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
 import {
   WALLET_IDENTITY_MAX_BATCH_SIZE,
   WalletIdentityServiceError,
@@ -35,22 +43,15 @@ import {
   getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
 import { z } from "zod";
-
-const router = new Hono();
+import { Hono } from "hono";
+import { setErr } from "@sv/util/errors";
 
 const walletRequestSchema = z.object({
   address: z.string(),
 });
 
 const walletOverviewRequestSchema = walletRequestSchema;
-
-const walletCounterpartyRequestSchema = walletRequestSchema.extend({
-  period: z.string().optional(),
-  limit: z.string().optional(),
-  includeTokens: z.string().optional(),
-});
 
 const walletIdentityBatchRequestSchema = z.object({
   addresses: z
@@ -64,13 +65,11 @@ const walletAnalysisRequestSchema = z.object({
   language: z.enum(["en", "vn"]).optional(),
 });
 
-const DEFAULT_COUNTERPARTY_PERIOD = "7d";
-const DEFAULT_COUNTERPARTY_LIMIT = 20;
-const MAX_COUNTERPARTY_LIMIT = 100;
-const MAX_EXCHANGE_LIMIT = 5000;
 const DEFAULT_OVERVIEW_PERIOD = "24H";
 
-function parseOverviewPeriod(rawPeriod?: string): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+function parseOverviewPeriod(
+  rawPeriod?: string,
+): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
   const normalized = String(rawPeriod ?? "")
     .trim()
     .toUpperCase();
@@ -150,66 +149,6 @@ function mapWalletAnalysisStatus(status: number): 400 | 409 | 502 | 504 {
   return 502;
 }
 
-function parseCounterpartyPeriod(rawPeriod?: string): "24h" | "7d" {
-  const normalized = String(rawPeriod ?? "")
-    .trim()
-    .toLowerCase();
-  return normalized === "24h"
-    ? "24h"
-    : normalized === "7d"
-      ? "7d"
-      : DEFAULT_COUNTERPARTY_PERIOD;
-}
-
-function parseCounterpartyLimit(rawLimit?: string): number {
-  const parsed = Number(rawLimit ?? DEFAULT_COUNTERPARTY_LIMIT);
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_COUNTERPARTY_LIMIT;
-  }
-
-  const integerLimit = Math.floor(parsed);
-  if (integerLimit < 1) {
-    return 1;
-  }
-
-  if (integerLimit > MAX_COUNTERPARTY_LIMIT) {
-    return MAX_COUNTERPARTY_LIMIT;
-  }
-
-  return integerLimit;
-}
-
-function parseCounterpartyIncludeTokens(rawIncludeTokens?: string): boolean {
-  if (rawIncludeTokens == null) {
-    return true;
-  }
-
-  const normalized = rawIncludeTokens.trim().toLowerCase();
-  if (normalized === "false" || normalized === "0") {
-    return false;
-  }
-
-  return true;
-}
-
-function parseExchangeLimit(rawLimit?: string): number | undefined {
-  if (rawLimit == null) {
-    return undefined;
-  }
-
-  const parsed = Number(rawLimit);
-  if (!Number.isFinite(parsed)) {
-    return undefined;
-  }
-
-  const integerLimit = Math.floor(parsed);
-  if (integerLimit < 1) {
-    return 1;
-  }
-
-  return Math.min(integerLimit, MAX_EXCHANGE_LIMIT);
-}
-
 function mapSwapToTokenTradeRow(
   swap: WalletSwap,
   walletAddress: string,
@@ -228,11 +167,16 @@ function mapSwapToTokenTradeRow(
           ? "buy"
           : "sell";
 
-  const selectedAmount = inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
-  const selectedTokenAddress = inferredAction === "buy" ? swap.bought.address : swap.sold.address;
-  const otherTokenAddress = inferredAction === "buy" ? swap.sold.address : swap.bought.address;
-  const selectedPrice = inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
-  const otherPrice = inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+  const selectedAmount =
+    inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress =
+    inferredAction === "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress =
+    inferredAction === "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice =
+    inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice =
+    inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
 
   return {
     address: walletAddress,
@@ -246,15 +190,13 @@ function mapSwapToTokenTradeRow(
     basePrice: selectedPrice,
     quotePrice: otherPrice,
     volumeUsd: swap.totalValueUsd ?? 0,
-    exchangeName: swap.exchangeName,
-    exchangeProgramAddress: swap.exchangeAddress || null,
     poolAddress: swap.pairAddress,
     poolName: null,
     tradeAction: inferredAction,
   };
 }
 
-const routes = router
+const app = new Hono()
   .get("/overview", async (c) => {
     const query = c.req.query();
     const params = walletOverviewRequestSchema.parse(query);
@@ -276,10 +218,13 @@ const routes = router
 
     try {
       const portfolio = await getWalletPortfolio(address);
-      return c.json(portfolio);
-    } catch (err) {
-      console.error("Failed to get wallet portfolio", err);
-      return c.json({ error: "Failed to get wallet portfolio" }, 500);
+      return c.json(portfolio, statusCode.Ok);
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { error: "Failed to get wallet portfolio" },
+        statusCode.InternalServerError,
+      );
     }
   })
   .get("/swap", async (c) => {
@@ -294,11 +239,7 @@ const routes = router
     const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
-      const txs = await getWalletSwaps(address, {
-        limit: Number.isFinite(limit) ? limit : undefined,
-        cursor: cursor ?? undefined,
-        before: before ?? undefined,
-      });
+      const txs = await getWalletSwaps(address);
 
       return c.json(txs);
     } catch (err) {
@@ -317,12 +258,7 @@ const routes = router
       const limit = limitParam ? Number(limitParam) : undefined;
 
       try {
-        const swaps = await getWalletSwaps(walletAddress, {
-          tokenAddress,
-          limit: Number.isFinite(limit) ? limit : undefined,
-          cursor: cursor ?? undefined,
-          before: before ?? undefined,
-        });
+        const swaps = await getWalletSwaps(walletAddress);
 
         const trades = swaps.swaps.map((swap) =>
           mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
@@ -353,11 +289,7 @@ const routes = router
     const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
-      const txs = await getWalletTransfers(address, {
-        limit: Number.isFinite(limit) ? limit : undefined,
-        cursor: cursor ?? undefined,
-        before: before ?? undefined,
-      });
+      const txs = await getWalletTransfers(address);
 
       return c.json(txs);
     } catch (err) {
@@ -406,57 +338,7 @@ const routes = router
       return c.json({ error: "Failed to get wallet asset distribution" }, 500);
     }
   })
-  .get("/exchanges", async (c) => {
-    const query = c.req.query();
-    const params = walletRequestSchema.parse(query);
-    const address = params.address;
-    const period = c.req.query("period") ?? undefined;
-    const chain = c.req.query("chain") ?? undefined;
-    const limitParam = c.req.query("limit");
-    const limit = parseExchangeLimit(limitParam);
 
-    try {
-      const data = await getWalletExchangeCounts(address, {
-        period,
-        chain,
-        limit,
-      });
-      return c.json(data);
-    } catch (err) {
-      console.error("Failed to get wallet exchange counts", err);
-      return c.json({ error: "Failed to get wallet exchange counts" }, 500);
-    }
-  })
-  .get("/counterparties", async (c) => {
-    const query = c.req.query();
-    const parsed = walletCounterpartyRequestSchema.safeParse(query);
-
-    if (!parsed.success) {
-      return c.json(
-        { error: "Missing or invalid required query param: address" },
-        400,
-      );
-    }
-
-    const address = parsed.data.address;
-    const period = parseCounterpartyPeriod(parsed.data.period);
-    const limit = parseCounterpartyLimit(parsed.data.limit);
-    const includeTokens = parseCounterpartyIncludeTokens(
-      parsed.data.includeTokens,
-    );
-
-    try {
-      const counterparties = await getWalletCounterparties(address, {
-        period,
-        limit,
-        includeTokens,
-      });
-      return c.json(counterparties);
-    } catch (err) {
-      console.error("Failed to get wallet counterparties", err);
-      return c.json({ error: "Failed to get wallet counterparties" }, 500);
-    }
-  })
   .get("/identity", async (c) => {
     const address = c.req.query("address");
 
@@ -515,7 +397,10 @@ const routes = router
 
     const parsed = walletAnalysisRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Missing or invalid required field: address" }, 400);
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
     }
 
     try {
@@ -547,7 +432,10 @@ const routes = router
 
     const parsed = walletAnalysisRequestSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: "Missing or invalid required field: address" }, 400);
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
     }
 
     try {
@@ -652,7 +540,8 @@ const routes = router
    */
   .get("/:address/audit", validate("param", addressSchema), async (c) => {
     const { address } = c.req.valid("param");
-    const force = c.req.query("force") === "1" || c.req.query("force") === "true";
+    const force =
+      c.req.query("force") === "1" || c.req.query("force") === "true";
 
     try {
       const audit = await getWalletAudit(address, { force });
@@ -680,6 +569,94 @@ const routes = router
         statusCode.InternalServerError,
       );
     }
+  })
+  .get("/day-activity", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const summary = await getWalletDayActivitySummary(address, dayMs);
+      return c.json(summary, 200);
+    } catch (err) {
+      console.error("Failed to get wallet day activity", err);
+      return c.json({ error: "Failed to get wallet day activity" }, 500);
+    }
+  })
+  .get("/tx-detail", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx detail", err);
+      return c.json({ error: "Failed to get wallet tx detail" }, 500);
+    }
+  })
+  .get("/tx-instructions", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxInstructionDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx instructions", err);
+      return c.json({ error: "Failed to get wallet tx instructions" }, 500);
+    }
+  })
+  .get("/token-price-chart", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const items = await getTokenPriceChartForDay(address, dayMs);
+      return c.json({ items: items ?? [] }, 200);
+    } catch (err) {
+      console.error("Failed to get token price chart", err);
+      return c.json({ error: "Failed to get token price chart" }, 500);
+    }
   });
 
-export default routes;
+export default app;
+
+export type WalletsAppType = typeof app;

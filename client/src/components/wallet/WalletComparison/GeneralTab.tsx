@@ -1,10 +1,10 @@
 import React from 'react';
 import type WalletComparisonProp from "./WalletComparisonProp";
 import styles from './GeneralTab.module.scss';
-import { BalanceChart } from '@/components/charts/BalanceChart';
 import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution';
 import { TradingVolumePerTransaction } from '@/components/charts/TradingVolume/TradingVolumePerTransaction';
 import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume';
+import { MultiWalletBalanceChart } from '@/components/charts/BalanceChartMultiV2';
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
@@ -29,14 +29,7 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
         <div className={styles.grid}>
             {/* Balance history comparison */}
             <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
-                <BalanceChart
-                    initialFilters={{
-                        timePeriod: "30D",
-                        wallets: walletAddresses
-                    }}
-                    minHeight={300}
-                    fetchEnabled={fetchEnabled}
-                />
+                <MultiWalletBalanceChart  addresses={walletAddresses} /> 
             </div>
 
             {/* Daily Trading Volume Historical Chart */}

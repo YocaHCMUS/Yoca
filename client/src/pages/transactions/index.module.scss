@@ -4,7 +4,6 @@
   flex-direction: column;
   height: 100vh;
   background: #f9fafb;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   overflow: hidden;
 }
 
@@ -181,7 +180,10 @@
   border-radius: 10px;
   border-left: 3px solid transparent;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition: background 0.15s, border-left-color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    border-left-color 0.15s,
+    box-shadow 0.15s;
   cursor: default;
 }
 
@@ -207,7 +209,6 @@
   font-size: 14px;
   color: #6b7280;
   background: #f9fafb;
-  font-family: Inter, ui-sans-serif, sans-serif;
 }
 
 .spinner {

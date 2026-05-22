@@ -346,6 +346,12 @@
   gap: 36px;
 }
 
+.tableRow {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
 .chartStack {
   display: flex;
   flex-direction: column;
@@ -371,7 +377,7 @@
 // ===== Swap token cells =====
 .swapTokenCell {
   display: inline-flex;
-  align-items: flex-start;
+  // align-items: flex-start;
   gap: $spacing-03;
   min-width: 0;
 }

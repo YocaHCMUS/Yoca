@@ -62,7 +62,7 @@ async function checkDependencies(
       getWalletIdentity(address),
       getWalletFirstFund(address),
       getWalletPortfolio(address),
-      getWalletSwaps(address, { limit: 1 }),
+      getWalletSwaps(address),
     ]);
 
   const missing: WalletAnalysisMissingDependency[] = [];

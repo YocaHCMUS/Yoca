@@ -1,15 +1,19 @@
-import { AUTH_COOKIE_NAME } from "@sv/config/constants";
-import { setErr } from "@sv/config/errors.js";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
   userAlertTokenMetric,
   userAlertTriggerModes,
+  userTradeDirections,
+  userTradingAggregations,
 } from "@sv/db/alerts.js";
+import { userAlertStatus } from "@sv/db/schema.js";
+import { setErr } from "@sv/util/errors.js";
 import env from "@sv/util/load-env";
 import { statusCode } from "@sv/util/responses.js";
 import type { Context, Next, ValidationTargets } from "hono";
-import { jwt } from "hono/jwt";
+import { getCookie } from "hono/cookie";
+import { verify } from "hono/jwt";
 import { validator } from "hono/validator";
 import z from "zod";
 
@@ -141,7 +145,8 @@ export const searchQuerySchema = z.object({
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
-// type inferrence to work correct (for some reasons)
+// type inferrence to work correct. Or else all field would collapsed into
+// string | string[]
 export const recentTradesQuerySchema = z.object({
   timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
   usdThreshold: z.coerce.number().min(0).default(0).optional(),
@@ -153,26 +158,74 @@ export const walletTokenTradesSchema = z.object({
   tokenAddress: solanaBase58Schema,
 });
 
-export const createAlertSchema = z.object({
-  tokenAddress: z.string().min(1),
+const tokenAlertConditionSchema = z.object({
+  period: z.enum(userAlertPeriods),
+  metric: z.enum(userAlertTokenMetric),
+  conditionOp: z.enum(userAlertConditionOps),
+  value: z.coerce.number(),
+});
+
+const tradingAlertScopeSchema = z.object({
+  walletAddress: solanaBase58Schema,
+  tokenAddress: solanaBase58Schema.optional().nullable(),
+  poolAddress: solanaBase58Schema.optional().nullable(),
+  counterpartyAddress: solanaBase58Schema.optional().nullable(),
+  direction: z.enum(userTradeDirections).default("both"),
+});
+
+const tradingAlertConditionSchema = z.object({
+  aggregation: z.enum(userTradingAggregations),
+  period: z.enum(userAlertPeriods),
+  conditionOp: z.enum(userAlertConditionOps),
+  value: z.coerce.number(),
+});
+
+const alertDeliverySchema = z.object({
+  email: z.email().optional(),
+});
+
+const alertBaseSchema = {
+  name: z.string().trim().min(1),
   triggerMode: z.enum(userAlertTriggerModes).default("once"),
   expiresAt: z.iso.datetime({ offset: true }),
-  alertName: z.string().min(1),
-  email: z.email().optional(),
+  delivery: alertDeliverySchema,
+};
+
+export const createTokenAlertSchema = z.object({
+  alertType: z.literal("token"),
+  ...alertBaseSchema,
+  tokenTarget: z.object({
+    tokenAddress: solanaBase58Schema,
+  }),
   conditions: z
-    .array(
-      z.object({
-        period: z.enum(userAlertPeriods),
-        alertType: z.enum(userAlertTokenMetric),
-        conditionOp: z.enum(userAlertConditionOps),
-        value: z.coerce.number(),
-      }),
-    )
+    .array(tokenAlertConditionSchema)
     .min(1, "At least one condition is required"),
 });
 
+export const createTradingAlertSchema = z.object({
+  alertType: z.literal("trading"),
+  ...alertBaseSchema,
+  scopes: z.array(tradingAlertScopeSchema).default([]),
+  conditions: z
+    .array(tradingAlertConditionSchema)
+    .min(1, "At least one condition is required"),
+});
+
+export const createAlertSchema = z.discriminatedUnion("alertType", [
+  createTokenAlertSchema,
+  createTradingAlertSchema,
+]);
+
+export type CreateAlertSchema = z.infer<typeof createAlertSchema>;
+export type CreateTokenAlertSchema = z.infer<typeof createTokenAlertSchema>;
+export type CreateTradingAlertSchema = z.infer<typeof createTradingAlertSchema>;
+
 export const alertIdSchema = z.object({
   id: z.uuid(),
+});
+
+export const alertStatusUpdateSchema = z.object({
+  status: z.enum(userAlertStatus),
 });
 
 export function validate<
@@ -195,19 +248,42 @@ export function validate<
   });
 }
 
-export const honoJwt = (c: Context, next: Next) => {
-  const jwtMiddleware = jwt({
+// This is re-implementation of jwt middleware with custom unauthorized response
+// See: https://github.com/atasoya/hono/blob/main/src/middleware/jwt/jwt.ts
+export const honoJwt = async (c: Context, next: Next) => {
+  // const jwtMiddleware = jwt({
+  //   secret: env.JWT_SECRET,
+  //   alg: "HS256",
+  //   cookie: AUTH_COOKIE_NAME,
+  // });
+  const options = {
     secret: env.JWT_SECRET,
     alg: "HS256",
     cookie: AUTH_COOKIE_NAME,
-  });
-  return jwtMiddleware(c, next);
+  } as const;
+  const token = getCookie(c, options.cookie);
+  if (!token) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  let payload;
+  try {
+    payload = await verify(token, options.secret, { alg: options.alg });
+  } catch (e) {}
+
+  if (!payload) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  c.set("jwtPayload", payload);
+  await next();
 };
 
 // Check if result schema was like expected. Useful for debugging
 export async function getTrackedApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
+  logActualResponse: boolean = false,
 ) {
   try {
     const rawRes = await resp.json();
@@ -215,6 +291,9 @@ export async function getTrackedApiResult<T extends z.ZodType>(
     if (!parseRes.success) {
       console.log("Unexpected response!");
       console.log("Zod errors:", parseRes.error.issues);
+    }
+
+    if (logActualResponse || !parseRes.success) {
       console.log(`Actual response (${resp.status}):`);
       const safeStr = (() => {
         try {
@@ -227,14 +306,14 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       if (safeStr.length > maxLog) {
         console.log(
           safeStr.slice(0, maxLog) +
-          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+            `\n... (truncated ${safeStr.length - maxLog} chars)`,
         );
       } else {
         console.log(safeStr);
       }
-      return;
     }
-    return parseRes.data;
+
+    return parseRes.success ? parseRes.data : undefined;
   } catch (err) {
     console.log("Unexpected Error:", err);
     return;
@@ -264,6 +343,9 @@ export const envSchema = z.object({
     .url()
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
+
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().default(""),
 
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),

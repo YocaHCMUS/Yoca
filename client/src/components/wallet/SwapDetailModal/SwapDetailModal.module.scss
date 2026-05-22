@@ -18,8 +18,10 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 8px;
-  width: 480px;
+  width: 920px;
   max-width: calc(100vw - #{$spacing-09});
+  max-height: 85vh;
+  overflow: hidden;
   padding: $spacing-06;
   display: flex;
   flex-direction: column;
@@ -125,7 +127,7 @@
   @include type-style('body-01');
   color: $text-secondary;
   text-align: center;
-  margin: 0;
+  margin: $spacing-04;
   overflow-wrap: break-word;
   word-break: break-word;
 
@@ -168,11 +170,20 @@
   color: $link-primary;
   font-family: 'IBM Plex Mono', monospace;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-01;
 
   &:hover {
     color: $link-primary-hover;
     text-decoration: underline;
   }
+}
+
+.txSigGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
 }
 
 /* ── Balance Changes Section ────────────────── */
@@ -242,4 +253,170 @@
   @include type-style('body-compact-01');
   color: $text-secondary;
   font-size: 0.75rem;
+}
+
+/* ── Two-column layout ───────────────────────── */
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-05;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rightColumn {
+  padding-left: $spacing-05;
+  border-left: 1px solid $border-subtle;
+  height: 100%;
+  max-height: calc(85vh - #{$spacing-06} * 2 - #{$spacing-05} * 2);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border-subtle transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $border-subtle;
+    border-radius: 3px;
+  }
+}
+
+/* ── Transfers section ───────────────────────── */
+.transfersSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.transferSectionTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.transferList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.transferItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  padding: $spacing-02 $spacing-03;
+  background-color: $layer-02;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.transferDir {
+  font-weight: 700;
+  width: 1rem;
+  text-align: center;
+}
+
+.transferAmount {
+  @include type-style('body-compact-01');
+  font-variant-numeric: tabular-nums;
+}
+
+.transferAmountIn {
+  color: $support-success;
+}
+
+.transferAmountOut {
+  color: $support-error;
+}
+
+.transferSpacer {
+  flex: 1;
+}
+
+.transferAddrLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+.transferAddress {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
+}
+
+.addressWithCopy {
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
+}
+
+/* ── Fee section ─────────────────────────────── */
+.feeSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+  margin-top: $spacing-04;
+  padding-top: $spacing-04;
+  border-top: 1px solid $border-subtle;
+}
+
+.feeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-02 0;
+}
+
+.feeLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+}
+
+.feeValue {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.feeValueLink {
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
+}
+
+/* ── Loading ─────────────────────────────────── */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-06 0;
 }

@@ -5,7 +5,7 @@ import type {
     WalletIntelligenceBatchResponse,
     WalletIntelligenceResponse,
 } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
-import { getWalletExchangeCounts } from "@sv/services/wallet/walletExchangeAggregation.service.js";
+
 import { buildWalletFirstFundInsight } from "@sv/services/wallet/walletFirstFundInsight.js";
 import { getWalletFirstFund } from "@sv/services/wallet/walletFirstFund.service.js";
 import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
@@ -138,49 +138,26 @@ function buildWalletIdentityAnalysis(input: {
         riskScore: normalizedRiskScore,
         riskLevel: toRiskLevel(normalizedRiskScore),
         signals: uniqueSignals,
-        counterpartyProfile: {
-            exchangeInteractions24h: input.analysisInputs.exchangeInteractions24h,
-            uniqueKnownEntities7d: input.analysisInputs.uniqueKnownEntities7d,
-        },
         firstFund: input.firstFund,
         userTags: input.userTags,
     };
 }
 
 async function getAnalysisInputs(address: string): Promise<AnalysisInputs> {
-    const [overviewResult, exchangeResult] = await Promise.all([
-        getWalletOverview(address)
-            .then((overview) => ({ ok: true as const, value: overview }))
-            .catch(() => ({ ok: false as const, value: null })),
-        getWalletExchangeCounts(address, { limit: 100 })
-            .then((exchanges) => ({ ok: true as const, value: exchanges }))
-            .catch(() => ({ ok: false as const, value: null })),
-    ]);
+    const overviewResult = await getWalletOverview(address)
+        .then((overview) => ({ ok: true as const, value: overview }))
+        .catch(() => ({ ok: false as const, value: null }));
 
     const transactionCount24h =
         overviewResult.ok && overviewResult.value?.transactionCount24h != null
             ? Number(overviewResult.value.transactionCount24h)
             : 0;
 
-    const exchanges = exchangeResult.ok && exchangeResult.value != null
-        ? exchangeResult.value.exchanges
-        : [];
-
-    const exchangeInteractions24h = exchanges.reduce(
-        (sum, exchange) => sum + Number(exchange.deposits ?? 0) + Number(exchange.withdrawals ?? 0),
-        0,
-    );
-
-    const uniqueKnownEntities7d = exchanges
-        .map((exchange) => exchange.name)
-        .filter((name) => typeof name === "string" && name.trim().length > 0 && name !== "Unknown")
-        .length;
-
     return {
-        exchangeInteractions24h,
-        uniqueKnownEntities7d,
+        exchangeInteractions24h: 0,
+        uniqueKnownEntities7d: 0,
         transactionCount24h,
-        analyticsComplete: overviewResult.ok && exchangeResult.ok,
+        analyticsComplete: overviewResult.ok,
     };
 }
 

@@ -1,17 +1,15 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '../../../styles/variables' as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
+@use "../../../styles/variables" as *;
 
 $color-success: #16c784;
 $color-danger: #ea3943;
-$font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 $divider: $border-subtle;
 
 .walletOverview {
   display: flex;
   flex-direction: column;
   width: 100%;
-  font-family: $font-family;
   background: $background;
   box-sizing: border-box;
   padding: 0;
@@ -91,7 +89,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 4px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -174,7 +174,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 8px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -204,7 +206,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 8px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 
   &:hover {
     color: $icon-primary;
@@ -298,10 +302,7 @@ $divider: $border-subtle;
   flex-direction: column;
   gap: 2px;
   border-bottom: 1px solid $divider;
-
 }
-
-
 
 .alignedStatRow {
   display: flex;
@@ -383,7 +384,12 @@ $divider: $border-subtle;
   width: 100%;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(90deg, $layer-02 0%, $layer-hover-01 50%, $layer-02 100%);
+  background: linear-gradient(
+    90deg,
+    $layer-02 0%,
+    $layer-hover-01 50%,
+    $layer-02 100%
+  );
   background-size: 200% 100%;
   animation: splitVolumeShimmer 1.25s ease-in-out infinite;
 }
@@ -447,7 +453,6 @@ $divider: $border-subtle;
   color: $text-primary;
   text-align: right;
 }
-
 
 .subStatValuePositive {
   font-size: 12px;
@@ -533,7 +538,6 @@ $divider: $border-subtle;
 .pnlTotalValueNegative {
   color: $color-danger;
 }
-
 
 .Card {
   display: flex;

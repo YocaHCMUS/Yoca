@@ -48,3 +48,7 @@ CHANGES.md
 
 server/api_logs
 externals
+
+AGENTS.md
+.agents/*
+skills-lock.json

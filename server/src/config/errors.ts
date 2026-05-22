@@ -20,12 +20,9 @@ export const ErrCodes = {
   hourlyChartHourlyExceeded90Days: "HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS",
   dailyChartDailyExceeded365Days: "DAILY_CHART_DAILY_EXCEEDED_365_DAYS",
   notFound: "NOT_FOUND",
+  unauthorized: "UNAUTHORIZED",
   rateLimitExceeded: "RATE_LIMIT_EXCEEDED",
   badGateway: "BAD_GATEWAY",
 } as const;
 
 export type ErrCode = (typeof ErrCodes)[keyof typeof ErrCodes];
-
-export function setErr<T extends ErrCode>(code: T) {
-  return { errorCode: code };
-}

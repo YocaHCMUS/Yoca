@@ -50,12 +50,6 @@ echarts.use([
 
 // ── Constants ────────────────────────────────────────────
 
-const TRACKED_WALLETS = [
-  "EG8XbqqyNmBLHMP2Y2wyPbMX8c6J12YG8KM4GmvWvUeV",
-  "GFHMc9BegxJXLdHJrABxNVoPRdnmVxXiNeoUCEpgXVHw",
-  "JD38n7ynKYcgPpF7k1BhXEeREu1KqptU93fVGy3S624k",
-];
-
 const PERIOD_OPTIONS: WalletOverviewPeriodKey[] = ["24H", "7D", "30D", "90D"];
 
 // ── Helpers ──────────────────────────────────────────────
@@ -141,11 +135,15 @@ interface ProfileDashboardTabProps {
   walletAddresses?: string[];
 }
 
-// ── Main component ───────────────────────────────────────
+const TRACKED_WALLETS = [
+  "EG8XbqqyNmBLHMP2Y2wyPbMX8c6J12YG8KM4GmvWvUeV",
+  "GFHMc9BegxJXLdHJrABxNVoPRdnmVxXiNeoUCEpgXVHw",
+  "JD38n7ynKYcgPpF7k1BhXEeREu1KqptU93fVGy3S624k",
+];
 
 export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboardTabProps) {
   const trackedWallets = useMemo(
-    () => (walletAddresses && walletAddresses.length > 0 ? walletAddresses : TRACKED_WALLETS),
+    () => TRACKED_WALLETS,
     [walletAddresses],
   );
   const [walletData, setWalletData] = useState<WalletDashboardData[]>([]);
@@ -171,7 +169,7 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
             ),
             fetchWalletAudit(address),
             fetchWalletIntelligence(address),
-            fetchBalanceTrend({ wallets: address, timePeriod: "90D" }),
+            fetchBalanceTrend({ query: { wallets: address, timePeriod: "30D" } }),
           ]);
 
           return {
@@ -218,11 +216,11 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
     }, 0);
 
     const overviewTotal = walletData.reduce(
-      (sum, w) => sum + (w.overview?.totalAssetValueUsd ?? 0),
+      (sum, w) => sum + (w.overview?.totalAssetValueUsd ?? w.overview?.holdings?.totalAssetValueUsd ?? 0),
       0,
     );
 
-    const totalAssets = portfolioTotal > 0 ? portfolioTotal : overviewTotal;
+    const totalAssets = overviewTotal;
 
     const totalTx = walletData.reduce(
       (sum, w) => sum + (w.overview?.periods?.[period]?.transactionCount ?? 0),
@@ -909,15 +907,26 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
     const allDays = new Set<number>();
 
     for (const w of walletData) {
-      if (!w.balanceTrend || !w.balanceTrend.series || w.balanceTrend.series.length === 0) continue;
+      if (!w.balanceTrend) continue;
+      
+      const trendData = w.balanceTrend[w.address] || w.balanceTrend;
+      
+      let dataPoints: any[] = [];
+      if (Array.isArray(trendData)) {
+        dataPoints = trendData;
+      } else if (trendData.series) {
+        const series = trendData.series.find((s: any) => s.unit === "USD" || s.name === "Total Balance (USD)") || trendData.series[0];
+        if (series && series.data) {
+          dataPoints = series.data;
+        }
+      }
 
-      const series = w.balanceTrend.series.find((s: any) => s.unit === "USD" || s.name === "Total Balance (USD)") || w.balanceTrend.series[0];
-      if (!series || !series.data) continue;
+      if (!dataPoints || dataPoints.length === 0) continue;
 
       const walletDays = new Map<number, number>();
-      for (const pt of series.data) {
-        const t = Number(pt.timestamp);
-        const v = Number(pt.value) || 0;
+      for (const pt of dataPoints) {
+        const t = Number(pt.timestamp || pt.timestampMs);
+        const v = Number(pt.value || pt.usdValue) || 0;
         if (!isNaN(t) && !isNaN(v)) {
           const d = new Date(t);
           d.setHours(0, 0, 0, 0);
@@ -951,22 +960,45 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
     const cutoff = now - (days * 24 * 60 * 60 * 1000);
     const filteredData = dataArr.filter(pt => pt[0] >= cutoff);
 
-    // Override the latest point with the exact real-time Net Worth (KPI) to prevent discrepancies
-    const currentTotalAssets = walletData.reduce((sum, w) => sum + (w.overview?.totalAssetValueUsd ?? 0), 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTime = today.getTime();
+    // Real-time current balance từ overview (đồng bộ với KPI card)
+    const currentTotalAssets = walletData.reduce(
+      (sum, w) => sum + (w.overview?.totalAssetValueUsd ?? w.overview?.holdings?.totalAssetValueUsd ?? 0),
+      0
+    );
 
-    const lastIndex = filteredData.length - 1;
-    if (lastIndex >= 0) {
-      if (filteredData[lastIndex][0] === todayTime) {
-        filteredData[lastIndex][1] = currentTotalAssets;
-      } else {
-        filteredData.push([todayTime, currentTotalAssets]);
-      }
-    } else {
-      filteredData.push([todayTime, currentTotalAssets]);
+    // Fallback: nếu không có data nào, vẽ flat line tại giá trị hiện tại
+    if (filteredData.length === 0) {
+      filteredData.push([cutoff, currentTotalAssets]);
+      filteredData.push([now, currentTotalAssets]);
     }
+
+    // If there is only 1 point, duplicate it to the start of the period to form a flat line
+    if (filteredData.length === 1) {
+      filteredData.unshift([cutoff, filteredData[0][1]]);
+    }
+
+    // Upsert điểm hôm nay = real-time balance để đồng bộ với KPI card
+    if (currentTotalAssets > 0) {
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayMs = todayStart.getTime();
+      const lastPt = filteredData[filteredData.length - 1];
+      if (lastPt && lastPt[0] === todayMs) {
+        // Replace điểm hôm nay nếu đã tồn tại
+        lastPt[1] = currentTotalAssets;
+      } else {
+        // Thêm điểm hôm nay nếu chưa có
+        filteredData.push([todayMs, currentTotalAssets]);
+      }
+    }
+
+    // Compute y-axis bounds with ~8% padding, let ECharts pick nice intervals
+    const values = filteredData.map(pt => pt[1]);
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const range = dataMax - dataMin || dataMax * 0.1 || 1;
+    const yMin = Math.max(0, dataMin - range * 0.08);
+    const yMax = dataMax + range * 0.08;
 
     return {
       backgroundColor: "transparent",
@@ -981,15 +1013,30 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
             `<span style="color:${CHART_COLORS.textSub}">Total Balance</span>  <strong style="color:${CHART_COLORS.primary}">${fmtUsd(pt.value[1])}</strong></div>`;
         },
       },
-      grid: { left: 72, right: 24, top: 16, bottom: 24 },
+      grid: { left: 72, right: 24, top: 24, bottom: 36 },
       xAxis: {
         type: "time",
-        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
+        min: cutoff,
+        max: now,
+        minInterval: 3600 * 24 * 1000, // 1 day
+        axisLabel: { 
+          color: CHART_COLORS.neutral, 
+          fontSize: 11,
+          formatter: '{MMM} {d}',
+          hideOverlap: true,
+          margin: 12,
+          showMinLabel: true,
+          showMaxLabel: true,
+        },
         axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        splitLine: { show: false }
+        splitLine: { show: false },
+        axisTick: { show: false }
       },
       yAxis: {
         type: "value",
+        min: yMin,
+        max: yMax,
+        splitNumber: 5,
         axisLabel: { color: CHART_COLORS.neutral, fontSize: 11, formatter: (v: number) => fmtUsd(v) },
         splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
         axisLine: { show: false },
@@ -1089,18 +1136,16 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
 
         {/* ── Header Controls ───────────────────────────────── */}
         <div className={styles.headerRow}>
-          <div className={styles.periodSwitcher}>
-            <span className={styles.periodLabel}>Timeframe</span>
-            <ContentSwitcher
-              onChange={(e) => setPeriod(e.name as WalletOverviewPeriodKey)}
-              selectedIndex={Math.max(0, PERIOD_OPTIONS.indexOf(period))}
-              size="sm"
-            >
-              <Switch name="24H" text="24H" />
-              <Switch name="7D" text="7D" />
-              <Switch name="30D" text="30D" />
-              <Switch name="90D" text="90D" />
-            </ContentSwitcher>
+          <div className={styles.periodSwitcherPills}>
+            {["7D", "30D", "90D"].map((p) => (
+              <button
+                key={p}
+                className={`${styles.periodPill} ${period === p ? styles.periodPillActive : ""}`}
+                onClick={() => setPeriod(p as WalletOverviewPeriodKey)}
+              >
+                {p}
+              </button>
+            ))}
           </div>
         </div>
 

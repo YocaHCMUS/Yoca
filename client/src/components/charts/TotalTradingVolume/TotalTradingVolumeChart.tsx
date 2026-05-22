@@ -1,40 +1,21 @@
-/**
- * Total Trading Volume Chart Component
- *
- * Displays ranking of wallets by total trading volume with horizontal bar chart
- *
- * Features:
- * - Ranked horizontal bar chart
- * - Shows total, deposit, and withdrawal volumes
- * - Multiple wallet support
- * - Auto-refresh on wallet changes
- * - Interactive tooltips with detailed breakdown
- *
- * @module components/charts/TotalTradingVolume
- */
-
-import sharedStyles from "@/components/charts/shared/ChartStyle.module.scss";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  getChartGridConfig,
-  getThemedChartBaseOption,
-  useChartTheme,
-} from "@/hooks/useChartTheme";
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import {
   fetchTotalTradingVolume,
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { TotalTradingVolumeRequestParams } from "@/types/chart-api.types";
-import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import { formatItemTooltip } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo, useRef } from "react";
-import { BaseChart } from "../Base/BaseChart";
-import { ChartGridItem } from "../shared";
+import { ChartWrapper, ChartGridItem } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 
 type TotalTradingVolumeResponse = InferFetcherData<
@@ -57,17 +38,13 @@ export function TotalTradingVolumeChart({
   const chartTitle = title || tr("charts.totalTradingVolumeChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
 
-  // Use centralized filter sync hook
   const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query
-   */
   const query = useMemo<TotalTradingVolumeRequestParams>(
     () => ({
       period: filters.timePeriod,
@@ -76,9 +53,6 @@ export function TotalTradingVolumeChart({
     [filters.timePeriod, walletsString],
   );
 
-  /**
-   * Lifecycle controller
-   */
   const { data, loadingState, refetch } = useStandardChartController<
     TotalTradingVolumeResponse,
     TotalTradingVolumeRequestParams
@@ -90,9 +64,6 @@ export function TotalTradingVolumeChart({
     enabled: fetchEnabled,
   });
 
-  /**
-   * Generate chart option
-   */
   const chartOption = useMemo((): EChartsOption | null => {
     if (
       !data ||
@@ -104,10 +75,6 @@ export function TotalTradingVolumeChart({
       return null;
     }
 
-    const baseOption = getThemedChartBaseOption(chartTheme);
-
-    // data.wallets: { wallet: string; tradingVolumeUsd: number | null }[]
-    // Sort by tradingVolumeUsd descending
     const wallets = [...data.wallets].sort(
       (a, b) => (b.tradingVolumeUsd ?? 0) - (a.tradingVolumeUsd ?? 0),
     );
@@ -118,8 +85,7 @@ export function TotalTradingVolumeChart({
 
     return {
       ...baseOption,
-      ...getChartGridConfig,
-      legend: getMultiSeriesLegend(chartTheme, ["Total Volume"], false),
+      legend: { show: false },
       xAxis: {
         ...baseOption.xAxis,
         type: "value",
@@ -137,7 +103,7 @@ export function TotalTradingVolumeChart({
           ...baseOption.yAxis.axisLabel,
           interval: 0,
         },
-        inverse: true, // Rank 1 at top
+        inverse: true,
       },
       series: [
         {
@@ -145,13 +111,13 @@ export function TotalTradingVolumeChart({
           type: "bar",
           data: totalVolumes,
           itemStyle: {
-            color: chartTheme.colorPalette[0],
+            color: CHART_COLOR_PALETTE[0],
           },
           label: {
             show: true,
             position: "right",
             formatter: (params: any) => fmt.num.compact.currency(params.value),
-            color: chartTheme.textColor,
+            color: baseOption.textStyle.color,
           },
           emphasis: {
             itemStyle: {
@@ -180,10 +146,10 @@ export function TotalTradingVolumeChart({
         },
       },
     };
-  }, [data, chartTheme, tr, fmt]);
+  }, [data, baseOption, fmt]);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={
@@ -194,13 +160,14 @@ export function TotalTradingVolumeChart({
         (data.wallets as any).error
       }
       onRetry={() => refetch(false)}
-    >
-      <div className={sharedStyles.chartControls} data-html2canvas-ignore="true">
+      toolbarLayout="stacked"
+      actions={
         <PeriodSelector
           value={filters.timePeriod}
           onChange={(k) => setTimePeriod(k)}
         />
-      </div>
+      }
+    >
       {chartOption && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts
@@ -216,6 +183,6 @@ export function TotalTradingVolumeChart({
           />
         </ChartGridItem>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 }

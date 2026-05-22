@@ -70,11 +70,11 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
         <section className={styles.contentStack}>
             <div className={styles.sectionCard}>
                 <div className={styles.sectionHeader}>
-                    <h3>{tr("walletPage.wallet")}</h3>
+                    <h3>Wallets</h3>
                     <Select
                         id="profile-wallet-selector"
                         hideLabel={true}
-                        labelText={tr("walletPage.wallet")}
+                        labelText="Wallets"
                         value={selectedWalletId}
                         onChange={(event) => setSelectedWalletId(event.target.value)}
                     >
@@ -124,7 +124,7 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                 <PnLChart
                     key={`pnl-${chartKey}`}
                     minHeight={360}
-                    initialFilters={{ timePeriod: period, wallets: chartWallets }}
+                    initialFilters={{ wallets: chartWallets }}
                     autoRefresh={false}
                 />
             </div>

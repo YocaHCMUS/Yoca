@@ -24,6 +24,8 @@ export const UPDATE_TRENDING_TOKENS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
 export const TRADER_GAINEERS_LOSERS_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
+export const DAY_MS = 24 * 60 * 60 * 1000;
+
 // Trending tokens fetching
 export const TRENDING_TOKENS_RESULT_LIMIT = 10;
 export const TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT = 20;
@@ -51,8 +53,8 @@ export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
 /** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
 export const WALLET_AUDIT_MODEL =
-  process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-3-flash";
-export const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY?.trim() || "";
+  process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-2.5-flash";
+export const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY?.trim() || "AIzaSyDCAqma0ci-iVbqSsnT_wjvn6tYe_wfUP0";
 
 function readBooleanEnv(name: string, fallback: boolean): boolean {
   const value = process.env[name]?.trim().toLowerCase();
@@ -112,14 +114,14 @@ const apiCallTrackerRedactFields = readListEnv(
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
   : [
-    "apikey",
-    "api_key",
-    "authorization",
-    "token",
-    "password",
-    "secret",
-    "signature",
-  ];
+      "apikey",
+      "api_key",
+      "authorization",
+      "token",
+      "password",
+      "secret",
+      "signature",
+    ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
@@ -135,6 +137,19 @@ export const WALLET_AI_ANALYSIS_DEBUG = readBooleanEnv(
   false,
 );
 
-export const NEWS_CACHE_TTL_MS = readNumberEnv("NEWS_CACHE_TTL_MS", 3 * 60 * 60 * 1000); // 1 hour
-export const N8N_LATEST_NEWS_URL = process.env.N8N_LATEST_NEWS_URL ||
+export const NEWS_CACHE_TTL_MS = readNumberEnv(
+  "NEWS_CACHE_TTL_MS",
+  3 * 60 * 60 * 1000,
+); // 1 hour
+export const N8N_LATEST_NEWS_URL =
+  process.env.N8N_LATEST_NEWS_URL ||
   "http://localhost:5678/webhook/latest-news";
+
+export const TRANSACTION_FETCH_MAX_PAGE_COUNT = readNumberEnv(
+  "TRANSACTION_FETCH_MAX_PAGE_COUNT",
+  10,
+);
+export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
+  "TRANSACTION_FETCH_MAX_ITEM_COUNT",
+  500,
+); // get 500 earliest txs

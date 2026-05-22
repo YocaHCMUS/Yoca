@@ -1,11 +1,10 @@
-import { setErr } from "@sv/config/errors.js";
 import { searchQuerySchema, validate } from "@sv/middlewares/validation.js";
-import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
-import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
-import * as bds from "@sv/util/util-birdeye.js";
+import { getSearchResult } from "@sv/services/search.js";
+import { serverErr } from "@sv/util/errors";
 import { statusCode } from "@sv/util/responses.js";
-import * as cg from "@sv/util/util-coingecko.js";
 import { Hono } from "hono";
+import * as bds from "@sv/util/util-birdeye";
+import * as cg from "@sv/util/util-coingecko";
 import z from "zod";
 
 function trimIdPrefix(
@@ -62,7 +61,9 @@ function extractSolanaWalletAddress(input: string): string | null {
   return isLikelySolanaWalletAddress(matched[0]) ? matched[0] : null;
 }
 
-async function getSearchWalletsResult(query: string): Promise<WalletSearchResult[]> {
+async function getSearchWalletsResult(
+  query: string,
+): Promise<WalletSearchResult[]> {
   const walletAddress = extractSolanaWalletAddress(query);
   if (!walletAddress) {
     return [];
@@ -154,92 +155,22 @@ const app = new Hono().get(
   async (c) => {
     try {
       const { q = "" } = c.req.valid("query");
-      const normalizedQuery = q.trim();
-      const searchQuery = normalizedQuery.toLowerCase();
-
-      if (!normalizedQuery) {
-        return c.json(
-          {
-            tokens: [],
-            pools: [],
-            wallets: [],
-          },
-          statusCode.Ok,
-        );
-      }
-
-      const [poolSearch, queriesSearch, wallets] = await Promise.all([
-        getSearchPoolsResult(searchQuery),
-        getSearchQueriesResult(searchQuery),
-        getSearchWalletsResult(normalizedQuery),
-      ]);
-
-      if (!poolSearch || queriesSearch == undefined) {
-        return c.json(
-          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-          statusCode.BadGateway,
-        );
-      }
-
-      const cgIdToSolanaAddress = await getAddressesByCoinGeckoIds(
-        queriesSearch.map((token) => token.id!),
-      );
-
-      const tokenResultMeta = queriesSearch
-        // Maybe not on Solana chain
-        .filter((token) => cgIdToSolanaAddress[token.id!])
-        .map((token): TokenQuickMeta => {
-          return {
-            address: cgIdToSolanaAddress[token.id!],
-            name: token.name || null,
-            symbol: token.symbol || null,
-            imgUrl: token.thumb || null,
-          };
-        });
-
-      const tokenAddresses = tokenResultMeta.map((token) => token.address);
-      const marketData = await getTokenMarketData(tokenAddresses);
-
-      const tokenDataList = tokenResultMeta.map((token) => ({
-        ...marketData[token.address],
-        ...token,
-      }));
-
-      const pools = poolSearch.pools.map((pool) => {
-        const baseTokenId = trimIdPrefix(
-          pool.relationships?.base_token?.data?.id,
-        );
-        const quoteTokenId = trimIdPrefix(
-          pool.relationships?.quote_token?.data?.id,
-        );
-
-        return {
-          ...pool,
-          baseTokenImg: baseTokenId
-            ? poolSearch.poolTokens[baseTokenId]?.imgUrl
-            : null,
-          quoteTokenImg: quoteTokenId
-            ? poolSearch.poolTokens[quoteTokenId]?.imgUrl
-            : null,
-        };
-      });
+      const result = await getSearchResult(q);
 
       return c.json(
         {
-          tokens: tokenDataList,
-          pools,
-          wallets,
+          tokens: result.tokens,
+          pools: result.pools,
+          wallets: result.wallets,
         },
         statusCode.Ok,
       );
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+    } catch (e) {
+      return serverErr(c, e);
     }
   },
 );
 
 export default app;
+
+export type SearchAppType = typeof app;

@@ -1,37 +1,33 @@
 import client from "@/api/main";
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
-import { CounterpartyActivity } from "@/components/charts/CounterpartyActivity/CounterpartyActivity.tsx";
-import { ExchangeComparison } from "@/components/charts/ExchangeComparison/ExchangeComparison.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
-import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
-  FilterType,
-  SortType,
-  Table,
-  tableHeaderLabel,
+    FilterType,
+    type FilterConfig,
+    SortType,
+    Table,
+    tableHeaderLabel,
 } from "@/components/tables/Table.tsx";
 import {
-  renderBase,
-  renderCode,
-  renderCurrency,
-  renderDateTime,
-  renderHash,
-  renderReducedNumber,
-  renderTokenCell,
+    renderBase,
+    renderCode,
+    renderDateTime,
+    renderHash,
+    renderReducedNumber,
+    renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
-import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
-import WalletOverview from "@/components/wallet/WalletOverview/WalletOverview.tsx";
+import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
-  AiAnalysisTab,
-  type AiAnalysisDependencyItem,
+    AiAnalysisTab,
+    type AiAnalysisDependencyItem,
 } from "@/components/wallet/AiAnalysis/index.ts";
 import {
-  WalletReportTemplate,
-  type WalletReportSection,
+    WalletReportTemplate,
+    type WalletReportSection,
 } from "@/components/WalletReportTemplate";
+import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useAuth } from "@/contexts/AuthContext.tsx";
@@ -40,51 +36,80 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-  fetchWalletAiAnalysis,
-  type WalletAiAnalysisLanguage,
-  fetchWalletCounterparties,
-  fetchWalletIntelligence,
-  fetchWalletOverview,
-  fetchWalletPortfolio,
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  type WalletAiAnalysisResponse,
-  type WalletCounterpartyRow,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
-  type WalletPortfolioItem,
-  type WalletSwap,
-  type WalletSwapTokenInfo,
-  type WalletTransfer,
+    fetchWalletSwaps,
+    fetchWalletTransfers,
+    fetchWalletPortfolio,
+    fetchWalletOverview,
+    fetchWalletIntelligence,
+    fetchWalletAiAnalysis,
+    type WalletSwap,
+    type WalletTransfer,
+    type WalletPortfolioItem,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletPageInfo,
+    type WalletSwapTokenChange,
+    type WalletSwapTokenInfo,
+    type WalletAiAnalysisLanguage,
+    type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { chunkArray } from "@/util/format";
-import { ChevronDown, Download, AiGenerate, Activity, ChartLine, Star, StarFilled, Wallet, Settings, Tag, Copy, Folder } from "@carbon/icons-react";
+import {
+    Activity,
+    AiGenerate,
+    ChartLine,
+    ChevronDown,
+    Download,
+    Star,
+    StarFilled,
+    User,
+    Wallet,
+    Settings,
+    Tag,
+    Copy,
+    Folder
+} from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
+    buildPortfolioMetaMap,
+    mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-  TokenAverageTradePrice,
-  TokenDetailsDemo,
+    TokenAverageTradePrice,
+    TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
-import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
+import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
+import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
+import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
+import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
+import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size <= 0 || items.length === 0) {
+    return [];
+  }
+
+  const output: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    output.push(items.slice(index, index + size));
+  }
+
+  return output;
+}
 
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
@@ -138,14 +163,7 @@ function PageSection({ children }: { children: ReactNode }) {
 export default function WalletPage() {
   const { user } = useAuth();
   const { tr, fmt, lang } = useLocalization();
-  const {
-    tokenWatchlist,
-    walletWatchlist,
-    tokenPending,
-    walletPending,
-    toggleToken,
-    toggleWallet,
-  } = useWatchlist();
+  const { tokenWatchlist, tokenPending, toggleToken } = useWatchlist();
   const bcp47 = locale[lang].langCode;
   const navigate = useNavigate();
   const { address } = useParams<{ address: string }>();
@@ -167,12 +185,8 @@ export default function WalletPage() {
   >({});
   const [transferLoading, setTransferLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
-  const [counterpartyLoading, setCounterpartyLoading] = useState(false);
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
-  const [counterparties, setCounterparties] = useState<WalletCounterpartyRow[]>(
-    [],
-  );
   const [overviewReport, setOverviewReport] =
     useState<WalletOverviewMultiPeriodResponse | null>(null);
   const [intelligenceReport, setIntelligenceReport] =
@@ -180,7 +194,7 @@ export default function WalletPage() {
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 AI Analysis — data loads when each tab is first visited. */
+  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 Forensic Audit, 4 AI Analysis — data loads when each tab is first visited. */
   const [activeTab, setActiveTab] = useState(0);
   /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
   const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
@@ -191,9 +205,7 @@ export default function WalletPage() {
   const [aiAnalysisWaitingReason, setAiAnalysisWaitingReason] = useState<
     string | null
   >(null);
-  const [aiAnalysisLastUpdated, setAiAnalysisLastUpdated] = useState<
-    string | null
-  >(null);
+  const [, setAiAnalysisLastUpdated] = useState<string | null>(null);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
@@ -315,36 +327,17 @@ export default function WalletPage() {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
+
+  const [dayPopupOpen, setDayPopupOpen] = useState(false);
+  const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
     () => flattenLoadedPages(transferPages),
     [transferPages],
   );
-
-  const transferByKey = useMemo(
-    () =>
-      new Map(
-        loadedTransfers.map((transfer) => [
-          `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-          transfer,
-        ]),
-      ),
-    [loadedTransfers],
-  );
-
-  const swapHasMore = useMemo(() => {
-    const maxLoadedPage = getMaxLoadedPage(swapPages);
-    return maxLoadedPage >= 1
-      ? Boolean(swapPageInfoByPage[maxLoadedPage]?.hasMore)
-      : false;
-  }, [swapPageInfoByPage, swapPages]);
-
-  const transferHasMore = useMemo(() => {
-    const maxLoadedPage = getMaxLoadedPage(transferPages);
-    return maxLoadedPage >= 1
-      ? Boolean(transferPageInfoByPage[maxLoadedPage]?.hasMore)
-      : false;
-  }, [transferPageInfoByPage, transferPages]);
 
   const { rows: portfolioData, meta: portfolioMeta } = useMemo(
     () => mapPortfolioItems(portfolio),
@@ -366,14 +359,6 @@ export default function WalletPage() {
     () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
     [tokenWatchlist],
   );
-  const walletWatchlistLookup = useMemo(
-    () => new Set(walletWatchlist.map((item) => item.toLowerCase())),
-    [walletWatchlist],
-  );
-  const isWalletInWatchlist = walletWatchlistLookup.has(
-    walletAddress.toLowerCase(),
-  );
-
   const formatSwapPair = (swap: WalletSwap): string => {
     const tokensInvolved =
       typeof swap.tokensInvolved === "string"
@@ -391,24 +376,13 @@ export default function WalletPage() {
   const swapData = useMemo(
     () =>
       loadedSwaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(
-          (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
-        );
-        const baseQuotePrice = toOptionalFiniteNumber(
-          (swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice,
-        );
+        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
         return [
-          String(swap.blockTimestampIso ?? ""),
-          typeof swap.exchangeName === "string" &&
-            swap.exchangeName.trim().length > 0
-            ? swap.exchangeName
-            : "—",
-          formatSwapPair(swap),
-          swap.sold,
-          swap.bought,
+          String(swap.blockTimestampIso ?? ""), // time column
+          formatSwapPair(swap), // pair column
+          swap.sold, // sold column
+          swap.bought, // bought column
           totalValueUsd ?? "—",
-          baseQuotePrice ?? "—",
-          swap.transactionHash,
         ];
       }),
     [loadedSwaps],
@@ -418,81 +392,73 @@ export default function WalletPage() {
     () =>
       loadedSwaps.map((swap) => [
         fmt.datetime.relativeShort(swap.blockTimestampIso, true),
-        swap.exchangeName || "Unknown",
         formatSwapPair(swap),
         swap.sold?.symbol ? String(swap.sold.symbol).toUpperCase() : "—",
         swap.bought?.symbol ? String(swap.bought.symbol).toUpperCase() : "—",
         swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
-        swap.baseQuotePrice != null
-          ? fmt.num.decimal(swap.baseQuotePrice)
-          : "—",
       ]),
     [fmt, loadedSwaps],
   );
 
   const transferData = useMemo(
     () =>
-      loadedTransfers.map((transfer) => [
-        transfer.from,
-        transfer.to,
-        typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown",
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
-      ]),
+      loadedTransfers.map((transfer) => {
+        const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
+          transfer.tokenAddress,
+        );
+        const fallbackLogoUri = tokenMetaLookupAddress
+          ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
+          : undefined;
+        const tokenSymbol =
+          typeof transfer.tokenSymbol === "string" &&
+            transfer.tokenSymbol.trim().length > 0
+            ? transfer.tokenSymbol
+            : "Unknown";
+        const tokenAmount = transfer.amount;
+        const transferValueUsd =
+          transfer.amountUsd ??
+          (transfer.priceUsd != null ? tokenAmount * transfer.priceUsd : null);
+        const tokenCell = {
+          address: transfer.tokenAddress,
+          amount: tokenAmount,
+          symbol: tokenSymbol,
+          name: transfer.tokenName ?? null,
+          logoUri: transfer.tokenLogoUri ?? fallbackLogoUri ?? null,
+          priceUsd: transfer.priceUsd ?? 0,
+          valueUsd: transferValueUsd ?? 0,
+          toString: () => {
+            return tokenSymbol;
+          },
+          valueOf: () => {
+            return tokenAmount;
+          },
+        };
+
+        return [
+          transfer.timestamp,
+          transfer.from,
+          transfer.to,
+          tokenCell,
+          transferValueUsd,
+        ];
+      }),
     [loadedTransfers],
   );
 
-  const counterpartyTableData = useMemo(
-    () =>
-      counterparties.map((row) => {
-        const identityLabel =
-          row.identity.name ||
-          (row.identity.status === "known"
-            ? tr("walletPage.identityKnown")
-            : row.identity.status === "unavailable"
-              ? tr("walletPage.identityUnavailable")
-              : tr("walletPage.unknown"));
-        return [
-          row.address,
-          identityLabel,
-          row.uniqueTokenCount,
-          row.tokens.join(", "),
-          row.totalVolumeUsd,
-          row.transactionCount,
-        ];
-      }),
-    [counterparties, tr],
-  );
-
-  const counterpartyHeaders = [
-    tr("walletPage.counterparties"),
-    tr("walletPage.identity"),
-    tr("walletPage.uniqueTokensTraded"),
-    tr("walletPage.tokenList"),
-    tr("walletPage.totalVolume"),
-    tr("charts.counterpartyActivityChart.transactionCount"),
-  ];
-
   const swapHeaders = [
     tr("walletPage.time"),
-    tr("walletPage.exchange"),
     tr("walletPage.pair"),
     tr("walletPage.tokenSold"),
     tr("walletPage.tokenBought"),
-    tr("walletPage.totalValueUSD"),
-    tr("walletPage.feeInLamports"),
+    tr("walletPage.value"),
   ];
 
   const transferHeaders = [
+    tr("walletPage.time"),
     tr("walletPage.sender"),
     tr("walletPage.receiver"),
     tr("walletPage.token"),
-    tr("walletPage.amount"),
-    tr("walletPage.time"),
+    tr("walletPage.value"),
   ];
 
   const portfolioHeaders = [
@@ -515,24 +481,20 @@ export default function WalletPage() {
     },
   ];
 
-  const isSortableCounterparties = [false, false, true, false, true, true];
   const isSortablePortfolio = [false, false, true, true, true];
-  const isSortableSwaps = [true, false, false, false, false, true, true];
-  const isSortableTransfers = [false, false, false, true, true];
+  const isSortableSwaps = [true, false, true, true, true];
+  const isSortableTransfers = [true, false, false, true, true];
 
-  const counterpartySortConfigs = {
-    2: { type: SortType.Number },
-    4: { type: SortType.Number },
-    5: { type: SortType.Number },
-  };
   const swapSortConfigs = {
     0: { type: SortType.Date },
-    5: { type: SortType.Number },
-    6: { type: SortType.Number },
+    2: { type: SortType.Number, field: "amount" },
+    3: { type: SortType.Number, field: "amount" },
+    4: { type: SortType.Number },
   };
   const transferSortConfigs = {
-    3: { type: SortType.Number },
-    4: { type: SortType.Date },
+    0: { type: SortType.Date },
+    2: { type: SortType.Number },
+    4: { type: SortType.Number },
   };
   const portfolioSortConfig = {
     2: { type: SortType.Number },
@@ -540,74 +502,99 @@ export default function WalletPage() {
     4: { type: SortType.Number },
   };
 
-  const counterpartyCellRenderers = [
-    (value: string) => renderHash(value),
-    (value: string) => renderCode(value),
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    (value: string) => renderCode(value),
-    (value: string) => renderReducedNumber(value, renderCurrency, bcp47),
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-  ];
-
   const renderSwapTokenInfoClassnames = {
     container: styles.swapTokenCell,
     amount: styles.swapTokenAmount,
   };
   const swapCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    (value: string) => renderCode(value),
-    (value: string) => renderCode(value),
-    (value: unknown, row?: unknown[] | null) => {
-      if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value as WalletSwapTokenInfo;
-      return renderTokenCell(
-        token,
-        renderSwapTokenInfoClassnames,
-        18,
-      )(String(token.symbol ?? ""), row ?? null);
-    },
-    (value: unknown, row?: unknown[] | null) => {
-      if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value as WalletSwapTokenInfo;
-      return renderTokenCell(
-        token,
-        renderSwapTokenInfoClassnames,
-        18,
-      )(String(token.symbol ?? ""), row ?? null);
-    },
-    (value: string) =>
-      value === "—"
-        ? renderBase(value)
-        : renderReducedNumber(value, renderCurrency, bcp47),
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-  ];
-
-  const transferCellRenderers = [
-    (value: string) => renderHash(value),
-    (value: string) => renderHash(value),
-    (value: string, row?: unknown[] | null) => {
-      if (!Array.isArray(row) || row.length < 6) return renderCode(value);
-      const transferKey = String(row[5] ?? "");
-      const transfer = transferByKey.get(transferKey);
-      if (!transfer) return renderCode(value);
-      const transferTokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-        transfer.tokenAddress,
-      );
-      const fallbackLogoUri = transferTokenMetaLookupAddress
-        ? tokenMeta.data?.[transferTokenMetaLookupAddress]?.imageUrl
+    (value: string, row?: any[]) => {
+      const soldToken = Array.isArray(row)
+        ? (row[2] as WalletSwapTokenChange | undefined)
         : undefined;
+      const boughtToken = Array.isArray(row)
+        ? (row[3] as WalletSwapTokenChange | undefined)
+        : undefined;
+      const pairLabel = String(value || "").replace(/,/g, " → ");
+
       return (
-        <TokenIdentityCell
-          symbol={String(transfer.tokenSymbol ?? value)}
-          fullName={transfer.tokenName}
-          imageUrl={transfer.tokenLogoUri ?? fallbackLogoUri}
-          imageSize={18}
-          tooltipAlign="right"
+        <SwapPairCell
+          soldToken={soldToken ?? null}
+          boughtToken={boughtToken ?? null}
+          pairLabel={pairLabel}
         />
       );
     },
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
+    (value: WalletSwapTokenInfo, row?: any) => {
+      if (!value || typeof value !== "object") return renderCode(String(value));
+      const token = value;
+      return renderTokenCell(
+        token,
+        fmt.num.compact.decimal,
+        renderSwapTokenInfoClassnames,
+        30,
+        true,
+        "negative",
+      )(String(token.symbol ?? ""), row ?? null);
+    },
+    (value: WalletSwapTokenInfo, row?: any) => {
+      if (!value || typeof value !== "object") return renderCode(String(value));
+      const token = value;
+      return renderTokenCell(
+        token,
+        fmt.num.compact.decimal,
+        renderSwapTokenInfoClassnames,
+        30,
+        true,
+        "positive",
+      )(String(token.symbol ?? ""), row ?? null);
+    },
+    (value: number | string) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return renderBase(fmt.num.currency(value));
+      }
+      return renderBase(String(value));
+    },
+  ];
+
+  const transferCellRenderers = [
     (value: string) => renderDateTime(value, fmt.datetime["relative"]),
+    (value: string) => {
+      const isCurrentWallet = value === walletAddress;
+      return renderHash(
+        value,
+        6,
+        4,
+        isCurrentWallet ? <User size={12} /> : undefined,
+        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
+      );
+    },
+    (value: string) => {
+      const isCurrentWallet = value === walletAddress;
+      return renderHash(
+        value,
+        6,
+        4,
+        isCurrentWallet ? <User size={12} /> : undefined,
+        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
+        isCurrentWallet
+      );
+    },
+    (value: WalletSwapTokenInfo, row?: any) => {
+      // neccessary evil
+      return renderTokenCell(
+        value,
+        fmt.num.compact.decimal,
+        renderSwapTokenInfoClassnames,
+        30,
+        true,
+      )(String(value.symbol ?? ""), row);
+    },
+    (value: number | null) => {
+      if (value == null) return renderBase("—");
+      return renderBase(fmt.num.currency(value));
+    },
   ];
 
   const portfolioCellRenderers = [
@@ -658,8 +645,7 @@ export default function WalletPage() {
           symbol={value}
           fullName={portfolioTokenMeta?.fullName}
           imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
-          imageSize={20}
-
+          imageSize={30}
           tooltipAlign="right"
         />
       );
@@ -675,80 +661,154 @@ export default function WalletPage() {
     },
   ];
 
-  const counterpartyFilterSchema = {
-    0: { type: FilterType.Select },
-    1: { type: FilterType.Select },
-    2: { type: FilterType.Range, min: 0, max: 100, step: 1 },
-    3: { type: FilterType.Select },
-    4: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.01 },
-    5: { type: FilterType.Range, min: 0, max: 10_000, step: 1 },
-  };
-
-  const portfolioFilterSchema = {
+  const portfolioFilterSchema: Record<number, FilterConfig | null> = {
     1: { type: FilterType.Select },
     2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
     3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
     4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
   };
 
-  const handleSwapPageChange = async (): Promise<boolean> => {
-    if (!address || swapLoading) return false;
-    const maxLoadedPage = getMaxLoadedPage(swapPages);
-    if (maxLoadedPage < 1) return false;
-    const previousPageInfo = swapPageInfoByPage[maxLoadedPage];
-    if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
-      return false;
-    setSwapLoading(true);
-    try {
-      const response = await fetchWalletSwaps(address, {
-        cursor: previousPageInfo.nextCursor,
-        before: previousPageInfo.nextCursor,
-      });
-      const nextRows = Array.isArray(response.swaps) ? response.swaps : [];
-      const nextPage = maxLoadedPage + 1;
-      setSwapPages((prev) => ({ ...prev, [nextPage]: nextRows }));
-      setSwapPageInfoByPage((prev) => ({
-        ...prev,
-        [nextPage]: response.pageInfo,
-      }));
-      return nextRows.length > 0;
-    } catch (error) {
-      console.error("Failed to load wallet swap page", error);
-      return false;
-    } finally {
-      setSwapLoading(false);
-    }
+  const swapFilterSchema: Record<number, FilterConfig | null> = {
+    0: { type: FilterType.Date },
+    1: {
+      type: FilterType.Composite,
+      filters: {
+        name: { type: FilterType.Select, field: "name" },
+        logo: null,
+      },
+    },
+    2: {
+      type: FilterType.Composite,
+      filters: {
+        address: null,
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01,
+        },
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: null,
+      },
+    },
+    3: {
+      type: FilterType.Composite,
+      filters: {
+        address: null,
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01,
+        },
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        logoUri: null,
+        priceUsd: null,
+        valueUsd: null,
+      },
+    },
+    4: {
+      type: FilterType.Range,
+      min: 0,
+      max: 1_000_000,
+      step: 0.01,
+    },
   };
 
-  const handleTransferPageChange = async (): Promise<boolean> => {
-    if (!address || transferLoading) return false;
-    const maxLoadedPage = getMaxLoadedPage(transferPages);
-    if (maxLoadedPage < 1) return false;
-    const previousPageInfo = transferPageInfoByPage[maxLoadedPage];
-    if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
-      return false;
-    setTransferLoading(true);
-    try {
-      const response = await fetchWalletTransfers(address, {
-        cursor: previousPageInfo.nextCursor,
-      });
-      const nextRows = Array.isArray(response.transfers)
-        ? response.transfers
-        : [];
-      const nextPage = maxLoadedPage + 1;
-      setTransferPages((prev) => ({ ...prev, [nextPage]: nextRows }));
-      setTransferPageInfoByPage((prev) => ({
-        ...prev,
-        [nextPage]: response.pageInfo,
-      }));
-      return nextRows.length > 0;
-    } catch (error) {
-      console.error("Failed to load wallet transfer page", error);
-      return false;
-    } finally {
-      setTransferLoading(false);
-    }
+  const transferFilterSchema: Record<number, FilterConfig | null> = {
+    0: { type: FilterType.Date },
+    1: { type: FilterType.Select },
+    2: { type: FilterType.Select },
+    3: {
+      type: FilterType.Composite,
+      filters: {
+        symbol: { type: FilterType.Select, field: "symbol" },
+        name: { type: FilterType.Select, field: "name" },
+        amount: {
+          type: FilterType.Range,
+          field: "amount",
+          min: 0,
+          max: 10_000,
+          step: 0.01,
+        },
+        logoUri: null,
+        address: null,
+        priceUsd: null,
+        valueUsd: null,
+      },
+    },
+    4: {
+      type: FilterType.Range,
+      min: 0,
+      max: 1_000_000,
+      step: 0.01,
+    },
   };
+
+  // const handleSwapPageChange = async (): Promise<boolean> => {
+  //   if (!address || swapLoading) return false;
+  //   const maxLoadedPage = getMaxLoadedPage(swapPages);
+  //   if (maxLoadedPage < 1) return false;
+  //   const previousPageInfo = swapPageInfoByPage[maxLoadedPage];
+  //   if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
+  //     return false;
+  //   setSwapLoading(true);
+  //   try {
+  //     const response = await fetchWalletSwaps(address, {
+  //       cursor: previousPageInfo.nextCursor,
+  //       before: previousPageInfo.nextCursor,
+  //     });
+  //     const nextRows = Array.isArray(response.swaps) ? response.swaps : [];
+  //     const nextPage = maxLoadedPage + 1;
+  //     setSwapPages((prev) => ({ ...prev, [nextPage]: nextRows }));
+  //     setSwapPageInfoByPage((prev) => ({
+  //       ...prev,
+  //       [nextPage]: response.pageInfo,
+  //     }));
+  //     return nextRows.length > 0;
+  //   } catch (error) {
+  //     console.error("Failed to load wallet swap page", error);
+  //     return false;
+  //   } finally {
+  //     setSwapLoading(false);
+  //   }
+  // };
+
+  // const handleTransferPageChange = async (): Promise<boolean> => {
+  //   if (!address || transferLoading) return false;
+  //   const maxLoadedPage = getMaxLoadedPage(transferPages);
+  //   if (maxLoadedPage < 1) return false;
+  //   const previousPageInfo = transferPageInfoByPage[maxLoadedPage];
+  //   if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
+  //     return false;
+  //   setTransferLoading(true);
+  //   try {
+  //     const response = await fetchWalletTransfers(address, {
+  //       cursor: previousPageInfo.nextCursor,
+  //     });
+  //     const nextRows = Array.isArray(response.transfers)
+  //       ? response.transfers
+  //       : [];
+  //     const nextPage = maxLoadedPage + 1;
+  //     setTransferPages((prev) => ({ ...prev, [nextPage]: nextRows }));
+  //     setTransferPageInfoByPage((prev) => ({
+  //       ...prev,
+  //       [nextPage]: response.pageInfo,
+  //     }));
+  //     return nextRows.length > 0;
+  //   } catch (error) {
+  //     console.error("Failed to load wallet transfer page", error);
+  //     return false;
+  //   } finally {
+  //     setTransferLoading(false);
+  //   }
+  // };
 
   useEffect(() => {
     if (!user || !address || address === "null") {
@@ -793,29 +853,20 @@ export default function WalletPage() {
   const loadActivityData = useCallback(async (): Promise<{
     swaps: WalletSwap[];
     transfers: WalletTransfer[];
-    counterparties: WalletCounterpartyRow[];
   }> => {
     if (!address || address === "null") {
-      return { swaps: [], transfers: [], counterparties: [] };
+      return { swaps: [], transfers: [] };
     }
     setSwapLoading(true);
     setTransferLoading(true);
-    setCounterpartyLoading(true);
     try {
-      const [swapsResult, transfersResult, counterpartiesResult] =
-        await Promise.allSettled([
-          fetchWalletSwaps(address),
-          fetchWalletTransfers(address),
-          fetchWalletCounterparties(address, {
-            period: "7d",
-            limit: 50,
-            includeTokens: true,
-          }),
-        ]);
+      const [swapsResult, transfersResult] = await Promise.allSettled([
+        fetchWalletSwaps(address),
+        fetchWalletTransfers(address),
+      ]);
 
       let swaps: WalletSwap[] = [];
       let transfers: WalletTransfer[] = [];
-      let counterpartiesOut: WalletCounterpartyRow[] = [];
 
       if (swapsResult.status === "fulfilled") {
         const swapsData = swapsResult.value?.swaps || [];
@@ -831,14 +882,6 @@ export default function WalletPage() {
         }
       }
 
-      if (counterpartiesResult.status === "fulfilled") {
-        const counterpartiesData =
-          counterpartiesResult.value?.counterparties ?? [];
-        if (Array.isArray(counterpartiesData)) {
-          counterpartiesOut = counterpartiesData;
-        }
-      }
-
       flushSync(() => {
         if (swapsResult.status === "fulfilled") {
           setSwapPages({ 1: swaps });
@@ -849,20 +892,15 @@ export default function WalletPage() {
           setTransferPages({ 1: transfers });
           setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
         }
-
-        if (counterpartiesResult.status === "fulfilled") {
-          setCounterparties(counterpartiesOut);
-        }
       });
 
-      return { swaps, transfers, counterparties: counterpartiesOut };
+      return { swaps, transfers };
     } catch (error) {
       console.error("[WalletPage] Failed to load activity data", error);
-      return { swaps: [], transfers: [], counterparties: [] };
+      return { swaps: [], transfers: [] };
     } finally {
       setSwapLoading(false);
       setTransferLoading(false);
-      setCounterpartyLoading(false);
     }
   }, [address]);
 
@@ -1018,7 +1056,7 @@ export default function WalletPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 3 && !aiAnalysisRequestedRef.current) {
+    if (activeTab === 4 && !aiAnalysisRequestedRef.current) {
       aiAnalysisRequestedRef.current = true;
       void loadAiAnalysisData();
     }
@@ -1040,7 +1078,6 @@ export default function WalletPage() {
       setSwapPageInfoByPage({});
       setTransferPages({});
       setTransferPageInfoByPage({});
-      setCounterparties([]);
       setOverviewReport(null);
       setIntelligenceReport(null);
       setAiAnalysisReport(null);
@@ -1094,10 +1131,9 @@ export default function WalletPage() {
     portfolio: WalletPortfolioItem[];
     swaps: WalletSwap[];
     transfers: WalletTransfer[];
-    counterparties: WalletCounterpartyRow[];
   }> => {
     if (!address || address === "null") {
-      return { portfolio: [], swaps: [], transfers: [], counterparties: [] };
+      return { portfolio: [], swaps: [], transfers: [] };
     }
 
     let p = portfolio;
@@ -1108,22 +1144,19 @@ export default function WalletPage() {
 
     let s = loadedSwaps;
     let t = loadedTransfers;
-    let c = counterparties;
     if (!activityLoadedRef.current) {
       activityLoadedRef.current = true;
       const activity = await loadActivityData();
       s = activity.swaps;
       t = activity.transfers;
-      c = activity.counterparties;
     }
 
-    return { portfolio: p, swaps: s, transfers: t, counterparties: c };
+    return { portfolio: p, swaps: s, transfers: t };
   }, [
     address,
     portfolio,
     loadedSwaps,
     loadedTransfers,
-    counterparties,
     loadPortfolioData,
     loadActivityData,
   ]);
@@ -1209,18 +1242,10 @@ export default function WalletPage() {
       const snap = await ensurePortfolioAndActivityForExport();
       const { rows: portfolioRows } = mapPortfolioItems(snap.portfolio);
       const swapSheetRows = snap.swaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(
-          (swap as unknown as { totalValueUsd?: unknown }).totalValueUsd,
-        );
-        const baseQuotePrice = toOptionalFiniteNumber(
-          (swap as unknown as { baseQuotePrice?: unknown }).baseQuotePrice,
-        );
+        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
+        const baseQuotePrice = toOptionalFiniteNumber(swap.baseQuotePrice);
         return [
           String(swap.blockTimestampIso ?? ""),
-          typeof swap.exchangeName === "string" &&
-            swap.exchangeName.trim().length > 0
-            ? swap.exchangeName
-            : "—",
           formatSwapPair(swap),
           swap.sold,
           swap.bought,
@@ -1230,33 +1255,16 @@ export default function WalletPage() {
         ];
       });
       const transferSheetRows = snap.transfers.map((transfer) => [
+        fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
           ? transfer.tokenSymbol
-          : "Unknown",
-        transfer.amount,
-        transfer.timestamp,
-        `${transfer.transactionSignature}:${transfer.instructionIndex}`,
+          : "Unknown"
+        } (${fmt.num.decimal(transfer.amount)})`,
+        transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
-      const counterpartySheetRows = snap.counterparties.map((row) => {
-        const identityLabel =
-          row.identity.name ||
-          (row.identity.status === "known"
-            ? tr("walletPage.identityKnown")
-            : row.identity.status === "unavailable"
-              ? tr("walletPage.identityUnavailable")
-              : tr("walletPage.unknown"));
-        return [
-          row.address,
-          identityLabel,
-          row.uniqueTokenCount,
-          row.tokens.join(", "),
-          row.totalVolumeUsd,
-          row.transactionCount,
-        ];
-      });
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(
         workbook,
@@ -1267,14 +1275,6 @@ export default function WalletPage() {
         workbook,
         XLSX.utils.aoa_to_sheet([transferHeaders, ...transferSheetRows]),
         "Transfers",
-      );
-      XLSX.utils.book_append_sheet(
-        workbook,
-        XLSX.utils.aoa_to_sheet([
-          counterpartyHeaders,
-          ...counterpartySheetRows,
-        ]),
-        "Counterparties",
       );
       XLSX.utils.book_append_sheet(
         workbook,
@@ -1339,18 +1339,17 @@ export default function WalletPage() {
       <section className={styles.section} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', paddingTop: 0 }}>
         <div className={styles.chartStack} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
-            <BalanceChart
-              minHeight={400}
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
-              autoRefresh
-            />
+            <BalanceChartV2 address={walletAddress} />
           </div>
           <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
             <PnLChart
               minHeight={400}
-              aggregation="daily"
               autoRefresh
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
+              initialFilters={{ wallets: [walletAddress] }}
+              onDayClick={(_wallet, ts) => {
+                setDayPopupTimestamp(ts);
+                setDayPopupOpen(true);
+              }}
             />
           </div>
         </div>
@@ -1414,19 +1413,7 @@ export default function WalletPage() {
     <div className={styles.tabPane}>
       <PageSection>
         <div className={styles.sectionStack}>
-          <div className={styles.chartSection}>
-            <CounterpartyActivity
-              minHeight={260}
-              initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
-              autoRefresh
-            />
-          </div>
-          <div className={styles.chartSection}>
-            <ExchangeComparison 
-              minHeight={260}
-              walletAddress={walletAddress} 
-            />
-          </div>
+          {/* Charts Temporarily Removed in 0.3.0 */}
         </div>
       </PageSection>
 
@@ -1439,20 +1426,7 @@ export default function WalletPage() {
               headers={swapHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(swapData)}
-              filterSchema={{
-                0: { type: FilterType.Select },
-                1: { type: FilterType.Select },
-                2: { type: FilterType.Select },
-                3: { type: FilterType.Select },
-                4: { type: FilterType.Select },
-                5: {
-                  type: FilterType.Range,
-                  min: 0,
-                  max: 1_000_000,
-                  step: 0.01,
-                },
-                6: { type: FilterType.Range, min: 0, max: 1, step: 0.000001 },
-              }}
+              filterSchema={swapFilterSchema}
               cellRenderers={swapCellRenderers}
               dataEntries={swapData}
               isSortable={isSortableSwaps}
@@ -1465,12 +1439,12 @@ export default function WalletPage() {
                 }
               }}
               loading={swapLoading && loadedSwaps.length === 0}
-              serverPagination={{
-                enabled: true,
-                hasMore: swapHasMore,
-                isLoading: swapLoading,
-                onPageChange: handleSwapPageChange,
-              }}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: swapHasMore,
+            //   isLoading: swapLoading,
+            //   onPageChange: handleSwapPageChange,
+            // }}
             />
           </div>
           <div className={styles.chartSection}>
@@ -1480,48 +1454,25 @@ export default function WalletPage() {
               headers={transferHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(transferData)}
-              filterSchema={{
-                0: { type: FilterType.Select },
-                1: { type: FilterType.Select },
-                2: { type: FilterType.Select },
-                3: { type: FilterType.Range, min: 0, max: 10000, step: 0.01 },
-                4: { type: FilterType.Select },
-              }}
+              filterSchema={transferFilterSchema}
               cellRenderers={transferCellRenderers}
               dataEntries={transferData}
               isSortable={isSortableTransfers}
               sortConfigs={transferSortConfigs}
-              loading={transferLoading && loadedTransfers.length === 0}
-              serverPagination={{
-                enabled: true,
-                hasMore: transferHasMore,
-                isLoading: transferLoading,
-                onPageChange: handleTransferPageChange,
-              }}
-            />
-          </div>
-          <div className={styles.chartSection}>
-            <Table
-              maxHeight={400}
-              title={tr("walletPage.counterparties")}
-              headers={counterpartyHeaders}
-              initialFilters={{}}
-              fetcher={Promise.resolve(counterpartyTableData)}
-              filterSchema={counterpartyFilterSchema}
-              cellRenderers={counterpartyCellRenderers}
-              dataEntries={counterpartyTableData}
-              isSortable={isSortableCounterparties}
-              sortConfigs={counterpartySortConfigs}
               onRowClick={(_row, rowIndex) => {
-                const counterpartyAddress =
-                  rowIndex >= 0 ? counterparties[rowIndex]?.address : undefined;
-                if (counterpartyAddress) {
-                  navigate(`/wallets/${counterpartyAddress}`);
+                const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                if (transfer) {
+                  setSelectedTransfer(transfer);
+                  setTransferModalOpen(true);
                 }
               }}
-              loading={
-                counterpartyLoading && counterpartyTableData.length === 0
-              }
+              loading={transferLoading && loadedTransfers.length === 0}
+            // serverPagination={{
+            //   enabled: true,
+            //   hasMore: transferHasMore,
+            //   isLoading: transferLoading,
+            //   onPageChange: handleTransferPageChange,
+            // }}
             />
           </div>
         </div>
@@ -1529,34 +1480,16 @@ export default function WalletPage() {
     </div>
   );
 
-  const aiDataStatusBadge = (statusRaw: "ok" | "insufficient_data") => {
-    const status = String(statusRaw ?? "").trim().toLowerCase();
-    const selected =
-      status === "ok"
-        ? { fg: "#166534", bg: "#dcfce7", label: tr("walletPage.aiStatusOk") }
-        : {
-          fg: "#92400e",
-          bg: "#fef3c7",
-          label: tr("walletPage.aiStatusInsufficientData"),
-        };
-
-    return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          borderRadius: 999,
-          padding: "4px 10px",
-          fontSize: 12,
-          fontWeight: 600,
-          color: selected.fg,
-          background: selected.bg,
-        }}
-      >
-        {selected.label}
-      </span>
-    );
-  };
+  const auditTab = (
+    <div className={styles.tabPane}>
+      <PageSection>
+        <WalletAuditPanel
+          walletAddress={walletAddress}
+          enabled={activeTab === 3}
+        />
+      </PageSection>
+    </div>
+  );
 
   const aiAnalysisTab = (
     <div className={styles.tabPane}>
@@ -1573,27 +1506,33 @@ export default function WalletPage() {
             //   : null
           }
           dependencyItems={((): AiAnalysisDependencyItem[] => {
-            const portfolioAvailable = Array.isArray(portfolio) && portfolio.length > 0;
-            const swapsAvailable = Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
+            const portfolioAvailable =
+              Array.isArray(portfolio) && portfolio.length > 0;
+            const swapsAvailable =
+              Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
             const intelligenceAvailable = intelligenceReport != null;
 
-            const portfolioStatus: AiAnalysisDependencyItem["status"] = portfolioAvailable
-              ? "available"
-              : portfolioLoading
-                ? "fetching"
-                : "no_data";
+            const portfolioStatus: AiAnalysisDependencyItem["status"] =
+              portfolioAvailable
+                ? "available"
+                : portfolioLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const swapsStatus: AiAnalysisDependencyItem["status"] = swapsAvailable
-              ? "available"
-              : swapLoading
-                ? "fetching"
-                : "no_data";
+            const swapsStatus: AiAnalysisDependencyItem["status"] =
+              swapsAvailable
+                ? "available"
+                : swapLoading
+                  ? "fetching"
+                  : "no_data";
 
-            const intelligenceStatus: AiAnalysisDependencyItem["status"] = intelligenceAvailable
-              ? "available"
-              : intelligenceLoading || (intelligenceEnabled && intelligenceReport == null)
-                ? "fetching"
-                : "no_data";
+            const intelligenceStatus: AiAnalysisDependencyItem["status"] =
+              intelligenceAvailable
+                ? "available"
+                : intelligenceLoading ||
+                  (intelligenceEnabled && intelligenceReport == null)
+                  ? "fetching"
+                  : "no_data";
 
             return [
               {
@@ -1601,7 +1540,11 @@ export default function WalletPage() {
                 label: String(tr("walletPage.aiDataPortfolio")),
                 status: portfolioStatus,
               },
-              { id: "swaps", label: String(tr("walletPage.aiDataSwaps")), status: swapsStatus },
+              {
+                id: "swaps",
+                label: String(tr("walletPage.aiDataSwaps")),
+                status: swapsStatus,
+              },
               {
                 id: "intelligence",
                 label: String(tr("walletPage.aiDataIntelligence")),
@@ -1857,18 +1800,7 @@ export default function WalletPage() {
               flexDirection: "column",
               gap: 20,
             }}
-          >
-            <div className={styles.chartSection}>
-              <CounterpartyActivity
-                minHeight={320}
-                initialFilters={{ timePeriod: "7D", wallets: [walletAddress] }}
-                autoRefresh
-              />
-            </div>
-            <div className={styles.chartSection}>
-              <ExchangeComparison walletAddress={walletAddress} />
-            </div>
-          </div>
+          ></div>
         </section>
       </div>
 
@@ -1897,7 +1829,16 @@ export default function WalletPage() {
       />
 
       <ChunkedPdfPages
-        items={transferData.map((row) => row.map((cell) => String(cell)))}
+        items={loadedTransfers.map((transfer) => [
+          fmt.datetime.relativeShort(transfer.timestamp, true),
+          transfer.from,
+          transfer.to,
+          `${typeof transfer.tokenSymbol === "string" &&
+            transfer.tokenSymbol.trim().length > 0
+            ? transfer.tokenSymbol
+            : "Unknown"
+          } (${fmt.num.decimal(transfer.amount)})`,
+        ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
         renderChunk={(chunkRows, chunkIndex, chunkCount) => (
           <div
@@ -1919,50 +1860,11 @@ export default function WalletPage() {
           </div>
         )}
       />
-
-      <ChunkedPdfPages
-        items={counterpartyTableData.map((row) =>
-          row.map((cell) => String(cell)),
-        )}
-        chunkSize={PDF_TABLE_ROWS_PER_PAGE}
-        renderChunk={(chunkRows, chunkIndex, chunkCount) => (
-          <div
-            key={`counterparties-pdf-page-${chunkIndex}`}
-            data-report-page="true"
-            style={pdfPageStyle}
-            className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
-          >
-            {renderPdfHeader("Activity / Risk")}
-            <PrintableTable
-              title={
-                chunkCount > 1
-                  ? `Counterparties (${chunkIndex + 1}/${chunkCount})`
-                  : "Counterparties"
-              }
-              headers={counterpartyHeaders}
-              rows={chunkRows}
-            />
-          </div>
-        )}
-      />
     </>
   );
 
   const tabActions = (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      {/* <IconButton
-                kind="ghost"
-                size="sm"
-                disabled={!user || !walletAddress || Boolean(walletPending[walletAddress])}
-                label={isWalletInWatchlist ? tr("marketPage.removeFromWatchlist") : tr("marketPage.addToWatchlist")}
-                onClick={() => {
-                    if (!walletAddress) return;
-                    void toggleWallet(walletAddress);
-                }}
-            >
-                {isWalletInWatchlist ? <StarFilled size={16} /> : <Star size={16} />}
-            </IconButton> */}
-
       <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
         <Button
           size="sm"
@@ -2023,7 +1925,8 @@ export default function WalletPage() {
   }
 
   return (
-    <PageWrapper noMarketTickers
+    <PageWrapper
+      noMarketTickers
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
@@ -2080,17 +1983,19 @@ export default function WalletPage() {
                   tr("walletPage.holdings"),
                   tr("walletPage.activityRisk"),
                   tr("walletPage.aiAnalysis"),
+                  "Audit"
                 ]}
                 tabIcons={[
                   <ChartLine key="wallet-overview-icon" size={16} />,
                   <Wallet key="wallet-holdings-icon" size={16} />,
                   <Activity key="wallet-activity-icon" size={16} />,
                   <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
+                  <User key="wallet-audit-icon" size={16} />,
                 ]}
-                tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab]}
+                tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab, auditTab]}
                 onTabChange={(index) => setActiveTab(index)}
                 actions={tabActions}
-              />
+            />
             </div>
           </div>
         </div>
@@ -2122,6 +2027,21 @@ export default function WalletPage() {
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
         swap={selectedSwap}
+        walletAddress={walletAddress}
+      />
+
+      <TransferDetailModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        transfer={selectedTransfer}
+        walletAddress={walletAddress}
+      />
+
+      <DayActivityPopup
+        isOpen={dayPopupOpen}
+        onClose={() => setDayPopupOpen(false)}
+        wallets={[walletAddress]}
+        dayTimestamp={dayPopupTimestamp}
       />
     </PageWrapper>
   );

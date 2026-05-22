@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import { DataTable, DataTableSkeleton, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
@@ -52,19 +55,83 @@ export enum SortType {
 
 export enum FilterType {
     Select = 'select',
-    Range = 'range'
+    Range = 'range',
+    Date = 'date',
+    Composite = 'composite'
 }
 
-export interface FilterConfig {
-    type: FilterType;
+export interface FilterSelectConfig {
+    type: FilterType.Select;
+    field?: string;
+}
+
+export interface FilterRangeConfig {
+    type: FilterType.Range;
+    field?: string;
     min?: number;
     max?: number;
     step?: number;
 }
 
+export interface FilterDateConfig {
+    type: FilterType.Date;
+    field?: string;
+}
+
+export interface FilterCompositeConfig {
+    type: FilterType.Composite;
+    filters: Record<string, FilterConfig | null>;
+}
+
+export interface FilterIgnoredConfig {
+    type: null;
+}
+
+export type FilterConfig =
+    | FilterSelectConfig
+    | FilterRangeConfig
+    | FilterDateConfig
+    | FilterCompositeConfig
+    | FilterIgnoredConfig;
+
+interface FilterRangeValue {
+    min?: number;
+    max?: number;
+}
+
+interface FilterDateValue {
+    from?: string;
+    to?: string;
+}
+
+interface FilterCompositeState {
+    [key: string]: string[] | FilterRangeValue | FilterDateValue | FilterCompositeState | null;
+}
+
+type FilterStateValue = string[] | FilterRangeValue | FilterDateValue | FilterCompositeState | null;
+
+function isFilterRangeValue(value: FilterStateValue): value is FilterRangeValue {
+    return Boolean(
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        ("min" in value || "max" in value),
+    );
+}
+
+function isFilterDateValue(value: FilterStateValue): value is FilterDateValue {
+    return Boolean(
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        ("from" in value || "to" in value),
+    );
+}
+
 export interface SortConfig {
     type: SortType;
     priorityMap?: Record<string, number>;
+    field?: string;
 }
 
 export interface ServerPaginationConfig {
@@ -79,7 +146,7 @@ export interface TableProps {
     headers: TableColumnHeader[];
     initialFilters: Partial<any>;
     fetcher: Promise<any>;
-    filterSchema: Record<number, FilterConfig>;
+    filterSchema: Record<number, FilterConfig | null>;
     actions?: React.ReactNode;
     classnames?: string[];
     cellRenderers?: (CellRenderer | null)[];
@@ -95,6 +162,276 @@ export interface TableProps {
     enableExport?: boolean;
     serverPagination?: ServerPaginationConfig;
     loading?: boolean;
+}
+
+function isEnabledFilterConfig(
+    schema: FilterConfig | null,
+): schema is Exclude<FilterConfig, FilterIgnoredConfig> {
+    return Boolean(schema && schema.type !== null);
+}
+
+function getFilterTargetValue(
+    rowValue: unknown,
+    field?: string,
+): unknown {
+    if (
+        field &&
+        rowValue != null &&
+        typeof rowValue === "object" &&
+        !Array.isArray(rowValue) &&
+        field in (rowValue as Record<string, unknown>)
+    ) {
+        return (rowValue as Record<string, unknown>)[field];
+    }
+
+    return rowValue;
+}
+
+function getSortTargetValue(
+    rowValue: unknown,
+    field?: string,
+): unknown {
+    return getFilterTargetValue(rowValue, field);
+}
+
+function getDefaultFilterState(schema: FilterConfig | null): FilterStateValue {
+    if (!schema || schema.type === null) {
+        return null;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return [];
+        case FilterType.Range:
+            return { min: schema.min, max: schema.max };
+        case FilterType.Date:
+            return { from: undefined, to: undefined };
+        case FilterType.Composite:
+            return Object.fromEntries(
+                Object.entries(schema.filters).map(([key, childSchema]) => [
+                    key,
+                    getDefaultFilterState(childSchema),
+                ]),
+            );
+        default:
+            return null;
+    }
+}
+
+function isFilterStateActive(
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+): boolean {
+    if (!schema || schema.type === null || value == null) {
+        return false;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return Array.isArray(value) && value.length > 0;
+        case FilterType.Range: {
+            if (!isFilterRangeValue(value)) {
+                return false;
+            }
+
+            return (
+                value.min !== undefined ||
+                value.max !== undefined
+            );
+        }
+        case FilterType.Date: {
+            if (!isFilterDateValue(value)) {
+                return false;
+            }
+
+            return value.from !== undefined || value.to !== undefined;
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters).some(([key, childSchema]) => {
+                if (!isEnabledFilterConfig(childSchema)) {
+                    return false;
+                }
+
+                return isFilterStateActive(childSchema, (value as Record<string, FilterStateValue | null>)[key] ?? null);
+            });
+        default:
+            return false;
+    }
+}
+
+function getFilterDisplayText(
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+): string {
+    if (!schema || schema.type === null || value == null) {
+        return "";
+    }
+
+    switch (schema.type) {
+        case FilterType.Select:
+            return Array.isArray(value) ? value.join(", ") : String(value);
+        case FilterType.Range: {
+            if (!isFilterRangeValue(value)) {
+                return String(value);
+            }
+
+            if (value.min !== undefined && value.max !== undefined) {
+                return `${value.min} - ${value.max}`;
+            }
+
+            if (value.min !== undefined) {
+                return `≥ ${value.min}`;
+            }
+
+            if (value.max !== undefined) {
+                return `≤ ${value.max}`;
+            }
+
+            return "";
+        }
+        case FilterType.Date: {
+            if (!isFilterDateValue(value)) {
+                return String(value);
+            }
+
+            if (value.from && value.to) {
+                return `${value.from} - ${value.to}`;
+            }
+
+            if (value.from) {
+                return `From ${value.from}`;
+            }
+
+            if (value.to) {
+                return `To ${value.to}`;
+            }
+
+            return "";
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters)
+                .map(([key, childSchema]) => {
+                    if (!isEnabledFilterConfig(childSchema)) {
+                        return "";
+                    }
+
+                    const childValue = (value as Record<string, FilterStateValue | null>)[key] ?? null;
+                    const childDisplayText = getFilterDisplayText(childSchema, childValue);
+                    return childDisplayText ? `${key}: ${childDisplayText}` : "";
+                })
+                .filter(Boolean)
+                .join("; ");
+        default:
+            return String(value);
+    }
+}
+
+function matchesFilterSchema(
+    rowValue: unknown,
+    schema: FilterConfig | null,
+    value: FilterStateValue,
+    fallbackField?: string,
+): boolean {
+    if (!schema || schema.type === null || value == null) {
+        return true;
+    }
+
+    switch (schema.type) {
+        case FilterType.Select: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return true;
+                }
+
+                return value.includes(String(targetValue ?? ""));
+            }
+
+            return String(targetValue ?? "") === String(value);
+        }
+        case FilterType.Range: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            const numericValue = Number(targetValue);
+            const rangeValue = value;
+
+            if (Number.isNaN(numericValue) || !isFilterRangeValue(rangeValue)) {
+                return true;
+            }
+
+            if (rangeValue.min !== undefined && numericValue < rangeValue.min) {
+                return false;
+            }
+
+            if (rangeValue.max !== undefined && numericValue > rangeValue.max) {
+                return false;
+            }
+
+            return true;
+        }
+        case FilterType.Date: {
+            const targetValue = getFilterTargetValue(rowValue, schema.field ?? fallbackField);
+            const targetTime = new Date(String(targetValue ?? "")).getTime();
+            const dateValue = value;
+
+            if (Number.isNaN(targetTime) || !isFilterDateValue(dateValue)) {
+                return true;
+            }
+
+            if (dateValue.from) {
+                const fromTime = new Date(dateValue.from).getTime();
+                if (!Number.isNaN(fromTime) && targetTime < fromTime) {
+                    return false;
+                }
+            }
+
+            if (dateValue.to) {
+                const toTime = new Date(dateValue.to).getTime();
+                if (!Number.isNaN(toTime) && targetTime > toTime) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        case FilterType.Composite:
+            return Object.entries(schema.filters).every(([key, childSchema]) => {
+                if (!isEnabledFilterConfig(childSchema)) {
+                    return true;
+                }
+
+                return matchesFilterSchema(
+                    rowValue,
+                    childSchema,
+                    (value as Record<string, FilterStateValue | null>)[key] ?? null,
+                    key,
+                );
+            });
+        default:
+            return true;
+    }
+}
+
+function getFilterCandidateValues(
+    dataEntries: any[][],
+    columnIndex: number,
+    schema: FilterConfig,
+    fallbackField?: string,
+): string[] {
+    const values = new Set<string>();
+
+    for (const row of dataEntries) {
+        const targetValue = getFilterTargetValue(row[columnIndex], schema.type === FilterType.Select || schema.type === FilterType.Range ? schema.field ?? fallbackField : fallbackField);
+        if (targetValue == null) {
+            continue;
+        }
+
+        const normalized = String(targetValue);
+        if (normalized.length > 0) {
+            values.add(normalized);
+        }
+    }
+
+    return Array.from(values).sort();
 }
 
 export const Table: React.FC<TableProps> = ({
@@ -115,6 +452,7 @@ export const Table: React.FC<TableProps> = ({
     serverPagination,
     loading = false,
 }) => {
+    const { tr } = useLocalization();
     const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
         normalizeTableHeaders(headers);
 
@@ -122,13 +460,15 @@ export const Table: React.FC<TableProps> = ({
     const [clientPageSize, setClientPageSize] = useState(20);
     // const [sortIndex, setSortIndex] = useState(0);
     const [searchValue, setSearchValue] = useState("");
-    const [filters, setFilters] = useState<Partial<any>>(initialFilters);
+    const [filters, setFilters] = useState<Partial<Record<number, FilterStateValue>>>(initialFilters);
     const [openFilterModal, setOpenFilterModal] = useState<number | null>(null);
-    const [tempFilterValue, setTempFilterValue] = useState<any>(null);
+    const [tempFilterValue, setTempFilterValue] = useState<FilterStateValue>(null);
     const [popupAlignment, setPopupAlignment] = useState<'left' | 'right'>('right');
+    const [popupPosition, setPopupPosition] = useState<CSSProperties>({});
     const filterPopupRef = useRef<HTMLDivElement>(null);
     const filterButtonRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
     const tableContainerRef = useRef<HTMLDivElement>(null);
+    const { themeRef } = useUserTheme();
 
     const isServerPagination = Boolean(serverPagination?.enabled);
     // Pagination UI is always client-side; server mode only controls when to load more data.
@@ -153,30 +493,81 @@ export const Table: React.FC<TableProps> = ({
         }
     }, [openFilterModal]);
 
+    useEffect(() => {
+        if (openFilterModal === null) {
+            setPopupPosition({});
+            return;
+        }
+
+        const updatePopupPosition = () => {
+            const buttonElement = filterButtonRefs.current[openFilterModal];
+
+            if (!buttonElement) {
+                return;
+            }
+
+            const buttonRect = buttonElement.getBoundingClientRect();
+            const popupWidth = 380;
+            const popupOffset = 12;
+            const viewportWidth = window.innerWidth;
+            const top = buttonRect.bottom + popupOffset;
+
+            const alignLeft = viewportWidth - buttonRect.right < popupWidth;
+
+            if (alignLeft) {
+                const left = Math.max(
+                    popupOffset,
+                    Math.min(buttonRect.left, viewportWidth - popupWidth - popupOffset),
+                );
+                setPopupAlignment('left');
+                setPopupPosition({ top, left });
+                return;
+            }
+
+            const right = Math.max(popupOffset, viewportWidth - buttonRect.right);
+            setPopupAlignment('right');
+            setPopupPosition({ top, right });
+        };
+
+        updatePopupPosition();
+        window.addEventListener('resize', updatePopupPosition);
+        window.addEventListener('scroll', updatePopupPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePopupPosition);
+            window.removeEventListener('scroll', updatePopupPosition, true);
+        };
+    }, [openFilterModal]);
+
     /**
      * Open filter modal for specific column
      */
     const openFilterForColumn = (columnIndex: number) => {
         const buttonElement = filterButtonRefs.current[columnIndex];
-        const tableContainer = tableContainerRef.current;
-
-        if (buttonElement && tableContainer) {
+        if (buttonElement) {
             const buttonRect = buttonElement.getBoundingClientRect();
-            const tableRect = tableContainer.getBoundingClientRect();
-            const popupWidth = 280; // min-width from CSS, risky value
-            const spaceFromTableStart = buttonRect.right - tableRect.left;
+            const popupWidth = 380;
+            const popupOffset = 12;
+            const viewportWidth = window.innerWidth;
 
-            // If not enough space from table start to button right, align to left
-            setPopupAlignment(spaceFromTableStart < popupWidth ? 'left' : 'right');
+            const alignLeft = viewportWidth - buttonRect.right < popupWidth;
+
+            if (alignLeft) {
+                const left = Math.max(
+                    popupOffset,
+                    Math.min(buttonRect.left, viewportWidth - popupWidth - popupOffset),
+                );
+                setPopupAlignment('left');
+                setPopupPosition({ top: buttonRect.bottom + popupOffset, left });
+            } else {
+                const right = Math.max(popupOffset, viewportWidth - buttonRect.right);
+                setPopupAlignment('right');
+                setPopupPosition({ top: buttonRect.bottom + popupOffset, right });
+            }
         }
         setOpenFilterModal(columnIndex);
-        // Initialize with existing filter or empty array for Select type
         const schema = filterSchema[columnIndex];
-        if (schema?.type === FilterType.Select) {
-            setTempFilterValue(filters[columnIndex] || []);
-        } else {
-            setTempFilterValue(filters[columnIndex] || null);
-        }
+        setTempFilterValue(filters[columnIndex] ?? getDefaultFilterState(schema ?? null));
     };
 
     /**
@@ -192,8 +583,13 @@ export const Table: React.FC<TableProps> = ({
      */
     const applyFilter = (columnIndex: number) => {
         const schema = filterSchema[columnIndex];
-        // For Select type, only apply if array has items
-        if (schema?.type === FilterType.Select) {
+        if (!isEnabledFilterConfig(schema)) {
+            setClientPage(1);
+            closeFilterModal();
+            return;
+        }
+
+        if (schema.type === FilterType.Select) {
             if (Array.isArray(tempFilterValue) && tempFilterValue.length > 0) {
                 setFilters(prev => ({
                     ...prev,
@@ -201,6 +597,32 @@ export const Table: React.FC<TableProps> = ({
                 }));
             } else {
                 // Remove filter if no items selected
+                setFilters(prev => {
+                    const newFilters = { ...prev };
+                    delete newFilters[columnIndex];
+                    return newFilters;
+                });
+            }
+        } else if (schema.type === FilterType.Range) {
+            if (isFilterRangeValue(tempFilterValue)) {
+                setFilters(prev => ({
+                    ...prev,
+                    [columnIndex]: tempFilterValue
+                }));
+            } else {
+                setFilters(prev => {
+                    const newFilters = { ...prev };
+                    delete newFilters[columnIndex];
+                    return newFilters;
+                });
+            }
+        } else if (schema.type === FilterType.Composite) {
+            if (isFilterStateActive(schema, tempFilterValue)) {
+                setFilters(prev => ({
+                    ...prev,
+                    [columnIndex]: tempFilterValue
+                }));
+            } else {
                 setFilters(prev => {
                     const newFilters = { ...prev };
                     delete newFilters[columnIndex];
@@ -239,31 +661,17 @@ export const Table: React.FC<TableProps> = ({
             const colIdx = parseInt(columnIndex);
             const schema = filterSchema[colIdx];
             const columnName = headerLabels[colIdx] || `Column ${colIdx}`;
+            const resolvedFilterValue = (filterValue ?? null) as FilterStateValue;
 
-            if (!schema || !filterValue) return;
+            if (!isEnabledFilterConfig(schema) || !isFilterStateActive(schema, resolvedFilterValue)) return;
 
-            let displayText = '';
+            const displayText = getFilterDisplayText(schema, resolvedFilterValue);
 
-            if (schema.type === FilterType.Range) {
-                const rangeFilter = filterValue as { min?: number; max?: number };
-                if (rangeFilter.min !== undefined && rangeFilter.max !== undefined) {
-                    displayText = `${rangeFilter.min} - ${rangeFilter.max}`;
-                } else if (rangeFilter.min !== undefined) {
-                    displayText = `≥ ${rangeFilter.min}`;
-                } else if (rangeFilter.max !== undefined) {
-                    displayText = `≤ ${rangeFilter.max}`;
-                }
-            } else if (Array.isArray(filterValue)) {
-                displayText = filterValue.join(', ');
-            } else {
-                displayText = String(filterValue);
-            }
-
-            if (displayText && filterValue !== 'all' && !(Array.isArray(filterValue) && filterValue.length === 0)) {
+            if (displayText && !(Array.isArray(resolvedFilterValue) && resolvedFilterValue.length === 0)) {
                 active.push({
                     columnIndex: colIdx,
                     columnName,
-                    value: filterValue,
+                    value: resolvedFilterValue,
                     displayText
                 });
             }
@@ -288,36 +696,12 @@ export const Table: React.FC<TableProps> = ({
             for (const [columnIndex, filterValue] of Object.entries(filters)) {
                 const colIdx = parseInt(columnIndex);
                 const schema = filterSchema[colIdx];
+                const resolvedFilterValue = (filterValue ?? null) as FilterStateValue;
 
-                if (!schema) continue;
+                if (!isEnabledFilterConfig(schema)) continue;
 
-                if (schema.type === FilterType.Range) {
-                    // Handle range filter
-                    const numValue = Number(row[colIdx]);
-                    if (isNaN(numValue)) continue;
-
-                    const rangeFilter = filterValue as { min?: number; max?: number };
-                    if (!rangeFilter) continue;
-
-                    if (rangeFilter.min !== undefined && numValue < rangeFilter.min) {
-                        return false;
-                    }
-                    if (rangeFilter.max !== undefined && numValue > rangeFilter.max) {
-                        return false;
-                    }
-                } else {
-                    // Handle select filter (multi-select with OR logic)
-                    if (Array.isArray(filterValue) && filterValue.length > 0) {
-                        const cellValue = String(row[colIdx]);
-                        if (!filterValue.includes(cellValue)) {
-                            return false;
-                        }
-                    } else if (filterValue && filterValue !== 'all') {
-                        const cellValue = String(row[colIdx]);
-                        if (cellValue !== filterValue) {
-                            return false;
-                        }
-                    }
+                if (!matchesFilterSchema(row[colIdx], schema, resolvedFilterValue)) {
+                    return false;
                 }
             }
         }
@@ -424,18 +808,22 @@ export const Table: React.FC<TableProps> = ({
             return String(cellA).localeCompare(String(cellB), locale);
         }
 
+        const sortTargetField = columnConfig.field;
+        const sortValueA = getSortTargetValue(cellA, sortTargetField);
+        const sortValueB = getSortTargetValue(cellB, sortTargetField);
+
         // 1. Dynamic Logic Selection
         switch (columnConfig.type) {
             case SortType.Priority:
                 console.log("priority");
                 const map = columnConfig.priorityMap || {};
-                comparison = (map[cellA] ?? 99) - (map[cellB] ?? 99);
+                comparison = (map[sortValueA as any] ?? 99) - (map[sortValueB as any] ?? 99);
                 break;
             case SortType.Date:
                 console.log("date");
-                const dateA = new Date(cellA).getTime();
-                const dateB = new Date(cellB).getTime();
-                console.log(`cellA: ${cellA} - ${dateA}; cellB: ${cellB} - ${dateB}`);
+                const dateA = new Date(sortValueA as any).getTime();
+                const dateB = new Date(sortValueB as any).getTime();
+                console.log(`cellA: ${sortValueA} - ${dateA}; cellB: ${sortValueB} - ${dateB}`);
                 // Handle invalid dates
                 if (isNaN(dateA) && isNaN(dateB)) comparison = 0;
                 else if (isNaN(dateA)) comparison = 1;
@@ -444,11 +832,11 @@ export const Table: React.FC<TableProps> = ({
                 break;
             case SortType.Number:
                 console.log("number");
-                comparison = Number(cellA) - Number(cellB);
+                comparison = Number(sortValueA) - Number(sortValueB);
                 break;
             default:
                 console.log("default");
-                comparison = String(cellA).localeCompare(String(cellB), locale);
+                comparison = String(sortValueA ?? "").localeCompare(String(sortValueB ?? ""), locale);
         }
         // 3. Apply Directionality
         return sortDirection === sortStates.DESC ? comparison * -1 : comparison;
@@ -457,91 +845,203 @@ export const Table: React.FC<TableProps> = ({
     /**
      * Render filter popup for specific column index
      */
-    const renderFilterPopup = (columnIndex: number) => {
-        if (openFilterModal !== columnIndex) return null;
+    const renderFilterControl = (
+        schema: FilterConfig,
+        value: FilterStateValue,
+        setValue: (nextValue: FilterStateValue) => void,
+        columnIndex: number,
+        keyPath?: string,
+    ): React.ReactNode => {
+        if (schema.type === null) {
+            return null;
+        }
 
-        const schema = filterSchema[columnIndex];
-        const columnHeader = headerLabels[columnIndex] || `Column ${columnIndex}`;
+        if (schema.type === FilterType.Composite) {
+            const compositeValue =
+                value && typeof value === "object" && !Array.isArray(value)
+                    ? value
+                    : {};
 
-        if (!schema) return null;
+            return (
+                <div className={styles.filterPopupContentGrid}>
+                    {Object.entries(schema.filters).map(([childKey, childSchema]) => {
+                        if (!isEnabledFilterConfig(childSchema)) {
+                            return null;
+                        }
+
+                        const childValue =
+                            (compositeValue as Record<string, FilterStateValue | null>)[childKey] ??
+                            getDefaultFilterState(childSchema);
+
+                        const itemClass = [
+                            styles.filterPopupItem,
+                            childSchema.type === FilterType.Range ? styles.filterPopupItemRange : '',
+                            childSchema.type === FilterType.Select ? styles.filterPopupItemSelect : '',
+                            childSchema.type === FilterType.Date ? styles.filterPopupItemDate : '',
+                        ].filter(Boolean).join(' ');
+
+                        return (
+                            <div key={`${columnIndex}-${keyPath ?? "root"}-${childKey}`} className={itemClass}>
+                                <div className={styles.filterPopupHeader}>
+                                    {childKey}
+                                </div>
+                                {renderFilterControl(
+                                    childSchema,
+                                    childValue,
+                                    (nextValue) => {
+                                        setValue({
+                                            ...(compositeValue as Record<string, FilterStateValue | null>),
+                                            [childKey]: nextValue,
+                                        });
+                                    },
+                                    columnIndex,
+                                    childKey,
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (schema.type === FilterType.Range) {
+            const rangeValue =
+                isFilterRangeValue(value)
+                    ? value
+                    : getDefaultFilterState(schema);
+            const resolvedRangeValue = rangeValue as FilterRangeValue | null;
+
+            return (
+                <Slider
+                    ariaLabelInput="Minimum Value"
+                    unstable_ariaLabelInputUpper="Maximum Value"
+                    value={resolvedRangeValue?.min ?? schema.min ?? 0}
+                    unstable_valueUpper={resolvedRangeValue?.max ?? schema.max ?? 100}
+                    min={schema.min ?? 0}
+                    max={schema.max ?? 100}
+                    step={schema.step ?? 1}
+                    stepMultiplier={10}
+                    hideTextInput={true}
+                    onChange={(nextValue: any) => {
+                        setValue({
+                            ...(resolvedRangeValue ?? {}),
+                            min: nextValue.value,
+                            max: nextValue.valueUpper,
+                        });
+                    }}
+                />
+            );
+        }
+
+        if (schema.type === FilterType.Date) {
+            const dateValue =
+                isFilterDateValue(value)
+                    ? value
+                    : getDefaultFilterState(schema);
+            const resolvedDateValue = dateValue as FilterDateValue | null;
+
+            return (
+                <div style={{ display: "grid", gap: "0.75rem" }}>
+                    <label style={{ display: "grid", gap: "0.25rem" }}>
+                        <span>{tr("table.from")}</span>
+                        <input
+                            type="date"
+                            value={resolvedDateValue?.from ?? ""}
+                            onChange={(event) => {
+                                setValue({
+                                    ...(resolvedDateValue ?? {}),
+                                    from: event.target.value || undefined,
+                                });
+                            }}
+                        />
+                    </label>
+                    <label style={{ display: "grid", gap: "0.25rem" }}>
+                        <span>{tr("table.to")}</span>
+                        <input
+                            type="date"
+                            value={resolvedDateValue?.to ?? ""}
+                            onChange={(event) => {
+                                setValue({
+                                    ...(resolvedDateValue ?? {}),
+                                    to: event.target.value || undefined,
+                                });
+                            }}
+                        />
+                    </label>
+                </div>
+            );
+        }
+
+        const selectedValues = Array.isArray(value) ? value : [];
+        const candidateValues = getFilterCandidateValues(
+            dataEntries,
+            columnIndex,
+            schema,
+            keyPath,
+        );
+        const allSelected =
+            candidateValues.length > 0 &&
+            candidateValues.every((candidate) => selectedValues.includes(candidate));
+        const indeterminate =
+            selectedValues.length > 0 &&
+            candidateValues.some((candidate) => selectedValues.includes(candidate)) &&
+            !allSelected;
 
         return (
+            <CheckboxGroup legendText="">
+                <Checkbox
+                    id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-select-all`}
+                    labelText={tr("table.selectAll")}
+                    checked={allSelected}
+                    indeterminate={indeterminate}
+                    onChange={(_event: unknown, { checked }: { checked: boolean }) => {
+                        setValue(checked ? candidateValues : []);
+                    }}
+                />
+                {candidateValues.map((candidateValue) => (
+                    <Checkbox
+                        key={candidateValue}
+                        id={`filter-checkbox-${columnIndex}-${keyPath ?? "root"}-${candidateValue}`}
+                        labelText={candidateValue}
+                        checked={selectedValues.includes(candidateValue)}
+                        onChange={(_event: unknown, { checked }: { checked: boolean }) => {
+                            const currentValues = Array.isArray(value) ? [...value] : [];
+                            if (checked) {
+                                setValue([...currentValues, candidateValue]);
+                            } else {
+                                setValue(currentValues.filter((candidate) => candidate !== candidateValue));
+                            }
+                        }}
+                    />
+                ))}
+            </CheckboxGroup>
+        );
+    };
+
+    const renderFilterPopup = () => {
+        if (openFilterModal === null) return null;
+
+        const schema = filterSchema[openFilterModal];
+        const columnHeader = headerLabels[openFilterModal] || `Column ${openFilterModal}`;
+
+        if (!isEnabledFilterConfig(schema)) return null;
+
+        const popupValue = tempFilterValue ?? getDefaultFilterState(schema);
+        const popup = (
             <div
                 className={`${styles.filterPopup} ${popupAlignment === 'left' ? styles.filterPopupLeft : styles.filterPopupRight}`}
                 ref={filterPopupRef}
+                style={popupPosition}
             >
                 <div className={styles.filterPopupContent}>
-                    <div className={styles.filterPopupHeader}>
-                        Filter: {columnHeader}
+                    <div className={styles.filterPopupTitle}>
+                        {tr("table.filterLabel", { column: columnHeader })}
                     </div>
-                    {schema.type === FilterType.Range ? (
-                        <Slider
-                            ariaLabelInput="Minimum Value"
-                            unstable_ariaLabelInputUpper="Maximum Value"
-                            value={tempFilterValue?.min ?? schema.min ?? 0}
-                            unstable_valueUpper={tempFilterValue?.max ?? schema.max ?? 100}
-                            min={schema.min ?? 0}
-                            max={schema.max ?? 100}
-                            step={schema.step ?? 1}
-                            stepMultiplier={10}
-                            hideTextInput={true}
-                            onChange={(value: any) => {
-                                setTempFilterValue((prev: any) => ({
-                                    ...(prev || {}),
-                                    min: value.value,
-                                    max: value.valueUpper
-                                }));
-                            }}
-                        />
-                    ) : (
-                        <CheckboxGroup
-                            legendText="Select values (multiple allowed)"
-                        >
-                            {(() => {
-                                const allValues = Array.from(
-                                    new Set(dataEntries.map(row => String(row[columnIndex])))
-                                ).sort();
-                                const selectedValues = Array.isArray(tempFilterValue) ? tempFilterValue : [];
-                                const allSelected = allValues.length > 0 && allValues.every(v => selectedValues.includes(v));
-                                const indeterminate = selectedValues.length > 0 && allValues.some(v => selectedValues.includes(v)) && !allSelected;
-
-                                return (
-                                    <>
-                                        <Checkbox
-                                            id={`filter-checkbox-${columnIndex}-select-all`}
-                                            labelText="Select All"
-                                            checked={allSelected}
-                                            indeterminate={indeterminate}
-                                            onChange={(e: any, { checked }: { checked: boolean }) => {
-                                                if (checked) {
-                                                    setTempFilterValue(allValues);
-                                                } else {
-                                                    setTempFilterValue([]);
-                                                }
-                                            }}
-                                        />
-                                        {allValues.map(value => {
-                                            return (
-                                                <Checkbox
-                                                    key={value}
-                                                    id={`filter-checkbox-${columnIndex}-${value}`}
-                                                    labelText={value}
-                                                    checked={selectedValues.includes(value)}
-                                                    onChange={(e: any, { checked }: { checked: boolean }) => {
-                                                        const currentValues = Array.isArray(tempFilterValue) ? [...tempFilterValue] : [];
-                                                        if (checked) {
-                                                            setTempFilterValue([...currentValues, value]);
-                                                        } else {
-                                                            setTempFilterValue(currentValues.filter(v => v !== value));
-                                                        }
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </>
-                                );
-                            })()}
-                        </CheckboxGroup>
+                    {renderFilterControl(
+                        schema,
+                        popupValue,
+                        setTempFilterValue,
+                        openFilterModal,
                     )}
                     <div className={styles.filterPopupActions}>
                         <Button
@@ -549,19 +1049,22 @@ export const Table: React.FC<TableProps> = ({
                             size="sm"
                             onClick={closeFilterModal}
                         >
-                            Cancel
+                            {tr("common.cancel")}
                         </Button>
                         <Button
                             kind="primary"
                             size="sm"
-                            onClick={() => applyFilter(columnIndex)}
+                            onClick={() => applyFilter(openFilterModal)}
                         >
-                            Apply
+                            {tr("table.apply")}
                         </Button>
                     </div>
                 </div>
             </div>
         );
+
+        const portalTarget = themeRef.current;
+        return portalTarget ? createPortal(popup, portalTarget) : popup;
     };
 
     const paginationTotalItems = isServerPagination
@@ -579,7 +1082,6 @@ export const Table: React.FC<TableProps> = ({
             enableExport={enableExport}
             isEmpty={!loading && filteredData.length === 0}
             enableToolbar={true}
-            searchPlaceholder="Search table..."
             searchValue={searchValue}
             onSearchChange={(value) => {
                 setSearchValue(value);
@@ -694,7 +1196,7 @@ export const Table: React.FC<TableProps> = ({
                                                                         >
                                                                             <Filter />
                                                                         </div>
-                                                                        {renderFilterPopup(index)}
+
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -748,7 +1250,7 @@ export const Table: React.FC<TableProps> = ({
                                                 <TableRow className={styles.noHover}>
                                                     <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
                                                         <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            No data available
+                                                            {tr("common.noData")}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -760,6 +1262,7 @@ export const Table: React.FC<TableProps> = ({
                         </DataTable>
                     )}
                 </div>
+                {renderFilterPopup()}
                 {/* <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }} ref={tableContainerRef}>
                 </div> */}
                 <div className={styles.paginationContainer}>
@@ -768,6 +1271,11 @@ export const Table: React.FC<TableProps> = ({
                         pageSize={pageSize}
                         pageSizes={[20, 30, 40, 50]}
                         totalItems={paginationTotalItems}
+                        itemsPerPageText={tr("table.itemsPerPageText")}
+                        pageRangeText={(current, total) => tr("table.pageRangeText", { count: current, total })}
+                        itemRangeText={(min, max, total) => tr("table.itemRangeText", { min, max, count: total })}
+                        forwardText={tr("table.nextPage")}
+                        backwardText={tr("table.previousPage")}
                         onChange={({ page: nextPage, pageSize: nextPageSize }) => {
                             if (isServerPagination) {
                                 if (serverPagination?.isLoading) {

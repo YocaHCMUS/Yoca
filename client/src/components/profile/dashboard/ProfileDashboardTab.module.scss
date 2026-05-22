@@ -35,30 +35,41 @@
   align-items: center;
 }
 
-.periodSwitcher {
+.periodSwitcherPills {
   display: inline-flex;
   align-items: center;
-  gap: $spacing-03;
-  padding: $spacing-03 $spacing-04;
-  border-radius: 999px;
-  background: $layer-02;
-  border: 1px solid $border-subtle-01;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(15, 98, 254, 0.08); /* Soft blue background instead of layer-02 */
+  border: 1px solid rgba(15, 98, 254, 0.15);
 }
 
-.periodLabel {
-  font-size: 12px;
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.32px;
+.periodPill {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(15, 98, 254, 0.05);
+  }
 }
 
-.periodSwitcher :global(.cds--content-switcher) {
-  min-height: 28px;
-}
-
-.periodSwitcher :global(.cds--content-switcher-btn) {
-  padding: 0 $spacing-03;
-  font-size: 12px;
+.periodPillActive {
+  background: var(--grad-blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(78, 148, 255, 0.3);
+  
+  &:hover {
+    color: #fff;
+  }
 }
 
 /* ── KPI strip ──────────────────────────────────────────── */
@@ -176,10 +187,13 @@
 /* ── Section panel ──────────────────────────────────────── */
 .panel {
   background: var(--panel-bg);
-  border: var(--glass-border);
-  border-radius: 8px;
-  padding: $spacing-06;
-  box-shadow: var(--card-shadow);
+  border-radius: 12px;
+  padding: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+  /* Removed border */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .panelTitle {

@@ -120,7 +120,7 @@ export function renderWalletAiReferenceText(
                         symbol={getReferenceSymbol(entry)}
                         fullName={getReferenceName(entry)}
                         imageUrl={entry.logoUri}
-                        imageSize={20}
+                        imageSize={30}
                         emphasizeSymbol
                     />
                 </span>,

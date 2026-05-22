@@ -25,9 +25,7 @@
   },
   "include": [
     "src/**/*",
-    "tests/api-manager/api-manager.service.integration.test.ts",
-    "tests/api-manager/api-manager.service.queue.test.ts",
-    "tests/api-manager/api-manager.service.test.ts"
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

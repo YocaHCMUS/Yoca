@@ -49,7 +49,7 @@ export function SearchBar({ onClose }: SearchBarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchResults = useGet(
-    client.api.search,
+    client.api.search.index,
     200,
     { query: { q: debouncedQuery } },
     {
@@ -70,18 +70,19 @@ export function SearchBar({ onClose }: SearchBarProps) {
         ),
         pools: data.pools.map(
           (pool): PoolResult => ({
-            id: pool.id || "",
-            address: pool.attributes?.address ?? null,
-            name: pool.attributes?.name ?? null,
-            dexId: pool.relationships?.dex?.data?.id ?? null,
-            baseTokenImg: pool.baseTokenImg ?? null,
-            quoteTokenImg: pool.quoteTokenImg ?? null,
+            address: pool.address,
+            name: pool.name,
+            dexId: pool.dexId,
+            baseTokenAddress: pool.baseToken?.address || null,
+            quoteTokenAddress: pool.quoteToken?.address || null,
+            baseTokenImg: pool.baseToken?.imgUrl || null,
+            quoteTokenImg: pool.quoteToken?.imgUrl ?? null,
           }),
         ),
         wallets: data.wallets.map(
           (wallet): WalletResult => ({
             address: wallet.address,
-            label: wallet.label,
+            // label: wallet.label,
           }),
         ),
       }),
@@ -121,9 +122,9 @@ export function SearchBar({ onClose }: SearchBarProps) {
 
   const selectPool = useCallback(
     (pool: PoolResult) => {
-      const tokenId = pool.id.split("_")[1] || null;
-      if (tokenId && pool.address) {
-        navigate(`/tokens/${tokenId}/${pool.address}`);
+      const tokenAddress = pool.baseTokenAddress;
+      if (tokenAddress && pool.address) {
+        navigate(`/tokens/${tokenAddress}/${pool.address}`);
         onClose();
       }
     },
@@ -148,7 +149,9 @@ export function SearchBar({ onClose }: SearchBarProps) {
       return apiWallets;
     }
 
-    const hasAddress = apiWallets.some((wallet) => wallet.address == extractedAddress);
+    const hasAddress = apiWallets.some(
+      (wallet) => wallet.address == extractedAddress,
+    );
     return hasAddress
       ? apiWallets
       : [{ address: extractedAddress, label: null }, ...apiWallets];
@@ -268,7 +271,7 @@ export function SearchBar({ onClose }: SearchBarProps) {
                       const actualIdx = tokenResults.length + idx;
                       return (
                         <PoolResultItem
-                          key={pool.id}
+                          key={pool.address}
                           pool={pool}
                           isFocused={
                             actualIdx == focusedIdx || actualIdx == hoveredIdx
@@ -288,7 +291,8 @@ export function SearchBar({ onClose }: SearchBarProps) {
                       {tr("nav.searchWallets")}
                     </p>
                     {walletResults.map((wallet, idx) => {
-                      const actualIdx = tokenResults.length + poolResults.length + idx;
+                      const actualIdx =
+                        tokenResults.length + poolResults.length + idx;
                       return (
                         <WalletResultItem
                           key={wallet.address}

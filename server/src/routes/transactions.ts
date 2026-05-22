@@ -15,7 +15,10 @@ const app = new Hono().get("/:txHash", async (c) => {
   } catch (err) {
     console.error("Failed to get transaction", err);
 
-    if (err instanceof Error && err.message.includes("HELIUS_API_KEY is not set")) {
+    if (
+      err instanceof Error &&
+      err.message.includes("HELIUS_API_KEY is not set")
+    ) {
       return c.json(
         { error: "HELIUS_API_KEY is missing on server" },
         statusCode.ServiceUnavailable,
@@ -23,7 +26,9 @@ const app = new Hono().get("/:txHash", async (c) => {
     }
 
     if (err instanceof Error) {
-      const heliusErr = err.message.match(/Helius enhanced tx request failed \((\d+)\):\s*(.*)$/);
+      const heliusErr = err.message.match(
+        /Helius enhanced tx request failed \((\d+)\):\s*(.*)$/,
+      );
       if (heliusErr) {
         return c.json(
           {
@@ -44,3 +49,5 @@ const app = new Hono().get("/:txHash", async (c) => {
 });
 
 export default app;
+
+export type TransactionsAppType = typeof app;

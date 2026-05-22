@@ -1,8 +1,9 @@
 import type { UserAlertPeriod } from "@sv/db/alerts.js";
 import {
-  userAlertConditions,
-  userAlertState,
-  userAlerts,
+  alertState,
+  alerts,
+  tokenAlertConditions,
+  tokenAlertTargets,
 } from "@sv/db/alerts.js";
 import { db } from "@sv/db/index.js";
 import { and, eq, gt, inArray, lte } from "drizzle-orm";
@@ -36,11 +37,15 @@ let isPolling = false;
 
 async function stopExpiredAlerts(now: Date) {
   const expiredAlerts = await db
-    .select({ alertId: userAlerts.id })
-    .from(userAlerts)
-    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
+    .select({ alertId: alerts.id })
+    .from(alerts)
+    .innerJoin(alertState, eq(alertState.alertId, alerts.id))
     .where(
-      and(lte(userAlerts.expiresAt, now), eq(userAlertState.status, "running")),
+      and(
+        eq(alerts.alertType, "token"),
+        lte(alerts.expiresAt, now),
+        eq(alertState.status, "running"),
+      ),
     );
 
   if (expiredAlerts.length == 0) {
@@ -50,28 +55,33 @@ async function stopExpiredAlerts(now: Date) {
   const expiredAlertIds = expiredAlerts.map((a) => a.alertId);
 
   await db
-    .update(userAlertState)
+    .update(alertState)
     .set({
       status: "stopped",
     })
-    .where(inArray(userAlertState.alertId, expiredAlertIds));
+    .where(inArray(alertState.alertId, expiredAlertIds));
 }
 
 async function getTrackedTokensWithPeriods(): Promise<TrackedToken[]> {
   const now = new Date();
   const result = await db
     .selectDistinct({
-      address: userAlerts.tokenAddress,
-      period: userAlertConditions.period,
+      address: tokenAlertTargets.tokenAddress,
+      period: tokenAlertConditions.period,
     })
-    .from(userAlerts)
-    .innerJoin(userAlertState, eq(userAlertState.alertId, userAlerts.id))
+    .from(alerts)
+    .innerJoin(alertState, eq(alertState.alertId, alerts.id))
+    .innerJoin(tokenAlertTargets, eq(tokenAlertTargets.alertId, alerts.id))
     .innerJoin(
-      userAlertConditions,
-      eq(userAlertConditions.alertId, userAlerts.id),
+      tokenAlertConditions,
+      eq(tokenAlertConditions.alertId, alerts.id),
     )
     .where(
-      and(gt(userAlerts.expiresAt, now), eq(userAlertState.status, "running")),
+      and(
+        eq(alerts.alertType, "token"),
+        gt(alerts.expiresAt, now),
+        eq(alertState.status, "running"),
+      ),
     );
 
   const tokenPeriodMap = new Map<string, Set<UserAlertPeriod>>();

@@ -2,6 +2,7 @@ import ProfileActivityTab from "@/components/profile/activity/ProfileActivityTab
 import ProfileAlertTab from "@/components/profile/alerts/ProfileAlertTab";
 import ProfileDashboardTab from "@/components/profile/dashboard/ProfileDashboardTab";
 import ProfilePortfolioTab from "@/components/profile/portfolio/ProfilePortfolioTab";
+import { ProfileSubscriptionsTab } from "@/components/profile/ProfileSubscriptionsTab";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import ProfileWalletTab from "@/components/profile/wallets/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/watchlist/ProfileWatchlistTab";
@@ -20,6 +21,7 @@ import {
   Activity,
   ChartLine,
   Notification,
+  Receipt,
   Settings,
   StarFilled,
   User,
@@ -62,7 +64,7 @@ export default function ProfilePage() {
       },
       {
         id: "dashboard",
-        node: <ProfileDashboardTab />,
+        node: <ProfileDashboardTab walletAddresses={walletAddresses} />,
       },
       {
         id: "alerts",
@@ -95,6 +97,10 @@ export default function ProfilePage() {
         ),
       },
       {
+        id: "subscriptions",
+        node: <ProfileSubscriptionsTab />,
+      },
+      {
         id: "settings",
         node: <ProfileSettingsTab />,
       },
@@ -118,6 +124,7 @@ export default function ProfilePage() {
         if (tab.id === "alerts") return <Notification size={16} />;
         if (tab.id === "wallets") return <Wallet size={16} />;
         if (tab.id === "watchlist") return <StarFilled size={16} />;
+        if (tab.id === "subscriptions") return <Receipt size={16} />;
         if (tab.id === "settings") return <Settings size={16} />;
         return <Activity size={16} />;
       }),

@@ -20,12 +20,12 @@ export function TokenIdentityCell({
     symbol,
     fullName,
     imageUrl,
-    imageSize = 28,
+    imageSize = 30,
     tooltipAlign = "right",
     emphasizeSymbol = false,
 
 }: TokenIdentityCellProps): React.ReactElement {
-    const normalizedSymbol = symbol?.trim() || "Unknown";
+    const normalizedSymbol = symbol?.trim().toUpperCase() || "UNKNOWN";
     const tooltipLabel = fullName?.trim() || normalizedSymbol;
     const source = imageUrl || null;
 

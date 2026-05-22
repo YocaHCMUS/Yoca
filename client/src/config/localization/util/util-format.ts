@@ -49,6 +49,35 @@ export function defineTextFormat() {
         }
       }
     },
+    txHash(
+      hash: string | null | undefined,
+      opts: AddressFormattingOptions = {},
+    ): string {
+      if (!hash) return nullDisplay;
+
+      const maxLength = opts.maxLength ?? 16;
+      const position = opts.position ?? "middle";
+
+      if (hash.length <= maxLength) {
+        return hash;
+      }
+
+      const ellipsis = ELLIPSIS;
+
+      switch (position) {
+        case "start": {
+          return `${ellipsis}${hash.slice(-maxLength)}`;
+        }
+        case "end": {
+          return `${hash.slice(0, maxLength)}${ellipsis}`;
+        }
+        case "middle":
+        default: {
+          const sideLength = Math.floor(maxLength / 2);
+          return `${hash.slice(0, sideLength)}${ellipsis}${hash.slice(-sideLength)}`;
+        }
+      }
+    },
   };
 }
 
@@ -63,13 +92,15 @@ function toSubscript(num: number): string {
 }
 
 function formatSmallCompact(value: number): string {
-  const str = value.toFixed(20);
-  const match = str.match(/^0\.0+/);
+  const str = value.toPrecision(16);
 
+  const match = str.match(/^0\.0+/);
   if (!match) return value.toString();
 
   const zeroCount = match[0].length - 2;
-  const significant = str.slice(match[0].length, match[0].length + 3);
+
+  const remaining = str.slice(match[0].length);
+  const significant = remaining.replace(/0+$/, "").slice(0, 4);
 
   return `0.0${toSubscript(zeroCount)}${significant}`;
 }

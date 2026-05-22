@@ -11,15 +11,22 @@ import {
   ChevronDown,
   ChartLine,
   TrashCan,
+  Add,
+  Checkmark,
+  Edit,
+  Close
 } from "@carbon/icons-react";
+import { TextInput } from "@carbon/react";
+import { TknImg } from "@/components/TknImg";
+import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useWatchlist } from "@/contexts/WatchlistContext";
+import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { loadWalletLabels, getWalletLabel, setWalletLabel, type WalletLabelMap } from "@/components/profile/shared/walletLabels";
 import { useNavigate } from "react-router";
 import styles from "./RightSidebar.module.scss";
 import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
-import { formatPrice, formatChange, formatNumber } from "@/util/format";
+
 import { fetchWalletOverview } from "@/services/wallet/walletApi";
 
 interface RightSidebarProps {
@@ -44,17 +51,33 @@ function TokenWatchlistRow({ token }: { token: string }) {
     { enabled: !!token }
   );
 
-  const marketData = tokenMarket.data?.[0];
-  const price = marketData?.price;
-  const change24h = marketData?.priceChange24h;
+  const tokenMeta = useGet(
+    client.api.tokens.meta[":addresses"],
+    200,
+    { param: { addresses: token } },
+    { enabled: !!token }
+  );
+
+  const marketData = Array.isArray(tokenMarket.data) ? tokenMarket.data.find(d => d.address === token) || tokenMarket.data[0] : tokenMarket.data?.[token];
+  const metaData = Array.isArray(tokenMeta.data) ? tokenMeta.data.find(d => d.address === token) || tokenMeta.data[0] : tokenMeta.data?.[token];
+  const price = marketData?.priceUsd;
+  const change24h = marketData?.priceChangePercentage24h;
   const volume24h = marketData?.volume24h;
   
+  const formatChange = (val: number | null | undefined) => {
+    if (val == null) return { text: '—', positive: null };
+    return { text: `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`, positive: val > 0 ? true : val < 0 ? false : null };
+  };
+  
   const { text: changeText, positive: changePositive } = formatChange(change24h);
-
   const formatVol = (val: number | null | undefined) => {
     if (val == null || val === 0) return '$0';
     return fmt.num.compact.currency(val);
   };
+  
+  const symbol = metaData?.symbol?.toUpperCase() ?? formatAddress(token);
+
+  const isLoading = tokenMarket.isLoading || tokenMeta.isLoading;
 
   return (
     <div
@@ -64,21 +87,23 @@ function TokenWatchlistRow({ token }: { token: string }) {
       onMouseLeave={() => setHovered(false)}
     >
       <div className={styles.td} style={{ flex: 2 }}>
-         <img 
-           src={`https://api.dicebear.com/7.x/identicon/svg?seed=${token}`} 
-           className={styles.tokenIcon} 
-           alt="logo" 
-         />
-         <span className={styles.tokenName}>{formatAddress(token)}</span>
+         <div style={{ marginRight: 8 }}>
+            <TknImg 
+              src={metaData?.imageUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${token}`} 
+              size={16}
+              alt={symbol} 
+            />
+         </div>
+         <span className={styles.tokenName} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{symbol}</span>
       </div>
       <div className={styles.td} style={{ flex: 1, textAlign: 'right' }}>
-        {price != null ? formatPrice(price) : '0'}
+        {isLoading ? '...' : (price != null ? fmt.num.currency(price) : '—')}
       </div>
       <div className={styles.td} style={{ flex: 1, textAlign: 'right', color: changePositive === true ? '#24a148' : changePositive === false ? '#da1e28' : 'inherit' }}>
-        {changeText === '—' ? '0' : changeText}
+        {isLoading ? '...' : (changeText === '—' ? '—' : changeText)}
       </div>
       <div className={styles.td} style={{ flex: 1, textAlign: 'right' }}>
-        {formatVol(volume24h)}
+        {isLoading ? '...' : (volume24h != null && volume24h !== 0 ? formatVol(volume24h) : '—')}
       </div>
       <button
         className={styles.deleteBtn}
@@ -142,25 +167,19 @@ function WalletWatchlistRow({ wallet }: { wallet: string }) {
 
 export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
   const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | null>(null);
+  const [isAddingToken, setIsAddingToken] = useState(false);
 
   useEffect(() => {
     onToggle?.(activeTab !== null);
   }, [activeTab, onToggle]);
-  const { tokenWatchlist, walletWatchlist } = useWatchlist();
-  const [labelMap, setLabelMap] = useState<WalletLabelMap>({});
+  const { tokenWatchlist, walletWatchlist, addToken } = useWatchlist();
+  const { labels, setLabel } = useWalletLabels();
+  const [draftLabel, setDraftLabel] = useState<string>('');
+  const [editingWallet, setEditingWallet] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLabelMap(loadWalletLabels());
-    
-    const handleLabelsUpdate = () => {
-      setLabelMap(loadWalletLabels());
-    };
-    
-    window.addEventListener("wallet-labels-updated", handleLabelsUpdate);
-    return () => {
-      window.removeEventListener("wallet-labels-updated", handleLabelsUpdate);
-    };
+    // We no longer need to manually listen to wallet-labels-updated since React Query handles reactivity.
   }, []);
 
   const handleCopy = (e: any, text: string) => {
@@ -187,10 +206,24 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
                     <ChevronDown size={16} />
                   </div>
                   <div className={styles.headerIcons}>
+                    <Add size={16} className={styles.iconBtn} onClick={() => setIsAddingToken(!isAddingToken)} />
                     <ChartLine size={16} className={styles.iconBtn} />
                     <Settings size={16} className={styles.iconBtn} />
                   </div>
                 </div>
+
+                {isAddingToken && (
+                  <div style={{ padding: '8px', borderBottom: '1px solid var(--cds-border-subtle)' }}>
+                    <TokenSearch 
+                      setValue={(val) => {
+                        if (val?.address) {
+                          addToken(val.address);
+                        }
+                      }} 
+                      closePanel={() => setIsAddingToken(false)} 
+                    />
+                  </div>
+                )}
                 
                 <div className={styles.tableHeader}>
                   <div className={styles.th} style={{ flex: 2 }}>TOKEN</div>
@@ -264,10 +297,10 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                {Object.keys(labelMap).length === 0 ? (
+                {Object.keys(labels).length === 0 ? (
                   <div className={styles.emptyState}>No labels created</div>
                 ) : (
-                  Object.entries(labelMap).map(([address, label], i) => (
+                  Object.entries(labels).map(([address, label], i) => (
                     <div key={`label-${i}`} className={styles.labelRow}>
                       <span className={styles.labelName}>{label}</span>
                       <div className={styles.labelAddress}>

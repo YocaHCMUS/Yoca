@@ -7,6 +7,12 @@
   }
 }
 
+.alertTypeTile {
+  max-inline-size: none !important;
+  inline-size: auto !important;
+  min-block-size: 12rem;
+}
+
 .conditionRow {
   animation: conditionRowEnter 260ms ease-out;
 }

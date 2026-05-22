@@ -10,6 +10,7 @@
 
 import client from "@/api/main";
 import type { RollingProfitAndLossResponse } from "@/types/chart-api.types";
+import { InferRequestType } from "hono";
 
 /**
  * Utility type to extract the inferred response type from a fetcher function
@@ -55,12 +56,9 @@ async function handleResponse(response: Response) {
  * Type automatically inferred from server route via Hono RPC
  */
 export async function fetchBalanceTrend(
-  params?: Parameters<typeof client.api.charts.balance.$get>[0],
+  params: InferRequestType<typeof client.api.charts.balance.$get>,
 ) {
-  // Hono RPC client requires wrapping query params in { query: {...} }
-  const honoParams = params ? { query: params } : undefined;
-
-  const response = await client.api.charts.balance.$get(honoParams);
+  const response = await client.api.charts.balance.$get(params);
   await handleResponse(response);
   const data = await response.json();
   return data;
@@ -78,68 +76,6 @@ export async function fetchAssetDistribution(
   const response = await client.api.charts.distribution.$get(honoParams);
   await handleResponse(response);
   const data = await response.json();
-  return data;
-}
-
-/**
- * Fetch exchange comparison data
- * GET /api/charts/exchanges
- * Type automatically inferred from server route via Hono RPC
- */
-export async function fetchExchangeComparison(
-  params?: Parameters<typeof client.api.charts.exchanges.$get>[0],
-) {
-  console.log("[fetchExchangeComparison] Requesting exchange data with params:", params);
-
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.exchanges.$get(honoParams);
-
-  await handleResponse(response);
-  const data = await response.json();
-
-  if ("error" in data) {
-    console.error("[fetchExchangeComparison] API returned error:", data.error);
-    throw new Error(`API error: ${data.error}`);
-  }
-
-  console.log("[fetchExchangeComparison] RAW API RESPONSE:", data);
-  console.log("[fetchExchangeComparison] Response structure - exchanges count:", data.exchanges?.length ?? 0);
-
-  if (data.exchanges && Array.isArray(data.exchanges)) {
-    console.log("[fetchExchangeComparison] FINAL CHART DATA:", JSON.stringify(data, null, 2));
-  }
-
-  return data;
-}
-
-/**
- * Fetch counterparty activity data
- * GET /api/charts/counterparties
- * Type automatically inferred from server route via Hono RPC
- */
-export async function fetchCounterpartyActivity(
-  params?: Parameters<typeof client.api.charts.counterparties.$get>[0],
-) {
-  console.log("[fetchCounterpartyActivity] Requesting counterparty data with params:", params);
-
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.counterparties.$get(honoParams);
-
-  await handleResponse(response);
-  const data = await response.json();
-
-  if ("error" in data) {
-    console.error("[fetchCounterpartyActivity] API returned error:", data.error);
-    throw new Error(`API error: ${data.error}`);
-  }
-
-  console.log("[fetchCounterpartyActivity] RAW API RESPONSE:", data);
-  console.log("[fetchCounterpartyActivity] Response structure - counterparties count:", data.counterparties?.length ?? 0);
-
-  if (data.counterparties && Array.isArray(data.counterparties)) {
-    console.log("[fetchCounterpartyActivity] FINAL CHART DATA:", JSON.stringify(data, null, 2));
-  }
-
   return data;
 }
 
@@ -192,23 +128,23 @@ export async function fetchTradingVolumeDistribution(
   // Normalize backend shape to { wallets: [{ walletAddress, data: [{name,value,percentage}], totalVolume }] }
   const wallets = Array.isArray(raw)
     ? raw.map((r: any) => {
-      const buyVol = r.buy.volumeUsd || 0;
-      const sellVol = r.sell.volumeUsd || 0;
-      const buyTx = r.buy.transactionCount || 0;
-      const sellTx = r.sell.transactionCount || 0;
-      const total = buyVol + sellVol;
-      const totalTx = buyTx + sellTx;
+        const buyVol = r.buy.volumeUsd || 0;
+        const sellVol = r.sell.volumeUsd || 0;
+        const buyTx = r.buy.transactionCount || 0;
+        const sellTx = r.sell.transactionCount || 0;
+        const total = buyVol + sellVol;
+        const totalTx = buyTx + sellTx;
 
-      return {
-        walletAddress: r.wallet,
-        buyVolume: buyVol,
-        sellVolume: sellVol,
-        totalVolume: total,
-        buyTransactionCount: buyTx,
-        sellTransactionCount: sellTx,
-        totalTransactionCount: totalTx,
-      };
-    })
+        return {
+          walletAddress: r.wallet,
+          buyVolume: buyVol,
+          sellVolume: sellVol,
+          totalVolume: total,
+          buyTransactionCount: buyTx,
+          sellTransactionCount: sellTx,
+          totalTransactionCount: totalTx,
+        };
+      })
     : [];
 
   return { wallets, metadata: { currency: "USD", timestamp: Date.now() } };
@@ -361,10 +297,16 @@ export async function fetchWinrate(
   }
 
   console.log("[fetchWinrate] RAW API RESPONSE:", data);
-  console.log("[fetchWinrate] Response structure - wallets count:", data.wallets?.length ?? 0);
+  console.log(
+    "[fetchWinrate] Response structure - wallets count:",
+    data.wallets?.length ?? 0,
+  );
 
   if (data.wallets && Array.isArray(data.wallets)) {
-    console.log("[fetchWinrate] FINAL CHART DATA:", JSON.stringify(data, null, 2));
+    console.log(
+      "[fetchWinrate] FINAL CHART DATA:",
+      JSON.stringify(data, null, 2),
+    );
   }
 
   return data;
@@ -437,8 +379,6 @@ export async function fetchStablecoinRatio(
 export const chartApi = {
   fetchBalanceTrend,
   fetchAssetDistribution,
-  fetchExchangeComparison,
-  fetchCounterpartyActivity,
   fetchPnLChart,
   fetchTransactionDistribution,
   // fetchPriceHistory,
@@ -452,8 +392,6 @@ export const chartApi = {
   // Aliases for convenience
   getBalance: fetchBalanceTrend,
   getDistribution: fetchAssetDistribution,
-  getExchanges: fetchExchangeComparison,
-  getCounterparties: fetchCounterpartyActivity,
   getPnL: fetchPnLChart,
   getTransactionDistribution: fetchTransactionDistribution,
   getTradingVolumeDistribution: fetchTradingVolumeDistribution,

@@ -87,12 +87,13 @@ export function TableWrapper({
   onExport,
   isEmpty = false,
   enableToolbar = false,
-  searchPlaceholder = "Search...",
+  searchPlaceholder,
   searchValue = "",
   onSearchChange,
   toolbarContent,
 }: TableWrapperProps) {
   const { tr } = useLocalization();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? tr("nav.searchPlaceholder");
   const [isExporting, setIsExporting] = useState(false);
 
   /**
@@ -135,7 +136,7 @@ export function TableWrapper({
           {enableToolbar && onSearchChange && (
             <input
               type="text"
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
               className={styles.searchInput}

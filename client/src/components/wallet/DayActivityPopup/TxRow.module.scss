@@ -1,0 +1,299 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.txRow {
+  background-color: $layer-02;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.txHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: $spacing-03;
+  align-items: center;
+  padding: $spacing-03 $spacing-04;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-02;
+  }
+}
+
+.txTime {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-variant-numeric: tabular-nums;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.txPair {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.txValue {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.txSigGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.txSignature {
+  @include type-style('body-compact-01');
+  color: $link-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-01;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary-hover;
+    text-decoration: underline;
+  }
+}
+
+.txBadge {
+  @include type-style('label-01');
+  font-weight: 700;
+  font-size: 0.65rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Detail ──────────────────────────────────── */
+.txDetail {
+  padding: $spacing-03 $spacing-04 $spacing-04;
+  border-top: 1px solid $border-subtle;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.detailTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.transferList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.transferItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  padding: $spacing-02 $spacing-03;
+  background-color: $layer-01;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.transferDir {
+  font-weight: 700;
+  width: 1rem;
+  text-align: center;
+}
+
+.transferAmount {
+  @include type-style('body-compact-01');
+  font-variant-numeric: tabular-nums;
+}
+
+.transferAmountIn {
+  color: $support-success;
+}
+
+.transferAmountOut {
+  color: $support-error;
+}
+
+.transferSymbol {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-weight: 600;
+}
+
+.transferSpacer {
+  flex: 1;
+}
+
+.transferAddress {
+  @include type-style('body-compact-01');
+  color: $text-secondary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
+}
+
+.transferAddrLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+.addressWithCopy {
+  display: flex;
+  align-items: center;
+  gap: $spacing-01;
+}
+
+.feeValueLink {
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $link-primary;
+    text-decoration: underline;
+  }
+}
+
+.feeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-02 0;
+}
+
+.feeLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+}
+
+.feeValue {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.instructionsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-02;
+  background: transparent;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  padding: $spacing-02 $spacing-04;
+  color: $link-primary;
+  cursor: pointer;
+  @include type-style('body-compact-01');
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.btnSpinner {
+  width: 12px;
+  height: 12px;
+}
+
+.instructionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.instructionsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.instructionItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: $spacing-02;
+  align-items: center;
+  padding: $spacing-02 $spacing-03;
+  background-color: $layer-01;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.instructionIndex {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+}
+
+.instructionProgram {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+}
+
+.instructionAccounts {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-align: right;
+}
+
+.innerInstructions {
+  grid-column: 1 / -1;
+  padding-left: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+  margin-top: $spacing-01;
+}
+
+.innerItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  padding: $spacing-01 $spacing-02;
+  background-color: $layer-03;
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.innerIndex {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-weight: 600;
+  font-size: 0.65rem;
+}
+
+.innerProgram {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-size: 0.75rem;
+}

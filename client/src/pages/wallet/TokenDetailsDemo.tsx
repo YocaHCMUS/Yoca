@@ -236,13 +236,6 @@ export function TokenAverageTradePrice({
         ),
         amount: fmt.num.compact.unit(amount, symbol?.toUpperCase() || null),
         value: fmt.num.compact.currency(trade.volumeUsd),
-        exchange: (
-          <div style={{ width: "4rem" }}>
-            <Txt secondary ellipsis size="sm" stretch>
-              {trade.exchangeName || "Unknown"}
-            </Txt>
-          </div>
-        ),
         transaction: (
           <IconButton
             href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
@@ -373,11 +366,6 @@ export function TokenAverageTradePrice({
             key: "value",
             header: `${tr("walletPage.value")} (USD)`,
             align: "end",
-          },
-          {
-            key: "exchange",
-            header: tr("walletPage.exchange"),
-            align: "start",
           },
           {
             key: "transaction",

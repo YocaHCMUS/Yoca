@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
-import { Button, Checkbox } from '@carbon/react';
-import { CheckmarkFilled, CloseFilled, CaretUp, CaretDown, Subtract, Copy, Checkmark } from '@carbon/icons-react';
-import SparklineChart from '@/components/charts/SparklineChart';
-import { TokenIdentityCell } from '../token/TokenIdentityCell.tsx';
-import type { TranslateFunction } from '@/contexts/LocalizationContext.tsx';
-import type { WalletSwapTokenInfo } from '@/services/wallet/walletApi.ts';
+import SparklineChart from "@/components/charts/SparklineChart";
+import { TranslateFunction } from "@/contexts/LocalizationContext.tsx";
+import type { WalletSwapTokenInfo } from "@/services/wallet/walletApi.ts";
+import {
+    CaretDown,
+    CaretUp,
+    Checkmark,
+    CheckmarkFilled,
+    CloseFilled,
+    Copy,
+    Edit,
+    Login,
+    Subtract,
+} from "@carbon/icons-react";
+import { Button } from "@carbon/react";
+import React, { useState } from "react";
+import { TokenIdentityCell } from "../token/TokenIdentityCell.tsx";
+import TrendNumWithSign, { ForceSign } from "../TrendNumWithSign.tsx";
 export interface SparklineCellValue {
   data: number[];
   positive?: boolean;
@@ -18,12 +29,12 @@ export interface SparklineCellValue {
  * Useful for displaying signatures, hashes, or technical identifiers
  */
 export const renderCode = (value: unknown) => {
-  let normalized = '';
+  let normalized = "";
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     normalized = value;
   } else if (value == null) {
-    normalized = '';
+    normalized = "";
   } else {
     try {
       normalized = JSON.stringify(value);
@@ -33,22 +44,25 @@ export const renderCode = (value: unknown) => {
   }
 
   return (
-    <code style={{ color: 'var(--cds-text-secondary)', fontSize: '0.75rem' }} title={normalized}>
+    <code
+      style={{ color: "var(--cds-text-secondary)", fontSize: "0.75rem" }}
+      title={normalized}
+    >
       {normalized}
     </code>
   );
 };
 
 function toDisplayText(value: unknown): string {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value;
   }
 
   if (value == null) {
-    return '';
+    return "";
   }
 
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
 
@@ -59,11 +73,12 @@ function toDisplayText(value: unknown): string {
   }
 }
 
-export const renderBase = (value: unknown, formatter?: (value: string) => React.ReactNode) => {
+export const renderBase = (
+  value: unknown,
+  formatter?: (value: string) => React.ReactNode,
+) => {
   const displayText = toDisplayText(value);
-  return (
-    <span>{formatter ? formatter(displayText) : displayText}</span>
-  );
+  return <span>{formatter ? formatter(displayText) : displayText}</span>;
 };
 
 /**
@@ -71,7 +86,7 @@ export const renderBase = (value: unknown, formatter?: (value: string) => React.
  * @param value - The original full value
  * @param renderFn - The render function to apply to the truncated value
  * @param limit - Maximum characters to show before truncation (default: 6)
- * 
+ *
  * @example
  * renderLong(longAddress, renderCode, 8)
  * renderLong(longText, renderBold, 10)
@@ -80,24 +95,25 @@ export const renderBase = (value: unknown, formatter?: (value: string) => React.
 export const renderLong = (
   value: string,
   renderFn: (value: string) => React.ReactNode,
-  limit: number = 6
+  limit: number = 6,
 ) => {
-  const truncatedValue = value.length > limit ? value.slice(0, limit) + '...' : value;
+  const truncatedValue =
+    value.length > limit ? value.slice(0, limit) + "..." : value;
 
   return (
     <span
       style={{
-        cursor: 'help',
-        padding: '2px 4px',
-        borderRadius: '2px',
-        transition: 'background-color 0.2s ease',
-        display: 'inline-block',
+        cursor: "help",
+        padding: "2px 4px",
+        borderRadius: "2px",
+        transition: "background-color 0.2s ease",
+        display: "inline-block",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--cds-layer-hover)';
+        e.currentTarget.style.backgroundColor = "var(--cds-layer-hover)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.backgroundColor = "transparent";
       }}
       title={value}
     >
@@ -109,7 +125,7 @@ export const renderLong = (
 export const renderReducedNumber = (
   value: string,
   renderFn: (value: string) => React.ReactNode,
-  bcp47Locale: string = 'en-US',
+  bcp47Locale: string = "en-US",
 ) => {
   // if value is in (0, 0.0001) => render as "< 0.0001"
   // if > 1000 => render as xK, the same is true for M, B,...
@@ -120,14 +136,14 @@ export const renderReducedNumber = (
   }
 
   if (numValue > 0 && numValue < 0.0001) {
-    return renderFn('< 0.0001');
+    return renderFn("< 0.0001");
   }
 
   if (Math.abs(numValue) > 1000) {
     // Use the caller-supplied BCP-47 locale so compact suffixes (K/M/B) match
     // the app's selected language while still avoiding OS-locale surprises.
     const compact = new Intl.NumberFormat(bcp47Locale, {
-      notation: 'compact',
+      notation: "compact",
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(numValue);
@@ -151,12 +167,18 @@ export const renderLongCode = (value: string, limit: number = 6) => {
  * Renders a hash/signature in truncated form (first N + last N chars) with a copy button.
  * Full value is shown in a tooltip on hover.
  */
-export const renderHash = (value: string, prefixLen: number = 6, suffixLen: number = 4) => {
+export const renderHash = (
+  value: string,
+  prefixLen: number = 6,
+  suffixLen: number = 4,
+  specialIcon?: React.ReactNode,
+  extraContext?: string,
+  bold?: boolean
+) => {
   const truncated =
     value.length > prefixLen + suffixLen + 3
       ? `${value.slice(0, prefixLen)}...${value.slice(-suffixLen)}`
       : value;
-
   const CopyButton = () => {
     const [copied, setCopied] = useState(false);
     const handleCopy = (e: React.MouseEvent) => {
@@ -169,34 +191,47 @@ export const renderHash = (value: string, prefixLen: number = 6, suffixLen: numb
     return (
       <button
         onClick={handleCopy}
-        title={copied ? 'Copied!' : 'Copy'}
+        title={copied ? "Copied!" : "Copy"}
         style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '0 2px',
-          color: copied ? 'var(--cds-support-success)' : 'var(--cds-text-secondary)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          verticalAlign: 'middle',
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "0 2px",
+          color: copied
+            ? "var(--cds-support-success)"
+            : "var(--cds-text-secondary)",
+          display: "inline-flex",
+          alignItems: "center",
+          verticalAlign: "middle",
           flexShrink: 0,
         }}
       >
+        {specialIcon}
         {copied ? <Checkmark size={12} /> : <Copy size={12} />}
       </button>
     );
   };
 
+  const title = extraContext ? `${value} (${extraContext})` : `${value}`;
+
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', maxWidth: '100%' }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "2px",
+        maxWidth: "100%",
+      }}
+    >
       <code
-        title={value}
+        title={title}
         style={{
           color: 'var(--cds-text-secondary)',
           fontSize: '0.75rem',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
+          ...(bold ? { fontWeight: 800 } : { fontWeight: 300 }),
         }}
       >
         {truncated}
@@ -208,11 +243,14 @@ export const renderHash = (value: string, prefixLen: number = 6, suffixLen: numb
 
 export const renderTokenCell = (
   token: WalletSwapTokenInfo,
+  formatAmount: (value: number | null) => string,
   classNames?: {
     container?: string;
     amount?: string;
   },
   imageSize?: number,
+  colorCoded?: boolean,
+  forceSign?: ForceSign,
 ) => {
   return (value: string, row?: unknown[] | null) => {
     if (!Array.isArray(row)) {
@@ -221,7 +259,18 @@ export const renderTokenCell = (
 
     return (
       <span className={classNames?.container}>
-        <span className={classNames?.amount}>{Math.abs(token.amount).toFixed(4)}</span>
+        {colorCoded ? (
+          <TrendNumWithSign
+            prefixes="none"
+            value={token.amount}
+            formatter={formatAmount}
+            forceSign={forceSign}
+          />
+        ) : (
+          <span className={classNames?.amount}>
+            {formatAmount(token.amount)}
+          </span>
+        )}
         <TokenIdentityCell
           symbol={token.symbol || "Unknown"}
           fullName={token.name ?? undefined}
@@ -235,92 +284,131 @@ export const renderTokenCell = (
 };
 
 export interface ProfilePortfolioCellRendererOptions {
-  selectedComparisonWalletAddresses: string[];
-  onComparisonToggle: (walletAddress: string, checked: boolean) => void;
   onUnlinkWallet: (walletAddress: string) => void | Promise<void>;
+  onEditLabel: (walletAddress: string, newLabel: string) => void | Promise<void>;
   formatAddress: (address: string) => string;
   formatCurrency: (value: number) => string;
   t: TranslateFunction;
 }
 
 export const createProfilePortfolioCellRenderers = ({
-  selectedComparisonWalletAddresses,
-  onComparisonToggle,
   onUnlinkWallet,
+  onEditLabel,
   formatAddress,
   formatCurrency,
   t,
 }: ProfilePortfolioCellRendererOptions) => [
-    (_value: unknown, row: unknown[]) => {
-      const walletAddress = String(row[0] ?? '');
+  // Address + Label column
+  (value: unknown) => {
+    const entry = value as { walletAddress: string; label: string; isAuthWallet?: boolean };
+    const walletAddress = entry?.walletAddress ?? "";
+    const initialLabel = entry?.label ?? "";
+    const isAuthWallet = Boolean(entry?.isAuthWallet);
 
-      return (
-        <div onClick={(event) => event.stopPropagation()}>
-          <Checkbox
-            id={`wallet-compare-${walletAddress}`}
-            labelText=""
-            hideLabel
-            checked={selectedComparisonWalletAddresses.includes(walletAddress)}
-            onChange={(_, state) => onComparisonToggle(walletAddress, state.checked)}
-          />
-        </div>
-      );
-    },
-    null,
-    (_value: unknown, row: unknown[]) => {
-      const walletAddress = String(row[2] ?? '');
+    const EditableLabelCell = () => {
+      const [isEditing, setIsEditing] = useState(false);
+      const [draft, setDraft] = useState(initialLabel);
 
-      return <span title={walletAddress}>{formatAddress(walletAddress)}</span>;
-    },
-    (value: unknown) => formatCurrency(Number(value)),
-    (value: unknown) => String(value),
-    (isAuthWallet: unknown, row: unknown[]) => {
-      if (typeof isAuthWallet !== 'boolean') {
-        return null;
+      if (isEditing) {
+        return (
+          <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="text" 
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onEditLabel(walletAddress, draft);
+                  setIsEditing(false);
+                } else if (e.key === 'Escape') {
+                  setDraft(initialLabel);
+                  setIsEditing(false);
+                }
+              }}
+            />
+            <Checkmark size={16} style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
+               onEditLabel(walletAddress, draft);
+               setIsEditing(false);
+            }} />
+            <CloseFilled size={16} style={{ cursor: "pointer", color: "var(--cds-support-error)" }} onClick={() => {
+               setDraft(initialLabel);
+               setIsEditing(false);
+            }} />
+          </div>
+        );
       }
 
-      const walletAddress = String(row[0] ?? '');
-
       return (
-        <div onClick={(event) => event.stopPropagation()}>
-          <Button
-            size="sm"
-            kind="ghost"
-            disabled={isAuthWallet}
-            title={isAuthWallet ? t('profileTabs.portfolio.authWalletCannotBeUnlinked') : t('profileTabs.portfolio.unlinkWallet')}
-            onClick={() => onUnlinkWallet(walletAddress)}
-          >
-            {t('profileTabs.portfolio.unlinkWallet')}
-          </Button>
-        </div>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <span title={walletAddress}>
+            {initialLabel || formatAddress(walletAddress)}
+          </span>
+          <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+            <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+          </div>
+          {isAuthWallet && (
+            <Login size={14} title={t("profileTabs.portfolio.authWalletLabel")} />
+          )}
+        </span>
       );
-    },
-  ];
+    };
+
+    return <EditableLabelCell />;
+  },
+  // Total Value column
+  (value: unknown) => formatCurrency(Number(value)),
+  // Unlink button
+  (isAuthWallet: unknown, row: unknown[]) => {
+    if (typeof isAuthWallet !== "boolean") {
+      return null;
+    }
+
+    const entry = row[0] as { walletAddress: string };
+    const walletAddress = entry?.walletAddress ?? "";
+
+    return (
+      <div onClick={(event) => event.stopPropagation()}>
+        <Button
+          size="sm"
+          kind="ghost"
+          disabled={isAuthWallet}
+          title={
+            isAuthWallet
+              ? t("profileTabs.portfolio.authWalletCannotBeUnlinked")
+              : t("profileTabs.portfolio.unlinkWallet")
+          }
+          onClick={() => onUnlinkWallet(walletAddress)}
+        >
+          {t("profileTabs.portfolio.unlinkWallet")}
+        </Button>
+      </div>
+    );
+  },
+];
 
 export const renderSparkline = (value: unknown) => {
-  if (!value || typeof value !== 'object') {
-    return '-';
+  if (!value || typeof value !== "object") {
+    return "-";
   }
 
   const sparkline = value as SparklineCellValue;
   const points = Array.isArray(sparkline.data) ? sparkline.data : [];
 
   if (points.length === 0) {
-    return '-';
+    return "-";
   }
 
   return (
     <div
       style={{
-        width: sparkline.width ?? '100%',
+        width: sparkline.width ?? "100%",
         height: sparkline.height ?? 40,
         paddingLeft: sparkline.paddingLeft ?? 24,
       }}
     >
-      <SparklineChart
-        data={points}
-        positive={sparkline.positive ?? true}
-      />
+      <SparklineChart data={points} positive={sparkline.positive ?? true} />
     </div>
   );
 };
@@ -331,12 +419,14 @@ export const renderSparkline = (value: unknown) => {
  */
 export const renderBinaryValue = (
   value: string,
-  colorMap: Record<string, string>
+  colorMap: Record<string, string>,
 ) => (
-  <span style={{
-    color: colorMap[value] || 'inherit',
-    fontWeight: 600
-  }}>
+  <span
+    style={{
+      color: colorMap[value] || "inherit",
+      fontWeight: 600,
+    }}
+  >
     {value}
   </span>
 );
@@ -351,10 +441,22 @@ export const renderBold = (value: string) => (
 /**
  * Renders a numeric value with currency symbol
  */
-export const renderCurrency = (value: unknown, symbol: string = '$', isInFront: boolean = true) => {
+export const renderCurrency = (
+  value: unknown,
+  symbol: string = "$",
+  isInFront: boolean = true,
+) => {
   const normalized = toDisplayText(value);
-  return (
-    isInFront ? <span>{symbol}{normalized}</span> : <span>{normalized}{symbol}</span>
+  return isInFront ? (
+    <span>
+      {symbol}
+      {normalized}
+    </span>
+  ) : (
+    <span>
+      {normalized}
+      {symbol}
+    </span>
   );
 };
 
@@ -366,21 +468,25 @@ export const renderCurrency = (value: unknown, symbol: string = '$', isInFront: 
  */
 export const renderStatus = (
   value: string,
-  successValues: string[] = ['Success'],
+  successValues: string[] = ["Success"],
   successIcon = CheckmarkFilled,
-  errorIcon = CloseFilled
+  errorIcon = CloseFilled,
 ) => {
   const isSuccess = successValues.includes(value);
   const Icon = isSuccess ? successIcon : errorIcon;
 
   return (
-    <span style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      color: isSuccess ? 'var(--cds-support-success)' : 'var(--cds-support-error)',
-      fontWeight: 600
-    }}>
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        color: isSuccess
+          ? "var(--cds-support-success)"
+          : "var(--cds-support-error)",
+        fontWeight: 600,
+      }}
+    >
       <Icon size={16} />
       {value}
     </span>
@@ -411,24 +517,27 @@ export const renderRelativeTime = (value: string) => {
  */
 export const renderDateTime = (
   value: string,
-  optionsOrFormatter?: Intl.DateTimeFormatOptions | ((value: string | null) => string),
+  optionsOrFormatter?:
+    | Intl.DateTimeFormatOptions
+    | ((value: string | null) => string),
   formatter?: (value: string | null) => string,
 ) => {
   const localizationFormatter =
-    typeof optionsOrFormatter === 'function' ? optionsOrFormatter : formatter;
+    typeof optionsOrFormatter === "function" ? optionsOrFormatter : formatter;
 
   if (localizationFormatter) {
     return <span>{localizationFormatter(value)}</span>;
   }
 
-  const options = typeof optionsOrFormatter === 'function' ? undefined : optionsOrFormatter;
+  const options =
+    typeof optionsOrFormatter === "function" ? undefined : optionsOrFormatter;
   const date = new Date(value);
   const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     ...options,
   };
 
@@ -438,7 +547,7 @@ export const renderDateTime = (
 enum ValueState {
   Positive,
   Neutral,
-  Negative
+  Negative,
 }
 
 /**
@@ -447,18 +556,27 @@ enum ValueState {
  * @param haveIcon - Whether to show up/down/neutral icons
  * @param percentage - Whether to format as percentage
  */
-export const renderPositiveNegative = (value: string, haveIcon: boolean = true, percentage: boolean = false) => {
+export const renderPositiveNegative = (
+  value: string,
+  haveIcon: boolean = true,
+  percentage: boolean = false,
+) => {
   const numValue = parseFloat(value);
-  const state = numValue > 0 ? ValueState.Positive : numValue < 0 ? ValueState.Negative : ValueState.Neutral;
+  const state =
+    numValue > 0
+      ? ValueState.Positive
+      : numValue < 0
+        ? ValueState.Negative
+        : ValueState.Neutral;
 
   const getColor = () => {
     switch (state) {
       case ValueState.Positive:
-        return 'var(--cds-support-success)';
+        return "var(--cds-support-success)";
       case ValueState.Negative:
-        return 'var(--cds-support-error)';
+        return "var(--cds-support-error)";
       default:
-        return 'var(--cds-text-secondary)';
+        return "var(--cds-text-secondary)";
     }
   };
 
@@ -475,19 +593,23 @@ export const renderPositiveNegative = (value: string, haveIcon: boolean = true, 
     }
   };
 
-  const formattedValue = percentage ? `${numValue.toFixed(2)}%` : numValue.toFixed(2);
+  const formattedValue = percentage
+    ? `${numValue.toFixed(2)}%`
+    : numValue.toFixed(2);
 
   return (
-    <span style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      color: getColor(),
-      fontWeight: 600
-    }}>
-      {state === ValueState.Positive && !percentage && '+'}
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        color: getColor(),
+        fontWeight: 600,
+      }}
+    >
+      {state === ValueState.Positive && !percentage && "+"}
       {formattedValue}
       {getIcon()}
     </span>
   );
-}
+};

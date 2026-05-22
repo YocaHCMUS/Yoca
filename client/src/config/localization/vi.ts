@@ -106,6 +106,12 @@ export const translation = defineTranslation({
     itemRangeText: "{{min}}-{{max}} của {{count}} mục",
     nextPage: "Trang tiếp theo",
     previousPage: "Trang trước",
+    searchPlaceholder: "Tìm kiếm bảng...",
+    filterLabel: "Bộ lọc: {{column}}",
+    apply: "Áp dụng",
+    selectAll: "Chọn tất cả",
+    from: "Từ",
+    to: "Đến",
   },
   // Authentication
   auth: {
@@ -214,8 +220,8 @@ export const translation = defineTranslation({
     balanceHistory: "Lịch sử số dư",
     tokenBalanceHistory: "Lịch sử số dư Token",
     profitLoss: "Lãi & Lỗ",
-    transfer: "Chuyển khoản",
-    swap: "Hoán đổi",
+    transfer: "Giao dịch chuyển",
+    swap: "Giao dịch swap",
     inflow: "Tiền vào",
     outflow: "Tiền ra",
     counterparties: "Đối tác",
@@ -225,6 +231,7 @@ export const translation = defineTranslation({
     seller: "Người gửi",
     sender: "Người gửi",
     receiver: "Người nhận",
+    currentWallet: "Ví hiện tại",
     type: "Loại",
     token: "Token",
     amount: "Số lượng",
@@ -270,6 +277,17 @@ export const translation = defineTranslation({
     identity: "Định danh",
     uniqueTokensTraded: "Token duy nhất đã giao dịch",
     tokenList: "Danh sách token",
+    trade: "{{count}} Giao dịch",
+    instructions: "Instructions",
+    view: "Xem",
+    hide: "Ẩn",
+    feePaid: "Đã trả",
+    feePayer: "Người trả",
+    feeReceivers: "Người nhận",
+    baseFee: "Phí cơ bản",
+    priorityFee: "Phí ưu tiên",
+    perToken: "/token",
+    account: "Tài khoản",
     totalVolume: "Tổng khối lượng",
     unknown: "Không xác định",
     unknownEntity: "Thực thể không xác định",
@@ -305,7 +323,7 @@ export const translation = defineTranslation({
     aiDataReadiness: "Mức sẵn sàng dữ liệu",
     aiDataAllAvailable: "Đã đủ dữ liệu",
     aiDataWaiting: "Đang chờ dữ liệu bắt buộc",
-    aiDataSwaps: "Hoán đổi",
+    aiDataSwaps: "Giao dịch swap",
     aiDataPortfolio: "Danh mục",
     aiDataFirstFunder: "Nguồn tài trợ đầu",
     aiDataIdentity: "Định danh",
@@ -334,6 +352,19 @@ export const translation = defineTranslation({
     aiFirstSeen: "Lần xuất hiện đầu",
     aiConsistencyAssessment: "Đánh giá độ nhất quán",
     aiSignals: "Tín hiệu",
+    from: "Từ ví",
+    to: "Đến ví",
+    swapDetails: "Chi tiết hoán đổi",
+    transferDetails: "Chi tiết chuyển",
+    sold: "Đã bán",
+    bought: "Đã mua",
+    swapped: "Đã hoán đổi",
+    forSwap: "sang",
+    totalValue: "Tổng giá trị",
+    transactionFee: "Phí giao dịch",
+    sent: "Đã gửi",
+    received: "Đã nhận",
+    transfersInTransaction: "Các lệnh chuyển trong giao dịch này ({{count}})",
   },
   dictionary: {
     tradingStrategy: {
@@ -348,7 +379,8 @@ export const translation = defineTranslation({
         },
         risk: {
           feeHeavy: "Giao dịch dày có thể làm chi phí phí giao dịch tăng cao.",
-          emotionalPressure: "Cần theo dõi liên tục và ra quyết định rất nhanh.",
+          emotionalPressure:
+            "Cần theo dõi liên tục và ra quyết định rất nhanh.",
         },
         rule: {
           minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
@@ -382,8 +414,7 @@ export const translation = defineTranslation({
         benefit: {
           strongTrendUpside:
             "Có thể mở rộng lợi nhuận khi xu hướng mạnh tiếp diễn.",
-          quickInvalidation:
-            "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
+          quickInvalidation: "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
         },
         risk: {
           falseBreakout: "Phá vỡ giả có thể gây chuỗi thua lỗ nhanh.",
@@ -404,8 +435,7 @@ export const translation = defineTranslation({
           riskControlled: "Quản trị quy mô vị thế giúp kiểm soát rủi ro.",
         },
         risk: {
-          trendAgainst:
-            "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
+          trendAgainst: "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
           patienceRequired: "Tín hiệu có thể thưa, cần kiên nhẫn và kỷ luật.",
         },
         rule: {
@@ -418,8 +448,7 @@ export const translation = defineTranslation({
         description:
           "Xây vị thế tập trung và nắm giữ xuyên qua các chu kỳ thị trường rộng hơn.",
         benefit: {
-          longCycleUpside:
-            "Có thể hưởng lợi kép trong xu hướng dài hạn.",
+          longCycleUpside: "Có thể hưởng lợi kép trong xu hướng dài hạn.",
           lowNoise: "Ít giao dịch hơn giúp giảm nhiễu ngắn hạn của thị trường.",
         },
         risk: {
@@ -440,8 +469,7 @@ export const translation = defineTranslation({
       },
       activeTrader: {
         name: "Ví giao dịch tích cực",
-        description:
-          "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
+        description: "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
       },
       whale: {
         name: "Ví cá voi",
@@ -467,7 +495,7 @@ export const translation = defineTranslation({
       dexRouter: {
         name: "Router DEX",
         description:
-          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router hoán đổi phi tập trung.",
+          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router swap phi tập trung.",
       },
       bridge: {
         name: "Cầu nối",
@@ -504,7 +532,7 @@ export const translation = defineTranslation({
       "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
     recentTrades: "Giao dịch gần đây",
     recentTradesDesc:
-      "Các giao dịch hoán đổi token gần nhất trên các sàn giao dịch.",
+      "Các giao dịch Giao dịch swap token gần nhất trên các sàn giao dịch.",
     marketHeatmapDescription: "Bản đồ nhiệt các token theo vốn hóa",
     marketCap: "Vốn hóa",
     volume24h: "Khối lượng 24h",
@@ -539,7 +567,7 @@ export const translation = defineTranslation({
       "Theo dõi các token yêu thích của bạn và giám sát hiệu suất của chúng ở một nơi duy nhất.",
     tradesTitle: "Hoạt động thị trường & Điểm nổi bật",
     tradesSubtitle:
-      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch hoán đổi mới nhất trên các sàn giao dịch phi tập trung.",
+      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch Giao dịch swap mới nhất trên các sàn giao dịch phi tập trung.",
     filterAll: "Tất cả",
     filterGreaterThan: ">{{val}}",
     selectToken: "Chọn một token để xem chi tiết",
@@ -718,8 +746,7 @@ export const translation = defineTranslation({
     ruleTableTrigger: "Kích hoạt",
     ruleTableExpires: "Hết hạn",
     ruleDeleteSuccess: "Đã xoá quy tắc và đồng bộ Helius.",
-    rulePreviewBody:
-      "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
+    rulePreviewBody: "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
     rulePreviewVerbSwap: "một giao dịch swap",
     rulePreviewVerbTransfer: "một giao dịch chuyển",
     rulePreviewVerbAny: "hoạt động",
@@ -736,7 +763,8 @@ export const translation = defineTranslation({
       "Cung cấp URL Discord webhook và/hoặc email ghi đè hợp lệ.",
     ruleSaveError: "Không thể lưu quy tắc cảnh báo.",
     ruleLoading: "Đang tải quy tắc cảnh báo…",
-    ruleCreateSuccess: "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
+    ruleCreateSuccess:
+      "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
@@ -866,7 +894,7 @@ export const translation = defineTranslation({
     transactionType: "Loại giao dịch",
     allTypes: "Tất cả loại",
     trades: "Giao dịch",
-    transfers: "Chuyển khoản",
+    transfers: "Giao dịch chuyển",
     deposits: "Nạp tiền",
     withdrawals: "Rút tiền",
     wallets: "Ví",
@@ -884,7 +912,7 @@ export const translation = defineTranslation({
 
     // Chart specific
     balanceChart: {
-      title: "Xu hướng số dư",
+      title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
       date: "Ngày",
@@ -944,6 +972,7 @@ export const translation = defineTranslation({
         topNFilter: "Bộ lọc Top N",
         minPctFilter: "Bộ lọc Min %",
       },
+      filtersMenu: "Bộ lọc",
       legend: {
         clickToHide: "Nhấp để ẩn {name}",
         clickToShow: "Nhấp để hiển thị {name}",
@@ -1013,7 +1042,7 @@ export const translation = defineTranslation({
       daily: "Hàng ngày",
       weekly: "Hàng tuần",
       monthly: "Hàng tháng",
-      both: "Cả hai",
+      both: "Lãi/Lỗ hàng ngày + tích lũy",
     },
     exchangeComparisonChart: {
       title: "So sánh hoạt động sàn giao dịch",
@@ -1166,6 +1195,7 @@ export const translation = defineTranslation({
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     NOT_FOUND: "Không tìm thấy",
+    UNAUTHORIZED: "Không được ủy quyền",
     RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
     BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
@@ -1325,10 +1355,10 @@ export const translation = defineTranslation({
       distributionDescription:
         "Phân bổ quyền sở hữu token {{symbol}} theo nhóm người nắm giữ hàng đầu.",
       top10: "Top 10",
-      rank1120: "11–20",
-      rank2140: "21–40",
-      rank1130: "11–30",
-      rank3150: "31–50",
+      rank1120: "11-20",
+      rank2140: "21-40",
+      rank1130: "11-30",
+      rank3150: "31-50",
       others: "Khác",
       volumeQ:
         "Khối lượng giao dịch hàng ngày của {{name}} ({{symbol}}) là bao nhiêu?",
@@ -1421,8 +1451,8 @@ export const translation = defineTranslation({
       title: "Hoạt động",
       unavailableTitle: "Hoạt động không có sẵn",
       unavailableDescription: "Không thể tải dữ liệu hoạt động ngay bây giờ.",
-      swapsTableTitle: "Giao dịch hoán đổi",
-      transfersTableTitle: "Chuyển khoản",
+      swapsTableTitle: "Giao dịch swap",
+      transfersTableTitle: "Giao dịch chuyển",
       tableHeaders: {
         swaps: {
           wallet: "Ví",
@@ -1479,9 +1509,9 @@ export const translation = defineTranslation({
       linkWalletButton: "Liên kết ví",
       linkedWalletsLabel: "Ví được liên kết",
       linkedWalletsList: "Danh sách ví liên kết",
-      wallet: "Ví",
+      label: "Nhãn",
       address: "Địa chỉ",
-      netWorth: "Giá trị ròng",
+      totalValue: "Tổng giá trị",
       auth: "Xác thực",
       actions: "Hành động",
       authWallet: "Ví xác thực",

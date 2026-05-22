@@ -5,9 +5,10 @@ import { useState } from "react";
 type CpyBtnProps = {
   size: "xs" | "sm" | "md" | "lg" | undefined;
   copyWhat: string | number;
+  align?: "left" | "right" | "top" | "bottom";
 };
 
-export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
+export function CpyBtn({ size, copyWhat, align = "right" }: CpyBtnProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -22,7 +23,7 @@ export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
       size={size}
       kind="ghost"
       label={copied ? "Copied" : "Copy"}
-      align="right"
+      align={align}
       onClick={handleCopy}
       data-export-hide="copy-button"
     >

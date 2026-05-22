@@ -4,10 +4,12 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
+  TokenDetailedInfoSelect,
   tokenDetails,
   tokenHolderStats,
   tokenMarketData,
   tokenMeta,
+  TokenMetaSelect,
   type TokenDetailedInfoInsert,
   type TokenHolderStatsInsert,
   type TokenMarketDataInsert,
@@ -61,9 +63,7 @@ function fetchHolderStats(tokenAddresses: string[]) {
   ).then((results) =>
     results
       .filter(
-        (
-          result,
-        ): result is PromiseFulfilledResult<TokenHolderStatsInsert> =>
+        (result): result is PromiseFulfilledResult<TokenHolderStatsInsert> =>
           result.status === "fulfilled",
       )
       .map((result) => result.value),
@@ -175,9 +175,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
   const marketDataValues = details.map((detail) => detail.market);
 
   if (
-    metaValues.length == 0
-    || detailedInfoValues.length == 0
-    || marketDataValues.length == 0
+    metaValues.length == 0 ||
+    detailedInfoValues.length == 0 ||
+    marketDataValues.length == 0
   ) {
     return {
       meta: [],
@@ -337,8 +337,8 @@ export async function getTokenDetails(tokenAddresses: string[]) {
   const staleAddresses = tokenAddresses.filter(
     (address) => !addressToRes[address],
   );
-  let refreshedMeta: TokenMetaInsert[] = [];
-  let refreshedDetails: TokenDetailedInfoInsert[] = [];
+  let refreshedMeta: TokenMetaSelect[] = [];
+  let refreshedDetails: TokenDetailedInfoSelect[] = [];
   try {
     const fetched = await fetchTokenDetails(staleAddresses);
     refreshedMeta = fetched.meta;
