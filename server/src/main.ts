@@ -21,6 +21,9 @@ import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
 import walletTags, {
   type WalletTagsAppType,
 } from "@sv/routes/walletTags.route.js";
+import walletAnalysis, {
+  type WalletAnalysisAppType,
+} from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -66,6 +69,7 @@ export type AppRoutes = {
   "/api/profile": ProfileAppType;
   "/api/wallets": WalletsAppType;
   "/api/walletTags": WalletTagsAppType;
+  "/api/wallet-analysis": WalletAnalysisAppType;
   "/api/alerts": AlertsRouteAppType;
   "/api/trades": TradesAppType;
   "/api/alertsHp": AlertsAppType;
@@ -87,6 +91,7 @@ const routes: AppRoutes = {
   "/api/profile": profile,
   "/api/wallets": wallets,
   "/api/walletTags": walletTags,
+  "/api/wallet-analysis": walletAnalysis,
   "/api/alerts": alerts,
   "/api/trades": trades,
   "/api/alertsHp": alertsHp,

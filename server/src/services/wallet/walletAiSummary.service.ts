@@ -1,7 +1,12 @@
 import { z } from "zod";
+import { GoogleGenAI } from "@google/genai";
 
 import { WalletBehaviorProfileSchema } from "../../modules/wallet-analysis/schemas/walletBehaviorProfile.schema.js";
 import type { EvidenceBundle, WalletBehaviorProfile } from "../../modules/wallet-analysis/types/walletBehaviorProfile.js";
+import {
+    GOOGLE_AI_KEY,
+    WALLET_AUDIT_MODEL,
+} from "@sv/config/constants.js";
 
 export type WalletAiEvidenceHighlight = {
     evidenceId: string;
@@ -48,6 +53,20 @@ export type WalletAISummary = {
 export type WalletAIInput = {
     profile: WalletBehaviorProfile;
     evidenceHighlights: WalletAiEvidenceHighlight[];
+};
+
+export type WalletAiGeminiClientLike = {
+    models: {
+        generateContent: (input: {
+            model: string;
+            contents: string;
+            config?: {
+                systemInstruction?: string;
+                temperature?: number;
+                responseMimeType?: string;
+            };
+        }) => Promise<{ text?: string | null }>;
+    };
 };
 
 const severityRank: Record<NonNullable<WalletAiEvidenceHighlight["severity"]>, number> = {
@@ -368,4 +387,67 @@ export function isEvidenceSubset(
     allowedEvidenceIds: string[],
 ): boolean {
     return isSubset(uniqueStrings(selectedEvidenceIds), new Set(uniqueStrings(allowedEvidenceIds)));
+}
+
+function createDefaultGeminiClient(): WalletAiGeminiClientLike | null {
+    const apiKey = GOOGLE_AI_KEY?.trim();
+    if (!apiKey) {
+        return null;
+    }
+
+    return new GoogleGenAI({ apiKey }) as unknown as WalletAiGeminiClientLike;
+}
+
+function extractJsonObject(text: string): unknown {
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    if (firstBrace < 0 || lastBrace <= firstBrace) {
+        return null;
+    }
+
+    const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+    try {
+        return JSON.parse(candidate);
+    } catch {
+        return null;
+    }
+}
+
+export async function summarizeWalletWithGemini(params: {
+    profile: WalletBehaviorProfile;
+    geminiClient?: WalletAiGeminiClientLike | null;
+}): Promise<WalletAISummary> {
+    const input = buildWalletAiInput(params.profile);
+    const prompt = buildWalletAnalystPrompt(input);
+    const geminiClient = params.geminiClient ?? createDefaultGeminiClient();
+
+    if (geminiClient == null) {
+        return buildWalletAiSummaryFallback(params.profile);
+    }
+
+    try {
+        const response = await geminiClient.models.generateContent({
+            model: WALLET_AUDIT_MODEL,
+            contents: prompt,
+            config: {
+                temperature: 0.2,
+                responseMimeType: "application/json",
+                systemInstruction: [
+                    "You are an on-chain Solana wallet analyst.",
+                    "You must only explain the supplied evidence and never invent evidence IDs or signatures.",
+                    "Return valid JSON only.",
+                ].join(" "),
+            },
+        });
+
+        const parsed = extractJsonObject(response.text ?? "");
+        return sanitizeWalletAiSummaryResponse(parsed, input);
+    } catch {
+        return buildWalletAiSummaryFallback(params.profile);
+    }
 }
