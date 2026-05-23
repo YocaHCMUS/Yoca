@@ -365,6 +365,7 @@ export const translation = defineTranslation({
     sent: "Đã gửi",
     received: "Đã nhận",
     transfersInTransaction: "Các lệnh chuyển trong giao dịch này ({{count}})",
+    internal: "Nội bộ",
   },
   dictionary: {
     tradingStrategy: {

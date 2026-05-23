@@ -7,14 +7,30 @@ import { toIsoTimestamp } from "@sv/services/wallet/fetchers/walletProviderMappe
 
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const SYSTEM_PROGRAMS = new Set([
-  "ComputeBudget111111111111111111111111111111",
-  "11111111111111111111111111111111",
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-]);
 const RENT_LIKE_LAMPORTS = [2_039_280, 2_074_080];
+
+function buildTokenAccountOwnership(
+  tokenTransfers: HeliusEnhancedTransaction["tokenTransfers"],
+): Map<string, string> {
+  const ownership = new Map<string, string>();
+  console.log("Building token account ownership map from token transfers:", tokenTransfers);
+  for (const t of tokenTransfers ?? []) {
+    const fromTA = t.fromTokenAccount ?? "";
+    const toTA = t.toTokenAccount ?? "";
+    const fromUA = t.fromUserAccount ?? "";
+    const toUA = t.toUserAccount ?? "";
+    if (fromTA && fromUA) ownership.set(fromTA, fromUA);
+    if (toTA && toUA) ownership.set(toTA, toUA);
+  }
+  return ownership;
+}
+
+function resolveOwner(
+  account: string,
+  ownershipMap: Map<string, string>,
+): string {
+  return ownershipMap.get(account) ?? account;
+}
 
 export function isRentExemptLikeLamports(amountLamports: number): boolean {
   if (!Number.isFinite(amountLamports) || amountLamports <= 0) return false;
@@ -22,21 +38,6 @@ export function isRentExemptLikeLamports(amountLamports: number): boolean {
     (rent) => Math.abs(amountLamports - rent) <= 120_000,
   );
 }
-
-function extractSwapProgramId(
-  tx: HeliusEnhancedTransaction,
-): string | null {
-  const instructions = tx.instructions ?? [];
-  for (const ins of instructions) {
-    const programId = String(ins.programId ?? "").trim();
-    if (programId && !SYSTEM_PROGRAMS.has(programId)) {
-      return programId;
-    }
-  }
-  return null;
-}
-
-
 
 function buildSwapLeg(mint: string, amount: number): WalletSwapTokenChange {
   return {
@@ -58,26 +59,33 @@ export function classifyTransaction(
 
   const tokenTransfers = tx.tokenTransfers ?? [];
   const nativeTransfers = tx.nativeTransfers ?? [];
+  const ownership = buildTokenAccountOwnership(tokenTransfers);
 
-  const hasTokenOut = tokenTransfers.some(
-    (t) =>
-      t.fromUserAccount === walletAddress &&
-      Number(t.tokenAmount ?? t.amount ?? 0) > 0,
-  );
+  const hasTokenOut = tokenTransfers.some((t) => {
+    const amount = Number(t.tokenAmount ?? t.amount ?? 0);
+    if (amount <= 0) return false;
+    const fromOwner = resolveOwner(String(t.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(t.toUserAccount ?? ""), ownership);
+    return fromOwner === walletAddress && toOwner !== walletAddress;
+  });
 
-  const hasTokenIn = tokenTransfers.some(
-    (t) =>
-      t.toUserAccount === walletAddress &&
-      Number(t.tokenAmount ?? t.amount ?? 0) > 0,
-  );
+  const hasTokenIn = tokenTransfers.some((t) => {
+    const amount = Number(t.tokenAmount ?? t.amount ?? 0);
+    if (amount <= 0) return false;
+    const fromOwner = resolveOwner(String(t.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(t.toUserAccount ?? ""), ownership);
+    return toOwner === walletAddress && fromOwner !== walletAddress;
+  });
 
   let hasNativeOut = false;
   let hasNativeIn = false;
   for (const nt of nativeTransfers) {
     const amount = Number(nt.amount ?? 0);
     if (amount <= 0 || isRentExemptLikeLamports(amount)) continue;
-    if (nt.fromUserAccount === walletAddress) hasNativeOut = true;
-    if (nt.toUserAccount === walletAddress) hasNativeIn = true;
+    const fromOwner = resolveOwner(String(nt.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(nt.toUserAccount ?? ""), ownership);
+    if (fromOwner === walletAddress && toOwner !== walletAddress) hasNativeOut = true;
+    if (toOwner === walletAddress && fromOwner !== walletAddress) hasNativeIn = true;
   }
 
   // SOL/TOKEN pair swap
@@ -88,9 +96,12 @@ export function classifyTransaction(
   const inMints = new Set<string>();
   for (const t of tokenTransfers) {
     const mint = String(t.mint ?? "").trim();
-    if (!mint || Number(t.tokenAmount ?? t.amount ?? 0) <= 0) continue;
-    if (t.fromUserAccount === walletAddress) outMints.add(mint);
-    if (t.toUserAccount === walletAddress) inMints.add(mint);
+    const amount = Number(t.tokenAmount ?? t.amount ?? 0);
+    if (!mint || amount <= 0) continue;
+    const fromOwner = resolveOwner(String(t.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(t.toUserAccount ?? ""), ownership);
+    if (fromOwner === walletAddress && toOwner !== walletAddress) outMints.add(mint);
+    if (toOwner === walletAddress && fromOwner !== walletAddress) inMints.add(mint);
   }
 
   // TOKEN/TOKEN swap
@@ -116,13 +127,12 @@ export function mapHeliusTxToSwap(
   if (!blockTimestampIso) return null;
 
   const signer = walletAddress;
-  const source = String(
-    tx.source ?? "",
-  ).trim();
-  const programId = extractSwapProgramId(tx);
 
   const tokenTransfers = tx.tokenTransfers ?? [];
   const nativeTransfers = tx.nativeTransfers ?? [];
+  const ownership = buildTokenAccountOwnership(tokenTransfers);
+
+  console.log("Ownership map:", ownership);
 
   const NET_ZERO_THRESHOLD = 1e-10;
   const netMap = new Map<string, number>();
@@ -131,16 +141,22 @@ export function mapHeliusTxToSwap(
     const mint = String(t.mint ?? "").trim();
     const amount = Number(t.tokenAmount ?? t.amount ?? 0);
     if (!mint || amount <= 0) continue;
-    if (t.fromUserAccount === signer) netMap.set(mint, (netMap.get(mint) ?? 0) - amount);
-    if (t.toUserAccount === signer) netMap.set(mint, (netMap.get(mint) ?? 0) + amount);
+    const fromOwner = resolveOwner(String(t.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(t.toUserAccount ?? ""), ownership);
+    if (fromOwner === toOwner) continue;
+    if (fromOwner === signer) netMap.set(mint, (netMap.get(mint) ?? 0) - amount);
+    if (toOwner === signer) netMap.set(mint, (netMap.get(mint) ?? 0) + amount);
   }
 
   for (const nt of nativeTransfers) {
     const amount = Number(nt.amount ?? 0);
     if (amount <= 0 || isRentExemptLikeLamports(amount)) continue;
     const solAmount = amount / 1e9;
-    if (nt.fromUserAccount === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) - solAmount);
-    if (nt.toUserAccount === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) + solAmount);
+    const fromOwner = resolveOwner(String(nt.fromUserAccount ?? ""), ownership);
+    const toOwner = resolveOwner(String(nt.toUserAccount ?? ""), ownership);
+    if (fromOwner === toOwner) continue;
+    if (fromOwner === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) - solAmount);
+    if (toOwner === signer) netMap.set(SOL_MINT, (netMap.get(SOL_MINT) ?? 0) + solAmount);
   }
 
   const outflows: Array<{ mint: string; amount: number }> = [];
@@ -151,7 +167,7 @@ export function mapHeliusTxToSwap(
     else inflows.push({ mint, amount: net });
   }
 
-  let counterparty = "unknown";
+  const counterparty = "unknown";
   let bought: WalletSwapTokenChange | null = null;
   let sold: WalletSwapTokenChange | null = null;
 

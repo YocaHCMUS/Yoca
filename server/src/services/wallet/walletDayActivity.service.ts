@@ -53,14 +53,13 @@ export async function getWalletDayActivitySummary(
     const date = new Date(fromMs).toISOString().split("T")[0] ?? "";
 
     try {
-        const [swapsRes, transfersRes] = await Promise.allSettled([
-            getWalletSwaps(address, fromMs, toMs),
-            getWalletTransfers(address, fromMs, toMs),
-        ]);
+        // const [swapsRes, transfersRes] = await Promise.allSettled([
+        //     getWalletSwaps(address, fromMs, toMs),
+        //     getWalletTransfers(address, fromMs, toMs),
+        // ]);
+        const swapsRes = await getWalletSwaps(address, fromMs, toMs);
 
-        const swaps = swapsRes.status === "fulfilled" ? swapsRes.value.swaps : [];
-        const transfers = transfersRes.status === "fulfilled" ? transfersRes.value.transfers : [];
-
+        const swaps = swapsRes.swaps;
         let buyVolumeUsd = 0;
         let sellVolumeUsd = 0;
         let buyTxCount = 0;
@@ -134,6 +133,8 @@ export async function getWalletDayActivitySummary(
                 boughtSymbol: boughtSymbol?.toUpperCase() ?? null,
                 soldAmount: swap.sold?.amount ?? 0,
                 boughtAmount: swap.bought?.amount ?? 0,
+                soldTokenAddress: swap.sold?.address ?? null,
+                boughtTokenAddress: swap.bought?.address ?? null,
             });
 
             const tsMs = Date.parse(swap.blockTimestampIso);
@@ -150,37 +151,6 @@ export async function getWalletDayActivitySummary(
                 acc.buyVolumeUsd += valueUsd;
                 acc.buyAmount += swap.bought.amount;
                 addHourlyVolume(swap.bought.address, hour, true, valueUsd);
-            }
-        }
-
-        for (const transfer of transfers) {
-            const valueUsd = transfer.amountUsd ?? 0;
-            const isInflow = transfer.to === address;
-
-            if (isInflow) {
-                buyVolumeUsd += valueUsd;
-            } else {
-                sellVolumeUsd += valueUsd;
-            }
-
-            const tsMs = Date.parse(transfer.timestamp);
-            const hour = Number.isFinite(tsMs) ? Math.floor((tsMs - fromMs) / 3600000) : 0;
-
-            if (transfer.tokenAddress) {
-                const acc = getOrCreateToken(
-                    transfer.tokenAddress,
-                    transfer.tokenSymbol,
-                    transfer.tokenLogoUri ?? null,
-                );
-                if (isInflow) {
-                    acc.buyVolumeUsd += valueUsd;
-                    acc.buyAmount += transfer.amount;
-                    addHourlyVolume(transfer.tokenAddress, hour, true, valueUsd);
-                } else {
-                    acc.sellVolumeUsd += valueUsd;
-                    acc.sellAmount += transfer.amount;
-                    addHourlyVolume(transfer.tokenAddress, hour, false, valueUsd);
-                }
             }
         }
 
@@ -285,6 +255,8 @@ export async function getWalletTxDetail(
                 logoUri: null,
                 amount,
                 amountUsd: null,
+                fromTokenAccount: tt.fromTokenAccount ?? undefined,
+                toTokenAccount: tt.toTokenAccount ?? undefined,
             });
         }
 

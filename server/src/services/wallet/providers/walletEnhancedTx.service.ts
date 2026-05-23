@@ -19,6 +19,8 @@ type TokenTransferRow = {
   tokenAmount: number;
   fromUserAccount: string;
   toUserAccount: string;
+  fromTokenAccount: string | null;
+  toTokenAccount: string | null;
   symbol: string | null;
   tokenSymbol: string | null;
   instructionIndex: number;
@@ -138,6 +140,8 @@ async function getCachedTxsByRange(
         tokenAmount: row.tokenAmount,
         fromUserAccount: row.fromUserAccount,
         toUserAccount: row.toUserAccount,
+        fromTokenAccount: row.fromTokenAccount,
+        toTokenAccount: row.toTokenAccount,
         symbol: row.symbol,
         tokenSymbol: row.tokenSymbol,
         instructionIndex: row.instructionIndex,
@@ -148,6 +152,8 @@ async function getCachedTxsByRange(
         tokenAmount: row.tokenAmount,
         fromUserAccount: row.fromUserAccount,
         toUserAccount: row.toUserAccount,
+        fromTokenAccount: row.fromTokenAccount,
+        toTokenAccount: row.toTokenAccount,
         symbol: row.symbol,
         tokenSymbol: row.tokenSymbol,
         instructionIndex: row.instructionIndex,
@@ -218,6 +224,8 @@ async function getCachedTxsByRange(
         amount: tt.tokenAmount,
         fromUserAccount: tt.fromUserAccount,
         toUserAccount: tt.toUserAccount,
+        fromTokenAccount: tt.fromTokenAccount ?? undefined,
+        toTokenAccount: tt.toTokenAccount ?? undefined,
         symbol: tt.symbol ?? undefined,
         tokenSymbol: tt.tokenSymbol ?? undefined,
       };
@@ -318,6 +326,8 @@ async function cacheTransactions(
     tokenAmount: number;
     fromUserAccount: string;
     toUserAccount: string;
+    fromTokenAccount: string | null;
+    toTokenAccount: string | null;
     symbol: string | null;
     tokenSymbol: string | null;
     instructionIndex: number;
@@ -359,6 +369,8 @@ async function cacheTransactions(
       const amount = Number(tt.tokenAmount ?? tt.amount ?? 0);
       const from = String(tt.fromUserAccount ?? tt.fromWallet ?? "").trim();
       const to = String(tt.toUserAccount ?? tt.toWallet ?? "").trim();
+      const fromTA = String(tt.fromTokenAccount ?? "").trim() || null;
+      const toTA = String(tt.toTokenAccount ?? "").trim() || null;
       if (!mint || amount <= 0 || !from || !to) continue;
       tokenRows.push({
         address,
@@ -367,6 +379,8 @@ async function cacheTransactions(
         tokenAmount: amount,
         fromUserAccount: from,
         toUserAccount: to,
+        fromTokenAccount: fromTA,
+        toTokenAccount: toTA,
         symbol: tt.symbol ?? null,
         tokenSymbol: tt.tokenSymbol ?? null,
         instructionIndex: i,
