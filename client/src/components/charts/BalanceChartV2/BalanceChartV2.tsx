@@ -143,15 +143,7 @@ export function BalanceChartV2({ address }: { address: string }) {
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                // <Flex gap={4} align="center">
-                //   <TknImg
-                //     size={25}
-                //     alt={account.symbol || account.tokenAddress}
-                //     loading={portfolio.isLoading}
-                //     src={account.logoUri}
-                //   />
-                //   <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
-                // </Flex>
+ 
                 <TokenIdentityCell
                   symbol={account.symbol || account.tokenAddress}
                   fullName={account.name}
@@ -221,7 +213,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading && portfolio.isLoading}
+          loading={tokenBalances.isLoading || portfolio.isLoading || totalBalancr.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>
