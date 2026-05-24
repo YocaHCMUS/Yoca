@@ -197,13 +197,7 @@ export function BalanceChartV2({ address }: { address: string }) {
                       prefixes="plus-minus"
                       formatter={fmt.num.percent}
                     />
-
-                    {/* <TrendNum
-                    value={change.delta}
-                    prefixes="plus-minus"
-                    formatter={fmt.num.currency}
-                  /> */}
-                  </Flex>
+                </Flex>
                 </Tag>
               );
             })}
@@ -213,7 +207,7 @@ export function BalanceChartV2({ address }: { address: string }) {
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading || portfolio.isLoading || totalBalancr.isLoading}
+          loading={tokenBalances.isLoading || portfolio.isLoading || totalBalance.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>

@@ -12,8 +12,6 @@ import TokenOverviewPage from "@/pages/token-overview";
 import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
-import WalletIssuesBalanceV1Page from "@/pages/wallet-issues-v1";
-import WalletIssuesBalanceV2Page from "@/pages/wallet-issues-v2";
 import WalletsComparisonPage from "@/pages/walletsComparison";
 import PricingPage from "@/pages/pricing";
 import { Component, type ReactNode } from "react";
@@ -97,14 +95,6 @@ function App() {
           }
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route
-          path="/wallet-issues/v1"
-          element={<WalletIssuesBalanceV1Page />}
-        />
-        <Route
-          path="/wallet-issues/v2"
-          element={<WalletIssuesBalanceV2Page />}
-        />
         <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
