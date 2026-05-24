@@ -567,10 +567,6 @@ export interface TokenPriceChartPoint {
   price: number;
 }
 
-export interface TokenPriceChartResponse {
-  items: TokenPriceChartPoint[];
-}
-
 export function fetchTokenPriceChartForDay(
   tokenAddress: string,
   dayMs: number,
