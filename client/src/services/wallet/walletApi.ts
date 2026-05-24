@@ -1,26 +1,5 @@
-/**
- * Wallet API Service
- *
- * Provides functions to fetch wallet data from backend API endpoints.
- * Types are automatically inferred from the backend Hono routes via RPC client.
- *
- * @module services/wallet/walletApi
- */
-
 import client from "@/api/main";
 
-/**
- * Utility type to extract the inferred response type from a fetcher function
- */
-export type InferFetcherData<
-  T extends (...args: unknown[]) => Promise<unknown>,
-> = Awaited<ReturnType<T>>;
-
-/**
- * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
- * All additive metadata fields are optional to allow graceful degradation
- * when enrichment data is partially unavailable.
- */
 export interface WalletPortfolioItem {
   tokenAddress: string;
   symbol: string;
@@ -32,23 +11,6 @@ export interface WalletPortfolioItem {
   change24hPercent?: number;
 }
 
-export interface WalletSwapBalanceChange {
-  mint: string;
-  amount: number;
-  decimals: number;
-  symbol?: string | null;
-  name?: string | null;
-  logoUri?: string | null;
-  priceUsd?: number | null;
-  valueUsd?: number | null;
-}
-
-export interface WalletSwapPair {
-  address?: string | null;
-  label?: string | null;
-  baseTokenAddress?: string | null;
-  quoteTokenAddress?: string | null;
-}
 
 export interface WalletSwap {
   transactionHash: string;
@@ -192,13 +154,6 @@ export interface WalletTxInstructionDetail {
   transactionHash: string;
   instructions: WalletInstruction[];
 }
-
-// export interface WalletSwapsResponse {
-//   address: string;
-//   chain?: string;
-//   swaps: WalletSwap[];
-//   pageInfo: WalletPageInfo;
-// }
 
 export interface WalletSwapsResponse {
   address: string;
