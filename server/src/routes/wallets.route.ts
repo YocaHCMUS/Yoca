@@ -1,48 +1,48 @@
 import {
-  addressSchema,
-  solanaBase58Schema,
-  validate,
-  walletTokenTradesSchema,
+    addressSchema,
+    solanaBase58Schema,
+    validate,
+    walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import type {
-  WalletPortfolioItem,
-  WalletSwap,
+    WalletPortfolioItem,
+    WalletSwap,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  getTokenDetails,
-  getWalletFirstFund,
+    getTokenDetails,
+    getWalletFirstFund,
 } from "@sv/services/wallet/index.js";
 import {
-  getWalletDayActivitySummary,
-  getWalletTxDetail,
-  getWalletTxInstructionDetail,
+    getWalletDayActivitySummary,
+    getWalletTxDetail,
+    getWalletTxInstructionDetail,
 } from "@sv/services/wallet/walletDayActivity.service.js";
 import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
 import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import {
-  getWalletSwaps,
-  getWalletTransfers,
+    getWalletSwaps,
+    getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import {
-  WALLET_IDENTITY_MAX_BATCH_SIZE,
-  WalletIdentityServiceError,
-  getWalletIdentity,
-  getWalletIdentityBatch,
+    WALLET_IDENTITY_MAX_BATCH_SIZE,
+    WalletIdentityServiceError,
+    getWalletIdentity,
+    getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import {
-  WalletAnalysisServiceError,
-  getWalletAiAnalysis,
+    WalletAnalysisServiceError,
+    getWalletAiAnalysis,
 } from "@sv/services/wallet/walletAnalysis.service.js";
 import {
-  WalletAuditServiceError,
-  getWalletAudit,
+    WalletAuditServiceError,
+    getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
-import { setErr } from "@sv/util/errors";
+import { serverErr, setErr } from "@sv/util/errors";
 
 const walletQuerySchema = z.object({
   address: solanaBase58Schema,
@@ -229,11 +229,7 @@ const app = new Hono()
       const portfolio = await getWalletPortfolio(address);
       return c.json(portfolio, statusCode.Ok);
     } catch (e) {
-      console.error(e);
-      return c.json(
-        { error: "Failed to get wallet portfolio" },
-        statusCode.InternalServerError,
-      );
+            return serverErr(c, e);
     }
   })
   .get("/swap", validate("query", walletQuerySchema), async (c) => {
@@ -242,9 +238,8 @@ const app = new Hono()
     try {
       const txs = await getWalletSwaps(address);
       return c.json(txs);
-    } catch (err) {
-      console.error("Failed to get wallet swaps", err);
-      return c.json({ error: "Failed to get wallet swaps" }, 500);
+    } catch (e) {
+      return serverErr(c, e);
     }
   })
   .get(
@@ -268,12 +263,8 @@ const app = new Hono()
           return c.json(trades, statusCode.BadGateway);
         }
         return c.json(trades, statusCode.Ok);
-      } catch (err) {
-        console.error(err);
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
-        );
+      } catch (e) {
+      return serverErr(c, e);        
       }
     },
   )
@@ -283,9 +274,8 @@ const app = new Hono()
     try {
       const txs = await getWalletTransfers(address);
       return c.json(txs);
-    } catch (err) {
-      console.error("Failed to get wallet transfers", err);
-      return c.json({ error: "Failed to get wallet transfers" }, 500);
+    } catch (e) {
+      return serverErr(c, e);
     }
   })
   .get("/distribution", validate("query", walletQuerySchema), async (c) => {
@@ -322,9 +312,8 @@ const app = new Hono()
           timestamp: Date.now(),
         },
       });
-    } catch (err) {
-      console.error("Failed to get wallet asset distribution", err);
-      return c.json({ error: "Failed to get wallet asset distribution" }, 500);
+    } catch (e) {
+      return serverErr(c, e);
     }
   })
 
@@ -333,15 +322,14 @@ const app = new Hono()
 
     try {
       const identity = await getWalletIdentity(address);
-      return c.json(identity, 200);
-    } catch (err) {
-      if (err instanceof WalletIdentityServiceError) {
-        const mapped = mapWalletIdentityError(err);
-        return c.json({ error: mapped.error, code: err.code }, mapped.status);
+      return c.json(identity, statusCode.Ok);
+    } catch (e) {
+      if (e instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(e);
+        return c.json({ error: mapped.error, code: e.code }, mapped.status);
       }
 
-      console.error("Failed to fetch wallet identity", err);
-      return c.json({ error: "Failed to fetch wallet identity" }, 500);
+      return serverErr(c, e);
     }
   })
   .post(
@@ -352,15 +340,14 @@ const app = new Hono()
 
       try {
         const identityBatch = await getWalletIdentityBatch(data.addresses);
-        return c.json(identityBatch, 200);
-      } catch (err) {
-        if (err instanceof WalletIdentityServiceError) {
-          const mapped = mapWalletIdentityError(err);
-          return c.json({ error: mapped.error, code: err.code }, mapped.status);
+        return c.json(identityBatch, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletIdentityServiceError) {
+          const mapped = mapWalletIdentityError(e);
+          return c.json({ error: mapped.error, code: e.code }, mapped.status);
         }
 
-        console.error("Failed to fetch wallet identity batch", err);
-        return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
+        return serverErr(c, e);
       }
     },
   )
@@ -372,17 +359,16 @@ const app = new Hono()
 
       try {
         const analysis = await getWalletAiAnalysis(data.address, data.language);
-        return c.json(analysis, 200);
-      } catch (err) {
-        if (err instanceof WalletAnalysisServiceError) {
+        return c.json(analysis, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletAnalysisServiceError) {
           return c.json(
-            { error: err.message, code: err.code, details: err.details },
-            mapWalletAnalysisStatus(err.status),
+            { error: e.message, code: e.code, details: e.details },
+            mapWalletAnalysisStatus(e.status),
           );
         }
 
-        console.error("Failed to get wallet AI analysis", err);
-        return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+        return serverErr(c, e);
       }
     },
   )
@@ -391,17 +377,15 @@ const app = new Hono()
 
     try {
       const analysis = await getWalletAiAnalysis(data.address, data.language);
-      return c.json(analysis, 200);
-    } catch (err) {
-      if (err instanceof WalletAnalysisServiceError) {
+      return c.json(analysis, statusCode.Ok);
+    } catch (e) {
+      if (e instanceof WalletAnalysisServiceError) {
         return c.json(
-          { error: err.message, code: err.code, details: err.details },
-          mapWalletAnalysisStatus(err.status),
+          { error: e.message, code: e.code, details: e.details },
+          mapWalletAnalysisStatus(e.status),
         );
       }
-
-      console.error("Failed to get wallet AI analysis", err);
-      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+      return serverErr(c, e);
     }
   })
   .get(
@@ -412,15 +396,13 @@ const app = new Hono()
 
       try {
         const intelligence = await composeWalletIntelligence(address);
-        return c.json(intelligence, 200);
-      } catch (err) {
-        if (err instanceof WalletIdentityServiceError) {
-          const mapped = mapWalletIdentityError(err);
-          return c.json({ error: mapped.error, code: err.code }, mapped.status);
+        return c.json(intelligence, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletIdentityServiceError) {
+          const mapped = mapWalletIdentityError(e);
+          return c.json({ error: mapped.error, code: e.code }, mapped.status);
         }
-
-        console.error("Failed to compose wallet intelligence", err);
-        return c.json({ error: "Failed to compose wallet intelligence" }, 500);
+        return serverErr(c, e);
       }
     },
   )
@@ -432,10 +414,9 @@ const app = new Hono()
 
       try {
         const summary = await getWalletDayActivitySummary(address, dayMs);
-        return c.json(summary, 200);
-      } catch (err) {
-        console.error("Failed to get wallet day activity", err);
-        return c.json({ error: "Failed to get wallet day activity" }, 500);
+        return c.json(summary, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -447,10 +428,9 @@ const app = new Hono()
 
       try {
         const detail = await getWalletTxDetail(address, signature);
-        return c.json(detail, 200);
-      } catch (err) {
-        console.error("Failed to get wallet tx detail", err);
-        return c.json({ error: "Failed to get wallet tx detail" }, 500);
+        return c.json(detail, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -462,10 +442,9 @@ const app = new Hono()
 
       try {
         const detail = await getWalletTxInstructionDetail(address, signature);
-        return c.json(detail, 200);
-      } catch (err) {
-        console.error("Failed to get wallet tx instructions", err);
-        return c.json({ error: "Failed to get wallet tx instructions" }, 500);
+        return c.json(detail, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -477,10 +456,9 @@ const app = new Hono()
 
       try {
         const items = await getTokenPriceChartForDay(address, dayMs);
-        return c.json({ items: items ?? [] }, 200);
-      } catch (err) {
-        console.error("Failed to get token price chart", err);
-        return c.json({ error: "Failed to get token price chart" }, 500);
+        return c.json({ items: items ?? [] }, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -496,13 +474,9 @@ const app = new Hono()
         );
       }
 
-      return c.json(firstFunds, 200);
-    } catch (err) {
-      console.log(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+      return c.json(firstFunds, statusCode.Ok);
+    } catch (e) {
+        return serverErr(c, e);
     }
   })
   .get("/:address/tokens", validate("param", addressSchema), async (c) => {
@@ -517,13 +491,9 @@ const app = new Hono()
         );
       }
 
-      return c.json(tokenDetails, 200);
-    } catch (err) {
-      console.log(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+      return c.json(tokenDetails, statusCode.Ok);
+    } catch (e) {
+        return serverErr(c, e);
     }
   })
   /**
@@ -545,9 +515,9 @@ const app = new Hono()
 
       try {
         const audit = await getWalletAudit(address, { force: shouldForce });
-        return c.json(audit, 200);
-      } catch (err) {
-        if (err instanceof WalletAuditServiceError) {
+        return c.json(audit, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletAuditServiceError) {
           const statusByCode: Record<
             WalletAuditServiceError["code"],
             400 | 404 | 502 | 503
@@ -558,16 +528,13 @@ const app = new Hono()
             invalid_model_response: 502,
           };
           return c.json(
-            { error: err.message, code: err.code },
-            statusByCode[err.code],
+            { error: e.message, code: e.code },
+            statusByCode[e.code],
           );
         }
 
-        console.error("Failed to generate wallet audit", err);
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
-        );
+        console.error("Failed to generate wallet audit", e);
+        return serverErr(c, e);
       }
     },
   );
