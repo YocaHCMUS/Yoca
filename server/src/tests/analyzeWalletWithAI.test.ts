@@ -4,33 +4,37 @@ import { DEFAULT_WALLET_BEHAVIOR_PROFILE } from "../modules/wallet-analysis/util
 
 const callOrder: string[] = [];
 
-vi.mock("../modules/wallet-analysis/services/walletTransactionFetcher.js", () => ({
-    fetchWalletTransactions: vi.fn(async (params: { walletAddress: string; limit: number }) => {
-        callOrder.push("fetchWalletTransactions");
+vi.mock("../modules/wallet-analysis/services/walletAnalysisDataSource.js", () => ({
+    getWalletAnalysisTransactions: vi.fn(async (params: { walletAddress: string; limit: number }) => {
+        callOrder.push("getWalletAnalysisTransactions");
         expect(params.limit).toBe(300);
 
-        return [
-            {
-                signature: "sig-1",
-                slot: 1,
-                timestamp: 1710000000,
-                type: "SWAP",
-                source: "HELIUS",
-                description: "swap",
-                fee: 5000,
-                feePayer: params.walletAddress,
-                nativeTransfers: [],
-                tokenTransfers: [],
-                accountData: [],
-                events: {},
-                info: {
-                    feePayer: params.walletAddress,
-                    fee: 5000,
+        return {
+            transactions: [
+                {
+                    signature: "sig-1",
                     slot: 1,
                     timestamp: 1710000000,
+                    type: "SWAP",
+                    source: "HELIUS",
+                    description: "swap",
+                    fee: 5000,
+                    feePayer: params.walletAddress,
+                    nativeTransfers: [],
+                    tokenTransfers: [],
+                    accountData: [],
+                    events: {},
+                    info: {
+                        feePayer: params.walletAddress,
+                        fee: 5000,
+                        slot: 1,
+                        timestamp: 1710000000,
+                    },
                 },
-            },
-        ];
+            ],
+            source: "CACHE_PLUS_HELIUS",
+            warnings: [],
+        };
     }),
 }));
 
@@ -166,7 +170,7 @@ describe("analyzeWalletWithAI", () => {
         });
 
         expect(callOrder).toEqual([
-            "fetchWalletTransactions",
+            "getWalletAnalysisTransactions",
             "normalizeHeliusTransactions",
             "buildWalletBehaviorProfile",
             "enrichProfileWithPersona",

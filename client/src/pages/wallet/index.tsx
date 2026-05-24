@@ -20,14 +20,11 @@ import {
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
-    AiAnalysisTab,
-    type AiAnalysisDependencyItem,
-} from "@/components/wallet/AiAnalysis/index.ts";
-import {
     WalletReportTemplate,
     type WalletReportSection,
 } from "@/components/WalletReportTemplate";
-import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
+import WalletAnalystPanel from "@/components/WalletAnalystPanel.tsx";
+import { AnalysisErrorState } from "@/components/wallet/AiAnalysisDashboard";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useAuth } from "@/contexts/AuthContext.tsx";
@@ -41,7 +38,6 @@ import {
     fetchWalletPortfolio,
     fetchWalletOverview,
     fetchWalletIntelligence,
-    fetchWalletAiAnalysis,
     type WalletSwap,
     type WalletTransfer,
     type WalletPortfolioItem,
@@ -50,9 +46,12 @@ import {
     type WalletPageInfo,
     type WalletSwapTokenChange,
     type WalletSwapTokenInfo,
-    type WalletAiAnalysisLanguage,
-    type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
+import {
+    analyzeWalletWithAI,
+    WalletAnalysisApiError,
+    type WalletAnalysisApiResponse,
+} from "@/services/api/walletAnalysis.tsx";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
     Activity,
@@ -164,8 +163,7 @@ export default function WalletPage() {
   const navigate = useNavigate();
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
-  const aiAnalysisLanguage: WalletAiAnalysisLanguage =
-    lang === "vi" ? "vn" : "en";
+  const aiAnalysisLanguage: "vi" | "en" = lang === "en" ? "en" : "vi";
 
   const [swapPages, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
   const [swapPageInfoByPage, setSwapPageInfoByPage] = useState<
@@ -190,12 +188,12 @@ export default function WalletPage() {
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 Forensic Audit, 4 AI Analysis — data loads when each tab is first visited. */
+  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 AI Analysis — data loads when each tab is first visited. */
   const [activeTab, setActiveTab] = useState(0);
   /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
   const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
   const [aiAnalysisReport, setAiAnalysisReport] =
-    useState<WalletAiAnalysisResponse | null>(null);
+    useState<WalletAnalysisApiResponse | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null);
   const [aiAnalysisWaitingReason, setAiAnalysisWaitingReason] = useState<
@@ -213,11 +211,9 @@ export default function WalletPage() {
   const aiAnalysisRequestedRef = useRef(false);
   const aiAnalysisLoadedRef = useRef(false);
   const aiAnalysisRequestIdRef = useRef(0);
-  const aiAnalysisCacheRef = useRef<Record<string, WalletAiAnalysisResponse>>(
-    {},
-  );
+  const aiAnalysisCacheRef = useRef<Record<string, WalletAnalysisApiResponse>>({});
   const aiAnalysisInFlightRef = useRef<
-    Partial<Record<string, Promise<WalletAiAnalysisResponse | null>>>
+    Partial<Record<string, Promise<WalletAnalysisApiResponse | null>>>
   >({});
   /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
   const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
@@ -900,7 +896,7 @@ export default function WalletPage() {
   }, [address]);
 
   const loadAiAnalysisData = useCallback(
-    async (forceRefresh = false): Promise<WalletAiAnalysisResponse | null> => {
+    async (forceRefresh = false): Promise<WalletAnalysisApiResponse | null> => {
       if (!address || address === "null") {
         return null;
       }
@@ -927,62 +923,13 @@ export default function WalletPage() {
         setAiAnalysisWaitingReason(null);
 
         try {
-          let intelligence = intelligenceReport ?? null;
-          if (!intelligence) {
-            setIntelligenceLoading(true);
-            try {
-              intelligence = await fetchWalletIntelligence(address);
-              if (!intelligenceReport) {
-                setIntelligenceReport(intelligence ?? null);
-              }
-            } finally {
-              setIntelligenceLoading(false);
-            }
-          }
-
-          let portfolioRows = portfolio;
-          if (!portfolioLoadedRef.current) {
-            portfolioRows = await loadPortfolioData();
-          }
-
-          let activitySwaps = loadedSwaps;
-          if (!activityLoadedRef.current) {
-            const activity = await loadActivityData();
-            activitySwaps = activity.swaps;
-          }
-
-          const missingDependencies: string[] = [];
-
-          if (intelligence?.identity?.status === "unavailable") {
-            missingDependencies.push("identity");
-          }
-
-          if (!intelligence?.analysis?.firstFund) {
-            missingDependencies.push("first_fund");
-          }
-
-          if (!Array.isArray(portfolioRows) || portfolioRows.length === 0) {
-            missingDependencies.push("portfolio");
-          }
-
-          if (!Array.isArray(activitySwaps) || activitySwaps.length === 0) {
-            missingDependencies.push("swaps");
-          }
-
-          if (missingDependencies.length > 0) {
-            if (requestId === aiAnalysisRequestIdRef.current) {
-              setAiAnalysisReport(null);
-              setAiAnalysisWaitingReason(
-                `AI analysis waiting for dependencies: ${missingDependencies.join(", ")}`,
-              );
-            }
-            return null;
-          }
-
-          const response = await fetchWalletAiAnalysis(
-            address,
-            aiAnalysisLanguage,
-          );
+          const response = await analyzeWalletWithAI({
+            walletAddress: address,
+            transactionLimit: 200,
+            language: aiAnalysisLanguage,
+            userLevel: "BEGINNER",
+            maxSummaryLength: "SHORT",
+          });
           if (requestId !== aiAnalysisRequestIdRef.current) {
             return null;
           }
@@ -991,6 +938,7 @@ export default function WalletPage() {
           setAiAnalysisReport(response);
           setAiAnalysisLastUpdated(new Date().toISOString());
           aiAnalysisLoadedRef.current = true;
+          setAiAnalysisWaitingReason(null);
           return response;
         } catch (error) {
           if (requestId !== aiAnalysisRequestIdRef.current) {
@@ -1000,9 +948,11 @@ export default function WalletPage() {
           aiAnalysisLoadedRef.current = false;
           setAiAnalysisReport(null);
           setAiAnalysisError(
-            error instanceof Error
-              ? error.message
-              : tr("walletPage.aiAnalysisFailed"),
+            error instanceof WalletAnalysisApiError && error.code === "TRANSACTION_FETCH_FAILED"
+              ? "AI analysis could not load wallet transaction data. Please retry."
+              : error instanceof Error
+                ? error.message
+                : tr("walletPage.aiAnalysisFailed"),
           );
           return null;
         } finally {
@@ -1018,12 +968,6 @@ export default function WalletPage() {
     },
     [
       address,
-      intelligenceReport,
-      intelligenceLoading,
-      portfolio,
-      loadedSwaps,
-      loadActivityData,
-      loadPortfolioData,
       aiAnalysisLanguage,
       tr,
     ],
@@ -1051,7 +995,7 @@ export default function WalletPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 4 && !aiAnalysisRequestedRef.current) {
+    if (activeTab === 3 && !aiAnalysisRequestedRef.current) {
       aiAnalysisRequestedRef.current = true;
       void loadAiAnalysisData();
     }
@@ -1469,94 +1413,51 @@ export default function WalletPage() {
     </div>
   );
 
-  const auditTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <WalletAuditPanel
-          walletAddress={walletAddress}
-          enabled={activeTab === 3}
-        />
-      </PageSection>
-    </div>
-  );
-
   const aiAnalysisTab = (
     <div className={styles.tabPane}>
       <PageSection>
-        <AiAnalysisTab
-          aiAnalysisLoading={aiAnalysisLoading}
-          aiAnalysisError={aiAnalysisError}
-          aiAnalysisWaitingReason={aiAnalysisWaitingReason}
-          aiAnalysisReport={aiAnalysisReport}
-          aiAnalysisLastUpdated={
-            null
-            // aiAnalysisLastUpdated
-            //   ? fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)
-            //   : null
-          }
-          dependencyItems={((): AiAnalysisDependencyItem[] => {
-            const portfolioAvailable =
-              Array.isArray(portfolio) && portfolio.length > 0;
-            const swapsAvailable =
-              Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
-            const intelligenceAvailable = intelligenceReport != null;
-
-            const portfolioStatus: AiAnalysisDependencyItem["status"] =
-              portfolioAvailable
-                ? "available"
-                : portfolioLoading
-                  ? "fetching"
-                  : "no_data";
-
-            const swapsStatus: AiAnalysisDependencyItem["status"] =
-              swapsAvailable
-                ? "available"
-                : swapLoading
-                  ? "fetching"
-                  : "no_data";
-
-            const intelligenceStatus: AiAnalysisDependencyItem["status"] =
-              intelligenceAvailable
-                ? "available"
-                : intelligenceLoading ||
-                  (intelligenceEnabled && intelligenceReport == null)
-                  ? "fetching"
-                  : "no_data";
-
-            return [
-              {
-                id: "portfolio",
-                label: String(tr("walletPage.aiDataPortfolio")),
-                status: portfolioStatus,
-              },
-              {
-                id: "swaps",
-                label: String(tr("walletPage.aiDataSwaps")),
-                status: swapsStatus,
-              },
-              {
-                id: "intelligence",
-                label: String(tr("walletPage.aiDataIntelligence")),
-                status: intelligenceStatus,
-              },
-            ];
-          })()}
-          canGenerate={
-            Array.isArray(portfolio) &&
-            portfolio.length > 0 &&
-            Array.isArray(loadedSwaps) &&
-            loadedSwaps.length > 0 &&
-            intelligenceReport != null
-          }
-          onGenerate={() => {
-            aiAnalysisRequestedRef.current = true;
-            void loadAiAnalysisData(true);
-          }}
-          onRetry={() => {
-            aiAnalysisRequestedRef.current = true;
-            void loadAiAnalysisData(true);
-          }}
-        />
+        <div className={styles.aiAnalysisShell}>
+          {aiAnalysisLoading ? (
+            <div className={styles.aiLoadingPanel} aria-live="polite">
+              <h3 className={styles.sectionTitle}>Analyzing wallet behavior...</h3>
+              <p className={styles.sectionDescription}>
+                Building evidence-backed persona, risk, and activity summaries.
+              </p>
+              <div className={styles.summaryGrid}>
+                <div className={styles.summaryCard} style={{ minHeight: 96 }} />
+                <div className={styles.summaryCard} style={{ minHeight: 96 }} />
+                <div className={styles.summaryCard} style={{ minHeight: 96 }} />
+                <div className={styles.summaryCard} style={{ minHeight: 96 }} />
+              </div>
+            </div>
+          ) : aiAnalysisError ? (
+            <AnalysisErrorState
+              message={aiAnalysisError}
+              onRetry={() => {
+                aiAnalysisRequestedRef.current = true;
+                void loadAiAnalysisData(true);
+              }}
+            />
+          ) : !aiAnalysisReport ? (
+            <div className={styles.aiLoadingPanel}>
+              <h3 className={styles.sectionTitle}>{String(tr("walletPage.aiAnalysis"))}</h3>
+              <p className={styles.sectionDescription}>
+                {aiAnalysisWaitingReason ?? String(tr("walletPage.aiNoData"))}
+              </p>
+            </div>
+          ) : (
+            <WalletAnalystPanel
+              profile={aiAnalysisReport.profile}
+              aiSummary={aiAnalysisReport.aiSummary}
+              generatedAt={aiAnalysisReport.generatedAt}
+              refreshing={aiAnalysisLoading}
+              onRefresh={() => {
+                aiAnalysisRequestedRef.current = true;
+                void loadAiAnalysisData(true);
+              }}
+            />
+          )}
+        </div>
       </PageSection>
     </div>
   );
@@ -1972,10 +1873,9 @@ export default function WalletPage() {
                 <ChartLine key="wallet-overview-icon" size={16} />,
                 <Wallet key="wallet-holdings-icon" size={16} />,
                 <Activity key="wallet-activity-icon" size={16} />,
-                <User key="wallet-audit-icon" size={16} />,
                 <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
               ]}
-              tabs={[overviewTab, holdingsTab, activityTab, auditTab, aiAnalysisTab]}
+              tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab]}
               onTabChange={(index) => setActiveTab(index)}
               actions={tabActions}
             />

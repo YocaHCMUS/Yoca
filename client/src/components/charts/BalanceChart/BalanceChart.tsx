@@ -123,8 +123,7 @@ async function fetchBalanceTrendWithCache(
 
   const promise = fetchBalanceTrend({
     query: {
-      wallets: query.wallets,
-      tokens: query.tokens,
+      wallets: query.wallets ?? "",
       timePeriod: query.timePeriod as any,
     },
   })
@@ -438,7 +437,7 @@ function BalanceChart({
   } = useStandardChartController<BalanceTrendData, BalanceRequestParams>({
     fetcher: async (query) => {
       if (!query.tokens) {
-        return emptyTokenResponse(query) as BalanceTrendData;
+        return emptyTokenResponse(query) as unknown as BalanceTrendData;
       }
       return fetchBalanceTrendWithCache(query);
     },

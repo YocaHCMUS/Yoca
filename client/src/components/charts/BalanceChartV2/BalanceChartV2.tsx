@@ -190,9 +190,8 @@ export function BalanceChartV2({ address }: { address: string }) {
               if (!change) return null;
 
               return (
-                <Tag size="lg" title={series.label}>
+                <Tag key={series.key} size="lg" title={series.label}>
                   <Flex
-                    key={series.key}
                     align="center"
                     justify="between"
                     gap={2}

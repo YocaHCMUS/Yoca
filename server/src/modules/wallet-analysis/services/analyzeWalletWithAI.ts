@@ -1,13 +1,16 @@
 import { WalletBehaviorProfileSchema } from "../schemas/walletBehaviorProfile.schema.js";
-import type { HeliusEnhancedTransactionLike, NormalizedWalletEvent } from "../types/normalizedWalletEvent.js";
+import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent.js";
 import type { WalletAISummary } from "../../../services/wallet/walletAiSummary.service.js";
 import type { WalletBehaviorProfile } from "../types/walletBehaviorProfile.js";
 import { normalizeHeliusTransactions } from "../normalizers/normalizeHeliusTransactions.js";
 import { buildWalletBehaviorProfile } from "../analyzers/buildWalletBehaviorProfile.js";
 import { enrichProfileWithPersona } from "../analyzers/enrichProfileWithPersona.js";
 import { enrichProfileWithRisk } from "../analyzers/enrichProfileWithRisk.js";
-import { summarizeWalletWithGemini } from "../../../services/wallet/walletAiSummary.service.js";
-import { fetchWalletTransactions } from "./walletTransactionFetcher.js";
+import { buildWalletAiSummaryFallback, summarizeWalletWithGemini } from "../../../services/wallet/walletAiSummary.service.js";
+import {
+    getWalletAnalysisTransactions,
+    type WalletAnalysisTransactionSource,
+} from "./walletAnalysisDataSource.js";
 import { isValidSolanaAddress } from "../utils/solanaAddressUtils.js";
 
 const DEFAULT_TRANSACTION_LIMIT = 200;
@@ -19,6 +22,12 @@ export type AnalyzeWalletWithAIResult = {
     profile: WalletBehaviorProfile;
     aiSummary: WalletAISummary;
     generatedAt: string;
+    debug?: {
+        transactionSource: WalletAnalysisTransactionSource;
+        rawTransactionCount: number;
+        normalizedEventCount: number;
+        warnings: string[];
+    };
 };
 
 export type AnalyzeWalletWithAIParams = {
@@ -81,20 +90,26 @@ export async function analyzeWalletWithAI(params: AnalyzeWalletWithAIParams): Pr
 
     const transactionLimit = clampTransactionLimit(params.transactionLimit);
 
-    let transactions: HeliusEnhancedTransactionLike[];
+    let dataSourceResult: Awaited<ReturnType<typeof getWalletAnalysisTransactions>>;
     try {
-        transactions = await fetchWalletTransactions({ walletAddress, limit: transactionLimit });
+        dataSourceResult = await getWalletAnalysisTransactions({
+            walletAddress,
+            limit: transactionLimit,
+        });
     } catch (error) {
         throw new AnalyzeWalletWithAIError(
             "TRANSACTION_FETCH_FAILED",
-            "Failed to fetch wallet transactions.",
+            "Failed to load wallet transactions for AI analysis.",
             error,
         );
     }
 
     let events: NormalizedWalletEvent[];
     try {
-        events = normalizeHeliusTransactions({ walletAddress, transactions });
+        events = normalizeHeliusTransactions({
+            walletAddress,
+            transactions: dataSourceResult.transactions,
+        });
     } catch (error) {
         throw new AnalyzeWalletWithAIError(
             "ANALYSIS_FAILED",
@@ -107,6 +122,18 @@ export async function analyzeWalletWithAI(params: AnalyzeWalletWithAIParams): Pr
     try {
         profile = buildWalletBehaviorProfile({ walletAddress, events });
         profile = applyAiPreferences(profile, params);
+        if (dataSourceResult.warnings.length > 0) {
+            profile = WalletBehaviorProfileSchema.parse({
+                ...profile,
+                dataQuality: {
+                    ...profile.dataQuality,
+                    warnings: [
+                        ...profile.dataQuality.warnings,
+                        ...dataSourceResult.warnings,
+                    ],
+                },
+            });
+        }
         profile = enrichProfileWithPersona({ profile, events });
         profile = enrichProfileWithRisk({ profile, events });
     } catch (error) {
@@ -117,12 +144,53 @@ export async function analyzeWalletWithAI(params: AnalyzeWalletWithAIParams): Pr
         );
     }
 
-    const aiSummary = await summarizeWalletWithGemini({ profile });
+    const rawTransactionCount = dataSourceResult.transactions.length;
+    const normalizedEventCount = events.length;
+    const warnings = [
+        ...dataSourceResult.warnings,
+        ...events.flatMap((event) => event.warnings),
+    ];
+
+    console.info("[wallet-analysis] analyzed wallet", {
+        walletAddress,
+        transactionSource: dataSourceResult.source,
+        rawTransactionCount,
+        normalizedEventCount,
+        warnings,
+    });
+
+    const aiSummary = events.length === 0
+        ? {
+            ...buildWalletAiSummaryFallback(profile),
+            shortSummary: "No analyzable wallet activity was found in the current analysis window.",
+            riskSummary: "Risk is UNKNOWN because no analyzable transactions were found.",
+            pnlSummary: "PnL is unavailable because no analyzable transactions were found.",
+            behaviorInsights: [
+                {
+                    title: "No analyzable activity",
+                    explanation: "The transaction data loaded successfully, but no wallet events were available for evidence-backed analysis.",
+                    evidenceIds: [],
+                },
+            ],
+            suspiciousFindings: [],
+            confidenceNote: "No evidence-backed findings can be produced without analyzable wallet events.",
+        }
+        : await summarizeWalletWithGemini({ profile });
+
+    const debug = process.env.NODE_ENV === "development"
+        ? {
+            transactionSource: dataSourceResult.source,
+            rawTransactionCount,
+            normalizedEventCount,
+            warnings,
+        }
+        : undefined;
 
     return {
         walletAddress,
         profile,
         aiSummary,
         generatedAt: new Date().toISOString(),
+        ...(debug ? { debug } : {}),
     };
 }

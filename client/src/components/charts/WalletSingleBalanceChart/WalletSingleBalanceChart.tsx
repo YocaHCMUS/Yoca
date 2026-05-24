@@ -210,13 +210,11 @@ export function WalletSingleBalanceChart({
       fetchBalanceTrend({
         query: {
           wallets: query.wallets || "",
-          tokens: query.tokens,
           timePeriod: query.timePeriod as any,
         },
       }),
     query: {
       wallets: query.wallets,
-      tokens: query.tokens,
       timePeriod: query.timePeriod as any,
     },
     autoRefresh,

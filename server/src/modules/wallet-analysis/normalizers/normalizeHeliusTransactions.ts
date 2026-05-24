@@ -291,6 +291,94 @@ function normalizeSwap(tx: HeliusEnhancedTransactionLike, warnings: string[]): N
     };
 }
 
+function normalizeSwapFromWalletDeltas(
+    tokenTransfers: NormalizedTokenTransfer[],
+    nativeTransfers: NormalizedNativeTransfer[],
+    tx: HeliusEnhancedTransactionLike,
+    warnings: string[],
+): NormalizedSwap | null {
+    const transactionType = String(tx.type ?? "").toUpperCase();
+    const hasSwapHint = transactionType.includes("SWAP") || String(tx.description ?? "").toLowerCase().includes("swap");
+    const netByMint = new Map<string, { amount: number; symbol: string | null }>();
+
+    for (const transfer of tokenTransfers) {
+        if (transfer.amount <= 0) {
+            continue;
+        }
+
+        const current = netByMint.get(transfer.mint) ?? { amount: 0, symbol: transfer.symbol ?? null };
+        if (transfer.directionForWallet === "IN") {
+            current.amount += transfer.amount;
+        } else if (transfer.directionForWallet === "OUT") {
+            current.amount -= transfer.amount;
+        }
+        current.symbol = current.symbol ?? transfer.symbol ?? null;
+        netByMint.set(transfer.mint, current);
+    }
+
+    for (const transfer of nativeTransfers) {
+        if (transfer.amountSol <= 0) {
+            continue;
+        }
+
+        const current = netByMint.get(SOL_MINT) ?? { amount: 0, symbol: "SOL" };
+        if (transfer.directionForWallet === "IN") {
+            current.amount += transfer.amountSol;
+        } else if (transfer.directionForWallet === "OUT") {
+            current.amount -= transfer.amountSol;
+        }
+        netByMint.set(SOL_MINT, current);
+    }
+
+    const outflows: Array<{ mint: string; amount: number; symbol: string | null }> = [];
+    const inflows: Array<{ mint: string; amount: number; symbol: string | null }> = [];
+
+    for (const [mint, net] of netByMint) {
+        if (Math.abs(net.amount) <= 1e-10) {
+            continue;
+        }
+        if (net.amount < 0) {
+            outflows.push({ mint, amount: Math.abs(net.amount), symbol: net.symbol });
+        } else {
+            inflows.push({ mint, amount: net.amount, symbol: net.symbol });
+        }
+    }
+
+    if (outflows.length === 0 || inflows.length === 0) {
+        return null;
+    }
+
+    if (!hasSwapHint && tokenTransfers.length + nativeTransfers.length < 2) {
+        return null;
+    }
+
+    const inputLeg = outflows.reduce((left, right) => left.amount >= right.amount ? left : right);
+    const outputLeg = inflows.reduce((left, right) => left.amount >= right.amount ? left : right);
+    const protocol = mapProtocolSource(tx.source);
+    const estimatedSwapValueUsd = inputLeg.mint && (isStablecoinMint(inputLeg.mint) || isSolLikeMint(inputLeg.mint))
+        ? inputLeg.amount
+        : outputLeg.mint && (isStablecoinMint(outputLeg.mint) || isSolLikeMint(outputLeg.mint))
+            ? outputLeg.amount
+            : null;
+
+    warnings.push("Swap was inferred from wallet token/native balance deltas because provider swap parser data was unavailable.");
+
+    return {
+        inputMint: inputLeg.mint,
+        outputMint: outputLeg.mint,
+        inputSymbol: inputLeg.symbol,
+        outputSymbol: outputLeg.symbol,
+        inputAmount: inputLeg.amount,
+        outputAmount: outputLeg.amount,
+        inputValueUsd: isStablecoinMint(inputLeg.mint) ? inputLeg.amount : null,
+        outputValueUsd: isStablecoinMint(outputLeg.mint) ? outputLeg.amount : null,
+        estimatedSwapValueUsd,
+        route: protocol.name !== "Unknown" ? [protocol.name] : [],
+        dex: protocol.category === "DEX" ? protocol.name : null,
+        tradeDirectionForWallet: inferTradeDirection(inputLeg.mint, outputLeg.mint),
+    };
+}
+
 function normalizeNftEvent(tx: HeliusEnhancedTransactionLike): NormalizedNftEvent | null {
     const nft = tx.events?.nft;
     if (nft == null) {
@@ -382,7 +470,13 @@ export function normalizeHeliusTransactions(params: {
         const protocol = normalizeProtocol(tx);
         const nativeTransfers = normalizeNativeTransfers(walletAddress, tx.nativeTransfers);
         const tokenTransfers = normalizeTokenTransfers(walletAddress, tx.tokenTransfers);
-        const swap = normalizeSwap(tx, warnings);
+        const parsedSwap = normalizeSwap(tx, warnings);
+        const swap = parsedSwap ?? normalizeSwapFromWalletDeltas(
+            tokenTransfers,
+            nativeTransfers,
+            tx,
+            warnings,
+        );
         const nftEvent = normalizeNftEvent(tx);
         const fee = normalizeFee(tx);
 

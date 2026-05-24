@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import type { ThemeMode } from "@/contexts/ThemeContext";
 
+type CSSVariableStyle = CSSProperties & Record<`--${string}`, string>;
+
 /** Solana accent system */
 export const LANDING_ACCENT = "#9945FF";
 export const LANDING_ACCENT_2 = "#14F195";
@@ -8,7 +10,7 @@ export const LANDING_ACCENT_HOVER = "#ad6dff";
 export const LANDING_ACCENT_MUTED = "rgba(153, 69, 255, 0.4)";
 export const LANDING_ACCENT_GLOW = "rgba(20, 241, 149, 0.24)";
 
-const landingThemeStyles: Record<ThemeMode, CSSProperties> = {
+const landingThemeStyles: Record<ThemeMode, CSSVariableStyle> = {
   dark: {
     "--landing-bg": "#0a0a0f",
     "--landing-surface": "rgba(17,17,24,0.62)",

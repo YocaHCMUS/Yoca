@@ -69,7 +69,7 @@ export default function HistoricalDataPage() {
     client.api.tokens.history[":address"]
       .$get({
         param: { address },
-        query: { days: selectedRange.days },
+        query: { days: String(selectedRange.days) },
       })
       .then(async (res) => {
         if (ctrl.signal.aborted) return;

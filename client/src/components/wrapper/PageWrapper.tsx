@@ -199,18 +199,16 @@ export function PageWrapper({
           onClick={toggleSideNav}
         />
 
-        <Link to="/market" style={{ textDecoration: "none" }}>
-          <HeaderName href="#" prefix="">
-            <Stack
-              gap={3}
-              orientation="horizontal"
-              style={{ alignItems: "center", fontWeight: "bold" }}
-            >
-              <img src={appLogo} alt="Logo" style={{ height: 36 }} />
-              <strong style={{ fontSize: 21 }}>YOCA</strong>
-            </Stack>
-          </HeaderName>
-        </Link>
+        <HeaderName href="/market" prefix="" style={{ textDecoration: "none" }}>
+          <Stack
+            gap={3}
+            orientation="horizontal"
+            style={{ alignItems: "center", fontWeight: "bold" }}
+          >
+            <img src={appLogo} alt="Logo" style={{ height: 36 }} />
+            <strong style={{ fontSize: 21 }}>YOCA</strong>
+          </Stack>
+        </HeaderName>
 
         <HeaderNavigation>
           <NavHeaderItems />
