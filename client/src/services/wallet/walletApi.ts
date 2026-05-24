@@ -387,70 +387,44 @@ export interface WalletOverviewMultiPeriodResponse {
 }
 
 /**
- * Helper to handle API response with error checking
- */
-async function handleResponse(response: Response) {
-  if (!response.ok) {
-    let errorMessage = `API error: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch (e) {
-      console.error("[walletApi] Failed to parse error response:", e);
-    }
-    const error = new Error(errorMessage);
-    console.error("[walletApi] Request failed:", {
-      status: response.status,
-      error,
-    });
-    throw error;
-  }
-}
-
-/**
  * Fetch wallet overview data
  * GET /api/wallets/overview
  */
-export async function fetchWalletOverview(
+export function fetchWalletOverview(
   address: string,
 ): Promise<WalletOverviewMultiPeriodResponse> {
-  const response = await client.api.wallets.overview.$get({
+  return client.api.wallets.overview.$get({
     query: {
       address,
       period: "24H",
     },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletOverviewMultiPeriodResponse;
 }
 
 /**
  * Fetch wallet portfolio data
  * GET /api/wallets/portfolio
  */
-export async function fetchWalletPortfolio(
+export function fetchWalletPortfolio(
   address: string,
   chain?: string,
 ): Promise<WalletPortfolioItem[]> {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.portfolio.$get({
-    query,
+  return client.api.wallets.portfolio.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletPortfolioItem[];
 }
 
 /**
  * Fetch wallet transfers
  * GET /api/wallets/transfers
  */
-export async function fetchWalletTransfers(
+export function fetchWalletTransfers(
   address: string,
   params?: {
     chain?: string;
@@ -459,20 +433,19 @@ export async function fetchWalletTransfers(
     before?: string;
   },
 ): Promise<WalletTransfersResponse> {
-  const query = { address, ...params };
-  const response = await client.api.wallets.transfers.$get({
-    query,
+  return client.api.wallets.transfers.$get({
+    query: { address, ...params },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletTransfersResponse;
 }
 
 /**
  * Fetch wallet swaps
  * GET /api/wallets/swap
  */
-export async function fetchWalletSwaps(
+export function fetchWalletSwaps(
   address: string,
   params?: {
     chain?: string;
@@ -481,150 +454,99 @@ export async function fetchWalletSwaps(
     before?: string;
   },
 ): Promise<WalletSwapsResponse> {
-  const query = { address, ...params };
-  const response = await client.api.wallets.swap.$get({
-    query,
+  return client.api.wallets.swap.$get({
+    query: { address, ...params },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletSwapsResponse;
 }
 
 /**
  * Fetch wallet balances
  * GET /api/balances
  */
-export async function fetchWalletBalances(address: string) {
-  const response = await client.api.balances[":address"].$get({
+export function fetchWalletBalances(address: string) {
+  return client.api.balances[":address"].$get({
     param: { address },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet asset distribution
  * GET /api/wallets/distribution
  */
-export async function fetchWalletDistribution(address: string, chain?: string) {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.distribution.$get({
-    query,
+export function fetchWalletDistribution(address: string, chain?: string) {
+  return client.api.wallets.distribution.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet identity data
  * GET /api/wallets/identity
  */
-export async function fetchWalletIdentity(address: string) {
-  const response = await client.api.wallets.identity.$get({
-    query: {
-      address
-    },
+export function fetchWalletIdentity(address: string) {
+  return client.api.wallets.identity.$get({
+    query: { address },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet identity batch data
  * POST /api/wallets/identity/batch
  */
-export async function fetchWalletIdentityBatch(
+export function fetchWalletIdentityBatch(
   addresses: string[],
   chain?: string,
 ) {
-  const response = await client.api.wallets.identity.batch.$post({
-    json: {
-      addresses,
-      ...(chain && { chain }),
-    },
+  return client.api.wallets.identity.batch.$post({
+    json: { addresses, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch composed wallet intelligence data
  * GET /api/wallets/intelligence
  */
-export async function fetchWalletIntelligence(
+export function fetchWalletIntelligence(
   address: string,
   chain?: string,
 ): Promise<WalletIntelligenceResponse> {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.intelligence.$get({
-    query,
+  return client.api.wallets.intelligence.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletIntelligenceResponse;
 }
 
 /**
  * Fetch wallet AI analysis
  * POST /api/wallets/ai-analysis
  */
-export async function fetchWalletAiAnalysis(
+export function fetchWalletAiAnalysis(
   address: string,
   language: WalletAiAnalysisLanguage,
 ): Promise<WalletAiAnalysisResponse> {
-  const response = await client.api.wallets["ai-analysis"].$post({
+  return client.api.wallets["ai-analysis"].$post({
     json: { address, language },
+  }).then(async resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error ${resp.status}`);
   });
-
-  if (!response.ok) {
-    let message = `Failed to fetch wallet AI analysis (${response.status})`;
-
-    try {
-      const errorData = (await response.json()) as {
-        error?: string;
-        message?: string;
-        code?: string;
-        details?: {
-          missingDependencies?: string[];
-        };
-      };
-
-      if (
-        errorData?.code === "dependency_not_ready" &&
-        Array.isArray(errorData.details?.missingDependencies)
-      ) {
-        const missing = errorData.details.missingDependencies.join(", ");
-        message =
-          missing.length > 0
-            ? `AI analysis dependencies are not ready: ${missing}`
-            : "AI analysis dependencies are not ready";
-      } else if (
-        typeof errorData?.message === "string" &&
-        errorData.message.trim()
-      ) {
-        message = errorData.message;
-      } else if (
-        typeof errorData?.error === "string" &&
-        errorData.error.trim()
-      ) {
-        message = errorData.error;
-      }
-    } catch (e) {
-      console.error(
-        "[walletApi] Failed to parse AI analysis error response:",
-        e,
-      );
-    }
-
-    throw new Error(message);
-  }
-
-  const data = await response.json();
-  return data as WalletAiAnalysisResponse;
 }
 
 /**
@@ -660,32 +582,29 @@ export interface WalletAuditReport {
  *
  * Pass `force: true` to bypass the 24-hour cache and re-run Gemini.
  */
-export async function fetchWalletAudit(
+export function fetchWalletAudit(
   address: string,
   options?: { force?: boolean },
 ): Promise<WalletAuditReport> {
-  const url = client.api.wallets[":address"].audit.$url({
+  return client.api.wallets[":address"].audit.$get({
     param: { address },
-    query: { force: "true" },
+    query: { force: options?.force ? "true" : "false" },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-
-  const response = await fetch(url.toString(), { credentials: "include" });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletAuditReport;
 }
 
-export async function fetchDayActivitySummary(
+export function fetchDayActivitySummary(
   address: string,
   dayMs: number,
 ): Promise<WalletDayActivitySummary> {
-  const url = client.api.wallets["day-activity"].$url({
+  return client.api.wallets["day-activity"].$get({
     query: { address, dayMs: String(dayMs) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  const response = await fetch(url.toString(), { credentials: "include" });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletDayActivitySummary;
 }
 
 export interface TokenPriceChartPoint {
@@ -697,74 +616,38 @@ export interface TokenPriceChartResponse {
   items: TokenPriceChartPoint[];
 }
 
-export async function fetchTokenPriceChartForDay(
+export function fetchTokenPriceChartForDay(
   tokenAddress: string,
   dayMs: number,
-): Promise<TokenPriceChartResponse> {
-  const url = client.api.wallets["token-price-chart"].$url({
+) {
+  return client.api.wallets["token-price-chart"].$get({
     query: { address: tokenAddress, dayMs: String(dayMs) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  const response = await fetch(url.toString(), { credentials: "include" });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as TokenPriceChartResponse;
 }
 
-export async function fetchTxDetail(
+export function fetchTxDetail(
   address: string,
   signature: string,
 ): Promise<WalletTxDetail> {
-  const url = client.api.wallets["tx-detail"].$url({
+  return client.api.wallets["tx-detail"].$get({
     query: { address, signature },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  const response = await fetch(url.toString(), { credentials: "include" });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletTxDetail;
 }
 
-export async function fetchTxInstructions(
+export function fetchTxInstructions(
   address: string,
   signature: string,
 ): Promise<WalletTxInstructionDetail> {
-  const url = client.api.wallets["tx-instructions"].$url({
+  return client.api.wallets["tx-instructions"].$get({
     query: { address, signature },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
   });
-  const response = await fetch(url.toString(), { credentials: "include" });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletTxInstructionDetail;
 }
-
-export const walletApi = {
-  fetchWalletOverview,
-  fetchWalletPortfolio,
-  fetchWalletTransfers,
-  fetchWalletSwaps,
-  fetchWalletBalances,
-  fetchWalletDistribution,
-  fetchWalletIdentity,
-  fetchWalletIdentityBatch,
-  fetchWalletIntelligence,
-  fetchWalletAiAnalysis,
-  fetchWalletAudit,
-  fetchDayActivitySummary,
-  fetchTokenPriceChartForDay,
-  fetchTxDetail,
-  fetchTxInstructions,
-  getOverview: fetchWalletOverview,
-  getPortfolio: fetchWalletPortfolio,
-  getTransfers: fetchWalletTransfers,
-  getSwaps: fetchWalletSwaps,
-  getBalances: fetchWalletBalances,
-  getDistribution: fetchWalletDistribution,
-  getIdentity: fetchWalletIdentity,
-  getIdentityBatch: fetchWalletIdentityBatch,
-  getIntelligence: fetchWalletIntelligence,
-  getAiAnalysis: fetchWalletAiAnalysis,
-  getAudit: fetchWalletAudit,
-  getDayActivitySummary: fetchDayActivitySummary,
-  getTokenPriceChartForDay: fetchTokenPriceChartForDay,
-  getTxDetail: fetchTxDetail,
-  getTxInstructions: fetchTxInstructions,
-};

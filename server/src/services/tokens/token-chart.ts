@@ -1,19 +1,19 @@
 import {
-  DAY_MS,
-  TOKEN_CHART_24H_UPDATE_THRESHOLD,
-  TOKEN_CHART_HOURLY_INTERVAL_MS,
-  TOKEN_CHART_HOURLY_MIN_POINTS,
-  TOKEN_CHART_HOURLY_MIN_SPAN_MS,
-  TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
+    DAY_MS,
+    TOKEN_CHART_24H_UPDATE_THRESHOLD,
+    TOKEN_CHART_HOURLY_INTERVAL_MS,
+    TOKEN_CHART_HOURLY_MIN_POINTS,
+    TOKEN_CHART_HOURLY_MIN_SPAN_MS,
+    TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenMarketChart24h,
-  tokenMarketChartDaily,
-  tokenMarketChartHourly,
-  type TokenMarketChart24hInsert,
-  type TokenMarketChartDailyInsert,
-  type TokenMarketChartHourlyInsert,
+    tokenMarketChart24h,
+    tokenMarketChartDaily,
+    tokenMarketChartHourly,
+    type TokenMarketChart24hInsert,
+    type TokenMarketChartDailyInsert,
+    type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
@@ -24,9 +24,9 @@ import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
-  bds_HistoryPriceSchema,
-  cg_TokenMarketChartSchema,
-  type CG_TokenMarketChart,
+    bds_HistoryPriceSchema,
+    cg_TokenMarketChartSchema,
+    type CG_TokenMarketChart,
 } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
