@@ -1557,7 +1557,15 @@ export const translation = {
       protectedPath: "Protected path: {{$path}}",
       login: "Login",
       backToHome: "Back to Home",
-    } 
+    },
+    notFound: {
+      error404: "404 Error",
+      title: "We're sorry!",
+      description:
+        "The page you requested does not exist or may have moved to another location.",
+      backToHome: "Back to Home",
+      goToMarket: "Go to Market",
+    }
   },
   ERROR,
 } as const;

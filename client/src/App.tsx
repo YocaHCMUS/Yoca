@@ -58,6 +58,7 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="/not-found" element={<NotFoundPage />} />
         <Route path="/market" element={<MarketPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route

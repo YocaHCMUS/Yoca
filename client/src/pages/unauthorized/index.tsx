@@ -40,7 +40,7 @@ export default function UnauthorizedPage() {
 
   return (
     <PageWrapper>
-      <Flex align="center" justify="center" style={{ height: 450 }}>
+      <Flex align="center" justify="center" style={{ blockSize: 450 }}>
         <Flex dir="column" align="center" gap={20}>
 
         <Flex dir="column" align="center" gap={8}>

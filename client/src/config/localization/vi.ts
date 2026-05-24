@@ -1558,6 +1558,14 @@ export const translation = defineTranslation({
       protectedPath: "Đường dẫn được bảo vệ: {{$path}}",
       login: "Đăng nhập",
       backToHome: "Quay lại trang chủ",
-    } 
+    },
+    notFound: {
+      error404: "Lỗi 404",
+      title: "Xin lỗi bạn",
+      description:
+        "Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đến vị trí khác.",  
+      backToHome: "Quay lại trang chủ",
+      goToMarket: "Đi đến thị trường",
+    }
   }
 });
