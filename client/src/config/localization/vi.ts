@@ -765,7 +765,7 @@ export const translation = defineTranslation({
       "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
-    vi: "Vietnam - Tiếng Việt (Vietnamese)",
+    vi: "Tiếng Việt - Tiếng Việt (Vietnamese)",
     en: "Mỹ - English (English)",
   },
   // Validation errors
