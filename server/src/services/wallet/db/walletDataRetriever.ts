@@ -1,31 +1,27 @@
 import {
-	WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
-	WALLET_SWAPS_TTL_MS,
-	WALLET_TRANSACTIONS_TTL_MS,
-	WALLET_TRANSFERS_TTL_MS,
+    WALLET_SWAPS_TTL_MS,
+    WALLET_TRANSACTIONS_TTL_MS,
+    WALLET_TRANSFERS_TTL_MS
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-	tokenTransfers,
-	walletHeliusTransactions,
-	walletSwap,
-	walletSwapMeta,
-	walletTransactions,
-	walletTransactionsMeta,
-	walletTransferMeta,
-	walletBalanceHistoryCache,
-	walletFirstFund,
-	walletPnlDataCache,
-	walletPnlDataMeta,
+    tokenTransfers,
+    walletHeliusTransactions,
+    walletSwap,
+    walletSwapMeta,
+    walletTransactions,
+    walletTransactionsMeta,
+    walletTransferMeta,
+    walletFirstFund,
+    walletPnlDataCache,
+    walletPnlDataMeta
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
-	WalletSwap,
-	WalletTransaction,
-	WalletTransactionHelius,
-	WalletTransfer,
-	BalanceDataPoint,
-	WalletTimePeriod,
+    WalletSwap,
+    WalletTransaction,
+    WalletTransactionHelius,
+    WalletTransfer
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export type CachedRange = {
@@ -637,44 +633,6 @@ export async function getCachedWalletSwapsChunk(
 		items: pageItems,
 		nextCursor,
 		hasMore,
-	};
-}
-
-/**
- * Retrieve cached wallet balance history from database
- * @param address - wallet address
- * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
- * @returns cached balance history with coverage metadata, or null if not fresh
- */
-export async function getCachedWalletBalanceHistory(
-	address: string,
-	timePeriod: WalletTimePeriod,
-): Promise<{
-	points: BalanceDataPoint[];
-	coveredFromMs: number;
-	coveredToMs: number;
-} | null> {
-	const threshold = new Date(Date.now() - WALLET_BALANCE_HISTORY_CACHE_TTL_MS);
-	const rows = await db
-		.select()
-		.from(walletBalanceHistoryCache)
-		.where(
-			and(
-				eq(walletBalanceHistoryCache.address, address),
-				eq(walletBalanceHistoryCache.timePeriod, timePeriod),
-				gte(walletBalanceHistoryCache.fetchedAt, threshold),
-			),
-		)
-		.limit(1);
-
-	if (rows.length === 0) {
-		return null;
-	}
-
-	return {
-		points: rows[0].data,
-		coveredFromMs: Number(rows[0].coveredFromMs),
-		coveredToMs: Number(rows[0].coveredToMs),
 	};
 }
 
