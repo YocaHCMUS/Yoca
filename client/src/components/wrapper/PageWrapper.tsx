@@ -6,38 +6,38 @@ import { headerNotificationsMockData } from "@/services/notifications/headerNoti
 import type { AlertNotification } from "@/types/profile";
 import { cds } from "@/util/carbon-theme";
 import {
-  Asleep,
-  ErrorFilled,
-  FireFill,
-  InformationFilled,
-  Light,
-  WarningAltFilled,
+    Asleep,
+    ErrorFilled,
+    FireFill,
+    InformationFilled,
+    Light,
+    WarningAltFilled,
 } from "@carbon/icons-react";
 import {
-  Content,
-  Header,
-  HeaderGlobalAction,
-  HeaderGlobalBar,
-  HeaderMenuButton,
-  HeaderMenuItem,
-  HeaderName,
-  HeaderNavigation,
-  HeaderPanel,
-  HeaderSideNavItems,
-  SideNav,
-  SideNavItems,
-  Stack,
-  Switcher,
-  SwitcherDivider,
-  SwitcherItem,
+    Content,
+    Header,
+    HeaderGlobalAction,
+    HeaderGlobalBar,
+    HeaderMenuButton,
+    HeaderMenuItem,
+    HeaderName,
+    HeaderNavigation,
+    HeaderPanel,
+    HeaderSideNavItems,
+    SideNav,
+    SideNavItems,
+    Stack,
+    Switcher,
+    SwitcherDivider,
+    SwitcherItem,
 } from "@carbon/react";
 import {
-  Checkmark,
-  Logout,
-  Notification,
-  Search,
-  User,
-  Wikis,
+    Checkmark,
+    Logout,
+    Notification,
+    Search,
+    User,
+    Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router";
@@ -156,7 +156,7 @@ export function PageWrapper({
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.market")}</HeaderMenuItem>
         <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
       </>
     );
