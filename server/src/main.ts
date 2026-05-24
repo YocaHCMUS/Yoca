@@ -14,12 +14,12 @@ import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
 import transactions, {
-  type TransactionsAppType,
+    type TransactionsAppType,
 } from "@sv/routes/transactions.js";
 import transfers, { type TransfersAppType } from "@sv/routes/transfers.js";
 import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
 import walletTags, {
-  type WalletTagsAppType,
+    type WalletTagsAppType,
 } from "@sv/routes/walletTags.route.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
 import { Hono } from "hono";
@@ -27,6 +27,7 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route";
+import { startTokenPolling } from "./services/tokens/token-data-polling";
 
 const app = new Hono()
   .use("*", logger())
@@ -39,7 +40,7 @@ const app = new Hono()
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }));
 
-// startTokenPolling();
+startTokenPolling();
 
 // Server
 serve(

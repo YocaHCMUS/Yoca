@@ -17,14 +17,8 @@ interface ProfileOverviewProps {
   loading: boolean;
 }
 
-function formatPct(value: number): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
 export function ProfileOverview({
   data,
-  onPeriodChange,
   loading,
 }: ProfileOverviewProps) {
   const { fmt } = useLocalization();
@@ -125,7 +119,7 @@ export function ProfileOverview({
             {loading ? (
               <SkeletonText width="7rem" />
             ) : (
-              `${fmt.num.compact.currency(data.pnlUsd)} (${formatPct(data.pnlPct)})`
+              `${fmt.num.compact.currency(data.pnlUsd)} (${fmt.num.percent(data.pnlPct)})`
             )}
           </p>
         </div>

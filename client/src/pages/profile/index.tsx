@@ -7,8 +7,8 @@ import ProfileUnavailableState from "@/components/profile/ProfileUnavailableStat
 import ProfileWalletTab from "@/components/profile/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
 import {
-  PROFILE_TABS,
-  type ProfileTabId,
+    PROFILE_TABS,
+    type ProfileTabId,
 } from "@/components/profile/profile.constants";
 import ProfileSettingsTab from "@/components/profile/profileSettingsTab";
 import TabContainer from "@/components/tabContainer/tabContainer";
@@ -18,22 +18,17 @@ import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { InlineLoading } from "@carbon/react";
 import {
-  Activity,
-  ChartLine,
-  Notification,
-  Receipt,
-  Settings,
-  StarFilled,
-  User,
-  Wallet,
+    Activity,
+    ChartLine,
+    Notification,
+    Receipt,
+    Settings,
+    StarFilled,
+    User,
+    Wallet,
 } from "@carbon/react/icons";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
-
-const DASHBOARD_ENABLED =
-  String(
-    import.meta.env.VITE_PROFILE_ENABLE_DASHBOARD ?? "true",
-  ).toLowerCase() !== "false";
 
 export default function ProfilePage() {
   const [period, setPeriod] = useState<TimePeriod>("30D");
@@ -114,11 +109,6 @@ export default function ProfilePage() {
     ];
 
     let visibleTabs = allTabs;
-
-    // Filter dashboard tab if disabled
-    if (!DASHBOARD_ENABLED) {
-      visibleTabs = allTabs.filter((tab) => tab.id !== "dashboard");
-    }
 
     return {
       names: visibleTabs.map(

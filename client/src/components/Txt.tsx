@@ -16,6 +16,7 @@ type TxtProps = {
   align?: TxtAlign;
   uppercase?: boolean;
   ellipsis?: boolean;
+  mono?: boolean;
   width?: string | number;
   className?: string;
   style?: CSSProperties;
@@ -48,6 +49,7 @@ export function Txt({
   weight,
   uppercase,
   ellipsis,
+  mono,
   width,
   children,
   align,
@@ -69,6 +71,7 @@ export function Txt({
         color:
           resolvedTone == "secondary" ? cds.textSecondary : cds.textPrimary,
         width: stretch ? "100%" : width,
+        fontFamily: mono ? "monospace" : undefined,
         ...(ellipsis && {
           overflow: "hidden",
           whiteSpace: "nowrap",

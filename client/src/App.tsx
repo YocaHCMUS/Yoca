@@ -2,7 +2,6 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
-import AuthShowcase from "@/pages/auth";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
@@ -57,14 +56,18 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<AuthShowcase />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/test-401" element={<UnauthorizedPage />} />
-        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route path="/market" element={<MarketPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/profile"
+          element={
+            <AuthGuard>
+              <ProfilePage />
+            </AuthGuard>
+          }
+        />
         <Route path="/tokens" element={<TokenPage />} />
         <Route
           path="/alerts/demo"

@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -1548,6 +1548,16 @@ export const translation = {
       defaultTitle: "Data unavailable",
       defaultDescription: "No profile data is available right now.",
     },
+  },
+  errorPages: {
+    unauthorized: {
+      error401: "401 Error",
+      accessDenied: "Access Denied",
+      description: "You need to log in before accessing this page.",
+      protectedPath: "Protected path: {{$path}}",
+      login: "Login",
+      backToHome: "Back to Home",
+    } 
   },
   ERROR,
 } as const;

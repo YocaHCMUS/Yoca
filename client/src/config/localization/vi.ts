@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -1550,4 +1550,14 @@ export const translation = defineTranslation({
       defaultDescription: "Không có dữ liệu hồ sơ nào có sẵn ngay bây giờ.",
     },
   },
+  errorPages: {
+    unauthorized: {
+      error401: "Lỗi 401",
+      accessDenied: "Truy cập bị từ chối",
+      description: "Bạn cần đăng nhập trước khi truy cập trang này.",
+      protectedPath: "Đường dẫn được bảo vệ: {{$path}}",
+      login: "Đăng nhập",
+      backToHome: "Quay lại trang chủ",
+    } 
+  }
 });

@@ -6,7 +6,6 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-const UNAUTHORIZED_ROUTE = "/unauthorized";
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user } = useAuth();
@@ -16,7 +15,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   if (!user) {
     return (
       <Navigate
-        to={UNAUTHORIZED_ROUTE}
+        to="/unauthorized"
         replace
         state={{ from: attemptedPath }}
       />
