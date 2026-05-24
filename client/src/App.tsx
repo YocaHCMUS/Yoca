@@ -1,10 +1,18 @@
-import { BrowserRouter, Route, Routes } from "react-router";
+import { RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Outlet, useNavigation } from "react-router";
+
+import { Loading } from "@carbon/react";
+import { Component, type ReactNode } from "react";
+
 import "./App.css";
+
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
+import AlertsDemo from "./pages/alerts/demo";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
+import PricingPage from "@/pages/pricing";
 import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
@@ -12,13 +20,11 @@ import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
-import PricingPage from "@/pages/pricing";
-import { Component, type ReactNode } from "react";
-import { AuthGuard } from "./components/auth";
-import AlertsDemo from "./pages/alerts/demo";
 
-/** Catches render errors inside route elements so a silent crash does not
- *  abort the React Router transition (leaving the old page mounted). */
+import { AuthGuard } from "./components/auth";
+import { useLocalization } from "./contexts/LocalizationContext";
+
+// Prevent route crashes from breaking router transitions
 class RouteErrorBoundary extends Component<
   { children: ReactNode },
   { error: Error | null }
@@ -33,7 +39,7 @@ class RouteErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[RouteErrorBoundary] Caught render error:", error, info);
+    console.error("RouteErrorBoundary: Caught render error:", error, info);
   }
 
   render() {
@@ -41,69 +47,151 @@ class RouteErrorBoundary extends Component<
       return (
         <div style={{ padding: "2rem", color: "red" }}>
           <h2>Something went wrong loading this page.</h2>
-          <pre style={{ fontSize: "0.8rem", whiteSpace: "pre-wrap" }}>
+
+          <pre
+            style={{
+              fontSize: "0.8rem",
+              whiteSpace: "pre-wrap",
+            }}
+          >
             {this.state.error.message}
           </pre>
         </div>
       );
     }
+
     return this.props.children;
   }
 }
 
-function App() {
+function RootLayout() {
+  const navigation = useNavigation();
+  const { tr } = useLocalization();
+
+  const isLoading =
+    navigation.state == "loading" || navigation.state == "submitting";
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/not-found" element={<NotFoundPage />} />
-        <Route path="/market" element={<MarketPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route
-          path="/profile"
-          element={
-            <AuthGuard>
-              <ProfilePage />
-            </AuthGuard>
-          }
-        />
-        <Route path="/tokens" element={<TokenPage />} />
-        <Route
-          path="/alerts/demo"
-          element={
-            <AuthGuard>
-              <AlertsDemo />
-            </AuthGuard>
-          }
-        />
-        <Route path="/tokens/:address" element={<TokenOverviewPage />} />
-        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
-        <Route
-          path="/historical-data/:address"
-          element={<HistoricalDataPage />}
-        />
-        <Route path="/transactions" element={<TransactionGraphPage />} />
-        <Route
-          path="/transactions/:txHash"
-          element={<TransactionGraphPage />}
-        />
-        {/* /comparison/wallets must be declared before /wallets/:address to avoid ambiguity */}
-        <Route
-          path="/comparison/wallets"
-          element={
-            <RouteErrorBoundary>
-              <WalletsComparisonPage />
-            </RouteErrorBoundary>
-          }
-        />
-        <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <Loading active={isLoading} description={tr("common.loading")} withOverlay />
+      <Outlet />
+    </>
   );
+}
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <RootLayout />,
+
+    children: [
+      {
+        index: true,
+        element: <Index />,
+      },
+
+      {
+        path: "pricing",
+        element: <PricingPage />,
+      },
+
+      {
+        path: "unauthorized",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "market",
+        element: <MarketPage />,
+      },
+
+      {
+        path: "alerts",
+        element: <AlertsPage />,
+      },
+
+      {
+        path: "alerts/demo",
+        element: (
+          <AuthGuard>
+            <AlertsDemo />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "profile",
+        element: (
+          <AuthGuard>
+            <ProfilePage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "tokens",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "tokens/:address",
+        element: <TokenOverviewPage />,
+      },
+
+      {
+        path: "tokens/:address/:poolAddress",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "historical-data/:address",
+        element: <HistoricalDataPage />,
+      },
+
+      {
+        path: "transactions",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "transactions/:txHash",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "comparison/wallets",
+        element: (
+          <RouteErrorBoundary>
+            <WalletsComparisonPage />
+          </RouteErrorBoundary>
+        ),
+      },
+
+      {
+        path: "wallets/:address",
+        element: <WalletPage />,
+      },
+
+      {
+        path: "secret-admin-dashboard",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "not-found",
+        element: <NotFoundPage />,
+      },
+
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
+    ],
+  },
+]);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

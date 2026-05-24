@@ -149,6 +149,7 @@ export const translation = {
   },
   // Authentication
   auth: {
+    authenticating: "Authenticating...",
     or: "Or continue with",
     signIn: "Sign In",
     signUp: "Sign Up",

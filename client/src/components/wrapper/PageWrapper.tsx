@@ -40,7 +40,6 @@ import {
     Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
@@ -76,6 +75,10 @@ type PageWrapperProps = {
   };
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
   noMarketTickers?: boolean;
+  authPopup?: {
+    isOpen: boolean;
+    onClose: () => void;
+  }
 };
 
 function getNotificationSeverityLabel(severity: AlertNotification["severity"]) {
@@ -107,6 +110,7 @@ export function PageWrapper({
   children,
   extraHeaderPanel,
   noMarketTickers = true,
+  authPopup
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
@@ -119,6 +123,17 @@ export function PageWrapper({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
+
+  useEffect(() => {
+    if (authPopup && isSignInOpen != authPopup.isOpen)
+      setIsSignInOpen(authPopup.isOpen);
+  }, [authPopup]);
+
+  useEffect(() => {
+    if (authPopup && !isSignInOpen) {
+      authPopup.onClose();
+    }
+  }, [isSignInOpen]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -199,18 +214,16 @@ export function PageWrapper({
           onClick={toggleSideNav}
         />
 
-        <Link to="/market" style={{ textDecoration: "none" }}>
-          <HeaderName href="#" prefix="">
-            <Stack
-              gap={3}
-              orientation="horizontal"
-              style={{ alignItems: "center", fontWeight: "bold" }}
-            >
-              <img src={appLogo} alt="Logo" style={{ height: 36 }} />
-              <strong style={{ fontSize: 21 }}>YOCA</strong>
-            </Stack>
-          </HeaderName>
-        </Link>
+        <HeaderName href="/market" prefix="">
+          <Stack
+            gap={3}
+            orientation="horizontal"
+            style={{ alignItems: "center", fontWeight: "bold" }}
+          >
+            <img src={appLogo} alt="Logo" style={{ height: 36 }} />
+            <strong style={{ fontSize: 21 }}>YOCA</strong>
+          </Stack>
+        </HeaderName>
 
         <HeaderNavigation>
           <NavHeaderItems />

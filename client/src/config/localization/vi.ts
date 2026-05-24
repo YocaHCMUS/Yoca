@@ -115,6 +115,7 @@ export const translation = defineTranslation({
   },
   // Authentication
   auth: {
+    authenticating: "Đang xác thực...",
     or: "Hoặc tiếp tục với",
     signIn: "Đăng nhập",
     signUp: "Đăng ký",

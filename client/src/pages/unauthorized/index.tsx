@@ -1,4 +1,3 @@
-import { SignInModal } from "@/components/auth";
 import { Flex } from "@/components/Flex";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
@@ -7,7 +6,6 @@ import { ArrowRight } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-
 
 type UnauthorizedRouteState = {
   from?: string;
@@ -34,69 +32,57 @@ export default function UnauthorizedPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const {tr, fmt} = useLocalization();
+  const { tr, fmt } = useLocalization();
 
   const requestedPath = getRequestedPath(location.state);
 
   return (
-    <PageWrapper>
+    <PageWrapper
+      authPopup={{
+        isOpen: isSignInOpen,
+        onClose: () => setIsSignInOpen(false),
+      }}
+    >
       <Flex align="center" justify="center" style={{ blockSize: 450 }}>
         <Flex dir="column" align="center" gap={20}>
+          <Flex dir="column" align="center" gap={8}>
+            <Txt uppercase>{tr("errorPages.unauthorized.error401")}</Txt>
+            <Flex dir="column" align="center" gap={10}>
+              <Txt size="2xl">{tr("errorPages.unauthorized.accessDenied")}</Txt>
 
-        <Flex dir="column" align="center" gap={8}>
-            <Txt uppercase>
-              {tr("errorPages.unauthorized.error401")}
-            </Txt>
-          <Flex dir="column" align="center" gap={10}>
-
-            <Txt size="2xl">
-              {tr("errorPages.unauthorized.accessDenied")}
-            </Txt>
-
-
-            <Txt secondary size="md">
-              {tr("errorPages.unauthorized.description")}
-              
-            </Txt>
-
-            {requestedPath.length > 0 ? (
-              <Txt secondary>
-              {tr("errorPages.unauthorized.protectedPath", {
-                $path:   <Txt mono>
-                  {requestedPath}
-                </Txt>
-              })}
+              <Txt secondary size="md">
+                {tr("errorPages.unauthorized.description")}
               </Txt>
-            ) : null}
+
+              {requestedPath.length > 0 ? (
+                <Txt secondary>
+                  {tr("errorPages.unauthorized.protectedPath", {
+                    $path: <Txt mono>{requestedPath}</Txt>,
+                  })}
+                </Txt>
+              ) : null}
+            </Flex>
           </Flex>
-        </Flex>
 
-
-          <Flex dir="row" gap={4} style={{inlineSize: 400}}>
-            <Button kind="primary"
+          <Flex dir="row" gap={4} style={{ inlineSize: 400 }}>
+            <Button
+              kind="primary"
               onClick={() => setIsSignInOpen(true)}
-              style={{flex: 1}}
+              style={{ flex: 1 }}
             >
               {tr("errorPages.unauthorized.login")}
             </Button>
-            
-            <Button kind="secondary"
-            renderIcon={ArrowRight}
+
+            <Button
+              kind="secondary"
+              renderIcon={ArrowRight}
               onClick={() => navigate("/")}
-              style={{flex: 1}}
+              style={{ flex: 1 }}
             >
               {tr("errorPages.unauthorized.backToHome")}
             </Button>
-
           </Flex>
         </Flex>
-
-
-        <SignInModal
-          open={isSignInOpen}
-          onClose={() => setIsSignInOpen(false)}
-          redirectUrl={requestedPath}
-        />
       </Flex>
     </PageWrapper>
   );
