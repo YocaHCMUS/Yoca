@@ -312,8 +312,7 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-01;
-  padding: $spacing-02 $spacing-02 $spacing-02 $spacing-07;
-  margin-left: $spacing-02;
+  padding: $spacing-02;
   border-left: 2px solid $border-subtle;
   background-color: $layer-02;
   border-radius: 0 0 4px 4px;
@@ -337,6 +336,20 @@
   @include type-style('body-compact-01');
   color: $text-primary;
   text-align: right;
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.detailAmount {
+  @include type-style('label-01');
+  color: $text-secondary;
+}
+
+.detailVolume {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 600;
 }
 
 .lossValue {
@@ -344,7 +357,40 @@
   font-weight: 600;
 }
 
-.winValue {
-  color: $support-success;
-  font-weight: 600;
+/* ── Pagination ───────────────────────── */
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-03;
+  padding: $spacing-03 0;
+  flex-shrink: 0;
+}
+
+.pageBtn {
+  background: transparent;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  color: $text-secondary;
+  cursor: pointer;
+  @include type-style('label-01');
+  padding: $spacing-01 $spacing-03;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) {
+    background-color: $layer-hover-01;
+    color: $text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.pageInfo {
+  @include type-style('label-01');
+  color: $text-secondary;
+  min-width: 48px;
+  text-align: center;
 }

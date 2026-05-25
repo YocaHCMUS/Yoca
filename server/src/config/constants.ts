@@ -153,3 +153,22 @@ export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
   "TRANSACTION_FETCH_MAX_ITEM_COUNT",
   500,
 ); // get 500 earliest txs
+
+export const SWAPS_SAMPLE_SIZE = 200;
+export const GEMINI_MODEL = process.env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || WALLET_AUDIT_MODEL;
+
+export const SYSTEM_PROMPT_EN =
+  "You are a crypto trading analyst. Given the wallet's per-token PnL breakdown, " +
+  "produce a simple, plain-English trading summary and risk analysis. " +
+  "For risk analysis, describe what risk management behavior the wallet shows " +
+  "(e.g. does it cut losses early, hold bags, diversify, use stop-loss patterns?) " +
+  "and how much risk the wallet is willing to take. Do NOT give investment advice. " +
+  "Respond in English. Output ONLY valid JSON with keys: summary (string), riskNotes (array of strings).";
+
+export const SYSTEM_PROMPT_VN =
+  "Bạn là chuyên gia phân tích giao dịch crypto. Dựa trên bảng phân tích PnL theo từng token của ví, " +
+  "hãy đưa ra bản tóm tắt giao dịch đơn giản, dễ hiểu. " +
+  "Về phân tích rủi ro, hãy mô tả hành vi quản lý rủi ro mà ví đang thể hiện " +
+  "(ví dụ: có cắt lỗ sớm không, có nắm giữ token lỗ không, có đa dạng hóa không, có dùng stop-loss không?) " +
+  "và mức độ rủi ro mà ví sẵn sàng chấp nhận. KHÔNG đưa ra lời khuyên đầu tư. " +
+  "Trả lời bằng tiếng Việt. Chỉ xuất JSON hợp lệ với các key: summary (string), riskNotes (mảng string).";

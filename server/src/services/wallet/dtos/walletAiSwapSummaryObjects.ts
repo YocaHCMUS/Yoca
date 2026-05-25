@@ -17,11 +17,14 @@ export const tokenPnlBreakdownSchema = z.object({
   sellCount: z.number().int().min(0),
   totalEntered: z.number().min(0),
   totalExited: z.number().min(0),
-  entryPriceRange: z.tuple([z.number(), z.number()]).nullable(),
-  exitPriceRange: z.tuple([z.number(), z.number()]).nullable(),
+  totalEnteredAmount: z.number().min(0),
+  totalExitedAmount: z.number().min(0),
+  entryPrices: z.array(z.number()).nullable(),
+  exitPrices: z.array(z.number()).nullable(),
+  totalBoughtVolumeUsd: z.number().min(0),
+  totalSoldVolumeUsd: z.number().min(0),
   longestHoldingTimeMs: z.number().nullable(),
-  maxTolerableLossPercent: z.number().nullable(),
-  minRealizedWinPercent: z.number().nullable(),
+  maxTolerableLossPercent: z.number(),
 });
 
 export const walletAiSwapSummaryResponseSchema = z.object({

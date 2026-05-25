@@ -3,8 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
+  GEMINI_MODEL,
   GOOGLE_AI_KEY,
-  WALLET_AUDIT_MODEL,
+  SWAPS_SAMPLE_SIZE,
+  SYSTEM_PROMPT_EN,
+  SYSTEM_PROMPT_VN,
   WALLET_AUDIT_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
@@ -19,29 +22,12 @@ import {
   type WalletAiSwapSummaryResponse,
 } from "./dtos/walletAiSwapSummaryObjects.js";
 import type { WalletAiSwapSummaryPersisted, TokenPnlBreakdownPersisted } from "@sv/db/schema.js";
+import { isBaseAsset } from "./walletDayActivity.service.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SWAPS_SAMPLE_SIZE = 100;
-const GEMINI_MODEL = process.env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || WALLET_AUDIT_MODEL;
-
-const SYSTEM_PROMPT_EN =
-  "You are a crypto trading analyst. Given the wallet's per-token PnL breakdown, " +
-  "produce a simple, plain-English trading summary and risk analysis. " +
-  "For risk analysis, describe what risk management behavior the wallet shows " +
-  "(e.g. does it cut losses early, hold bags, diversify, use stop-loss patterns?) " +
-  "and how much risk the wallet is willing to take. Do NOT give investment advice. " +
-  "Respond in English. Output ONLY valid JSON with keys: summary (string), riskNotes (array of strings).";
-
-const SYSTEM_PROMPT_VN =
-  "Bạn là chuyên gia phân tích giao dịch crypto. Dựa trên bảng phân tích PnL theo từng token của ví, " +
-  "hãy đưa ra bản tóm tắt giao dịch đơn giản, dễ hiểu. " +
-  "Về phân tích rủi ro, hãy mô tả hành vi quản lý rủi ro mà ví đang thể hiện " +
-  "(ví dụ: có cắt lỗ sớm không, có nắm giữ token lỗ không, có đa dạng hóa không, có dùng stop-loss không?) " +
-  "và mức độ rủi ro mà ví sẵn sàng chấp nhận. KHÔNG đưa ra lời khuyên đầu tư. " +
-  "Trả lời bằng tiếng Việt. Chỉ xuất JSON hợp lệ với các key: summary (string), riskNotes (mảng string).";
 
 export class WalletAiSwapSummaryServiceError extends Error {
   readonly code: WalletAiSwapSummaryErrorCode;
@@ -77,11 +63,12 @@ interface TokenAccumulator {
   sellCount: number;
   entryPrices: number[];
   exitPrices: number[];
-  totalBought: number;
-  totalSold: number;
+  totalBoughtAmount: number;
+  totalSoldAmount: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
   longestHoldingTimeMs: number | null;
   maxTolerableLossPercent: number | null;
-  minRealizedWinPercent: number | null;
 }
 
 function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
@@ -91,13 +78,14 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
     (a, b) => new Date(a.blockTimestampIso).getTime() - new Date(b.blockTimestampIso).getTime(),
   );
 
+
   for (const swap of sorted) {
     const bought = swap.bought;
     const sold = swap.sold;
     if (!bought || !sold) continue;
 
     // -- bought side: token enters wallet --
-    {
+    if (!isBaseAsset(bought.address)) {
       let acc = tokenMap.get(bought.address);
       if (!acc) {
         acc = {
@@ -113,22 +101,25 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
           sellCount: 0,
           entryPrices: [],
           exitPrices: [],
-          totalBought: 0,
-          totalSold: 0,
+          totalBoughtAmount: 0,
+          totalSoldAmount: 0,
+          totalBoughtUsd: 0,
+          totalSoldUsd: 0,
           longestHoldingTimeMs: null,
           maxTolerableLossPercent: null,
-          minRealizedWinPercent: null,
         };
         tokenMap.set(bought.address, acc);
       }
-      acc.entryQueue.push({ amount: bought.amount, price: bought.priceUsd, remaining: bought.amount, timestampMs: new Date(swap.blockTimestampIso).getTime() });
-      acc.entryPrices.push(bought.priceUsd);
-      acc.totalBought += bought.amount;
+      const entryPrice = swap.totalValueUsd && bought.amount > 0 ? swap.totalValueUsd / bought.amount : 0;
+      acc.entryQueue.push({ amount: bought.amount, price: entryPrice, remaining: bought.amount, timestampMs: new Date(swap.blockTimestampIso).getTime() });
+      acc.entryPrices.push(entryPrice);
+      acc.totalBoughtAmount += bought.amount;
+      acc.totalBoughtUsd += swap.totalValueUsd ? swap.totalValueUsd : 0;
       acc.buyCount += 1;
     }
 
     // -- sold side: token exits wallet --
-    {
+    if (!isBaseAsset(sold.address)) {
       let acc = tokenMap.get(sold.address);
       if (!acc) {
         acc = {
@@ -144,19 +135,23 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
           sellCount: 0,
           entryPrices: [],
           exitPrices: [],
-          totalBought: 0,
-          totalSold: 0,
+          totalBoughtAmount: 0,
+          totalSoldAmount: 0,
+          totalBoughtUsd: 0,
+          totalSoldUsd: 0,
           longestHoldingTimeMs: null,
           maxTolerableLossPercent: null,
-          minRealizedWinPercent: null,
         };
         tokenMap.set(sold.address, acc);
       }
 
+      const exitPrice = swap.totalValueUsd && sold.amount > 0 ? swap.totalValueUsd / sold.amount : 0;
       let remainingExit = sold.amount;
-      acc.totalSold += sold.amount;
+      acc.totalSoldAmount += sold.amount;
+      acc.totalSoldUsd += swap.totalValueUsd ? swap.totalValueUsd : 0;
       acc.sellCount += 1;
       const sellTimeMs = new Date(swap.blockTimestampIso).getTime();
+      let hadWinInThisSell = false;
 
       while (remainingExit > 0 && acc.entryQueue.length > 0) {
         const lot = acc.entryQueue[0];
@@ -164,32 +159,30 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
         lot.remaining -= matched;
         remainingExit -= matched;
 
-        const contribution = matched * (sold.priceUsd - lot.price);
+        const contribution = matched * (exitPrice - lot.price);
         acc.realizedPnl += contribution;
-        if (contribution > 0) acc.wins += 1;
+        if (contribution > 0) hadWinInThisSell = true;
 
         const holdMs = sellTimeMs - lot.timestampMs;
         if (acc.longestHoldingTimeMs === null || holdMs > acc.longestHoldingTimeMs) {
           acc.longestHoldingTimeMs = holdMs;
         }
 
-        const retPct = lot.price > 0 ? (sold.priceUsd - lot.price) / lot.price : 0;
+        const retPct = lot.price > 0 ? (exitPrice - lot.price) / lot.price : 0;
         if (retPct < 0) {
           if (acc.maxTolerableLossPercent === null || retPct < acc.maxTolerableLossPercent) {
             acc.maxTolerableLossPercent = retPct;
           }
-        } else {
-          if (acc.minRealizedWinPercent === null || retPct < acc.minRealizedWinPercent) {
-            acc.minRealizedWinPercent = retPct;
-          }
         }
+
+        acc.exitPrices.push(exitPrice);
 
         if (lot.remaining <= 1e-12) {
           acc.entryQueue.shift();
-          acc.exitPrices.push(sold.priceUsd);
         }
       }
 
+      if (hadWinInThisSell) acc.wins += 1;
       acc.exits += 1;
     }
   }
@@ -198,8 +191,6 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
 }
 
 function buildBreakdown(acc: TokenAccumulator): TokenPnlBreakdownPersisted {
-  const entryPrices = acc.entryPrices;
-  const exitPrices = acc.exitPrices;
   return {
     address: acc.address,
     symbol: acc.symbol,
@@ -210,13 +201,16 @@ function buildBreakdown(acc: TokenAccumulator): TokenPnlBreakdownPersisted {
     wins: acc.wins,
     buyCount: acc.buyCount,
     sellCount: acc.sellCount,
-    totalEntered: round2(acc.totalBought),
-    totalExited: round2(acc.totalSold),
-    entryPriceRange: entryPrices.length > 0 ? [Math.min(...entryPrices), Math.max(...entryPrices)] : null,
-    exitPriceRange: exitPrices.length > 0 ? [Math.min(...exitPrices), Math.max(...exitPrices)] : null,
+    totalEntered: round2(acc.totalBoughtUsd),
+    totalExited: round2(acc.totalSoldUsd),
+    totalEnteredAmount: round2(acc.totalBoughtAmount),
+    totalExitedAmount: round2(acc.totalSoldAmount),
+    entryPrices: acc.entryPrices.length > 0 ? acc.entryPrices : null,
+    exitPrices: acc.exitPrices.length > 0 ? acc.exitPrices : null,
+    totalBoughtVolumeUsd: round2(acc.totalBoughtUsd),
+    totalSoldVolumeUsd: round2(acc.totalSoldUsd),
     longestHoldingTimeMs: acc.longestHoldingTimeMs,
-    maxTolerableLossPercent: acc.maxTolerableLossPercent !== null ? round2(acc.maxTolerableLossPercent * 100) : null,
-    minRealizedWinPercent: acc.minRealizedWinPercent !== null ? round2(acc.minRealizedWinPercent * 100) : null,
+    maxTolerableLossPercent: acc.maxTolerableLossPercent !== null ? round2(acc.maxTolerableLossPercent * 100) : 0,
   };
 }
 
@@ -248,23 +242,18 @@ async function readCachedSummary(
   const row = rows[0];
   if (row.fetchedAt < threshold) return null;
 
-  return {
+  const parsed = walletAiSwapSummaryResponseSchema.safeParse({
     address: row.address,
-    language: row.language as "en" | "vn",
-    tradeCount: row.response.tradeCount,
-    realizedPnlUsd: row.response.realizedPnlUsd,
-    winningPercentage: row.response.winningPercentage,
-    totalBoughtUsd: row.response.totalBoughtUsd,
-    totalSoldUsd: row.response.totalSoldUsd,
-    topProfitable: row.response.topProfitable,
-    topLoser: row.response.topLoser,
-    allTokenBreakdowns: row.response.allTokenBreakdowns ?? [],
-    riskNotes: row.response.riskNotes,
-    summary: row.response.summary,
+    language: row.language,
+    ...row.response,
     model: row.model,
     fetchedAt: row.fetchedAt.toISOString(),
     cached: true,
-  };
+  });
+
+  if (!parsed.success) return null;
+
+  return parsed.data;
 }
 
 async function writeCachedSummary(

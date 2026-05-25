@@ -293,11 +293,14 @@ export interface WalletAiSwapSummaryTokenPnl {
   sellCount: number;
   totalEntered: number;
   totalExited: number;
-  entryPriceRange: [number, number] | null;
-  exitPriceRange: [number, number] | null;
+  totalEnteredAmount: number;
+  totalExitedAmount: number;
+  entryPrices: number[] | null;
+  exitPrices: number[] | null;
+  totalBoughtVolumeUsd: number;
+  totalSoldVolumeUsd: number;
   longestHoldingTimeMs: number | null;
-  maxTolerableLossPercent: number | null;
-  minRealizedWinPercent: number | null;
+  maxTolerableLossPercent: number;
 }
 
 export interface WalletAiSwapSummaryResponse {

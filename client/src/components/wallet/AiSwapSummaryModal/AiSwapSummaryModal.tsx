@@ -11,7 +11,10 @@ import {
   type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
+// import { MiniHistogram } from "./MiniHistogram";
 import styles from "./ai-swap-summary.module.scss";
+
+const PAGE_SIZE = 10;
 
 interface AiSwapSummaryModalProps {
   isOpen: boolean;
@@ -19,24 +22,26 @@ interface AiSwapSummaryModalProps {
   walletAddress: string;
 }
 
-function formatPriceRange(range: [number, number] | null): string {
-  if (!range) return "—";
-  const fmt = (n: number) =>
-    n < 0.001
-      ? n.toExponential(4)
-      : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
-  return `${fmt(range[0])} – ${fmt(range[1])}`;
+function formatPriceCompact(n: number): string {
+  if (n < 0.001) return n.toExponential(4);
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 }
 
 function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
   const { tr, fmt } = useLocalization();
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
 
   const sorted = useMemo(
     () => [...report.allTokenBreakdowns].sort((a, b) => (sortAsc ? a.pnlUsd - b.pnlUsd : b.pnlUsd - a.pnlUsd)),
     [report.allTokenBreakdowns, sortAsc],
   );
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const pageTokens = useMemo(() => sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [sorted, page]);
+
+  useEffect(() => { setPage(0); }, [sortAsc]);
 
   const toggleExpand = (addr: string) => {
     setExpandedSet((prev) => {
@@ -119,7 +124,7 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
           </button>
         </div>
         <div className={styles.rankedList}>
-          {sorted.map((t) => {
+          {pageTokens.map((t) => {
             const isExpanded = expandedSet.has(t.address);
             return (
               <div key={t.address} className={styles.rankedEntry}>
@@ -151,40 +156,79 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
                 </div>
                 {isExpanded && (
                   <div className={styles.expandedDetail}>
-                    <div className={styles.detailRow}>
+                    {/* <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.entry")}</span>
-                      <span className={styles.detailValue}>{formatPriceRange(t.entryPriceRange)}</span>
+                      <span className={styles.detailValue}>
+                        <MiniHistogram prices={t.entryPrices ?? []} />
+                      </span>
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.exit")}</span>
-                      <span className={styles.detailValue}>{formatPriceRange(t.exitPriceRange)}</span>
-                    </div>
+                      <span className={styles.detailValue}>
+                        <MiniHistogram prices={t.exitPrices ?? []} />
+                      </span>
+                    </div> */}
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.hold")}</span>
                       <span className={styles.detailValue}>{fmt.datetime.duration(t.longestHoldingTimeMs)}</span>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.winRate")}</span>
+                      <span className={styles.detailValue}>{t.sellCount > 0 ? (t.wins / t.sellCount * 100).toFixed(1) + "%" : "—"}</span>
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.maxLoss")}</span>
                       <span className={`${styles.detailValue} ${styles.lossValue}`}>{fmt.num.percentagePoint(t.maxTolerableLossPercent)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.minWin")}</span>
-                      <span className={`${styles.detailValue} ${styles.winValue}`}>{fmt.num.percentagePoint(t.minRealizedWinPercent)}</span>
-                    </div>
-                    <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.bought")}</span>
-                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalEntered)}</span>
+                      <span className={styles.detailValue}>
+                        <span className={styles.detailAmount}>{fmt.num.compact.decimal(t.totalEnteredAmount)}</span>
+                        <span className={styles.detailVolume}>{fmt.num.compact.currency(t.totalBoughtVolumeUsd)}</span>
+                      </span>
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.sold")}</span>
-                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalExited)}</span>
+                      <span className={styles.detailValue}>
+                        <span className={styles.detailAmount}>{fmt.num.compact.decimal(t.totalExitedAmount)}</span>
+                        <span className={styles.detailVolume}>{fmt.num.compact.currency(t.totalSoldVolumeUsd)}</span>
+                      </span>
                     </div>
+                    {/* <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.buyVolume")}</span>
+                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalBoughtVolumeUsd)}</span>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.sellVolume")}</span>
+                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalSoldVolumeUsd)}</span>
+                    </div> */}
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+        {pageCount > 1 && (
+          <div className={styles.paginationRow}>
+            <button
+              type="button"
+              className={styles.pageBtn}
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              {tr("walletPage.aiSwapSummary.pagePrev")}
+            </button>
+            <span className={styles.pageInfo}>{page + 1} / {pageCount}</span>
+            <button
+              type="button"
+              className={styles.pageBtn}
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              {tr("walletPage.aiSwapSummary.pageNext")}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

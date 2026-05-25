@@ -1223,11 +1223,14 @@ export type TokenPnlBreakdownPersisted = {
   sellCount: number;
   totalEntered: number;
   totalExited: number;
-  entryPriceRange: [number, number] | null;
-  exitPriceRange: [number, number] | null;
+  totalEnteredAmount: number;
+  totalExitedAmount: number;
+  entryPrices: number[] | null;
+  exitPrices: number[] | null;
+  totalBoughtVolumeUsd: number;
+  totalSoldVolumeUsd: number;
   longestHoldingTimeMs: number | null;
-  maxTolerableLossPercent: number | null;
-  minRealizedWinPercent: number | null;
+  maxTolerableLossPercent: number;
 };
 
 // --- News tables (Phase 1: news-fetching AI filter integration) ---
