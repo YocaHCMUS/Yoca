@@ -1178,6 +1178,58 @@ export const walletAuditCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+/**
+ * AI Swap Summary cache.
+ *
+ * Stores Gemini-generated swap trading summaries per wallet+language so we
+ * don't pay the model cost on repeated views. Read path checks
+ * `fetchedAt >= now - 24h`.
+ */
+export const walletAiSwapSummaryCache = pgTable(
+  "wallet_ai_swap_summary_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull().default("en"),
+    response: jsonb("response")
+      .$type<WalletAiSwapSummaryPersisted>()
+      .notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.language] })],
+);
+
+export type WalletAiSwapSummaryPersisted = {
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: TokenPnlBreakdownPersisted | null;
+  topLoser: TokenPnlBreakdownPersisted | null;
+  allTokenBreakdowns: TokenPnlBreakdownPersisted[];
+  riskNotes: string[];
+  summary: string;
+};
+export type TokenPnlBreakdownPersisted = {
+  address: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  pnlUsd: number;
+  trades: number;
+  wins: number;
+  buyCount: number;
+  sellCount: number;
+  totalEntered: number;
+  totalExited: number;
+  entryPriceRange: [number, number] | null;
+  exitPriceRange: [number, number] | null;
+  longestHoldingTimeMs: number | null;
+  maxTolerableLossPercent: number | null;
+  minRealizedWinPercent: number | null;
+};
+
 // --- News tables (Phase 1: news-fetching AI filter integration) ---
 export const newsBatches = pgTable("news_batches", {
   id: serial("id").primaryKey(),

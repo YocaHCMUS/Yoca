@@ -42,6 +42,10 @@ import {
   WalletAuditServiceError,
   getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
+import {
+  WalletAiSwapSummaryServiceError,
+  getWalletAiSwapSummary,
+} from "@sv/services/wallet/walletAiSwapSummary.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
@@ -454,6 +458,54 @@ const app = new Hono()
 
       console.error("Failed to get wallet AI analysis", err);
       return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+    }
+  })
+  .post("/ai-swap-summary", async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
+    }
+
+    try {
+      const summary = await getWalletAiSwapSummary(
+        parsed.data.address,
+        parsed.data.language,
+      );
+      return c.json(summary, 200);
+    } catch (err) {
+      if (err instanceof WalletAiSwapSummaryServiceError) {
+        const errCode = err.code;
+        const statusByCode: Record<
+          WalletAiSwapSummaryServiceError["code"],
+          400 | 409 | 502
+        > = {
+          invalid_address: 400,
+          no_data: 409,
+          model_error: 502,
+          invalid_model_response: 502,
+          provider_unknown: 502,
+        };
+        return c.json(
+          { error: err.message, code: errCode },
+          statusByCode[errCode],
+        );
+      }
+
+      if (err instanceof Error) {
+        console.error("Failed to get wallet AI swap summary", err.message);
+      }
+      return c.json({ error: "Failed to get wallet AI swap summary" }, 500);
     }
   })
   .get("/intelligence", async (c) => {

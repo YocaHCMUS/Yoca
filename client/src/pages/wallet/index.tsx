@@ -91,6 +91,7 @@ import {
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
+import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 
@@ -327,6 +328,8 @@ export default function WalletPage() {
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
+  const [aiSwapSummaryOpen, setAiSwapSummaryOpen] = useState(false);
 
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
@@ -1412,6 +1415,15 @@ export default function WalletPage() {
             <Table
               maxHeight={400}
               title={tr("walletPage.swap")}
+              actions={
+                <Button
+                  size="sm"
+                  kind="tertiary"
+                  onClick={() => setAiSwapSummaryOpen(true)}
+                >
+                  AI Summary
+                </Button>
+              }
               headers={swapHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(swapData)}
@@ -2019,6 +2031,13 @@ export default function WalletPage() {
         onClose={() => setDayPopupOpen(false)}
         wallets={[walletAddress]}
         dayTimestamp={dayPopupTimestamp}
+      />
+
+      <AiSwapSummaryModal
+        isOpen={aiSwapSummaryOpen}
+        onClose={() => setAiSwapSummaryOpen(false)}
+        walletAddress={walletAddress}
+        language={aiAnalysisLanguage}
       />
     </PageWrapper>
   );

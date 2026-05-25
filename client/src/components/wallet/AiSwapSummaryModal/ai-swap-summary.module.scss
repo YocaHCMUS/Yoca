@@ -1,0 +1,350 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.card {
+  background-color: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  width: 960px;
+  max-width: calc(100vw - #{$spacing-09});
+  max-height: 85vh;
+  overflow: hidden;
+  padding: $spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Header ─────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.title {
+  @include type-style('heading-02');
+  color: $text-primary;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+/* ── Two-column layout ──────────────── */
+.twoColumnLayout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: $spacing-06;
+}
+
+.leftColumn {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.rightColumn {
+  width: 320px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-left: 1px solid $border-subtle;
+  padding-left: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+@media (max-width: 768px) {
+  .twoColumnLayout {
+    flex-direction: column;
+  }
+
+  .rightColumn {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid $border-subtle;
+    padding-left: 0;
+    padding-top: $spacing-04;
+  }
+}
+
+/* ── Stats row ──────────────────────── */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-03;
+}
+
+.statCard {
+  background-color: $layer-02;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  padding: $spacing-04;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.statLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statValue {
+  @include type-style('heading-02');
+  color: $text-primary;
+  font-weight: 600;
+}
+
+/* ── Summary section ────────────────── */
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.summaryTitle {
+  @include type-style('heading-02');
+  color: $text-primary;
+  margin: 0;
+  padding-top: $spacing-03;
+  border-top: 1px solid $border-subtle;
+}
+
+.summaryText {
+  @include type-style('body-01');
+  color: $text-primary;
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* ── Section ────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.sectionTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding-top: $spacing-03;
+  border-top: 1px solid $border-subtle;
+}
+
+/* ── Risk list ──────────────────────── */
+.riskList {
+  margin: 0;
+  padding-left: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.riskItem {
+  @include type-style('body-01');
+  color: $text-primary;
+  line-height: 1.5;
+}
+
+/* ── Cached hint ────────────────────── */
+.cachedHint {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-align: right;
+  margin: 0;
+}
+
+/* ── Error state ────────────────────── */
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-04;
+  padding: $spacing-07 0;
+}
+
+.errorText {
+  @include type-style('body-01');
+  color: $support-error;
+  margin: 0;
+  text-align: center;
+}
+
+.retryBtn {
+  background-color: var(--button-primary);
+  color: $text-on-color;
+  border: none;
+  border-radius: 6px;
+  padding: $spacing-03 $spacing-06;
+  @include type-style('body-compact-01');
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    background-color: var(--button-primary-hover);
+  }
+}
+
+/* ── Ranked list header ─────────────── */
+.rankedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.rankedTitle {
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sortToggle {
+  background: transparent;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  color: $text-secondary;
+  cursor: pointer;
+  @include type-style('label-01');
+  padding: 2px $spacing-03;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+    color: $text-primary;
+  }
+}
+
+/* ── Ranked list ────────────────────── */
+.rankedList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rankedEntry {
+  display: flex;
+  flex-direction: column;
+}
+
+.rankedRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  padding: $spacing-02;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.rankedPnl {
+  flex-shrink: 0;
+  min-width: 70px;
+  text-align: right;
+}
+
+.rankedBuySell {
+  @include type-style('label-01');
+  color: $text-secondary;
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: right;
+}
+
+.rankedChevron {
+  color: $icon-secondary;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* ── Expanded detail panel ──────────── */
+.expandedDetail {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+  padding: $spacing-02 $spacing-02 $spacing-02 $spacing-07;
+  margin-left: $spacing-02;
+  border-left: 2px solid $border-subtle;
+  background-color: $layer-02;
+  border-radius: 0 0 4px 4px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.detailLabel {
+  @include type-style('label-01');
+  color: $text-secondary;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.detailValue {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  text-align: right;
+}
+
+.lossValue {
+  color: $support-error;
+  font-weight: 600;
+}
+
+.winValue {
+  color: $support-success;
+  font-weight: 600;
+}

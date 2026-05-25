@@ -281,6 +281,70 @@ export interface WalletIntelligenceResponse {
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export interface WalletAiSwapSummaryTokenPnl {
+  address: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  pnlUsd: number;
+  trades: number;
+  wins: number;
+  buyCount: number;
+  sellCount: number;
+  totalEntered: number;
+  totalExited: number;
+  entryPriceRange: [number, number] | null;
+  exitPriceRange: [number, number] | null;
+  longestHoldingTimeMs: number | null;
+  maxTolerableLossPercent: number | null;
+  minRealizedWinPercent: number | null;
+}
+
+export interface WalletAiSwapSummaryResponse {
+  address: string;
+  language: "en" | "vn";
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: WalletAiSwapSummaryTokenPnl | null;
+  topLoser: WalletAiSwapSummaryTokenPnl | null;
+  allTokenBreakdowns: WalletAiSwapSummaryTokenPnl[];
+  riskNotes: string[];
+  summary: string;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+export async function fetchWalletAiSwapSummary(
+  address: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<WalletAiSwapSummaryResponse> {
+  const response = await client.api.wallets["ai-swap-summary"].$post({
+    json: { address, language },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch wallet AI swap summary (${response.status})`;
+    try {
+      const errorData = await response.json() as { error?: string; message?: string; code?: string };
+      if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch {
+      // ignore parse failure
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as WalletAiSwapSummaryResponse;
+}
+
 export interface WalletAiReferenceEntry {
   ref_id: number;
   type: "wallet" | "exchange" | "token";
@@ -738,6 +802,7 @@ export const walletApi = {
   fetchWalletIdentityBatch,
   fetchWalletIntelligence,
   fetchWalletAiAnalysis,
+  fetchWalletAiSwapSummary,
   fetchWalletAudit,
   fetchDayActivitySummary,
   fetchTokenPriceChartForDay,
@@ -753,6 +818,7 @@ export const walletApi = {
   getIdentityBatch: fetchWalletIdentityBatch,
   getIntelligence: fetchWalletIntelligence,
   getAiAnalysis: fetchWalletAiAnalysis,
+  getAiSwapSummary: fetchWalletAiSwapSummary,
   getAudit: fetchWalletAudit,
   getDayActivitySummary: fetchDayActivitySummary,
   getTokenPriceChartForDay: fetchTokenPriceChartForDay,
