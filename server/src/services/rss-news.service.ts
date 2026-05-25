@@ -1,4 +1,5 @@
 import Parser from "rss-parser";
+import { fetchBraveTokenNews } from "./brave-news.service.js";
 
 export interface TokenNewsArticle {
   title: string;
@@ -36,7 +37,7 @@ interface RssItem extends Parser.Item {
   description?: string;
 }
 
-interface RawNewsArticle {
+export interface RawNewsArticle {
   title: string;
   url: string;
   source: string;
@@ -108,6 +109,7 @@ const RSS_FEEDS: RssFeedConfig[] = [
 
 const RSS_FETCH_TIMEOUT_MS = 12_000;
 const MIN_RELEVANCE_SCORE = 4;
+const MIN_ARTICLES_BEFORE_SEARCH_FALLBACK = 3;
 
 const parser = new Parser<unknown, RssItem>({
   timeout: 12_000,
@@ -247,7 +249,7 @@ function isBitcoinIdentity(identity: TokenNewsIdentity) {
   );
 }
 
-function isSolanaEcosystemIdentity(identity: TokenNewsIdentity) {
+export function isSolanaEcosystemIdentity(identity: TokenNewsIdentity) {
   return (
     identity.address === WRAPPED_SOL_MINT ||
     identity.searchSymbols.some((symbol) => SOLANA_ECOSYSTEM_SYMBOLS.has(symbol)) ||
@@ -557,6 +559,71 @@ function dedupeArticles(articles: TokenNewsArticle[]) {
   return [...byTitle.values()];
 }
 
+function scoreAndFilterArticles(
+  articles: RawNewsArticle[],
+  identity: TokenNewsIdentity,
+) {
+  const scoredArticles = articles.map((article) => {
+    const relevance = scoreArticle(article, identity);
+    return {
+      article,
+      relevance,
+      contentOnlyMatches: getContentOnlyMatches(article, identity),
+    };
+  });
+
+  const matchedArticles = scoredArticles
+    .filter(
+      ({ relevance }) =>
+        relevance.hasStrongMatch && relevance.score >= MIN_RELEVANCE_SCORE,
+    )
+    .map(({ article, relevance }) => ({
+      title: article.title,
+      url: article.url,
+      source: article.source,
+      publishedAt: article.publishedAt,
+      description: article.description,
+      score: relevance.score,
+      matchedBy: relevance.matchedBy,
+    }));
+
+  return { scoredArticles, matchedArticles };
+}
+
+function logContentOnlyRejectedSample(
+  scoredArticles: ReturnType<typeof scoreAndFilterArticles>["scoredArticles"],
+  identity: TokenNewsIdentity,
+  source: string,
+) {
+  const contentOnlyRejectedSample = scoredArticles
+    .filter(
+      ({ relevance, contentOnlyMatches }) =>
+        !relevance.hasStrongMatch && contentOnlyMatches.length > 0,
+    )
+    .slice(0, 3)
+    .map(({ article, relevance, contentOnlyMatches }) => ({
+      title: article.title,
+      source: article.source,
+      score: relevance.score,
+      matchedContentOnly: contentOnlyMatches,
+    }));
+
+  if (contentOnlyRejectedSample.length > 0) {
+    console.debug(
+      "[rss-news] rejected content-only mentions",
+      JSON.stringify(
+        {
+          token: identity.normalizedSymbol,
+          source,
+          sample: contentOnlyRejectedSample,
+        },
+        null,
+        2,
+      ),
+    );
+  }
+}
+
 export async function getRssTokenNews(token: TokenNewsRequest) {
   const identity = buildTokenNewsIdentity(token);
   const selectedFeeds = selectFeedsForToken(identity);
@@ -611,58 +678,58 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
     });
   }
 
-  const scoredArticles = fetchedArticles.map((article) => {
-    const relevance = scoreArticle(article, identity);
-    return {
-      article,
-      relevance,
-      contentOnlyMatches: getContentOnlyMatches(article, identity),
-    };
-  });
+  const {
+    scoredArticles: scoredRssArticles,
+    matchedArticles: matchedRssArticles,
+  } = scoreAndFilterArticles(fetchedArticles, identity);
+  logContentOnlyRejectedSample(scoredRssArticles, identity, "rss");
 
-  const contentOnlyRejectedSample = scoredArticles
-    .filter(
-      ({ relevance, contentOnlyMatches }) =>
-        !relevance.hasStrongMatch && contentOnlyMatches.length > 0,
-    )
-    .slice(0, 3)
-    .map(({ article, relevance, contentOnlyMatches }) => ({
-      title: article.title,
-      source: article.source,
-      score: relevance.score,
-      matchedContentOnly: contentOnlyMatches,
-    }));
+  const rssArticles = dedupeArticles(matchedRssArticles);
+  let braveArticles: TokenNewsArticle[] = [];
+  let fallbackUsed = false;
 
-  if (contentOnlyRejectedSample.length > 0) {
-    console.debug(
-      "[rss-news] rejected content-only mentions",
-      JSON.stringify(
-        {
-          token: identity.normalizedSymbol,
-          sample: contentOnlyRejectedSample,
-        },
-        null,
-        2,
-      ),
-    );
+  if (
+    rssArticles.length < MIN_ARTICLES_BEFORE_SEARCH_FALLBACK &&
+    process.env.BRAVE_SEARCH_API_KEY?.trim()
+  ) {
+    fallbackUsed = true;
+    try {
+      const braveResult = await fetchBraveTokenNews({
+        identity,
+        isSolanaEcosystem: isSolanaEcosystemIdentity(identity),
+      });
+      const { scoredArticles, matchedArticles } = scoreAndFilterArticles(
+        braveResult.articles,
+        identity,
+      );
+      braveArticles = dedupeArticles(matchedArticles);
+
+      console.info("[rss-news] brave fallback", {
+        used: true,
+        query: braveResult.query,
+        endpointUsed: braveResult.endpointUsed,
+        rawResults: braveResult.rawResultCount,
+        normalizedResults: braveResult.articles.length,
+        matchedResults: braveArticles.length,
+      });
+      logContentOnlyRejectedSample(scoredArticles, identity, "brave");
+    } catch (err) {
+      console.warn("[rss-news] brave fallback failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  } else {
+    console.info("[rss-news] brave fallback", {
+      used: false,
+      reason:
+        rssArticles.length >= MIN_ARTICLES_BEFORE_SEARCH_FALLBACK
+          ? "rss-threshold-met"
+          : "missing-api-key",
+      rssArticles: rssArticles.length,
+    });
   }
 
-  const matchedArticles = scoredArticles
-    .filter(
-      ({ relevance }) =>
-        relevance.hasStrongMatch && relevance.score >= MIN_RELEVANCE_SCORE,
-    )
-    .map(({ article, relevance }) => ({
-      title: article.title,
-      url: article.url,
-      source: article.source,
-      publishedAt: article.publishedAt,
-      description: article.description,
-      score: relevance.score,
-      matchedBy: relevance.matchedBy,
-    }));
-
-  const articles = dedupeArticles(matchedArticles).sort((a, b) => {
+  const articles = dedupeArticles([...rssArticles, ...braveArticles]).sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return (
       (b.publishedAt ? Date.parse(b.publishedAt) : 0) -
@@ -675,6 +742,9 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
     selectedFeedSources: selectedFeeds.map((feed) => feed.source),
     articlesFetched: fetchedArticles.length,
     articlesMatched: articles.length,
+    rssArticles: rssArticles.length,
+    braveArticles: braveArticles.length,
+    fallbackUsed,
     failedFeeds: failedFeeds.map((feed) => feed.source),
   });
 
@@ -688,8 +758,13 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
       symbol: identity.normalizedSymbol,
       name: identity.originalName,
     },
-    source: "rss" as const,
+    source: fallbackUsed ? ("rss+brave" as const) : ("rss" as const),
     updatedAt: new Date().toISOString(),
     articles,
+    meta: {
+      rssArticles: rssArticles.length,
+      braveArticles: braveArticles.length,
+      fallbackUsed,
+    },
   };
 }

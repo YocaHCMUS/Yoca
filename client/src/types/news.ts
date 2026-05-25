@@ -53,9 +53,14 @@ export interface TokenNewsResponseData {
         symbol: string;
         name: string;
     };
-    source: 'rss';
+    source: 'rss' | 'rss+brave';
     updatedAt: string;
     articles: TokenNewsArticle[];
+    meta?: {
+        rssArticles: number;
+        braveArticles: number;
+        fallbackUsed: boolean;
+    };
 }
 
 export interface TokenNewsApiResponse {
@@ -64,7 +69,7 @@ export interface TokenNewsApiResponse {
 }
 
 export interface NewsFilterResult {
-    source: 'rss';
+    source: 'rss' | 'rss+brave';
     updatedAt: string;
     entries: NewsArticle[];
 }
