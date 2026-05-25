@@ -183,7 +183,7 @@ export function TokenAverageTradePrice({
     const normalizedTrades = recentTrades.data
       .map((trade): TradePoint => {
         const side = trade.tradeAction == "buy" ? "buy" : "sell";
-        const price = getTradeRowPrice(trade as Record<string, unknown>);
+        const price = getTradeRowPrice(trade);
 
         return {
           unixTimeMs: trade.blockUnixTimeMs,
@@ -203,7 +203,7 @@ export function TokenAverageTradePrice({
 
     return mapTradesWithFallbackPrice(
       selectedRangeTrades,
-      priceData.data as TimeSeriesDataPoint[] | undefined,
+      priceData.data,
       true,
     );
   }, [recentTrades.data, priceData.data, selectedTimeRange]);
@@ -271,7 +271,6 @@ export function TokenAverageTradePrice({
                   {tokenSymbol ??
                     fmt.text.address(tokenAddress, {
                       maxLength: 4,
-                      position: "end",
                     })}
                 </Link>
                 <CpyBtn size="xs" copyWhat={tokenAddress} />
@@ -364,7 +363,7 @@ export function TokenAverageTradePrice({
           },
           {
             key: "value",
-            header: `${tr("walletPage.value")} (USD)`,
+            header: `${tr("walletPage.value")}`,
             align: "end",
           },
           {
