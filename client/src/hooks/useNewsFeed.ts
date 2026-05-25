@@ -4,14 +4,14 @@
  */
 
 import { useCallback, useState } from 'react';
-import { getNewsForToken } from '@/services/news';
+import { getTokenNews } from '@/services/news';
 import type { NewsArticle, TokenNewsQuery } from '@/types/news';
 
 interface UseNewsFeedState {
     entries: NewsArticle[];
     isLoading: boolean;
     error: string | null;
-    cached: boolean;
+    updatedAt: string | null;
     hasLoaded: boolean;
 }
 
@@ -20,7 +20,7 @@ export function useNewsFeed(query: TokenNewsQuery) {
         entries: [],
         isLoading: false,
         error: null,
-        cached: false,
+        updatedAt: null,
         hasLoaded: false,
     });
 
@@ -28,12 +28,12 @@ export function useNewsFeed(query: TokenNewsQuery) {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         try {
-            const result = await getNewsForToken(query);
+            const result = await getTokenNews(query);
             setState({
                 entries: result.entries || [],
                 isLoading: false,
                 error: null,
-                cached: result.cached,
+                updatedAt: result.updatedAt,
                 hasLoaded: true,
             });
         } catch (err) {
@@ -46,7 +46,7 @@ export function useNewsFeed(query: TokenNewsQuery) {
                 hasLoaded: true,
             }));
         }
-    }, [query]);
+    }, [query.address, query.symbol, query.name]);
 
     const refresh = useCallback(() => {
         fetchNews();

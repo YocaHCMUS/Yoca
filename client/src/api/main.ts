@@ -33,6 +33,7 @@ type WalletTagsRouteClient = ClientTypeOf<"/api/walletTags">;
 type AlertsClient = ClientTypeOf<"/api/alerts">;
 type AlertsHpClient = ClientTypeOf<"/api/alertsHp">;
 type NewsClient = ClientTypeOf<"/api/news">;
+type TokenNewsClient = ClientTypeOf<"/api/token-news">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 
 export type ApiClient = {
@@ -52,6 +53,7 @@ export type ApiClient = {
     alerts: AlertsClient;
     alertsHp: AlertsHpClient;
     news: NewsClient;
+    tokenNews: TokenNewsClient;
     payment: PaymentClient;
   };
 };
@@ -73,6 +75,7 @@ const client: ApiClient = {
     alerts: hcc("/api/alerts"),
     alertsHp: hcc("/api/alertsHp"),
     news: hcc("/api/news"),
+    tokenNews: hcc("/api/token-news"),
     payment: hcc("/api/payment"),
   },
 };

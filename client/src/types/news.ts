@@ -24,6 +24,7 @@ export interface NewsArticle {
     batchId?: number;
     title: string;
     url: string;
+    source?: string;
     description?: string | null;
     publishedAt?: string | null;
     sourceName?: string | null;
@@ -31,11 +32,40 @@ export interface NewsArticle {
     contentHash?: string;
     extraSnippets?: string[] | null;
     context?: NewsTokenContext | null;
+    score?: number;
+    matchedBy?: string[];
     raw?: Record<string, unknown>;
 }
 
+export interface TokenNewsArticle {
+    title: string;
+    url: string;
+    source: string;
+    publishedAt: string | null;
+    description: string;
+    score: number;
+    matchedBy: string[];
+}
+
+export interface TokenNewsResponseData {
+    token: {
+        address: string;
+        symbol: string;
+        name: string;
+    };
+    source: 'rss';
+    updatedAt: string;
+    articles: TokenNewsArticle[];
+}
+
+export interface TokenNewsApiResponse {
+    success: boolean;
+    data: TokenNewsResponseData;
+}
+
 export interface NewsFilterResult {
-    cached: boolean;
+    source: 'rss';
+    updatedAt: string;
     entries: NewsArticle[];
 }
 
