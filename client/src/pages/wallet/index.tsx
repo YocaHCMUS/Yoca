@@ -2037,7 +2037,6 @@ export default function WalletPage() {
         isOpen={aiSwapSummaryOpen}
         onClose={() => setAiSwapSummaryOpen(false)}
         walletAddress={walletAddress}
-        language={aiAnalysisLanguage}
       />
     </PageWrapper>
   );

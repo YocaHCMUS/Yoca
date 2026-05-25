@@ -8,32 +8,15 @@ import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
 import {
   fetchWalletAiSwapSummary,
   type WalletAiSwapSummaryResponse,
-  type WalletAiSwapSummaryTokenPnl,
+  type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./ai-swap-summary.module.scss";
 
 interface AiSwapSummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
   walletAddress: string;
-  language: "en" | "vn";
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms == null) return "—";
-  const seconds = Math.floor(ms / 1000);
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function formatPercent(value: number | null): string {
-  if (value == null) return "—";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
 }
 
 function formatPriceRange(range: [number, number] | null): string {
@@ -45,15 +28,8 @@ function formatPriceRange(range: [number, number] | null): string {
   return `${fmt(range[0])} – ${fmt(range[1])}`;
 }
 
-const USD_FORMATTER = (v: number | null) =>
-  v == null ? "—" : `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const COMPACT_USD_FORMATTER = (v: number | null) =>
-  v == null ? "—" : `$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-
 function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
-  const vn = report.language === "vn";
-  const l = (en: string, vnStr: string) => vn ? vnStr : en;
+  const { tr, fmt } = useLocalization();
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
 
@@ -76,34 +52,34 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
       <div className={styles.leftColumn}>
         <div className={styles.statsRow}>
           <div className={styles.statCard}>
-            <span className={styles.statLabel}>{l("Realized PnL", "PnL thực tế")}</span>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
             <span className={styles.statValue}>
               <TrendNumWithSign
                 value={report.realizedPnlUsd}
                 prefixes="plus-minus"
-                formatter={USD_FORMATTER}
+                formatter={fmt.num.currency}
               />
             </span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statLabel}>{l("Win Rate", "Tỷ lệ thắng")}</span>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.winRate")}</span>
             <span className={styles.statValue}>{report.winningPercentage.toFixed(1)}%</span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statLabel}>{l("Trades", "Giao dịch")}</span>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.trades")}</span>
             <span className={styles.statValue}>{report.tradeCount}</span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statLabel}>{l("Volume", "Khối lượng")}</span>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.volume")}</span>
             <span className={styles.statValue}>
-              ${(report.totalBoughtUsd + report.totalSoldUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              {fmt.num.compact.currency(report.totalBoughtUsd + report.totalSoldUsd)}
             </span>
           </div>
         </div>
 
         <div className={styles.summarySection}>
           <h3 className={styles.summaryTitle}>
-            {l("Summary", "Tóm tắt")}
+            {tr("walletPage.aiSwapSummary.summary")}
           </h3>
           <p className={styles.summaryText}>{report.summary}</p>
         </div>
@@ -111,7 +87,7 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
         {report.riskNotes.length > 0 && (
           <div className={styles.section}>
             <h4 className={styles.sectionTitle}>
-              {l("Risk Analysis", "Phân tích rủi ro")}
+              {tr("walletPage.aiSwapSummary.riskAnalysis")}
             </h4>
             <ul className={styles.riskList}>
               {report.riskNotes.map((note, i) => (
@@ -123,7 +99,7 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
 
         {report.cached && (
           <p className={styles.cachedHint}>
-            {l("Cached result", "Kết quả từ bộ nhớ đệm")}
+            {tr("walletPage.aiSwapSummary.cachedResult")}
           </p>
         )}
       </div>
@@ -131,13 +107,13 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
       <div className={styles.rightColumn}>
         <div className={styles.rankedHeader}>
           <span className={styles.rankedTitle}>
-            {l("All Tokens", "Tất cả token")}
+            {tr("walletPage.aiSwapSummary.allTokens")}
           </span>
           <button
             type="button"
             className={styles.sortToggle}
             onClick={() => setSortAsc(!sortAsc)}
-            title={sortAsc ? l("Sorted: worst PnL first", "Sắp xếp: PnL thấp nhất") : l("Sorted: best PnL first", "Sắp xếp: PnL cao nhất")}
+            title={sortAsc ? tr("walletPage.aiSwapSummary.sortedWorst") : tr("walletPage.aiSwapSummary.sortedBest")}
           >
             PnL {sortAsc ? "↑" : "↓"}
           </button>
@@ -165,7 +141,7 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
                     <TrendNumWithSign
                       value={t.pnlUsd}
                       prefixes="plus-minus"
-                      formatter={USD_FORMATTER}
+                      formatter={fmt.num.currency}
                     />
                   </span>
                   <span className={styles.rankedBuySell}>{t.buyCount}b / {t.sellCount}s</span>
@@ -176,32 +152,32 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
                 {isExpanded && (
                   <div className={styles.expandedDetail}>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Entry", "Vào")}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.entry")}</span>
                       <span className={styles.detailValue}>{formatPriceRange(t.entryPriceRange)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Exit", "Ra")}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.exit")}</span>
                       <span className={styles.detailValue}>{formatPriceRange(t.exitPriceRange)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Hold", "Giữ")}</span>
-                      <span className={styles.detailValue}>{formatDuration(t.longestHoldingTimeMs)}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.hold")}</span>
+                      <span className={styles.detailValue}>{fmt.datetime.duration(t.longestHoldingTimeMs)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Max Loss", "Lỗ nhất")}</span>
-                      <span className={`${styles.detailValue} ${styles.lossValue}`}>{formatPercent(t.maxTolerableLossPercent)}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.maxLoss")}</span>
+                      <span className={`${styles.detailValue} ${styles.lossValue}`}>{fmt.num.percentagePoint(t.maxTolerableLossPercent)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Min Win", "Lời nhất")}</span>
-                      <span className={`${styles.detailValue} ${styles.winValue}`}>{formatPercent(t.minRealizedWinPercent)}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.minWin")}</span>
+                      <span className={`${styles.detailValue} ${styles.winValue}`}>{fmt.num.percentagePoint(t.minRealizedWinPercent)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Bought", "Mua")}</span>
-                      <span className={styles.detailValue}>{COMPACT_USD_FORMATTER(t.totalEntered)}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.bought")}</span>
+                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalEntered)}</span>
                     </div>
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{l("Sold", "Bán")}</span>
-                      <span className={styles.detailValue}>{COMPACT_USD_FORMATTER(t.totalExited)}</span>
+                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.sold")}</span>
+                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalExited)}</span>
                     </div>
                   </div>
                 )}
@@ -226,11 +202,13 @@ export function AiSwapSummaryModal({
   isOpen,
   onClose,
   walletAddress,
-  language,
 }: AiSwapSummaryModalProps) {
+  const { tr, lang } = useLocalization();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<WalletAiSwapSummaryResponse | null>(null);
+
+  const apiLanguage: WalletAiAnalysisLanguage = lang === "vi" ? "vn" : "en";
 
   const fetch = useCallback(async () => {
     if (!isOpen || !walletAddress) return;
@@ -238,14 +216,14 @@ export function AiSwapSummaryModal({
     setError(null);
     setReport(null);
     try {
-      const result = await fetchWalletAiSwapSummary(walletAddress, language);
+      const result = await fetchWalletAiSwapSummary(walletAddress, apiLanguage);
       setReport(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load AI swap summary");
     } finally {
       setLoading(false);
     }
-  }, [isOpen, walletAddress, language]);
+  }, [isOpen, walletAddress, apiLanguage]);
 
   useEffect(() => {
     if (isOpen) void fetch();
@@ -256,20 +234,17 @@ export function AiSwapSummaryModal({
   const modalRoot = document.getElementById(ID_MODAL_ROOT);
   if (!modalRoot) return null;
 
-  const vn = language === "vn";
-  const label = vn ? "AI Tổng kết Giao dịch" : "AI Swap Summary";
-
   return ReactDOM.createPortal(
     <div
       className={styles.backdrop}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={label}
+      aria-label={tr("walletPage.aiSwapSummary.title")}
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <span className={styles.title}>{label}</span>
+          <span className={styles.title}>{tr("walletPage.aiSwapSummary.title")}</span>
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -290,7 +265,7 @@ export function AiSwapSummaryModal({
               className={styles.retryBtn}
               onClick={() => void fetch()}
             >
-              {vn ? "Thử lại" : "Retry"}
+              {tr("walletPage.aiSwapSummary.retry")}
             </button>
           </div>
         ) : report ? (
