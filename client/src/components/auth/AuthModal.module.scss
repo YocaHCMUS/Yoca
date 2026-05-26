@@ -305,6 +305,137 @@
   transition-delay: 1.2s;
 }
 
+/* ===== LIGHT MODE STYLES ===== */
+.overlay.light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.container.light {
+  background: #f5f5f7;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.08), 0 0 25px rgba(153, 69, 255, 0.12);
+
+  h1 {
+    color: #1a1a1a;
+  }
+
+  p {
+    color: #666666;
+  }
+}
+
+.formBox.light {
+  background: #f5f5f7;
+  color: #1a1a1a;
+
+  input {
+    color: #1a1a1a;
+  }
+}
+
+.inputBox input.light {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(153, 69, 255, 0.2);
+  color: #1a1a1a;
+
+  &:focus {
+    border-color: rgb(153, 69, 255);
+    background: rgba(153, 69, 255, 0.08);
+  }
+
+  &::placeholder {
+    color: #999999;
+  }
+}
+
+.inputBox i.light {
+  color: rgb(20, 241, 149);
+}
+
+.errorText.light {
+  color: #ef4444;
+}
+
+.globalError.light {
+  color: #ef4444;
+}
+
+.forgotLink.light {
+  a {
+    color: #666666;
+
+    &:hover {
+      color: rgb(153, 69, 255);
+    }
+  }
+}
+
+.btn.light {
+  background: linear-gradient(120deg, rgb(153, 69, 255) 0%, rgb(125, 95, 255) 52%, rgb(20, 241, 149) 100%);
+  color: #ffffff;
+  box-shadow: rgba(153, 69, 255, 0.25) 0px 0px 14px;
+
+  &:hover {
+    box-shadow: rgba(153, 69, 255, 0.4) 0px 0px 20px;
+  }
+}
+
+.socialIcons.light {
+  button,
+  :global(.wallet-adapter-button-trigger) {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(153, 69, 255, 0.3) !important;
+    color: #1a1a1a !important;
+
+    &:hover {
+      background-color: rgba(153, 69, 255, 0.08) !important;
+      border-color: rgb(153, 69, 255) !important;
+    }
+  }
+}
+
+.toggleBox.light {
+  &::before {
+    background: linear-gradient(120deg, 
+      rgb(153, 69, 255) 0%, 
+      rgb(125, 95, 255) 12%, 
+      rgb(110, 210, 255) 25%, 
+      
+      rgb(110, 210, 255) 25%,
+      rgb(153, 69, 255) 75%, 
+      
+      rgb(153, 69, 255) 75%, 
+      rgb(125, 95, 255) 91.99%, 
+      rgb(110, 210, 255) 100%
+    );
+  }
+}
+
+.togglePanel.light {
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.15) 0%, rgba(110, 210, 255, 0.15) 100%);
+  color: #1a1a1a;
+
+  h1 {
+    color: #1a1a1a;
+  }
+
+  p {
+    color: #666666;
+    margin-bottom: 20px;
+  }
+
+  .btn {
+    color: #1a1a1a !important;
+    border: 2px solid rgba(153, 69, 255, 0.4) !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+
+    &:hover {
+      background: rgba(153, 69, 255, 0.1) !important;
+      border-color: rgb(153, 69, 255) !important;
+    }
+  }
+}
+
 /* Các đoạn responsive giữ nguyên */
 @media screen and (max-width: 650px) {
   .container {
