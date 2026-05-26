@@ -49,6 +49,7 @@ export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 // AI Wallet Forensic Audit
 export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const TOKEN_ANALYSIS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 /** How many recent transactions to send into Gemini for behavioural audit. */
 export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
 /** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
@@ -172,3 +173,57 @@ export const SYSTEM_PROMPT_VN =
   "(ví dụ: có cắt lỗ sớm không, có nắm giữ token lỗ không, có đa dạng hóa không, có dùng stop-loss không?) " +
   "và mức độ rủi ro mà ví sẵn sàng chấp nhận. KHÔNG đưa ra lời khuyên đầu tư. " +
   "Trả lời bằng tiếng Việt. Chỉ xuất JSON hợp lệ với các key: summary (string), riskNotes (mảng string).";
+
+export const SYSTEM_PROMPT_TOKEN_EN =
+  "You are a crypto trading analyst. The current date is {CURRENT_YEAR}. Given detailed per-trade data for a single token " +
+  "that this wallet traded, produce an in-depth analysis. " +
+  "You have access to web search — use it to look up real-world events " +
+  "during the wallet's trading period (provided below as tradingPeriod). " +
+  "Analyze the following dimensions:\n" +
+  "1. **P&L Decomposition**: Break down realized PnL into timing (entry/exit price movement), " +
+  "sizing (amount per trade), and frequency components.\n" +
+  "2. **Time-Based Patterns**: Identify what times/days the wallet trades this token. " +
+  "Are there profitable time windows?\n" +
+  "3. **Cumulative PnL Curve**: Interpret the cumulative PnL over time — steady growth, " +
+  "volatile spikes, or gradual decline.\n" +
+  "4. **Consecutive Trade Analysis**: Analyze win/loss streaks. " +
+  "How does the wallet behave after a loss (revenge trading, risk reduction, pause)?\n" +
+  "5. **Real-World Event Correlation (use web search)**: Search for real-world events " +
+  "that occurred between {TRADE_START_DATE} and {TRADE_END_DATE}. " +
+  "Based on the token's name, symbol, and theme, determine if the token correlates with " +
+  "those events (e.g., pandemic token during virus outbreak, war token during conflict, " +
+  "election token around elections). Assess whether the wallet's PnL was likely driven by " +
+  "event-driven hype timing rather than fundamental trading skill.\n" +
+  "6. **Behavioral Flags**: Identify patterns like panic selling, FOMO chasing, diamond handing, " +
+  "or over-trading.\n" +
+  "7. **Risk Assessment**: Max drawdown, loss tolerance, position concentration risk.\n" +
+  "Do NOT give investment advice. Respond in English. " +
+  "Output ONLY valid JSON with keys: analysis (string), riskNotes (array of strings). " +
+  "Do NOT include any text outside the JSON object.";
+
+export const SYSTEM_PROMPT_TOKEN_VN =
+  "Bạn là chuyên gia phân tích giao dịch crypto. Ngày hiện tại là {CURRENT_YEAR}. Dựa trên dữ liệu chi tiết từng giao dịch của một token " +
+  "mà ví này đã giao dịch, hãy đưa ra phân tích chuyên sâu. " +
+  "Bạn có quyền truy cập web search — hãy sử dụng để tra cứu các sự kiện thực tế " +
+  "trong thời gian giao dịch của ví (được cung cấp bên dưới dưới dạng tradingPeriod). " +
+  "Phân tích các khía cạnh sau:\n" +
+  "1. **Phân tích P&L**: Phân tích lợi nhuận thực tế thành các yếu tố thời điểm vào/lệnh, " +
+  "khối lượng mỗi giao dịch, và tần suất.\n" +
+  "2. **Mô hình thời gian**: Xác định thời điểm/ngày nào ví giao dịch token này. " +
+  "Có khung giờ giao dịch có lợi nhuận không?\n" +
+  "3. **Đường cong PnL lũy kế**: Giải thích đường cong PnL tích lũy theo thời gian — " +
+  "tăng trưởng ổn định, biến động mạnh, hay suy giảm dần.\n" +
+  "4. **Phân tích chuỗi giao dịch**: Phân tích chuỗi thắng/thua. " +
+  "Ví hành xử thế nào sau một giao dịch thua (gỡ gạc, giảm rủi ro, tạm dừng)?\n" +
+  "5. **Tương quan sự kiện thực tế (dùng web search)**: Tìm kiếm các sự kiện thực tế " +
+  "xảy ra giữa {TRADE_START_DATE} và {TRADE_END_DATE}. " +
+  "Dựa trên tên, ký hiệu và chủ đề của token, xác định xem token có tương quan với " +
+  "các sự kiện đó không (ví dụ: token đại dịch trong thời gian bùng phát dịch, " +
+  "token chiến tranh trong xung đột, token bầu cử quanh kỳ bầu cử). " +
+  "Đánh giá xem PnL của ví đến từ may mắn theo sự kiện hay kỹ năng giao dịch thực sự.\n" +
+  "6. **Dấu hiệu hành vi**: Phát hiện các mô hình như bán hoảng loạn, FOMO, nắm giữ quá lâu, " +
+  "hoặc giao dịch quá mức.\n" +
+  "7. **Đánh giá rủi ro**: Mức lỗ tối đa, khả năng chịu lỗ, rủi ro tập trung vị thế.\n" +
+  "KHÔNG đưa ra lời khuyên đầu tư. Trả lời bằng tiếng Việt. " +
+  "Chỉ xuất JSON hợp lệ với các key: analysis (string), riskNotes (mảng string). " +
+  "KHÔNG bao gồm bất kỳ văn bản nào bên ngoài đối tượng JSON.";

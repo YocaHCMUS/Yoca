@@ -348,6 +348,73 @@ export async function fetchWalletAiSwapSummary(
   return data as WalletAiSwapSummaryResponse;
 }
 
+export interface WalletTokenTradeEvent {
+  timestampMs: number;
+  type: "buy" | "sell";
+  price: number;
+  amount: number;
+  valueUsd: number;
+  pnlUsd?: number;
+  pnlPercent?: number;
+  holdingTimeMs?: number;
+}
+
+export interface WalletTokenPnlDistribution {
+  extremeProfit: number;
+  highProfit: number;
+  profit: number;
+  lowLoss: number;
+  highLoss: number;
+}
+
+export interface TokenDeepAnalysisResponse {
+  address: string;
+  tokenAddress: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  analysis: string;
+  riskNotes: string[];
+  tradeCount: number;
+  realizedPnlUsd: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  tradeTimeline: WalletTokenTradeEvent[];
+  pnlDistribution: WalletTokenPnlDistribution;
+  cumulativePnlCurve: [number, number][];
+  winningPercentage: number;
+  model: string;
+  cached: boolean;
+}
+
+export async function fetchTokenDeepAnalysis(
+  walletAddress: string,
+  tokenAddress: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<TokenDeepAnalysisResponse> {
+  const response = await client.api.wallets["ai-swap-summary"]["token"].$post({
+    json: { address: walletAddress, tokenAddress, language },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch token deep analysis (${response.status})`;
+    try {
+      const errorData = await response.json() as { error?: string; message?: string; code?: string };
+      if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch {
+      // ignore parse failure
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as TokenDeepAnalysisResponse;
+}
+
 export interface WalletAiReferenceEntry {
   ref_id: number;
   type: "wallet" | "exchange" | "token";

@@ -1,0 +1,356 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Loading } from "@carbon/react";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import {
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
+import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import {
+  fetchTokenDeepAnalysis,
+  type TokenDeepAnalysisResponse,
+  type WalletAiAnalysisLanguage,
+} from "@/services/wallet/walletApi";
+import { TokenPriceChart, type TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
+import TrendNumWithSign from "@/components/TrendNumWithSign";
+import styles from "./TokenDeepAnalysisView.module.scss";
+
+interface TokenDeepAnalysisViewProps {
+  walletAddress: string;
+  tokenAddress: string;
+  apiLanguage: WalletAiAnalysisLanguage;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function groupTradesByDay(timeline: TokenDeepAnalysisResponse["tradeTimeline"]): Map<number, TradeIndicator[]> {
+  const dayMap = new Map<number, TradeIndicator[]>();
+  for (const event of timeline) {
+    const dayStart = Math.floor(event.timestampMs / DAY_MS) * DAY_MS;
+    if (!dayMap.has(dayStart)) {
+      dayMap.set(dayStart, []);
+    }
+    dayMap.get(dayStart)!.push({
+      timestampMs: event.timestampMs,
+      type: event.type,
+      price: event.price,
+      amount: event.amount,
+      symbol: "",
+    });
+  }
+  return new Map([...dayMap.entries()].sort(([a], [b]) => a - b));
+}
+
+function formatDate(ms: number): string {
+  const d = new Date(ms);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+const PIE_COLORS = [CHART_COLOR_PALETTE[1], CHART_COLOR_PALETTE[5], CHART_COLOR_PALETTE[6], CHART_COLOR_PALETTE[4], "#da1e28"];
+
+export function TokenDeepAnalysisView({
+  walletAddress,
+  tokenAddress,
+  apiLanguage,
+}: TokenDeepAnalysisViewProps) {
+  const { tr, fmt } = useLocalization();
+  const baseOption = useCarbonChartBaseOption();
+  const [data, setData] = useState<TokenDeepAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedNotes, setExpandedNotes] = useState(false);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchTokenDeepAnalysis(walletAddress, tokenAddress, apiLanguage);
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load token analysis");
+    } finally {
+      setLoading(false);
+    }
+  }, [walletAddress, tokenAddress, apiLanguage]);
+
+  useEffect(() => {
+    void fetch();
+  }, [fetch]);
+
+  const tradeDays = useMemo(() => {
+    if (!data) return new Map<number, TradeIndicator[]>();
+    return groupTradesByDay(data.tradeTimeline);
+  }, [data]);
+
+  const pieOption = useMemo((): EChartsOption | null => {
+    if (!data) return null;
+    const d = data.pnlDistribution;
+    const buckets = [
+      { name: tr("walletPage.aiSwapSummary.extremeProfit"), value: d.extremeProfit },
+      { name: tr("walletPage.aiSwapSummary.highProfit"), value: d.highProfit },
+      { name: tr("walletPage.aiSwapSummary.profit"), value: d.profit },
+      { name: tr("walletPage.aiSwapSummary.lowLoss"), value: d.lowLoss },
+      { name: tr("walletPage.aiSwapSummary.highLoss"), value: d.highLoss },
+    ];
+
+    const totalTradeExits = buckets.reduce((s, b) => s + b.value, 0);
+
+    return {
+      ...baseOption,
+      tooltip: {
+        ...baseOption.tooltip,
+        trigger: "item" as const,
+        formatter: (params: unknown) => {
+          const p = params as { name: string; value: number; percent: number };
+          let html = createTooltipHeader(p.name);
+          html += createTooltipRow(tr("walletPage.aiSwapSummary.trades"), String(p.value));
+          html += createTooltipRow(
+            tr("walletPage.aiSwapSummary.pnlDistribution"),
+            `${p.percent.toFixed(1)}%`,
+          );
+          return html;
+        },
+      },
+      legend: { show: false },
+      series: [
+        {
+          type: "pie",
+          radius: ["30%", "65%"],
+          center: ["50%", "50%"],
+          data: buckets.map((b, i) => ({
+            name: b.name,
+            value: b.value,
+            itemStyle: {
+              color: PIE_COLORS[i % PIE_COLORS.length],
+              borderColor: "transparent",
+              borderWidth: 2,
+              borderRadius: 4,
+            },
+          })),
+          label: {
+            formatter: (p: unknown) => {
+              const pp = p as { name: string; data: { value: number } };
+              if (totalTradeExits === 0) return pp.name;
+              const pct = (pp.data.value / totalTradeExits * 100).toFixed(1);
+              return `${pp.name}\n${pct}%`;
+            },
+            color: baseOption.textStyle.color,
+            fontSize: 10,
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: "rgba(0, 0, 0, 0.5)",
+            },
+          },
+        },
+      ],
+    };
+  }, [data, tr, baseOption]);
+
+  const cumulativeOption = useMemo((): EChartsOption | null => {
+    if (!data || data.cumulativePnlCurve.length === 0) return null;
+
+    const sorted = [...data.cumulativePnlCurve].sort(([a], [b]) => a - b);
+    const chartData = sorted.map(([ts, pnl]) => [ts, pnl] as [number, number]);
+    const color = CHART_COLOR_PALETTE[0];
+
+    return {
+      ...baseOption,
+      tooltip: {
+        ...baseOption.tooltip,
+        trigger: "axis" as const,
+        formatter: (params: unknown) => {
+          if (!Array.isArray(params) || params.length === 0) return "";
+          const entry = params[0] as { data: [number, number] };
+          const [ts, pnl] = entry.data;
+          let html = createTooltipHeader(new Date(ts).toLocaleDateString());
+          html += createTooltipRow(
+            tr("walletPage.aiSwapSummary.cumulativePnl"),
+            fmt.num.currency(pnl),
+          );
+          return html;
+        },
+      },
+      legend: { show: false },
+      grid: { left: 56, right: 16, top: 12, bottom: 28 },
+      xAxis: {
+        ...baseOption.xAxis,
+        type: "time",
+        boundaryGap: false as never,
+        splitNumber: 4,
+        axisLabel: { ...baseOption.xAxis?.axisLabel, fontSize: 10 },
+      },
+      yAxis: {
+        ...baseOption.yAxis,
+        type: "value",
+        axisLabel: {
+          ...baseOption.yAxis?.axisLabel,
+          fontSize: 10,
+          formatter: (val: number) => fmt.num.compact.currency(val),
+        },
+      },
+      series: [
+        {
+          type: "line",
+          data: chartData,
+          showSymbol: false,
+          smooth: false,
+          lineStyle: { width: 2, color },
+          areaStyle: {
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: `${color}4D` },
+                { offset: 1, color: `${color}0D` },
+              ],
+            },
+          },
+        },
+      ],
+    };
+  }, [data, fmt, tr, baseOption]);
+
+  if (loading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <Loading withOverlay={false} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.errorContainer}>
+        <p className={styles.errorText}>{error}</p>
+        <button type="button" className={styles.retryBtn} onClick={() => void fetch()}>
+          {tr("walletPage.aiSwapSummary.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className={styles.twoColumnLayout}>
+      {/* ── Left Column: Analysis + Stats ── */}
+      <div className={styles.leftColumn}>
+        <div className={styles.statsRow}>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.trades")}</span>
+            <span className={styles.statValue}>{data.tradeCount}</span>
+          </div>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
+            <span className={styles.statValue}>
+              <TrendNumWithSign
+                value={data.realizedPnlUsd}
+                prefixes="plus-minus"
+                formatter={fmt.num.currency}
+              />
+            </span>
+          </div>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.winRate")}</span>
+            <span className={styles.statValue}>{data.winningPercentage.toFixed(1)}%</span>
+          </div>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.volume")}</span>
+            <span className={styles.statValue}>
+              {fmt.num.compact.currency(data.totalBoughtUsd + data.totalSoldUsd)}
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.analysisSection}>
+          <h3 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.tokenAnalysis")}</h3>
+          <p className={styles.analysisText}>{data.analysis}</p>
+        </div>
+
+        {data.riskNotes.length > 0 && (
+          <div className={styles.riskSection}>
+            <button
+              type="button"
+              className={styles.riskToggle}
+              onClick={() => setExpandedNotes((v) => !v)}
+            >
+              {tr("walletPage.aiSwapSummary.riskNotes")} ({data.riskNotes.length})
+              <span className={styles.riskChevron}>{expandedNotes ? "▼" : "▶"}</span>
+            </button>
+            {expandedNotes && (
+              <ul className={styles.riskList}>
+                {data.riskNotes.map((note, i) => (
+                  <li key={i} className={styles.riskItem}>{note}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {data.cached && (
+          <p className={styles.cachedHint}>
+            {tr("walletPage.aiSwapSummary.cachedResult")}
+          </p>
+        )}
+      </div>
+
+      {/* ── Right Column: Charts ── */}
+      <div className={styles.rightColumn}>
+        {tradeDays.size > 0 && (
+          <div className={styles.chartSection}>
+            <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.tradeTimeline")}</h4>
+            <div className={styles.chartRow}>
+              {[...tradeDays.entries()].map(([dayStart, dayTrades]) => (
+                <div key={dayStart} className={styles.chartCard}>
+                  <span className={styles.chartDateLabel}>{formatDate(dayStart)}</span>
+                  <TokenPriceChart
+                    tokenAddress={tokenAddress}
+                    tokenSymbol={data.symbol ?? tokenAddress}
+                    tokenLogoUri={data.logoUri}
+                    dayMs={dayStart}
+                    trades={dayTrades}
+                    onRemove={() => {}}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.chartsGrid}>
+          {data.cumulativePnlCurve.length > 0 && (
+            <div className={styles.echartCard}>
+              <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.cumulativePnl")}</h4>
+              <ReactECharts
+                option={cumulativeOption ?? {}}
+                style={{ height: 200, width: "100%" }}
+                notMerge
+                lazyUpdate
+                opts={{ renderer: "canvas" }}
+              />
+            </div>
+          )}
+
+          <div className={styles.echartCard}>
+            <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.pnlDistribution")}</h4>
+            <ReactECharts
+              option={pieOption ?? {}}
+              style={{ height: 200, width: "100%" }}
+              notMerge
+              lazyUpdate
+              opts={{ renderer: "canvas" }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

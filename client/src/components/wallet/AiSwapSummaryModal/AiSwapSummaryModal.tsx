@@ -11,6 +11,7 @@ import {
   type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { TokenDeepAnalysisView } from "./TokenDeepAnalysisView";
 // import { MiniHistogram } from "./MiniHistogram";
 import styles from "./ai-swap-summary.module.scss";
 
@@ -22,12 +23,22 @@ interface AiSwapSummaryModalProps {
   walletAddress: string;
 }
 
-function formatPriceCompact(n: number): string {
-  if (n < 0.001) return n.toExponential(4);
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+interface TokenTab {
+  tokenAddress: string;
+  symbol: string;
+  name: string | null;
+  logoUri: string | null;
 }
 
-function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
+const SUMMARY_TAB_ID = "summary";
+
+function SummaryContent({
+  report,
+  onOpenTokenTab,
+}: {
+  report: WalletAiSwapSummaryResponse;
+  onOpenTokenTab: (t: TokenTab) => void;
+}) {
   const { tr, fmt } = useLocalization();
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
@@ -156,18 +167,6 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
                 </div>
                 {isExpanded && (
                   <div className={styles.expandedDetail}>
-                    {/* <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.entry")}</span>
-                      <span className={styles.detailValue}>
-                        <MiniHistogram prices={t.entryPrices ?? []} />
-                      </span>
-                    </div>
-                    <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.exit")}</span>
-                      <span className={styles.detailValue}>
-                        <MiniHistogram prices={t.exitPrices ?? []} />
-                      </span>
-                    </div> */}
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.hold")}</span>
                       <span className={styles.detailValue}>{fmt.datetime.duration(t.longestHoldingTimeMs)}</span>
@@ -194,14 +193,23 @@ function SummaryContent({ report }: { report: WalletAiSwapSummaryResponse }) {
                         <span className={styles.detailVolume}>{fmt.num.compact.currency(t.totalSoldVolumeUsd)}</span>
                       </span>
                     </div>
-                    {/* <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.buyVolume")}</span>
-                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalBoughtVolumeUsd)}</span>
+                    <div className={styles.analyzeRow}>
+                      <button
+                        type="button"
+                        className={styles.analyzeBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenTokenTab({
+                            tokenAddress: t.address,
+                            symbol: t.symbol ?? t.address,
+                            name: t.name ?? null,
+                            logoUri: t.logoUri ?? null,
+                          });
+                        }}
+                      >
+                        {tr("walletPage.aiSwapSummary.analyze")} →
+                      </button>
                     </div>
-                    <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.sellVolume")}</span>
-                      <span className={styles.detailValue}>{fmt.num.compact.currency(t.totalSoldVolumeUsd)}</span>
-                    </div> */}
                   </div>
                 )}
               </div>
@@ -251,6 +259,8 @@ export function AiSwapSummaryModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<WalletAiSwapSummaryResponse | null>(null);
+  const [tabs, setTabs] = useState<TokenTab[]>([]);
+  const [activeTab, setActiveTab] = useState<string>(SUMMARY_TAB_ID);
 
   const apiLanguage: WalletAiAnalysisLanguage = lang === "vi" ? "vn" : "en";
 
@@ -270,13 +280,39 @@ export function AiSwapSummaryModal({
   }, [isOpen, walletAddress, apiLanguage]);
 
   useEffect(() => {
-    if (isOpen) void fetch();
+    if (isOpen) {
+      setTabs([]);
+      setActiveTab(SUMMARY_TAB_ID);
+      void fetch();
+    }
   }, [isOpen, fetch]);
+
+  const openTokenTab = useCallback((tab: TokenTab) => {
+    setTabs((prev) => {
+      const exists = prev.some((t) => t.tokenAddress === tab.tokenAddress);
+      if (exists) return prev;
+      return [...prev, tab];
+    });
+    setActiveTab(tab.tokenAddress);
+  }, []);
+
+  const closeTokenTab = useCallback((tokenAddress: string) => {
+    setTabs((prev) => {
+      const next = prev.filter((t) => t.tokenAddress !== tokenAddress);
+      return next;
+    });
+    setActiveTab((current) => {
+      if (current === tokenAddress) return SUMMARY_TAB_ID;
+      return current;
+    });
+  }, []);
 
   if (!isOpen) return null;
 
   const modalRoot = document.getElementById(ID_MODAL_ROOT);
   if (!modalRoot) return null;
+
+  const hasTokenTabs = tabs.length > 0;
 
   return ReactDOM.createPortal(
     <div
@@ -288,7 +324,44 @@ export function AiSwapSummaryModal({
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <span className={styles.title}>{tr("walletPage.aiSwapSummary.title")}</span>
+          <div className={styles.headerLeft}>
+            {hasTokenTabs && (
+              <div className={styles.tabBar}>
+                <button
+                  type="button"
+                  className={`${styles.tab} ${activeTab === SUMMARY_TAB_ID ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab(SUMMARY_TAB_ID)}
+                >
+                  {tr("walletPage.aiSwapSummary.title")}
+                </button>
+                {tabs.map((tab) => (
+                  <div key={tab.tokenAddress} className={`${styles.tab} ${activeTab === tab.tokenAddress ? styles.tabActive : ""}`}>
+                    <button
+                      type="button"
+                      className={styles.tabLabelBtn}
+                      onClick={() => setActiveTab(tab.tokenAddress)}
+                    >
+                      {tab.symbol}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.tabCloseBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTokenTab(tab.tokenAddress);
+                      }}
+                      aria-label={`Close ${tab.symbol} tab`}
+                    >
+                      <Close size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!hasTokenTabs && (
+              <span className={styles.title}>{tr("walletPage.aiSwapSummary.title")}</span>
+            )}
+          </div>
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -312,8 +385,14 @@ export function AiSwapSummaryModal({
               {tr("walletPage.aiSwapSummary.retry")}
             </button>
           </div>
-        ) : report ? (
-          <SummaryContent report={report} />
+        ) : activeTab === SUMMARY_TAB_ID && report ? (
+          <SummaryContent report={report} onOpenTokenTab={openTokenTab} />
+        ) : activeTab !== SUMMARY_TAB_ID ? (
+          <TokenDeepAnalysisView
+            walletAddress={walletAddress}
+            tokenAddress={activeTab}
+            apiLanguage={apiLanguage}
+          />
         ) : null}
       </div>
     </div>,
