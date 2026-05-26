@@ -559,6 +559,13 @@ function dedupeArticles(articles: TokenNewsArticle[]) {
   return [...byTitle.values()];
 }
 
+function getArticleTimestamp(article: TokenNewsArticle) {
+  if (!article.publishedAt) return 0;
+
+  const timestamp = Date.parse(article.publishedAt);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function scoreAndFilterArticles(
   articles: RawNewsArticle[],
   identity: TokenNewsIdentity,
@@ -729,13 +736,14 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
     });
   }
 
-  const articles = dedupeArticles([...rssArticles, ...braveArticles]).sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return (
-      (b.publishedAt ? Date.parse(b.publishedAt) : 0) -
-      (a.publishedAt ? Date.parse(a.publishedAt) : 0)
-    );
-  });
+  const articles = dedupeArticles([...rssArticles, ...braveArticles]).sort(
+    (a, b) => {
+      const dateDiff = getArticleTimestamp(b) - getArticleTimestamp(a);
+      if (dateDiff !== 0) return dateDiff;
+
+      return b.score - a.score;
+    },
+  );
 
   console.info("[rss-news] token news fetch", {
     selectedFeeds: selectedFeeds.length,

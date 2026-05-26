@@ -1260,6 +1260,8 @@ export const translation = defineTranslation({
       showing: "Đang hiển thị",
       of: "trên",
       loadMore: "Tải thêm",
+      previousPage: "Trang tin trước",
+      nextPage: "Trang tin tiếp theo",
       expand: "Mở rộng",
       collapse: "Thu gọn",
       snippetsTitle: "Đoạn trích thêm",

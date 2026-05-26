@@ -1262,6 +1262,8 @@ export const translation = {
       showing: "Showing",
       of: "of",
       loadMore: "Load More",
+      previousPage: "Previous news page",
+      nextPage: "Next news page",
       expand: "Expand",
       collapse: "Collapse",
       snippetsTitle: "Extra snippets",
