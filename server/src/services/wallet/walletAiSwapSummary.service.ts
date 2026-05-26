@@ -151,7 +151,7 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
       acc.totalSoldUsd += swap.totalValueUsd ? swap.totalValueUsd : 0;
       acc.sellCount += 1;
       const sellTimeMs = new Date(swap.blockTimestampIso).getTime();
-      let hadWinInThisSell = false;
+      const pnlBeforeSell = acc.realizedPnl;
 
       while (remainingExit > 0 && acc.entryQueue.length > 0) {
         const lot = acc.entryQueue[0];
@@ -161,7 +161,6 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
 
         const contribution = matched * (exitPrice - lot.price);
         acc.realizedPnl += contribution;
-        if (contribution > 0) hadWinInThisSell = true;
 
         const holdMs = sellTimeMs - lot.timestampMs;
         if (acc.longestHoldingTimeMs === null || holdMs > acc.longestHoldingTimeMs) {
@@ -182,7 +181,7 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
         }
       }
 
-      if (hadWinInThisSell) acc.wins += 1;
+      if (acc.realizedPnl - pnlBeforeSell > 0) acc.wins += 1;
       acc.exits += 1;
     }
   }
