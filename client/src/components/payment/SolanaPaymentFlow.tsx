@@ -348,8 +348,8 @@ export function SolanaPaymentFlow({
       // console.log("[SolanaPaymentFlow] Simulating transaction...");
       const simulation = await connection.simulateTransaction(transaction);
       if (simulation.value.err) {
-        console.error("🔥 [SolanaPaymentFlow] EXACT SIMULATION ERROR:", simulation.value.err);
-        console.error("📜 [SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
+        console.error("[SolanaPaymentFlow] EXACT SIMULATION ERROR:", simulation.value.err);
+        console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
         const logSummary = simulation.value.logs?.find(
           (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
         );
@@ -403,7 +403,7 @@ export function SolanaPaymentFlow({
       // EXACT on-chain failure reason (e.g. InsufficientFunds, InvalidAccountData).
       const simLogs = err?.logs as string[] | undefined;
       if (simLogs?.length) {
-        console.error("📜 [SolanaPaymentFlow] SendTransactionError simulation logs:");
+        console.error("[SolanaPaymentFlow] SendTransactionError simulation logs:");
         simLogs.forEach((log, i) => console.error(`  [${i}] ${log}`));
       }
       console.error("[SolanaPaymentFlow] Tx Failed (full error):", err);
