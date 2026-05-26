@@ -45,33 +45,6 @@ function RootLayout() {
   );
 }
 
-const headers = [
-  { key: "col1", header: "Column 1" },
-  { key: "col2", header: "Column 2" },
-  { key: "col3", header: "Column 3" },
-  { key: "col4", header: "Column 4" },
-  { key: "col5", header: "Column 5" },
-  { key: "col6", header: "Column 6" },
-  { key: "col7", header: "Column 7" },
-  { key: "col8", header: "Column 8" },
-  { key: "col9", header: "Column 9" },
-  { key: "col10", header: "Column 10" },
-];
-
-const rows = Array.from({ length: 20 }, (_, i) => ({
-  id: `row-${i}`,
-  col1: `Data ${i}-1`,
-  col2: `Data ${i}-2`,
-  col3: `Data ${i}-3`,
-  col4: `Data ${i}-4`,
-  col5: `Data ${i}-5`,
-  col6: `Data ${i}-6`,
-  col7: `Data ${i}-7`,
-  col8: `Data ${i}-8`,
-  col9: `Data ${i}-9`,
-  col10: `Data ${i}-10`,
-}));
-
 const router = createBrowserRouter([
   {
     path: "/",
