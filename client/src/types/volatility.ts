@@ -46,6 +46,10 @@ export interface VolatilitySignalResponse {
     groupedEventsReturned: number;
     evaluatedWindows: string[];
     relatedNewsWindowHours: number;
+    cache?: {
+      hit: boolean;
+      expiresAt: string;
+    };
     events: VolatilityEvent[];
   };
 }
@@ -58,4 +62,5 @@ export interface TokenVolatilityNewsQuery {
   timeframe?: VolatilityTimeframe;
   window?: VolatilityWindow;
   maxEventsWithNews?: number;
+  forceRefresh?: boolean;
 }

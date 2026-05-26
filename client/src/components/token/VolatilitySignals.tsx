@@ -23,6 +23,10 @@ interface VolatilitySignalsProps {
 interface VolatilitySignalsState {
   events: VolatilityEvent[];
   dataPointsAnalyzed: number;
+  cache: {
+    hit: boolean;
+    expiresAt: string;
+  } | null;
   isLoading: boolean;
   error: string | null;
   hasLoaded: boolean;
@@ -87,6 +91,7 @@ function getInitialState(): VolatilitySignalsState {
   return {
     events: [],
     dataPointsAnalyzed: 0,
+    cache: null,
     isLoading: false,
     error: null,
     hasLoaded: false,
@@ -151,7 +156,7 @@ export function VolatilitySignals({
     [state.events],
   );
 
-  const fetchSignals = useCallback(async () => {
+  const fetchSignals = useCallback(async (forceRefresh = false) => {
     if (!address || !symbol || !name) return;
 
     setState((prev) => ({
@@ -172,12 +177,14 @@ export function VolatilitySignals({
         timeframe,
         window: "auto",
         maxEventsWithNews: MAX_EVENTS_WITH_NEWS,
+        forceRefresh,
       });
       const nextEvents = data.events.slice(0, MAX_EVENTS_RENDERED);
 
       setState({
         events: nextEvents,
         dataPointsAnalyzed: data.dataPointsAnalyzed,
+        cache: data.cache ?? null,
         isLoading: false,
         error: null,
         hasLoaded: true,
@@ -197,7 +204,7 @@ export function VolatilitySignals({
   }, [address, symbol, name, threshold, timeframe]);
 
   useEffect(() => {
-    void fetchSignals();
+    void fetchSignals(false);
   }, [fetchSignals]);
 
   const toggleEvent = (eventId: string) => {
@@ -219,6 +226,11 @@ export function VolatilitySignals({
         <div className={styles.titleGroup}>
           <h2>Volatility Signals</h2>
           <p>Price moves with possible related news near each event.</p>
+          {state.cache && (
+            <span className={styles.cacheMeta}>
+              {state.cache.hit ? "Cached" : "Updated just now"}
+            </span>
+          )}
         </div>
 
         <div className={styles.controls}>
@@ -250,7 +262,7 @@ export function VolatilitySignals({
           <Button
             kind="tertiary"
             size="sm"
-            onClick={() => void fetchSignals()}
+            onClick={() => void fetchSignals(true)}
             disabled={state.isLoading}
             iconDescription="Refresh volatility signals"
             hasIconOnly

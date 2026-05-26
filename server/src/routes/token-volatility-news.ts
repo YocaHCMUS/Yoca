@@ -6,6 +6,12 @@ import {
   type TokenVolatilityTimeframe,
   type TokenVolatilityWindow,
 } from "@sv/services/tokens/token-volatility.js";
+import {
+  getTokenVolatilityNewsCacheExpiresAt,
+  readTokenVolatilityNewsCache,
+  writeTokenVolatilityNewsCache,
+  type TokenVolatilityNewsCacheKey,
+} from "@sv/services/tokens/token-volatility-news-cache.js";
 import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
@@ -29,6 +35,10 @@ const tokenVolatilityNewsQuerySchema = z.object({
     .min(0)
     .max(10)
     .default(DEFAULT_MAX_EVENTS_WITH_NEWS),
+  forceRefresh: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
 });
 
 function getDefaultRelatedNewsWindowHours(
@@ -84,6 +94,7 @@ const app = new Hono().get("/", async (c) => {
     timeframe,
     window,
     maxEventsWithNews,
+    forceRefresh,
   } = parsed.data;
 
   const token = {
@@ -94,8 +105,68 @@ const app = new Hono().get("/", async (c) => {
   const volatilityTimeframe = timeframe as TokenVolatilityTimeframe;
   const relatedNewsWindowHours =
     getDefaultRelatedNewsWindowHours(volatilityTimeframe);
+  const cacheKey: TokenVolatilityNewsCacheKey = {
+    tokenAddress: address,
+    symbol: token.symbol,
+    name: token.name,
+    thresholdPercent: threshold,
+    timeframe: volatilityTimeframe,
+    detectionWindow: window,
+    maxEventsWithNews,
+  };
 
   try {
+    if (!forceRefresh) {
+      try {
+        const cached =
+          await readTokenVolatilityNewsCache<Record<string, unknown>>(
+            cacheKey,
+          );
+
+        if (cached) {
+          console.info("[token-volatility-news] cache hit", {
+            token,
+            thresholdPercent: threshold,
+            timeframe,
+            window,
+            maxEventsWithNews,
+            expiresAt: cached.expiresAt,
+          });
+
+          return c.json(
+            {
+              success: true,
+              data: {
+                ...cached.data,
+                cache: {
+                  hit: true,
+                  expiresAt: cached.expiresAt,
+                },
+              },
+            },
+            statusCode.Ok,
+          );
+        }
+      } catch (err) {
+        console.warn("[token-volatility-news] cache read failed", {
+          token,
+          thresholdPercent: threshold,
+          timeframe,
+          window,
+          maxEventsWithNews,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    } else {
+      console.info("[token-volatility-news] cache bypass requested", {
+        token,
+        thresholdPercent: threshold,
+        timeframe,
+        window,
+        maxEventsWithNews,
+      });
+    }
+
     const volatility = await getTokenPriceVolatilityEvents({
       ...token,
       thresholdPercent: threshold,
@@ -154,15 +225,38 @@ const app = new Hono().get("/", async (c) => {
         eventsWithRelatedNews.push({ ...event, relatedNews: [] });
       }
     }
+    const freshData = {
+      ...volatility,
+      window,
+      relatedNewsWindowHours,
+      events: eventsWithRelatedNews,
+    };
+    const expiresAt = getTokenVolatilityNewsCacheExpiresAt(
+      volatilityTimeframe,
+    );
+
+    try {
+      await writeTokenVolatilityNewsCache(cacheKey, freshData, expiresAt);
+    } catch (err) {
+      console.warn("[token-volatility-news] cache write failed", {
+        token,
+        thresholdPercent: threshold,
+        timeframe,
+        window,
+        maxEventsWithNews,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     return c.json(
       {
         success: true,
         data: {
-          ...volatility,
-          window,
-          relatedNewsWindowHours,
-          events: eventsWithRelatedNews,
+          ...freshData,
+          cache: {
+            hit: false,
+            expiresAt: expiresAt.toISOString(),
+          },
         },
       },
       statusCode.Ok,
