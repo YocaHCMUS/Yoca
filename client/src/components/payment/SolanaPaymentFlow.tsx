@@ -1,10 +1,14 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { SystemProgram, Transaction } from "@solana/web3.js";
+import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
 import { PrivacyTransactionId } from "./PrivacyTransactionId";
-import { getValidatedSolanaNetwork } from "@/util/solanaNetwork";
+import { 
+  getValidatedSolanaNetwork, 
+  getExpectedGenesisHash, 
+  getNetworkDisplayName 
+} from "@/util/solanaNetwork";
 
 /**
  * Define your merchant address for receiving Devnet SOL payments.
@@ -73,6 +77,13 @@ export function SolanaPaymentFlow({
   const [verifyingSignature, setVerifyingSignature] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  let networkName = "Devnet";
+  try {
+    networkName = getNetworkDisplayName();
+  } catch {
+    // Fallback if env is broken, the actual throw happens during submit
+  }
+
   const solAmount = TIER_SOL_AMOUNTS[tierKey];
 
   /**
@@ -101,7 +112,7 @@ export function SolanaPaymentFlow({
             <span className="text-2xl">◎</span>
             <div>
               <p className="text-white font-semibold text-sm">Connect Your Solana Wallet</p>
-              <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on Devnet</p>
+              <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on {networkName}</p>
             </div>
           </div>
         </div>
@@ -234,8 +245,13 @@ export function SolanaPaymentFlow({
     // ── Validate Solana network env var before any RPC call ───────────────
     // Catches missing/invalid VITE_SOLANA_NETWORK early so the user sees a
     // clear system error instead of a cryptic RPC or wallet error.
+    let expectedGenesis: string;
+    let validatedNetworkName: string;
+    let rawNetworkKey: "devnet" | "testnet" | "mainnet-beta";
     try {
-      getValidatedSolanaNetwork();
+      rawNetworkKey = getValidatedSolanaNetwork();
+      expectedGenesis = getExpectedGenesisHash();
+      validatedNetworkName = getNetworkDisplayName();
     } catch (envErr: any) {
       onError(envErr.message);
       return;
@@ -262,15 +278,14 @@ export function SolanaPaymentFlow({
       const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
 
       // ── Step 0: Network mismatch guard ───────────────────────────────────
-      // Compares the connected RPC's genesis hash against the known Devnet
+      // Compares the connected RPC's genesis hash against the known expected
       // genesis. If Phantom is set to Mainnet while the app uses Devnet, we
       // fail fast with a clear message instead of a cryptic Phantom warning.
-      const DEVNET_GENESIS = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
       const genesisHash = await connection.getGenesisHash();
-      if (genesisHash !== DEVNET_GENESIS) {
+      if (genesisHash !== expectedGenesis) {
         throw new Error(
-          "Network mismatch: your wallet is on Mainnet but this app uses Devnet. " +
-          "Open Phantom → Settings → Developer Settings → enable Testnet Mode (Devnet)."
+          `Network mismatch: your wallet is connected to the wrong network. ` +
+          `This app uses ${validatedNetworkName}. Please change your wallet network in Settings.`
         );
       }
 
@@ -281,25 +296,27 @@ export function SolanaPaymentFlow({
       // will fail with "BlockhashNotFound". 'finalized' prevents this desync.
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
 
-      // ── Step 2: Strict transaction construction ───────────────────────────
-      // Use explicit property assignment (not constructor params) to guarantee
-      // the SDK picks up recentBlockhash and feePayer regardless of version quirks.
-      const transaction = new Transaction();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-      transaction.add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: merchantKey,
-          lamports,
-        })
-      );
+      // ── Step 2: Strict transaction construction (VersionedTransaction) ──────
+      // Phantom strongly recommends VersionedTransactions for modern dApps.
+      // Legacy Transactions can sometimes cause simulation anomalies on Testnet.
+      const message = new TransactionMessage({
+        payerKey: publicKey,
+        recentBlockhash: blockhash,
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: merchantKey,
+            lamports,
+          }),
+        ],
+      }).compileToV0Message();
+      
+      const transaction = new VersionedTransaction(message);
 
       // ── Debug logs — remove before Mainnet ───────────────────────────────
       // console.log("[SolanaPaymentFlow] Network Endpoint:", connection.rpcEndpoint);
       // console.log("[SolanaPaymentFlow] Merchant PubKey:", merchantKey.toBase58());
       // console.log("[SolanaPaymentFlow] Lamports to send:", lamports);
-      // console.log("[SolanaPaymentFlow] Fee Payer:", transaction.feePayer?.toBase58());
       // ─────────────────────────────────────────────────────────────────────
 
       // ── Step 3a: Explicit balance check ──────────────────────────────────
@@ -307,7 +324,8 @@ export function SolanaPaymentFlow({
       // can silently skip the fee-payer balance check → false "pass".
       // We manually verify balance here to catch InsufficientFunds BEFORE
       // Phantom shows its own simulation error to the user.
-      const ESTIMATED_FEE_LAMPORTS = 10_000; // conservative upper bound for a 1-instruction tx
+      // Phantom often attaches priority fees (up to 0.00008 SOL), so we use a safe margin.
+      const ESTIMATED_FEE_LAMPORTS = 100_000; // 0.0001 SOL upper bound for safety
       const balance = await connection.getBalance(publicKey, 'confirmed');
       const totalRequired = lamports + ESTIMATED_FEE_LAMPORTS;
       // console.log(
@@ -319,7 +337,7 @@ export function SolanaPaymentFlow({
           `Insufficient SOL: wallet has ${(balance / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
           `but needs at least ${(totalRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
           `(${(lamports / LAMPORTS_PER_SOL).toFixed(6)} transfer + fee). ` +
-          `Airdrop more Devnet SOL at faucet.solana.com.`
+          `Airdrop more ${validatedNetworkName} SOL at faucet.solana.com.`
         );
       }
       // ─────────────────────────────────────────────────────────────────────
@@ -366,12 +384,17 @@ export function SolanaPaymentFlow({
       setVerifyingSignature(signature);
 
       try {
-        const result = await verifySolanaPayment({ txId: signature, tier: tierKey });
+        const result = await verifySolanaPayment({ 
+          txId: signature, 
+          tier: tierKey,
+          network: rawNetworkKey
+        });
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
       } catch (verifyErr: any) {
         console.error("[SolanaPaymentFlow] Verification error:", verifyErr);
         onError(verifyErr.message || "Failed to verify transaction. Please try again.");
+        setTxSignature(null);
         setVerifyingSignature(null);
         onProcessingChange(false);
       }
@@ -453,7 +476,7 @@ export function SolanaPaymentFlow({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">Network</p>
-            <p className="text-white font-bold">Devnet</p>
+            <p className="text-white font-bold">{networkName}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">USD Equiv.</p>
@@ -467,7 +490,7 @@ export function SolanaPaymentFlow({
         <p className="text-xs text-[#64748b]">
           You will be prompted to sign a transaction to send{" "}
           <strong className="text-white">{solAmount} SOL</strong> from your wallet to our
-          merchant address on <strong className="text-white">Solana Devnet</strong>.
+          merchant address on <strong className="text-white">Solana {networkName}</strong>.
         </p>
       </div>
 

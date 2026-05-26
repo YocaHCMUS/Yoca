@@ -20,6 +20,15 @@ const NETWORK_TO_ADAPTER: Record<SolanaNetwork, WalletAdapterNetwork> = {
 };
 
 /**
+ * Known genesis hashes for Solana clusters to prevent cross-network transactions.
+ */
+export const GENESIS_HASHES: Record<SolanaNetwork, string> = {
+  devnet: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  testnet: "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
+  "mainnet-beta": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+};
+
+/**
  * Reads and strictly validates `VITE_SOLANA_NETWORK` from the Vite env.
  *
  * @throws {Error} A clear, human-readable error if the variable is missing,
@@ -79,4 +88,27 @@ export function getWalletAdapterNetwork(): WalletAdapterNetwork {
 export function getDynamicConnection(): Connection {
   const network = getValidatedSolanaNetwork();
   return new Connection(clusterApiUrl(network), "confirmed");
+}
+
+/**
+ * Returns the expected genesis hash for the configured network.
+ * Use this to verify the connected wallet is on the correct network.
+ */
+export function getExpectedGenesisHash(): string {
+  return GENESIS_HASHES[getValidatedSolanaNetwork()];
+}
+
+/**
+ * Returns a human-readable display name for the configured network.
+ */
+export function getNetworkDisplayName(): string {
+  const network = getValidatedSolanaNetwork();
+  switch (network) {
+    case "devnet":
+      return "Devnet";
+    case "testnet":
+      return "Testnet";
+    case "mainnet-beta":
+      return "Mainnet";
+  }
 }

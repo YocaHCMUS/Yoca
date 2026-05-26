@@ -424,6 +424,7 @@ const app = new Hono()
       z.object({
         txId: z.string().min(64).max(128), // Solana tx signature
         tier: z.enum(["Lite", "Plus", "Pro"]),
+        network: z.enum(["devnet", "testnet", "mainnet-beta"]).default("devnet"),
       })
     ),
     async (c) => {
@@ -443,7 +444,7 @@ const app = new Hono()
             statusCode.Unauthorized,
           );
 
-        const { txId, tier } = c.req.valid("json");
+        const { txId, tier, network } = c.req.valid("json");
 
         // Import Solana verification service
         const { verifySolanaTransaction } = await import(
@@ -451,7 +452,7 @@ const app = new Hono()
         );
 
         // Verify transaction
-        const verification = await verifySolanaTransaction(txId, tier);
+        const verification = await verifySolanaTransaction(txId, tier, network);
 
         if (!verification.valid) {
           console.warn("[payment/verify-solana] Transaction verification failed:", {

@@ -8,6 +8,7 @@
 export type VerifySolanaPaymentRequest = {
   txId: string;
   tier: "Lite" | "Plus" | "Pro";
+  network: "devnet" | "testnet" | "mainnet-beta";
 };
 
 export type VerifySolanaPaymentResponse = {
