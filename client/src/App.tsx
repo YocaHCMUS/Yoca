@@ -5,17 +5,7 @@ import {
   useNavigation,
 } from "react-router";
 
-import {
-  DataTable,
-  Loading,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@carbon/react";
-import { Component, type ReactNode } from "react";
+import { Loading } from "@carbon/react";
 import "./App.css";
 
 import Index from "@/pages";
@@ -34,48 +24,7 @@ import WalletsComparisonPage from "@/pages/walletsComparison";
 import AlertsDemo from "./pages/alerts/demo";
 
 import { AuthGuard } from "./components/auth";
-import Tble from "./components/Tble";
 import { useLocalization } from "./contexts/LocalizationContext";
-
-// Prevent route crashes from breaking router transitions
-class RouteErrorBoundary extends Component<
-  { children: ReactNode },
-  { error: Error | null }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("RouteErrorBoundary: Caught render error:", error, info);
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: "2rem", color: "red" }}>
-          <h2>Something went wrong loading this page.</h2>
-
-          <pre
-            style={{
-              fontSize: "0.8rem",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {this.state.error.message}
-          </pre>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
 
 function RootLayout() {
   const navigation = useNavigation();
@@ -204,11 +153,7 @@ const router = createBrowserRouter([
 
       {
         path: "comparison/wallets",
-        element: (
-          <RouteErrorBoundary>
-            <WalletsComparisonPage />
-          </RouteErrorBoundary>
-        ),
+        element: <WalletsComparisonPage />,
       },
 
       {
@@ -229,55 +174,6 @@ const router = createBrowserRouter([
       {
         path: "*",
         element: <NotFoundPage />,
-      },
-
-      {
-        path: "tbl-fix",
-        element: (
-          <>
-            <Tble
-              headers={headers}
-              rows={rows}
-              stickyHeader
-              height={200}
-            ></Tble>
-            <div style={{ width: 700, overflow: "auto", height: 200 }}>
-              <DataTable rows={rows} headers={headers} stickyHeader>
-                {({
-                  rows,
-                  headers,
-                  getTableProps,
-                  getHeaderProps,
-                  getRowProps,
-                  getCellProps,
-                }) => (
-                  <Table {...getTableProps()}>
-                    <TableHead>
-                      <TableRow>
-                        {headers.map((header) => (
-                          <TableHeader {...getHeaderProps({ header })}>
-                            {header.header}
-                          </TableHeader>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow {...getRowProps({ row })}>
-                          {row.cells.map((cell) => (
-                            <TableCell {...getCellProps({ cell })}>
-                              {cell.value}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </DataTable>
-            </div>
-          </>
-        ),
       },
     ],
   },
