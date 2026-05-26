@@ -118,7 +118,7 @@ export default function Tble({
 
     return {
       bodyClassName: alignmentClass,
-      headerClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyHeaderCell : ""}`,
+      headerClassName: `${alignmentClass}`,
       style,
     };
   };
@@ -197,7 +197,11 @@ export default function Tble({
             >
               <Table {...getTableProps()}>
                 <TableHead hidden={hideHeaders}>
-                  <TableRow>
+                  <TableRow
+                    className={
+                      stickyHeader ? overwriteStyles.stickyHeaderRow : undefined
+                    }
+                  >
                     {internalHeaders.map((header) => {
                       const config = getCellConfiguration(header.key);
                       return (

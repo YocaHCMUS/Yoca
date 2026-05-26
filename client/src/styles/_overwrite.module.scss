@@ -95,6 +95,12 @@
     }
   }
 
+  .stickyHeaderRow {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
   .alignStart {
     text-align: left;
     justify-content: flex-start;

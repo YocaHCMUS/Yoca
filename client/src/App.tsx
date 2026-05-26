@@ -235,14 +235,12 @@ const router = createBrowserRouter([
         path: "tbl-fix",
         element: (
           <>
-            <div style={{ width: 700, overflow: "auto", height: 200 }}>
-              <Tble
-                headers={headers}
-                rows={rows}
-                stickyHeader
-                height={200}
-              ></Tble>
-            </div>
+            <Tble
+              headers={headers}
+              rows={rows}
+              stickyHeader
+              height={200}
+            ></Tble>
             <div style={{ width: 700, overflow: "auto", height: 200 }}>
               <DataTable rows={rows} headers={headers} stickyHeader>
                 {({
