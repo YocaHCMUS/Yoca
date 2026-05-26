@@ -11,10 +11,25 @@ export interface TokenNewsArticle {
   matchedBy: string[];
 }
 
+export type RelatedNewsConfidence = "high" | "medium" | "low";
+
+export interface RelatedTokenNewsArticle extends TokenNewsArticle {
+  timeDistanceHours: number | null;
+  confidence: RelatedNewsConfidence;
+}
+
 export interface TokenNewsRequest {
   address: string;
   symbol: string;
   name: string;
+}
+
+export interface TokenNewsOptions {
+  eventAt?: string;
+  windowHours?: number;
+  preferSearch?: boolean;
+  maxArticles?: number;
+  strictMode?: boolean;
 }
 
 export interface TokenNewsIdentity {
@@ -566,6 +581,76 @@ function getArticleTimestamp(article: TokenNewsArticle) {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
+function getTimeDistanceHours(article: TokenNewsArticle, eventAt: string) {
+  if (!article.publishedAt) return null;
+
+  const articleTimestamp = Date.parse(article.publishedAt);
+  const eventTimestamp = Date.parse(eventAt);
+
+  if (
+    Number.isNaN(articleTimestamp) ||
+    Number.isNaN(eventTimestamp)
+  ) {
+    return null;
+  }
+
+  return Math.abs(articleTimestamp - eventTimestamp) / (60 * 60 * 1000);
+}
+
+function getRelatedNewsConfidence(
+  timeDistanceHours: number | null,
+): RelatedNewsConfidence {
+  if (timeDistanceHours == null) return "low";
+  if (timeDistanceHours <= 12) return "high";
+  if (timeDistanceHours <= 72) return "medium";
+  return "low";
+}
+
+function applyEventContext(
+  articles: TokenNewsArticle[],
+  options: TokenNewsOptions,
+) {
+  if (!options.eventAt) return articles;
+
+  const windowHours = options.windowHours ?? 72;
+
+  return articles
+    .map((article): RelatedTokenNewsArticle => {
+      const timeDistanceHours = getTimeDistanceHours(article, options.eventAt!);
+
+      return {
+        ...article,
+        timeDistanceHours:
+          timeDistanceHours == null
+            ? null
+            : Number(timeDistanceHours.toFixed(2)),
+        confidence: getRelatedNewsConfidence(timeDistanceHours),
+      };
+    })
+    .filter((article) => {
+      if (!options.strictMode) return true;
+      if (article.timeDistanceHours == null) return true;
+      return article.timeDistanceHours <= windowHours;
+    })
+    .sort((a, b) => {
+      const aDistance = a.timeDistanceHours ?? Number.POSITIVE_INFINITY;
+      const bDistance = b.timeDistanceHours ?? Number.POSITIVE_INFINITY;
+      if (aDistance !== bDistance) return aDistance - bDistance;
+
+      const dateDiff = getArticleTimestamp(b) - getArticleTimestamp(a);
+      if (dateDiff !== 0) return dateDiff;
+
+      return b.score - a.score;
+    });
+}
+
+function limitArticles<T>(articles: T[], maxArticles?: number) {
+  if (maxArticles == null) return articles;
+  if (maxArticles <= 0) return [];
+
+  return articles.slice(0, maxArticles);
+}
+
 function scoreAndFilterArticles(
   articles: RawNewsArticle[],
   identity: TokenNewsIdentity,
@@ -631,7 +716,10 @@ function logContentOnlyRejectedSample(
   }
 }
 
-export async function getRssTokenNews(token: TokenNewsRequest) {
+export async function getRssTokenNews(
+  token: TokenNewsRequest,
+  options: TokenNewsOptions = {},
+) {
   const identity = buildTokenNewsIdentity(token);
   const selectedFeeds = selectFeedsForToken(identity);
 
@@ -696,7 +784,8 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
   let fallbackUsed = false;
 
   if (
-    rssArticles.length < MIN_ARTICLES_BEFORE_SEARCH_FALLBACK &&
+    (options.preferSearch ||
+      rssArticles.length < MIN_ARTICLES_BEFORE_SEARCH_FALLBACK) &&
     process.env.BRAVE_SEARCH_API_KEY?.trim()
   ) {
     fallbackUsed = true;
@@ -704,6 +793,7 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
       const braveResult = await fetchBraveTokenNews({
         identity,
         isSolanaEcosystem: isSolanaEcosystemIdentity(identity),
+        eventAt: options.eventAt,
       });
       const { scoredArticles, matchedArticles } = scoreAndFilterArticles(
         braveResult.articles,
@@ -729,6 +819,7 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
     console.info("[rss-news] brave fallback", {
       used: false,
       reason:
+        !options.preferSearch &&
         rssArticles.length >= MIN_ARTICLES_BEFORE_SEARCH_FALLBACK
           ? "rss-threshold-met"
           : "missing-api-key",
@@ -736,7 +827,7 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
     });
   }
 
-  const articles = dedupeArticles([...rssArticles, ...braveArticles]).sort(
+  const sortedArticles = dedupeArticles([...rssArticles, ...braveArticles]).sort(
     (a, b) => {
       const dateDiff = getArticleTimestamp(b) - getArticleTimestamp(a);
       if (dateDiff !== 0) return dateDiff;
@@ -744,6 +835,8 @@ export async function getRssTokenNews(token: TokenNewsRequest) {
       return b.score - a.score;
     },
   );
+  const contextualArticles = applyEventContext(sortedArticles, options);
+  const articles = limitArticles(contextualArticles, options.maxArticles);
 
   console.info("[rss-news] token news fetch", {
     selectedFeeds: selectedFeeds.length,

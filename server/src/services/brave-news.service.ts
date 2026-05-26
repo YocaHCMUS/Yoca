@@ -3,6 +3,7 @@ import type { RawNewsArticle, TokenNewsIdentity } from "./rss-news.service.js";
 interface BraveNewsSearchOptions {
   identity: TokenNewsIdentity;
   isSolanaEcosystem: boolean;
+  eventAt?: string;
 }
 
 interface BraveSearchItem {
@@ -62,23 +63,42 @@ function getPrimarySearchName(identity: TokenNewsIdentity) {
   return nonWrappedName ?? identity.searchNames[0] ?? identity.originalName;
 }
 
+function formatEventDate(value?: string) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date
+    .toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+    .replace(",", "");
+}
+
 export function buildBraveNewsQuery({
   identity,
   isSolanaEcosystem,
+  eventAt,
 }: BraveNewsSearchOptions) {
   const searchName = getPrimarySearchName(identity);
   const searchSymbol =
     identity.searchSymbols[0] ?? identity.normalizedSymbol ?? "";
+  const eventDate = formatEventDate(eventAt);
+  const dateSuffix = eventDate ? ` ${eventDate}` : "";
 
   if (isSolanaEcosystem && searchSymbol !== "SOL") {
-    return `"${searchName}" "$${searchSymbol}" Solana news`;
+    return `"${searchName}" ${searchSymbol} Solana news${dateSuffix}`;
   }
 
   if (isSolanaEcosystem) {
-    return `${searchName} ${searchSymbol} latest news`;
+    return `${searchName} ${searchSymbol} crypto news${dateSuffix}`;
   }
 
-  return `"${searchName}" "$${searchSymbol}" crypto news`;
+  return `"${searchName}" ${searchSymbol} crypto news${dateSuffix}`;
 }
 
 function normalizeBraveItem(item: BraveSearchItem): RawNewsArticle | null {

@@ -11,6 +11,12 @@ import chartRoutes, { type ChartRouteAppType } from "@sv/routes/chart.route.js";
 import misc, { type MiscAppType } from "@sv/routes/misc.js";
 import news, { type NewsAppType } from "@sv/routes/news.js";
 import tokenNews, { type TokenNewsAppType } from "@sv/routes/token-news.js";
+import tokenVolatility, {
+  type TokenVolatilityAppType,
+} from "@sv/routes/token-volatility.js";
+import tokenVolatilityNews, {
+  type TokenVolatilityNewsAppType,
+} from "@sv/routes/token-volatility-news.js";
 import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
@@ -76,6 +82,8 @@ export type AppRoutes = {
   "/api/alertsHp": AlertsAppType;
   "/api/news": NewsAppType;
   "/api/token-news": TokenNewsAppType;
+  "/api/token-volatility": TokenVolatilityAppType;
+  "/api/token-volatility-news": TokenVolatilityNewsAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
 };
@@ -99,6 +107,8 @@ const routes: AppRoutes = {
   "/api/alertsHp": alertsHp,
   "/api/news": news,
   "/api/token-news": tokenNews,
+  "/api/token-volatility": tokenVolatility,
+  "/api/token-volatility-news": tokenVolatilityNews,
   "/api/payment": payment,
   "/webhook": webhook,
 };
