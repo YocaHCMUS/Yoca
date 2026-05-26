@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loading } from "@carbon/react";
+import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import {
@@ -220,8 +220,34 @@ export function TokenDeepAnalysisView({
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <Loading withOverlay={false} />
+      <div className={styles.twoColumnLayout}>
+        <div className={styles.leftColumn}>
+          <div className={styles.statsRow}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={styles.statCard}>
+                <SkeletonText width="80%" />
+                <SkeletonPlaceholder style={{ height: 20, width: "50%", margin: "0 auto" }} />
+              </div>
+            ))}
+          </div>
+          <div className={styles.analysisSection}>
+            <SkeletonText width="30%" />
+            <SkeletonText width="100%" />
+            <SkeletonText width="100%" />
+            <SkeletonText width="75%" />
+          </div>
+          <div style={{ marginTop: 4 }}>
+            <SkeletonText width="25%" />
+            <SkeletonText width="90%" />
+            <SkeletonText width="85%" />
+          </div>
+        </div>
+        <div className={styles.rightColumn}>
+          <SkeletonText width="40%" />
+          <SkeletonPlaceholder style={{ height: 200, width: "100%", borderRadius: 8, marginBottom: 12 }} />
+          <SkeletonText width="40%" />
+          <SkeletonPlaceholder style={{ height: 200, width: "100%", borderRadius: 8 }} />
+        </div>
       </div>
     );
   }

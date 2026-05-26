@@ -31,13 +31,7 @@
   gap: $spacing-04;
 }
 
-/* Loading / Error */
-.loadingContainer {
-  display: flex;
-  justify-content: center;
-  padding: 40px 0;
-}
-
+/* Error */
 .errorContainer {
   display: flex;
   flex-direction: column;

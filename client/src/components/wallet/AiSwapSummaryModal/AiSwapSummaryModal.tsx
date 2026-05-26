@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import { Close, ChevronDown, ChevronRight } from "@carbon/react/icons";
-import { Loading } from "@carbon/react";
+import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
@@ -251,8 +251,42 @@ function SummaryContent({
 
 function LoadingSkeleton() {
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-      <Loading withOverlay={false} />
+    <div className={styles.twoColumnLayout}>
+      <div className={styles.leftColumn}>
+        <div className={styles.statsRow}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={styles.statCard}>
+              <SkeletonText width="80%" />
+              <SkeletonPlaceholder style={{ height: 24, width: "60%", margin: "0 auto" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
+          <SkeletonText heading width="40%" />
+          <SkeletonText width="100%" />
+          <SkeletonText width="100%" />
+          <SkeletonText width="75%" />
+        </div>
+        <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
+          <SkeletonText width="30%" />
+          <SkeletonText width="90%" />
+          <SkeletonText width="85%" />
+        </div>
+      </div>
+      <div className={styles.rightColumn}>
+        <div className={styles.rankedHeader}>
+          <SkeletonText width="40%" />
+          <SkeletonText width="20%" />
+        </div>
+        <div className={styles.rankedList}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={styles.rankedRow}>
+              <SkeletonPlaceholder style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
+              <SkeletonText width="60%" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
