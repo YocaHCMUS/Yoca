@@ -153,6 +153,7 @@ function SummaryContent({
                     imageSize={20}
                     tooltipAlign="right"
                   />
+                  <span className={styles.rankedSpacer} />
                   <span className={styles.rankedPnl}>
                     <TrendNumWithSign
                       value={t.pnlUsd}
@@ -160,7 +161,13 @@ function SummaryContent({
                       formatter={fmt.num.currency}
                     />
                   </span>
-                  <span className={styles.rankedBuySell}>{t.buyCount}b / {t.sellCount}s</span>
+                  <span className={styles.rankedBuySell}>
+                    <span className={styles.rankedBuyLabel}>{t.buyCount}</span>
+                    {/* {tr("walletPage.buy")} */}
+                    <span className={styles.rankedSlash}>/</span>
+                    <span className={styles.rankedSellLabel}>{t.sellCount}</span>
+                    {/* {tr("walletPage.sell")} */}
+                  </span>
                   <span className={styles.rankedChevron}>
                     {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </span>
