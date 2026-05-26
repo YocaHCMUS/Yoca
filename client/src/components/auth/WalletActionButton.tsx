@@ -66,7 +66,7 @@ export function WalletActionButton<TResult>({
     if (!connected) {
       triggerWalletMultiBtn();
       console.log("model opened: ", isModalOpen);
-      // openModal();
+      openModal();
       return;
     }
 
