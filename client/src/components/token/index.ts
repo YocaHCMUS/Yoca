@@ -14,3 +14,4 @@ export * from "./TopHoldersTable";
 export * from "./TokenTabs";
 export * from "./NewsTab";
 export * from "./NewsCard";
+export * from "./VolatilitySignals";

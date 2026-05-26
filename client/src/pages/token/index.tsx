@@ -6,6 +6,7 @@ import {
   RecentTransactions,
   TokenChart,
   TokenHeader,
+  VolatilitySignals,
   TopHolders,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
@@ -239,6 +240,12 @@ export default function TokenPage() {
 
         <div className={styles.rightColumn}>
           <TokenChart pool={pool} />
+
+          <VolatilitySignals
+            address={address}
+            symbol={meta.symbol}
+            name={meta.name}
+          />
 
           <RecentTransactions
             trades={trades.map((trade) => {
