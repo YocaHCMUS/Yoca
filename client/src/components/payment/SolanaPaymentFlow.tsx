@@ -3,6 +3,8 @@ import { SystemProgram, Transaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
+import { PrivacyTransactionId } from "./PrivacyTransactionId";
+import { getValidatedSolanaNetwork } from "@/util/solanaNetwork";
 
 /**
  * Define your merchant address for receiving Devnet SOL payments.
@@ -213,9 +215,8 @@ export function SolanaPaymentFlow({
             <span className="text-xs text-[#64748b]">Verifying transaction...</span>
           </div>
         </div>
-        <div className="text-xs text-[#64748b] p-3 rounded-lg bg-white/5 border border-white/10 font-mono break-all">
-          {txSignature}
-        </div>
+        {/* Privacy-masked transaction ID with toggle & copy */}
+        <PrivacyTransactionId transactionId={txSignature} />
       </div>
     );
   }
@@ -227,6 +228,16 @@ export function SolanaPaymentFlow({
   async function handleSendTransaction() {
     if (!publicKey) {
       onError("Wallet not connected");
+      return;
+    }
+
+    // ── Validate Solana network env var before any RPC call ───────────────
+    // Catches missing/invalid VITE_SOLANA_NETWORK early so the user sees a
+    // clear system error instead of a cryptic RPC or wallet error.
+    try {
+      getValidatedSolanaNetwork();
+    } catch (envErr: any) {
+      onError(envErr.message);
       return;
     }
 

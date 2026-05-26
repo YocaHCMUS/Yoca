@@ -15,6 +15,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
+import { getWalletAdapterNetwork } from "@/util/solanaNetwork";
 import {
   type FC,
   type ReactNode,
@@ -94,7 +95,22 @@ function SolanaProviderContent({ children }: { children: ReactNode }) {
 }
 
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
-  const network = WalletAdapterNetwork.Devnet;
+  /**
+   * Derive the network from VITE_SOLANA_NETWORK with strict validation.
+   * Falls back to Devnet if the env is misconfigured so the UI can still
+   * mount and display the error through its own toast/alert system.
+   */
+  const network = useMemo((): WalletAdapterNetwork => {
+    try {
+      return getWalletAdapterNetwork();
+    } catch (err) {
+      console.error(
+        "[SolanaProvider] Network configuration error — falling back to Devnet:\n",
+        (err as Error).message
+      );
+      return WalletAdapterNetwork.Devnet;
+    }
+  }, []);
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
   const wallets = useMemo(
