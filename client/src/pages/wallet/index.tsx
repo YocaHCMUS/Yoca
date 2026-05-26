@@ -3,31 +3,31 @@ import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDi
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
-    FilterType,
-    type FilterConfig,
-    SortType,
-    Table,
-    tableHeaderLabel,
+  FilterType,
+  SortType,
+  Table,
+  tableHeaderLabel,
+  type FilterConfig,
 } from "@/components/tables/Table.tsx";
 import {
-    renderBase,
-    renderCode,
-    renderDateTime,
-    renderHash,
-    renderReducedNumber,
-    renderTokenCell,
+  renderBase,
+  renderCode,
+  renderDateTime,
+  renderHash,
+  renderReducedNumber,
+  renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
-    AiAnalysisTab,
-    type AiAnalysisDependencyItem,
+  AiAnalysisTab,
+  type AiAnalysisDependencyItem,
 } from "@/components/wallet/AiAnalysis/index.ts";
-import {
-    WalletReportTemplate,
-    type WalletReportSection,
-} from "@/components/WalletReportTemplate";
+import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
+import {
+  WalletReportTemplate,
+  type WalletReportSection,
+} from "@/components/WalletReportTemplate";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useAuth } from "@/contexts/AuthContext.tsx";
@@ -36,63 +36,72 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-    fetchWalletSwaps,
-    fetchWalletTransfers,
-    fetchWalletPortfolio,
-    fetchWalletOverview,
-    fetchWalletIntelligence,
-    fetchWalletAiAnalysis,
-    type WalletSwap,
-    type WalletTransfer,
-    type WalletPortfolioItem,
-    type WalletIntelligenceResponse,
-    type WalletOverviewMultiPeriodResponse,
-    type WalletPageInfo,
-    type WalletSwapTokenChange,
-    type WalletSwapTokenInfo,
-    type WalletAiAnalysisLanguage,
-    type WalletAiAnalysisResponse,
+  fetchWalletAiAnalysis,
+  fetchWalletIntelligence,
+  fetchWalletOverview,
+  fetchWalletPortfolio,
+  fetchWalletSwaps,
+  fetchWalletTransfers,
+  type WalletAiAnalysisLanguage,
+  type WalletAiAnalysisResponse,
+  type WalletIntelligenceResponse,
+  type WalletOverviewMultiPeriodResponse,
+  type WalletPageInfo,
+  type WalletPortfolioItem,
+  type WalletSwap,
+  type WalletSwapTokenChange,
+  type WalletSwapTokenInfo,
+  type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
-    Activity,
-    AiGenerate,
-    ChartLine,
-    ChevronDown,
-    Download,
-    Star,
-    StarFilled,
-    User,
-    Wallet,
+  Activity,
+  AiGenerate,
+  ChartLine,
+  ChevronDown,
+  Download,
+  Star,
+  StarFilled,
+  User,
+  Wallet,
 } from "@carbon/icons-react";
-import { Button, IconButton, TableCell, Table as CBTable, TableRow, TableHead, TableHeader, TableBody } from "@carbon/react";
+import {
+  Button,
+  Table as CBTable,
+  IconButton,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@carbon/react";
 import JSZip from "jszip";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-    buildPortfolioMetaMap,
-    mapPortfolioItems,
+  buildPortfolioMetaMap,
+  mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-    TokenAverageTradePrice,
-    TokenDetailsDemo,
+  TokenAverageTradePrice,
+  TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
+import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
-import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
-import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
@@ -323,7 +332,8 @@ export default function WalletPage() {
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
   const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
+  const [selectedTransfer, setSelectedTransfer] =
+    useState<WalletTransfer | null>(null);
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
@@ -406,7 +416,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-            transfer.tokenSymbol.trim().length > 0
+          transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -562,7 +572,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet
+        isCurrentWallet,
       );
     },
     (value: string) => {
@@ -573,7 +583,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet
+        isCurrentWallet,
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -1253,10 +1263,11 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
+        `${
+          typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1428,12 +1439,12 @@ export default function WalletPage() {
                 }
               }}
               loading={swapLoading && loadedSwaps.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: swapHasMore,
-            //   isLoading: swapLoading,
-            //   onPageChange: handleSwapPageChange,
-            // }}
+              // serverPagination={{
+              //   enabled: true,
+              //   hasMore: swapHasMore,
+              //   isLoading: swapLoading,
+              //   onPageChange: handleSwapPageChange,
+              // }}
             />
           </div>
           <div className={styles.chartSection}>
@@ -1456,12 +1467,12 @@ export default function WalletPage() {
                 }
               }}
               loading={transferLoading && loadedTransfers.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: transferHasMore,
-            //   isLoading: transferLoading,
-            //   onPageChange: handleTransferPageChange,
-            // }}
+              // serverPagination={{
+              //   enabled: true,
+              //   hasMore: transferHasMore,
+              //   isLoading: transferLoading,
+              //   onPageChange: handleTransferPageChange,
+              // }}
             />
           </div>
         </div>
@@ -1519,7 +1530,7 @@ export default function WalletPage() {
               intelligenceAvailable
                 ? "available"
                 : intelligenceLoading ||
-                  (intelligenceEnabled && intelligenceReport == null)
+                    (intelligenceEnabled && intelligenceReport == null)
                   ? "fetching"
                   : "no_data";
 
@@ -1822,10 +1833,11 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
+          `${
+            typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+              ? transfer.tokenSymbol
+              : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1920,169 +1932,24 @@ export default function WalletPage() {
         isOpen: !!selectedToken,
         content: selectedToken && (
           <>
-          <TokenAverageTradePrice
-            walletAddress={address}
-            tokenAddress={selectedToken.address}
-            tokenImgUrl={
-              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-            }
-            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-            tokenSymbol={
-              tokenMeta.data?.[selectedToken.address]?.symbol || null
-            }
-            tokenCurrentPrice={
-              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-            }
-            avgBuyPrice={selectedToken.avgBuyCost}
-            avgSellPrice={selectedToken.avgSellCost}
-          />
-          <CBTable
-  aria-label="sample table"
-  size="lg"
->
-  <TableHead>
-    <TableRow>
-      <TableHeader>
-        Name
-      </TableHeader>
-      <TableHeader>
-        Rule
-      </TableHeader>
-      <TableHeader>
-        Status
-      </TableHeader>
-      <TableHeader>
-        Other
-      </TableHeader>
-      <TableHeader>
-        Example
-      </TableHeader>
-    </TableRow>
-  </TableHead>
-  <TableBody>
-    <TableRow>
-      <TableCell>
-        Load Balancer 1
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Starting
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 2
-      </TableCell>
-      <TableCell>
-        DNS delegation
-      </TableCell>
-      <TableCell>
-        Active
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 3
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Disabled
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 4
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Disabled
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 5
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Disabled
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 6
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Disabled
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell>
-        Load Balancer 7
-      </TableCell>
-      <TableCell>
-        Round robin
-      </TableCell>
-      <TableCell>
-        Disabled
-      </TableCell>
-      <TableCell>
-        Test
-      </TableCell>
-      <TableCell>
-        22
-      </TableCell>
-    </TableRow>
-  </TableBody>
-</CBTable>
+            <TokenAverageTradePrice
+              walletAddress={address}
+              tokenAddress={selectedToken.address}
+              tokenImgUrl={
+                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+              }
+              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+              tokenSymbol={
+                tokenMeta.data?.[selectedToken.address]?.symbol || null
+              }
+              tokenCurrentPrice={
+                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+              }
+              avgBuyPrice={selectedToken.avgBuyCost}
+              avgSellPrice={selectedToken.avgSellCost}
+            />
+           
           </>
-
         ),
         size: "lg",
         onClose: () => setSelectedToken(null),
@@ -2123,7 +1990,13 @@ export default function WalletPage() {
                 <User key="wallet-audit-icon" size={16} />,
                 <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
               ]}
-              tabs={[overviewTab, holdingsTab, activityTab, auditTab, aiAnalysisTab]}
+              tabs={[
+                overviewTab,
+                holdingsTab,
+                activityTab,
+                auditTab,
+                aiAnalysisTab,
+              ]}
               onTabChange={(index) => setActiveTab(index)}
               actions={tabActions}
             />

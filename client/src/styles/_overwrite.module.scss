@@ -16,6 +16,12 @@
     :global(.cds--data-table-content) {
       height: 100%;
     }
+
+    :global(.cds--data-table) {
+      width: max-content;
+      min-width: 100%;
+      table-layout: auto;
+    }
   }
 
   :global(.cds--table-header-label) {
@@ -67,6 +73,10 @@
 
   /* Sticky headers: show full titles (wrap at word boundaries; no ellipsis). */
   .stickyHeaderCell {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--cds-layer-accent-01);
     white-space: normal;
     overflow: visible;
     vertical-align: bottom;
