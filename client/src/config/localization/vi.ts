@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-    defineDateTimeFormat,
-    defineNumberFormat,
-    defineTextFormat,
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -1562,11 +1562,11 @@ export const translation = defineTranslation({
     },
     notFound: {
       error404: "Lỗi 404",
-      title: "Xin lỗi bạn",
+      title: "Xin lỗi bạn!",
       description:
-        "Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đến vị trí khác.",  
+        "Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đến vị trí khác.",
       backToHome: "Quay lại trang chủ",
       goToMarket: "Đi đến thị trường",
-    }
-  }
+    },
+  },
 });

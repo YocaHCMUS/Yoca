@@ -6,38 +6,38 @@ import { headerNotificationsMockData } from "@/services/notifications/headerNoti
 import type { AlertNotification } from "@/types/profile";
 import { cds } from "@/util/carbon-theme";
 import {
-    Asleep,
-    ErrorFilled,
-    FireFill,
-    InformationFilled,
-    Light,
-    WarningAltFilled,
+  Asleep,
+  ErrorFilled,
+  FireFill,
+  InformationFilled,
+  Light,
+  WarningAltFilled,
 } from "@carbon/icons-react";
 import {
-    Content,
-    Header,
-    HeaderGlobalAction,
-    HeaderGlobalBar,
-    HeaderMenuButton,
-    HeaderMenuItem,
-    HeaderName,
-    HeaderNavigation,
-    HeaderPanel,
-    HeaderSideNavItems,
-    SideNav,
-    SideNavItems,
-    Stack,
-    Switcher,
-    SwitcherDivider,
-    SwitcherItem,
+  Content,
+  Header,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
+  HeaderMenuButton,
+  HeaderMenuItem,
+  HeaderName,
+  HeaderNavigation,
+  HeaderPanel,
+  HeaderSideNavItems,
+  SideNav,
+  SideNavItems,
+  Stack,
+  Switcher,
+  SwitcherDivider,
+  SwitcherItem,
 } from "@carbon/react";
 import {
-    Checkmark,
-    Logout,
-    Notification,
-    Search,
-    User,
-    Wikis,
+  Checkmark,
+  Logout,
+  Notification,
+  Search,
+  User,
+  Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
@@ -75,10 +75,11 @@ type PageWrapperProps = {
   };
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
   noMarketTickers?: boolean;
+  wideContent?: boolean;
   authPopup?: {
     isOpen: boolean;
     onClose: () => void;
-  }
+  };
 };
 
 function getNotificationSeverityLabel(severity: AlertNotification["severity"]) {
@@ -110,7 +111,8 @@ export function PageWrapper({
   children,
   extraHeaderPanel,
   noMarketTickers = true,
-  authPopup
+  wideContent = false,
+  authPopup,
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
@@ -423,7 +425,13 @@ export function PageWrapper({
 
       <Content
         id="main-content"
-        className={isAnyExtraPanelOpen ? styles.contentDimmed : ""}
+        className={
+          isAnyExtraPanelOpen
+            ? styles.contentDimmed
+            : wideContent
+              ? styles.wideContent
+              : ""
+        }
         style={
           {
             "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",

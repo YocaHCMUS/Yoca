@@ -7,8 +7,8 @@ import ProfileUnavailableState from "@/components/profile/ProfileUnavailableStat
 import ProfileWalletTab from "@/components/profile/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
 import {
-    PROFILE_TABS,
-    type ProfileTabId,
+  PROFILE_TABS,
+  type ProfileTabId,
 } from "@/components/profile/profile.constants";
 import ProfileSettingsTab from "@/components/profile/profileSettingsTab";
 import TabContainer from "@/components/tabContainer/tabContainer";
@@ -18,16 +18,16 @@ import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { InlineLoading } from "@carbon/react";
 import {
-    Activity,
-    ChartLine,
-    Notification,
-    Receipt,
-    Settings,
-    StarFilled,
-    User,
-    Wallet,
+  Activity,
+  ChartLine,
+  Notification,
+  Receipt,
+  Settings,
+  StarFilled,
+  User,
+  Wallet,
 } from "@carbon/react/icons";
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import styles from "./index.module.scss";
 
 export default function ProfilePage() {
@@ -37,16 +37,12 @@ export default function ProfilePage() {
     period,
   });
   const [loading, setLoading] = useState(false);
-  const {
-    walletAddresses,
-    linkedWallets,
-    error: sharedError,
-  } = useProfileSharedData({
+  const { walletAddresses, linkedWallets, error } = useProfileSharedData({
     setLoading,
   });
 
   const tabsConfig = useMemo(() => {
-    const allTabs: Array<{ id: ProfileTabId; node: React.ReactNode }> = [
+    const allTabs: Array<{ id: ProfileTabId; node: ReactNode }> = [
       {
         id: "overview",
         node: (
@@ -113,16 +109,16 @@ export default function ProfilePage() {
     return {
       names: visibleTabs.map(
         (tab) =>
-          PROFILE_TABS.find((item) => item.id === tab.id)?.label ?? tab.id,
+          PROFILE_TABS.find((item) => item.id == tab.id)?.label ?? tab.id,
       ),
       icons: visibleTabs.map((tab) => {
-        if (tab.id === "overview") return <User size={16} />;
-        if (tab.id === "dashboard") return <ChartLine size={16} />;
-        if (tab.id === "alerts") return <Notification size={16} />;
-        if (tab.id === "wallets") return <Wallet size={16} />;
-        if (tab.id === "watchlist") return <StarFilled size={16} />;
-        if (tab.id === "subscriptions") return <Receipt size={16} />;
-        if (tab.id === "settings") return <Settings size={16} />;
+        if (tab.id == "overview") return <User size={16} />;
+        if (tab.id == "dashboard") return <ChartLine size={16} />;
+        if (tab.id == "alerts") return <Notification size={16} />;
+        if (tab.id == "wallets") return <Wallet size={16} />;
+        if (tab.id == "watchlist") return <StarFilled size={16} />;
+        if (tab.id == "subscriptions") return <Receipt size={16} />;
+        if (tab.id == "settings") return <Settings size={16} />;
         return <Activity size={16} />;
       }),
       nodes: visibleTabs.map((tab) => tab.node),
@@ -135,25 +131,22 @@ export default function ProfilePage() {
   }, [activeTab, tabsConfig.names.length]);
 
   return (
-    <PageWrapper>
-      <main className={styles.page}>
-        {loading || profileLoading ? (
-          <div className={styles.loadingState}>
-            <InlineLoading description="Loading profile page" status="active" />
-          </div>
-        ) : null}
-
-        <div className={styles.tabSection}>
-          <TabContainer
-            activeTab={activeTab}
-            names={tabsConfig.names}
-            tabIcons={tabsConfig.icons}
-            tabs={tabsConfig.nodes}
-            onTabChange={setActiveTab}
-            orientation="vertical"
-          />
+    <PageWrapper wideContent>
+      {loading || profileLoading ? (
+        <div className={styles.loadingState}>
+          <InlineLoading description="Loading profile page" status="active" />
         </div>
-      </main>
+      ) : null}
+
+      <TabContainer
+        activeTab={activeTab}
+        names={tabsConfig.names}
+        tabIcons={tabsConfig.icons}
+        tabs={tabsConfig.nodes}
+        onTabChange={setActiveTab}
+        orientation="vertical"
+        style={{ height: "100vh" }}
+      />
     </PageWrapper>
   );
 }

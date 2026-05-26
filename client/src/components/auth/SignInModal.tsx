@@ -46,7 +46,9 @@ export function SignInModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const resolvedRedirectUrl =
-    typeof redirectUrl == "string" && redirectUrl.length > 0 ? redirectUrl : "/";
+    typeof redirectUrl == "string" && redirectUrl.length > 0
+      ? redirectUrl
+      : "/";
 
   const formSchema = z.object({
     email: z.email(tr("validation.invalidEmail")),
@@ -113,7 +115,12 @@ export function SignInModal({
   }
 
   return (
-    <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
+    <ComposedModal
+      className={styles.modalLayer}
+      open={open}
+      onClose={close}
+      preventCloseOnClickOutside={false}
+    >
       <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
       <ModalBody className={"bodyne"}>
         <Form onSubmit={handleSubmit(onSubmit)}>

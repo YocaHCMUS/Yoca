@@ -81,6 +81,7 @@ function SolanaProviderContent({ children }: { children: ReactNode }) {
             open={isModalOpen}
             onClose={closeModal}
             className={styles.walletModalContainer}
+            preventCloseOnClickOutside={false}
           >
             <ModalBody
               id="wallet-modal-container"
@@ -107,7 +108,10 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect={false}>
-        <WalletModalProvider container="#wallet-modal-container">
+        <WalletModalProvider
+          container="#wallet-modal-container"
+          className="hello"
+        >
           <SolanaProviderContent>{children}</SolanaProviderContent>
         </WalletModalProvider>
       </WalletProvider>
