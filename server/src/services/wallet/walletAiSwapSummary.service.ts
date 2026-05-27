@@ -172,7 +172,11 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
           if (acc.maxTolerableLossPercent === null || retPct < acc.maxTolerableLossPercent) {
             acc.maxTolerableLossPercent = retPct;
           }
+        } else {
+          acc.wins += 1;
         }
+        acc.exits += 1;
+
 
         acc.exitPrices.push(exitPrice);
 
@@ -181,8 +185,15 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
         }
       }
 
-      if (acc.realizedPnl - pnlBeforeSell > 0) acc.wins += 1;
-      acc.exits += 1;
+      // if (acc.realizedPnl - pnlBeforeSell > 0) acc.wins += 1;
+      // acc.exits += 1;
+
+      // const retPct = acc.realizedPnl - pnlBeforeSell / pnlBeforeSell;
+      // if (retPct < 0) {
+      //   if (acc.maxTolerableLossPercent === null || retPct < acc.maxTolerableLossPercent) {
+      //     acc.maxTolerableLossPercent = retPct;
+      //   }
+      // }
     }
   }
 
@@ -198,6 +209,7 @@ function buildBreakdown(acc: TokenAccumulator): TokenPnlBreakdownPersisted {
     pnlUsd: round2(acc.realizedPnl),
     trades: acc.buyCount + acc.sellCount,
     wins: acc.wins,
+    exits: acc.exits,
     buyCount: acc.buyCount,
     sellCount: acc.sellCount,
     totalEntered: round2(acc.totalBoughtUsd),

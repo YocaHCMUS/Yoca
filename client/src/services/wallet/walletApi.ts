@@ -289,6 +289,7 @@ export interface WalletAiSwapSummaryTokenPnl {
   pnlUsd: number;
   trades: number;
   wins: number;
+  exits: number;
   buyCount: number;
   sellCount: number;
   totalEntered: number;
@@ -381,7 +382,6 @@ export interface TokenDeepAnalysisResponse {
   totalSoldUsd: number;
   tradeTimeline: WalletTokenTradeEvent[];
   pnlDistribution: WalletTokenPnlDistribution;
-  cumulativePnlCurve: [number, number][];
   winningPercentage: number;
   model: string;
   cached: boolean;

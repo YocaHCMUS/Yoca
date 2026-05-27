@@ -95,7 +95,6 @@ interface SingleTokenAccumulator {
   totalBoughtUsd: number;
   totalSoldUsd: number;
   tradeEvents: SingleTokenTradeEventRaw[];
-  cumulativePnlCurve: Array<{ timestampMs: number; cumulativePnl: number }>;
 }
 
 function computeSingleTokenEvents(swaps: WalletSwap[], tokenAddress: string): SingleTokenAccumulator {
@@ -118,10 +117,7 @@ function computeSingleTokenEvents(swaps: WalletSwap[], tokenAddress: string): Si
     totalBoughtUsd: 0,
     totalSoldUsd: 0,
     tradeEvents: [],
-    cumulativePnlCurve: [],
   };
-
-  let runningPnl = 0;
 
   for (const swap of sorted) {
     const bought = swap.bought;
@@ -155,8 +151,6 @@ function computeSingleTokenEvents(swaps: WalletSwap[], tokenAddress: string): Si
       let remainingExit = sold.amount;
       acc.totalSoldUsd += swap.totalValueUsd ?? 0;
       acc.sellCount += 1;
-      let hadWin = false;
-
       while (remainingExit > 0 && acc.entryQueue.length > 0) {
         const lot = acc.entryQueue[0];
         const matched = Math.min(remainingExit, lot.remaining);
@@ -165,8 +159,8 @@ function computeSingleTokenEvents(swaps: WalletSwap[], tokenAddress: string): Si
 
         const contribution = matched * (exitPrice - lot.price);
         acc.realizedPnl += contribution;
-        runningPnl += contribution;
-        if (contribution > 0) hadWin = true;
+        if (contribution > 0) acc.wins += 1;
+        acc.exits += 1;
 
         const holdMs = swapTimeMs - lot.timestampMs;
         const pnlPercent = lot.price > 0 ? (exitPrice - lot.price) / lot.price : 0;
@@ -186,11 +180,6 @@ function computeSingleTokenEvents(swaps: WalletSwap[], tokenAddress: string): Si
           acc.entryQueue.shift();
         }
       }
-
-      if (hadWin) acc.wins += 1;
-      acc.exits += 1;
-
-      acc.cumulativePnlCurve.push({ timestampMs: swapTimeMs, cumulativePnl: Math.round(runningPnl * 100) / 100 });
     }
   }
 
@@ -384,7 +373,6 @@ export async function getTokenDeepAnalysis(
         pnlPercent: e.pnlPercent != null ? Math.round(e.pnlPercent * 10000) / 100 : undefined,
         holdingTimeMs: e.holdingTimeMs,
       })),
-      cumulativePnlCurve: acc.cumulativePnlCurve.map((p) => [p.timestampMs, p.cumulativePnl] as const),
     },
   };
 
@@ -422,7 +410,6 @@ export async function getTokenDeepAnalysis(
     totalSoldUsd: Math.round(acc.totalSoldUsd * 100) / 100,
     tradeTimeline,
     pnlDistribution,
-    cumulativePnlCurve: acc.cumulativePnlCurve.map((p) => [p.timestampMs, p.cumulativePnl]),
     winningPercentage,
     model: GEMINI_MODEL,
     cached: false,

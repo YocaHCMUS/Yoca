@@ -45,7 +45,6 @@ export const tokenDeepAnalysisResponseSchema = z.object({
   totalSoldUsd: z.number().min(0),
   tradeTimeline: z.array(tokenTradeEventSchema),
   pnlDistribution: tokenPnlDistributionSchema,
-  cumulativePnlCurve: z.array(z.tuple([z.number(), z.number()])),
   winningPercentage: z.number().min(0).max(100),
   model: z.string().min(1),
   cached: z.boolean(),

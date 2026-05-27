@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import {
-  CHART_COLOR_PALETTE,
-  useCarbonChartBaseOption,
-} from "@/util/carbon-chart-base";
+import { useCarbonChartBaseOption } from "@/util/carbon-chart-base";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
@@ -159,73 +156,6 @@ export function TokenDeepAnalysisView({
     };
   }, [data, tr, baseOption]);
 
-  const cumulativeOption = useMemo((): EChartsOption | null => {
-    if (!data || data.cumulativePnlCurve.length === 0) return null;
-
-    const sorted = [...data.cumulativePnlCurve].sort(([a], [b]) => a - b);
-    const chartData = sorted.map(([ts, pnl]) => [ts, pnl] as [number, number]);
-    const color = CHART_COLOR_PALETTE[0];
-
-    return {
-      ...baseOption,
-      tooltip: {
-        ...baseOption.tooltip,
-        trigger: "axis" as const,
-        formatter: (params: unknown) => {
-          if (!Array.isArray(params) || params.length === 0) return "";
-          const entry = params[0] as { data: [number, number] };
-          const [ts, pnl] = entry.data;
-          let html = createTooltipHeader(new Date(ts).toLocaleDateString());
-          html += createTooltipRow(
-            tr("walletPage.aiSwapSummary.cumulativePnl"),
-            fmt.num.currency(pnl),
-          );
-          return html;
-        },
-      },
-      legend: { show: false },
-      grid: { left: 56, right: 16, top: 12, bottom: 28 },
-      xAxis: {
-        ...baseOption.xAxis,
-        type: "time",
-        boundaryGap: false as never,
-        splitNumber: 4,
-        axisLabel: { ...baseOption.xAxis?.axisLabel, fontSize: 10 },
-      },
-      yAxis: {
-        ...baseOption.yAxis,
-        type: "value",
-        axisLabel: {
-          ...baseOption.yAxis?.axisLabel,
-          fontSize: 10,
-          formatter: (val: number) => fmt.num.compact.currency(val),
-        },
-      },
-      series: [
-        {
-          type: "line",
-          data: chartData,
-          showSymbol: false,
-          smooth: false,
-          lineStyle: { width: 2, color },
-          areaStyle: {
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: `${color}4D` },
-                { offset: 1, color: `${color}0D` },
-              ],
-            },
-          },
-        },
-      ],
-    };
-  }, [data, fmt, tr, baseOption]);
-
   if (loading) {
     return (
       <div className={styles.twoColumnLayout}>
@@ -360,19 +290,6 @@ export function TokenDeepAnalysisView({
         )}
 
         <div className={styles.chartsGrid}>
-          {data.cumulativePnlCurve.length > 0 && (
-            <div className={styles.echartCard}>
-              <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.cumulativePnl")}</h4>
-              <ReactECharts
-                option={cumulativeOption ?? {}}
-                style={{ height: 200, width: "100%" }}
-                notMerge
-                lazyUpdate
-                opts={{ renderer: "canvas" }}
-              />
-            </div>
-          )}
-
           <div className={styles.echartCard}>
             <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.pnlDistribution")}</h4>
             <ReactECharts

@@ -13,6 +13,7 @@ export const tokenPnlBreakdownSchema = z.object({
   pnlUsd: z.number(),
   trades: z.number().int().min(0),
   wins: z.number().int().min(0),
+  exits: z.number().int().min(0),
   buyCount: z.number().int().min(0),
   sellCount: z.number().int().min(0),
   totalEntered: z.number().min(0),

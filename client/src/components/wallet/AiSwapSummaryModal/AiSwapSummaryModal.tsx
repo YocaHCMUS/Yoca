@@ -180,7 +180,7 @@ function SummaryContent({
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.winRate")}</span>
-                      <span className={styles.detailValue}>{t.sellCount > 0 ? (t.wins / t.sellCount * 100).toFixed(1) + "%" : "—"}</span>
+                      <span className={styles.detailValue}>{t.sellCount > 0 ? (t.wins / t.exits * 100).toFixed(1) + "%" : "—"}</span>
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.detailLabel}>{tr("walletPage.aiSwapSummary.maxLoss")}</span>

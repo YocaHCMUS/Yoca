@@ -1219,6 +1219,7 @@ export type TokenPnlBreakdownPersisted = {
   pnlUsd: number;
   trades: number;
   wins: number;
+  exits: number;
   buyCount: number;
   sellCount: number;
   totalEntered: number;
