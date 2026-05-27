@@ -1337,7 +1337,13 @@ export default function WalletPage() {
       <PageSection>
         <div className={styles.chartStack}>
           <div className={styles.chartSection}>
-            <BalanceChartV2 address={walletAddress} />
+            <BalanceChartV2
+              address={walletAddress}
+              onClickDay={(ts) => {
+                setDayPopupTimestamp(ts);
+                setDayPopupOpen(true);
+              }}
+            />
           </div>
           <div className={styles.chartSection}>
             <PnLChart

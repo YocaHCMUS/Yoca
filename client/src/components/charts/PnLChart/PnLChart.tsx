@@ -16,6 +16,7 @@ import {
   formatTimestampWithTimezone,
 } from "@/util/chart-helpers";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
+import { attachChartDayClick } from "@/util/chart-click";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -57,7 +58,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
 
-  const chartRef = useRef<ReactECharts>(null);
+  const chartRefMap = useRef(new Map<number, ReactECharts>());
   const baseOption = useCarbonChartBaseOption();
   const { selectedTimezone: timezone } = useChartContext();
   const [displayMode, setDisplayMode] = useState<"daily" | "cumulative" | "both">(
@@ -336,30 +337,33 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   }, [displayData, createChartOption]);
 
   useEffect(() => {
-    if (!onDayClick || !chartRef.current) return;
+    if (!onDayClick) return;
 
-    const chartInstance = chartRef.current.getEchartsInstance();
-    const handler = (params: any) => {
-      if (params.componentType !== "series" || params.dataIndex == null) return;
+    const cleanups: (() => void)[] = [];
 
-      const chartEntry = chartOptions[params.seriesIndex ?? 0];
-      if (!chartEntry) return;
+    chartOptions.forEach((entry, index) => {
+      const reactECharts = chartRefMap.current.get(index);
+      if (!reactECharts) return;
+
+      const chartInstance = reactECharts.getEchartsInstance();
 
       const timestamps = displayData && "wallets" in displayData
-        ? displayData.wallets[params.seriesIndex ?? 0]?.dailyPnL.map((p) => p.timestamp)
+        ? displayData.wallets[index]?.dailyPnL.map((p) => p.timestamp)
         : displayData && "dailyPnL" in displayData
           ? displayData.dailyPnL.map((p) => p.timestamp)
           : [];
 
-      const ts = timestamps[params.dataIndex];
-      if (ts != null) {
-        onDayClick(chartEntry.walletAddress, ts);
-      }
-    };
+      if (timestamps.length === 0) return;
 
-    chartInstance.on("click", handler);
+      cleanups.push(
+        attachChartDayClick(chartInstance, timestamps, (ts) => {
+          onDayClick(entry.walletAddress, ts);
+        }),
+      );
+    });
+
     return () => {
-      chartInstance.off("click", handler);
+      cleanups.forEach((fn) => fn());
     };
   }, [onDayClick, chartOptions, displayData]);
 
@@ -429,7 +433,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                 minHeight={minHeight}
               >
                 <ReactECharts
-                  ref={index === 0 ? chartRef : undefined}
+                  ref={(el) => {
+                    if (el) chartRefMap.current.set(index, el);
+                    else chartRefMap.current.delete(index);
+                  }}
                   option={chartData.option}
                   style={{
                     height: "100%",

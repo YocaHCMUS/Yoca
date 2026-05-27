@@ -49,7 +49,13 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
   };
 }
 
-export function BalanceChartV2({ address }: { address: string }) {
+export function BalanceChartV2({
+  address,
+  onClickDay,
+}: {
+  address: string;
+  onClickDay?: (timestamp: number) => void;
+}) {
   const { tr, fmt } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("7D");
@@ -223,6 +229,7 @@ export function BalanceChartV2({ address }: { address: string }) {
           height={500}
           loading={tokenBalances.isLoading && portfolio.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
+          onClickDay={onClickDay}
         />
       </Flex>
     </ChartWrapper>
