@@ -17,6 +17,7 @@ export async function getTokenVolatilityNews(
       window: query.window ?? "auto",
       maxEventsWithNews: String(query.maxEventsWithNews ?? 3),
       ...(query.forceRefresh ? { forceRefresh: "true" } : {}),
+      ...(query.includeSummary ? { includeSummary: "true" } : {}),
     },
   });
 

@@ -301,6 +301,7 @@ export const tokenVolatilityNewsCache = pgTable(
     timeframe: varchar("timeframe", { length: 16 }).notNull(),
     detectionWindow: varchar("detection_window", { length: 16 }).notNull(),
     maxEventsWithNews: integer("max_events_with_news").notNull(),
+    includeSummary: boolean("include_summary").notNull().default(false),
     responseJson: jsonb("response_json")
       .$type<Record<string, unknown>>()
       .notNull(),
@@ -318,6 +319,7 @@ export const tokenVolatilityNewsCache = pgTable(
       table.timeframe,
       table.detectionWindow,
       table.maxEventsWithNews,
+      table.includeSummary,
     ),
   ],
 );

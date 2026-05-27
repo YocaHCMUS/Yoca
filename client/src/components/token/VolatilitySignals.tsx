@@ -10,6 +10,7 @@ import { getTokenVolatilityNews } from "@/services/tokenVolatility";
 import type {
   RelatedNewsArticle,
   VolatilityEvent,
+  VolatilitySummary,
   VolatilityTimeframe,
 } from "@/types/volatility";
 import styles from "./VolatilitySignals.module.scss";
@@ -27,6 +28,10 @@ interface VolatilitySignalsState {
     hit: boolean;
     expiresAt: string;
   } | null;
+  summary: VolatilitySummary | null;
+  isSummaryLoading: boolean;
+  summaryError: string | null;
+  summaryRequested: boolean;
   isLoading: boolean;
   error: string | null;
   hasLoaded: boolean;
@@ -92,6 +97,10 @@ function getInitialState(): VolatilitySignalsState {
     events: [],
     dataPointsAnalyzed: 0,
     cache: null,
+    summary: null,
+    isSummaryLoading: false,
+    summaryError: null,
+    summaryRequested: false,
     isLoading: false,
     error: null,
     hasLoaded: false,
@@ -122,8 +131,8 @@ function RelatedNewsList({ articles }: { articles: RelatedNewsArticle[] }) {
             <span className={styles.relatedNewsTitle}>{article.title}</span>
             <span className={styles.relatedNewsMeta}>
               {article.source}
-              {article.publishedAt ? ` · ${formatDateTime(article.publishedAt)}` : ""}
-              {" · "}
+              {article.publishedAt ? ` | ${formatDateTime(article.publishedAt)}` : ""}
+              {" | "}
               {formatTimeDistance(article.timeDistanceHours)}
             </span>
           </div>
@@ -135,6 +144,24 @@ function RelatedNewsList({ articles }: { articles: RelatedNewsArticle[] }) {
           <Launch className={styles.linkIcon} size={14} />
         </a>
       ))}
+    </div>
+  );
+}
+
+function SignalSummary({ summary }: { summary: VolatilitySummary }) {
+  return (
+    <div className={styles.summaryBox}>
+      <div className={styles.summaryLabel}>Signal summary</div>
+      <p className={styles.summaryHeadline}>{summary.headline}</p>
+      <ul className={styles.summaryBullets}>
+        {summary.bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+      <p className={styles.summaryRiskNote}>{summary.riskNote}</p>
+      {summary.provider && (
+        <div className={styles.summaryProvider}>{summary.provider}</div>
+      )}
     </div>
   );
 }
@@ -156,12 +183,19 @@ export function VolatilitySignals({
     [state.events],
   );
 
-  const fetchSignals = useCallback(async (forceRefresh = false) => {
+  const fetchSignals = useCallback(async (
+    forceRefresh = false,
+    includeSummary = false,
+  ) => {
     if (!address || !symbol || !name) return;
 
     setState((prev) => ({
       ...prev,
       events: [],
+      summary: includeSummary ? prev.summary : null,
+      isSummaryLoading: false,
+      summaryError: null,
+      summaryRequested: includeSummary,
       isLoading: true,
       error: null,
       hasLoaded: prev.hasLoaded,
@@ -178,6 +212,7 @@ export function VolatilitySignals({
         window: "auto",
         maxEventsWithNews: MAX_EVENTS_WITH_NEWS,
         forceRefresh,
+        includeSummary,
       });
       const nextEvents = data.events.slice(0, MAX_EVENTS_RENDERED);
 
@@ -185,6 +220,10 @@ export function VolatilitySignals({
         events: nextEvents,
         dataPointsAnalyzed: data.dataPointsAnalyzed,
         cache: data.cache ?? null,
+        summary: data.summary ?? null,
+        isSummaryLoading: false,
+        summaryError: null,
+        summaryRequested: includeSummary,
         isLoading: false,
         error: null,
         hasLoaded: true,
@@ -194,6 +233,7 @@ export function VolatilitySignals({
       setState((prev) => ({
         ...prev,
         isLoading: false,
+        isSummaryLoading: false,
         error:
           err instanceof Error
             ? err.message
@@ -204,8 +244,77 @@ export function VolatilitySignals({
   }, [address, symbol, name, threshold, timeframe]);
 
   useEffect(() => {
-    void fetchSignals(false);
+    void fetchSignals(false, false);
   }, [fetchSignals]);
+
+  const handleThresholdChange = (value: number) => {
+    setState((prev) => ({
+      ...prev,
+      summary: null,
+      summaryError: null,
+      summaryRequested: false,
+    }));
+    setThreshold(value);
+  };
+
+  const handleTimeframeChange = (value: VolatilityTimeframe) => {
+    setState((prev) => ({
+      ...prev,
+      summary: null,
+      summaryError: null,
+      summaryRequested: false,
+    }));
+    setTimeframe(value);
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!address || !symbol || !name) return;
+
+    setState((prev) => ({
+      ...prev,
+      isSummaryLoading: true,
+      summaryError: null,
+      summaryRequested: true,
+    }));
+
+    try {
+      const data = await getTokenVolatilityNews({
+        address,
+        symbol,
+        name,
+        threshold,
+        timeframe,
+        window: "auto",
+        maxEventsWithNews: MAX_EVENTS_WITH_NEWS,
+        includeSummary: true,
+      });
+      const nextEvents = data.events.slice(0, MAX_EVENTS_RENDERED);
+
+      setState((prev) => ({
+        ...prev,
+        events: nextEvents,
+        dataPointsAnalyzed: data.dataPointsAnalyzed,
+        cache: data.cache ?? null,
+        summary: data.summary ?? null,
+        isSummaryLoading: false,
+        summaryError: null,
+        hasLoaded: true,
+      }));
+      setExpandedEvents((prev) => {
+        if (prev.size > 0) return prev;
+        return new Set(nextEvents[0] ? [nextEvents[0].id] : []);
+      });
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        isSummaryLoading: false,
+        summaryError:
+          err instanceof Error
+            ? err.message
+            : "Unable to generate signal summary right now.",
+      }));
+    }
+  };
 
   const toggleEvent = (eventId: string) => {
     setExpandedEvents((prev) => {
@@ -238,7 +347,7 @@ export function VolatilitySignals({
             hideLabel
             id="volatility-threshold-select"
             value={String(threshold)}
-            onChange={(event) => setThreshold(Number(event.target.value))}
+            onChange={(event) => handleThresholdChange(Number(event.target.value))}
             disabled={state.isLoading}
           >
             {THRESHOLD_OPTIONS.map((value) => (
@@ -251,7 +360,7 @@ export function VolatilitySignals({
             id="volatility-timeframe-select"
             value={timeframe}
             onChange={(event) =>
-              setTimeframe(event.target.value as VolatilityTimeframe)
+              handleTimeframeChange(event.target.value as VolatilityTimeframe)
             }
             disabled={state.isLoading}
           >
@@ -262,7 +371,7 @@ export function VolatilitySignals({
           <Button
             kind="tertiary"
             size="sm"
-            onClick={() => void fetchSignals(true)}
+            onClick={() => void fetchSignals(true, state.summaryRequested)}
             disabled={state.isLoading}
             iconDescription="Refresh volatility signals"
             hasIconOnly
@@ -271,6 +380,30 @@ export function VolatilitySignals({
           </Button>
         </div>
       </div>
+
+      {!state.isLoading && !state.error && state.hasLoaded && (
+        <div className={styles.summaryActions}>
+          <Button
+            kind="tertiary"
+            size="sm"
+            onClick={() => void handleGenerateSummary()}
+            disabled={state.isSummaryLoading}
+          >
+            {state.isSummaryLoading
+              ? "Generating summary..."
+              : "Generate signal summary"}
+          </Button>
+          {state.summaryError && (
+            <span className={styles.summaryError}>
+              Unable to generate signal summary right now.
+            </span>
+          )}
+        </div>
+      )}
+
+      {!state.isLoading && !state.error && state.summary && (
+        <SignalSummary summary={state.summary} />
+      )}
 
       {state.isLoading && (
         <div className={styles.loading} aria-busy="true" aria-live="polite">
@@ -317,7 +450,7 @@ export function VolatilitySignals({
                         <strong>{formatChangePercent(event.changePercent)}</strong>
                       </div>
                       <div className={styles.eventMeta}>
-                        {formatDateTime(event.timestamp)} · window: {event.window}
+                        {formatDateTime(event.timestamp)} | window: {event.window}
                       </div>
                     </div>
                   </div>

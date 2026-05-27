@@ -11,6 +11,7 @@ export interface TokenVolatilityNewsCacheKey {
   timeframe: TokenVolatilityTimeframe;
   detectionWindow: string;
   maxEventsWithNews: number;
+  includeSummary: boolean;
 }
 
 export interface TokenVolatilityNewsCacheEntry<TData> {
@@ -57,6 +58,7 @@ export async function readTokenVolatilityNewsCache<TData>(
         eq(tokenVolatilityNewsCache.timeframe, key.timeframe),
         eq(tokenVolatilityNewsCache.detectionWindow, key.detectionWindow),
         eq(tokenVolatilityNewsCache.maxEventsWithNews, key.maxEventsWithNews),
+        eq(tokenVolatilityNewsCache.includeSummary, key.includeSummary),
         gt(tokenVolatilityNewsCache.expiresAt, new Date()),
       ),
     )
@@ -87,6 +89,7 @@ export async function writeTokenVolatilityNewsCache<TData>(
       timeframe: key.timeframe,
       detectionWindow: key.detectionWindow,
       maxEventsWithNews: key.maxEventsWithNews,
+      includeSummary: key.includeSummary,
       responseJson: data as Record<string, unknown>,
       createdAt: now,
       updatedAt: now,
@@ -99,6 +102,7 @@ export async function writeTokenVolatilityNewsCache<TData>(
         tokenVolatilityNewsCache.timeframe,
         tokenVolatilityNewsCache.detectionWindow,
         tokenVolatilityNewsCache.maxEventsWithNews,
+        tokenVolatilityNewsCache.includeSummary,
       ],
       set: {
         symbol: key.symbol,

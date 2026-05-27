@@ -12,6 +12,7 @@ import {
   writeTokenVolatilityNewsCache,
   type TokenVolatilityNewsCacheKey,
 } from "@sv/services/tokens/token-volatility-news-cache.js";
+import { summarizeTokenVolatilityNews } from "@sv/services/tokens/token-volatility-summary.js";
 import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
@@ -36,6 +37,10 @@ const tokenVolatilityNewsQuerySchema = z.object({
     .max(10)
     .default(DEFAULT_MAX_EVENTS_WITH_NEWS),
   forceRefresh: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+  includeSummary: z
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
@@ -95,6 +100,7 @@ const app = new Hono().get("/", async (c) => {
     window,
     maxEventsWithNews,
     forceRefresh,
+    includeSummary,
   } = parsed.data;
 
   const token = {
@@ -113,6 +119,7 @@ const app = new Hono().get("/", async (c) => {
     timeframe: volatilityTimeframe,
     detectionWindow: window,
     maxEventsWithNews,
+    includeSummary,
   };
 
   try {
@@ -130,6 +137,7 @@ const app = new Hono().get("/", async (c) => {
             timeframe,
             window,
             maxEventsWithNews,
+            includeSummary,
             expiresAt: cached.expiresAt,
           });
 
@@ -154,6 +162,7 @@ const app = new Hono().get("/", async (c) => {
           timeframe,
           window,
           maxEventsWithNews,
+          includeSummary,
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -164,6 +173,7 @@ const app = new Hono().get("/", async (c) => {
         timeframe,
         window,
         maxEventsWithNews,
+        includeSummary,
       });
     }
 
@@ -225,11 +235,18 @@ const app = new Hono().get("/", async (c) => {
         eventsWithRelatedNews.push({ ...event, relatedNews: [] });
       }
     }
-    const freshData = {
+    const dataWithoutSummary = {
       ...volatility,
       window,
       relatedNewsWindowHours,
       events: eventsWithRelatedNews,
+    };
+    const summary = includeSummary
+      ? await summarizeTokenVolatilityNews(dataWithoutSummary)
+      : null;
+    const freshData = {
+      ...dataWithoutSummary,
+      summary,
     };
     const expiresAt = getTokenVolatilityNewsCacheExpiresAt(
       volatilityTimeframe,
@@ -244,6 +261,7 @@ const app = new Hono().get("/", async (c) => {
         timeframe,
         window,
         maxEventsWithNews,
+        includeSummary,
         error: err instanceof Error ? err.message : String(err),
       });
     }

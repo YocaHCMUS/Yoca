@@ -28,6 +28,14 @@ export interface VolatilityEvent {
   relatedNews: RelatedNewsArticle[];
 }
 
+export interface VolatilitySummary {
+  headline: string;
+  bullets: string[];
+  riskNote: string;
+  generatedAt: string;
+  provider?: string;
+}
+
 export interface VolatilitySignalResponse {
   success: boolean;
   data: {
@@ -50,6 +58,7 @@ export interface VolatilitySignalResponse {
       hit: boolean;
       expiresAt: string;
     };
+    summary: VolatilitySummary | null;
     events: VolatilityEvent[];
   };
 }
@@ -63,4 +72,5 @@ export interface TokenVolatilityNewsQuery {
   window?: VolatilityWindow;
   maxEventsWithNews?: number;
   forceRefresh?: boolean;
+  includeSummary?: boolean;
 }

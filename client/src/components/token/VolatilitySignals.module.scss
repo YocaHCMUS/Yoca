@@ -65,6 +65,61 @@
   gap: 10px;
 }
 
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.summaryError {
+  color: $text-error;
+  font-size: 12px;
+}
+
+.summaryBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $layer-01;
+}
+
+.summaryLabel {
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summaryHeadline {
+  margin: 0;
+  color: $text-primary;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.summaryBullets {
+  margin: 0;
+  padding-left: 18px;
+  color: $text-primary;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.summaryRiskNote,
+.summaryProvider {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.summaryProvider {
+  font-size: 11px;
+}
+
 .loadingEvent,
 .eventCard {
   border: 1px solid $border-subtle;
