@@ -48,7 +48,7 @@ function formatDate(ms: number): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-const PIE_COLORS = [CHART_COLOR_PALETTE[1], CHART_COLOR_PALETTE[5], CHART_COLOR_PALETTE[6], CHART_COLOR_PALETTE[4], "#da1e28"];
+const PIE_COLORS = ["#13692a", "#2e7d32", "#66bb6a", "#eb5b5b", "#c21e1e"];
 
 export function TokenDeepAnalysisView({
   walletAddress,
@@ -113,12 +113,20 @@ export function TokenDeepAnalysisView({
           return html;
         },
       },
-      legend: { show: false },
+      legend: {
+        show: true,
+        orient: "vertical",
+        right: 0,
+        top: "center",
+        itemWidth: 10,
+        itemHeight: 10,
+        textStyle: { color: baseOption.textStyle.color, fontSize: 11 },
+      },
       series: [
         {
           type: "pie",
           radius: ["30%", "65%"],
-          center: ["50%", "50%"],
+          center: ["38%", "50%"],
           data: buckets.map((b, i) => ({
             name: b.name,
             value: b.value,
@@ -343,7 +351,7 @@ export function TokenDeepAnalysisView({
                     tokenLogoUri={data.logoUri}
                     dayMs={dayStart}
                     trades={dayTrades}
-                    onRemove={() => {}}
+                    onRemove={() => { }}
                   />
                 </div>
               ))}
