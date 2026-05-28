@@ -12,6 +12,7 @@ import {
     type PaymentHistory,
 } from "@/services/profile/subscriptionApi";
 import { Loading } from "@carbon/react";
+import { Copy, Check } from "lucide-react";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
 
@@ -444,13 +445,50 @@ function PaymentHistoryPanel({
                   {item.status}
                 </span>
               </td>
-              <td style={{ fontSize: "11px", color: "#64748b" }}>
-                {paymentIdLabel(item)}
+              <td>
+                <PaymentIdCell paymentId={paymentIdLabel(item)} />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function PaymentIdCell({ paymentId }: { paymentId: string }) {
+  const [isCopied, setIsCopied] = useState(false);
+
+  if (!paymentId || paymentId === "-") return <span>-</span>;
+
+  const masked =
+    paymentId.length > 12
+      ? `${paymentId.slice(0, 6)}...${paymentId.slice(-4)}`
+      : paymentId;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(paymentId);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.warn("Clipboard write failed", err);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-sm" style={{ color: "#94a3b8" }}>
+        {masked}
+      </span>
+      <button
+        onClick={handleCopy}
+        className="p-1 transition-colors hover:text-[#14F195]"
+        style={{ color: isCopied ? "#14F195" : "#64748b" }}
+        title="Copy Full ID"
+      >
+        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+      </button>
     </div>
   );
 }
