@@ -34,6 +34,7 @@ type AlertsClient = ClientTypeOf<"/api/alerts">;
 type AlertsHpClient = ClientTypeOf<"/api/alertsHp">;
 type NewsClient = ClientTypeOf<"/api/news">;
 type TokenNewsClient = ClientTypeOf<"/api/token-news">;
+type TokenChartNewsEventsClient = ClientTypeOf<"/api/token-chart-news-events">;
 type TokenVolatilityNewsClient = ClientTypeOf<"/api/token-volatility-news">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 
@@ -55,6 +56,7 @@ export type ApiClient = {
     alertsHp: AlertsHpClient;
     news: NewsClient;
     tokenNews: TokenNewsClient;
+    tokenChartNewsEvents: TokenChartNewsEventsClient;
     tokenVolatilityNews: TokenVolatilityNewsClient;
     payment: PaymentClient;
   };
@@ -78,6 +80,7 @@ const client: ApiClient = {
     alertsHp: hcc("/api/alertsHp"),
     news: hcc("/api/news"),
     tokenNews: hcc("/api/token-news"),
+    tokenChartNewsEvents: hcc("/api/token-chart-news-events"),
     tokenVolatilityNews: hcc("/api/token-volatility-news"),
     payment: hcc("/api/payment"),
   },

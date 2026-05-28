@@ -11,6 +11,9 @@ import chartRoutes, { type ChartRouteAppType } from "@sv/routes/chart.route.js";
 import misc, { type MiscAppType } from "@sv/routes/misc.js";
 import news, { type NewsAppType } from "@sv/routes/news.js";
 import tokenNews, { type TokenNewsAppType } from "@sv/routes/token-news.js";
+import tokenChartNewsEvents, {
+  type TokenChartNewsEventsAppType,
+} from "@sv/routes/token-chart-news-events.js";
 import tokenVolatility, {
   type TokenVolatilityAppType,
 } from "@sv/routes/token-volatility.js";
@@ -82,6 +85,7 @@ export type AppRoutes = {
   "/api/alertsHp": AlertsAppType;
   "/api/news": NewsAppType;
   "/api/token-news": TokenNewsAppType;
+  "/api/token-chart-news-events": TokenChartNewsEventsAppType;
   "/api/token-volatility": TokenVolatilityAppType;
   "/api/token-volatility-news": TokenVolatilityNewsAppType;
   "/webhook": WebhookAppType;
@@ -107,6 +111,7 @@ const routes: AppRoutes = {
   "/api/alertsHp": alertsHp,
   "/api/news": news,
   "/api/token-news": tokenNews,
+  "/api/token-chart-news-events": tokenChartNewsEvents,
   "/api/token-volatility": tokenVolatility,
   "/api/token-volatility-news": tokenVolatilityNews,
   "/api/payment": payment,

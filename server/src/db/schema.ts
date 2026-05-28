@@ -324,6 +324,36 @@ export const tokenVolatilityNewsCache = pgTable(
   ],
 );
 
+export const tokenChartNewsEventsCache = pgTable(
+  "token_chart_news_events_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    includeSummary: boolean("include_summary").notNull().default(false),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_chart_news_events_cache_key_uq").on(
+      table.tokenAddress,
+      table.symbol,
+      table.name,
+      table.timeframe,
+      table.includeSummary,
+    ),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,

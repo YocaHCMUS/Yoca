@@ -208,6 +208,7 @@ export default function TokenOverviewPage() {
                 <TokenOverviewChart
                   address={address}
                   symbol={details?.symbol ?? ""}
+                  name={details?.name ?? ""}
                   onPriceChangeUpdate={setCustomPriceChange}
                 />
               )}
