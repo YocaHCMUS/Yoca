@@ -10,17 +10,14 @@ import {
   type TokenChartNewsEventsCacheKey,
   type TokenChartNewsTimeframe,
 } from "@sv/services/tokens/token-chart-news-events-cache.js";
+import {
+  summarizeTokenChartNewsEvent,
+  type TokenChartNewsEventSummary,
+} from "@sv/services/tokens/token-chart-news-summary.js";
 import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import z from "zod";
-
-interface TokenChartNewsEventSummary {
-  headline: string;
-  bullets: string[];
-  provider?: string;
-  generatedAt: string;
-}
 
 interface TokenChartNewsEvent {
   date: string;
@@ -78,53 +75,46 @@ function getUtcDateTimestamp(dateKey: string) {
   return new Date(`${dateKey}T00:00:00.000Z`).toISOString();
 }
 
-function formatDateLabel(dateKey: string) {
-  const timestamp = Date.parse(`${dateKey}T00:00:00.000Z`);
-  if (Number.isNaN(timestamp)) return dateKey;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(timestamp);
+function hasCurrentSummaryShape(summary: TokenChartNewsEventSummary | null) {
+  return Boolean(
+    summary &&
+      typeof summary.headline === "string" &&
+      typeof summary.tldr === "string" &&
+      Array.isArray(summary.bullets) &&
+      Array.isArray(summary.themes) &&
+      typeof summary.riskNote === "string",
+  );
 }
 
-function buildDeterministicSummary(
-  event: Omit<TokenChartNewsEvent, "summary">,
-): TokenChartNewsEventSummary {
-  const topArticles = event.articles.slice(0, 3);
+async function addSummaries(
+  data: TokenChartNewsEventsData,
+): Promise<TokenChartNewsEventsData> {
+  const events: TokenChartNewsEvent[] = [];
 
-  return {
-    headline: `Related token news on ${formatDateLabel(event.date)}.`,
-    bullets:
-      topArticles.length > 0
-        ? topArticles.map((article) => `${article.source}: ${article.title}`)
-        : [`${event.articleCount} related article${event.articleCount === 1 ? "" : "s"} found on this date.`],
-    provider: "deterministic",
-    generatedAt: new Date().toISOString(),
-  };
-}
-
-function addSummaries(data: TokenChartNewsEventsData): TokenChartNewsEventsData {
-  return {
-    ...data,
-    events: data.events.map((event) => ({
+  for (const event of data.events) {
+    events.push({
       ...event,
-      summary: buildDeterministicSummary({
+      summary: await summarizeTokenChartNewsEvent({
+        token: {
+          name: data.token.name,
+          symbol: data.token.symbol,
+        },
         date: event.date,
-        timestamp: event.timestamp,
         articleCount: event.articleCount,
         articles: event.articles,
       }),
-    })),
+    });
+  }
+
+  return {
+    ...data,
+    events,
   };
 }
 
 function groupArticlesByDate(
   articles: TokenNewsArticle[],
   timeframe: TokenChartNewsTimeframe,
-  includeSummary: boolean,
 ) {
   const cutoffMs = Date.now() - timeframeDays[timeframe] * 24 * 60 * 60 * 1000;
   const groups = new Map<string, TokenNewsArticle[]>();
@@ -153,9 +143,7 @@ function groupArticlesByDate(
 
       return {
         ...eventWithoutSummary,
-        summary: includeSummary
-          ? buildDeterministicSummary(eventWithoutSummary)
-          : null,
+        summary: null,
       };
     })
     .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
@@ -180,7 +168,7 @@ async function buildFreshChartNewsEvents({
     { maxArticles: 80 },
   );
 
-  return {
+  const data: TokenChartNewsEventsData = {
     token: {
       address,
       symbol: news.token.symbol,
@@ -188,8 +176,10 @@ async function buildFreshChartNewsEvents({
     },
     timeframe,
     updatedAt: new Date().toISOString(),
-    events: groupArticlesByDate(news.articles, timeframe, includeSummary),
+    events: groupArticlesByDate(news.articles, timeframe),
   };
+
+  return includeSummary ? addSummaries(data) : data;
 }
 
 const app = new Hono().get("/", async (c) => {
@@ -220,15 +210,29 @@ const app = new Hono().get("/", async (c) => {
       const cached =
         await readTokenChartNewsEventsCache<TokenChartNewsEventsData>(cacheKey);
       if (cached) {
-        console.info("[token-chart-news-events] cache hit", {
-          address,
-          symbol: cacheKey.symbol,
-          timeframe,
-          includeSummary,
-          events: cached.data.events.length,
-        });
+        const summaryCacheIsCurrent =
+          !includeSummary ||
+          cached.data.events.every((event) =>
+            hasCurrentSummaryShape(event.summary),
+          );
 
-        return c.json({ success: true, data: cached.data }, statusCode.Ok);
+        if (!summaryCacheIsCurrent) {
+          console.info("[token-chart-news-events] stale summary cache ignored", {
+            address,
+            symbol: cacheKey.symbol,
+            timeframe,
+          });
+        } else {
+          console.info("[token-chart-news-events] cache hit", {
+            address,
+            symbol: cacheKey.symbol,
+            timeframe,
+            includeSummary,
+            events: cached.data.events.length,
+          });
+
+          return c.json({ success: true, data: cached.data }, statusCode.Ok);
+        }
       }
     } catch (err) {
       console.warn("[token-chart-news-events] cache read failed", {
@@ -248,7 +252,7 @@ const app = new Hono().get("/", async (c) => {
             includeSummary: false,
           });
         if (baseCached) {
-          const summarized = addSummaries(baseCached.data);
+          const summarized = await addSummaries(baseCached.data);
           const expiresAt = getTokenChartNewsEventsCacheExpiresAt(timeframe);
           await writeTokenChartNewsEventsCache(cacheKey, summarized, expiresAt);
 

@@ -12,7 +12,10 @@ export interface TokenChartNewsArticle {
 
 export interface TokenChartNewsEventSummary {
   headline: string;
+  tldr: string;
   bullets: string[];
+  themes: string[];
+  riskNote: string;
   provider?: string;
   generatedAt: string;
 }
