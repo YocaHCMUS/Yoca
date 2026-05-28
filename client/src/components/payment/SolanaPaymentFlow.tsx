@@ -1,5 +1,5 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { SystemProgram, Transaction } from "@solana/web3.js";
+import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
@@ -294,29 +294,31 @@ export function SolanaPaymentFlow({
       }
 
       // ── Step 1: Fresh blockhash — fetched IMMEDIATELY before construction ─
-      // Using 'confirmed' per Phantom best practices. This commitment level is
-      // what Phantom's internal simulation uses, so the blockhash is guaranteed
-      // to be recognised when Phantom re-simulates on its end.
+      // Using 'confirmed' per Phantom & Solflare best practices. This is the
+      // commitment level both wallets use internally during their own simulation,
+      // so the blockhash is guaranteed to be recognised on both ends.
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
       console.log("[SolanaPaymentFlow] Fresh blockhash fetched:", blockhash);
 
-      // ── Step 2: Legacy Transaction with explicit recentBlockhash + feePayer ─
-      // Phantom's official documentation uses the legacy Transaction API with
-      // explicit property assignment. VersionedTransaction can sometimes cause
-      // simulation desync between our RPC and Phantom's internal RPC.
-      const transaction = new Transaction({
+      // ── Step 2: VersionedTransaction (V0) construction ───────────────────
+      // Modern V0 transaction format. Solflare strictly expects this format
+      // for accurate parsing and simulation of transfer instructions.
+      const messageV0 = new TransactionMessage({
+        payerKey: publicKey,
         recentBlockhash: blockhash,
-        feePayer: publicKey,  // must be the connected wallet's public key
-      }).add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: merchantKey,
-          lamports,
-        })
-      );
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: merchantKey,
+            lamports,
+          }),
+        ],
+      }).compileToV0Message();
 
-      console.log("[SolanaPaymentFlow] Transaction constructed:", {
-        feePayer: publicKey.toBase58(),
+      const transaction = new VersionedTransaction(messageV0);
+
+      console.log("[SolanaPaymentFlow] Transaction constructed (V0):", {
+        payerKey: publicKey.toBase58(),
         merchant: merchantKey.toBase58(),
         lamports,
         lastValidBlockHeight,
@@ -362,12 +364,11 @@ export function SolanaPaymentFlow({
           logSummary ?? `Simulation failed: ${JSON.stringify(simulation.value.err)}`
         );
       }
-      console.log("[SolanaPaymentFlow] Simulation passed ✅ — presenting Phantom for signature...");
+      console.log("[SolanaPaymentFlow] Simulation passed ✅ — presenting wallet for signature...");
 
       // ── Step 4: Send (only reached if simulation passed) ─────────────────
-      // No skipPreflight — let Phantom run its own simulation for the UI.
-      // Our simulateTransaction above is the early guard; if it passes here,
-      // Phantom's re-simulation will also pass, showing no red warning to the user.
+      // No extra options needed — the wallet adapter defaults are correct for
+      // legacy transactions with both Phantom and Solflare.
       const signature = await sendTransaction(transaction, connection);
       setTxSignature(signature);
       console.log("[SolanaPaymentFlow] Transaction submitted with signature:", signature);
@@ -415,9 +416,26 @@ export function SolanaPaymentFlow({
       }
     } catch (err: any) {
       // ── Unified error handler ─────────────────────────────────────────────
-      // All failure paths flow here: user rejection in Phantom, simulation
-      // failure, on-chain revert, network timeout, or balance errors.
+      // All failure paths flow here: user rejection in Phantom/Solflare,
+      // simulation failure, on-chain revert, network timeout, or balance errors.
       // SendTransactionError carries RPC simulation logs with the EXACT reason.
+
+      // Detect wallet-specific provider errors to improve diagnostic clarity.
+      // Solflare throws 'WalletSignTransactionError' on user rejection or
+      // provider-level failures; Phantom uses similar error names.
+      if (
+        err.name === 'WalletSignTransactionError' ||
+        err.name === 'TransactionSignatureError' ||
+        err.name === 'WalletSendTransactionError'
+      ) {
+        console.error(
+          `[SolanaPaymentFlow] Wallet provider error [${err.name}]:`,
+          err.message,
+          // err.code is set by some providers (e.g. 4001 = user rejected)
+          err.code != null ? `(code: ${err.code})` : ''
+        );
+      }
+
       const simLogs = err?.logs as string[] | undefined;
       if (simLogs?.length) {
         console.error("[SolanaPaymentFlow] SendTransactionError — RPC simulation logs:");
