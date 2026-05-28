@@ -88,8 +88,10 @@
   padding: 14px;
   border: 1px solid $border-subtle;
   border-radius: 8px;
-  background: rgba(22, 22, 22, 0.96);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  color: $text-primary;
+  background: $background;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  scrollbar-color: $border-strong $layer-01;
 }
 
 .newsPopupHeader {
@@ -120,7 +122,7 @@
   border: 1px solid $border-subtle;
   border-radius: 4px;
   color: $text-primary;
-  background: transparent;
+  background: $layer-01;
   cursor: pointer;
 
   &:hover {
@@ -173,7 +175,7 @@
   padding: 10px;
   border: 1px solid $border-subtle;
   border-radius: 6px;
-  color: inherit;
+  color: $text-primary;
   text-decoration: none;
   background: $layer-01;
 
@@ -205,4 +207,10 @@
   font-size: 12px;
   line-height: 1.4;
   color: $text-secondary;
+}
+
+:global([data-carbon-theme="g100"]) {
+  .newsPopup {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
 }
