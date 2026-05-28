@@ -1,5 +1,5 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import { SystemProgram, Transaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
@@ -22,9 +22,13 @@ const MERCHANT_ADDRESS_RAW =
   import.meta.env.VITE_SOLANA_MERCHANT_ADDRESS as string | undefined;
 
 /**
- * Tier pricing in SOL for Devnet payments
- * Note: Must be > 0.00089 SOL to avoid rent-exemption errors 
- * if the merchant wallet is completely empty on Devnet.
+ * Tier pricing in SOL.
+ * Note: Must be > 0.00089 SOL to avoid rent-exemption errors
+ * if the merchant wallet is completely empty on Devnet/Testnet.
+ *
+ * ⚠️  MUST stay in sync with `TIER_SOL_AMOUNTS` in
+ *     `server/src/services/solana-payment.service.ts`.
+ *     If you change a value here, update the server constant too, and vice versa.
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
   Lite: 0.001,
@@ -273,7 +277,7 @@ export function SolanaPaymentFlow({
     onProcessingChange(true);
 
     try {
-      // TODO: Hardcoded small amounts for Devnet testing. Replace with actual SOL conversion logic for Mainnet.
+      // TODO: Hardcoded small amounts for Devnet/Testnet testing. Replace with real SOL conversion for Mainnet.
       // Math.floor guarantees a strict integer — floating-point lamports cause simulation failures.
       const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
 
@@ -289,49 +293,48 @@ export function SolanaPaymentFlow({
         );
       }
 
-      // ── Step 1: Fresh blockhash — fetched immediately before construction ─
-      // We use 'finalized' instead of 'confirmed' on Devnet to ensure the
-      // blockhash has propagated to ALL nodes. Phantom uses its own internal RPC,
-      // and if it hasn't seen the 'confirmed' blockhash yet, its simulation
-      // will fail with "BlockhashNotFound". 'finalized' prevents this desync.
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+      // ── Step 1: Fresh blockhash — fetched IMMEDIATELY before construction ─
+      // Using 'confirmed' per Phantom best practices. This commitment level is
+      // what Phantom's internal simulation uses, so the blockhash is guaranteed
+      // to be recognised when Phantom re-simulates on its end.
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      console.log("[SolanaPaymentFlow] Fresh blockhash fetched:", blockhash);
 
-      // ── Step 2: Strict transaction construction (VersionedTransaction) ──────
-      // Phantom strongly recommends VersionedTransactions for modern dApps.
-      // Legacy Transactions can sometimes cause simulation anomalies on Testnet.
-      const message = new TransactionMessage({
-        payerKey: publicKey,
+      // ── Step 2: Legacy Transaction with explicit recentBlockhash + feePayer ─
+      // Phantom's official documentation uses the legacy Transaction API with
+      // explicit property assignment. VersionedTransaction can sometimes cause
+      // simulation desync between our RPC and Phantom's internal RPC.
+      const transaction = new Transaction({
         recentBlockhash: blockhash,
-        instructions: [
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: merchantKey,
-            lamports,
-          }),
-        ],
-      }).compileToV0Message();
-      
-      const transaction = new VersionedTransaction(message);
+        feePayer: publicKey,  // must be the connected wallet's public key
+      }).add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: merchantKey,
+          lamports,
+        })
+      );
 
-      // ── Debug logs — remove before Mainnet ───────────────────────────────
-      // console.log("[SolanaPaymentFlow] Network Endpoint:", connection.rpcEndpoint);
-      // console.log("[SolanaPaymentFlow] Merchant PubKey:", merchantKey.toBase58());
-      // console.log("[SolanaPaymentFlow] Lamports to send:", lamports);
-      // ─────────────────────────────────────────────────────────────────────
+      console.log("[SolanaPaymentFlow] Transaction constructed:", {
+        feePayer: publicKey.toBase58(),
+        merchant: merchantKey.toBase58(),
+        lamports,
+        lastValidBlockHeight,
+      });
 
       // ── Step 3a: Explicit balance check ──────────────────────────────────
       // simulateTransaction() runs on an UNSIGNED tx (sigVerify:false) so it
       // can silently skip the fee-payer balance check → false "pass".
       // We manually verify balance here to catch InsufficientFunds BEFORE
       // Phantom shows its own simulation error to the user.
-      // Phantom often attaches priority fees (up to 0.00008 SOL), so we use a safe margin.
+      // Phantom may add priority fees (up to 0.0001 SOL), so we use a safe margin.
       const ESTIMATED_FEE_LAMPORTS = 100_000; // 0.0001 SOL upper bound for safety
       const balance = await connection.getBalance(publicKey, 'confirmed');
       const totalRequired = lamports + ESTIMATED_FEE_LAMPORTS;
-      // console.log(
-      //   `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
-      //   `need ${totalRequired} (${lamports} transfer + ${ESTIMATED_FEE_LAMPORTS} fee estimate)`
-      // );
+      console.log(
+        `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
+        `need ${totalRequired} (${lamports} transfer + ${ESTIMATED_FEE_LAMPORTS} fee estimate)`
+      );
       if (balance < totalRequired) {
         throw new Error(
           `Insufficient SOL: wallet has ${(balance / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
@@ -340,15 +343,17 @@ export function SolanaPaymentFlow({
           `Airdrop more ${validatedNetworkName} SOL at faucet.solana.com.`
         );
       }
-      // ─────────────────────────────────────────────────────────────────────
 
-      // ── Step 3b: Pre-simulation with logs ────────────────────────────────
-      // Run simulation AFTER the balance check so sigVerify:false quirks don't
-      // mask the real error. If it still fails, print the exact Solana logs.
-      // console.log("[SolanaPaymentFlow] Simulating transaction...");
+      // ── Step 3b: Pre-simulation with explicit error + log output ─────────
+      // CRITICAL: Run simulation BEFORE presenting the Phantom popup to the user.
+      // If simulation fails, log the EXACT on-chain error and logs — this is
+      // the information Phantom hides behind a generic "Transaction may fail" UI.
+      // sigVerify:false is the default for unsigned transactions.
+      console.log("[SolanaPaymentFlow] Running pre-send simulation...");
       const simulation = await connection.simulateTransaction(transaction);
       if (simulation.value.err) {
-        console.error("[SolanaPaymentFlow] EXACT SIMULATION ERROR:", simulation.value.err);
+        // ⬇️ These two lines are the most important debugging output in the flow.
+        console.error("[SolanaPaymentFlow] SIMULATION ERROR (exact):", simulation.value.err);
         console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
         const logSummary = simulation.value.logs?.find(
           (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
@@ -357,30 +362,40 @@ export function SolanaPaymentFlow({
           logSummary ?? `Simulation failed: ${JSON.stringify(simulation.value.err)}`
         );
       }
-      // console.log("[SolanaPaymentFlow] Simulation passed ✅ — sending to wallet...");
-      // ─────────────────────────────────────────────────────────────────────
+      console.log("[SolanaPaymentFlow] Simulation passed ✅ — presenting Phantom for signature...");
 
       // ── Step 4: Send (only reached if simulation passed) ─────────────────
       // No skipPreflight — let Phantom run its own simulation for the UI.
-      // Our simulateTransaction above acts as the early guard; if it passes,
-      // Phantom's simulation will also pass and show no red warning to the user.
+      // Our simulateTransaction above is the early guard; if it passes here,
+      // Phantom's re-simulation will also pass, showing no red warning to the user.
       const signature = await sendTransaction(transaction, connection);
       setTxSignature(signature);
+      console.log("[SolanaPaymentFlow] Transaction submitted with signature:", signature);
 
+      // ── Step 5: Strict on-chain confirmation ─────────────────────────────
       // Wait for on-chain confirmation BEFORE calling the backend.
-      // This prevents the race condition where getParsedTransaction returns null.
+      // Use the object form { signature, blockhash, lastValidBlockHeight } so
+      // the SDK can detect block-height expiry and fail fast rather than polling
+      // indefinitely. This prevents the race where getParsedTransaction returns null.
+      console.log("[SolanaPaymentFlow] Awaiting on-chain confirmation...");
       const confirmation = await connection.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
         'confirmed'
       );
 
-      // Check for an on-chain execution error (e.g. insufficient funds)
+      // ── Step 6: On-chain error check ──────────────────────────────────────
+      // confirmation.value.err is non-null when the validator executed the
+      // transaction but it REVERTED (e.g. bad instruction, account constraint).
+      // Without this check, the UI would show success for reverted transactions.
       if (confirmation.value.err) {
+        console.error("[SolanaPaymentFlow] On-chain execution error:", confirmation.value.err);
         throw new Error(
           `Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`
         );
       }
+      console.log("[SolanaPaymentFlow] Transaction confirmed on-chain ✅");
 
+      // ── Step 7: Backend verification (only after confirmed + no error) ────
       setVerifyingSignature(signature);
 
       try {
@@ -392,29 +407,32 @@ export function SolanaPaymentFlow({
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
       } catch (verifyErr: any) {
-        console.error("[SolanaPaymentFlow] Verification error:", verifyErr);
-        onError(verifyErr.message || "Failed to verify transaction. Please try again.");
+        console.error("[SolanaPaymentFlow] Backend verification error:", verifyErr);
+        onError(verifyErr.message || "Failed to verify transaction. Please contact support.");
         setTxSignature(null);
         setVerifyingSignature(null);
         onProcessingChange(false);
       }
     } catch (err: any) {
-      // SendTransactionError carries the RPC simulation logs — these reveal the
-      // EXACT on-chain failure reason (e.g. InsufficientFunds, InvalidAccountData).
+      // ── Unified error handler ─────────────────────────────────────────────
+      // All failure paths flow here: user rejection in Phantom, simulation
+      // failure, on-chain revert, network timeout, or balance errors.
+      // SendTransactionError carries RPC simulation logs with the EXACT reason.
       const simLogs = err?.logs as string[] | undefined;
       if (simLogs?.length) {
-        console.error("[SolanaPaymentFlow] SendTransactionError simulation logs:");
+        console.error("[SolanaPaymentFlow] SendTransactionError — RPC simulation logs:");
         simLogs.forEach((log, i) => console.error(`  [${i}] ${log}`));
       }
-      console.error("[SolanaPaymentFlow] Tx Failed (full error):", err);
+      console.error("[SolanaPaymentFlow] Transaction failed (full error object):", err);
 
-      // Prefer a human-readable log line over the raw error message
+      // Prefer a human-readable log line over the raw error.message
       const logError = simLogs?.find(
         (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
       );
       onError(logError ?? err?.message ?? "Transaction failed. Please try again.");
       setTxSignature(null);
       setVerifyingSignature(null);
+      // Always re-enable the button on any error path
       onProcessingChange(false);
     }
   }
