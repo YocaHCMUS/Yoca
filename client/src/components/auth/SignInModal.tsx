@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -27,6 +28,8 @@ export function AuthModalBase({
   const { tr } = useLocalization();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useUserTheme();
+  const isLight = theme === "light";
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -144,40 +147,40 @@ export function AuthModalBase({
   if (!open) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
+    <div className={`${styles.overlay} ${isLight ? styles.lightOverlay : ""}`} onClick={handleClose}>
       <div 
-        className={`${styles.container} ${isRegisterMode ? styles.active : ""}`} 
+        className={`${styles.container} ${isLight ? styles.lightContainer : ""} ${isRegisterMode ? styles.active : ""}`} 
         onClick={(e) => e.stopPropagation()} /* Chặn click ra ngoài để không tự tắt modal */
       >
         
         {/* ========= LOGIN FORM ========= */}
-        <div className={`${styles.formBox} ${styles.login}`}>
+        <div className={`${styles.formBox} ${styles.login} ${isLight ? styles.lightFormBox : ""}`}>
           <form onSubmit={handleLoginSubmit(onLogin)}>
             <h1>{tr("auth.signIn")}</h1>
-            {errMsg && !isRegisterMode && <p className={styles.globalError}>{errMsg}</p>}
+            {errMsg && !isRegisterMode && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
 
-            <div className={styles.inputBox}>
-              <input type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerLogin("email")} />
-              <i className="bx bxs-envelope"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerLogin("email")} />
+              <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {loginErrors.email && <span className={styles.errorText}>{loginErrors.email.message}</span>}
 
-            <div className={styles.inputBox}>
-              <input type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerLogin("password")} />
-              <i className="bx bxs-lock-alt"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerLogin("password")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {loginErrors.password && <span className={styles.errorText}>{loginErrors.password.message}</span>}
 
-            <div className={styles.forgotLink}>
+            <div className={`${styles.forgotLink} ${isLight ? styles.lightForgotLink : ""}`}>
               <a href="#">{tr("auth.forgotPassword")}</a>
             </div>
 
-            <button type="submit" className={styles.btn} disabled={isSubmitting}>
+            <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
               {isSubmitting ? tr("common.loading") : tr("auth.signIn")}
             </button>
 
             <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
-            <div className={styles.socialIcons}>
+            <div className={`${styles.socialIcons} ${isLight ? styles.lightSocialIcons : ""}`}>
               <GoogleAuthButton
                 disabled={isSubmitting}
                 onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
@@ -193,41 +196,41 @@ export function AuthModalBase({
         </div>
 
         {/* ========= REGISTER FORM ========= */}
-        <div className={`${styles.formBox} ${styles.register}`}>
+        <div className={`${styles.formBox} ${styles.register} ${isLight ? styles.lightFormBox : ""}`}>
           <form onSubmit={handleRegisterSubmit(onSignup)}>
             <h1>{tr("auth.signUp")}</h1>
-            {errMsg && isRegisterMode && <p className={styles.globalError}>{errMsg}</p>}
+            {errMsg && isRegisterMode && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
 
-            <div className={styles.inputBox}>
-              <input type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerSignup("email")} />
-              <i className="bx bxs-envelope"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerSignup("email")} />
+              <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {registerErrors.email && <span className={styles.errorText}>{registerErrors.email.message}</span>}
 
-            <div className={styles.inputBox}>
-              <input type="text" placeholder={tr("auth.displayName")} disabled={isSubmitting} {...registerSignup("displayName")} />
-              <i className="bx bxs-user"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="text" placeholder={tr("auth.displayName")} disabled={isSubmitting} {...registerSignup("displayName")} />
+              <i className={`bx bxs-user ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {registerErrors.displayName && <span className={styles.errorText}>{registerErrors.displayName.message}</span>}
 
-            <div className={styles.inputBox}>
-              <input type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerSignup("password")} />
-              <i className="bx bxs-lock-alt"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerSignup("password")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {registerErrors.password && <span className={styles.errorText}>{registerErrors.password.message}</span>}
 
-            <div className={styles.inputBox}>
-              <input type="password" placeholder={tr("auth.confirmPassword")} disabled={isSubmitting} {...registerSignup("retypePassword")} />
-              <i className="bx bxs-lock-alt"></i>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.confirmPassword")} disabled={isSubmitting} {...registerSignup("retypePassword")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
             </div>
             {registerErrors.retypePassword && <span className={styles.errorText}>{registerErrors.retypePassword.message}</span>}
 
-            <button type="submit" className={styles.btn} disabled={isSubmitting}>
+            <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
               {isSubmitting ? tr("common.loading") : tr("auth.signUp")}
             </button>
 
             <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
-            <div className={styles.socialIcons}>
+            <div className={`${styles.socialIcons} ${isLight ? styles.lightSocialIcons : ""}`}>
               <GoogleAuthButton
                 disabled={isSubmitting}
                 onSuccess={async () => { await refreshUser(); handleClose(); navigate("/"); }}
@@ -243,19 +246,19 @@ export function AuthModalBase({
         </div>
 
         {/* ========= ANIMATION TOGGLE BOX ========= */}
-        <div className={styles.toggleBox}>
-          <div className={`${styles.togglePanel} ${styles.toggleLeft}`}>
+        <div className={`${styles.toggleBox} ${isLight ? styles.lightToggleBox : ""}`}>
+          <div className={`${styles.togglePanel} ${styles.toggleLeft} ${isLight ? styles.lightTogglePanel : ""}`}>
             <h1><b>Welcome!</b></h1>
             <p>Don't have an account?</p>
-            <button className={`${styles.btn} ${styles.registerBtn}`} onClick={toggleMode}>
+            <button className={`${styles.btn} ${styles.registerBtn} ${isLight ? styles.lightBtn : ""}`} onClick={toggleMode}>
               Register
             </button>
           </div>
 
-          <div className={`${styles.togglePanel} ${styles.toggleRight}`}>
+          <div className={`${styles.togglePanel} ${styles.toggleRight} ${isLight ? styles.lightTogglePanel : ""}`}>
             <h1><b>Welcome to Yoca!</b></h1>
             <p>Already have an account?</p>
-            <button className={`${styles.btn} ${styles.loginBtn}`} onClick={toggleMode}>
+            <button className={`${styles.btn} ${styles.loginBtn} ${isLight ? styles.lightBtn : ""}`} onClick={toggleMode}>
               Login
             </button>
           </div>
