@@ -1,99 +1,87 @@
 import client from "@/api/main";
-import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
-import TabContainer from "@/components/tabContainer/tabContainer.tsx";
+import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
+import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
+import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
+import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
+import { WalletAiAnalysisPopup } from "@/components/wallet/WalletAiAnalysisPopup/WalletAiAnalysisPopup.tsx";
 import {
-    FilterType,
-    type FilterConfig,
-    SortType,
-    Table,
-    tableHeaderLabel,
+  FilterType,
+  type FilterConfig,
+  SortType,
+  Table,
+  tableHeaderLabel,
 } from "@/components/tables/Table.tsx";
 import {
-    renderBase,
-    renderCode,
-    renderDateTime,
-    renderHash,
-    renderReducedNumber,
-    renderTokenCell,
+  renderBase,
+  renderCode,
+  renderDateTime,
+  renderHash,
+  renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
-import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import {
-    AiAnalysisTab,
-    type AiAnalysisDependencyItem,
-} from "@/components/wallet/AiAnalysis/index.ts";
-import {
-    WalletReportTemplate,
-    type WalletReportSection,
+  WalletReportTemplate,
+  type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
-import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
-import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-    fetchWalletSwaps,
-    fetchWalletTransfers,
-    fetchWalletPortfolio,
-    fetchWalletOverview,
-    fetchWalletIntelligence,
-    fetchWalletAiAnalysis,
-    type WalletSwap,
-    type WalletTransfer,
-    type WalletPortfolioItem,
-    type WalletIntelligenceResponse,
-    type WalletOverviewMultiPeriodResponse,
-    type WalletPageInfo,
-    type WalletSwapTokenChange,
-    type WalletSwapTokenInfo,
-    type WalletAiAnalysisLanguage,
-    type WalletAiAnalysisResponse,
+  fetchWalletSwaps,
+  fetchWalletTransfers,
+  fetchWalletPortfolio,
+  fetchWalletOverview,
+  fetchWalletIntelligence,
+  fetchWalletAiAnalysis,
+  type WalletSwap,
+  type WalletTransfer,
+  type WalletPortfolioItem,
+  type WalletIntelligenceResponse,
+  type WalletOverviewMultiPeriodResponse,
+  type WalletPageInfo,
+  type WalletSwapTokenChange,
+  type WalletSwapTokenInfo,
+  type WalletAiAnalysisLanguage,
+  type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
-    Activity,
-    AiGenerate,
-    ChartLine,
-    ChevronDown,
-    Download,
-    Star,
-    StarFilled,
-    User,
-    Wallet,
+  User,
 } from "@carbon/icons-react";
-import { Button, IconButton } from "@carbon/react";
+import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-    buildPortfolioMetaMap,
-    mapPortfolioItems,
+  buildPortfolioMetaMap,
+  mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-    TokenAverageTradePrice,
-    TokenDetailsDemo,
+  TokenAverageTradePrice,
+  TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
-import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
+import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
+import { TimePeriod } from "@/types/chart-filters.types.ts";
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
@@ -149,20 +137,9 @@ function resolveTokenMetaLookupAddress(
   return tokenAddress;
 }
 
-function PageSection({ children }: { children: ReactNode }) {
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionStack}>{children}</div>
-    </section>
-  );
-}
-
 export default function WalletPage() {
-  const { user } = useAuth();
   const { tr, fmt, lang } = useLocalization();
-  const { tokenWatchlist, tokenPending, toggleToken } = useWatchlist();
   const bcp47 = locale[lang].langCode;
-  const navigate = useNavigate();
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
   const aiAnalysisLanguage: WalletAiAnalysisLanguage =
@@ -191,10 +168,11 @@ export default function WalletPage() {
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  /** 0 Overview, 1 Holdings, 2 Activity / Risk, 3 Forensic Audit, 4 AI Analysis — data loads when each tab is first visited. */
-  const [activeTab, setActiveTab] = useState(0);
-  /** Gates GET /wallets/intelligence in the left rail until Activity / Risk has been opened (heavy). */
-  const [intelligenceEnabled, setIntelligenceEnabled] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>("24H");
+  const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [activeActivityTab, setActiveActivityTab] = useState<number>(1);
+
   const [aiAnalysisReport, setAiAnalysisReport] =
     useState<WalletAiAnalysisResponse | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
@@ -209,8 +187,6 @@ export default function WalletPage() {
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
-  const portfolioLoadedRef = useRef(false);
-  const activityLoadedRef = useRef(false);
   const aiAnalysisRequestedRef = useRef(false);
   const aiAnalysisLoadedRef = useRef(false);
   const aiAnalysisRequestIdRef = useRef(0);
@@ -220,13 +196,6 @@ export default function WalletPage() {
   const aiAnalysisInFlightRef = useRef<
     Partial<Record<string, Promise<WalletAiAnalysisResponse | null>>>
   >({});
-  /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
-  const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
-
-  const [leftWidth, setLeftWidth] = useState(420);
-  const isDragging = useRef(false);
-  const dragStartX = useRef(0);
-  const dragStartWidth = useRef(420);
 
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
@@ -239,7 +208,7 @@ export default function WalletPage() {
     client.api.wallets[":address"].tokens,
     200,
     { param: { address: address || "" } },
-    { enabled: !!address && activeTab === 1 },
+    { enabled: !!address },
   );
 
   const tokenAddresses = useMemo(
@@ -268,58 +237,6 @@ export default function WalletPage() {
     { enabled: !!tokenAddresses },
   );
 
-  const handleDividerMouseDown = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      isDragging.current = true;
-      dragStartX.current = event.clientX;
-      dragStartWidth.current = leftWidth;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [leftWidth],
-  );
-
-  useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
-      if (!isDragging.current) return;
-      const delta = event.clientX - dragStartX.current;
-      const next = Math.min(700, Math.max(280, dragStartWidth.current + delta));
-      setLeftWidth(next);
-    };
-
-    const onMouseUp = () => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, []);
-
-  useEffect(() => {
-    const onOutsideClick = (event: MouseEvent) => {
-      if (!exportMenuRef.current) return;
-      if (!exportMenuRef.current.contains(event.target as Node)) {
-        setIsExportMenuOpen(false);
-      }
-    };
-
-    if (isExportMenuOpen) {
-      document.addEventListener("mousedown", onOutsideClick);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", onOutsideClick);
-    };
-  }, [isExportMenuOpen]);
-
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
@@ -345,18 +262,22 @@ export default function WalletPage() {
     () => buildPortfolioMetaMap(portfolioMeta),
     [portfolioMeta],
   );
-  const portfolioTableData = useMemo(
-    () =>
-      portfolioData.map((row, rowIndex) => [
-        portfolioMeta[rowIndex]?.tokenAddress ?? "",
-        ...row,
-      ]),
-    [portfolioData, portfolioMeta],
-  );
-  const tokenWatchlistLookup = useMemo(
-    () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
-    [tokenWatchlist],
-  );
+
+  const portfolioMetaAsMap = useMemo(() => {
+    const map = new Map<number, { tokenAddress: string; logoUri: string | null; fullName: string | null }>();
+    for (let i = 0; i < portfolioMeta.length; i++) {
+      const meta = portfolioMeta[i];
+      if (meta) {
+        map.set(i, {
+          tokenAddress: meta.tokenAddress,
+          logoUri: meta.logoUri ?? null,
+          fullName: meta.fullName ?? null,
+        });
+      }
+    }
+    return map;
+  }, [portfolioMeta]);
+
   const formatSwapPair = (swap: WalletSwap): string => {
     const tokensInvolved =
       typeof swap.tokensInvolved === "string"
@@ -378,8 +299,12 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""), // time column
           formatSwapPair(swap), // pair column
-          swap.sold, // sold column
-          swap.bought, // bought column
+          Object.assign(swap.sold, {
+            toString: () => swap.sold.symbol ?? "Unknown",
+          }), // sold column
+          Object.assign(swap.bought, {
+            toString: () => swap.bought.symbol ?? "Unknown",
+          }), // bought column
           totalValueUsd ?? "—",
         ];
       }),
@@ -437,7 +362,7 @@ export default function WalletPage() {
           transfer.from,
           transfer.to,
           tokenCell,
-          transferValueUsd,
+          transferValueUsd ?? "—",
         ];
       }),
     [loadedTransfers],
@@ -459,27 +384,6 @@ export default function WalletPage() {
     tr("walletPage.value"),
   ];
 
-  const portfolioHeaders = [
-    { header: "", align: "center" as const, minWidth: "3.25rem" },
-    {
-      header: tr("walletPage.token"),
-      align: "start" as const,
-      minWidth: "11rem",
-    },
-    { header: tr("walletPage.price"), align: "end" as const, minWidth: "8rem" },
-    {
-      header: tr("walletPage.holding"),
-      align: "end" as const,
-      minWidth: "8rem",
-    },
-    {
-      header: tr("walletPage.value"),
-      align: "end" as const,
-      minWidth: "8.5rem",
-    },
-  ];
-
-  const isSortablePortfolio = [false, false, true, true, true];
   const isSortableSwaps = [true, false, true, true, true];
   const isSortableTransfers = [true, false, false, true, true];
 
@@ -494,12 +398,6 @@ export default function WalletPage() {
     2: { type: SortType.Number },
     4: { type: SortType.Number },
   };
-  const portfolioSortConfig = {
-    2: { type: SortType.Number },
-    3: { type: SortType.Number },
-    4: { type: SortType.Number },
-  };
-
   const renderSwapTokenInfoClassnames = {
     container: styles.swapTokenCell,
     amount: styles.swapTokenAmount,
@@ -580,91 +478,20 @@ export default function WalletPage() {
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
-      // neccessary evil
+      if (!value || typeof value !== "object") return renderCode(String(value));
       return renderTokenCell(
         value,
         fmt.num.compact.decimal,
         renderSwapTokenInfoClassnames,
         30,
         true,
-      )(String(value.symbol ?? ""), row);
+      )(String(value.symbol ?? ""), row ?? null);
     },
     (value: number | null) => {
       if (value == null) return renderBase("—");
       return renderBase(fmt.num.currency(value));
     },
   ];
-
-  const portfolioCellRenderers = [
-    (value: string) => {
-      const tokenAddress =
-        typeof value === "string" && value.trim().length > 0
-          ? value
-          : undefined;
-      const watched = Boolean(
-        tokenAddress && tokenWatchlistLookup.has(tokenAddress.toLowerCase()),
-      );
-      const pending = Boolean(tokenAddress && tokenPending[tokenAddress]);
-
-      if (!tokenAddress) {
-        return null;
-      }
-
-      return (
-        <IconButton
-          kind="ghost"
-          size="sm"
-          disabled={pending || !user}
-          label={
-            watched
-              ? tr("marketPage.removeFromWatchlist")
-              : tr("marketPage.addToWatchlist")
-          }
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void toggleToken(tokenAddress);
-          }}
-        >
-          {watched ? <StarFilled size={16} /> : <Star size={16} />}
-        </IconButton>
-      );
-    },
-    (value: string) => {
-      const portfolioTokenMeta = portfolioMetaMap.get(value);
-      const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-        portfolioTokenMeta?.tokenAddress,
-      );
-      const fallbackLogoUri = tokenMetaLookupAddress
-        ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
-        : undefined;
-      return (
-        <TokenIdentityCell
-          symbol={value}
-          fullName={portfolioTokenMeta?.fullName}
-          imageUrl={portfolioTokenMeta?.logoUri ?? fallbackLogoUri}
-          imageSize={30}
-          tooltipAlign="right"
-        />
-      );
-    },
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
-    },
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
-    },
-  ];
-
-  const portfolioFilterSchema: Record<number, FilterConfig | null> = {
-    1: { type: FilterType.Select },
-    2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
-    3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
-    4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
-  };
 
   const swapFilterSchema: Record<number, FilterConfig | null> = {
     0: { type: FilterType.Date },
@@ -809,7 +636,7 @@ export default function WalletPage() {
   // };
 
   useEffect(() => {
-    if (!user || !address || address === "null") {
+    if (!address || address === "null") {
       setWalletTags([]);
       return;
     }
@@ -820,7 +647,7 @@ export default function WalletPage() {
         console.error("[WalletPage] Failed to load wallet tags:", error);
         setWalletTags([]);
       });
-  }, [address, user]);
+  }, [address]);
 
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
@@ -841,7 +668,6 @@ export default function WalletPage() {
       flushSync(() => {
         setPortfolio([]);
       });
-      portfolioLoadedRef.current = false;
       return [];
     } finally {
       setPortfolioLoading(false);
@@ -944,12 +770,12 @@ export default function WalletPage() {
           }
 
           let portfolioRows = portfolio;
-          if (!portfolioLoadedRef.current) {
+          if (portfolioRows.length === 0) {
             portfolioRows = await loadPortfolioData();
           }
 
           let activitySwaps = loadedSwaps;
-          if (!activityLoadedRef.current) {
+          if (activitySwaps.length === 0) {
             const activity = await loadActivityData();
             activitySwaps = activity.swaps;
           }
@@ -1033,10 +859,6 @@ export default function WalletPage() {
   );
 
   useEffect(() => {
-    setIntelligenceEnabled(false);
-  }, [address]);
-
-  useEffect(() => {
     aiAnalysisRequestIdRef.current += 1;
     aiAnalysisRequestedRef.current = false;
     aiAnalysisLoadedRef.current = false;
@@ -1048,29 +870,7 @@ export default function WalletPage() {
   }, [address, aiAnalysisLanguage]);
 
   useEffect(() => {
-    if (activeTab === 2) {
-      setIntelligenceEnabled(true);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 4 && !aiAnalysisRequestedRef.current) {
-      aiAnalysisRequestedRef.current = true;
-      void loadAiAnalysisData();
-    }
-  }, [activeTab, loadAiAnalysisData]);
-
-  useEffect(() => {
-    if (activeTab !== 1) {
-      holdingsPortfolioAttemptedRef.current = null;
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
     if (!address || address === "null") {
-      portfolioLoadedRef.current = false;
-      activityLoadedRef.current = false;
-      holdingsPortfolioAttemptedRef.current = null;
       setPortfolio([]);
       setSwapPages({});
       setSwapPageInfoByPage({});
@@ -1085,45 +885,19 @@ export default function WalletPage() {
       setAiAnalysisLoading(false);
       return;
     }
-    portfolioLoadedRef.current = false;
-    activityLoadedRef.current = false;
-    aiAnalysisLoadedRef.current = false;
-  }, [address]);
 
-  useEffect(() => {
-    if (!address || address === "null") {
-      return;
-    }
+    // Load all data on mount
+    void loadPortfolioData();
+    void loadActivityData();
 
-    const shouldInitialPortfolioLoad =
-      (activeTab === 0 || activeTab === 1) && !portfolioLoadedRef.current;
-    const shouldHoldingsPortfolioBackfill =
-      activeTab === 1 &&
-      portfolioLoadedRef.current &&
-      portfolio.length === 0 &&
-      !portfolioLoading &&
-      holdingsPortfolioAttemptedRef.current !== address;
+    fetchWalletOverview(address, "solana")
+      .then(setOverviewReport)
+      .catch((err) => console.error("[WalletPage] Failed to load overview:", err));
 
-    if (shouldInitialPortfolioLoad) {
-      portfolioLoadedRef.current = true;
-      void loadPortfolioData();
-    } else if (shouldHoldingsPortfolioBackfill) {
-      holdingsPortfolioAttemptedRef.current = address;
-      void loadPortfolioData();
-    }
-
-    if (activeTab === 2 && !activityLoadedRef.current) {
-      activityLoadedRef.current = true;
-      void loadActivityData();
-    }
-  }, [
-    address,
-    activeTab,
-    portfolio.length,
-    portfolioLoading,
-    loadPortfolioData,
-    loadActivityData,
-  ]);
+    fetchWalletIntelligence(address, "solana")
+      .then(setIntelligenceReport)
+      .catch((err) => console.error("[WalletPage] Failed to load intelligence:", err));
+  }, [address, loadPortfolioData, loadActivityData]);
 
   const ensurePortfolioAndActivityForExport = useCallback(async (): Promise<{
     portfolio: WalletPortfolioItem[];
@@ -1135,15 +909,13 @@ export default function WalletPage() {
     }
 
     let p = portfolio;
-    if (!portfolioLoadedRef.current) {
-      portfolioLoadedRef.current = true;
+    if (p.length === 0) {
       p = await loadPortfolioData();
     }
 
     let s = loadedSwaps;
     let t = loadedTransfers;
-    if (!activityLoadedRef.current) {
-      activityLoadedRef.current = true;
+    if (s.length === 0 && t.length === 0) {
       const activity = await loadActivityData();
       s = activity.swaps;
       t = activity.transfers;
@@ -1160,14 +932,8 @@ export default function WalletPage() {
   ]);
 
   const activeReportSection = useMemo<WalletReportSection>(() => {
-    if (activeTab === 1) {
-      return "holdings";
-    }
-    if (activeTab === 2) {
-      return "activity_risk";
-    }
     return "overview";
-  }, [activeTab]);
+  }, []);
 
   const reportHeaderTags = useMemo(() => {
     const tags: string[] = [];
@@ -1245,8 +1011,8 @@ export default function WalletPage() {
         return [
           String(swap.blockTimestampIso ?? ""),
           formatSwapPair(swap),
-          swap.sold,
-          swap.bought,
+          `${swap.sold.symbol ?? "Unknown"} (${fmt.num.compact.decimal(swap.sold.amount)})`,
+          `${swap.bought.symbol ?? "Unknown"} (${fmt.num.compact.decimal(swap.bought.amount)})`,
           totalValueUsd ?? "—",
           baseQuotePrice ?? "—",
           swap.transactionHash,
@@ -1277,7 +1043,7 @@ export default function WalletPage() {
       XLSX.utils.book_append_sheet(
         workbook,
         XLSX.utils.aoa_to_sheet([
-          portfolioHeaders.slice(1).map(tableHeaderLabel),
+          ["", "Token", "Price", "Holding", "Value"],
           ...portfolioRows,
         ]),
         "Portfolio",
@@ -1296,7 +1062,7 @@ export default function WalletPage() {
   async function handleExportChartsZip() {
     try {
       setIsChartsExporting(true);
-      const root = document.querySelector(`.${styles.rightContent}`);
+      const root = document.querySelector(`.${styles.mainCol}`);
       if (!root) throw new Error("Chart container not found");
       const zip = new JSZip();
       const imagesFolder = zip.folder("charts");
@@ -1331,253 +1097,6 @@ export default function WalletPage() {
       setIsExportMenuOpen(false);
     }
   }
-
-  const overviewTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <div className={styles.chartStack}>
-          <div className={styles.chartSection}>
-            <BalanceChartV2
-              address={walletAddress}
-              onClickDay={(ts) => {
-                setDayPopupTimestamp(ts);
-                setDayPopupOpen(true);
-              }}
-            />
-          </div>
-          <div className={styles.chartSection}>
-            <PnLChart
-              minHeight={400}
-              autoRefresh
-              initialFilters={{ wallets: [walletAddress] }}
-              onDayClick={(_wallet, ts) => {
-                setDayPopupTimestamp(ts);
-                setDayPopupOpen(true);
-              }}
-            />
-          </div>
-        </div>
-      </PageSection>
-    </div>
-  );
-
-  const holdingsTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <div className={styles.sectionStack}>
-          <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-            <div
-              className={styles.chartSection}
-              style={{ flex: "0 1 48%", minWidth: 0 }}
-            >
-              <AssetDistribution
-                initialFilters={{
-                  wallets: address ? [address] : [],
-                  timePeriod: "30D",
-                }}
-                autoRefresh
-              />
-            </div>
-            <div
-              className={`${styles.chartSection} ${styles.portfolioCard}`}
-              style={{ flex: "1 1 52%", minWidth: 280 }}
-            >
-              <Table
-                title={tr("walletPage.portfolio")}
-                headers={portfolioHeaders}
-                initialFilters={{}}
-                fetcher={Promise.resolve(portfolioTableData)}
-                filterSchema={portfolioFilterSchema}
-                cellRenderers={portfolioCellRenderers}
-                dataEntries={portfolioTableData}
-                isSortable={isSortablePortfolio}
-                sortConfigs={portfolioSortConfig}
-                onRowClick={(_row, rowIndex) => {
-                  const tokenAddress =
-                    rowIndex >= 0
-                      ? portfolioMeta[rowIndex]?.tokenAddress
-                      : undefined;
-                  if (tokenAddress) {
-                    navigate(`/tokens/${tokenAddress}`);
-                  }
-                }}
-                loading={portfolioLoading && portfolioTableData.length === 0}
-              />
-            </div>
-          </div>
-          <div className={styles.chartSection}>
-            <TokenDetailsDemo setSelectedToken={setSelectedToken} />
-          </div>
-        </div>
-      </PageSection>
-    </div>
-  );
-
-  const activityTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <div className={styles.tableStack}>
-          <div className={styles.chartSection}>
-            <Table
-              maxHeight={400}
-              title={tr("walletPage.swap")}
-              actions={
-                <Button
-                  size="sm"
-                  kind="tertiary"
-                  onClick={() => setAiSwapSummaryOpen(true)}
-                >
-                  AI Summary
-                </Button>
-              }
-              headers={swapHeaders}
-              initialFilters={{}}
-              fetcher={Promise.resolve(swapData)}
-              filterSchema={swapFilterSchema}
-              cellRenderers={swapCellRenderers}
-              dataEntries={swapData}
-              isSortable={isSortableSwaps}
-              sortConfigs={swapSortConfigs}
-              onRowClick={(_row, rowIndex) => {
-                const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
-                if (swap) {
-                  setSelectedSwap(swap);
-                  setSwapModalOpen(true);
-                }
-              }}
-              loading={swapLoading && loadedSwaps.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: swapHasMore,
-            //   isLoading: swapLoading,
-            //   onPageChange: handleSwapPageChange,
-            // }}
-            />
-          </div>
-          <div className={styles.chartSection}>
-            <Table
-              maxHeight={400}
-              title={tr("walletPage.transfer")}
-              headers={transferHeaders}
-              initialFilters={{}}
-              fetcher={Promise.resolve(transferData)}
-              filterSchema={transferFilterSchema}
-              cellRenderers={transferCellRenderers}
-              dataEntries={transferData}
-              isSortable={isSortableTransfers}
-              sortConfigs={transferSortConfigs}
-              onRowClick={(_row, rowIndex) => {
-                const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
-                if (transfer) {
-                  setSelectedTransfer(transfer);
-                  setTransferModalOpen(true);
-                }
-              }}
-              loading={transferLoading && loadedTransfers.length === 0}
-            // serverPagination={{
-            //   enabled: true,
-            //   hasMore: transferHasMore,
-            //   isLoading: transferLoading,
-            //   onPageChange: handleTransferPageChange,
-            // }}
-            />
-          </div>
-        </div>
-      </PageSection>
-    </div>
-  );
-
-  const auditTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <WalletAuditPanel
-          walletAddress={walletAddress}
-          enabled={activeTab === 3}
-        />
-      </PageSection>
-    </div>
-  );
-
-  const aiAnalysisTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <AiAnalysisTab
-          aiAnalysisLoading={aiAnalysisLoading}
-          aiAnalysisError={aiAnalysisError}
-          aiAnalysisWaitingReason={aiAnalysisWaitingReason}
-          aiAnalysisReport={aiAnalysisReport}
-          aiAnalysisLastUpdated={
-            null
-            // aiAnalysisLastUpdated
-            //   ? fmt.datetime.relativeShort(aiAnalysisLastUpdated, true)
-            //   : null
-          }
-          dependencyItems={((): AiAnalysisDependencyItem[] => {
-            const portfolioAvailable =
-              Array.isArray(portfolio) && portfolio.length > 0;
-            const swapsAvailable =
-              Array.isArray(loadedSwaps) && loadedSwaps.length > 0;
-            const intelligenceAvailable = intelligenceReport != null;
-
-            const portfolioStatus: AiAnalysisDependencyItem["status"] =
-              portfolioAvailable
-                ? "available"
-                : portfolioLoading
-                  ? "fetching"
-                  : "no_data";
-
-            const swapsStatus: AiAnalysisDependencyItem["status"] =
-              swapsAvailable
-                ? "available"
-                : swapLoading
-                  ? "fetching"
-                  : "no_data";
-
-            const intelligenceStatus: AiAnalysisDependencyItem["status"] =
-              intelligenceAvailable
-                ? "available"
-                : intelligenceLoading ||
-                  (intelligenceEnabled && intelligenceReport == null)
-                  ? "fetching"
-                  : "no_data";
-
-            return [
-              {
-                id: "portfolio",
-                label: String(tr("walletPage.aiDataPortfolio")),
-                status: portfolioStatus,
-              },
-              {
-                id: "swaps",
-                label: String(tr("walletPage.aiDataSwaps")),
-                status: swapsStatus,
-              },
-              {
-                id: "intelligence",
-                label: String(tr("walletPage.aiDataIntelligence")),
-                status: intelligenceStatus,
-              },
-            ];
-          })()}
-          canGenerate={
-            Array.isArray(portfolio) &&
-            portfolio.length > 0 &&
-            Array.isArray(loadedSwaps) &&
-            loadedSwaps.length > 0 &&
-            intelligenceReport != null
-          }
-          onGenerate={() => {
-            aiAnalysisRequestedRef.current = true;
-            void loadAiAnalysisData(true);
-          }}
-          onRetry={() => {
-            aiAnalysisRequestedRef.current = true;
-            void loadAiAnalysisData(true);
-          }}
-        />
-      </PageSection>
-    </div>
-  );
 
   const pdfPageStyle: React.CSSProperties = {
     width: 1024,
@@ -1870,59 +1389,6 @@ export default function WalletPage() {
     </>
   );
 
-  const tabActions = (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
-        <Button
-          size="sm"
-          kind="secondary"
-          renderIcon={ChevronDown}
-          onClick={() => setIsExportMenuOpen((prev) => !prev)}
-          disabled={isPagePdfExporting || isDataExporting || isChartsExporting}
-        >
-          {tr("charts.export")}
-        </Button>
-        {isExportMenuOpen && (
-          <div className={styles.exportMenu}>
-            <button
-              type="button"
-              className={styles.exportMenuItem}
-              onClick={handleExportDataXlsx}
-              disabled={isDataExporting}
-            >
-              <Download size={16} />
-              {isDataExporting
-                ? tr("walletPage.exportingData")
-                : tr("walletPage.exportDataXlsx")}
-            </button>
-            <button
-              type="button"
-              className={styles.exportMenuItem}
-              onClick={handleExportChartsZip}
-              disabled={isChartsExporting}
-            >
-              <Download size={16} />
-              {isChartsExporting
-                ? tr("walletPage.exportingCharts")
-                : tr("walletPage.exportChartsZip")}
-            </button>
-            <button
-              type="button"
-              className={styles.exportMenuItem}
-              onClick={handleExportPagePdf}
-              disabled={isPagePdfExporting}
-            >
-              <Download size={16} />
-              {isPagePdfExporting
-                ? tr("walletPage.exportingReport")
-                : tr("walletPage.exportReportPdf")}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   if (!address) {
     return (
       <PageWrapper>
@@ -1958,47 +1424,142 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div
-        className={styles.walletGrid}
-        style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
-      >
-        <div className={styles.leftColumn}>
-          <WalletOverview
-            walletAddress={walletAddress}
-            enableIntelligence={intelligenceEnabled}
-          />
-        </div>
+      <div className={styles.shell}>
+        <WalletTopbar
+          address={walletAddress}
+          onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
+          onAuditOpen={() => setAuditOpen(true)}
+          onExportData={handleExportDataXlsx}
+          onExportCharts={handleExportChartsZip}
+          onExportPdf={handleExportPagePdf}
+          isExporting={isPagePdfExporting || isDataExporting || isChartsExporting}
+          currentPeriod={selectedPeriod}
+          onPeriodChange={(period) => setSelectedPeriod(period)}
+        />
 
-        <div
-          className={styles.resizeDivider}
-          onMouseDown={handleDividerMouseDown}
-        >
-          <div className={styles.resizeHandle} />
-        </div>
+        <WalletHero
+          overview={overviewReport}
+          selectedPeriod={selectedPeriod}
+          loading={false}
+        />
 
-        <div className={styles.rightColumn}>
-          <div className={styles.rightContent}>
-            <TabContainer
-              activeTab={activeTab}
-              names={[
-                tr("walletPage.overview"),
-                tr("walletPage.holdings"),
-                tr("walletPage.activity"),
-                tr("walletPage.aiAnalysis"),
-              ]}
-              tabIcons={[
-                <ChartLine key="wallet-overview-icon" size={16} />,
-                <Wallet key="wallet-holdings-icon" size={16} />,
-                <Activity key="wallet-activity-icon" size={16} />,
-                <User key="wallet-audit-icon" size={16} />,
-                <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
-              ]}
-              tabs={[overviewTab, holdingsTab, activityTab, auditTab, aiAnalysisTab]}
-              onTabChange={(index) => setActiveTab(index)}
-              actions={tabActions}
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            {/* Balance History */}
+            <div className={styles.section}>
+              <div className={styles.chartSection}>
+                <BalanceChartV2
+                  address={walletAddress}
+                  onClickDay={(ts) => {
+                    setDayPopupTimestamp(ts);
+                    setDayPopupOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Profit & Loss */}
+            <div className={styles.section}>
+              <div className={styles.chartSection}>
+                <PnLChart
+                  minHeight={400}
+                  autoRefresh
+                  initialFilters={{ wallets: [walletAddress] }}
+                  onDayClick={(_wallet, ts) => {
+                    setDayPopupTimestamp(ts);
+                    setDayPopupOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Activity Tables */}
+            <div className={styles.section}>
+              <TabContainer
+                activeTab={activeActivityTab}
+                names={[
+                  `${tr("walletPage.swap")} (${loadedSwaps.length})`,
+                  `${tr("walletPage.transfer")} (${loadedTransfers.length})`,
+                ]}
+                actions={
+                  <Button
+                    size="sm"
+                    kind="tertiary"
+                    onClick={() => setAiSwapSummaryOpen(true)}
+                  >
+                    {/* {tr("walletPage.aiSwapSummary")}
+                     */}
+                    AI Swap Summary
+                  </Button>
+                }
+                onTabChange={(index) =>
+                  setActiveActivityTab(index)
+                }
+                tabs={[
+                  <Table
+                    key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                    maxHeight={400}
+                    title={tr("walletPage.swap")}
+                    headers={swapHeaders}
+                    initialFilters={{}}
+                    fetcher={Promise.resolve(swapData)}
+                    filterSchema={swapFilterSchema}
+                    cellRenderers={swapCellRenderers}
+                    dataEntries={swapData}
+                    isSortable={isSortableSwaps}
+                    sortConfigs={swapSortConfigs}
+                    onRowClick={(_row, rowIndex) => {
+                      const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
+                      if (swap) {
+                        setSelectedSwap(swap);
+                        setSwapModalOpen(true);
+                      }
+                    }}
+                    loading={swapLoading && loadedSwaps.length === 0}
+                  />
+                  // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
+                  // </div>
+                  ,
+                  <Table
+                    key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                    maxHeight={400}
+                    title={tr("walletPage.transfer")}
+                    headers={transferHeaders}
+                    initialFilters={{}}
+                    fetcher={Promise.resolve(transferData)}
+                    filterSchema={transferFilterSchema}
+                    cellRenderers={transferCellRenderers}
+                    dataEntries={transferData}
+                    isSortable={isSortableTransfers}
+                    sortConfigs={transferSortConfigs}
+                    onRowClick={(_row, rowIndex) => {
+                      const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                      if (transfer) {
+                        setSelectedTransfer(transfer);
+                        setTransferModalOpen(true);
+                      }
+                    }}
+                    loading={transferLoading && loadedTransfers.length === 0}
+                  />
+                  // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
+                  // </div>,
+                ]}
+              />
+            </div>
+
+          </div>
+
+          <div className={styles.sideCol}>
+            <WalletHoldingsPanel
+              walletAddress={walletAddress}
+              portfolio={portfolio}
+              portfolioMeta={portfolioMetaAsMap}
+              loading={portfolioLoading}
             />
           </div>
         </div>
+        <TokenDetailsDemo setSelectedToken={setSelectedToken} />
+
       </div>
 
       <div
@@ -2011,8 +1572,8 @@ export default function WalletPage() {
           tags={reportHeaderTags}
           overview={overviewReport}
           activeSection={activeReportSection}
-          overviewContent={overviewTab}
-          holdingsContent={holdingsTab}
+          overviewContent={null}
+          holdingsContent={null}
           activityRiskContent={activityRiskPdfContent}
           reportDate={reportDate}
         />
@@ -2044,6 +1605,40 @@ export default function WalletPage() {
         onClose={() => setAiSwapSummaryOpen(false)}
         walletAddress={walletAddress}
       />
+
+      <WalletAiAnalysisPopup
+        isOpen={aiAnalysisOpen}
+        onClose={() => setAiAnalysisOpen(false)}
+        walletAddress={walletAddress}
+        lang={lang}
+      />
+
+      {auditOpen && (
+        <div
+          className={styles.auditOverlay}
+          onClick={() => setAuditOpen(false)}
+        >
+          <div
+            className={styles.auditPanel}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.auditHeader}>
+              <span className={styles.auditTitle}>Forensic Audit</span>
+              <button
+                type="button"
+                className={styles.auditCloseBtn}
+                onClick={() => setAuditOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <WalletAuditPanel
+              walletAddress={walletAddress}
+              enabled={auditOpen}
+            />
+          </div>
+        </div>
+      )}
     </PageWrapper>
   );
 }

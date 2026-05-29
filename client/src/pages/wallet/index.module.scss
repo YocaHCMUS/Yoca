@@ -1,72 +1,477 @@
 @use '@carbon/react/scss/spacing' as *;
 @use '@carbon/react/scss/theme' as *;
 
-// ===== Two-column layout (matching token overview) =====
-.walletGrid {
-  display: grid;
-  // grid-template-columns is set via inline style (resizable)
-  grid-template-columns: 420px 4px minmax(0, 1fr);
-  gap: 0;
-  padding: 0;
-  // height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
+// ===== Shell (outer wrapper) =====
+.shell {
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  overflow: hidden;
   min-height: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-// ===== Resize Divider =====
-.resizeDivider {
-  position: relative;
-  width: 4px;
-  height: 100%;
-  background: $border-subtle;
-  cursor: col-resize;
-  flex-shrink: 0;
-  z-index: 20;
-  transition: background 0.15s;
-
-  &:hover,
-  &:active {
-    background: $border-strong;
-  }
+// ===== Topbar =====
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  background: $layer-01;
+  border-bottom: 1px solid $border-subtle;
 }
 
-.resizeHandle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topbarAvatar {
+  width: 32px;
   height: 32px;
-  border-radius: 6px;
-  background: $border-strong;
-  opacity: 0;
-  transition: opacity 0.15s;
+  border-radius: 50%;
+  background: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-secondary;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
 
-  .resizeDivider:hover & {
-    opacity: 1;
+.topbarIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.topbarAddress {
+  font-size: 13px;
+  font-weight: 500;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbarAddressText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbarSub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: $text-secondary;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  line-height: 1;
+}
+
+.chipBlue {
+  background: $layer-02;
+  color: var(--interactive-info);
+}
+
+.chipGray {
+  background: $layer-02;
+  color: $text-secondary;
+  border: 1px solid $border-subtle;
+}
+
+.chipGreen {
+  background: rgba(22, 199, 132, 0.1);
+  color: #16c784;
+}
+
+.chipRed {
+  background: rgba(218, 30, 40, 0.1);
+  color: #da1e28;
+}
+
+.chipWarm {
+  background: rgba(242, 153, 74, 0.1);
+  color: #f2994a;
+}
+
+.topbarRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.topbarRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ibtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
   }
 }
 
-// ===== Left Column (sidebar) =====
-.leftColumn {
+.iconBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-secondary;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $icon-primary;
+    background-color: $layer-hover-01;
+  }
+}
+
+// ===== Hero Row =====
+.hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  min-width: 0;
-  height: 100%;
-  overflow-y: auto;
+  border-bottom: 1px solid $border-subtle;
 }
 
-// ===== Right Column (main content) =====
-.rightColumn {
+.heroCell {
+  padding: 16px 20px;
+  background: $layer-01;
+}
+
+.heroCell+.heroCell {
+  border-left: 1px solid $border-subtle;
+}
+
+.heroLabel {
+  font-size: 11px;
+  color: $text-secondary;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.heroVal {
+  font-size: 20px;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.heroSub {
+  font-size: 12px;
+  color: $text-secondary;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deltaPos {
+  color: #16c784;
+  font-size: 12px;
+}
+
+.deltaNeg {
+  color: #da1e28;
+  font-size: 12px;
+}
+
+.pnlRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pnlHalf {
+  flex: 1;
+  background: $layer-02;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.pnlHalfLabel {
+  font-size: 10px;
+  color: $text-secondary;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pnlHalfVal {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.pnlHalfVal.positive {
+  color: #16c784;
+}
+
+.pnlHalfVal.negative {
+  color: #da1e28;
+}
+
+// ===== Body (main + side) =====
+.body {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.mainCol {
+  flex: 6;
+  border-right: 1px solid $border-subtle;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  height: 100%;
-  overflow: hidden;
-  background: $background;
+  overflow-y: auto;
+  min-height: 0;
 }
 
+.sideCol {
+  flex: 4;
+  background: $layer-01;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+// ===== Sections =====
+.section {
+  padding: 16px 20px;
+  border-bottom: 1px solid $border-subtle;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.secHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.secTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.secMeta {
+  font-size: 11px;
+  color: $text-secondary;
+}
+
+// ===== Chart / table containers =====
+.chartSection {
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  overflow: hidden;
+  background: $layer-01;
+}
+
+// ===== Side Column: Holdings Panel =====
+.holdingsPanel {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.holdingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.holdingsTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.holdingsCount {
+  font-size: 11px;
+  color: $text-secondary;
+}
+
+.holdingsDonut {
+  margin-bottom: 6px;
+}
+
+.pfRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid $border-subtle;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: $layer-hover-01;
+    margin: 0 -6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 4px;
+  }
+}
+
+.pfRowActive {
+  border-left: 2px solid var(--interactive-info);
+  padding-left: 6px;
+  border-radius: 0;
+}
+
+.pfAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pfName {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  color: $text-primary;
+}
+
+.pfValueWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pfValue {
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: $text-primary;
+}
+
+.pfPct {
+  font-size: 10px;
+  color: $text-secondary;
+}
+
+.viewAllBtn {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 12px;
+  padding: 7px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
+}
+
+// ===== Side Column: AI Analysis Card =====
+.aiCard {
+  padding: 16px 20px;
+  background: $layer-02;
+  border-top: 1px solid $border-subtle;
+}
+
+.aiCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.aiCardDesc {
+  font-size: 12px;
+  color: $text-secondary;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.aiGenerateBtn {
+  width: 100%;
+  font-size: 12px;
+  padding: 7px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: $layer-01;
+  color: $text-primary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+// ===== Export Menu =====
 .exportMenuWrapper {
   position: relative;
 }
@@ -108,16 +513,7 @@
   }
 }
 
-.rightContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 24px;
-  overflow-y: auto;
-  min-height: 0;
-}
-
+// ===== Utility styles =====
 .hiddenReportTemplate {
   position: absolute;
   top: 0;
@@ -128,172 +524,9 @@
   pointer-events: none;
 }
 
-.tabPane {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-height: 0;
-}
-
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.summaryCard {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 100%;
-  padding: 16px;
-  border: 1px solid $border-subtle;
-  border-radius: 12px;
-  background: $layer-01;
-}
-
-.summaryLabel {
-  margin: 0;
-  color: $text-secondary;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.summaryValue {
-  margin: 0;
-  color: $text-primary;
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.summaryMeta {
-  margin: 0;
-  color: $text-secondary;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-// ===== Section styling (matching token page) =====
-.section {
-  display: flex;
-  flex-direction: column;
-  padding-top: 36px;
-}
-
-.sectionTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: $text-primary;
-  margin: 0;
-}
-
-.sectionDescription {
-  font-size: 14px;
-  color: $text-secondary;
-  margin: 0;
-}
-
-// ===== Chart / table containers =====
-.chartSection {
-  border: 1px solid $border-subtle;
-  border-radius: 12px;
-  overflow: hidden;
-  background: $layer-01;
-}
-
-.portfolioCard {
-  :global([data-testid='table-wrapper']) {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-  }
-
-  :global([data-testid='table-wrapper'] > div:first-child) {
-    flex-shrink: 0;
-  }
-
-  :global([data-testid='table-wrapper'] > div:last-child) {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  :global([data-testid='table-wrapper'] > div:last-child > div:first-child) {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  :global([data-testid='table-wrapper'] > div:last-child > div:first-child > div:first-child) {
-    flex: 1;
-    position: relative;
-    min-height: 0;
-  }
-
-  :global([data-testid='table-wrapper'] > div:last-child > div:first-child > div:first-child > *) {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow-y: auto;
-  }
-
-  :global([data-testid='table-wrapper'] > div:last-child > div:first-child > div:last-child) {
-    flex-shrink: 0;
-  }
-}
-
-.sectionStack {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-}
-
-.tableStack {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-}
-
-.tableRow {
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
-}
-
-.chartStack {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  overflow: hidden;
-}
-
-.sideBySide {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.columnWrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
 // ===== Swap token cells =====
 .swapTokenCell {
   display: inline-flex;
-  // align-items: flex-start;
   gap: $spacing-03;
   min-width: 0;
 }
@@ -303,4 +536,110 @@
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+
+// ===== Tooltip =====
+.tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltipTip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: $text-secondary;
+  width: 180px;
+  line-height: 1.5;
+  z-index: 20;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.tooltip:hover .tooltipTip {
+  display: block;
+}
+
+// ===== Audit Overlay =====
+.auditOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 7000;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auditPanel {
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  width: min(90vw, 800px);
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.auditHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid $border-subtle;
+}
+
+.auditTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.auditCloseBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-secondary;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+// ===== Resize Divider (REMOVE - no longer needed) =====
+.resizeDivider {
+  display: none;
+}
+
+.resizeHandle {
+  display: none;
+}
+
+.leftColumn {
+  display: none;
+}
+
+.rightColumn {
+  display: none;
+}
+
+.rightContent {
+  display: none;
+}
+
+.tabPane {
+  display: none;
 }

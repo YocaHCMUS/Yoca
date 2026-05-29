@@ -4,10 +4,11 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import React from "react";
 import styles from "./PeriodSelector.module.scss";
+import { WalletOverviewPeriodKey } from "@sv/services/wallet/dtos/walletDataObjects";
 
 interface PeriodSelectorProps {
-  value: TimePeriod;
-  onChange: (key: TimePeriod) => void;
+  value: TimePeriod | WalletOverviewPeriodKey;
+  onChange: (key: TimePeriod | WalletOverviewPeriodKey) => void;
   options?: PeriodOption[];
   compact?: boolean;
   className?: string;

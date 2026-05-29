@@ -1,0 +1,214 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  background: $layer-01;
+  border-bottom: 1px solid $border-subtle;
+}
+
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topbarAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: $layer-02;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-secondary;
+  flex-shrink: 0;
+}
+
+.topbarIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.topbarAddress {
+  font-size: 13px;
+  font-weight: 500;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbarAddressText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  vertical-align: middle;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: $icon-primary;
+  }
+}
+
+.topbarSub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chipGreen {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  line-height: 1;
+  background: rgba(22, 199, 132, 0.1);
+  color: #16c784;
+}
+
+.chipGray {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  line-height: 1;
+  background: $layer-02;
+  color: $text-secondary;
+  border: 1px solid $border-subtle;
+}
+
+.inlineTagBtn {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--interactive-link);
+  font-size: 11px;
+}
+
+.topbarRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.topbarRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ibtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $icon-primary;
+    background-color: $layer-hover-01;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.exportMenuWrapper {
+  position: relative;
+}
+
+.exportMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 240px;
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  z-index: 50;
+}
+
+.exportMenuItem {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $layer-hover-01;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: $text-disabled;
+  }
+}

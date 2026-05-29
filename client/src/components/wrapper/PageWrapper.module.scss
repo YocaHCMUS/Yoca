@@ -25,6 +25,7 @@
 :global(.cds--content) {
   --page-content-top-offset: 3.5rem;
   padding-top: var(--page-content-top-offset) !important;
+  padding: 0 !important;
 }
 
 .extraHeaderPanelContent {
