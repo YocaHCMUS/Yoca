@@ -127,7 +127,7 @@
 }
 
 .forgotLink {
-  margin: -15px 0 15px;
+  margin: 0px 0 15px;
   a {
     font-size: 14.5px;
     color: #94a3b8;
@@ -423,7 +423,7 @@
 }
 
 .lightToggleBox::before {
-  background: linear-gradient(135deg, #c9a3f7 0%, #a8d5f7 35%, #7ecfde 65%, #5ee8d4 100%);
+  background: linear-gradient(135deg, #c9a3f7 0%, #a8d5f7 20%, #7ecfde 80%, #5ee8d4 90%);
   left: -250%;
   width: 300%;
   height: 100%;
