@@ -11,7 +11,7 @@
   height: 100vh;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(6px); 
-  z-index: 9999;
+  z-index: 999;
 }
 
 .lightOverlay {
@@ -192,6 +192,8 @@
     transition: all 0.2s ease-in-out !important;
     box-shadow: none !important;
     padding: 0 12px !important;
+    position: relative !important;
+    z-index: 10000 !important;
 
     &:hover {
       background-color: rgba(153, 69, 255, 0.08) !important; 
@@ -214,6 +216,10 @@
     &:first-of-type svg {
       fill: none !important;
     }
+  }
+
+  :global(.wallet-adapter-dropdown) {
+    z-index: 10001 !important;
   }
 }
 
@@ -370,6 +376,14 @@
   background: #ffffff;
   box-shadow: none;
   border-left: none;
+
+  h1 {
+    color: #000000;
+  }
+
+  p {
+    color: #666666;
+  }
 }
 
 .lightInputBox {
@@ -385,7 +399,7 @@
   }
 
   i {
-    color: #999999;
+    color: rgb(20, 241, 149);
   }
 }
 
@@ -394,7 +408,7 @@
 }
 
 .lightIcon {
-  color: #22c55e;
+  color: rgb(20, 241, 149);
 }
 
 .lightBtn {
@@ -432,27 +446,27 @@
 
 .lightTogglePanel {
   color: #fff;
-}
 
-.lightTogglePanel p {
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 400;
-}
+  h1 {
+    color: #000000;
+    font-weight: 400;
+  }
 
-.lightTogglePanel h1 {
-  color: #ffffff;
-  font-weight: 600;
-}
+  p {
+    color: #333333;
+    font-weight: 400;
+  }
 
-.lightTogglePanel .btn {
-  background: transparent !important;
-  color: #fff !important;
-  border: 2px solid rgba(255, 255, 255, 0.85) !important;
-  box-shadow: none !important;
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: #ffffff !important;
+  .btn {
+    background: transparent !important;
+    color: #fff !important;
+    border: 2px solid rgba(255, 255, 255, 0.85) !important;
+    box-shadow: none !important;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: #ffffff !important;
+    }
   }
 }
 
