@@ -17,6 +17,10 @@ import { useNavigate } from 'react-router';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
+import { PERIOD_OPTIONS } from '@/config/periodOptions';
+import WalletOverviewValueSection from './WalletOverviewValueSection';
+import WalletOverviewTradingSection from './WalletOverviewTradingSection';
+import WalletOverviewPnLSection from './WalletOverviewPnLSection';
 
 function shortenWalletAddress(address: string): string {
     const normalized = address.trim();
@@ -100,10 +104,6 @@ export interface WalletOverviewProps {
     /** When false, skips GET /wallets/intelligence until enabled (saves heavy API work until needed). */
     enableIntelligence?: boolean;
 }
-import { PERIOD_OPTIONS } from '@/config/periodOptions';
-import WalletOverviewValueSection from './WalletOverviewValueSection';
-import WalletOverviewTradingSection from './WalletOverviewTradingSection';
-import WalletOverviewPnLSection from './WalletOverviewPnLSection';
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({
     walletAddress = 'null',
@@ -164,7 +164,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 setLoading(true);
                 setError(null);
 
-                const overviewResult = await fetchWalletOverview(walletAddress, 'solana');
+                const overviewResult = await fetchWalletOverview(walletAddress);
                 setOverview(overviewResult);
                 setSelectedPeriod(overviewResult.selectedPeriod ?? '24H');
             } catch (err) {

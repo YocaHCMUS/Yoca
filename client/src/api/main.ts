@@ -79,3 +79,9 @@ const client: ApiClient = {
 
 export default client;
 export type ApiErrCode = ErrCode;
+
+// client.api.tokens.markets.chart[":address"].daily.$get({
+//   query: {
+//     days: ,
+//   },
+// });

@@ -1,22 +1,17 @@
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import Bottleneck from "bottleneck";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
+import env from "./load-env.js";
 const BIRDEYE_SERVICE_NAME = "birdeye";
 let birdeyeKeysInitialized = false;
 
 export function getEndpoint(path: string): URL {
-  if (!process.env.BIRDEYE_API_BASE_URL) {
-    throw new Error("Birdey API base url was not set");
-  }
-  return new URL(`${process.env.BIRDEYE_API_BASE_URL}${path}`);
+  return new URL(`${env.BIRDEYE_API_BASE_URL}${path}`);
 }
 
 export function getRequiredHeaders(): Record<string, string> {
   if (!birdeyeKeysInitialized) {
-    apiKeyManager.initializeKeys(
-      BIRDEYE_SERVICE_NAME,
-      process.env.BIRDEYE_API_KEY,
-    );
+    apiKeyManager.initializeKeys(BIRDEYE_SERVICE_NAME, env.BIRDEYE_API_KEY);
     birdeyeKeysInitialized = true;
   }
 

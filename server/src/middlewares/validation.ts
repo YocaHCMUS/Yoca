@@ -29,8 +29,17 @@ export const paginationSchema = z.object({
   offset: z.coerce.number(),
 });
 
+// Notes: All schema fields of Hono's "query" must be optional for the
+// type inferrence to work correct. Or else all field would collapsed into
+// string | string[]
+// ->
+// This is actually intended behavior from hono that all number type collapse
+// into string | string[], since query must be send as string (Hono may just not
+// dare to risk losing precision)
+// See: https://hono.dev/docs/guides/rpc#path-parameters
+
 export const daysQuerySchema = z.object({
-  days: z.coerce.number().positive().optional(),
+  days: z.coerce.number().positive().default(30),
 });
 
 export const addressSchema = z.object({
@@ -141,16 +150,16 @@ export const userPayloadSchema = z.object({
 export type UserPayload = z.infer<typeof userPayloadSchema>;
 
 export const searchQuerySchema = z.object({
-  q: z.string().optional(),
+  q: z.string().default(""),
 });
 
 // Notes: All schema fields of Hono's "query" must be optional for the
 // type inferrence to work correct. Or else all field would collapsed into
 // string | string[]
 export const recentTradesQuerySchema = z.object({
-  timeWindow: z.enum(["6h", "12h", "24h"]).default("24h").optional(),
-  usdThreshold: z.coerce.number().min(0).default(0).optional(),
-  sortBy: z.enum(["volume", "time"]).default("volume").optional(),
+  timeWindow: z.enum(["6h", "12h", "24h"]).default("24h"),
+  usdThreshold: z.coerce.number().min(0).default(0),
+  sortBy: z.enum(["volume", "time"]).default("volume"),
 });
 
 export const walletTokenTradesSchema = z.object({
@@ -283,41 +292,54 @@ export const honoJwt = async (c: Context, next: Next) => {
 export async function getTrackedApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
-  logActualResponse: boolean = false,
+  logSuccessResponse: boolean = false,
 ) {
   try {
-    const rawRes = await resp.json();
-    const parseRes = schema.safeParse(rawRes);
-    if (!parseRes.success) {
-      console.log("Unexpected response!");
-      console.log("Zod errors:", parseRes.error.issues);
-    }
-
-    if (logActualResponse || !parseRes.success) {
-      console.log(`Actual response (${resp.status}):`);
-      const safeStr = (() => {
-        try {
-          return JSON.stringify(rawRes, null, 2);
-        } catch {
-          return String(rawRes);
-        }
-      })();
-      const maxLog = 1000;
-      if (safeStr.length > maxLog) {
-        console.log(
-          safeStr.slice(0, maxLog) +
-            `\n... (truncated ${safeStr.length - maxLog} chars)`,
-        );
-      } else {
-        console.log(safeStr);
-      }
-    }
-
-    return parseRes.success ? parseRes.data : undefined;
+    const jsonResp = await resp.json();
+    return validateResponseDataSchema(
+      resp.status,
+      jsonResp,
+      schema,
+      logSuccessResponse,
+    );
   } catch (err) {
-    console.log("Unexpected Error:", err);
+    console.error("Unexpected Error:", err);
     return;
   }
+}
+
+export async function validateResponseDataSchema<T extends z.ZodType>(
+  status: number,
+  jsonResp: any,
+  schema: T,
+  logSuccessResponse: boolean,
+) {
+  const parseRes = schema.safeParse(jsonResp);
+  if (!parseRes.success) {
+    console.error("Unexpected response!\nZod errors:", parseRes.error.issues);
+  }
+
+  if (logSuccessResponse || !parseRes.success) {
+    console.log(`Actual response (${status}):`);
+    const safeStr = (() => {
+      try {
+        return JSON.stringify(jsonResp, null, 2);
+      } catch {
+        return String(jsonResp);
+      }
+    })();
+    const maxLog = 1000;
+    if (safeStr.length > maxLog) {
+      console.log(
+        safeStr.slice(0, maxLog) +
+          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+      );
+    } else {
+      console.log(safeStr);
+    }
+  }
+
+  return parseRes.success ? parseRes.data : undefined;
 }
 
 export const envSchema = z.object({

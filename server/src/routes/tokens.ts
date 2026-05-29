@@ -124,7 +124,7 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { days = 30 } = c.req.valid("query");
+        const { days } = c.req.valid("query");
 
         if (days > 90) {
           return c.json(

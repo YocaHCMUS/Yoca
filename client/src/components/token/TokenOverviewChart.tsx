@@ -65,11 +65,11 @@ export function TokenOverviewChart({
             : range.days <= 90
               ? await client.api.tokens.markets.chart[":address"].hourly.$get({
                   param: { address },
-                  query: { days: range.days },
+                  query: { days: range.days.toString() },
                 })
               : await client.api.tokens.markets.chart[":address"].daily.$get({
                   param: { address },
-                  query: { days: range.days },
+                  query: { days: range.days.toString() },
                 });
 
         if (response.status === 200) {

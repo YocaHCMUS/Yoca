@@ -70,7 +70,7 @@ const DEFAULT_SIZE_SCALE: TradeBubbleSizeScale = {
 };
 
 function toFiniteNumber(value: unknown): number | null {
-  if (typeof value !== "number") {
+  if (typeof value != "number") {
     return null;
   }
   if (!Number.isFinite(value)) {
@@ -83,7 +83,7 @@ function normalizeMarketData(
   marketData: TimeSeriesDataPoint[] | undefined,
   isDataSorted: boolean,
 ): TimeSeriesDataPoint[] {
-  if (!marketData || marketData.length === 0) {
+  if (!marketData || marketData.length == 0) {
     return [];
   }
 
@@ -98,7 +98,7 @@ function getRepresentativePriceStep(
   prices: number[],
   priceBucketPercent?: number,
 ): number | null {
-  if (!priceBucketPercent || priceBucketPercent <= 0 || prices.length === 0) {
+  if (!priceBucketPercent || priceBucketPercent <= 0 || prices.length == 0) {
     return null;
   }
 
@@ -135,7 +135,7 @@ export function findNearestMarketPrice(
     const mid = Math.floor((left + right) / 2);
     const midTs = marketData[mid].unixTimeMs;
 
-    if (midTs === targetUnixTimeMs) {
+    if (midTs == targetUnixTimeMs) {
       return marketData[mid].value;
     }
 
@@ -172,7 +172,7 @@ export function mapTradesWithFallbackPrice(
 
   return trades.map((trade) => {
     const directPrice = toFiniteNumber(trade.price);
-    if (directPrice !== null) {
+    if (directPrice != null) {
       return {
         ...trade,
         price: directPrice,
@@ -185,7 +185,7 @@ export function mapTradesWithFallbackPrice(
       trade.unixTimeMs,
     );
 
-    if (mappedPrice === null) {
+    if (mappedPrice == null) {
       return {
         ...trade,
         price: null,
@@ -212,11 +212,11 @@ export function aggregateTradesForScatter(
     const price = toFiniteNumber(trade.price);
 
     return (
-      (trade.side === "buy" || trade.side === "sell") &&
+      (trade.side == "buy" || trade.side == "sell") &&
       Number.isFinite(trade.unixTimeMs) &&
-      volumeUsd !== null &&
+      volumeUsd != null &&
       volumeUsd > 0 &&
-      price !== null
+      price != null
     );
   });
 
@@ -259,8 +259,8 @@ export function aggregateTradesForScatter(
         weightedPrice: price * volumeUsd,
         weightedTime: trade.unixTimeMs * volumeUsd,
         tradeCount: 1,
-        mappedCount: trade.priceSource === "mapped" ? 1 : 0,
-        tradePriceCount: trade.priceSource === "trade" ? 1 : 0,
+        mappedCount: trade.priceSource == "mapped" ? 1 : 0,
+        tradePriceCount: trade.priceSource == "trade" ? 1 : 0,
       });
       continue;
     }
@@ -269,10 +269,10 @@ export function aggregateTradesForScatter(
     existing.weightedPrice += price * volumeUsd;
     existing.weightedTime += trade.unixTimeMs * volumeUsd;
     existing.tradeCount += 1;
-    if (trade.priceSource === "mapped") {
+    if (trade.priceSource == "mapped") {
       existing.mappedCount += 1;
     }
-    if (trade.priceSource === "trade") {
+    if (trade.priceSource == "trade") {
       existing.tradePriceCount += 1;
     }
   }
@@ -294,7 +294,7 @@ function createSizeScale(
   points: AggregatedTradePoint[],
   sizeScale: TradeBubbleSizeScale,
 ): (volumeUsd: number) => number {
-  if (points.length === 0) {
+  if (points.length == 0) {
     return () => sizeScale.minPx;
   }
 
@@ -309,7 +309,7 @@ function createSizeScale(
     return () => sizeScale.minPx;
   }
 
-  if (minVolume === maxVolume) {
+  if (minVolume == maxVolume) {
     return () => (sizeScale.minPx + sizeScale.maxPx) / 2;
   }
 
@@ -323,11 +323,11 @@ function createSizeScale(
 export function getDefaultAggregationForDayRange(
   days: 7 | 30 | 90,
 ): TradeAggregationConfig {
-  if (days === 7) {
+  if (days == 7) {
     return { timeBucketMs: 60 * 60 * 1000 };
   }
 
-  if (days === 30) {
+  if (days == 30) {
     return { timeBucketMs: 4 * 60 * 60 * 1000 };
   }
 
@@ -362,9 +362,9 @@ export function TimeSeriesTradesScatterChart({
     warning: cds.supportWarning,
   });
 
-  const chartData = useMemo(() => {
-    if (!data || data.length === 0) {
-      return [] as [number, number][];
+  const chartData: [number, number][] = useMemo(() => {
+    if (!data || data.length == 0) {
+      return [] ;
     }
 
     const sorted = isDataSorted
@@ -372,7 +372,7 @@ export function TimeSeriesTradesScatterChart({
       : [...data].sort((a, b) => a.unixTimeMs - b.unixTimeMs);
 
     return sorted.map(
-      (point) => [point.unixTimeMs, point.value] as [number, number],
+      (point) => [point.unixTimeMs, point.value],
     );
   }, [data, isDataSorted]);
 
@@ -382,12 +382,12 @@ export function TimeSeriesTradesScatterChart({
   );
 
   const buyTrades = useMemo(
-    () => aggregatedTrades.filter((trade) => trade.side === "buy"),
+    () => aggregatedTrades.filter((trade) => trade.side == "buy"),
     [aggregatedTrades],
   );
 
   const sellTrades = useMemo(
-    () => aggregatedTrades.filter((trade) => trade.side === "sell"),
+    () => aggregatedTrades.filter((trade) => trade.side == "sell"),
     [aggregatedTrades],
   );
 
@@ -475,7 +475,7 @@ export function TimeSeriesTradesScatterChart({
             value: [number, number];
           };
 
-          if (params.seriesType === "line") {
+          if (params.seriesType == "line") {
             const [ts, val] = params.value;
             const dateStr =
               range < 86_400_000 * 2
@@ -495,7 +495,7 @@ export function TimeSeriesTradesScatterChart({
           const [ts, price] = params.data.value;
           const dateStr = fmt.datetime.datetime(ts);
           const side =
-            params.data.side === "buy"
+            params.data.side == "buy"
               ? tr("walletPage.buy")
               : tr("walletPage.sell");
           const tradeCount = params.data.tradeCount ?? 1;
@@ -613,9 +613,9 @@ export function TimeSeriesTradesScatterChart({
                 formatter: () =>
                   `${markLine.label}: ${valueFormatter ? valueFormatter(markLine.value) : markLine.value}`,
                 position:
-                  markLines.length === 2
+                  markLines.length == 2
                     ? markLine.value >
-                      (markLines[0] === markLine
+                      (markLines[0] == markLine
                         ? markLines[1].value
                         : markLines[0].value)
                       ? "insideEndTop"

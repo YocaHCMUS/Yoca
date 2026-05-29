@@ -149,15 +149,7 @@ export function BalanceChartV2({
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                // <Flex gap={4} align="center">
-                //   <TknImg
-                //     size={25}
-                //     alt={account.symbol || account.tokenAddress}
-                //     loading={portfolio.isLoading}
-                //     src={account.logoUri}
-                //   />
-                //   <Txt size="md">{account.symbol || account.tokenAddress}</Txt>
-                // </Flex>
+ 
                 <TokenIdentityCell
                   symbol={account.symbol || account.tokenAddress}
                   fullName={account.name}
@@ -211,13 +203,7 @@ export function BalanceChartV2({
                       prefixes="plus-minus"
                       formatter={fmt.num.percent}
                     />
-
-                    {/* <TrendNum
-                    value={change.delta}
-                    prefixes="plus-minus"
-                    formatter={fmt.num.currency}
-                  /> */}
-                  </Flex>
+                </Flex>
                 </Tag>
               );
             })}
@@ -227,7 +213,7 @@ export function BalanceChartV2({
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading && portfolio.isLoading}
+          loading={tokenBalances.isLoading || portfolio.isLoading || totalBalance.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
           onClickDay={onClickDay}
         />

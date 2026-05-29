@@ -7,6 +7,7 @@ import { resolveEnhancedTransactions } from "@sv/services/wallet/providers/walle
 import { mapHeliusTxsToSwaps } from "@sv/services/wallet/providers/helius-to-swap.js";
 import { mapHeliusTxsToTransfers } from "@sv/services/wallet/providers/helius-to-transfer.js";
 import { resolveRequestedRange, isMissingRangeSignificant, getMissingRanges } from "@sv/services/wallet/walletRange.utils.js";
+import { DAY_MS } from "./wallet.constants";
 
 function sortTransfersByTimestampDesc(transfers: WalletTransfer[]): WalletTransfer[] {
     return [...transfers].sort(
@@ -85,7 +86,6 @@ export async function getWalletTransfers(
     const fetchedTransfers: WalletTransfer[] = [];
     for (const range of missingRanges) {
         if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-            console.log(`[get wallet transfer] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
             const txs = await resolveEnhancedTransactions(
                 address,
                 range.fromMs,
@@ -127,7 +127,6 @@ export async function getWalletTransfers(
     await enrichWithSolanaTokenPrices(combinedTransfers);
     await postEnrichTransfers(combinedTransfers);
     await saveTransfersCache(address, combinedTransfers, cachefrom, cacheTo);
-
     return {
         address,
         transfers: combinedTransfers,
@@ -152,7 +151,6 @@ export async function getWalletSwaps(
 ): Promise<WalletSwapsResponse> {
     const metaRows = await getCachedWalletSwapsMeta(address);
     const walletSwapMeta = metaRows.length > 0 ? metaRows[0] : null;
-
     const requestedRange = resolveRequestedRange(from, to);
     const coveredRange =
         walletSwapMeta?.coveredFromSec != null && walletSwapMeta?.coveredToSec != null
@@ -208,8 +206,6 @@ export async function getWalletSwaps(
     const fetchedSwaps: WalletSwap[] = [];
     for (const range of missingRanges) {
         if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-            console.log(`[get wallet swaps] Fetch missing ranges ${new Date(range.fromMs)} - ${new Date(range.toMs)}`)
-
             const txs = await resolveEnhancedTransactions(
                 address,
                 range.fromMs,
@@ -238,7 +234,7 @@ export async function getWalletSwaps(
     }
 
     const cacheTo = to || Date.now()
-    const fromDate = new Date(cacheTo - (30 * 24 * 60 * 60 * 1000))
+    const fromDate = new Date(cacheTo - 30 * DAY_MS)
     const cachefrom = from || Date.UTC(
         fromDate.getUTCFullYear(),
         fromDate.getUTCMonth(),
@@ -258,7 +254,6 @@ export async function getWalletSwaps(
             : fetchedSwaps.length > 0
                 ? "provider"
                 : "cache";
-
     return {
         address,
         swaps: combinedSwaps,

@@ -1,20 +1,20 @@
 import {
-  bigint,
-  boolean,
-  decimal as dec,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  primaryKey,
-  serial,
-  smallint,
-  text,
-  timestamp,
-  unique,
-  uniqueIndex,
-  uuid,
-  varchar,
+    bigint,
+    boolean,
+    decimal as dec,
+    integer,
+    jsonb,
+    pgEnum,
+    pgTable,
+    primaryKey,
+    serial,
+    smallint,
+    text,
+    timestamp,
+    unique,
+    uniqueIndex,
+    uuid,
+    varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 export * from "./alerts";
@@ -845,64 +845,6 @@ export const walletAiAnalysisCache = pgTable(
   ],
 );
 
-export const walletBalanceHistoryCache = pgTable(
-  "wallet_balance_history_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    timePeriod: varchar("time_period", { length: 10 }).notNull(),
-    data: jsonb("data")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-    coveredFromMs: bigint("covered_from_ms", { mode: "number" }).notNull(),
-    coveredToMs: bigint("covered_to_ms", { mode: "number" }).notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.address, t.timePeriod] })],
-);
-
-export const walletTokenBalanceHistoryCache = pgTable(
-  "wallet_token_balance_history_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    tokenAddress: varchar("token_address", { length: 66 }).notNull(),
-    tokenSymbol: varchar("token_symbol", { length: 64 }).notNull(),
-    tokenSeries: jsonb("token_series")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
-    usdSeries: jsonb("usd_series")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-    coveredFromMs: bigint("covered_from_ms", { mode: "number" }).notNull(),
-    coveredToMs: bigint("covered_to_ms", { mode: "number" }).notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
-);
-
 export const walletUserTags = pgTable(
   "wallet_user_tags",
   {
@@ -1320,10 +1262,6 @@ export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
 
 export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
-export type WalletBalanceHistoryCacheInsert =
-  typeof walletBalanceHistoryCache.$inferInsert;
-export type WalletTokenBalanceHistoryCacheInsert =
-  typeof walletTokenBalanceHistoryCache.$inferInsert;
 export type walletHeliusTransactionsInsert =
   typeof walletHeliusTransactions.$inferInsert;
 export type WalletEnhancedTransactionsInsert =

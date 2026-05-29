@@ -154,7 +154,7 @@ const app = new Hono().get(
   validate("query", searchQuerySchema),
   async (c) => {
     try {
-      const { q = "" } = c.req.valid("query");
+      const { q } = c.req.valid("query");
       const result = await getSearchResult(q);
 
       return c.json(

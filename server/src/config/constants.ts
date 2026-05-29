@@ -25,6 +25,15 @@ export const TOP_TOKENS_BY_MARKET_CAP_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
 export const TRADER_GAINEERS_LOSERS_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
+export const HOUR_MS = 60 * 60 * 1000;
+
+// Token chart intervals for hourly/daily gap detection
+export const TOKEN_CHART_HOURLY_INTERVAL_MS = HOUR_MS;
+export const TOKEN_CHART_DAILY_INTERVAL_MS = DAY_MS;
+
+// Time span requirements for chart completeness
+export const TOKEN_CHART_HOURLY_MIN_POINTS = 8;
+export const TOKEN_CHART_HOURLY_MIN_SPAN_MS = 18 * 60 * 60 * 1000; // 18 hours
 
 // Trending tokens fetching
 export const TRENDING_TOKENS_RESULT_LIMIT = 10;

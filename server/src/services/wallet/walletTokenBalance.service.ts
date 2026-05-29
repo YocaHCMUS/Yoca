@@ -8,10 +8,10 @@ import {
   walletTokenBalanceHistory,
   WalletTokenBalanceHistoryInsert,
 } from "@sv/db/schema.js";
-import { getUtcDatesFromNow } from "@sv/util/date.js";
+import { getUtcDatesFromNow, getUtcDatesFromNowMs } from "@sv/util/date.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, between, eq, inArray } from "drizzle-orm";
 
 type WalletTokenBalanceHistory = Record<
   string,
@@ -52,26 +52,89 @@ export async function getWalletTokenBalanceHistory(
   tokenAddresses: string[],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const dates = getUtcDatesFromNow(timePeriod);
+  const expectedDatesMs = getUtcDatesFromNowMs(timePeriod);
+  const start = expectedDatesMs[expectedDatesMs.length - 1];
+  const end = expectedDatesMs[0];
 
-  const start = dayjs(dates[dates.length - 1]).valueOf();
-  const end = dayjs(dates[0]).valueOf();
-
-  const res = await db
+  // Get existing records from DB
+  const existingRecords = await db
     .select()
     .from(walletTokenBalanceHistory)
     .where(
       and(
-        gte(walletTokenBalanceHistory.timestampMs, start),
-        lte(walletTokenBalanceHistory.timestampMs, end),
+        between(walletTokenBalanceHistory.timestampMs, start, end),
         eq(walletTokenBalanceHistory.address, address),
         inArray(walletTokenBalanceHistory.tokenAddress, tokenAddresses),
       ),
+    )
+    .orderBy(
+      walletTokenBalanceHistory.tokenAddress,
+      walletTokenBalanceHistory.timestampMs,
     );
 
-  if (res.length > 0) {
+  // Build set of existing timestamps
+  const existingTimestamps = new Set(existingRecords.map((r) => r.timestampMs));
+
+  // Detect missing dates
+  const missingTimestampsMs = expectedDatesMs.filter(
+    (timestampMs) => !existingTimestamps.has(timestampMs),
+  );
+
+  // If there are gaps, fetch only those dates
+  if (missingTimestampsMs.length > 0) {
+    // Convert ms timestamps back to ISO strings for API calls
+    const missingDates = missingTimestampsMs.map((ms) =>
+      dayjs(ms).toISOString(),
+    );
+
+    const resArray = await Promise.all(
+      missingDates.map((date) => bdsFetchAssetsAt(address, date)),
+    );
+
+    const insertValues = resArray.flatMap(
+      (res) =>
+        res?.net_assets.map(
+          (tokenBalance): WalletTokenBalanceHistoryInsert => ({
+            address: address,
+            timestampMs: dayjs(res.date).valueOf(),
+            tokenAddress: tokenBalance.token_address,
+            tokenBalance: Number(tokenBalance.balance),
+            usdValue: tokenBalance.value,
+          }),
+        ) || [],
+    );
+
+    // Write all tokens to db at once
+    await db
+      .insert(walletTokenBalanceHistory)
+      .values(insertValues)
+      .onConflictDoNothing();
+
+    // Filter to requested token addresses if specified
+    let newData: WalletTokenBalanceHistoryInsert[] = insertValues;
+    if (tokenAddresses.length > 0) {
+      newData = insertValues.filter((val) =>
+        tokenAddresses.includes(val.tokenAddress),
+      );
+    }
+
+    // Combine existing and new data
+    const combinedRecords = [...existingRecords, ...(newData || [])];
+
     return groupTokenHistory(
-      res.map((row) => ({
+      combinedRecords.map((row) => ({
+        tokenAddress: row.tokenAddress,
+        value: row.tokenBalance,
+        usdValue: row.usdValue,
+        timestampMs: row.timestampMs,
+      })),
+    );
+  }
+
+  // All dates found in DB
+  if (existingRecords.length > 0) {
+    return groupTokenHistory(
+      existingRecords.map((row) => ({
         tokenAddress: row.tokenAddress,
         value: row.tokenBalance,
         usdValue: row.usdValue,
@@ -79,6 +142,7 @@ export async function getWalletTokenBalanceHistory(
       })),
     );
   } else {
+    // Fetch all dates if nothing in DB
     return fetchWalletTokenBalanceHistory(address, tokenAddresses, timePeriod);
   }
 }
