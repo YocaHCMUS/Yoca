@@ -1,6 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useSolanaContext } from "@/contexts/SolanaWalletContext";
-import { Button, type ButtonBaseProps } from "@carbon/react";
 import { Wallet } from "@carbon/react/icons";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -21,10 +20,7 @@ type WalletActionButtonProps<TResult> = {
     onSuccess: (result: TResult) => void;
     action: (payload: WalletActionPayload<TResult>) => Promise<void>;
     label?: string;
-    kind?: ButtonBaseProps["kind"];
-    renderIcon?: ButtonBaseProps["renderIcon"];
     className?: string;
-    style?: React.CSSProperties;
 };
 
 export function WalletActionButton<TResult>({
@@ -33,28 +29,35 @@ export function WalletActionButton<TResult>({
     onSuccess,
     action,
     label,
-    kind = "tertiary",
-    renderIcon = Wallet,
     className,
-    style,
 }: WalletActionButtonProps<TResult>) {
     const { tr } = useLocalization();
     const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
     const { isModalOpen, openModal, closeModal } = useSolanaContext();
     const walletConnectBtnRef = useRef<HTMLDivElement>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    
+    // Thêm state ghi nhớ ý định Sign sau khi Connect
+    const [pendingAuth, setPendingAuth] = useState(false);
 
+    // Xử lý đóng modal khi connect thành công
     useEffect(() => {
         if (connected && isModalOpen) {
             closeModal();
         }
     }, [connected, isModalOpen, closeModal]);
 
+    // TỰ ĐỘNG GỌI HÀM KÝ KHI VÍ CONNECT THÀNH CÔNG
+    useEffect(() => {
+        if (connected && pendingAuth && publicKey && signMessage && wallet) {
+            setPendingAuth(false);
+            executeAction();
+        }
+    }, [connected, pendingAuth, publicKey, signMessage, wallet]);
+
     const triggerWalletMultiBtn = () => {
         const container = walletConnectBtnRef.current;
-        if (!container) {
-            return;
-        }
+        if (!container) return;
 
         const btn = container.querySelector("button");
         if (btn instanceof HTMLElement) {
@@ -62,13 +65,8 @@ export function WalletActionButton<TResult>({
         }
     };
 
-    async function onBtnClick() {
-        if (!connected) {
-            triggerWalletMultiBtn();
-            openModal();
-            return;
-        }
-
+    // Tách logic Sign ra một hàm riêng để tái sử dụng
+    const executeAction = async () => {
         if (!publicKey || !signMessage || !wallet) {
             onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
             return;
@@ -90,37 +88,37 @@ export function WalletActionButton<TResult>({
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    async function onBtnClick() {
+        if (!connected) {
+            setPendingAuth(true); // Đánh dấu là người dùng muốn Đăng nhập/Ký
+            triggerWalletMultiBtn(); // Mở popup connect của ví
+            openModal();
+            return;
+        }
+
+        // Nếu đã connect sẵn rồi thì chạy thẳng xuống executeAction
+        executeAction();
     }
 
-    const buttonLabel = label
-        ?? (wallet
-            ? connected
-                ? tr("auth.continueWithConnectedWallet", {
-                    connectedWalletAddress: publicKey?.toString() || "",
-                    connectedWalletName: wallet.adapter.name,
-                })
-                : connecting
-                    ? tr("auth.connectingWithWallet")
-                    : tr("auth.continueWithSelectedWallet", {
-                        walletName: wallet.adapter.name,
-                    })
-            : tr("auth.continueWithWallet"));
+    const defaultLabel = wallet ? wallet.adapter.name : "Wallet";
+    const buttonLabel = label ?? (connecting ? tr("auth.connectingWithWallet") : defaultLabel);
 
     return (
         <>
-            <Button
-                kind={kind}
-                renderIcon={renderIcon}
+            <button
+                type="button"
                 disabled={disabled || isModalOpen || connecting || isProcessing}
                 onClick={onBtnClick}
                 className={className}
-                style={style}
             >
-                {buttonLabel}
-            </Button>
+                <Wallet size={20} />
+                <span>{buttonLabel}</span>
+            </button>
 
-            <div ref={walletConnectBtnRef}>
-                <WalletMultiButton style={{ display: "none" }} />
+            <div ref={walletConnectBtnRef} style={{ display: "none" }}>
+                <WalletMultiButton />
             </div>
         </>
     );

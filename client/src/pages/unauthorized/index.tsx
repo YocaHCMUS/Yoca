@@ -42,7 +42,7 @@ export default function UnauthorizedPage() {
   const requestedPath = getRequestedPath(location.state);
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-center items-center bg-[#161616] overflow-hidden font-sans px-8 md:px-16 lg:px-32">
+    <div className="fixed inset-0 z-50 flex flex-col justify-center items-center bg-[#161616] overflow-hidden font-sans px-8 md:px-16 lg:px-32">
       <div className="flex flex-col items-center text-center max-w-4xl w-full mx-auto gap-10">
         <div className="flex flex-col items-center gap-3 w-full">
           <p

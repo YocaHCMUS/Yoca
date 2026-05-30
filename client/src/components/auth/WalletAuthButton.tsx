@@ -62,10 +62,6 @@ export function WalletAuthButton({
           resolveError(getWalletAuthErrorMessage(errCode));
         }
       }}
-      style={{
-        inlineSize: "100%",
-        maxInlineSize: "100%",
-      }}
     />
   );
 }

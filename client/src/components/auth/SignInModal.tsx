@@ -1,96 +1,112 @@
 import client from "@/api/main";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { ArrowRight } from "@carbon/icons-react";
-import {
-  Button,
-  ComposedModal,
-  Form,
-  InlineNotification,
-  Link,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  PasswordInput,
-  Stack,
-  TextInput,
-} from "@carbon/react";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import z from "zod";
-import { ModalStateManager } from "../ModelStateManager";
-import { Divider } from "../partials/Divider/Divider";
 import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import { SignUpModal } from "./SignUpModal";
 import { WalletAuthButton } from "./WalletAuthButton";
 
-type SignInModalProps = {
+type AuthModalProps = {
   open: boolean;
   onClose: () => void;
   redirectUrl?: string;
-  onToggleSignUp?: () => void;
+  initialMode?: "login" | "register";
 };
 
-export function SignInModal({
+// Component xử lý chính bao gồm cả Login & Register 
+export function AuthModalBase({
   open,
   onClose,
   redirectUrl,
-  onToggleSignUp,
-}: SignInModalProps) {
-  const { tr, fmt } = useLocalization();
+  initialMode = "login",
+}: AuthModalProps) {
+  const { tr } = useLocalization();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { theme } = useUserTheme();
+  const isLight = theme === "light";
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
-  const resolvedRedirectUrl =
-    typeof redirectUrl == "string" && redirectUrl.length > 0 ? redirectUrl : "/";
+  
+  // Quản lý trạng thái Animation Slide (false = Login, true = Register)
+  const [isRegisterMode, setIsRegisterMode] = useState(initialMode === "register");
 
-  const formSchema = z.object({
-    email: z.email(tr("validation.invalidEmail")),
-    password: z.string().min(8, tr("validation.passwordTooShort", { min: 8 })),
+  useEffect(() => {
+    setIsRegisterMode(initialMode === "register");
+  }, [initialMode, open]);
+
+  // Sử dụng trang hiện tại làm mặc định thay vì "/" (landing page)
+  const resolvedRedirectUrl = typeof redirectUrl === "string" && redirectUrl.length > 0 ? redirectUrl : location.pathname;
+
+  // ====== SCHEMA & LOGIC LOGIN ======
+  const loginSchema = z.object({
+    email: z.email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
   });
-
-  type FormSchema = z.infer<typeof formSchema>;
-
+  type LoginSchema = z.infer<typeof loginSchema>;
   const {
-    register,
-    handleSubmit,
-    clearErrors,
-    formState: { errors },
-  } = useForm<FormSchema>({
-    resolver: zodResolver(formSchema),
-    mode: "onSubmit",
-  });
+    register: registerLogin,
+    handleSubmit: handleLoginSubmit,
+    clearErrors: clearLoginErrors,
+    formState: { errors: loginErrors },
+  } = useForm<LoginSchema>({ resolver: zodResolver(loginSchema) });
 
-  function close() {
+  // ====== SCHEMA & LOGIC REGISTER ======
+  const registerSchema = z
+    .object({
+      email: z.email("Invalid email address"),
+      displayName: z.string().min(1).optional(),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      retypePassword: z.string(),
+    })
+    .refine((data) => data.password === data.retypePassword, {
+      message: "Passwords do not match",
+      path: ["retypePassword"],
+    });
+  type RegisterSchema = z.infer<typeof registerSchema>;
+  const {
+    register: registerSignup,
+    handleSubmit: handleRegisterSubmit,
+    clearErrors: clearRegisterErrors,
+    formState: { errors: registerErrors },
+  } = useForm<RegisterSchema>({ resolver: zodResolver(registerSchema) });
+
+
+  // ====== HANDLERS ======
+  function handleClose() {
     setErrMsg(null);
-    clearErrors();
+    clearLoginErrors();
+    clearRegisterErrors();
     onClose();
   }
 
-  async function onSubmit(data: FormSchema) {
+  function toggleMode() {
+    setIsRegisterMode((prev) => !prev);
+    setErrMsg(null);
+  }
+
+  async function onLogin(data: LoginSchema) {
     setIsSubmitting(true);
     setErrMsg(null);
-
     try {
       const resp = await client.api.users.auth.password.login.$post({
-        json: {
-          email: data.email,
-          password: data.password,
-        },
+        json: { email: data.email, password: data.password },
       });
 
-      if (resp.status == 200) {
+      if (resp.status === 200) {
         await refreshUser();
-        close();
+        handleClose();
         navigate(resolvedRedirectUrl, { replace: true });
-      } else if (resp.status == 401 || resp.status == 422) {
+      } else if (resp.status === 401 || resp.status === 422) {
         const res = await resp.json();
-        const errCode = res.errorCode;
-        setErrMsg(tr(`ERROR.${errCode}`));
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
       } else {
         setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
       }
@@ -102,113 +118,163 @@ export function SignInModal({
     }
   }
 
-  function onGoogleSignInSuccess(_userId: string) {
-    refreshUser();
-    close();
-    navigate(resolvedRedirectUrl, { replace: true });
+  async function onSignup(data: RegisterSchema) {
+    setIsSubmitting(true);
+    setErrMsg(null);
+    try {
+      const resp = await client.api.users.auth.password.register.$post({
+        json: { email: data.email, displayName: data.displayName, password: data.password },
+      });
+
+      if (resp.status === 201) {
+        await refreshUser();
+        handleClose();
+        navigate(resolvedRedirectUrl, { replace: true });
+      } else if (resp.status === 400 || resp.status === 422) {
+        const res = await resp.json();
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
+      } else if (resp.status === 500) {
+        setErrMsg(tr("ERROR.INTERNAL_SERVER_ERR"));
+      } else {
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
+      }
+    } catch (err) {
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function onGoogleSignInError(_error: string) {
-    setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"));
-  }
+  if (!open) return null;
 
   return (
-    <ComposedModal className={styles.modalLayer} open={open} onClose={close}>
-      <ModalHeader label={tr("nav.account")} title={tr("auth.signIn")} />
-      <ModalBody className={"bodyne"}>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Stack gap={6}>
-            <TextInput
-              id="email"
-              labelText={`${tr("auth.email")}*`}
-              placeholder={tr("auth.email")}
-              invalid={!!errors.email}
-              invalidText={errors.email?.message || ""}
-              {...register("email")}
-            />
+    <div className={`${styles.overlay} ${isLight ? styles.lightOverlay : ""}`} onClick={handleClose}>
+      <div 
+        className={`${styles.container} ${isLight ? styles.lightContainer : ""} ${isRegisterMode ? styles.active : ""}`} 
+        onClick={(e) => e.stopPropagation()} /* Chặn click ra ngoài để không tự tắt modal */
+      >
+        
+        {/* ========= LOGIN FORM ========= */}
+        <div className={`${styles.formBox} ${styles.login} ${isLight ? styles.lightFormBox : ""}`}>
+          <form onSubmit={handleLoginSubmit(onLogin)}>
+            <h1>{tr("auth.signIn")}</h1>
+            {errMsg && !isRegisterMode && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
 
-            <PasswordInput
-              id="password"
-              labelText={`${tr("auth.password")}*`}
-              placeholder={tr("auth.password")}
-              invalid={!!errors.password}
-              invalidText={errors.password?.message || ""}
-              disabled={isSubmitting}
-              {...register("password")}
-            />
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerLogin("email")} />
+              <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {loginErrors.email && <span className={styles.errorText}>{loginErrors.email.message}</span>}
 
-            <Link>{tr("auth.forgotPassword")}</Link>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerLogin("password")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {loginErrors.password && <span className={styles.errorText}>{loginErrors.password.message}</span>}
 
-            {errMsg && (
-              <InlineNotification
-                kind="error"
-                title="Error"
-                lowContrast
-                subtitle={errMsg}
+            <div className={`${styles.forgotLink} ${isLight ? styles.lightForgotLink : ""}`}>
+              <a href="#">{tr("auth.forgotPassword")}</a>
+            </div>
+
+            <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
+              {isSubmitting ? tr("common.loading") : tr("auth.signIn")}
+            </button>
+
+            <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
+            <div className={`${styles.socialIcons} ${isLight ? styles.lightSocialIcons : ""}`}>
+              <GoogleAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={() => setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"))}
               />
-            )}
+              <WalletAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={(err) => setErrMsg(err)}
+              />
+            </div>
+          </form>
+        </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting}
-              renderIcon={ArrowRight}
-              style={{
-                inlineSize: "100%",
-                maxInlineSize: "100%",
-              }}
-            >
-              {tr("auth.continueWithPassword")}
-            </Button>
-          </Stack>
-        </Form>
-        <Divider text={tr("common.or")} />
-        <Stack gap={4} style={{ marginBottom: "2rem" }}>
-          <GoogleAuthButton
-            disabled={isSubmitting}
-            onSuccess={onGoogleSignInSuccess}
-            onError={onGoogleSignInError}
-          />
+        {/* ========= REGISTER FORM ========= */}
+        <div className={`${styles.formBox} ${styles.register} ${isLight ? styles.lightFormBox : ""}`}>
+          <form onSubmit={handleRegisterSubmit(onSignup)}>
+            <h1>{tr("auth.signUp")}</h1>
+            {errMsg && isRegisterMode && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
 
-          <WalletAuthButton
-            disabled={isSubmitting}
-            onSuccess={async (userId) => {
-              await refreshUser();
-              close();
-              navigate(resolvedRedirectUrl, { replace: true });
-            }}
-            onError={(err) => setErrMsg(err)}
-          />
-        </Stack>
-      </ModalBody>
-      <ModalFooter>
-        <ModalStateManager
-          renderLauncher={({ setOpen }) => (
-            <span className={styles.bottomInfo}>
-              {tr("auth.signUpSuggestion", {
-                $createAccount: (
-                  <Link
-                    onClick={() => {
-                      if (onToggleSignUp) {
-                        onToggleSignUp();
-                      } else {
-                        setOpen(true);
-                        onClose();
-                      }
-                    }}
-                  >
-                    {tr("auth.createAccount")}
-                  </Link>
-                ),
-              })}
-            </span>
-          )}
-        >
-          {({ open, setOpen }) => (
-            <SignUpModal open={open} onClose={() => setOpen(false)} />
-          )}
-        </ModalStateManager>
-      </ModalFooter>
-    </ComposedModal>
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerSignup("email")} />
+              <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {registerErrors.email && <span className={styles.errorText}>{registerErrors.email.message}</span>}
+
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="text" placeholder={tr("auth.displayName")} disabled={isSubmitting} {...registerSignup("displayName")} />
+              <i className={`bx bxs-user ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {registerErrors.displayName && <span className={styles.errorText}>{registerErrors.displayName.message}</span>}
+
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.password")} disabled={isSubmitting} {...registerSignup("password")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {registerErrors.password && <span className={styles.errorText}>{registerErrors.password.message}</span>}
+
+            <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+              <input className={isLight ? styles.lightInput : undefined} type="password" placeholder={tr("auth.confirmPassword")} disabled={isSubmitting} {...registerSignup("retypePassword")} />
+              <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
+            </div>
+            {registerErrors.retypePassword && <span className={styles.errorText}>{registerErrors.retypePassword.message}</span>}
+
+            <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
+              {isSubmitting ? tr("common.loading") : tr("auth.signUp")}
+            </button>
+
+            <p style={{ marginTop: "15px" }}>{tr("common.or")}</p>
+            <div className={`${styles.socialIcons} ${isLight ? styles.lightSocialIcons : ""}`}>
+              <GoogleAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={() => setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"))}
+              />
+              <WalletAuthButton
+                disabled={isSubmitting}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={(err) => setErrMsg(err)}
+              />
+            </div>
+          </form>
+        </div>
+
+        {/* ========= ANIMATION TOGGLE BOX ========= */}
+        <div className={`${styles.toggleBox} ${isLight ? styles.lightToggleBox : ""}`}>
+          <div className={`${styles.togglePanel} ${styles.toggleLeft} ${isLight ? styles.lightTogglePanel : ""}`}>
+            <h1><b>Welcome!</b></h1>
+            <p>Don't have an account?</p>
+            <button className={`${styles.btn} ${styles.registerBtn} ${isLight ? styles.lightBtn : ""}`} onClick={toggleMode}>
+              Register
+            </button>
+          </div>
+
+          <div className={`${styles.togglePanel} ${styles.toggleRight} ${isLight ? styles.lightTogglePanel : ""}`}>
+            <h1><b>Welcome to Yoca!</b></h1>
+            <p>Already have an account?</p>
+            <button className={`${styles.btn} ${styles.loginBtn} ${isLight ? styles.lightBtn : ""}`} onClick={toggleMode}>
+              Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
+
+// ==== EXPORT WRAPPERS ĐỂ KHÔNG LÀM HỎNG CÁC IMPORT CŨ ====
+export const SignInModal = (props: Omit<AuthModalProps, "initialMode">) => (
+  <AuthModalBase {...props} initialMode="login" />
+);
+
+export const SignUpModal = (props: Omit<AuthModalProps, "initialMode">) => (
+  <AuthModalBase {...props} initialMode="register" />
+);
