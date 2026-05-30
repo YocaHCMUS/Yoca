@@ -1,8 +1,8 @@
 import {
-  createBrowserRouter,
-  Outlet,
-  RouterProvider,
-  useNavigation,
+    createBrowserRouter,
+    Outlet,
+    RouterProvider,
+    useNavigation,
 } from "react-router";
 
 import { Loading } from "@carbon/react";

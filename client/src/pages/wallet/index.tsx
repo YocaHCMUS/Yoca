@@ -3,30 +3,30 @@ import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDi
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import TabContainer from "@/components/tabContainer/tabContainer.tsx";
 import {
-  FilterType,
-  SortType,
-  Table,
-  tableHeaderLabel,
-  type FilterConfig,
+    FilterType,
+    SortType,
+    Table,
+    tableHeaderLabel,
+    type FilterConfig,
 } from "@/components/tables/Table.tsx";
 import {
-  renderBase,
-  renderCode,
-  renderDateTime,
-  renderHash,
-  renderReducedNumber,
-  renderTokenCell,
+    renderBase,
+    renderCode,
+    renderDateTime,
+    renderHash,
+    renderReducedNumber,
+    renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import {
-  AiAnalysisTab,
-  type AiAnalysisDependencyItem,
+    AiAnalysisTab,
+    type AiAnalysisDependencyItem,
 } from "@/components/wallet/AiAnalysis/index.ts";
 import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import {
-  WalletReportTemplate,
-  type WalletReportSection,
+    WalletReportTemplate,
+    type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
@@ -36,76 +36,65 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-  fetchWalletAiAnalysis,
-  fetchWalletIntelligence,
-  fetchWalletOverview,
-  fetchWalletPortfolio,
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  type WalletAiAnalysisLanguage,
-  type WalletAiAnalysisResponse,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
-  type WalletPortfolioItem,
-  type WalletSwap,
-  type WalletSwapTokenChange,
-  type WalletSwapTokenInfo,
-  type WalletTransfer,
+    fetchWalletAiAnalysis,
+    fetchWalletIntelligence,
+    fetchWalletOverview,
+    fetchWalletPortfolio,
+    fetchWalletSwaps,
+    fetchWalletTransfers,
+    type WalletAiAnalysisLanguage,
+    type WalletAiAnalysisResponse,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletPageInfo,
+    type WalletPortfolioItem,
+    type WalletSwap,
+    type WalletSwapTokenChange,
+    type WalletSwapTokenInfo,
+    type WalletTransfer,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
-  Activity,
-  AiGenerate,
-  ChartLine,
-  ChevronDown,
-  Download,
-  Star,
-  StarFilled,
-  User,
-  Wallet,
-  Settings,
-  Tag,
-  Copy,
-  Folder,
+    Activity,
+    AiGenerate,
+    ChartLine,
+    ChevronDown,
+    Download,
+    Star,
+    StarFilled,
+    User,
+    Wallet
 } from "@carbon/icons-react";
 import {
-  Button,
-  Table as CBTable,
-  IconButton,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Button,
+    IconButton
 } from "@carbon/react";
 import JSZip from "jszip";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
+    buildPortfolioMetaMap,
+    mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-  TokenAverageTradePrice,
-  TokenDetailsDemo,
+    TokenAverageTradePrice,
+    TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
-import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
