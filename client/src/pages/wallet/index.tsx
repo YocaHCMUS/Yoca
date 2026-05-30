@@ -1448,7 +1448,7 @@ export default function WalletPage() {
             {/* Balance History */}
             <div className={styles.section}>
               <BalanceChartV2
-                minHeight={320}
+                minHeight={324}
                 address={walletAddress}
                 onClickDay={(ts) => {
                   setDayPopupTimestamp(ts);
@@ -1460,7 +1460,7 @@ export default function WalletPage() {
             {/* Profit & Loss */}
             <div className={styles.section}>
               <PnLChart
-                minHeight={320}
+                minHeight={324}
                 autoRefresh
                 initialFilters={{ wallets: [walletAddress] }}
                 onDayClick={(_wallet, ts) => {
