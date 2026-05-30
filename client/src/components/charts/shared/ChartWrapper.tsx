@@ -32,6 +32,7 @@ interface ChartWrapperProps {
   enableFullscreen?: boolean;
   enableMiniPlayer?: boolean;
   toolbarLayout?: "default" | "stacked";
+  wrapperMinHeight?: number;
 }
 
 export function ChartWrapper({
@@ -51,6 +52,7 @@ export function ChartWrapper({
   enableFullscreen = true,
   enableMiniPlayer = true,
   toolbarLayout = "default",
+  wrapperMinHeight,
 }: ChartWrapperProps) {
   const { tr } = useLocalization();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -184,6 +186,7 @@ export function ChartWrapper({
       <div
         ref={containerRef}
         className={`${styles.wrapper} ${className || ""}`}
+        style={wrapperMinHeight != null ? { minHeight: wrapperMinHeight } : undefined}
         data-testid="chart-wrapper"
         role="region"
         aria-label={`Chart: ${title}`}
@@ -211,7 +214,7 @@ export function ChartWrapper({
         </div>
 
         <div
-          className={`${styles.header} ${toolbarLayout === "stacked" ? styles.headerStacked : ""}`}
+          className={`${styles.header} ${toolbarLayout === "stacked" ? styles.headerStacked : styles.headerDefault}`}
         >
           {toolbarLayout === "stacked" ? (
             <>

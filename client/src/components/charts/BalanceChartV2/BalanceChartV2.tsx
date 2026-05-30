@@ -52,9 +52,11 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
 export function BalanceChartV2({
   address,
   onClickDay,
+  minHeight = 500,
 }: {
   address: string;
   onClickDay?: (timestamp: number) => void;
+  minHeight?: number;
 }) {
   const { tr, fmt } = useLocalization();
 
@@ -123,9 +125,9 @@ export function BalanceChartV2({
         ? [totalBalance.data]
         : []
       : [
-          ...(tokenBalances.data ?? []),
-          // ...(totalBalance.data ? [totalBalance.data] : []),
-        ];
+        ...(tokenBalances.data ?? []),
+        // ...(totalBalance.data ? [totalBalance.data] : []),
+      ];
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -138,7 +140,7 @@ export function BalanceChartV2({
   }, [balanceSeries]);
 
   return (
-    <ChartWrapper title={tr("charts.balanceChart.title")}>
+    <ChartWrapper title={tr("charts.balanceChart.title")} wrapperMinHeight={minHeight} enableExport={false} enableFullscreen={false} enableMiniPlayer={false}>
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
@@ -226,7 +228,7 @@ export function BalanceChartV2({
 
         <MultiTimeSeriesLineChart
           series={balanceSeries}
-          height={500}
+          height={minHeight}
           loading={tokenBalances.isLoading && portfolio.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
           onClickDay={onClickDay}

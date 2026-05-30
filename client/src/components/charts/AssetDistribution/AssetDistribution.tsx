@@ -314,7 +314,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       series: [
         {
           type: 'pie',
-          radius: ['26%', '56%'],
+          radius: ['50%', '76%'],
           center: ['50%', '50%'],
           data: grouped.map((a, i) => ({
             name: a.name,
@@ -341,21 +341,21 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
       graphic: [
+        // {
+        //   type: 'text',
+        //   left: 'center',
+        //   top: '46%',
+        //   style: {
+        //     text: tr('charts.assetDistributionChart.totalValue'),
+        //     fill: baseOption.textStyle.color,
+        //     fontSize: 14,
+        //     opacity: 0.7,
+        //   },
+        // },
         {
           type: 'text',
           left: 'center',
           top: '46%',
-          style: {
-            text: tr('charts.assetDistributionChart.totalValue'),
-            fill: baseOption.textStyle.color,
-            fontSize: 14,
-            opacity: 0.7,
-          },
-        },
-        {
-          type: 'text',
-          left: 'center',
-          top: '50%',
           style: {
             text: fmt.num.compact.currency(displayTotal),
             fill: baseOption.textStyle.color,
@@ -471,7 +471,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   return (
     <ChartWrapper
       title={chartTitle}
-      toolbarLayout="stacked"
+      // toolbarLayout="stacked"
       loadingState={loadingState}
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0
@@ -483,7 +483,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
+      wrapperMinHeight={minHeight}
       actions={filterControls}
+      enableExport={false}
+      enableFullscreen={false}
+      enableMiniPlayer={false}
     >
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -551,7 +555,6 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                 key={chartData.walletAddress}
                 itemKey={chartData.walletAddress}
                 minHeight={minHeight}
-                aspectRatio="1"
               >
                 <ReactECharts
                   ref={index === 0 ? chartRef : undefined}
@@ -584,7 +587,7 @@ const TRIGGER_STYLE: React.CSSProperties = {
 
 const MENU_STYLE: React.CSSProperties = {
   position: 'absolute',
-  left: 0,
+  right: 0,
   top: 'calc(100% + 4px)',
   minWidth: 220,
   background: 'var(--cds-layer)',

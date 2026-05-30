@@ -194,7 +194,7 @@ export function WalletHoldingsPanel({
             timePeriod: "30D",
           }}
           autoRefresh
-          minHeight={240}
+          minHeight={340}
         />
       </div>
 
@@ -218,6 +218,7 @@ export function WalletHoldingsPanel({
               navigate(`/tokens/${tokenAddress}`);
             }
           }}
+          enableExport={false}
           loading={loading && portfolioTableData.length === 0}
         />
       </div>

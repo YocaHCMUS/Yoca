@@ -171,7 +171,7 @@ export default function WalletPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>("24H");
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [activeActivityTab, setActiveActivityTab] = useState<number>(1);
+  const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
 
   const [aiAnalysisReport, setAiAnalysisReport] =
     useState<WalletAiAnalysisResponse | null>(null);
@@ -1447,30 +1447,27 @@ export default function WalletPage() {
           <div className={styles.mainCol}>
             {/* Balance History */}
             <div className={styles.section}>
-              <div className={styles.chartSection}>
-                <BalanceChartV2
-                  address={walletAddress}
-                  onClickDay={(ts) => {
-                    setDayPopupTimestamp(ts);
-                    setDayPopupOpen(true);
-                  }}
-                />
-              </div>
+              <BalanceChartV2
+                minHeight={320}
+                address={walletAddress}
+                onClickDay={(ts) => {
+                  setDayPopupTimestamp(ts);
+                  setDayPopupOpen(true);
+                }}
+              />
             </div>
 
             {/* Profit & Loss */}
             <div className={styles.section}>
-              <div className={styles.chartSection}>
-                <PnLChart
-                  minHeight={400}
-                  autoRefresh
-                  initialFilters={{ wallets: [walletAddress] }}
-                  onDayClick={(_wallet, ts) => {
-                    setDayPopupTimestamp(ts);
-                    setDayPopupOpen(true);
-                  }}
-                />
-              </div>
+              <PnLChart
+                minHeight={320}
+                autoRefresh
+                initialFilters={{ wallets: [walletAddress] }}
+                onDayClick={(_wallet, ts) => {
+                  setDayPopupTimestamp(ts);
+                  setDayPopupOpen(true);
+                }}
+              />
             </div>
 
             {/* Activity Tables */}
@@ -1515,6 +1512,7 @@ export default function WalletPage() {
                         setSwapModalOpen(true);
                       }
                     }}
+                    enableExport={false}
                     loading={swapLoading && loadedSwaps.length === 0}
                   />
                   // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
@@ -1539,6 +1537,7 @@ export default function WalletPage() {
                         setTransferModalOpen(true);
                       }
                     }}
+                    enableExport={false}
                     loading={transferLoading && loadedTransfers.length === 0}
                   />
                   // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
