@@ -1,4 +1,3 @@
-import { WalletSingleBalanceChart } from "@/components/charts/WalletSingleBalanceChart";
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import { TradingVolumeDistribution } from "@/components/charts/TradingVolumeDistribution/TradingVolumeDistribution";
 import { PnLChart } from "@/components/charts/PnLChart/PnLChart";
@@ -9,6 +8,7 @@ import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavaila
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Select, SelectItem } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
+import { MultiWalletBalanceChart } from "@/components/charts/BalanceChartMultiV2";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -86,14 +86,7 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
             </div>
 
             <div className={styles.sectionCard}>
-                <WalletSingleBalanceChart
-                    key={`balance-${chartKey}`}
-                    title={tr("walletPage.balanceHistory")}
-                    minHeight={360}
-                    initialFilters={{
-                        timePeriod: "7D",
-                        wallets: chartWallets,
-                    }}
+                <MultiWalletBalanceChart addresses={chartWallets}
                 />
             </div>
 

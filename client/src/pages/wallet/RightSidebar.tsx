@@ -1,22 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
-  Star,
-  StarFilled,
-  Tag,
-  Settings,
-  Notification,
-  Wallet,
-  ArrowsHorizontal,
-  Copy,
-  ChevronDown,
-  ChartLine,
-  TrashCan,
-  Add,
-  Checkmark,
-  Edit,
-  Close
+    Star,
+    StarFilled,
+    Tag,
+    Settings,
+    Copy,
+    ChevronDown,
+    ChartLine,
+    TrashCan,
+    Add
 } from "@carbon/icons-react";
-import { TextInput } from "@carbon/react";
 import { TknImg } from "@/components/TknImg";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useWatchlist } from "@/contexts/WatchlistContext";
@@ -125,7 +118,7 @@ function WalletWatchlistRow({ wallet }: { wallet: string }) {
 
   useEffect(() => {
     if (wallet) {
-      fetchWalletOverview(wallet, 'solana')
+      fetchWalletOverview(wallet)
         .then((data) => setOverview(data))
         .catch((err) => console.error("Failed to fetch wallet overview:", err));
     }
