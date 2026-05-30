@@ -7,6 +7,7 @@ type AuthReminderModalProps = {
   onClose: () => void;
 };
 
+// TODO: Open sign up/ sign in modal from PageWrapper instead
 /**
  * A lightweight modal that intercepts unauthenticated users trying to
  * purchase a plan.  Reuses the project's dark-UI patterns and opens the
@@ -111,7 +112,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
         onClose={() => {
           onClose();
         }}
-        onToggleSignUp={() => setActiveView("signup")}
+        // onToggleSignUp={() => setActiveView("signup")}
         redirectUrl="/pricing"
       />
 
