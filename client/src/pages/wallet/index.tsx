@@ -1438,7 +1438,7 @@ export default function WalletPage() {
                     >
                       {/* {tr("walletPage.aiSwapSummary")}
                      */}
-                      AI Swap Summary
+                      {tr("walletPage.aiSwapSummary.button")}
                     </Button>
                   }
                   onTabChange={(index) =>
