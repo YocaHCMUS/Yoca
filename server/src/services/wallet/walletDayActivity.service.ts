@@ -22,10 +22,9 @@ const STABLE_MINTS = new Set([
     "Es9vMFrzaCERmJfrF4H2FYD4h4H8o3A8rM6jD5M3j6Q",
 ]);
 
-function isBaseAsset(mint: string | undefined): boolean {
+export function isBaseAsset(mint: string | undefined): boolean {
     if (!mint) return false;
-    const lower = mint.toLowerCase();
-    return lower === SOL_MINT.toLowerCase() || STABLE_MINTS.has(lower);
+    return mint === SOL_MINT || STABLE_MINTS.has(mint);
 }
 
 function getUtcStartOfDayMs(tsMs: number): number {

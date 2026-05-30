@@ -94,6 +94,7 @@ import { RightSidebar } from "./RightSidebar.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
+import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { WalletOverview } from "@/components/wallet/WalletOverview/WalletOverview.tsx";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 
@@ -328,6 +329,8 @@ export default function WalletPage() {
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
+  const [aiSwapSummaryOpen, setAiSwapSummaryOpen] = useState(false);
 
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
@@ -1279,11 +1282,17 @@ export default function WalletPage() {
   }
 
   const overviewTab = (
-    <div className={styles.tabPane} style={{ flex: '1 0 auto' }}>
-      <section className={styles.section} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', paddingTop: 0 }}>
-        <div className={styles.chartStack} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
-            <BalanceChartV2 address={walletAddress} />
+    <div className={styles.tabPane}>
+      <PageSection>
+        <div className={styles.chartStack}>
+          <div className={styles.chartSection}>
+            <BalanceChartV2
+              address={walletAddress}
+              onClickDay={(ts) => {
+                setDayPopupTimestamp(ts);
+                setDayPopupOpen(true);
+              }}
+            />
           </div>
           <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
             <PnLChart
@@ -1297,7 +1306,7 @@ export default function WalletPage() {
             />
           </div>
         </div>
-      </section>
+      </PageSection>
     </div>
   );
 
@@ -1367,6 +1376,15 @@ export default function WalletPage() {
             <Table
               maxHeight={400}
               title={tr("walletPage.swap")}
+              actions={
+                <Button
+                  size="sm"
+                  kind="tertiary"
+                  onClick={() => setAiSwapSummaryOpen(true)}
+                >
+                  AI Summary
+                </Button>
+              }
               headers={swapHeaders}
               initialFilters={{}}
               fetcher={Promise.resolve(swapData)}
@@ -1943,6 +1961,12 @@ export default function WalletPage() {
         onClose={() => setDayPopupOpen(false)}
         wallets={[walletAddress]}
         dayTimestamp={dayPopupTimestamp}
+      />
+
+      <AiSwapSummaryModal
+        isOpen={aiSwapSummaryOpen}
+        onClose={() => setAiSwapSummaryOpen(false)}
+        walletAddress={walletAddress}
       />
     </PageWrapper>
   );
