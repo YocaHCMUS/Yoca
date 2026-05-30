@@ -170,16 +170,9 @@ function mapSwapToTokenTradeRow(
 ) {
   const normalizedToken = tokenAddress.trim().toLowerCase();
   const boughtAddress = swap.bought.address.trim().toLowerCase();
-  const soldAddress = swap.sold.address.trim().toLowerCase();
 
   const inferredAction: "buy" | "sell" =
-    boughtAddress === normalizedToken
-      ? "buy"
-      : soldAddress === normalizedToken
-        ? "sell"
-        : swap.transactionType.trim().toLowerCase() === "buy"
-          ? "buy"
-          : "sell";
+    boughtAddress === normalizedToken ? "buy" : "sell";
 
   const selectedAmount =
     inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
@@ -274,7 +267,14 @@ const app = new Hono()
       try {
         const swaps = await getWalletSwaps(walletAddress);
 
-        const trades = swaps.swaps.map((swap) =>
+        const normalizedToken = tokenAddress.trim().toLowerCase();
+        const relevantSwaps = swaps.swaps.filter((swap) => {
+          const bought = swap.bought.address.trim().toLowerCase();
+          const sold = swap.sold.address.trim().toLowerCase();
+          return bought === normalizedToken || sold === normalizedToken;
+        });
+
+        const trades = relevantSwaps.map((swap) =>
           mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
         );
 
