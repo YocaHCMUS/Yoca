@@ -78,7 +78,7 @@ export function LandingProducts() {
             Core Features
           </p>
           <h2
-            className="mx-auto mt-4 max-w-3xl text-center text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
+            className="mx-auto mt-4 max-w-3xl text-center text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
             Everything you need to stay ahead of the market.
@@ -115,7 +115,7 @@ export function LandingProducts() {
               }}
               onMouseLeave={(e) => {
                 if (!p.highlight) {
-                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+                  e.currentTarget.style.borderColor = "var(--landing-card-border)";
                   e.currentTarget.style.boxShadow = "none";
                 }
               }}
@@ -123,23 +123,23 @@ export function LandingProducts() {
               <div className="flex items-start justify-between gap-4">
                 <span
                   className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: p.highlight ? LANDING_ACCENT : "#94a3b8" }}
+                  style={{ color: p.highlight ? LANDING_ACCENT : "var(--landing-muted)" }}
                 >
                   {p.tag}
                 </span>
                 <Icon
-                  className="h-5 w-5 shrink-0 text-[#8b5cf6]"
+                  className="h-5 w-5 shrink-0 text-(--landing-accent)"
                   style={{ opacity: 0.8 }}
                   aria-hidden
                 />
               </div>
               <h3
-                className="mt-5 text-xl font-bold text-[#f8fafc]"
+                className="mt-5 text-xl font-bold text-(--landing-foreground)"
                 style={{ lineHeight: 1.3 }}
               >
                 {p.title}
               </h3>
-              <p className="mt-3 text-[#94a3b8]" style={{ lineHeight: 1.7 }}>
+              <p className="mt-3 text-(--landing-muted)" style={{ lineHeight: 1.7 }}>
                 {p.description}
               </p>
               <Link

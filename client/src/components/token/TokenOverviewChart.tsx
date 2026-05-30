@@ -1,10 +1,15 @@
 import client from "@/api/main";
 import { FilterSwitch } from "@/components/FilterSwitch";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { getTokenChartNewsEvents } from "@/services/tokenChartNewsEvents";
+import type {
+  TokenChartNewsEvent,
+  TokenChartNewsTimeframe,
+} from "@/types/chartNewsEvents";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import type { InferResponseType } from "hono/client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./TokenOverviewChart.module.scss";
 
 type ChartMode = "price" | "marketcap";
@@ -18,15 +23,45 @@ type ChartPoint = InferResponseType<
 interface TokenOverviewChartProps {
   address: string;
   symbol: string;
+  name: string;
   onPriceChangeUpdate?: (data: {
     percentage: number | null;
     label: string;
   }) => void;
 }
 
+function getNewsTimeframe(days: number): TokenChartNewsTimeframe {
+  if (days === 1) return "24h";
+  if (days === 7) return "7d";
+  if (days === 30) return "1m";
+  if (days === 90) return "3m";
+  return "1y";
+}
+
+function getClosestChartPoint(
+  points: [number, number][],
+  targetTimestamp: number,
+) {
+  if (points.length === 0) return null;
+
+  let closest = points[0];
+  let closestDistance = Math.abs(points[0][0] - targetTimestamp);
+
+  for (let i = 1; i < points.length; i += 1) {
+    const distance = Math.abs(points[i][0] - targetTimestamp);
+    if (distance < closestDistance) {
+      closest = points[i];
+      closestDistance = distance;
+    }
+  }
+
+  return closest;
+}
+
 export function TokenOverviewChart({
   address,
   symbol,
+  name,
   onPriceChangeUpdate,
 }: TokenOverviewChartProps) {
   const { tr, fmt, lang } = useLocalization();
@@ -47,7 +82,14 @@ export function TokenOverviewChart({
   const [prices, setPrices] = useState<[number, number][]>([]);
   const [marketCaps, setMarketCaps] = useState<[number, number][]>([]);
   const [loading, setLoading] = useState(false);
+  const [newsEvents, setNewsEvents] = useState<TokenChartNewsEvent[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [selectedNewsEvent, setSelectedNewsEvent] =
+    useState<TokenChartNewsEvent | null>(null);
+  const [newsSummaryLoading, setNewsSummaryLoading] = useState(false);
   const chartRef = useRef<ReactECharts>(null);
+  const newsTimeframe = useMemo(() => getNewsTimeframe(range.days), [range]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,7 +139,134 @@ export function TokenOverviewChart({
     fetchData();
   }, [address, range]);
 
+  useEffect(() => {
+    const fetchNewsEvents = async () => {
+      if (!address || !symbol || !name) {
+        setNewsEvents([]);
+        setSelectedNewsEvent(null);
+        return;
+      }
+
+      setNewsLoading(true);
+      setNewsError(null);
+      setSelectedNewsEvent(null);
+
+      try {
+        const data = await getTokenChartNewsEvents({
+          address,
+          symbol,
+          name,
+          timeframe: newsTimeframe,
+          includeSummary: false,
+        });
+        setNewsEvents(data.events);
+      } catch (err) {
+        console.error("[TokenOverviewChart] failed to load news markers", err);
+        setNewsEvents([]);
+        setNewsError("Unable to load news markers.");
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+
+    fetchNewsEvents();
+  }, [address, symbol, name, newsTimeframe]);
+
   const seriesData = mode === "price" ? prices : marketCaps;
+
+  const newsMarkerData = useMemo(() => {
+    if (seriesData.length === 0 || newsEvents.length === 0) return [];
+
+    return newsEvents
+      .map((event) => {
+        const timestamp = Date.parse(event.timestamp);
+        if (Number.isNaN(timestamp)) return null;
+
+        const closestPoint = getClosestChartPoint(seriesData, timestamp);
+        if (!closestPoint) return null;
+
+        return {
+          value: [closestPoint[0], closestPoint[1]],
+          event,
+        };
+      })
+      .filter(Boolean);
+  }, [seriesData, newsEvents]);
+
+  const formatEventDate = useCallback(
+    (timestamp: string) => {
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) return timestamp;
+
+      return date.toLocaleDateString(dateLocale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    },
+    [dateLocale],
+  );
+
+  const formatArticleDate = useCallback(
+    (timestamp: string | null) => {
+      if (!timestamp) return "";
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) return "";
+
+      return date.toLocaleString(dateLocale, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+    [dateLocale],
+  );
+
+  const handleChartClick = useCallback(
+    async (params: any) => {
+      if (params?.seriesName !== "News markers") return;
+
+      const event = params?.data?.event as TokenChartNewsEvent | undefined;
+      if (!event) return;
+
+      setSelectedNewsEvent(event);
+      if (event.summary || newsSummaryLoading) return;
+
+      setNewsSummaryLoading(true);
+      try {
+        const data = await getTokenChartNewsEvents({
+          address,
+          symbol,
+          name,
+          timeframe: newsTimeframe,
+          includeSummary: true,
+          date: event.date,
+        });
+        const summarizedEvent =
+          data.events.find((item) => item.date === event.date) ?? event;
+        setNewsEvents((currentEvents) =>
+          currentEvents.map((item) =>
+            item.date === summarizedEvent.date ? summarizedEvent : item,
+          ),
+        );
+        setSelectedNewsEvent(summarizedEvent);
+      } catch (err) {
+        console.error("[TokenOverviewChart] failed to load marker summary", err);
+      } finally {
+        setNewsSummaryLoading(false);
+      }
+    },
+    [address, symbol, name, newsTimeframe, newsSummaryLoading],
+  );
+
+  const chartEvents = useMemo(
+    () => ({
+      click: handleChartClick,
+    }),
+    [handleChartClick],
+  );
 
   const isPositive = useMemo(() => {
     if (seriesData.length < 2) return true;
@@ -198,6 +367,7 @@ export function TokenOverviewChart({
       },
       series: [
         {
+          name: mode === "price" ? "Price" : "Market cap",
           type: "line",
           data: seriesData,
           smooth: false,
@@ -217,9 +387,53 @@ export function TokenOverviewChart({
             },
           },
         },
+        {
+          name: "News markers",
+          type: "scatter",
+          data: newsMarkerData,
+          symbol: "pin",
+          symbolSize: 34,
+          z: 12,
+          itemStyle: {
+            color: "#f1c21b",
+            borderColor: "#111",
+            borderWidth: 1,
+          },
+          label: {
+            show: true,
+            formatter: (params: any) =>
+              String(params?.data?.event?.articleCount ?? ""),
+            color: "#111",
+            fontSize: 10,
+            fontWeight: 700,
+          },
+          tooltip: {
+            formatter: (params: any) => {
+              const event = params?.data?.event as
+                | TokenChartNewsEvent
+                | undefined;
+              if (!event) return "";
+              return `<div style="padding:6px 10px">
+                        <div style="color:#aaa;margin-bottom:3px;font-size:12px">${formatEventDate(event.timestamp)}</div>
+                        <div style="font-size:13px;font-weight:700">${event.articleCount} related news article${event.articleCount === 1 ? "" : "s"}</div>
+                        <div style="color:#aaa;margin-top:3px;font-size:11px">Click to view articles</div>
+                    </div>`;
+            },
+          },
+        },
       ],
     };
-  }, [seriesData, color, areaColor, range, fmt, dateLocale]);
+  }, [
+    seriesData,
+    newsMarkerData,
+    color,
+    areaColor,
+    range,
+    mode,
+    fmt,
+    dateLocale,
+    formatEventDate,
+  ]);
 
   return (
     <div className={styles.container}>
@@ -263,13 +477,105 @@ export function TokenOverviewChart({
             ref={chartRef}
             option={option}
             notMerge
+            onEvents={chartEvents}
             style={{ height: "100%", width: "100%" }}
             opts={{ renderer: "canvas" }}
             showLoading={loading}
             loadingOption={{ color, maskColor: "rgba(0,0,0,0.4)" }}
           />
         )}
+
+        {selectedNewsEvent && (
+          <div className={styles.newsPopup}>
+            <div className={styles.newsPopupHeader}>
+              <div>
+                <div className={styles.newsPopupEyebrow}>News marker</div>
+                <div className={styles.newsPopupTitle}>
+                  {formatEventDate(selectedNewsEvent.timestamp)}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.newsPopupClose}
+                onClick={() => setSelectedNewsEvent(null)}
+                aria-label="Close news marker"
+              >
+                x
+              </button>
+            </div>
+
+            <div className={styles.newsPopupMeta}>
+              {selectedNewsEvent.articleCount} article
+              {selectedNewsEvent.articleCount === 1 ? "" : "s"} on this date
+            </div>
+
+            <div className={styles.newsSummary}>
+              {newsSummaryLoading && !selectedNewsEvent.summary ? (
+                <div className={styles.newsSummaryLoading}>
+                  Loading summary...
+                </div>
+              ) : selectedNewsEvent.summary ? (
+                <>
+                  <div className={styles.newsSummaryTitle}>
+                    {selectedNewsEvent.summary.headline}
+                  </div>
+                  <ul className={styles.newsSummaryBullets}>
+                    {selectedNewsEvent.summary.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                  {selectedNewsEvent.summary.provider && (
+                    <div className={styles.newsSummaryProvider}>
+                      Summary: {selectedNewsEvent.summary.provider}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className={styles.newsSummaryLoading}>
+                  Summary unavailable.
+                </div>
+              )}
+            </div>
+
+            <div className={styles.newsArticleList}>
+              {selectedNewsEvent.articles.map((article) => (
+                <a
+                  key={article.url}
+                  className={styles.newsArticle}
+                  href={article.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <div className={styles.newsArticleTitle}>{article.title}</div>
+                  <div className={styles.newsArticleMeta}>
+                    {article.source}
+                    {article.publishedAt
+                      ? ` | ${formatArticleDate(article.publishedAt)}`
+                      : ""}
+                  </div>
+                  {article.description && (
+                    <div className={styles.newsArticleDescription}>
+                      {article.description}
+                    </div>
+                  )}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {!loading && seriesData.length > 0 && (
+        <div className={styles.newsMarkerStatus}>
+          {newsLoading
+            ? "Loading news markers..."
+            : newsError
+              ? newsError
+              : newsEvents.length === 0
+                ? "No news markers for this timeframe."
+                : `${newsEvents.length} news marker${newsEvents.length === 1 ? "" : "s"} in this timeframe.`}
+        </div>
+      )}
     </div>
   );
 }

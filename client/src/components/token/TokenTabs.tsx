@@ -18,7 +18,7 @@ export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabs
     const tabs = [
         { id: "overview", label: tr("token.tabs.overview") },
         { id: "markets", label: tr("token.tabs.markets") },
-        // { id: "news", label: "News" },
+        { id: "news", label: "News" },
     ];
     const selectedIndex = TAB_IDS.indexOf(activeTab);
 

@@ -290,6 +290,72 @@ export const tokenPriceCache = pgTable(
   (table) => [primaryKey({ columns: [table.mint, table.timestampSec] })],
 );
 
+export const tokenVolatilityNewsCache = pgTable(
+  "token_volatility_news_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    thresholdPercent: decimal("threshold_percent").notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    detectionWindow: varchar("detection_window", { length: 16 }).notNull(),
+    maxEventsWithNews: integer("max_events_with_news").notNull(),
+    includeSummary: boolean("include_summary").notNull().default(false),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_volatility_news_cache_key_uq").on(
+      table.tokenAddress,
+      table.thresholdPercent,
+      table.timeframe,
+      table.detectionWindow,
+      table.maxEventsWithNews,
+      table.includeSummary,
+    ),
+  ],
+);
+
+export const tokenChartNewsEventsCache = pgTable(
+  "token_chart_news_events_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    eventDate: varchar("event_date", { length: 10 }).notNull().default(""),
+    includeSummary: boolean("include_summary").notNull().default(false),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_chart_news_events_cache_key_uq").on(
+      table.tokenAddress,
+      table.symbol,
+      table.name,
+      table.timeframe,
+      table.eventDate,
+      table.includeSummary,
+    ),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,

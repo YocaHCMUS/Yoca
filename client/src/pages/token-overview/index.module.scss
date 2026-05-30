@@ -84,9 +84,8 @@
   color: $text-secondary;
 }
 
-// No longer needed — scroll inside rightContent, no sticky header overlap
 .scrollAnchor {
-  scroll-margin-top: 0;
+  scroll-margin-top: 96px;
 }
 
 // ===== Skeleton Loading =====

@@ -30,7 +30,7 @@ export function LandingTestimonials() {
             className="landing-quote-card relative flex flex-col"
             style={{
               ...cardSurface,
-              backgroundColor: "rgba(17,17,24,0.85)",
+              backgroundColor: "var(--landing-panel-bg)",
             }}
           >
             <span
@@ -45,20 +45,20 @@ export function LandingTestimonials() {
               &ldquo;
             </span>
             <p
-              className="mt-1 flex-1 text-lg text-[#e2e8f0]"
+              className="mt-1 flex-1 text-lg text-(--landing-muted)"
               style={{ lineHeight: 1.7 }}
             >
               {q.text}
             </p>
             <footer
               className="mt-8 pt-6"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ borderTop: "1px solid var(--landing-card-border)" }}
             >
               <cite className="not-italic">
-                <span className="block font-semibold text-[#f8fafc]">
+                <span className="block font-semibold text-(--landing-foreground)">
                   {q.name}
                 </span>
-                <span className="mt-1 block text-sm text-[#94a3b8]">
+                <span className="mt-1 block text-sm text-(--landing-muted)">
                   {q.role}
                 </span>
               </cite>

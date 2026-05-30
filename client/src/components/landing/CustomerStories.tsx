@@ -33,7 +33,7 @@ export function LandingCustomerStories() {
         paddingTop: SECTION_PADDING_Y,
         paddingBottom: SECTION_PADDING_Y,
         scrollMarginTop: "5rem",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
+        borderTop: "1px solid var(--landing-section-border)",
       }}
     >
       <div style={grid12Shell}>
@@ -43,13 +43,13 @@ export function LandingCustomerStories() {
         >
           <div>
             <h2
-              className="text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl"
+              className="text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
               style={{ lineHeight: 1.2 }}
             >
               Customer stories
             </h2>
             <p
-              className="mt-4 max-w-xl text-[#94a3b8]"
+              className="mt-4 max-w-xl text-(--landing-muted)"
               style={{ lineHeight: 1.65 }}
             >
               Read how teams use Yoca to turn raw chain activity into decisions
@@ -77,23 +77,23 @@ export function LandingCustomerStories() {
               (e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)")
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)")
+              (e.currentTarget.style.borderColor = "var(--landing-card-border)")
             }
           >
             <div
               className="flex h-12 w-12 items-center justify-center rounded-xl font-mono text-sm font-bold"
               style={{
-                background: "rgba(255,255,255,0.06)",
+                background: "var(--landing-surface)",
                 color: LANDING_ACCENT,
               }}
             >
               {s.initials}
             </div>
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.15em] text-[#94a3b8]">
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.15em] text-(--landing-muted)">
               {s.org}
             </p>
             <h3
-              className="mt-2 flex-1 text-base font-semibold text-[#f8fafc]"
+              className="mt-2 flex-1 text-base font-semibold text-(--landing-foreground)"
               style={{ lineHeight: 1.45 }}
             >
               {s.title}

@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
+import { PageWrapper } from "@/components/wrapper";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
@@ -17,6 +18,14 @@ import PricingPage from "@/pages/pricing";
 import { Component, type ReactNode } from "react";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
+
+function LandingRoute() {
+  return (
+    <PageWrapper noMarketTickers>
+      <Index />
+    </PageWrapper>
+  );
+}
 
 /** Catches render errors inside route elements so a silent crash does not
  *  abort the React Router transition (leaving the old page mounted). */
@@ -56,7 +65,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={<LandingRoute />} />
         <Route path="/auth" element={<AuthShowcase />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
