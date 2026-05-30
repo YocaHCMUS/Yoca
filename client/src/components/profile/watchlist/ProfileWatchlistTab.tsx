@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import { CpyBtn } from "@/components/CpyBtn";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { SortType, Table } from "@/components/tables/Table";
 import { renderSparkline } from "@/components/tables/TableCellRenderer";
@@ -16,7 +17,6 @@ import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
-import styles from "@/components/profile/shared/profile.module.scss";
 
 interface LinkedWalletsResponse {
   userId: string;
@@ -59,15 +59,6 @@ export function ProfileWatchlistTab() {
     { param: { addresses: tokenAddresses || "" } },
     { enabled: Boolean(tokenAddresses) },
   );
-
-  const marketByAddress = useMemo(() => {
-    const data = marketData.data;
-    if (!data) return {} as Record<string, any>;
-    if (Array.isArray(data)) {
-      return Object.fromEntries(data.map((item: any) => [item.address, item]));
-    }
-    return data as Record<string, any>;
-  }, [marketData.data]);
 
   const tokenMetaByAddress = useMemo(() => {
     const data = tokenMeta.data;
@@ -144,7 +135,7 @@ export function ProfileWatchlistTab() {
   const tokenTableData = useMemo(() => {
     return tokenWatchlist.map((tokenAddress) => {
       const meta = tokenMetaByAddress[tokenAddress];
-      const market = marketByAddress[tokenAddress];
+      const market = marketData.data?.[tokenAddress];
       const symbol =
         meta?.symbol?.toUpperCase() ?? fmt.text.address(tokenAddress);
       const name = meta?.name ?? tokenAddress;
@@ -173,7 +164,7 @@ export function ProfileWatchlistTab() {
         },
       ];
     });
-  }, [tokenWatchlist, tokenMetaByAddress, marketByAddress, fmt, tokenPending]);
+  }, [tokenWatchlist, tokenMetaByAddress, marketData.data, fmt, tokenPending]);
 
   const tokenCellRenderers = useMemo(
     () => [
@@ -388,6 +379,10 @@ export function ProfileWatchlistTab() {
   const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;
   const walletLoading = isLoading || linkedWallets.isLoading;
 
+  if (isLoading) {
+    return <ProfileLoadingState />;
+  }
+
   const tokenTable =
     tokenTableData.length === 0 && !tokenLoading ? (
       <ProfileUnavailableState
@@ -472,9 +467,7 @@ export function ProfileWatchlistTab() {
     );
 
   return (
-    <section className={styles.contentStack}>
-      <div className={styles.watchlistTabContainer}>
-        <TabContainer
+    <TabContainer
           activeTab={activeSubtab}
           onTabChange={setActiveSubtab}
           names={[
@@ -487,8 +480,6 @@ export function ProfileWatchlistTab() {
           ]}
           tabs={[walletTable, tokenTable]}
         />
-      </div>
-    </section>
   );
 }
 

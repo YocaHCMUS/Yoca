@@ -1,4 +1,5 @@
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
@@ -51,6 +52,10 @@ export function ProfileActivityTab({
   );
 
   const swapsRaw = useMemo(() => data.swapsRaw ?? [], [data.swapsRaw]);
+
+  if (loading) {
+    return <ProfileLoadingState />;
+  }
 
   if (error) {
     return (

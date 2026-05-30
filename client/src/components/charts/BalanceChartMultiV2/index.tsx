@@ -103,7 +103,7 @@ export function MultiWalletBalanceChart({
 
         return {
           key: wallet,
-          label: wallet,
+          label: fmt.text.address(wallet),
           data,
         };
       },

@@ -4,11 +4,12 @@ import ProfileDashboardTab from "@/components/profile/dashboard/ProfileDashboard
 import ProfilePortfolioTab from "@/components/profile/portfolio/ProfilePortfolioTab";
 import { ProfileSubscriptionsTab } from "@/components/profile/ProfileSubscriptionsTab";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import ProfileWalletTab from "@/components/profile/wallets/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/watchlist/ProfileWatchlistTab";
 import {
-  PROFILE_TABS,
-  type ProfileTabId,
+    PROFILE_TABS,
+    type ProfileTabId,
 } from "@/components/profile/shared/profile.constants";
 import ProfileSettingsTab from "@/components/profile/settings";
 import TabContainer from "@/components/tabContainer/tabContainer";
@@ -16,19 +17,17 @@ import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
 import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { InlineLoading } from "@carbon/react";
 import {
-  Activity,
-  ChartLine,
-  Notification,
-  Receipt,
-  Settings,
-  StarFilled,
-  User,
-  Wallet,
+    Activity,
+    ChartLine,
+    Notification,
+    Receipt,
+    Settings,
+    StarFilled,
+    User,
+    Wallet,
 } from "@carbon/react/icons";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import styles from "./index.module.scss";
 
 export default function ProfilePage() {
   const [period, setPeriod] = useState<TimePeriod>("30D");
@@ -126,20 +125,18 @@ export default function ProfilePage() {
   return (
     <PageWrapper wideContent>
       {loading || profileLoading ? (
-        <div className={styles.loadingState}>
-          <InlineLoading description="Loading profile page" status="active" />
-        </div>
-      ) : null}
-
-      <TabContainer
-        activeTab={activeTab}
-        names={tabsConfig.names}
-        tabIcons={tabsConfig.icons}
-        tabs={tabsConfig.nodes}
-        onTabChange={setActiveTab}
-        orientation="vertical"
-        style={{ height: "100vh" }}
-      />
+        <ProfileLoadingState />
+      ) : (
+        <TabContainer
+          activeTab={activeTab}
+          names={tabsConfig.names}
+          tabIcons={tabsConfig.icons}
+          tabs={tabsConfig.nodes}
+          onTabChange={setActiveTab}
+          orientation="vertical"
+          style={{ height: "100vh" }}
+        />
+      )}
     </PageWrapper>
   );
 }

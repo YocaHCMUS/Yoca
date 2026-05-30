@@ -14,7 +14,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const {tr} = useLocalization();
   const location = useLocation();
   const attemptedPath = `${location.pathname}${location.search}${location.hash}`;
-  console.log("User is:...", user); 
   if (isUserLoading) {
     return <Loading withOverlay description={tr("auth.authenticating")}/>
   } else if (!user) {
