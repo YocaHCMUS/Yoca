@@ -215,8 +215,6 @@ export function ProfilePortfolioTab({
             <div className={styles.inlineActions}>
               <WalletActionButton<string>
                 label="Link wallet"
-                kind="ghost"
-                renderIcon={AddLarge}
                 className={styles.triggerButton}
                 onError={(message) => {
                   console.error(
