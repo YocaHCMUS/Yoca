@@ -150,8 +150,13 @@ const app = new Hono()
       if (googleUser) {
         userId = googleUser.account.userId;
         displayName = googleUser.user.displayName;
+        if (!displayName) {
+          displayName = payload.name || "Guest";
+          await userService.updateUserDisplayName(userId, displayName);
+        }
       } else {
-        userId = await userService.createUserWithGoogle(googleId);
+        displayName = payload.name || "Guest";
+        userId = await userService.createUserWithGoogle(googleId, displayName);
       }
 
       const token = await setAuthToken(c, userId, displayName);

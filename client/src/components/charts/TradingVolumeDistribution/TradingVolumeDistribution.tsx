@@ -160,7 +160,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       series: [
         {
           type: 'pie',
-          radius: ['26%', '56%'],
+          radius: ['22%', '48%'],
           center: ['50%', '50%'],
           data: dataWithRecalculatedPercentages.map((a, i) => ({
             name: a.name,

@@ -96,10 +96,10 @@ export async function findUserByGoogleId(googleId: string) {
   return user;
 }
 
-export async function createUserWithGoogle(googleId: string) {
+export async function createUserWithGoogle(googleId: string, displayName: string = "Guest") {
   let userId = "";
   await db.transaction(async (tx) => {
-    const [newUser] = await tx.insert(users).values({}).returning();
+    const [newUser] = await tx.insert(users).values({ displayName }).returning();
     await tx.insert(authAccounts).values({
       provider: "google",
       userId: newUser.id,
@@ -241,6 +241,13 @@ export async function getUserById(userId: string) {
     .limit(1);
 
   return user ?? null;
+}
+
+export async function updateUserDisplayName(userId: string, displayName: string) {
+  await db
+    .update(users)
+    .set({ displayName })
+    .where(eq(users.id, userId));
 }
 
 export async function getUserAuthMethods(userId: string) {

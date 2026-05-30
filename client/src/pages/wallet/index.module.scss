@@ -8,15 +8,91 @@
   grid-template-columns: 420px 4px minmax(0, 1fr);
   gap: 0;
   padding: 0;
-  // height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
+  // 3rem is the Carbon UI Shell header height. We subtract it along with the top offset (market ticker)
+  height: calc(100dvh - 3rem - var(--page-content-top-offset, 3.5rem));
   min-height: 0;
   overflow: hidden;
+
+  /* Hide vertical scrollbars but keep horizontal ones for tables */
+  *::-webkit-scrollbar:vertical {
+    display: none !important;
+    width: 0 !important;
+  }
+  *::-webkit-scrollbar:horizontal {
+    display: block !important;
+    height: 6px !important;
+  }
+  *::-webkit-scrollbar-thumb:horizontal {
+    background: var(--cds-border-strong-01, #8d8d8d) !important;
+    border-radius: 4px !important;
+  }
+  *::-webkit-scrollbar-track:horizontal {
+    background: transparent !important;
+  }
+  * {
+    /* For Firefox: make scrollbars thin instead of completely hiding them so horizontal still works */
+    scrollbar-width: thin;
+  }
+}
+
+/* Lightweight right sidebar (toolbar on the edge, panel slides out to left) */
+.rightSidebar {
+  position: fixed;
+  right: 0;
+  top: var(--page-content-top-offset, 3.5rem);
+  bottom: 0;
+  display: flex;
+  flex-direction: row; /* panel then toolbar */
+  align-items: stretch;
+  z-index: 70;
+  pointer-events: none; /* let toolbar/panel control their own pointer-events */
+}
+
+.sidebarPanel {
+  width: 360px;
+  background: var(--cds-layer-01);
+  border-left: 1px solid var(--cds-border-subtle);
+  box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+  height: 100%;
+  overflow: hidden;
+  transform: translateX(100%); /* hidden by default */
+  transition: transform 0.22s ease;
+  pointer-events: auto;
+}
+
+.sidebarPanel.open {
+  transform: translateX(0);
+}
+
+.sidebarToolbar {
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 6px;
+  background: transparent;
+  border-left: 1px solid transparent;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.sidebarToolbar :global(.bx--btn) {
+  background: transparent;
+}
+
+/* Position tooltips for toolbar icons to appear to the left */
+.sidebarToolbar :global(.bx--tooltip) {
+  position: fixed !important;
+  left: auto !important;
+  right: 64px !important;
+  z-index: 1200 !important;
 }
 
 // ===== Resize Divider =====
 .resizeDivider {
   position: relative;
-  width: 4px;
+  width: 1px;
   height: 100%;
   background: $border-subtle;
   cursor: col-resize;
@@ -116,6 +192,13 @@
   padding: 24px;
   overflow-y: auto;
   min-height: 0;
+
+  /* Hide scrollbar for clean UI but keep scrolling functionality */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 .hiddenReportTemplate {
@@ -132,7 +215,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-height: 0;
 }
 
 .summaryGrid {
@@ -202,6 +284,8 @@
   border-radius: 12px;
   overflow: hidden;
   background: $layer-01;
+  display: flex;
+  flex-direction: column;
 }
 
 .portfolioCard {
@@ -277,7 +361,7 @@
 
 .sideBySide {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
 }
 

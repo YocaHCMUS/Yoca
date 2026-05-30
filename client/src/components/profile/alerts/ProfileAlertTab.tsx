@@ -1,4 +1,4 @@
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
@@ -18,7 +18,7 @@ import {
   Toggle,
 } from "@carbon/react";
 import { useMemo, useState } from "react";
-import styles from "./profile.module.scss";
+import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileAlertTabProps {
   data: ProfileAlertsData;

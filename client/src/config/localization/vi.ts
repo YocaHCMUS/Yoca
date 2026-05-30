@@ -579,6 +579,7 @@ export const translation = defineTranslation({
   // Wallet Comparison Page
   walletComparison: {
     selectedWallets: "Ví đã chọn",
+    activeWallet: "Ví đang xem",
     addWalletAddress: "Thêm địa chỉ ví",
     enterWalletAddress: "Nhập địa chỉ ví...",
     noWalletsSelected: "Chưa chọn ví nào. Thêm địa chỉ ví để so sánh.",
@@ -588,9 +589,11 @@ export const translation = defineTranslation({
     exportPdf: "Xuất PDF",
     generatingPdf: "Đang tạo PDF...",
     pdfReportTitle: "Báo cáo so sánh ví",
+    walletAnalysisReport: "Báo cáo phân tích ví",
     pdfGeneratedDate: "Ngày tạo",
     pdfWalletsCompared: "Số ví so sánh",
     pdfWalletAddresses: "Địa chỉ ví",
+    viewDeepDive: "Xem chi tiết",
   },
   // Wallet Report PDF Template
   wallet_report: {
@@ -1529,6 +1532,11 @@ export const translation = defineTranslation({
       portfolioTableTitle: "Bảng danh mục đầu tư",
       balanceChartTitle: "Cân bằng",
       drawdownChartTitle: "Rút ngắn",
+      section: {
+        performance: "Hiệu suất ví",
+        activity: "Dòng tiền và hoạt động",
+        risk: "Cấu trúc rủi ro",
+      },
     },
     watchlist: {
       title: "Danh sách theo dõi",

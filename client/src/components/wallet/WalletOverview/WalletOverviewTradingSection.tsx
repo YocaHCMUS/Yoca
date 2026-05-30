@@ -86,7 +86,7 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
                 )}
             </div>
 
-            <div className={styles.statRow}>
+            <div className={styles.subStatRow} style={{ padding: '12px 12px', borderTop: '1px solid var(--cds-border-subtle)', gap: '6px' }}>
                 <div className={styles.subStatLabel}>{`${tr('wallet.tradingVolume')} (${tr('walletPage.buy')}/${tr('walletPage.sell')})`}</div>
                 {renderValue(
                     hasVolumeSplit,
@@ -98,7 +98,7 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
                 )}
             </div>
 
-            <div className={styles.statRow}>
+            <div className={styles.subStatRow} style={{ padding: '12px 12px', borderTop: '1px solid var(--cds-border-subtle)', gap: '6px' }}>
                 <div className={styles.subStatLabel}>{`${tr('wallet.transactionCount')} (${tr('walletPage.buy')}/${tr('walletPage.sell')})`}</div>
                 {renderValue(
                     hasCountSplit,
@@ -110,7 +110,7 @@ const WalletOverviewTradingSection = ({ tradingVolume, buyTradingVolume, sellTra
                 )}
             </div>
 
-            <div className={styles.statRow}>
+            <div className={styles.cardsRow}>
                 <HoldingCard
                     label={tr('wallet.tokensTraded')}
                     value={tokenAmountTraded}

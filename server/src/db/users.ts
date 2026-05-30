@@ -85,6 +85,18 @@ export const userWalletWatchlist = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.walletAddress] })],
 );
 
+export const userWalletLabels = pgTable(
+  "user_wallet_labels",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.walletAddress] })],
+);
+
 export const authAccounts = pgTable(
   "auth_accounts",
   {
@@ -123,6 +135,8 @@ export type UserTokenWatchlistInsert = typeof userTokenWatchlist.$inferInsert;
 export type UserTokenWatchlistSelect = typeof userTokenWatchlist.$inferSelect;
 export type UserWalletWatchlistInsert = typeof userWalletWatchlist.$inferInsert;
 export type UserWalletWatchlistSelect = typeof userWalletWatchlist.$inferSelect;
+export type UserWalletLabelInsert = typeof userWalletLabels.$inferInsert;
+export type UserWalletLabelSelect = typeof userWalletLabels.$inferSelect;
 export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type AuthAccountSelect = typeof authAccounts.$inferSelect;
 // #endregion

@@ -1,11 +1,16 @@
+import { ProfileOverview } from "@/components/profile/overview/ProfileOverview";
+import { Table, FilterType, SortType } from "@/components/tables/Table";
+import { renderLongCode, createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
-import { ProfileOverview } from "@/components/profile/ProfileOverview";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
-import { FilterType, SortType, Table } from "@/components/tables/Table";
-import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
+import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
+import type { TimePeriod } from "@/types/chart-filters.types";
+import { AddLarge, Checkmark, Close, Edit } from "@carbon/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import {
     linkWalletAddress,
     requestLinkWalletChallenge,
@@ -13,13 +18,10 @@ import {
 } from "@/services/profile/profileApi";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
+import styles from "@/components/profile/shared/profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
-import type { ProfileAccountTier, ProfileOverviewData } from "@/types/profile";
-import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge } from "@carbon/icons-react";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import styles from "./profile.module.scss";
+import { Button, IconButton, TextInput } from "@carbon/react";
+import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 
 interface ProfilePortfolioTabProps {
   linkedWallets: LinkedWalletRowPayload[];
@@ -39,22 +41,23 @@ export function ProfilePortfolioTab({
   period,
   onPeriodChange,
 }: ProfilePortfolioTabProps) {
-  const { tr, fmt } = useLocalization();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
-  const linkedWalletByAddress = useMemo(
-    () =>
-      new Map(linkedWalletRows.map((wallet) => [wallet.walletAddress, wallet])),
-    [linkedWalletRows],
-  );
-  const linkedWalletAddresses = useMemo(
-    () => linkedWalletRows.map((wallet) => wallet.walletAddress),
-    [linkedWalletRows],
-  );
-  const [currentPlanTier, setCurrentPlanTier] = useState<PlanTier | null>(null);
-  const { walletOverviews, setWalletOverviews, loading } =
-    useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
+    const { tr, fmt } = useLocalization();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [linkedWalletRows, setLinkedWalletRows] = useState(linkedWallets);
+    const linkedWalletByAddress = useMemo(
+        () => new Map(linkedWalletRows.map((wallet) => [wallet.walletAddress, wallet])),
+        [linkedWalletRows],
+    );
+    const linkedWalletAddresses = useMemo(
+        () => linkedWalletRows.map((wallet) => wallet.walletAddress),
+        [linkedWalletRows],
+    );
+    const [currentPlanTier, setCurrentPlanTier] = useState<PlanTier | null>(null);
+    const [editingAddress, setEditingAddress] = useState<string | null>(null);
+    const [draftLabel, setDraftLabel] = useState("");
+    const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
+    const { labels: labelMap, setLabel } = useWalletLabels();
 
   useEffect(() => {
     setLinkedWalletRows(linkedWallets);
@@ -97,6 +100,7 @@ export function ProfilePortfolioTab({
   };
 
   const overviewData = useMemo<ProfileOverviewData>(() => {
+    const authWalletCount = linkedWalletRows.filter((wallet) => wallet.isAuthWallet).length;
     const totalNetWorthUsd = walletOverviews.reduce(
       (sum, overview) => sum + overview.totalAssetValueUsd,
       0,
@@ -124,6 +128,7 @@ export function ProfilePortfolioTab({
       pnlUsd,
       pnlPct: totalNetWorthUsd > 0 ? (pnlUsd / totalNetWorthUsd) * 100 : 0,
       linkedWalletCount: linkedWalletAddresses.length,
+      authWalletCount,
     };
   }, [
     currentPlanTier,
@@ -132,23 +137,26 @@ export function ProfilePortfolioTab({
     user?.userId,
     linkedWalletAddresses,
     walletOverviews,
+    linkedWalletRows,
   ]);
 
   const tableRows = useMemo(
     () =>
       walletOverviews.map((overview) => {
         const walletMeta = linkedWalletByAddress.get(overview.address);
-        const walletLabel = fmt.text.address(overview.address);
+        const walletLabel = labelMap[overview.address] ?? "";
 
         return [
-          overview.address,
-          walletLabel,
-          overview.address,
+          {
+            walletAddress: overview.address,
+            label: walletLabel,
+            isAuthWallet: walletMeta?.isAuthWallet
+          },
           overview.totalAssetValueUsd,
           walletMeta?.isAuthWallet,
         ];
       }),
-    [linkedWalletByAddress, walletOverviews, fmt],
+    [linkedWalletByAddress, walletOverviews, labelMap, fmt],
   );
 
   const handleUnlinkWallet = async (walletAddress: string) => {
@@ -169,6 +177,7 @@ export function ProfilePortfolioTab({
 
   const portfolioCellRenderers = createProfilePortfolioCellRenderers({
     onUnlinkWallet: handleUnlinkWallet,
+    onEditLabel: setLabel,
     formatAddress: (address: string) => fmt.text.address(address),
     formatCurrency: (value: number) => fmt.num.compact.currency(value),
     t: tr,
@@ -185,7 +194,6 @@ export function ProfilePortfolioTab({
         <Table
           title={tr("profileTabs.portfolio.linkedWalletsList")}
           headers={[
-            tr("profileTabs.portfolio.label"),
             tr("profileTabs.portfolio.address"),
             tr("profileTabs.portfolio.totalValue"),
             tr("profileTabs.portfolio.actions"),
@@ -194,14 +202,13 @@ export function ProfilePortfolioTab({
           fetcher={Promise.resolve([])}
           filterSchema={{
             0: { type: FilterType.Select },
-            1: { type: FilterType.Select },
-            2: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+            1: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
           }}
           dataEntries={tableRows}
           cellRenderers={portfolioCellRenderers}
-          isSortable={[true, true, true, false]}
+          isSortable={[true, true, false]}
           sortConfigs={{
-            2: { type: SortType.Number },
+            1: { type: SortType.Number },
           }}
           enableExport={false}
           actions={
@@ -254,7 +261,10 @@ export function ProfilePortfolioTab({
           onRowClick={(_, rowIndex) => {
             const row = tableRows[rowIndex];
             if (row) {
-              const walletAddress = row[0] as string;
+              const walletAddress =
+                typeof row[0] === "object" && row[0] != null
+                  ? (row[0] as { walletAddress: string }).walletAddress
+                  : (row[0] as unknown as string);
               navigateToWalletDetail(walletAddress);
             }
           }}

@@ -1,16 +1,16 @@
-import ProfileActivityTab from "@/components/profile/ProfileActivityTab";
-import ProfileAlertTab from "@/components/profile/ProfileAlertTab";
-import ProfileDashboardTab from "@/components/profile/ProfileDashboardTab";
-import ProfilePortfolioTab from "@/components/profile/ProfilePortfolioTab";
+import ProfileActivityTab from "@/components/profile/activity/ProfileActivityTab";
+import ProfileAlertTab from "@/components/profile/alerts/ProfileAlertTab";
+import ProfileDashboardTab from "@/components/profile/dashboard/ProfileDashboardTab";
+import ProfilePortfolioTab from "@/components/profile/portfolio/ProfilePortfolioTab";
 import { ProfileSubscriptionsTab } from "@/components/profile/ProfileSubscriptionsTab";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
-import ProfileWalletTab from "@/components/profile/ProfileWalletTab";
-import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileWalletTab from "@/components/profile/wallets/ProfileWalletTab";
+import ProfileWatchlistTab from "@/components/profile/watchlist/ProfileWatchlistTab";
 import {
   PROFILE_TABS,
   type ProfileTabId,
-} from "@/components/profile/profile.constants";
-import ProfileSettingsTab from "@/components/profile/profileSettingsTab";
+} from "@/components/profile/shared/profile.constants";
+import ProfileSettingsTab from "@/components/profile/settings";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
@@ -64,14 +64,7 @@ export default function ProfilePage() {
       },
       {
         id: "dashboard",
-        node: profileData ? (
-          <ProfileDashboardTab data={profileData.dashboard} />
-        ) : (
-          <ProfileUnavailableState
-            title="Dashboard unavailable"
-            description="No dashboard data is available right now."
-          />
-        ),
+        node: <ProfileDashboardTab walletAddresses={walletAddresses} />,
       },
       {
         id: "alerts",

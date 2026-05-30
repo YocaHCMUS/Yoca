@@ -95,6 +95,14 @@ function App() {
           }
         />
         <Route path="/wallets/:address" element={<WalletPage />} />
+        <Route
+          path="/wallets/:address"
+          element={
+            <RouteErrorBoundary>
+              <WalletPage />
+            </RouteErrorBoundary>
+          }
+        />
         <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

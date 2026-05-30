@@ -800,118 +800,70 @@ export async function fetchBirdeyeJson(
 export async function fetchBirdeyePortfolio(
   address: string,
 ): Promise<WalletPortfolio> {
-  const limit = 100;
-  const seenPortfolioKeys = new Set<string>();
-  let lastPayload: any = null;
-  const paged = await runOffsetPagination<WalletPortfolioItem>({
-    initialOffset: 0,
-    maxPages: MAX_HELIUS_PORTFOLIO_BALANCE_PAGES,
-    maxItems: MAX_HELIUS_PORTFOLIO_ITEMS,
-    pageSize: limit,
-    stagnantPageLimit: MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES,
-    fetchPage: async (offset) => {
-      const json = await fetchBirdeyeJson(
-        "/wallet/v2/current-net-worth",
-        "GET",
-        {
-          searchParams: {
-            wallet: address,
-            filter_value: 0.0001,
-            sort_type: "desc",
-            limit,
-            offset,
-          },
-        },
-      );
-
-      if (!json) {
-        return {
-          pageItems: [],
-          hasMore: false,
-        };
-      }
-
-      lastPayload = json;
-      const balances: any[] = Array.isArray(json?.data?.items)
-        ? json.data.items
-        : [];
-      const total = Math.max(
-        0,
-        Math.floor(toFiniteNumber(json?.pagination?.total, 0)),
-      );
-      const pageItems: WalletPortfolioItem[] = [];
-
-      for (const token of balances) {
-        const amount = toTokenAmount(
-          token.balance,
-          token.decimals,
-          token.amount,
-        );
-        if (!(amount > 0) || Number.isNaN(amount)) continue;
-
-        const tokenAddress = token.address;
-        const tokenAddressKey = tokenAddress.trim().toLowerCase();
-        const fallbackKey = `${String(token.symbol ?? "")
-          .trim()
-          .toLowerCase()}::${String(token.name ?? "")
-            .trim()
-            .toLowerCase()}`;
-        const dedupeKey = tokenAddressKey || fallbackKey;
-
-        if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
-          continue;
-        }
-
-        if (dedupeKey) {
-          seenPortfolioKeys.add(dedupeKey);
-        }
-
-        const pricePerToken = toOptionalNumber(token.price);
-        const usdValue =
-          toOptionalNumber(token.value) ??
-          (pricePerToken != null ? amount * pricePerToken : 0);
-
-        pageItems.push({
-          tokenAddress,
-          symbol: String(token.symbol ?? ""),
-          name: token.name ? String(token.name) : undefined,
-          logoUri: getTokenLogoUri(token),
-          amount,
-          priceUsd: pricePerToken ?? undefined,
-          valueUsd: usdValue,
-        });
-      }
-
-      return {
-        pageItems,
-        hasMore: balances.length >= limit && offset + limit < total,
-      };
+  const json = await fetchBirdeyeJson(
+    "/v1/wallet/token_list",
+    "GET",
+    {
+      searchParams: {
+        wallet: address,
+      },
     },
-  });
+  );
 
-  if (paged.stopReason === "max-items") {
-    console.warn("[wallet-portfolio-fetch] Max portfolio item limit reached", {
+  if (!json || !json.data) {
+    return {
       address,
-      pagesFetched: paged.pagesFetched,
-      itemCount: paged.items.length,
-    });
+      items: [],
+      totalAssetValueUsd: 0,
+    };
   }
 
-  if (paged.stopReason === "stagnant") {
-    console.warn(
-      "[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch",
-      {
-        address,
-        pagesFetched: paged.pagesFetched,
-        itemCount: paged.items.length,
-      },
+  const balances: any[] = Array.isArray(json.data.items)
+    ? json.data.items
+    : [];
+
+  const pageItems: WalletPortfolioItem[] = [];
+  let calculatedTotal = 0;
+
+  for (const token of balances) {
+    const amount = toTokenAmount(
+      token.balance,
+      token.decimals,
+      token.uiAmount ?? token.amount,
     );
+    if (!(amount > 0) || Number.isNaN(amount)) continue;
+
+    const tokenAddress = String(token.address ?? token.mint ?? "");
+    const pricePerToken =
+      token.priceUsd != null && !Number.isNaN(Number(token.priceUsd))
+        ? Number(token.priceUsd)
+        : token.price != null && !Number.isNaN(Number(token.price))
+          ? Number(token.price)
+          : undefined;
+
+    // Prioritize Birdeye's API valueUsd as it includes liquidity/scam adjustments (matching their website's "Hide Low Liq/Scam" logic)
+    const usdValue =
+      toOptionalNumber(token.valueUsd) ??
+      toOptionalNumber(token.value) ??
+      (pricePerToken != null ? amount * pricePerToken : 0);
+      
+    calculatedTotal += usdValue;
+
+    pageItems.push({
+      tokenAddress,
+      symbol: String(token.symbol ?? ""),
+      name: token.name ? String(token.name) : undefined,
+      logoUri: getTokenLogoUri(token),
+      amount,
+      priceUsd: pricePerToken ?? undefined,
+      valueUsd: usdValue,
+    });
   }
 
   return {
     address,
-    items: paged.items,
-    totalAssetValueUsd: toFiniteNumber(lastPayload?.data?.total_value, 0),
+    items: pageItems,
+    totalAssetValueUsd: calculatedTotal > 0 ? calculatedTotal : toFiniteNumber(json.data.totalUsd, 0),
   };
 }
 

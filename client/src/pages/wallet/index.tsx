@@ -64,6 +64,10 @@ import {
     StarFilled,
     User,
     Wallet,
+    Settings,
+    Tag,
+    Copy,
+    Folder
 } from "@carbon/icons-react";
 import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
@@ -87,7 +91,7 @@ import {
     TokenAverageTradePrice,
     TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
-// import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
+import { RightSidebar } from "./RightSidebar.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
@@ -222,10 +226,11 @@ export default function WalletPage() {
   /** Reset when leaving Holdings so we can retry portfolio fetch if the table is still empty (chart uses a different API). */
   const holdingsPortfolioAttemptedRef = useRef<string | null>(null);
 
-  const [leftWidth, setLeftWidth] = useState(420);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(540);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
-  const dragStartWidth = useRef(420);
+  const dragStartWidth = useRef(540);
 
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
@@ -1330,13 +1335,13 @@ export default function WalletPage() {
   }
 
   const overviewTab = (
-    <div className={styles.tabPane}>
-      <PageSection>
-        <div className={styles.chartStack}>
-          <div className={styles.chartSection}>
+    <div className={styles.tabPane} style={{ flex: '1 0 auto' }}>
+      <section className={styles.section} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', paddingTop: 0 }}>
+        <div className={styles.chartStack} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
             <BalanceChartV2 address={walletAddress} />
           </div>
-          <div className={styles.chartSection}>
+          <div className={styles.chartSection} style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
             <PnLChart
               minHeight={400}
               autoRefresh
@@ -1348,7 +1353,7 @@ export default function WalletPage() {
             />
           </div>
         </div>
-      </PageSection>
+      </section>
     </div>
   );
 
@@ -1356,10 +1361,10 @@ export default function WalletPage() {
     <div className={styles.tabPane}>
       <PageSection>
         <div className={styles.sectionStack}>
-          <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap", flexDirection: isRightSidebarOpen ? "column" : "row" }}>
             <div
               className={styles.chartSection}
-              style={{ flex: "0 1 48%", minWidth: 0 }}
+              style={{ flex: isRightSidebarOpen ? "1 0 auto" : "1 1 40%", minWidth: 280 }}
             >
               <AssetDistribution
                 initialFilters={{
@@ -1371,7 +1376,7 @@ export default function WalletPage() {
             </div>
             <div
               className={`${styles.chartSection} ${styles.portfolioCard}`}
-              style={{ flex: "1 1 52%", minWidth: 280 }}
+              style={{ flex: isRightSidebarOpen ? "1 0 auto" : "1 1 52%", minWidth: 280, minHeight: 400 }}
             >
               <Table
                 title={tr("walletPage.portfolio")}
@@ -1406,6 +1411,12 @@ export default function WalletPage() {
 
   const activityTab = (
     <div className={styles.tabPane}>
+      <PageSection>
+        <div className={styles.sectionStack}>
+          {/* Charts Temporarily Removed in 0.3.0 */}
+        </div>
+      </PageSection>
+
       <PageSection>
         <div className={styles.tableStack}>
           <div className={styles.chartSection}>
@@ -1940,47 +1951,59 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div
-        className={styles.walletGrid}
-        style={{ gridTemplateColumns: `${leftWidth}px 4px minmax(0, 1fr)` }}
-      >
-        <div className={styles.leftColumn}>
-          <WalletOverview
-            walletAddress={walletAddress}
-            enableIntelligence={intelligenceEnabled}
-          />
-        </div>
-
+      <div style={{ display: "flex", width: "100%", height: "100%" }}>
         <div
-          className={styles.resizeDivider}
-          onMouseDown={handleDividerMouseDown}
+          className={styles.walletGrid}
+          style={{ 
+            gridTemplateColumns: `${isRightSidebarOpen ? Math.min(leftWidth, 260) : leftWidth}px 1px minmax(0, 1fr)`, 
+            flex: 1, 
+            minWidth: 0 
+          }}
         >
-          <div className={styles.resizeHandle} />
-        </div>
-
-        <div className={styles.rightColumn}>
-          <div className={styles.rightContent}>
-            <TabContainer
-              activeTab={activeTab}
-              names={[
-                tr("walletPage.overview"),
-                tr("walletPage.holdings"),
-                tr("walletPage.activity"),
-                tr("walletPage.aiAnalysis"),
-              ]}
-              tabIcons={[
-                <ChartLine key="wallet-overview-icon" size={16} />,
-                <Wallet key="wallet-holdings-icon" size={16} />,
-                <Activity key="wallet-activity-icon" size={16} />,
-                <User key="wallet-audit-icon" size={16} />,
-                <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
-              ]}
-              tabs={[overviewTab, holdingsTab, activityTab, auditTab, aiAnalysisTab]}
-              onTabChange={(index) => setActiveTab(index)}
-              actions={tabActions}
+          <div className={styles.leftColumn}>
+            <WalletOverview
+              walletAddress={walletAddress}
+              enableIntelligence={intelligenceEnabled}
             />
           </div>
+
+          <div
+            className={styles.resizeDivider}
+            onMouseDown={handleDividerMouseDown}
+          >
+            <div className={styles.resizeHandle} />
+          </div>
+
+          <div className={styles.rightColumn}>
+            <div className={styles.rightContent}>
+              <TabContainer
+                activeTab={activeTab}
+                names={[
+                  tr("walletPage.overview"),
+                  tr("walletPage.holdings"),
+                  tr("walletPage.activityRisk"),
+                  tr("walletPage.aiAnalysis"),
+                  "Audit"
+                ]}
+                tabIcons={[
+                  <ChartLine key="wallet-overview-icon" size={16} />,
+                  <Wallet key="wallet-holdings-icon" size={16} />,
+                  <Activity key="wallet-activity-icon" size={16} />,
+                  <AiGenerate key="wallet-ai-analysis-icon" size={16} />,
+                  <User key="wallet-audit-icon" size={16} />,
+                ]}
+                tabs={[overviewTab, holdingsTab, activityTab, aiAnalysisTab, auditTab]}
+                onTabChange={(index) => setActiveTab(index)}
+                actions={tabActions}
+            />
+            </div>
+          </div>
         </div>
+
+        <RightSidebar 
+          currentAddress={address || ""} 
+          onToggle={setIsRightSidebarOpen}
+        />
       </div>
 
       <div

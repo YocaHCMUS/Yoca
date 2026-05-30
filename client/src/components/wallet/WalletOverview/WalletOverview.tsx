@@ -14,6 +14,7 @@ import {
 } from '@/services/wallet/walletApi';
 import { fetchWalletTags, saveWalletTags } from '@/services/wallet/walletTagsApi';
 import { useNavigate } from 'react-router';
+import { useWalletLabels } from '@/hooks/profile/useWalletLabels';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
@@ -121,8 +122,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const labelKey = `wallet-label-${walletAddress}`;
-    const [label, setLabel] = useState<string>(() => localStorage.getItem(labelKey) ?? '');
+    const { labels, setLabel: setWalletLabel } = useWalletLabels();
+    const label = labels[walletAddress] ?? '';
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
 
     const [tags, setTags] = useState<string[]>([]);
@@ -214,12 +215,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     }, [walletAddress, enableIntelligence, autoRefresh, refreshInterval]);
 
     const handleLabelSave = (newLabel: string) => {
-        setLabel(newLabel);
-        if (newLabel) {
-            localStorage.setItem(labelKey, newLabel);
-        } else {
-            localStorage.removeItem(labelKey);
-        }
+        setWalletLabel(walletAddress, newLabel);
     };
 
     const handleTagsSave = async (newTags: string[]) => {

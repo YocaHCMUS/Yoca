@@ -613,6 +613,7 @@ export const translation = {
   // Wallet Comparison Page
   walletComparison: {
     selectedWallets: "Selected Wallets",
+    activeWallet: "Active Wallet",
     addWalletAddress: "Add Wallet Address",
     enterWalletAddress: "Enter wallet address...",
     noWalletsSelected: "No wallets selected. Add wallet addresses to compare.",
@@ -622,9 +623,11 @@ export const translation = {
     exportPdf: "Export PDF",
     generatingPdf: "Generating PDF...",
     pdfReportTitle: "Wallet Comparison Report",
+    walletAnalysisReport: "Wallet Analysis Report",
     pdfGeneratedDate: "Generated Date",
     pdfWalletsCompared: "Wallets Compared",
     pdfWalletAddresses: "Wallet Addresses",
+    viewDeepDive: "Deep Dive",
   },
   // Wallet Report PDF Template
   wallet_report: {
@@ -1529,6 +1532,11 @@ export const translation = {
       portfolioTableTitle: "Portfolio table",
       balanceChartTitle: "Balance",
       drawdownChartTitle: "Drawdown",
+      section: {
+        performance: "Wallet performance",
+        activity: "Flow and activity",
+        risk: "Risk mix",
+      },
     },
     watchlist: {
       title: "Watchlist",

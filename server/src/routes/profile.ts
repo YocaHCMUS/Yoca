@@ -44,6 +44,11 @@ import {
   removeTokenFromWatchlist,
 } from "@sv/services/profile/watchlist.service.js";
 import {
+  getUserWalletLabels,
+  setUserWalletLabel,
+  deleteUserWalletLabel,
+} from "@sv/services/profile/walletLabels.service.js";
+import {
   backfillUserPaymentHistory,
   enrichPaymentHistoryWithStripeProduct,
   getUserSubscription,
@@ -755,6 +760,42 @@ const app = new Hono()
         );
       }
     },
+  )
+  .get("/wallet-labels", honoJwt, userExtract, async (c) => {
+    try {
+      const { id: userId } = c.get("userPayload");
+      if (!userId) {
+        return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+      }
+      const labels = await getUserWalletLabels(userId);
+      return c.json(labels, statusCode.Ok);
+    } catch (err) {
+      console.error("Failed to fetch wallet labels", err);
+      return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+    }
+  })
+  .put(
+    "/wallet-labels",
+    honoJwt,
+    userExtract,
+    validate("json", z.object({
+      walletAddress: solanaBase58Schema,
+      label: z.string()
+    })),
+    async (c) => {
+      try {
+        const { id: userId } = c.get("userPayload");
+        if (!userId) {
+          return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
+        }
+        const { walletAddress, label } = c.req.valid("json");
+        await setUserWalletLabel(userId, walletAddress, label);
+        return c.json({ message: "Label updated" }, statusCode.Ok);
+      } catch (err) {
+        console.error("Failed to update wallet label", err);
+        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+      }
+    }
   )
   .get("/subscriptions", honoJwt, userExtract, async (c) => {
     try {

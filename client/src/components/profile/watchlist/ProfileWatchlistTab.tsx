@@ -1,6 +1,6 @@
 import client from "@/api/main";
 import { CpyBtn } from "@/components/CpyBtn";
-import ProfileUnavailableState from "@/components/profile/ProfileUnavailableState";
+import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { SortType, Table } from "@/components/tables/Table";
 import { renderSparkline } from "@/components/tables/TableCellRenderer";
@@ -15,7 +15,8 @@ import { IconButton, Link, Stack } from "@carbon/react";
 import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import styles from "./profile.module.scss";
+import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
+import styles from "@/components/profile/shared/profile.module.scss";
 
 interface LinkedWalletsResponse {
   userId: string;
@@ -29,6 +30,7 @@ export function ProfileWatchlistTab() {
   const { tr, fmt } = useLocalization();
   const navigate = useNavigate();
   const [activeSubtab, setActiveSubtab] = useState(0);
+  const { labels, setLabel } = useWalletLabels();
   const {
     tokenWatchlist,
     walletWatchlist,
@@ -285,12 +287,15 @@ export function ProfileWatchlistTab() {
               walletAddress,
               pending: Boolean(walletPending[walletAddress]),
             },
-            walletAddress,
+            {
+              walletAddress,
+              label: labels[walletAddress] ?? ""
+            },
             linkedWalletIdentity[walletAddress] ?? "-",
           ],
         }))
         .map((entry) => entry.row),
-    [walletWatchlist, linkedWalletIdentity, walletPending],
+    [walletWatchlist, linkedWalletIdentity, walletPending, labels],
   );
 
   const walletCellRenderers = useMemo(
@@ -317,23 +322,67 @@ export function ProfileWatchlistTab() {
         );
       },
       (value: unknown) => {
-        const walletAddress = typeof value === "string" ? value : "";
-        return (
-          <Stack
-            orientation="horizontal"
-            gap={2}
-            style={{ alignItems: "center" }}
-          >
-            <Link href={`/wallets/${walletAddress}`}>
-              {fmt.text.address(walletAddress)}
-            </Link>
-            <CpyBtn size="xs" copyWhat={walletAddress} />
-          </Stack>
-        );
+        const entry = value as { walletAddress: string; label: string };
+        const walletAddress = entry?.walletAddress ?? "";
+        const initialLabel = entry?.label ?? "";
+
+        const EditableLabelCell = () => {
+          const [isEditing, setIsEditing] = useState(false);
+          const [draft, setDraft] = useState(initialLabel);
+
+          if (isEditing) {
+            return (
+              <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="text" 
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setLabel(walletAddress, draft);
+                      setIsEditing(false);
+                    } else if (e.key === 'Escape') {
+                      setDraft(initialLabel);
+                      setIsEditing(false);
+                    }
+                  }}
+                />
+                <div style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
+                   setLabel(walletAddress, draft);
+                   setIsEditing(false);
+                }}>✓</div>
+                <div style={{ cursor: "pointer", color: "var(--cds-support-error)", paddingLeft: 4, fontWeight: "bold" }} onClick={() => {
+                   setDraft(initialLabel);
+                   setIsEditing(false);
+                }}>✕</div>
+              </div>
+            );
+          }
+
+          return (
+            <Stack
+              orientation="horizontal"
+              gap={3}
+              style={{ alignItems: "center" }}
+            >
+              <Link href={`/wallets/${walletAddress}`}>
+                {initialLabel || fmt.text.address(walletAddress)}
+              </Link>
+              <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+                <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+              </div>
+              <CpyBtn size="xs" copyWhat={walletAddress} />
+            </Stack>
+          );
+        };
+
+        return <EditableLabelCell />;
       },
       (value: unknown) => (typeof value === "string" ? value : "-"),
     ],
-    [fmt, toggleWallet, tr],
+    [fmt, toggleWallet, tr, setLabel],
   );
 
   const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;

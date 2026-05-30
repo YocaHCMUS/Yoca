@@ -68,7 +68,7 @@ const WalletOverviewPnLSection = ({ totalPnL, realizedPnL, unrealizedPnL, loadin
                 )}
             </div>
 
-            <div className={styles.statRow}>
+            <div className={styles.cardsRow}>
                 <PnlCard
                     label={tr('wallet.realizedPnL')}
                     value={realizedPnL}
