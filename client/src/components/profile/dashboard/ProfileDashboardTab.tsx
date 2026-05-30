@@ -1,17 +1,17 @@
-import { Button, ContentSwitcher, InlineLoading, Switch } from "@carbon/react";
+import { Button, InlineLoading } from "@carbon/react";
 import {
-  Activity,
-  ChartColumn,
-  Currency,
-  Wallet,
+    Activity,
+    ChartColumn,
+    Currency,
+    Wallet,
 } from "@carbon/react/icons";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import { BarChart, PieChart, RadarChart, TreemapChart } from "echarts/charts";
 import {
-  GridComponent,
-  LegendComponent,
-  TitleComponent,
-  TooltipComponent,
+    GridComponent,
+    LegendComponent,
+    TitleComponent,
+    TooltipComponent,
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
@@ -20,17 +20,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartProvider } from "@/contexts/ChartContext";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import {
-  fetchWalletAudit,
-  fetchWalletDistribution,
-  fetchWalletIntelligence,
-  fetchWalletOverview,
-  fetchWalletPortfolio,
-  type WalletAuditReport,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletOverviewPeriodKey,
-  type WalletPortfolioItem,
-  type WalletTokenDetails,
+    fetchWalletAudit,
+    fetchWalletDistribution,
+    fetchWalletIntelligence,
+    fetchWalletOverview,
+    fetchWalletPortfolio,
+    type WalletAuditReport,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletOverviewPeriodKey,
+    type WalletPortfolioItem,
+    type WalletTokenDetails,
 } from "@/services/wallet/walletApi";
 
 import styles from "./ProfileDashboardTab.module.scss";
@@ -254,7 +254,7 @@ export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboar
     import("@/services/wallet/walletApi").then(async (m) => {
       try {
         const results = await Promise.all(
-          trackedWallets.map((addr) => m.walletApi.getTokenDetails(addr))
+          trackedWallets.map((addr) => m.fetchWalletTokenDetails(addr))
         );
         const allTokens = results.flat().filter(Boolean);
         if (isActive) {
