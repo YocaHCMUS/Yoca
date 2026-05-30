@@ -1,4 +1,5 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import type { WalletName } from "@solana/wallet-adapter-base";
 import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
@@ -93,23 +94,41 @@ export function SolanaPaymentFlow({
   const solAmount = TIER_SOL_AMOUNTS[tierKey];
 
   /**
-   * After select() updates the wallet state, auto-call connect() to open
-   * the browser extension popup. select() alone does NOT open the popup.
+   * Step 1: Reset the loading spinner as soon as the wallet is fully connected.
+   * This is the primary success path — covers autoConnect and normal connect().
    */
   useEffect(() => {
-    if (wallet && !connected && isConnecting) {
-      connect()
-        .catch((err) => {
-          console.error("[SolanaPaymentFlow] connect() failed:", err);
-          setConnectingWalletName(null);
-        })
-        .finally(() => setIsConnecting(false));
-    }
-    // Reset spinner once wallet is fully connected
     if (connected) {
       setConnectingWalletName(null);
+      setIsConnecting(false);
     }
-  }, [wallet, connected, isConnecting, connect]);
+  }, [connected]);
+
+  /**
+   * Step 2: Handles wallet selection and connection with explicit error recovery.
+   * Calling select() alone does NOT open the extension popup; connect() must
+   * be awaited after the adapter has been switched.
+   *
+   * All failure paths (user closes popup, adapter error, network error) are
+   * caught here so the loading UI is always reset.
+   */
+  const handleWalletSelect = async (walletName: WalletName) => {
+    try {
+      setConnectingWalletName(walletName);
+      select(walletName);
+      setIsConnecting(true);
+      // Note: select() updates React state asynchronously, so we call connect()
+      // here to explicitly open the extension popup without waiting for a
+      // re-render cycle.
+      await connect();
+    } catch (error) {
+      // Catches: user closes the popup, WalletConnectionError, network errors, etc.
+      console.error("[SolanaPaymentFlow] Wallet connection failed or was closed:", error);
+      setConnectingWalletName(null);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE 1: Wallet not connected → show wallet selection UI
@@ -164,11 +183,7 @@ export function SolanaPaymentFlow({
                   id={`connect-wallet-${w.adapter.name.toLowerCase().replace(/\s+/g, "-")}`}
                   type="button"
                   disabled={isThisWalletConnecting}
-                  onClick={() => {
-                    setConnectingWalletName(w.adapter.name); // show spinner immediately
-                    select(w.adapter.name);  // set the adapter
-                    setIsConnecting(true);   // triggers useEffect → connect() popup
-                  }}
+                  onClick={() => handleWalletSelect(w.adapter.name)}
                   className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {/* Wallet icon */}
