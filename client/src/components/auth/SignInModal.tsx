@@ -5,7 +5,7 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import z from "zod";
 import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -28,6 +28,7 @@ export function AuthModalBase({
   const { tr } = useLocalization();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useUserTheme();
   const isLight = theme === "light";
 
@@ -41,7 +42,8 @@ export function AuthModalBase({
     setIsRegisterMode(initialMode === "register");
   }, [initialMode, open]);
 
-  const resolvedRedirectUrl = typeof redirectUrl === "string" && redirectUrl.length > 0 ? redirectUrl : "/";
+  // Sử dụng trang hiện tại làm mặc định thay vì "/" (landing page)
+  const resolvedRedirectUrl = typeof redirectUrl === "string" && redirectUrl.length > 0 ? redirectUrl : location.pathname;
 
   // ====== SCHEMA & LOGIC LOGIN ======
   const loginSchema = z.object({
@@ -127,7 +129,7 @@ export function AuthModalBase({
       if (resp.status === 201) {
         await refreshUser();
         handleClose();
-        navigate("/");
+        navigate(resolvedRedirectUrl, { replace: true });
       } else if (resp.status === 400 || resp.status === 422) {
         const res = await resp.json();
         setErrMsg(tr(`ERROR.${res.errorCode}`));
@@ -233,13 +235,13 @@ export function AuthModalBase({
             <div className={`${styles.socialIcons} ${isLight ? styles.lightSocialIcons : ""}`}>
               <GoogleAuthButton
                 disabled={isSubmitting}
-                onSuccess={async () => { await refreshUser(); handleClose(); navigate("/"); }}
-                onError={(msg) => setErrMsg(msg)}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={() => setErrMsg(tr("ERROR.GOOGLE_VERIFICATION_FAILED"))}
               />
               <WalletAuthButton
                 disabled={isSubmitting}
-                onSuccess={async () => { await refreshUser(); handleClose(); navigate("/"); }}
-                onError={(msg) => setErrMsg(msg)}
+                onSuccess={async () => { await refreshUser(); handleClose(); navigate(resolvedRedirectUrl, { replace: true }); }}
+                onError={(err) => setErrMsg(err)}
               />
             </div>
           </form>
