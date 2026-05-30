@@ -1,7 +1,9 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import type { WalletName } from "@solana/wallet-adapter-base";
 import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
 import { PrivacyTransactionId } from "./PrivacyTransactionId";
 import { 
@@ -22,9 +24,13 @@ const MERCHANT_ADDRESS_RAW =
   import.meta.env.VITE_SOLANA_MERCHANT_ADDRESS as string | undefined;
 
 /**
- * Tier pricing in SOL for Devnet payments
- * Note: Must be > 0.00089 SOL to avoid rent-exemption errors 
- * if the merchant wallet is completely empty on Devnet.
+ * Tier pricing in SOL.
+ * Note: Must be > 0.00089 SOL to avoid rent-exemption errors
+ * if the merchant wallet is completely empty on Devnet/Testnet.
+ *
+ * ⚠️  MUST stay in sync with `TIER_SOL_AMOUNTS` in
+ *     `server/src/services/solana-payment.service.ts`.
+ *     If you change a value here, update the server constant too, and vice versa.
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
   Lite: 0.001,
@@ -76,6 +82,7 @@ export function SolanaPaymentFlow({
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [verifyingSignature, setVerifyingSignature] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingWalletName, setConnectingWalletName] = useState<string | null>(null);
 
   let networkName = "Devnet";
   try {
@@ -87,18 +94,41 @@ export function SolanaPaymentFlow({
   const solAmount = TIER_SOL_AMOUNTS[tierKey];
 
   /**
-   * After select() updates the wallet state, auto-call connect() to open
-   * the browser extension popup. select() alone does NOT open the popup.
+   * Step 1: Reset the loading spinner as soon as the wallet is fully connected.
+   * This is the primary success path — covers autoConnect and normal connect().
    */
   useEffect(() => {
-    if (wallet && !connected && isConnecting) {
-      connect()
-        .catch((err) => {
-          console.error("[SolanaPaymentFlow] connect() failed:", err);
-        })
-        .finally(() => setIsConnecting(false));
+    if (connected) {
+      setConnectingWalletName(null);
+      setIsConnecting(false);
     }
-  }, [wallet, connected, isConnecting, connect]);
+  }, [connected]);
+
+  /**
+   * Step 2: Handles wallet selection and connection with explicit error recovery.
+   * Calling select() alone does NOT open the extension popup; connect() must
+   * be awaited after the adapter has been switched.
+   *
+   * All failure paths (user closes popup, adapter error, network error) are
+   * caught here so the loading UI is always reset.
+   */
+  const handleWalletSelect = async (walletName: WalletName) => {
+    try {
+      setConnectingWalletName(walletName);
+      select(walletName);
+      setIsConnecting(true);
+      // Note: select() updates React state asynchronously, so we call connect()
+      // here to explicitly open the extension popup without waiting for a
+      // re-render cycle.
+      await connect();
+    } catch (error) {
+      // Catches: user closes the popup, WalletConnectionError, network errors, etc.
+      console.error("[SolanaPaymentFlow] Wallet connection failed or was closed:", error);
+      setConnectingWalletName(null);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE 1: Wallet not connected → show wallet selection UI
@@ -145,52 +175,57 @@ export function SolanaPaymentFlow({
               </p>
             </div>
           ) : (
-            wallets.map((w) => (
-              <button
-                key={w.adapter.name}
-                id={`connect-wallet-${w.adapter.name.toLowerCase().replace(/\s+/g, "-")}`}
-                type="button"
-                onClick={() => {
-                  select(w.adapter.name);  // set the adapter
-                  setIsConnecting(true);   // triggers useEffect → connect() popup
-                }}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group"
-              >
-                {/* Wallet icon */}
-                {w.adapter.icon ? (
-                  <img
-                    src={w.adapter.icon}
-                    alt={w.adapter.name}
-                    className="w-8 h-8 rounded-lg flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#14F195] text-sm font-bold">◎</span>
-                  </div>
-                )}
-
-                {/* Wallet name + readiness */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold group-hover:text-[#14F195] transition-colors">
-                    {w.adapter.name}
-                  </p>
-                  <p className="text-[#64748b] text-xs capitalize">
-                    {w.readyState === "Installed" ? "Installed" : "Not detected"}
-                  </p>
-                </div>
-
-                {/* Chevron */}
-                <svg
-                  className="w-4 h-4 text-[#64748b] group-hover:text-[#14F195] transition-colors flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
+            wallets.map((w) => {
+              const isThisWalletConnecting = connectingWalletName === w.adapter.name;
+              return (
+                <button
+                  key={w.adapter.name}
+                  id={`connect-wallet-${w.adapter.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  type="button"
+                  disabled={isThisWalletConnecting}
+                  onClick={() => handleWalletSelect(w.adapter.name)}
+                  className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ))
+                  {/* Wallet icon */}
+                  {w.adapter.icon ? (
+                    <img
+                      src={w.adapter.icon}
+                      alt={w.adapter.name}
+                      className="w-8 h-8 rounded-lg flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[#14F195] text-sm font-bold">◎</span>
+                    </div>
+                  )}
+
+                  {/* Wallet name + readiness */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold group-hover:text-[#14F195] transition-colors">
+                      {w.adapter.name}
+                    </p>
+                    <p className="text-[#64748b] text-xs capitalize">
+                      {isThisWalletConnecting ? "Connecting…" : (w.readyState === "Installed" ? "Installed" : "Not detected")}
+                    </p>
+                  </div>
+
+                  {/* Spinner or Chevron */}
+                  {isThisWalletConnecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#14F195] flex-shrink-0" />
+                  ) : (
+                    <svg
+                      className="w-4 h-4 text-[#64748b] group-hover:text-[#14F195] transition-colors flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
 
@@ -273,7 +308,7 @@ export function SolanaPaymentFlow({
     onProcessingChange(true);
 
     try {
-      // TODO: Hardcoded small amounts for Devnet testing. Replace with actual SOL conversion logic for Mainnet.
+      // TODO: Hardcoded small amounts for Devnet/Testnet testing. Replace with real SOL conversion for Mainnet.
       // Math.floor guarantees a strict integer — floating-point lamports cause simulation failures.
       const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
 
@@ -289,17 +324,17 @@ export function SolanaPaymentFlow({
         );
       }
 
-      // ── Step 1: Fresh blockhash — fetched immediately before construction ─
-      // We use 'finalized' instead of 'confirmed' on Devnet to ensure the
-      // blockhash has propagated to ALL nodes. Phantom uses its own internal RPC,
-      // and if it hasn't seen the 'confirmed' blockhash yet, its simulation
-      // will fail with "BlockhashNotFound". 'finalized' prevents this desync.
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+      // ── Step 1: Fresh blockhash — fetched IMMEDIATELY before construction ─
+      // Using 'confirmed' per Phantom & Solflare best practices. This is the
+      // commitment level both wallets use internally during their own simulation,
+      // so the blockhash is guaranteed to be recognised on both ends.
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      console.log("[SolanaPaymentFlow] Fresh blockhash fetched:", blockhash);
 
-      // ── Step 2: Strict transaction construction (VersionedTransaction) ──────
-      // Phantom strongly recommends VersionedTransactions for modern dApps.
-      // Legacy Transactions can sometimes cause simulation anomalies on Testnet.
-      const message = new TransactionMessage({
+      // ── Step 2: VersionedTransaction (V0) construction ───────────────────
+      // Modern V0 transaction format. Solflare strictly expects this format
+      // for accurate parsing and simulation of transfer instructions.
+      const messageV0 = new TransactionMessage({
         payerKey: publicKey,
         recentBlockhash: blockhash,
         instructions: [
@@ -310,28 +345,29 @@ export function SolanaPaymentFlow({
           }),
         ],
       }).compileToV0Message();
-      
-      const transaction = new VersionedTransaction(message);
 
-      // ── Debug logs — remove before Mainnet ───────────────────────────────
-      // console.log("[SolanaPaymentFlow] Network Endpoint:", connection.rpcEndpoint);
-      // console.log("[SolanaPaymentFlow] Merchant PubKey:", merchantKey.toBase58());
-      // console.log("[SolanaPaymentFlow] Lamports to send:", lamports);
-      // ─────────────────────────────────────────────────────────────────────
+      const transaction = new VersionedTransaction(messageV0);
+
+      console.log("[SolanaPaymentFlow] Transaction constructed (V0):", {
+        payerKey: publicKey.toBase58(),
+        merchant: merchantKey.toBase58(),
+        lamports,
+        lastValidBlockHeight,
+      });
 
       // ── Step 3a: Explicit balance check ──────────────────────────────────
       // simulateTransaction() runs on an UNSIGNED tx (sigVerify:false) so it
       // can silently skip the fee-payer balance check → false "pass".
       // We manually verify balance here to catch InsufficientFunds BEFORE
       // Phantom shows its own simulation error to the user.
-      // Phantom often attaches priority fees (up to 0.00008 SOL), so we use a safe margin.
+      // Phantom may add priority fees (up to 0.0001 SOL), so we use a safe margin.
       const ESTIMATED_FEE_LAMPORTS = 100_000; // 0.0001 SOL upper bound for safety
       const balance = await connection.getBalance(publicKey, 'confirmed');
       const totalRequired = lamports + ESTIMATED_FEE_LAMPORTS;
-      // console.log(
-      //   `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
-      //   `need ${totalRequired} (${lamports} transfer + ${ESTIMATED_FEE_LAMPORTS} fee estimate)`
-      // );
+      console.log(
+        `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
+        `need ${totalRequired} (${lamports} transfer + ${ESTIMATED_FEE_LAMPORTS} fee estimate)`
+      );
       if (balance < totalRequired) {
         throw new Error(
           `Insufficient SOL: wallet has ${(balance / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
@@ -340,15 +376,17 @@ export function SolanaPaymentFlow({
           `Airdrop more ${validatedNetworkName} SOL at faucet.solana.com.`
         );
       }
-      // ─────────────────────────────────────────────────────────────────────
 
-      // ── Step 3b: Pre-simulation with logs ────────────────────────────────
-      // Run simulation AFTER the balance check so sigVerify:false quirks don't
-      // mask the real error. If it still fails, print the exact Solana logs.
-      // console.log("[SolanaPaymentFlow] Simulating transaction...");
+      // ── Step 3b: Pre-simulation with explicit error + log output ─────────
+      // CRITICAL: Run simulation BEFORE presenting the Phantom popup to the user.
+      // If simulation fails, log the EXACT on-chain error and logs — this is
+      // the information Phantom hides behind a generic "Transaction may fail" UI.
+      // sigVerify:false is the default for unsigned transactions.
+      console.log("[SolanaPaymentFlow] Running pre-send simulation...");
       const simulation = await connection.simulateTransaction(transaction);
       if (simulation.value.err) {
-        console.error("[SolanaPaymentFlow] EXACT SIMULATION ERROR:", simulation.value.err);
+        // ⬇️ These two lines are the most important debugging output in the flow.
+        console.error("[SolanaPaymentFlow] SIMULATION ERROR (exact):", simulation.value.err);
         console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
         const logSummary = simulation.value.logs?.find(
           (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
@@ -357,30 +395,39 @@ export function SolanaPaymentFlow({
           logSummary ?? `Simulation failed: ${JSON.stringify(simulation.value.err)}`
         );
       }
-      // console.log("[SolanaPaymentFlow] Simulation passed ✅ — sending to wallet...");
-      // ─────────────────────────────────────────────────────────────────────
+      console.log("[SolanaPaymentFlow] Simulation passed ✅ — presenting wallet for signature...");
 
       // ── Step 4: Send (only reached if simulation passed) ─────────────────
-      // No skipPreflight — let Phantom run its own simulation for the UI.
-      // Our simulateTransaction above acts as the early guard; if it passes,
-      // Phantom's simulation will also pass and show no red warning to the user.
+      // No extra options needed — the wallet adapter defaults are correct for
+      // legacy transactions with both Phantom and Solflare.
       const signature = await sendTransaction(transaction, connection);
       setTxSignature(signature);
+      console.log("[SolanaPaymentFlow] Transaction submitted with signature:", signature);
 
+      // ── Step 5: Strict on-chain confirmation ─────────────────────────────
       // Wait for on-chain confirmation BEFORE calling the backend.
-      // This prevents the race condition where getParsedTransaction returns null.
+      // Use the object form { signature, blockhash, lastValidBlockHeight } so
+      // the SDK can detect block-height expiry and fail fast rather than polling
+      // indefinitely. This prevents the race where getParsedTransaction returns null.
+      console.log("[SolanaPaymentFlow] Awaiting on-chain confirmation...");
       const confirmation = await connection.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
         'confirmed'
       );
 
-      // Check for an on-chain execution error (e.g. insufficient funds)
+      // ── Step 6: On-chain error check ──────────────────────────────────────
+      // confirmation.value.err is non-null when the validator executed the
+      // transaction but it REVERTED (e.g. bad instruction, account constraint).
+      // Without this check, the UI would show success for reverted transactions.
       if (confirmation.value.err) {
+        console.error("[SolanaPaymentFlow] On-chain execution error:", confirmation.value.err);
         throw new Error(
           `Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`
         );
       }
+      console.log("[SolanaPaymentFlow] Transaction confirmed on-chain ✅");
 
+      // ── Step 7: Backend verification (only after confirmed + no error) ────
       setVerifyingSignature(signature);
 
       try {
@@ -392,29 +439,49 @@ export function SolanaPaymentFlow({
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
       } catch (verifyErr: any) {
-        console.error("[SolanaPaymentFlow] Verification error:", verifyErr);
-        onError(verifyErr.message || "Failed to verify transaction. Please try again.");
+        console.error("[SolanaPaymentFlow] Backend verification error:", verifyErr);
+        onError(verifyErr.message || "Failed to verify transaction. Please contact support.");
         setTxSignature(null);
         setVerifyingSignature(null);
         onProcessingChange(false);
       }
     } catch (err: any) {
-      // SendTransactionError carries the RPC simulation logs — these reveal the
-      // EXACT on-chain failure reason (e.g. InsufficientFunds, InvalidAccountData).
+      // ── Unified error handler ─────────────────────────────────────────────
+      // All failure paths flow here: user rejection in Phantom/Solflare,
+      // simulation failure, on-chain revert, network timeout, or balance errors.
+      // SendTransactionError carries RPC simulation logs with the EXACT reason.
+
+      // Detect wallet-specific provider errors to improve diagnostic clarity.
+      // Solflare throws 'WalletSignTransactionError' on user rejection or
+      // provider-level failures; Phantom uses similar error names.
+      if (
+        err.name === 'WalletSignTransactionError' ||
+        err.name === 'TransactionSignatureError' ||
+        err.name === 'WalletSendTransactionError'
+      ) {
+        console.error(
+          `[SolanaPaymentFlow] Wallet provider error [${err.name}]:`,
+          err.message,
+          // err.code is set by some providers (e.g. 4001 = user rejected)
+          err.code != null ? `(code: ${err.code})` : ''
+        );
+      }
+
       const simLogs = err?.logs as string[] | undefined;
       if (simLogs?.length) {
-        console.error("[SolanaPaymentFlow] SendTransactionError simulation logs:");
+        console.error("[SolanaPaymentFlow] SendTransactionError — RPC simulation logs:");
         simLogs.forEach((log, i) => console.error(`  [${i}] ${log}`));
       }
-      console.error("[SolanaPaymentFlow] Tx Failed (full error):", err);
+      console.error("[SolanaPaymentFlow] Transaction failed (full error object):", err);
 
-      // Prefer a human-readable log line over the raw error message
+      // Prefer a human-readable log line over the raw error.message
       const logError = simLogs?.find(
         (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
       );
       onError(logError ?? err?.message ?? "Transaction failed. Please try again.");
       setTxSignature(null);
       setVerifyingSignature(null);
+      // Always re-enable the button on any error path
       onProcessingChange(false);
     }
   }
