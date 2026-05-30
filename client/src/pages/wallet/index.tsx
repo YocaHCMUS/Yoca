@@ -174,7 +174,7 @@ export default function WalletPage() {
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
-  const [activeActivityTab, setActiveActivityTab] = useState<number>(1);
+  const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
 
   const [aiAnalysisReport, setAiAnalysisReport] =
     useState<WalletAnalysisApiResponse | null>(null);
@@ -1376,31 +1376,31 @@ export default function WalletPage() {
       }}
     >
       <div className={styles.pageLayout}>
-      <div className={styles.shell}>
-        <WalletTopbar
-          address={walletAddress}
-          onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
-          onAuditOpen={() => setAuditOpen(true)}
-          onExportData={handleExportDataXlsx}
-          onExportCharts={handleExportChartsZip}
-          onExportPdf={handleExportPagePdf}
-          isExporting={isPagePdfExporting || isDataExporting || isChartsExporting}
-          currentPeriod={selectedPeriod}
-          onPeriodChange={(period) => setSelectedPeriod(period)}
-        />
+        <div className={styles.shell}>
+          <WalletTopbar
+            address={walletAddress}
+            onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
+            onAuditOpen={() => setAuditOpen(true)}
+            onExportData={handleExportDataXlsx}
+            onExportCharts={handleExportChartsZip}
+            onExportPdf={handleExportPagePdf}
+            isExporting={isPagePdfExporting || isDataExporting || isChartsExporting}
+            currentPeriod={selectedPeriod}
+            onPeriodChange={(period) => setSelectedPeriod(period)}
+          />
 
-        <WalletHero
-          overview={overviewReport}
-          selectedPeriod={selectedPeriod}
-          loading={false}
-        />
+          <WalletHero
+            overview={overviewReport}
+            selectedPeriod={selectedPeriod}
+            loading={false}
+          />
 
-        <div className={styles.body}>
-          <div className={styles.mainCol}>
-            {/* Balance History */}
-            <div className={styles.section}>
-              <div className={styles.chartSection}>
+          <div className={styles.body}>
+            <div className={styles.mainCol}>
+              {/* Balance History */}
+              <div className={styles.section}>
                 <BalanceChartV2
+                  minHeight={320}
                   address={walletAddress}
                   onClickDay={(ts) => {
                     setDayPopupTimestamp(ts);
@@ -1408,13 +1408,11 @@ export default function WalletPage() {
                   }}
                 />
               </div>
-            </div>
 
-            {/* Profit & Loss */}
-            <div className={styles.section}>
-              <div className={styles.chartSection}>
+              {/* Profit & Loss */}
+              <div className={styles.section}>
                 <PnLChart
-                  minHeight={400}
+                  minHeight={320}
                   autoRefresh
                   initialFilters={{ wallets: [walletAddress] }}
                   onDayClick={(_wallet, ts) => {
@@ -1423,99 +1421,100 @@ export default function WalletPage() {
                   }}
                 />
               </div>
+
+              {/* Activity Tables */}
+              <div className={styles.section}>
+                <TabContainer
+                  activeTab={activeActivityTab}
+                  names={[
+                    `${tr("walletPage.swap")} (${loadedSwaps.length})`,
+                    `${tr("walletPage.transfer")} (${loadedTransfers.length})`,
+                  ]}
+                  actions={
+                    <Button
+                      size="sm"
+                      kind="tertiary"
+                      onClick={() => setAiSwapSummaryOpen(true)}
+                    >
+                      {/* {tr("walletPage.aiSwapSummary")}
+                     */}
+                      AI Swap Summary
+                    </Button>
+                  }
+                  onTabChange={(index) =>
+                    setActiveActivityTab(index)
+                  }
+                  tabs={[
+                    <Table
+                      key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                      maxHeight={400}
+                      title={tr("walletPage.swap")}
+                      headers={swapHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(swapData)}
+                      filterSchema={swapFilterSchema}
+                      cellRenderers={swapCellRenderers}
+                      dataEntries={swapData}
+                      isSortable={isSortableSwaps}
+                      sortConfigs={swapSortConfigs}
+                      onRowClick={(_row, rowIndex) => {
+                        const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
+                        if (swap) {
+                          setSelectedSwap(swap);
+                          setSwapModalOpen(true);
+                        }
+                      }}
+                      enableExport={false}
+                      loading={swapLoading && loadedSwaps.length === 0}
+                    />
+                    // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
+                    // </div>
+                    ,
+                    <Table
+                      key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                      maxHeight={400}
+                      title={tr("walletPage.transfer")}
+                      headers={transferHeaders}
+                      initialFilters={{}}
+                      fetcher={Promise.resolve(transferData)}
+                      filterSchema={transferFilterSchema}
+                      cellRenderers={transferCellRenderers}
+                      dataEntries={transferData}
+                      isSortable={isSortableTransfers}
+                      sortConfigs={transferSortConfigs}
+                      onRowClick={(_row, rowIndex) => {
+                        const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                        if (transfer) {
+                          setSelectedTransfer(transfer);
+                          setTransferModalOpen(true);
+                        }
+                      }}
+                      enableExport={false}
+                      loading={transferLoading && loadedTransfers.length === 0}
+                    />
+                    // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
+                    // </div>,
+                  ]}
+                />
+              </div>
+
             </div>
 
-            {/* Activity Tables */}
-            <div className={styles.section}>
-              <TabContainer
-                activeTab={activeActivityTab}
-                names={[
-                  `${tr("walletPage.swap")} (${loadedSwaps.length})`,
-                  `${tr("walletPage.transfer")} (${loadedTransfers.length})`,
-                ]}
-                actions={
-                  <Button
-                    size="sm"
-                    kind="tertiary"
-                    onClick={() => setAiSwapSummaryOpen(true)}
-                  >
-                    {/* {tr("walletPage.aiSwapSummary")}
-                     */}
-                    AI Swap Summary
-                  </Button>
-                }
-                onTabChange={(index) =>
-                  setActiveActivityTab(index)
-                }
-                tabs={[
-                  <Table
-                    key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
-                    maxHeight={400}
-                    title={tr("walletPage.swap")}
-                    headers={swapHeaders}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve(swapData)}
-                    filterSchema={swapFilterSchema}
-                    cellRenderers={swapCellRenderers}
-                    dataEntries={swapData}
-                    isSortable={isSortableSwaps}
-                    sortConfigs={swapSortConfigs}
-                    onRowClick={(_row, rowIndex) => {
-                      const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
-                      if (swap) {
-                        setSelectedSwap(swap);
-                        setSwapModalOpen(true);
-                      }
-                    }}
-                    loading={swapLoading && loadedSwaps.length === 0}
-                  />
-                  // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
-                  // </div>
-                  ,
-                  <Table
-                    key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
-                    maxHeight={400}
-                    title={tr("walletPage.transfer")}
-                    headers={transferHeaders}
-                    initialFilters={{}}
-                    fetcher={Promise.resolve(transferData)}
-                    filterSchema={transferFilterSchema}
-                    cellRenderers={transferCellRenderers}
-                    dataEntries={transferData}
-                    isSortable={isSortableTransfers}
-                    sortConfigs={transferSortConfigs}
-                    onRowClick={(_row, rowIndex) => {
-                      const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
-                      if (transfer) {
-                        setSelectedTransfer(transfer);
-                        setTransferModalOpen(true);
-                      }
-                    }}
-                    loading={transferLoading && loadedTransfers.length === 0}
-                  />
-                  // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
-                  // </div>,
-                ]}
+            <div className={styles.sideCol}>
+              <WalletHoldingsPanel
+                walletAddress={walletAddress}
+                portfolio={portfolio}
+                portfolioMeta={portfolioMetaAsMap}
+                loading={portfolioLoading}
               />
             </div>
-
           </div>
-
-          <div className={styles.sideCol}>
-            <WalletHoldingsPanel
-              walletAddress={walletAddress}
-              portfolio={portfolio}
-              portfolioMeta={portfolioMetaAsMap}
-              loading={portfolioLoading}
-            />
-          </div>
+          <TokenDetailsDemo setSelectedToken={setSelectedToken} />
         </div>
-        <TokenDetailsDemo setSelectedToken={setSelectedToken} />
-      </div>
-      <RightSidebar
-        currentAddress={walletAddress}
-        onToggle={setIsRightSidebarOpen}
-      />
+        <RightSidebar
+          currentAddress={walletAddress}
+          onToggle={setIsRightSidebarOpen}
+        />
       </div>
 
       <div

@@ -395,6 +395,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       isEmpty={isEmpty}
       onRetry={() => refetch(false)}
       toolbarLayout="stacked"
+      wrapperMinHeight={minHeight}
       actions={
         <Flex gap={8} align="center">
           <ContentSwitcher
