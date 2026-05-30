@@ -70,9 +70,9 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
           prefixes="plus-minus"
           formatter={(v) => fmt.num.currency(v ?? 0)}
         />
-        <div className={styles.pnlRow}>
-          <div className={styles.pnlHalf}>
-            <div className={styles.pnlHalfLabel}>
+        <div className={styles.subSectionRow}>
+          <div className={styles.subSectionHalf}>
+            <div className={styles.subSectionHalfLabel}>
               {tr('wallet.realizedPnL')}
               {/* <Tooltip label={tr('wallet.realizedPnLTooltip')} align="bottom">
                 <Information size={10} className={styles.infoIconSm} />
@@ -84,8 +84,8 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
               formatter={formatVal}
             />
           </div>
-          <div className={styles.pnlHalf}>
-            <div className={styles.pnlHalfLabel}>
+          <div className={styles.subSectionHalf}>
+            <div className={styles.subSectionHalfLabel}>
               {tr('wallet.unrealizedPnL')}
               {/* <Tooltip label={tr('wallet.unrealizedPnLTooltip')} align="bottom">
                 <Information size={10} className={styles.infoIconSm} />
@@ -125,7 +125,18 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
             {tr('walletPage.buy')} / {tr('walletPage.sell')}
           </span>
         </div>
-        <div className={styles.heroMeta}>
+        <div className={styles.subSectionRow}>
+          <div className={styles.subSectionHalf}>
+            <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensTraded')}</div>
+            {tokenTraded != null && Number.isFinite(tokenTraded) ? tokenTraded : "—"}
+          </div>
+          <div className={styles.subSectionHalf}>
+            <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensHolding')}</div>
+            {numberOfTokenHolding != null && Number.isFinite(numberOfTokenHolding) ? numberOfTokenHolding : "—"}
+          </div>
+        </div>
+      </div>
+      {/* <div className={styles.heroMeta}>
           <span className={styles.heroSubText}>
             {tokenTraded != null && Number.isFinite(tokenTraded) ? tokenTraded : "—"} {tr('wallet.tokensTraded')}
           </span>
@@ -134,7 +145,7 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
             {numberOfTokenHolding != null && Number.isFinite(numberOfTokenHolding) ? numberOfTokenHolding : "—"} {tr('wallet.tokensHolding')}
           </span>
         </div>
-      </div>
+      </div> */}
     </div >
   );
 }

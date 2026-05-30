@@ -14,7 +14,7 @@ $filter-popup-z-index: 9999;
   max-height: $table-max-height * 0.8;
   overflow-y: auto;
   background: var(--cds-layer-01);
-  border: 1px solid var(--cds-border-subtle-01);
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: $spacing-02;
   box-shadow: 0 $spacing-01 $spacing-04 rgba(0, 0, 0, 0.2);
   padding: $spacing-05;
@@ -140,7 +140,7 @@ $filter-popup-z-index: 9999;
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: var(--cds-layer-01);
+  // background-color: var(--cds-layer-01);
 }
 
 /* Match Tble / Last-traded: full header labels (wrap, no ellipsis). */
@@ -214,7 +214,7 @@ $filter-popup-z-index: 9999;
   justify-content: center;
   align-items: center;
   margin-top: $spacing-05;
-  border-top: 1px solid var(--cds-border-subtle-01);
+  border-top: 1px solid var(--cds-border-subtle-03);
   padding-top: $spacing-05;
 }
 

@@ -5,16 +5,16 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
 .heroCell {
   padding: 16px 20px;
-  background: $layer-01;
+  // background: $layer-01;
 }
 
-.heroCell + .heroCell {
-  border-left: 1px solid $border-subtle;
+.heroCell+.heroCell {
+  border-left: 1px solid var(--cds-border-subtle-03);
 }
 
 .heroLabel {
@@ -98,20 +98,22 @@
   font-size: 12px;
 }
 
-.pnlRow {
+.subSectionRow {
   display: flex;
   gap: 6px;
   margin-top: 6px;
 }
 
-.pnlHalf {
+.subSectionHalf {
   flex: 1;
-  background: $layer-02;
-  border-radius: 6px;
   padding: 6px 8px;
 }
 
-.pnlHalfLabel {
+.subSectionHalf+.subSectionHalf {
+  border-left: 1px solid var(--cds-border-subtle-02);
+}
+
+.subSectionHalfLabel {
   font-size: 10px;
   color: $text-secondary;
   display: flex;
@@ -119,16 +121,16 @@
   gap: 3px;
 }
 
-.pnlHalfVal {
+.subSectionHalfVal {
   font-size: 13px;
   font-weight: 600;
   margin-top: 2px;
 }
 
-.pnlHalfVal.positive {
+.subSectionHalfVal.positive {
   color: #16c784;
 }
 
-.pnlHalfVal.negative {
+.subSectionHalfVal.negative {
   color: #da1e28;
 }
