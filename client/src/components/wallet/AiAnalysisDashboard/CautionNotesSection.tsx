@@ -3,9 +3,11 @@ import { normalizeRiskLanguage, uniqueStrings } from "./utils";
 
 const DEFAULT_DISCLAIMER =
   "Risk score reflects observed behavior in the analyzed transaction window. It is not financial advice, a legal judgment, or proof of fraud.";
+const LABEL_DISCLAIMER =
+  "Labels such as Bot-like Trader, High Risk Speculator, or Wash Trading Suspect are behavioral classifications, not accusations.";
 
 export function CautionNotesSection({ notes }: { notes?: string[] }) {
-  const cautionNotes = uniqueStrings([...(notes ?? []), DEFAULT_DISCLAIMER]);
+  const cautionNotes = uniqueStrings([...(notes ?? []), DEFAULT_DISCLAIMER, LABEL_DISCLAIMER]);
 
   return (
     <section className={`${styles.sectionCard} ${styles.cautionCard}`}>
@@ -18,7 +20,7 @@ export function CautionNotesSection({ notes }: { notes?: string[] }) {
       <div className={styles.notesList}>
         {cautionNotes.map((note, index) => (
           <p key={`${note}-${index}`} className={styles.noteText}>
-            {note === DEFAULT_DISCLAIMER ? note : normalizeRiskLanguage(note)}
+            {note === DEFAULT_DISCLAIMER || note === LABEL_DISCLAIMER ? note : normalizeRiskLanguage(note)}
           </p>
         ))}
       </div>

@@ -34,5 +34,19 @@ export type MetricCardItem = {
   label: string;
   value: ReactNode;
   helper?: string;
+  tooltip?: string;
   tone?: "success" | "warning" | "danger" | "info" | "neutral";
+};
+
+export type PersonaExplanation = {
+  label: string;
+  meaning: string;
+  commonSignals: string;
+  caution?: string;
+};
+
+export type RiskFactorExplanation = {
+  label: string;
+  meaning: string;
+  whyItMatters: string;
 };

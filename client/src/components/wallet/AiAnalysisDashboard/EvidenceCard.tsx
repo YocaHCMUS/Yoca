@@ -1,4 +1,5 @@
 import styles from "./AiAnalysisDashboard.module.scss";
+import { HelpTooltip, LabelWithTooltip } from "./HelpTooltip";
 import { SeverityBadge } from "./SeverityBadge";
 import { SignatureChip, TokenMintChip } from "./SignatureChip";
 import type { EvidenceLike } from "./types";
@@ -16,7 +17,9 @@ export function EvidenceCard({ evidence }: { evidence: EvidenceLike }) {
       <div className={styles.evidenceTitleRow}>
         <div>
           <h4 className={styles.evidenceTitle}>{normalizeRiskLanguage(evidence.title) || "Evidence"}</h4>
-          <div className={styles.evidenceId}>ID: {evidenceId}</div>
+          <div className={styles.evidenceId}>
+            Evidence ID: {evidenceId} <HelpTooltip text="Internal reference used to connect findings, risk factors, and evidence." />
+          </div>
         </div>
         <SeverityBadge severity={evidence.severity} />
       </div>
@@ -28,17 +31,32 @@ export function EvidenceCard({ evidence }: { evidence: EvidenceLike }) {
       {(evidence.value != null || evidence.threshold != null) ? (
         <div className={styles.metricRow}>
           {evidence.value != null ? (
-            <span className={styles.metricPill}>Value: <strong>{formatMetricValue(evidence.value)}</strong></span>
+            <span className={styles.metricPill}>
+              <LabelWithTooltip tooltip="The measured value from this wallet's analyzed transaction window.">
+                Value
+              </LabelWithTooltip>
+              <strong>{formatMetricValue(evidence.value)}</strong>
+            </span>
           ) : null}
           {evidence.threshold != null ? (
-            <span className={styles.metricPill}>Threshold: <strong>{formatMetricValue(evidence.threshold)}</strong></span>
+            <span className={styles.metricPill}>
+              <LabelWithTooltip tooltip="The rule threshold used to decide whether this signal should be shown.">
+                Threshold
+              </LabelWithTooltip>
+              <strong>{formatMetricValue(evidence.threshold)}</strong>
+            </span>
           ) : null}
         </div>
       ) : null}
 
       {visibleSignatures.length > 0 ? (
         <div>
-          <div className={styles.chipLabel}>Related Signatures</div>
+          <LabelWithTooltip
+            className={styles.chipLabel}
+            tooltip="Representative transactions used as supporting evidence. Opens in Solscan."
+          >
+            Related Signatures
+          </LabelWithTooltip>
           <div className={styles.chipRow}>
             {visibleSignatures.map((signature) => (
               <SignatureChip key={signature} signature={signature} />
@@ -52,7 +70,12 @@ export function EvidenceCard({ evidence }: { evidence: EvidenceLike }) {
 
       {tokenMints.length > 0 ? (
         <div>
-          <div className={styles.chipLabel}>Related Token Mints</div>
+          <LabelWithTooltip
+            className={styles.chipLabel}
+            tooltip="Token addresses involved in this signal."
+          >
+            Related Token Mints
+          </LabelWithTooltip>
           <div className={styles.chipRow}>
             {tokenMints.slice(0, 5).map((mint) => (
               <TokenMintChip key={mint} mint={mint} />

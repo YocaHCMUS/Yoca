@@ -42,6 +42,62 @@
   text-transform: uppercase;
 }
 
+.labelWithTooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-02;
+  min-width: 0;
+}
+
+.tooltipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.infoButton {
+  width: 18px;
+  height: 18px;
+  border: 1px solid $border-subtle;
+  border-radius: 999px;
+  background: $layer-02;
+  color: $text-secondary;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.tooltipBubble {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: min(280px, 80vw);
+  padding: $spacing-03 $spacing-04;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $layer-02;
+  color: $text-primary;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.tooltipWrap:hover .tooltipBubble,
+.tooltipWrap:focus-within .tooltipBubble {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .title {
   margin: 0;
   color: $text-primary;
@@ -172,7 +228,8 @@
 .findingList,
 .riskList,
 .evidenceList,
-.notesList {
+.notesList,
+.explanationList {
   display: flex;
   flex-direction: column;
   gap: $spacing-04;
@@ -199,6 +256,63 @@
   border: 1px solid $border-subtle;
   border-radius: 8px;
   background: $layer-02;
+}
+
+.inlineHelpText {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.explanationDetails {
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $layer-02;
+  overflow: hidden;
+}
+
+.explanationDetails summary {
+  padding: $spacing-04 $spacing-05;
+  color: $text-primary;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.explanationContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+  padding: 0 $spacing-05 $spacing-05;
+}
+
+.explanationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-04;
+}
+
+.explanationBlock {
+  min-width: 0;
+  padding: $spacing-04;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $layer-01;
+}
+
+.compactList {
+  margin: 0;
+  padding-left: $spacing-06;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.compactList li + li {
+  margin-top: $spacing-02;
 }
 
 .cardMetaValue {
@@ -326,6 +440,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.scoreImpactButton {
+  border: 0;
+  background: transparent;
+  cursor: help;
+}
+
 .metricRow {
   display: flex;
   flex-wrap: wrap;
@@ -352,6 +472,13 @@
   color: $text-secondary;
   font-size: 12px;
   font-family: 'IBM Plex Mono', monospace;
+  overflow-wrap: anywhere;
+}
+
+.secondaryMeta {
+  color: $text-secondary;
+  font-size: 12px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
@@ -417,7 +544,8 @@
   }
 
   .metricsGrid,
-  .summaryMetaGrid {
+  .summaryMetaGrid,
+  .explanationGrid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,6 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { EvidenceCard } from "./EvidenceCard";
+import { ExplanationDetails } from "./HelpTooltip";
 import type { EvidenceLike } from "./types";
 
 type EvidenceHighlightsSectionProps = {
@@ -20,6 +21,23 @@ export function EvidenceHighlightsSection({ evidenceHighlights, profileEvidence 
           <p className={styles.sectionDescription}>Signals and representative signatures used to support the analysis.</p>
         </div>
       </div>
+
+      <ExplanationDetails summary="How to read evidence cards">
+        <div className={styles.explanationGrid}>
+          <div className={styles.explanationBlock}>
+            <div className={styles.cardMetaLabel}>Value and Threshold</div>
+            <p className={styles.inlineHelpText}>
+              Value is the measured result for this wallet. Threshold is the rule level that triggered the signal.
+            </p>
+          </div>
+          <div className={styles.explanationBlock}>
+            <div className={styles.cardMetaLabel}>Traceability</div>
+            <p className={styles.inlineHelpText}>
+              Evidence IDs connect findings, risk factors, and evidence. Signatures are representative transactions users can verify on Solscan.
+            </p>
+          </div>
+        </div>
+      </ExplanationDetails>
 
       {evidence.length === 0 ? (
         <p className={styles.bodyText}>No evidence highlights are available for this wallet.</p>

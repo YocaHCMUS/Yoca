@@ -5,6 +5,7 @@ import {
   KeyFindingsSection,
   RiskBreakdownSection,
   EvidenceHighlightsSection,
+  HowToReadAnalysis,
   CautionNotesSection,
   EmptyAnalysisState,
 } from "@/components/wallet/AiAnalysisDashboard";
@@ -50,16 +51,17 @@ export default function WalletAnalystPanel({
     <div className={styles.panel}>
       <AIAnalysisHeader generatedAt={generatedAt} onRefresh={onRefresh} refreshing={refreshing} />
       <AnalysisMetricCards profile={profile} />
-      <AIBehaviorSummaryCard aiSummary={aiSummary} />
+      <AIBehaviorSummaryCard aiSummary={aiSummary} profile={profile} />
       <KeyFindingsSection
         suspiciousFindings={aiSummary.suspiciousFindings}
         behaviorInsights={aiSummary.behaviorInsights}
       />
-      <RiskBreakdownSection riskFactors={profile.risk?.riskFactors} />
+      <RiskBreakdownSection riskFactors={profile.risk?.riskFactors} profile={profile} />
       <EvidenceHighlightsSection
         evidenceHighlights={aiSummary.evidenceHighlights}
         profileEvidence={profile.evidence}
       />
+      <HowToReadAnalysis />
       <CautionNotesSection notes={aiSummary.cautionNotes} />
     </div>
   );
