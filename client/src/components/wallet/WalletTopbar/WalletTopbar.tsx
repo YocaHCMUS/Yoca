@@ -15,7 +15,6 @@ import {
   Copy,
 } from "@carbon/icons-react";
 import { CopyButton, Tag, Tooltip } from "@carbon/react";
-import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
 import { WalletTagsModal } from "@/components/wallet/WalletTagsModal/WalletTagsModal";
 import {
@@ -23,15 +22,12 @@ import {
   fetchWalletOverview,
   type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
-  type WalletOverviewPeriodKey,
 } from "@/services/wallet/walletApi";
 import { fetchWalletTags, saveWalletTags } from "@/services/wallet/walletTagsApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
-import { PERIOD_OPTIONS } from "@/config/periodOptions";
 import { useNavigate } from "react-router";
-import type { TimePeriod } from "@/types/chart-filters.types";
 import styles from "./WalletTopbar.module.scss";
 
 function shortenWalletAddress(address: string): string {
@@ -75,8 +71,6 @@ export interface WalletTopbarProps {
   onExportCharts: () => void;
   onExportPdf: () => void;
   isExporting: boolean;
-  currentPeriod: WalletOverviewPeriodKey;
-  onPeriodChange: (period: WalletOverviewPeriodKey) => void;
 }
 
 export function WalletTopbar({
@@ -87,8 +81,6 @@ export function WalletTopbar({
   onExportCharts,
   onExportPdf,
   isExporting,
-  currentPeriod = "24H",
-  onPeriodChange,
 }: WalletTopbarProps) {
   const { user } = useAuth();
   const { tr, fmt } = useLocalization();
@@ -254,14 +246,6 @@ export function WalletTopbar({
           </div>
         </div>
         <div className={styles.topbarRight}>
-          <div className={styles.topbarRow}>
-            <PeriodSelector
-              value={currentPeriod}
-              onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
-              options={PERIOD_OPTIONS}
-              compact
-            />
-          </div>
           <div className={styles.topbarRow}>
             <Tooltip label={isBookmarked ? tr("wallet.bookmarked") : tr("wallet.bookmarkWallet")} align="bottom-left">
               <button

@@ -1433,14 +1433,13 @@ export default function WalletPage() {
           onExportCharts={handleExportChartsZip}
           onExportPdf={handleExportPagePdf}
           isExporting={isPagePdfExporting || isDataExporting || isChartsExporting}
-          currentPeriod={selectedPeriod}
-          onPeriodChange={(period) => setSelectedPeriod(period)}
         />
 
         <WalletHero
           overview={overviewReport}
           selectedPeriod={selectedPeriod}
           loading={false}
+          onPeriodChange={(period) => setSelectedPeriod(period)}
         />
 
         <div className={styles.body}>

@@ -1,8 +1,8 @@
 import React from "react";
-import { Information } from "@carbon/icons-react";
-import { Tooltip } from "@carbon/react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { WalletOverviewMultiPeriodResponse, WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
+import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
+import { PERIOD_OPTIONS } from "@/config/periodOptions";
 import styles from "./WalletHero.module.scss";
 import { TrendNum } from "@/components/TrendNum";
 import TrendNumWithSign from "@/components/TrendNumWithSign";
@@ -11,9 +11,10 @@ interface WalletHeroProps {
   overview: WalletOverviewMultiPeriodResponse | null;
   selectedPeriod: WalletOverviewPeriodKey;
   loading: boolean;
+  onPeriodChange: (period: WalletOverviewPeriodKey) => void;
 }
 
-export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProps) {
+export function WalletHero({ overview, selectedPeriod, loading, onPeriodChange }: WalletHeroProps) {
   const { tr, fmt } = useLocalization();
 
   const selectedStats = overview?.periods?.[selectedPeriod] ?? null;
@@ -41,102 +42,112 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
   };
 
   return (
-    <div className={styles.hero}>
-      {/* Total Value */}
-      <div className={styles.heroCell}>
-        <div className={styles.heroLabel}>{tr('wallet.totalAssetValue')}</div>
-        <div className={styles.heroVal}>{formatVal(totalAssetValue)}</div>
-        {pnlUnrealized != null && Number.isFinite(pnlUnrealized) && totalAssetValue != null && totalAssetValue > 0 && (
-          <div className={styles.heroSub}>
-            <TrendNum
-              value={((pnlUnrealized / totalAssetValue) * 100)}
-              prefixes="arrow"
-              formatter={fmt.num.percent}
-            />
-          </div>
-        )}
+    <>
+      <div className={styles.heroHeader}>
+        <h2 className={styles.heroTitle}>{tr('walletPage.overview')}</h2>
+        <PeriodSelector
+          value={selectedPeriod}
+          onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
+          options={PERIOD_OPTIONS}
+          compact
+        />
       </div>
+      <div className={styles.hero}>
+        {/* Total Value */}
+        <div className={styles.heroCell}>
+          <div className={styles.heroLabel}>{tr('wallet.totalAssetValue')}</div>
+          <div className={styles.heroVal}>{formatVal(totalAssetValue)}</div>
+          {pnlUnrealized != null && Number.isFinite(pnlUnrealized) && totalAssetValue != null && totalAssetValue > 0 && (
+            <div className={styles.heroSub}>
+              <TrendNum
+                value={((pnlUnrealized / totalAssetValue) * 100)}
+                prefixes="arrow"
+                formatter={fmt.num.percent}
+              />
+            </div>
+          )}
+        </div>
 
-      {/* Total PnL */}
-      <div className={styles.heroCell}>
-        <div className={styles.heroLabel}>
-          {tr('wallet.totalPnL')}
-          {/* <Tooltip label={tr('wallet.totalPnLTooltip')} align="bottom">
+        {/* Total PnL */}
+        <div className={styles.heroCell}>
+          <div className={styles.heroLabel}>
+            {tr('wallet.totalPnL')}
+            {/* <Tooltip label={tr('wallet.totalPnLTooltip')} align="bottom">
             <Information size={12} className={styles.infoIcon} />
           </Tooltip> */}
-        </div>
-        <TrendNum
-          value={totalPnL}
-          prefixes="plus-minus"
-          formatter={(v) => fmt.num.currency(v ?? 0)}
-        />
-        <div className={styles.subSectionRow}>
-          <div className={styles.subSectionHalf}>
-            <div className={styles.subSectionHalfLabel}>
-              {tr('wallet.realizedPnL')}
-              {/* <Tooltip label={tr('wallet.realizedPnLTooltip')} align="bottom">
+          </div>
+          <TrendNum
+            value={totalPnL}
+            prefixes="plus-minus"
+            formatter={(v) => fmt.num.currency(v ?? 0)}
+          />
+          <div className={styles.subSectionRow}>
+            <div className={styles.subSectionHalf}>
+              <div className={styles.subSectionHalfLabel}>
+                {tr('wallet.realizedPnL')}
+                {/* <Tooltip label={tr('wallet.realizedPnLTooltip')} align="bottom">
                 <Information size={10} className={styles.infoIconSm} />
               </Tooltip> */}
+              </div>
+              <TrendNum
+                value={pnlRealized}
+                prefixes="none"
+                formatter={formatVal}
+              />
             </div>
-            <TrendNum
-              value={pnlRealized}
-              prefixes="none"
-              formatter={formatVal}
-            />
-          </div>
-          <div className={styles.subSectionHalf}>
-            <div className={styles.subSectionHalfLabel}>
-              {tr('wallet.unrealizedPnL')}
-              {/* <Tooltip label={tr('wallet.unrealizedPnLTooltip')} align="bottom">
+            <div className={styles.subSectionHalf}>
+              <div className={styles.subSectionHalfLabel}>
+                {tr('wallet.unrealizedPnL')}
+                {/* <Tooltip label={tr('wallet.unrealizedPnLTooltip')} align="bottom">
                 <Information size={10} className={styles.infoIconSm} />
               </Tooltip> */}
+              </div>
+              <TrendNum
+                value={pnlUnrealized}
+                prefixes="none"
+                formatter={formatVal}
+              />
             </div>
-            <TrendNum
-              value={pnlUnrealized}
-              prefixes="none"
-              formatter={formatVal}
-            />
           </div>
         </div>
-      </div>
 
-      {/* Trading Volume */}
-      <div className={styles.heroCell}>
-        <div className={styles.heroLabel}>{tr('wallet.tradingVolume')}</div>
-        <div className={styles.heroVal}>{formatVal(tradingVolume)}</div>
-        <div className={styles.heroSub}>
-          <TrendNum value={buyVolumeUsd} prefixes="none" formatter={formatVal} /> {tr('walletPage.buy')}
-          <span className={styles.heroDot}>·</span>
-          <TrendNumWithSign forceSign="negative" value={sellVolumeUsd} prefixes="none" formatter={formatVal} /> {tr('walletPage.sell')}
+        {/* Trading Volume */}
+        <div className={styles.heroCell}>
+          <div className={styles.heroLabel}>{tr('wallet.tradingVolume')}</div>
+          <div className={styles.heroVal}>{formatVal(tradingVolume)}</div>
+          <div className={styles.heroSub}>
+            <TrendNum value={buyVolumeUsd} prefixes="none" formatter={formatVal} /> {tr('walletPage.buy')}
+            <span className={styles.heroDot}>·</span>
+            <TrendNumWithSign forceSign="negative" value={sellVolumeUsd} prefixes="none" formatter={formatVal} /> {tr('walletPage.sell')}
+          </div>
         </div>
-      </div>
 
-      {/* Activity */}
-      <div className={styles.heroCell}>
-        <div className={styles.heroLabel}>{tr('walletPage.activity')}</div>
-        <div className={styles.heroVal}>
-          <TrendNumWithSign forceSign="positive" value={buyTxCount} prefixes="none" formatter={(v) => v != null && Number.isFinite(v) ? fmt.num.compact.unit(v, "") : "—"} /> /{" "}
-          <TrendNumWithSign forceSign="negative" value={sellTxCount} prefixes="none" formatter={(v) => v != null && Number.isFinite(v) ? fmt.num.compact.unit(v, "") : "—"} />
-          {/* {buyTxCount != null && Number.isFinite(buyTxCount) ? buyTxCount : "—"} /{" "}
+        {/* Activity */}
+        <div className={styles.heroCell}>
+          <div className={styles.heroLabel}>{tr('walletPage.activity')}</div>
+          <div className={styles.heroVal}>
+            <TrendNumWithSign forceSign="positive" value={buyTxCount} prefixes="none" formatter={(v) => v != null && Number.isFinite(v) ? fmt.num.compact.unit(v, "") : "—"} /> /{" "}
+            <TrendNumWithSign forceSign="negative" value={sellTxCount} prefixes="none" formatter={(v) => v != null && Number.isFinite(v) ? fmt.num.compact.unit(v, "") : "—"} />
+            {/* {buyTxCount != null && Number.isFinite(buyTxCount) ? buyTxCount : "—"} /{" "}
           {sellTxCount != null && Number.isFinite(sellTxCount) ? sellTxCount : "—"} */}
-        </div>
-        <div className={styles.heroSubSub}>
-          <span className={styles.heroSubText}>
-            {tr('walletPage.buy')} / {tr('walletPage.sell')}
-          </span>
-        </div>
-        <div className={styles.subSectionRow}>
-          <div className={styles.subSectionHalf}>
-            <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensTraded')}</div>
-            {tokenTraded != null && Number.isFinite(tokenTraded) ? tokenTraded : "—"}
           </div>
-          <div className={styles.subSectionHalf}>
-            <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensHolding')}</div>
-            {numberOfTokenHolding != null && Number.isFinite(numberOfTokenHolding) ? numberOfTokenHolding : "—"}
+          <div className={styles.heroSubSub}>
+            <span className={styles.heroSubText}>
+              {tr('walletPage.buy')} / {tr('walletPage.sell')}
+            </span>
+          </div>
+          <div className={styles.subSectionRow}>
+            <div className={styles.subSectionHalf}>
+              <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensTraded')}</div>
+              {tokenTraded != null && Number.isFinite(tokenTraded) ? tokenTraded : "—"}
+            </div>
+            <div className={styles.subSectionHalf}>
+              <div className={styles.subSectionHalfLabel}>{tr('wallet.tokensHolding')}</div>
+              {numberOfTokenHolding != null && Number.isFinite(numberOfTokenHolding) ? numberOfTokenHolding : "—"}
+            </div>
           </div>
         </div>
-      </div>
-      {/* <div className={styles.heroMeta}>
+        {/* <div className={styles.heroMeta}>
           <span className={styles.heroSubText}>
             {tokenTraded != null && Number.isFinite(tokenTraded) ? tokenTraded : "—"} {tr('wallet.tokensTraded')}
           </span>
@@ -146,7 +157,8 @@ export function WalletHero({ overview, selectedPeriod, loading }: WalletHeroProp
           </span>
         </div>
       </div> */}
-    </div >
+      </div>
+    </>
   );
 }
 
