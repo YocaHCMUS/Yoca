@@ -10,8 +10,8 @@
 
 // ===== Shell (outer wrapper) =====
 .shell {
-  background: $layer-01;
-  border: 1px solid $border-subtle;
+  background: $background;
+  // border: 1px solid var(--cds-border-subtle-03);
   overflow: hidden;
   min-height: 0;
   display: flex;
@@ -25,8 +25,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 12px 20px;
-  background: $layer-01;
-  border-bottom: 1px solid $border-subtle;
+  // background: $layer-01;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
 .topbarLeft {
@@ -99,7 +99,7 @@
 .chipGray {
   background: $layer-02;
   color: $text-secondary;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--cds-border-subtle-03);
 }
 
 .chipGreen {
@@ -138,7 +138,7 @@
   font-size: 12px;
   padding: 5px 10px;
   border-radius: 6px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--cds-border-subtle-03);
   background: transparent;
   color: $text-secondary;
   cursor: pointer;
@@ -175,16 +175,16 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
 .heroCell {
   padding: 16px 20px;
-  background: $layer-01;
+  // background: $layer-01;
 }
 
 .heroCell+.heroCell {
-  border-left: 1px solid $border-subtle;
+  border-left: 1px solid var(--cds-border-subtle-03);
 }
 
 .heroLabel {
@@ -270,7 +270,7 @@
 
 .mainCol {
   flex: 6;
-  border-right: 1px solid $border-subtle;
+  border-right: 1px solid var(--cds-border-subtle-03);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -279,7 +279,7 @@
 
 .sideCol {
   flex: 4;
-  background: $layer-01;
+  // background: $layer-01;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -289,7 +289,7 @@
 // ===== Sections =====
 .section {
   // padding: 16px 20px;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 
   &:last-child {
     border-bottom: none;
@@ -316,10 +316,10 @@
 
 // ===== Chart / table containers =====
 .chartSection {
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: 12px;
   overflow: hidden;
-  background: $layer-01;
+  // background: $layer-01;
 }
 
 // ===== Side Column: Holdings Panel =====
@@ -357,7 +357,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
   cursor: pointer;
 
   &:last-child {
@@ -422,7 +422,7 @@
   font-size: 12px;
   padding: 7px;
   border-radius: 6px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--cds-border-subtle-03);
   background: transparent;
   color: $text-secondary;
   cursor: pointer;
@@ -438,7 +438,7 @@
 .aiCard {
   padding: 16px 20px;
   background: $layer-02;
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--cds-border-subtle-03);
 }
 
 .aiCardTitle {
@@ -463,8 +463,8 @@
   font-size: 12px;
   padding: 7px;
   border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: $layer-01;
+  border: 1px solid var(--cds-border-subtle-03);
+  // background: $layer-01;
   color: $text-primary;
   cursor: pointer;
   display: flex;
@@ -488,8 +488,8 @@
   right: 0;
   top: calc(100% + 6px);
   min-width: 240px;
-  background: $layer-01;
-  border: 1px solid $border-subtle;
+  // background: $layer-01;
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   padding: 6px;
@@ -558,8 +558,8 @@
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
-  background: $layer-01;
-  border: 1px solid $border-subtle;
+  // background: $layer-01;
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: 6px;
   padding: 7px 10px;
   font-size: 11px;
@@ -587,8 +587,8 @@
 }
 
 .auditPanel {
-  background: $layer-01;
-  border: 1px solid $border-subtle;
+  // background: $layer-01;
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: 12px;
   width: min(90vw, 800px);
   max-height: 80vh;
@@ -602,7 +602,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
 .auditTitle {
