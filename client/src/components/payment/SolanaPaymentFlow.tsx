@@ -2,6 +2,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
 import { PrivacyTransactionId } from "./PrivacyTransactionId";
 import { 
@@ -80,6 +81,7 @@ export function SolanaPaymentFlow({
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [verifyingSignature, setVerifyingSignature] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingWalletName, setConnectingWalletName] = useState<string | null>(null);
 
   let networkName = "Devnet";
   try {
@@ -99,8 +101,13 @@ export function SolanaPaymentFlow({
       connect()
         .catch((err) => {
           console.error("[SolanaPaymentFlow] connect() failed:", err);
+          setConnectingWalletName(null);
         })
         .finally(() => setIsConnecting(false));
+    }
+    // Reset spinner once wallet is fully connected
+    if (connected) {
+      setConnectingWalletName(null);
     }
   }, [wallet, connected, isConnecting, connect]);
 
@@ -149,52 +156,61 @@ export function SolanaPaymentFlow({
               </p>
             </div>
           ) : (
-            wallets.map((w) => (
-              <button
-                key={w.adapter.name}
-                id={`connect-wallet-${w.adapter.name.toLowerCase().replace(/\s+/g, "-")}`}
-                type="button"
-                onClick={() => {
-                  select(w.adapter.name);  // set the adapter
-                  setIsConnecting(true);   // triggers useEffect → connect() popup
-                }}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group"
-              >
-                {/* Wallet icon */}
-                {w.adapter.icon ? (
-                  <img
-                    src={w.adapter.icon}
-                    alt={w.adapter.name}
-                    className="w-8 h-8 rounded-lg flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#14F195] text-sm font-bold">◎</span>
-                  </div>
-                )}
-
-                {/* Wallet name + readiness */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold group-hover:text-[#14F195] transition-colors">
-                    {w.adapter.name}
-                  </p>
-                  <p className="text-[#64748b] text-xs capitalize">
-                    {w.readyState === "Installed" ? "Installed" : "Not detected"}
-                  </p>
-                </div>
-
-                {/* Chevron */}
-                <svg
-                  className="w-4 h-4 text-[#64748b] group-hover:text-[#14F195] transition-colors flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
+            wallets.map((w) => {
+              const isThisWalletConnecting = connectingWalletName === w.adapter.name;
+              return (
+                <button
+                  key={w.adapter.name}
+                  id={`connect-wallet-${w.adapter.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  type="button"
+                  disabled={isThisWalletConnecting}
+                  onClick={() => {
+                    setConnectingWalletName(w.adapter.name); // show spinner immediately
+                    select(w.adapter.name);  // set the adapter
+                    setIsConnecting(true);   // triggers useEffect → connect() popup
+                  }}
+                  className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ))
+                  {/* Wallet icon */}
+                  {w.adapter.icon ? (
+                    <img
+                      src={w.adapter.icon}
+                      alt={w.adapter.name}
+                      className="w-8 h-8 rounded-lg flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[#14F195] text-sm font-bold">◎</span>
+                    </div>
+                  )}
+
+                  {/* Wallet name + readiness */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold group-hover:text-[#14F195] transition-colors">
+                      {w.adapter.name}
+                    </p>
+                    <p className="text-[#64748b] text-xs capitalize">
+                      {isThisWalletConnecting ? "Connecting…" : (w.readyState === "Installed" ? "Installed" : "Not detected")}
+                    </p>
+                  </div>
+
+                  {/* Spinner or Chevron */}
+                  {isThisWalletConnecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#14F195] flex-shrink-0" />
+                  ) : (
+                    <svg
+                      className="w-4 h-4 text-[#64748b] group-hover:text-[#14F195] transition-colors flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
 
