@@ -15,6 +15,7 @@ export interface TokenChartNewsEventSummary {
   tldr: string;
   bullets: string[];
   themes: string[];
+  confidence: "high" | "medium" | "low";
   riskNote: string;
   provider?: string;
   generatedAt: string;
@@ -50,4 +51,6 @@ export interface TokenChartNewsEventsQuery {
   name: string;
   timeframe: TokenChartNewsTimeframe;
   includeSummary?: boolean;
+  forceRefresh?: boolean;
+  date?: string;
 }

@@ -9,6 +9,7 @@ export interface TokenChartNewsEventsCacheKey {
   symbol: string;
   name: string;
   timeframe: TokenChartNewsTimeframe;
+  eventDate: string;
   includeSummary: boolean;
 }
 
@@ -51,6 +52,7 @@ export async function readTokenChartNewsEventsCache<TData>(
         eq(tokenChartNewsEventsCache.symbol, key.symbol),
         eq(tokenChartNewsEventsCache.name, key.name),
         eq(tokenChartNewsEventsCache.timeframe, key.timeframe),
+        eq(tokenChartNewsEventsCache.eventDate, key.eventDate),
         eq(tokenChartNewsEventsCache.includeSummary, key.includeSummary),
         gt(tokenChartNewsEventsCache.expiresAt, new Date()),
       ),
@@ -79,6 +81,7 @@ export async function writeTokenChartNewsEventsCache<TData>(
       symbol: key.symbol,
       name: key.name,
       timeframe: key.timeframe,
+      eventDate: key.eventDate,
       includeSummary: key.includeSummary,
       responseJson: data as Record<string, unknown>,
       createdAt: now,
@@ -91,6 +94,7 @@ export async function writeTokenChartNewsEventsCache<TData>(
         tokenChartNewsEventsCache.symbol,
         tokenChartNewsEventsCache.name,
         tokenChartNewsEventsCache.timeframe,
+        tokenChartNewsEventsCache.eventDate,
         tokenChartNewsEventsCache.includeSummary,
       ],
       set: {

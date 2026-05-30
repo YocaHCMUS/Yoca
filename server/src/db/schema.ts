@@ -332,6 +332,7 @@ export const tokenChartNewsEventsCache = pgTable(
     symbol: varchar("symbol", { length: 32 }).notNull(),
     name: varchar("name", { length: 128 }).notNull(),
     timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    eventDate: varchar("event_date", { length: 10 }).notNull().default(""),
     includeSummary: boolean("include_summary").notNull().default(false),
     responseJson: jsonb("response_json")
       .$type<Record<string, unknown>>()
@@ -349,6 +350,7 @@ export const tokenChartNewsEventsCache = pgTable(
       table.symbol,
       table.name,
       table.timeframe,
+      table.eventDate,
       table.includeSummary,
     ),
   ],

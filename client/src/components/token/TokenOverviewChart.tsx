@@ -242,11 +242,16 @@ export function TokenOverviewChart({
           name,
           timeframe: newsTimeframe,
           includeSummary: true,
+          date: event.date,
         });
-        setNewsEvents(data.events);
-        setSelectedNewsEvent(
-          data.events.find((item) => item.date === event.date) ?? event,
+        const summarizedEvent =
+          data.events.find((item) => item.date === event.date) ?? event;
+        setNewsEvents((currentEvents) =>
+          currentEvents.map((item) =>
+            item.date === summarizedEvent.date ? summarizedEvent : item,
+          ),
         );
+        setSelectedNewsEvent(summarizedEvent);
       } catch (err) {
         console.error("[TokenOverviewChart] failed to load marker summary", err);
       } finally {

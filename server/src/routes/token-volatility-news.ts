@@ -21,7 +21,7 @@ import z from "zod";
 const supportedTimeframes = ["24h", "hourly", "daily"] as const;
 const supportedWindows = ["auto", "adjacent", "15m", "1h", "6h", "24h"] as const;
 const DEFAULT_MAX_EVENTS_WITH_NEWS = 5;
-const MAX_RELATED_ARTICLES_PER_EVENT = 3;
+const MAX_RELATED_ARTICLES_PER_EVENT = 5;
 
 const tokenVolatilityNewsQuerySchema = z.object({
   address: solanaBase58Schema,
@@ -69,6 +69,7 @@ async function getPossibleRelatedNewsForEvent({
     preferSearch: true,
     maxArticles: MAX_RELATED_ARTICLES_PER_EVENT,
     strictMode: true,
+    searchMode: "event",
   });
 
   return {

@@ -11,6 +11,8 @@ export async function getTokenChartNewsEvents({
   name,
   timeframe,
   includeSummary = false,
+  forceRefresh = false,
+  date,
 }: TokenChartNewsEventsQuery): Promise<TokenChartNewsEventsData> {
   const response = await client.api.tokenChartNewsEvents.index.$get({
     query: {
@@ -19,6 +21,8 @@ export async function getTokenChartNewsEvents({
       name,
       timeframe,
       includeSummary: includeSummary ? "true" : "false",
+      ...(forceRefresh ? { forceRefresh: "true" } : {}),
+      ...(date ? { date } : {}),
     },
   });
 

@@ -30,6 +30,7 @@ export interface TokenNewsOptions {
   preferSearch?: boolean;
   maxArticles?: number;
   strictMode?: boolean;
+  searchMode?: "token" | "event" | "chart";
 }
 
 export interface TokenNewsIdentity {
@@ -101,6 +102,11 @@ const RSS_FEEDS: RssFeedConfig[] = [
     category: "general",
   },
   {
+    source: "The Block",
+    url: "https://www.theblock.co/rss.xml",
+    category: "general",
+  },
+  {
     source: "Bitcoin Magazine",
     url: "https://bitcoinmagazine.com/.rss/full/",
     category: "bitcoin",
@@ -124,7 +130,7 @@ const RSS_FEEDS: RssFeedConfig[] = [
 
 const RSS_FETCH_TIMEOUT_MS = 12_000;
 const MIN_RELEVANCE_SCORE = 4;
-const MIN_ARTICLES_BEFORE_SEARCH_FALLBACK = 3;
+const MIN_ARTICLES_BEFORE_SEARCH_FALLBACK = 5;
 
 const parser = new Parser<unknown, RssItem>({
   timeout: 12_000,
@@ -156,6 +162,37 @@ const WEAK_GENERIC_PHRASES = [
   "could rally",
   "analyst says",
 ];
+
+const CRYPTO_CONTEXT_KEYWORDS = [
+  "crypto",
+  "cryptocurrency",
+  "token",
+  "blockchain",
+  "web3",
+  "defi",
+  "dex",
+  "on-chain",
+  "onchain",
+  "solana",
+  "ethereum",
+  "bitcoin",
+  "airdrop",
+  "staking",
+  "governance",
+  "wallet",
+  "mainnet",
+  "protocol",
+  "liquidity",
+];
+
+const AMBIGUOUS_NAMES_REQUIRING_CRYPTO_CONTEXT = new Set([
+  "jupiter",
+  "hyper",
+  "near",
+  "render",
+  "ray",
+  "orca",
+]);
 
 const WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112";
 const SOLANA_ECOSYSTEM_SYMBOLS = new Set([
@@ -417,6 +454,12 @@ function scoreArticle(article: RawNewsArticle, identity: TokenNewsIdentity) {
 
   const hasStrongMatch = strongTitleMatch || strongDescriptionMatch;
   const visibleText = `${title} ${description}`;
+  const requiresCryptoContext = identity.searchNames.some((name) =>
+    AMBIGUOUS_NAMES_REQUIRING_CRYPTO_CONTEXT.has(name.trim().toLowerCase()),
+  );
+  const hasCryptoContext = CRYPTO_CONTEXT_KEYWORDS.some((keyword) =>
+    visibleText.includes(keyword),
+  );
 
   if (hasStrongMatch) {
     for (const keyword of EVENT_KEYWORDS) {
@@ -436,10 +479,18 @@ function scoreArticle(article: RawNewsArticle, identity: TokenNewsIdentity) {
     }
   }
 
+  const acceptedStrongMatch =
+    hasStrongMatch && (!requiresCryptoContext || hasCryptoContext);
+
+  if (hasStrongMatch && !acceptedStrongMatch) {
+    score -= 4;
+    matchedBy.push("weak:missing-crypto-context");
+  }
+
   return {
     score,
     matchedBy: [...new Set(matchedBy)],
-    hasStrongMatch,
+    hasStrongMatch: acceptedStrongMatch,
     strongTitleMatch,
     strongDescriptionMatch,
     weakBodyMatch,
@@ -794,6 +845,7 @@ export async function getRssTokenNews(
         identity,
         isSolanaEcosystem: isSolanaEcosystemIdentity(identity),
         eventAt: options.eventAt,
+        searchMode: options.searchMode,
       });
       const { scoredArticles, matchedArticles } = scoreAndFilterArticles(
         braveResult.articles,
@@ -804,6 +856,7 @@ export async function getRssTokenNews(
       console.info("[rss-news] brave fallback", {
         used: true,
         query: braveResult.query,
+        queries: braveResult.queries,
         endpointUsed: braveResult.endpointUsed,
         rawResults: braveResult.rawResultCount,
         normalizedResults: braveResult.articles.length,

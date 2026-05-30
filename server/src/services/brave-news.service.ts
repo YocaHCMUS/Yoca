@@ -4,6 +4,7 @@ interface BraveNewsSearchOptions {
   identity: TokenNewsIdentity;
   isSolanaEcosystem: boolean;
   eventAt?: string;
+  searchMode?: "token" | "event" | "chart";
 }
 
 interface BraveSearchItem {
@@ -26,7 +27,8 @@ const BRAVE_NEWS_SEARCH_ENDPOINT =
 const BRAVE_WEB_SEARCH_ENDPOINT =
   "https://api.search.brave.com/res/v1/web/search";
 const BRAVE_SEARCH_TIMEOUT_MS = 10_000;
-const BRAVE_RESULT_COUNT = 20;
+const BRAVE_RESULT_COUNT = 10;
+const MAX_BRAVE_QUERIES = 3;
 
 function stripHtml(value: string) {
   return value
@@ -79,26 +81,120 @@ function formatEventDate(value?: string) {
     .replace(",", "");
 }
 
-export function buildBraveNewsQuery({
+function formatEventMonthYear(value?: string) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function uniqueNonEmpty(values: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(trimmed);
+  }
+
+  return result;
+}
+
+export function buildBraveNewsQueries({
   identity,
   isSolanaEcosystem,
   eventAt,
+  searchMode = eventAt ? "event" : "token",
 }: BraveNewsSearchOptions) {
   const searchName = getPrimarySearchName(identity);
   const searchSymbol =
     identity.searchSymbols[0] ?? identity.normalizedSymbol ?? "";
-  const eventDate = formatEventDate(eventAt);
-  const dateSuffix = eventDate ? ` ${eventDate}` : "";
+  const quotedName = `"${searchName}"`;
+  const quotedSymbol = searchSymbol ? `"${searchSymbol}"` : "";
 
-  if (isSolanaEcosystem && searchSymbol !== "SOL") {
-    return `"${searchName}" ${searchSymbol} Solana news${dateSuffix}`;
+  if (searchMode === "event" || searchMode === "chart") {
+    const eventDate = formatEventDate(eventAt);
+    const monthYear = formatEventMonthYear(eventAt);
+
+    return uniqueNonEmpty([
+      `${quotedName} ${quotedSymbol} crypto news ${eventDate}`,
+      `${quotedName} ${quotedSymbol} update ${monthYear}`,
+      isSolanaEcosystem
+        ? `${quotedName} ${quotedSymbol} Solana news ${monthYear}`
+        : "",
+    ]).slice(0, MAX_BRAVE_QUERIES);
   }
 
-  if (isSolanaEcosystem) {
-    return `${searchName} ${searchSymbol} crypto news${dateSuffix}`;
+  return uniqueNonEmpty([
+    `${quotedName} ${quotedSymbol} crypto news`,
+    isSolanaEcosystem ? `${quotedName} ${quotedSymbol} Solana news` : "",
+    `${quotedName} token latest news`,
+  ]).slice(0, MAX_BRAVE_QUERIES);
+}
+
+export function buildBraveNewsQuery(options: BraveNewsSearchOptions) {
+  return buildBraveNewsQueries(options)[0] ?? "";
+}
+
+function normalizeUrl(value: string) {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (
+        key.toLowerCase().startsWith("utm_") ||
+        ["ref", "fbclid", "gclid"].includes(key.toLowerCase())
+      ) {
+        url.searchParams.delete(key);
+      }
+    }
+    return url.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return value.trim().replace(/\/$/, "").toLowerCase();
+  }
+}
+
+function normalizeTitle(value: string) {
+  return stripHtml(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function dedupeRawArticles(articles: RawNewsArticle[]) {
+  const byUrl = new Map<string, RawNewsArticle>();
+
+  for (const article of articles) {
+    const key = normalizeUrl(article.url);
+    const existing = byUrl.get(key);
+    if (!existing || article.description.length > existing.description.length) {
+      byUrl.set(key, article);
+    }
   }
 
-  return `"${searchName}" ${searchSymbol} crypto news${dateSuffix}`;
+  const byTitle = new Map<string, RawNewsArticle>();
+  for (const article of byUrl.values()) {
+    const key = normalizeTitle(article.title);
+    const existing = byTitle.get(key);
+    if (!existing || article.description.length > existing.description.length) {
+      byTitle.set(key, article);
+    }
+  }
+
+  return [...byTitle.values()];
 }
 
 function normalizeBraveItem(item: BraveSearchItem): RawNewsArticle | null {
@@ -162,38 +258,58 @@ async function fetchBraveEndpoint(endpoint: string, query: string) {
 }
 
 export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
-  const query = buildBraveNewsQuery(options);
-  let endpointUsed = BRAVE_NEWS_SEARCH_ENDPOINT;
+  const queries = buildBraveNewsQueries(options);
+  const endpointUsed = new Set<string>();
+  const articles: RawNewsArticle[] = [];
+  let rawResultCount = 0;
 
-  try {
-    const payload = await fetchBraveEndpoint(BRAVE_NEWS_SEARCH_ENDPOINT, query);
-    const results = payload.results ?? [];
+  for (const query of queries) {
+    try {
+      const payload = await fetchBraveEndpoint(
+        BRAVE_NEWS_SEARCH_ENDPOINT,
+        query,
+      );
+      endpointUsed.add(BRAVE_NEWS_SEARCH_ENDPOINT);
+      const results = payload.results ?? [];
+      rawResultCount += results.length;
+      articles.push(
+        ...results
+          .map(normalizeBraveItem)
+          .filter((article): article is RawNewsArticle => article != null),
+      );
+    } catch (err) {
+      console.warn("[brave-news] news search failed, trying web search", {
+        query,
+        error: err instanceof Error ? err.message : String(err),
+      });
 
-    return {
-      query,
-      endpointUsed,
-      rawResultCount: results.length,
-      articles: results
-        .map(normalizeBraveItem)
-        .filter((article): article is RawNewsArticle => article != null),
-    };
-  } catch (err) {
-    endpointUsed = BRAVE_WEB_SEARCH_ENDPOINT;
-    console.warn("[brave-news] news search failed, trying web search", {
-      query,
-      error: err instanceof Error ? err.message : String(err),
-    });
-
-    const payload = await fetchBraveEndpoint(BRAVE_WEB_SEARCH_ENDPOINT, query);
-    const results = payload.web?.results ?? [];
-
-    return {
-      query,
-      endpointUsed,
-      rawResultCount: results.length,
-      articles: results
-        .map(normalizeBraveItem)
-        .filter((article): article is RawNewsArticle => article != null),
-    };
+      try {
+        const payload = await fetchBraveEndpoint(
+          BRAVE_WEB_SEARCH_ENDPOINT,
+          query,
+        );
+        endpointUsed.add(BRAVE_WEB_SEARCH_ENDPOINT);
+        const results = payload.web?.results ?? [];
+        rawResultCount += results.length;
+        articles.push(
+          ...results
+            .map(normalizeBraveItem)
+            .filter((article): article is RawNewsArticle => article != null),
+        );
+      } catch (webErr) {
+        console.warn("[brave-news] web search failed", {
+          query,
+          error: webErr instanceof Error ? webErr.message : String(webErr),
+        });
+      }
+    }
   }
+
+  return {
+    query: queries[0] ?? "",
+    queries,
+    endpointUsed: [...endpointUsed].join(","),
+    rawResultCount,
+    articles: dedupeRawArticles(articles),
+  };
 }
