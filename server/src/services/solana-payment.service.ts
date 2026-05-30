@@ -37,10 +37,15 @@ interface TransactionVerification {
 }
 
 /**
- * Create a connection to Helius Devnet RPC.
- * Uses HELIUS_API_KEY environment variable.
+ * Create a connection to Solana RPC based on network.
+ * Uses HELIUS_API_KEY for devnet/mainnet, public API for testnet.
  */
-function createHeliusConnection(): Connection {
+function createSolanaConnection(network: "devnet" | "testnet" | "mainnet-beta"): Connection {
+  if (network === "testnet") {
+    // Helius doesn't support testnet natively, use Solana public API
+    return new Connection("https://api.testnet.solana.com", "confirmed");
+  }
+
   const apiKeyRaw = process.env.HELIUS_API_KEY;
   if (!apiKeyRaw) {
     throw new Error("HELIUS_API_KEY is not configured");
@@ -50,8 +55,10 @@ function createHeliusConnection(): Connection {
   if (!apiKey) {
     throw new Error("HELIUS_API_KEY contains no valid key");
   }
-  // Use Helius Devnet endpoint
-  const rpcUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
+  
+  // Use Helius endpoint
+  const subdomain = network === "mainnet-beta" ? "mainnet" : "devnet";
+  const rpcUrl = `https://${subdomain}.helius-rpc.com/?api-key=${apiKey}`;
   return new Connection(rpcUrl, "confirmed");
 }
 
@@ -122,7 +129,8 @@ function extractNativeTransfers(
  */
 export async function verifySolanaTransaction(
   txId: string,
-  tier: "Lite" | "Plus" | "Pro"
+  tier: "Lite" | "Plus" | "Pro",
+  network: "devnet" | "testnet" | "mainnet-beta" = "devnet"
 ): Promise<TransactionVerification> {
   try {
     // Validate merchant address
@@ -140,8 +148,8 @@ export async function verifySolanaTransaction(
     const expectedAmountSol = TIER_SOL_AMOUNTS[tier];
     const expectedAmountLamports = Math.floor(expectedAmountSol * LAMPORTS_PER_SOL);
 
-    // Create connection to Helius
-    const connection = createHeliusConnection();
+    // Create connection to RPC
+    const connection = createSolanaConnection(network);
 
     // Fetch parsed transaction
     console.log("[verifySolanaTransaction] Fetching transaction:", txId);

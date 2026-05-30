@@ -1,8 +1,14 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { SystemProgram, Transaction } from "@solana/web3.js";
+import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
+import { PrivacyTransactionId } from "./PrivacyTransactionId";
+import { 
+  getValidatedSolanaNetwork, 
+  getExpectedGenesisHash, 
+  getNetworkDisplayName 
+} from "@/util/solanaNetwork";
 
 /**
  * Define your merchant address for receiving Devnet SOL payments.
@@ -17,11 +23,13 @@ const MERCHANT_ADDRESS_RAW =
 
 /**
  * Tier pricing in SOL for Devnet payments
+ * Note: Must be > 0.00089 SOL to avoid rent-exemption errors 
+ * if the merchant wallet is completely empty on Devnet.
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
-  Lite: 0.0001,
-  Plus: 0.0005,
-  Pro: 0.001,
+  Lite: 0.001,
+  Plus: 0.005,
+  Pro: 0.01,
 };
 
 type SolanaPaymentFlowProps = {
@@ -69,6 +77,13 @@ export function SolanaPaymentFlow({
   const [verifyingSignature, setVerifyingSignature] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  let networkName = "Devnet";
+  try {
+    networkName = getNetworkDisplayName();
+  } catch {
+    // Fallback if env is broken, the actual throw happens during submit
+  }
+
   const solAmount = TIER_SOL_AMOUNTS[tierKey];
 
   /**
@@ -97,7 +112,7 @@ export function SolanaPaymentFlow({
             <span className="text-2xl">◎</span>
             <div>
               <p className="text-white font-semibold text-sm">Connect Your Solana Wallet</p>
-              <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on Devnet</p>
+              <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on {networkName}</p>
             </div>
           </div>
         </div>
@@ -211,9 +226,8 @@ export function SolanaPaymentFlow({
             <span className="text-xs text-[#64748b]">Verifying transaction...</span>
           </div>
         </div>
-        <div className="text-xs text-[#64748b] p-3 rounded-lg bg-white/5 border border-white/10 font-mono break-all">
-          {txSignature}
-        </div>
+        {/* Privacy-masked transaction ID with toggle & copy */}
+        <PrivacyTransactionId transactionId={txSignature} />
       </div>
     );
   }
@@ -225,6 +239,21 @@ export function SolanaPaymentFlow({
   async function handleSendTransaction() {
     if (!publicKey) {
       onError("Wallet not connected");
+      return;
+    }
+
+    // ── Validate Solana network env var before any RPC call ───────────────
+    // Catches missing/invalid VITE_SOLANA_NETWORK early so the user sees a
+    // clear system error instead of a cryptic RPC or wallet error.
+    let expectedGenesis: string;
+    let validatedNetworkName: string;
+    let rawNetworkKey: "devnet" | "testnet" | "mainnet-beta";
+    try {
+      rawNetworkKey = getValidatedSolanaNetwork();
+      expectedGenesis = getExpectedGenesisHash();
+      validatedNetworkName = getNetworkDisplayName();
+    } catch (envErr: any) {
+      onError(envErr.message);
       return;
     }
 
@@ -248,28 +277,93 @@ export function SolanaPaymentFlow({
       // Math.floor guarantees a strict integer — floating-point lamports cause simulation failures.
       const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
 
-      // Get a FRESH blockhash immediately before building the transaction
-      // to minimise the chance of it expiring during simulation.
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      // ── Step 0: Network mismatch guard ───────────────────────────────────
+      // Compares the connected RPC's genesis hash against the known expected
+      // genesis. If Phantom is set to Mainnet while the app uses Devnet, we
+      // fail fast with a clear message instead of a cryptic Phantom warning.
+      const genesisHash = await connection.getGenesisHash();
+      if (genesisHash !== expectedGenesis) {
+        throw new Error(
+          `Network mismatch: your wallet is connected to the wrong network. ` +
+          `This app uses ${validatedNetworkName}. Please change your wallet network in Settings.`
+        );
+      }
 
-      const transaction = new Transaction({
+      // ── Step 1: Fresh blockhash — fetched immediately before construction ─
+      // We use 'finalized' instead of 'confirmed' on Devnet to ensure the
+      // blockhash has propagated to ALL nodes. Phantom uses its own internal RPC,
+      // and if it hasn't seen the 'confirmed' blockhash yet, its simulation
+      // will fail with "BlockhashNotFound". 'finalized' prevents this desync.
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+
+      // ── Step 2: Strict transaction construction (VersionedTransaction) ──────
+      // Phantom strongly recommends VersionedTransactions for modern dApps.
+      // Legacy Transactions can sometimes cause simulation anomalies on Testnet.
+      const message = new TransactionMessage({
+        payerKey: publicKey,
         recentBlockhash: blockhash,
-        feePayer: publicKey,         // must be explicit
-      }).add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: merchantKey,
-          lamports,
-        })
-      );
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: merchantKey,
+            lamports,
+          }),
+        ],
+      }).compileToV0Message();
+      
+      const transaction = new VersionedTransaction(message);
 
-      // ── Debug logs — remove before Mainnet ────────────────────────────
-      console.log("[SolanaPaymentFlow] Network Endpoint:", connection.rpcEndpoint);
-      console.log("[SolanaPaymentFlow] Merchant PubKey:", merchantKey.toBase58());
-      console.log("[SolanaPaymentFlow] Lamports to send:", lamports);
-      console.log("[SolanaPaymentFlow] Fee Payer:", transaction.feePayer?.toBase58());
-      // ─────────────────────────────────────────────────────────────────
+      // ── Debug logs — remove before Mainnet ───────────────────────────────
+      // console.log("[SolanaPaymentFlow] Network Endpoint:", connection.rpcEndpoint);
+      // console.log("[SolanaPaymentFlow] Merchant PubKey:", merchantKey.toBase58());
+      // console.log("[SolanaPaymentFlow] Lamports to send:", lamports);
+      // ─────────────────────────────────────────────────────────────────────
 
+      // ── Step 3a: Explicit balance check ──────────────────────────────────
+      // simulateTransaction() runs on an UNSIGNED tx (sigVerify:false) so it
+      // can silently skip the fee-payer balance check → false "pass".
+      // We manually verify balance here to catch InsufficientFunds BEFORE
+      // Phantom shows its own simulation error to the user.
+      // Phantom often attaches priority fees (up to 0.00008 SOL), so we use a safe margin.
+      const ESTIMATED_FEE_LAMPORTS = 100_000; // 0.0001 SOL upper bound for safety
+      const balance = await connection.getBalance(publicKey, 'confirmed');
+      const totalRequired = lamports + ESTIMATED_FEE_LAMPORTS;
+      // console.log(
+      //   `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
+      //   `need ${totalRequired} (${lamports} transfer + ${ESTIMATED_FEE_LAMPORTS} fee estimate)`
+      // );
+      if (balance < totalRequired) {
+        throw new Error(
+          `Insufficient SOL: wallet has ${(balance / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
+          `but needs at least ${(totalRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL ` +
+          `(${(lamports / LAMPORTS_PER_SOL).toFixed(6)} transfer + fee). ` +
+          `Airdrop more ${validatedNetworkName} SOL at faucet.solana.com.`
+        );
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      // ── Step 3b: Pre-simulation with logs ────────────────────────────────
+      // Run simulation AFTER the balance check so sigVerify:false quirks don't
+      // mask the real error. If it still fails, print the exact Solana logs.
+      // console.log("[SolanaPaymentFlow] Simulating transaction...");
+      const simulation = await connection.simulateTransaction(transaction);
+      if (simulation.value.err) {
+        console.error("[SolanaPaymentFlow] EXACT SIMULATION ERROR:", simulation.value.err);
+        console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
+        const logSummary = simulation.value.logs?.find(
+          (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
+        );
+        throw new Error(
+          logSummary ?? `Simulation failed: ${JSON.stringify(simulation.value.err)}`
+        );
+      }
+      // console.log("[SolanaPaymentFlow] Simulation passed ✅ — sending to wallet...");
+      // ─────────────────────────────────────────────────────────────────────
+
+      // ── Step 4: Send (only reached if simulation passed) ─────────────────
+      // No skipPreflight — let Phantom run its own simulation for the UI.
+      // Our simulateTransaction above acts as the early guard; if it passes,
+      // Phantom's simulation will also pass and show no red warning to the user.
       const signature = await sendTransaction(transaction, connection);
       setTxSignature(signature);
 
@@ -290,19 +384,35 @@ export function SolanaPaymentFlow({
       setVerifyingSignature(signature);
 
       try {
-        const result = await verifySolanaPayment({ txId: signature, tier: tierKey });
+        const result = await verifySolanaPayment({ 
+          txId: signature, 
+          tier: tierKey,
+          network: rawNetworkKey
+        });
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
       } catch (verifyErr: any) {
         console.error("[SolanaPaymentFlow] Verification error:", verifyErr);
         onError(verifyErr.message || "Failed to verify transaction. Please try again.");
+        setTxSignature(null);
         setVerifyingSignature(null);
         onProcessingChange(false);
       }
     } catch (err: any) {
-      // Log the FULL error object so the simulation failure reason is visible in the console
+      // SendTransactionError carries the RPC simulation logs — these reveal the
+      // EXACT on-chain failure reason (e.g. InsufficientFunds, InvalidAccountData).
+      const simLogs = err?.logs as string[] | undefined;
+      if (simLogs?.length) {
+        console.error("[SolanaPaymentFlow] SendTransactionError simulation logs:");
+        simLogs.forEach((log, i) => console.error(`  [${i}] ${log}`));
+      }
       console.error("[SolanaPaymentFlow] Tx Failed (full error):", err);
-      onError(err?.message || "Transaction failed. Please try again.");
+
+      // Prefer a human-readable log line over the raw error message
+      const logError = simLogs?.find(
+        (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
+      );
+      onError(logError ?? err?.message ?? "Transaction failed. Please try again.");
       setTxSignature(null);
       setVerifyingSignature(null);
       onProcessingChange(false);
@@ -366,7 +476,7 @@ export function SolanaPaymentFlow({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">Network</p>
-            <p className="text-white font-bold">Devnet</p>
+            <p className="text-white font-bold">{networkName}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">USD Equiv.</p>
@@ -380,7 +490,7 @@ export function SolanaPaymentFlow({
         <p className="text-xs text-[#64748b]">
           You will be prompted to sign a transaction to send{" "}
           <strong className="text-white">{solAmount} SOL</strong> from your wallet to our
-          merchant address on <strong className="text-white">Solana Devnet</strong>.
+          merchant address on <strong className="text-white">Solana {networkName}</strong>.
         </p>
       </div>
 

@@ -519,6 +519,29 @@ export type WalletAuditPersona =
   | "Retail"
   | "Unknown";
 
+export interface WalletTokenDetails {
+  symbol: string | null;
+  address: string;
+  tokenAddress: string;
+  lastTradeUnixTime: number;
+  totalBuyCount: number;
+  totalSellCount: number;
+  totalTradeCount: number;
+  totalBoughtAmount: number;
+  totalSoldAmount: number;
+  balanceAmount: number;
+  costOfQuantitySold: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  currentValue: number;
+  realizedProfitUsd: number;
+  realizedProfitPercent: number;
+  unrealizedProfitUsd: number;
+  unrealizedProfitPercent: number;
+  avgBuyCost: number;
+  avgSellCost: number;
+}
+
 export interface WalletAuditReport {
   address: string;
   persona: WalletAuditPersona;
@@ -550,7 +573,17 @@ export function fetchWalletAudit(
   });
 }
 
-export function fetchDayActivitySummary(
+export async function fetchWalletTokenDetails(address: string): Promise<WalletTokenDetails[]> {
+  return client.api.wallets[":address"].tokens.$get({
+    param: { address }
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+
+export async function fetchDayActivitySummary(
   address: string,
   dayMs: number,
 ): Promise<WalletDayActivitySummary> {

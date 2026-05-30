@@ -187,7 +187,7 @@ export async function addWalletToWatchlist(walletAddress: string) {
     return resp.json();
 }
 
-export async function removeWalletFromWatchlist(walletAddress: string) {
+export async function removeWalletFromWatchlist(walletAddress: string): Promise<void> {
     const resp = await client.api.profile.watchlist["addresses-update"].$delete({
         json: { walletAddress },
     });
@@ -195,8 +195,23 @@ export async function removeWalletFromWatchlist(walletAddress: string) {
     if (!resp.ok) {
         throw new Error(`Failed to remove wallet from watchlist: ${resp.status}`);
     }
+}
 
+export async function getWalletLabels(): Promise<Record<string, string>> {
+    const resp = await client.api.profile["wallet-labels"].$get();
+    if (!resp.ok) {
+        throw new Error(`Failed to fetch wallet labels: ${resp.status}`);
+    }
     return resp.json();
+}
+
+export async function setWalletLabel(walletAddress: string, label: string): Promise<void> {
+    const resp = await client.api.profile["wallet-labels"].$put({
+        json: { walletAddress, label },
+    });
+    if (!resp.ok) {
+        throw new Error(`Failed to update wallet label: ${resp.status}`);
+    }
 }
 
 

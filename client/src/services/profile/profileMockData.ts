@@ -14,6 +14,7 @@ export const profileMockApiPayload: ProfilePageData = {
         pnlUsd: 16420.15,
         pnlPct: 12.74,
         linkedWalletCount: 4,
+        authWalletCount: 1,
     },
     dashboard: {
         kpis: [

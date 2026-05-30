@@ -134,10 +134,14 @@ export default function PricingPage() {
   const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Check for success redirect from Stripe
+  // Check for success redirect from Stripe (return_url flow only)
+  // Requires both ?success=true AND ?tier=<name> to prevent stale-URL false-positives.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("success") === "true") {
+    const successParam = params.get("success");
+    const tierParam = params.get("tier");
+    if (successParam === "true" && tierParam) {
+      setSelectedTier({ name: tierParam, price: "" });
       setPaymentSuccess(true);
       // Clean up URL without reloading
       window.history.replaceState({}, "", window.location.pathname);

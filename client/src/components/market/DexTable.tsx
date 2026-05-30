@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import classNames from "classnames";
 import { useNavigate } from "react-router";
+import { InlineLoading } from "@carbon/react";
 import styles from "./DexTable.module.scss";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -183,8 +184,10 @@ export function DexTable({
 
   if (loading) {
     return (
-      <div className={styles.dexTableContainer}>
-        <div className={styles.emptyState}>Loading market data...</div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 250px)' }}>
+        <div style={{ width: 'fit-content' }}>
+          <InlineLoading status="active" description="Loading market data..." />
+        </div>
       </div>
     );
   }

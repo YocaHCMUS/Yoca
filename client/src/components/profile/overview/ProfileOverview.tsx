@@ -1,26 +1,20 @@
 import {
     SUBSCRIPTION_TIER_LABELS,
     SUBSCRIPTION_TIER_TAG_KIND
-} from "@/components/profile/profile.constants";
+} from "@/components/profile/shared/profile.constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
-import type { TimePeriod } from "@/types/chart-filters.types";
 import type { ProfileOverviewData } from "@/types/profile";
 import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
-import { Activity, ChartLine, Wallet } from "@carbon/react/icons";
+import { Activity, ChartLine, Wallet, Link as LinkIcon } from "@carbon/react/icons";
 import { useEffect, useState } from "react";
-import styles from "./profile.module.scss";
-
+import styles from "@/components/profile/shared/profile.module.scss";
 interface ProfileOverviewProps {
   data: ProfileOverviewData;
-  onPeriodChange: (period: TimePeriod) => void;
   loading: boolean;
 }
 
-export function ProfileOverview({
-  data,
-  loading,
-}: ProfileOverviewProps) {
+export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
   const { fmt } = useLocalization();
   const [subscriptionTier, setSubscriptionTier] = useState<PlanTier | "Standard">(
     "Standard",
@@ -122,6 +116,15 @@ export function ProfileOverview({
               `${fmt.num.compact.currency(data.pnlUsd)} (${fmt.num.percent(data.pnlPct)})`
             )}
           </p>
+        </div>
+        <div className={styles.metricCard}>
+          <p className={styles.metricLabel}>
+              <LinkIcon size={16} />
+              Authorized wallets
+          </p>
+          <div className={styles.metricValue}>
+              {loading ? <SkeletonText width="3rem" /> : data.authWalletCount}
+          </div>
         </div>
       </div>
     </section>

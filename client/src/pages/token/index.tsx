@@ -10,6 +10,7 @@ import {
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useGet } from "@/hooks/useGet";
+import { InlineLoading } from "@carbon/react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
@@ -157,11 +158,23 @@ export default function TokenPage() {
   }, [poolAddress, result.data?.pool]);
 
   if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
-    return <>Loading</>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+        <div style={{ width: 'fit-content' }}>
+          <InlineLoading status="active" description="Loading token data..." />
+        </div>
+      </div>
+    );
   }
 
   if (result.isLoading) {
-    return <>Loading</>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+        <div style={{ width: 'fit-content' }}>
+          <InlineLoading status="active" description="Loading token data..." />
+        </div>
+      </div>
+    );
   }
 
   if (result.error || !result.data || !result.data.meta) {
@@ -184,7 +197,13 @@ export default function TokenPage() {
   const pool = pairData;
 
   if (!pool) {
-    return <>Loading</>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
+        <div style={{ width: 'fit-content' }}>
+          <InlineLoading status="active" description="Loading token data..." />
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -8,6 +8,7 @@ import {
     CheckmarkFilled,
     CloseFilled,
     Copy,
+    Edit,
     Login,
     Subtract,
 } from "@carbon/icons-react";
@@ -284,6 +285,7 @@ export const renderTokenCell = (
 
 export interface ProfilePortfolioCellRendererOptions {
   onUnlinkWallet: (walletAddress: string) => void | Promise<void>;
+  onEditLabel: (walletAddress: string, newLabel: string) => void | Promise<void>;
   formatAddress: (address: string) => string;
   formatCurrency: (value: number) => string;
   t: TranslateFunction;
@@ -291,27 +293,69 @@ export interface ProfilePortfolioCellRendererOptions {
 
 export const createProfilePortfolioCellRenderers = ({
   onUnlinkWallet,
+  onEditLabel,
   formatAddress,
   formatCurrency,
   t,
 }: ProfilePortfolioCellRendererOptions) => [
-  // Label column
-  null,
-  // Address column with login icon if auth wallet
-  (_value: unknown, row: unknown[]) => {
-    const walletAddress = String(row[2] ?? "");
-    const isAuthWallet = Boolean(row[4]);
+  // Address + Label column
+  (value: unknown) => {
+    const entry = value as { walletAddress: string; label: string; isAuthWallet?: boolean };
+    const walletAddress = entry?.walletAddress ?? "";
+    const initialLabel = entry?.label ?? "";
+    const isAuthWallet = Boolean(entry?.isAuthWallet);
 
-    return (
-      <span
-        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-      >
-        <span title={walletAddress}>{formatAddress(walletAddress)}</span>
-        {isAuthWallet && (
-          <Login size={14} title={t("profileTabs.portfolio.authWalletLabel")} />
-        )}
-      </span>
-    );
+    const EditableLabelCell = () => {
+      const [isEditing, setIsEditing] = useState(false);
+      const [draft, setDraft] = useState(initialLabel);
+
+      if (isEditing) {
+        return (
+          <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="text" 
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onEditLabel(walletAddress, draft);
+                  setIsEditing(false);
+                } else if (e.key === 'Escape') {
+                  setDraft(initialLabel);
+                  setIsEditing(false);
+                }
+              }}
+            />
+            <Checkmark size={16} style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
+               onEditLabel(walletAddress, draft);
+               setIsEditing(false);
+            }} />
+            <CloseFilled size={16} style={{ cursor: "pointer", color: "var(--cds-support-error)" }} onClick={() => {
+               setDraft(initialLabel);
+               setIsEditing(false);
+            }} />
+          </div>
+        );
+      }
+
+      return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <span title={walletAddress}>
+            {initialLabel || formatAddress(walletAddress)}
+          </span>
+          <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+            <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+          </div>
+          {isAuthWallet && (
+            <Login size={14} title={t("profileTabs.portfolio.authWalletLabel")} />
+          )}
+        </span>
+      );
+    };
+
+    return <EditableLabelCell />;
   },
   // Total Value column
   (value: unknown) => formatCurrency(Number(value)),
@@ -321,7 +365,8 @@ export const createProfilePortfolioCellRenderers = ({
       return null;
     }
 
-    const walletAddress = String(row[0] ?? "");
+    const entry = row[0] as { walletAddress: string };
+    const walletAddress = entry?.walletAddress ?? "";
 
     return (
       <div onClick={(event) => event.stopPropagation()}>
