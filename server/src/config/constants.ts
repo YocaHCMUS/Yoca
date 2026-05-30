@@ -54,7 +54,7 @@ export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 // AI Wallet Forensic Audit
 export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

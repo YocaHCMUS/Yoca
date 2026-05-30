@@ -4,10 +4,10 @@ import { Activity, ChartColumn, Currency, Wallet } from "@carbon/react/icons";
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import { BarChart, PieChart, RadarChart, TreemapChart } from "echarts/charts";
 import {
-    GridComponent,
-    LegendComponent,
-    TitleComponent,
-    TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
@@ -16,16 +16,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartProvider } from "@/contexts/ChartContext";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import {
-    fetchWalletDistribution,
-    fetchWalletIntelligence,
-    fetchWalletOverview,
-    fetchWalletPortfolio,
-    fetchWalletTokenDetails,
-    type WalletIntelligenceResponse,
-    type WalletOverviewMultiPeriodResponse,
-    type WalletOverviewPeriodKey,
-    type WalletPortfolioItem,
-    type WalletTokenDetails,
+  fetchWalletDistribution,
+  fetchWalletIntelligence,
+  fetchWalletOverview,
+  fetchWalletPortfolio,
+  fetchWalletTokenDetails,
+  type WalletIntelligenceResponse,
+  type WalletOverviewMultiPeriodResponse,
+  type WalletOverviewPeriodKey,
+  type WalletPortfolioItem,
+  type WalletTokenDetails,
 } from "@/services/wallet/walletApi";
 import { fetchBalanceTrend } from "@/services/chart/chartApi";
 import { MultiWalletBalanceChart } from "@/components/charts/BalanceChartMultiV2";
@@ -1366,6 +1366,8 @@ export default function ProfileDashboardTab({
           <div className={styles.panel}>
             <MultiWalletBalanceChart
               addresses={walletData.map((w) => w.address)}
+              showTotal={false}
+              show24Change={false}
             />
           </div>
 

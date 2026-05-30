@@ -1,10 +1,10 @@
 import client from "@/api/main";
 import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 type AuthUser = {
@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
         }
       } else {
+        // API may return null for unauthenticated sessions.
         setUser(null);
-        console.error("Unexpected response while fetching current user:", resp);
       }
     } catch (err) {
       console.error("Failed to fetch current user:", err);
@@ -66,7 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isUserLoading, setUser, refreshUser, signOut }}>
+    <AuthContext.Provider
+      value={{ user, isUserLoading, setUser, refreshUser, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

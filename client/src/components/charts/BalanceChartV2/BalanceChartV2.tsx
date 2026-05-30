@@ -111,15 +111,18 @@ export function BalanceChartV2({ address }: { address: string }) {
     },
   );
 
-  const balanceSeries =
-    selectedTokens == null
-      ? totalBalance.data
-        ? [totalBalance.data]
-        : []
-      : [
-          ...(tokenBalances.data ?? []),
-          // ...(totalBalance.data ? [totalBalance.data] : []),
-        ];
+  const balanceSeries = useMemo(
+    () =>
+      selectedTokens == null
+        ? totalBalance.data
+          ? [totalBalance.data]
+          : []
+        : [
+            ...(tokenBalances.data ?? []),
+            ...(totalBalance.data ? [totalBalance.data] : []),
+          ],
+    [selectedTokens, totalBalance.data, tokenBalances.data],
+  );
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -143,7 +146,6 @@ export function BalanceChartV2({ address }: { address: string }) {
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
- 
                 <TokenIdentityCell
                   symbol={account.symbol || account.tokenAddress}
                   fullName={account.name}
@@ -182,13 +184,8 @@ export function BalanceChartV2({ address }: { address: string }) {
               if (!change) return null;
 
               return (
-                <Tag size="lg" title={series.label}>
-                  <Flex
-                    key={series.key}
-                    align="center"
-                    justify="between"
-                    gap={2}
-                  >
+                <Tag key={series.key} size="lg" title={series.label}>
+                  <Flex align="center" justify="between" gap={2}>
                     <Txt size="sm" secondary>
                       {series.label}
                     </Txt>
@@ -197,7 +194,7 @@ export function BalanceChartV2({ address }: { address: string }) {
                       prefixes="plus-minus"
                       formatter={fmt.num.percent}
                     />
-                </Flex>
+                  </Flex>
                 </Tag>
               );
             })}
@@ -207,7 +204,11 @@ export function BalanceChartV2({ address }: { address: string }) {
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={500}
-          loading={tokenBalances.isLoading || portfolio.isLoading || totalBalance.isLoading}
+          loading={
+            tokenBalances.isLoading ||
+            portfolio.isLoading ||
+            totalBalance.isLoading
+          }
           valueFormatter={(val) => fmt.num.currency(val)}
         />
       </Flex>

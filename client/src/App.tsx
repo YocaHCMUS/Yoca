@@ -1,8 +1,8 @@
 import {
-    createBrowserRouter,
-    Outlet,
-    RouterProvider,
-    useNavigation,
+  createBrowserRouter,
+  Outlet,
+  RouterProvider,
+  useNavigation,
 } from "react-router";
 
 import { Loading } from "@carbon/react";
@@ -25,6 +25,7 @@ import AlertsDemo from "./pages/alerts/demo";
 
 import { AuthGuard } from "./components/auth";
 import { useLocalization } from "./contexts/LocalizationContext";
+import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
 
 function RootLayout() {
   const navigation = useNavigation();
@@ -142,6 +143,13 @@ const router = createBrowserRouter([
       {
         path: "not-found",
         element: <NotFoundPage />,
+      },
+
+      {
+        path: "balance",
+        element: (
+          <BalanceChartV2 address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
+        ),
       },
 
       {

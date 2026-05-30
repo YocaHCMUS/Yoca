@@ -8,7 +8,10 @@ import {
   walletTokenBalanceHistory,
   WalletTokenBalanceHistoryInsert,
 } from "@sv/db/schema.js";
-import { getUtcDatesFromNow, getUtcDatesFromNowMs } from "@sv/util/date.js";
+import {
+  getStartOfUtcDatesFromNow,
+  getStartOfUtcDatesFromNowMs,
+} from "@sv/util/date.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
@@ -52,7 +55,7 @@ export async function getWalletTokenBalanceHistory(
   tokenAddresses: string[],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const expectedDatesMs = getUtcDatesFromNowMs(timePeriod);
+  const expectedDatesMs = getStartOfUtcDatesFromNowMs(timePeriod);
   const start = expectedDatesMs[expectedDatesMs.length - 1];
   const end = expectedDatesMs[0];
 
@@ -152,7 +155,7 @@ export async function fetchWalletTokenBalanceHistory(
   tokenAddresses: string[] = [],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const dates = getUtcDatesFromNow(timePeriod);
+  const dates = getStartOfUtcDatesFromNow(timePeriod);
 
   const resArray = await Promise.all(
     dates.map((date) => bdsFetchAssetsAt(address, date)),
