@@ -1,43 +1,46 @@
 import {
-    addressSchema,
-    solanaBase58Schema,
-    validate,
-    walletTokenTradesSchema,
+  addressSchema,
+  validate,
+  walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import type {
-    WalletPortfolioItem,
-    WalletSwap,
+  WalletPortfolioItem,
+  WalletSwap,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-    getTokenDetails,
-    getWalletFirstFund,
+  getTokenDetails,
+  getWalletFirstFund,
 } from "@sv/services/wallet/index.js";
 import {
-    getWalletDayActivitySummary,
-    getWalletTxDetail,
-    getWalletTxInstructionDetail,
+  getWalletDayActivitySummary,
+  getWalletTxDetail,
+  getWalletTxInstructionDetail,
 } from "@sv/services/wallet/walletDayActivity.service.js";
 import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
-import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js";
+import {
+  // fetchTestTransaction,
+  // getWalletExchangeCounts,
+  getWalletOverview,
+} from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import {
-    getWalletSwaps,
-    getWalletTransfers,
+  getWalletSwaps,
+  getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import {
-    WALLET_IDENTITY_MAX_BATCH_SIZE,
-    WalletIdentityServiceError,
-    getWalletIdentity,
-    getWalletIdentityBatch,
+  WALLET_IDENTITY_MAX_BATCH_SIZE,
+  WalletIdentityServiceError,
+  getWalletIdentity,
+  getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import {
-    WalletAnalysisServiceError,
-    getWalletAiAnalysis,
+  WalletAnalysisServiceError,
+  getWalletAiAnalysis,
 } from "@sv/services/wallet/walletAnalysis.service.js";
 import {
-    WalletAuditServiceError,
-    getWalletAudit,
+  WalletAuditServiceError,
+  getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import {
   WalletAiSwapSummaryServiceError,
@@ -50,83 +53,65 @@ import {
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
-import { serverErr, setErr } from "@sv/util/errors";
+import { setErr } from "@sv/util/errors";
 
-const walletQuerySchema = z.object({
-  address: solanaBase58Schema,
+const walletRequestSchema = z.object({
+  address: z.string(),
 });
 
-const walletOverviewQuerySchema = z.object({
-  address: solanaBase58Schema,
-  period: z
-    .enum(["24H", "7D", "30D", "60D", "90D", "1Y", "All"])
-    .default("24H"),
-});
+const walletOverviewRequestSchema = walletRequestSchema;
 
-const walletIdentityQuerySchema = z.object({
-  address: solanaBase58Schema,
-});
-
-const walletIdentityBatchSchema = z.object({
+const walletIdentityBatchRequestSchema = z.object({
   addresses: z
-    .array(solanaBase58Schema)
+    .array(z.string().trim().min(1))
     .min(1)
     .max(WALLET_IDENTITY_MAX_BATCH_SIZE),
 });
 
-const walletAnalysisBodySchema = z.object({
-  address: solanaBase58Schema,
+const walletAnalysisRequestSchema = z.object({
+  address: z.string().trim().min(1),
   language: z.enum(["en", "vn"]).optional(),
 });
 
 const walletTokenAnalysisRequestSchema = z.object({
-  address: solanaBase58Schema,
-  tokenAddress: solanaBase58Schema,
+  address: z.string().trim().min(1),
+  tokenAddress: z.string().trim().min(1),
   language: z.enum(["en", "vn"]).optional(),
 });
 
 const DEFAULT_OVERVIEW_PERIOD = "24H";
-const walletIntelligenceQuerySchema = z.object({
-  address: solanaBase58Schema,
-});
 
-const walletDayActivityQuerySchema = z.object({
-  address: solanaBase58Schema,
-  dayMs: z.coerce.number(),
-});
+function parseOverviewPeriod(
+  rawPeriod?: string,
+): "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All" {
+  const normalized = String(rawPeriod ?? "")
+    .trim()
+    .toUpperCase();
 
-const walletTxDetailQuerySchema = z.object({
-  address: solanaBase58Schema,
-  signature: z.string().trim().min(1),
-});
+  if (normalized === "24H") return "24H";
+  if (normalized === "7D") return "7D";
+  if (normalized === "30D") return "30D";
+  if (normalized === "60D") return "60D";
+  if (normalized === "90D") return "90D";
+  if (normalized === "1Y") return "1Y";
+  if (normalized === "ALL") return "All";
 
-const walletTxInstructionsQuerySchema = z.object({
-  address: solanaBase58Schema,
-  signature: z.string().trim().min(1),
-});
-
-const walletTokenPriceChartQuerySchema = z.object({
-  address: solanaBase58Schema,
-  dayMs: z.coerce.number(),
-});
-
-const walletAuditQuerySchema = z.object({
-  force: z.enum(["0", "1", "true", "false"]),
-});
+  return DEFAULT_OVERVIEW_PERIOD;
+}
 
 function mapWalletIdentityError(err: WalletIdentityServiceError): {
   status: 400 | 401 | 502 | 503;
   error: string;
 } {
-  if (err.code == "invalid_address") {
+  if (err.code === "invalid_address") {
     return { status: 400, error: "Invalid wallet address format" };
   }
 
-  if (err.code == "invalid_batch") {
+  if (err.code === "invalid_batch") {
     return { status: 400, error: "Invalid identity batch payload" };
   }
 
-  if (err.code == "provider_unauthorized") {
+  if (err.code === "provider_unauthorized") {
     return {
       status: 401,
       error: "Wallet identity provider authorization failed",
@@ -134,13 +119,13 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
   }
 
   if (
-    err.code == "provider_rate_limited" ||
-    err.code == "provider_unavailable"
+    err.code === "provider_rate_limited" ||
+    err.code === "provider_unavailable"
   ) {
     return { status: 503, error: "Wallet identity provider is unavailable" };
   }
 
-  if (err.code == "provider_bad_request") {
+  if (err.code === "provider_bad_request") {
     return {
       status: 400,
       error: "Invalid request for wallet identity provider",
@@ -148,11 +133,11 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
   }
 
   const fallbackStatus: 400 | 401 | 502 | 503 =
-    err.statusCode == 400
+    err.statusCode === 400
       ? 400
-      : err.statusCode == 401
+      : err.statusCode === 401
         ? 401
-        : err.statusCode == 503
+        : err.statusCode === 503
           ? 503
           : 502;
 
@@ -163,15 +148,15 @@ function mapWalletIdentityError(err: WalletIdentityServiceError): {
 }
 
 function mapWalletAnalysisStatus(status: number): 400 | 409 | 502 | 504 {
-  if (status == 400) {
+  if (status === 400) {
     return 400;
   }
 
-  if (status == 409) {
+  if (status === 409) {
     return 409;
   }
 
-  if (status == 504) {
+  if (status === 504) {
     return 504;
   }
 
@@ -185,27 +170,20 @@ function mapSwapToTokenTradeRow(
 ) {
   const normalizedToken = tokenAddress.trim().toLowerCase();
   const boughtAddress = swap.bought.address.trim().toLowerCase();
-  const soldAddress = swap.sold.address.trim().toLowerCase();
 
   const inferredAction: "buy" | "sell" =
-    boughtAddress == normalizedToken
-      ? "buy"
-      : soldAddress == normalizedToken
-        ? "sell"
-        : swap.transactionType.trim().toLowerCase() == "buy"
-          ? "buy"
-          : "sell";
+    boughtAddress === normalizedToken ? "buy" : "sell";
 
   const selectedAmount =
-    inferredAction == "buy" ? swap.bought.amount : swap.sold.amount;
+    inferredAction === "buy" ? swap.bought.amount : swap.sold.amount;
   const selectedTokenAddress =
-    inferredAction == "buy" ? swap.bought.address : swap.sold.address;
+    inferredAction === "buy" ? swap.bought.address : swap.sold.address;
   const otherTokenAddress =
-    inferredAction == "buy" ? swap.sold.address : swap.bought.address;
+    inferredAction === "buy" ? swap.sold.address : swap.bought.address;
   const selectedPrice =
-    inferredAction == "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+    inferredAction === "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
   const otherPrice =
-    inferredAction == "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+    inferredAction === "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
 
   return {
     address: walletAddress,
@@ -226,8 +204,11 @@ function mapSwapToTokenTradeRow(
 }
 
 const app = new Hono()
-  .get("/overview", validate("query", walletOverviewQuerySchema), async (c) => {
-    const { address, period } = c.req.valid("query");
+  .get("/overview", async (c) => {
+    const query = c.req.query();
+    const params = walletOverviewRequestSchema.parse(query);
+    const address = params.address;
+    const period = parseOverviewPeriod(c.req.query("period"));
 
     try {
       const overview = await getWalletOverview(address, { timePeriod: period });
@@ -237,24 +218,40 @@ const app = new Hono()
       return c.json({ error: "Failed to get wallet overview" }, 500);
     }
   })
-  .get("/portfolio", validate("query", walletQuerySchema), async (c) => {
-    const { address } = c.req.valid("query");
+  .get("/portfolio", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query);
+    const address = params.address;
 
     try {
       const portfolio = await getWalletPortfolio(address);
       return c.json(portfolio, statusCode.Ok);
     } catch (e) {
-            return serverErr(c, e);
+      console.error(e);
+      return c.json(
+        { error: "Failed to get wallet portfolio" },
+        statusCode.InternalServerError,
+      );
     }
   })
-  .get("/swap", validate("query", walletQuerySchema), async (c) => {
-    const { address } = c.req.valid("query");
+  .get("/swap", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query);
+    const address = params.address;
+
+    const limitParam = c.req.query("limit");
+    const cursor = c.req.query("cursor");
+    const before = c.req.query("before");
+
+    const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
       const txs = await getWalletSwaps(address);
+
       return c.json(txs);
-    } catch (e) {
-      return serverErr(c, e);
+    } catch (err) {
+      console.error("Failed to get wallet swaps", err);
+      return c.json({ error: "Failed to get wallet swaps" }, 500);
     }
   })
   .get(
@@ -270,7 +267,14 @@ const app = new Hono()
       try {
         const swaps = await getWalletSwaps(walletAddress);
 
-        const trades = swaps.swaps.map((swap) =>
+        const normalizedToken = tokenAddress.trim().toLowerCase();
+        const relevantSwaps = swaps.swaps.filter((swap) => {
+          const bought = swap.bought.address.trim().toLowerCase();
+          const sold = swap.sold.address.trim().toLowerCase();
+          return bought === normalizedToken || sold === normalizedToken;
+        });
+
+        const trades = relevantSwaps.map((swap) =>
           mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
         );
 
@@ -278,23 +282,39 @@ const app = new Hono()
           return c.json(trades, statusCode.BadGateway);
         }
         return c.json(trades, statusCode.Ok);
-      } catch (e) {
-      return serverErr(c, e);        
+      } catch (err) {
+        console.error(err);
+        return c.json(
+          setErr("INTERNAL_SERVER_ERR"),
+          statusCode.InternalServerError,
+        );
       }
     },
   )
-  .get("/transfers", validate("query", walletQuerySchema), async (c) => {
-    const { address } = c.req.valid("query");
+  .get("/transfers", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query);
+    const address = params.address;
+
+    const limitParam = c.req.query("limit");
+    const cursor = c.req.query("cursor");
+    const before = c.req.query("before");
+
+    const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
       const txs = await getWalletTransfers(address);
+
       return c.json(txs);
-    } catch (e) {
-      return serverErr(c, e);
+    } catch (err) {
+      console.error("Failed to get wallet transfers", err);
+      return c.json({ error: "Failed to get wallet transfers" }, 500);
     }
   })
-  .get("/distribution", validate("query", walletQuerySchema), async (c) => {
-    const { address } = c.req.valid("query");
+  .get("/distribution", async (c) => {
+    const query = c.req.query();
+    const params = walletRequestSchema.parse(query);
+    const address = params.address;
 
     try {
       // Get portfolio data which forms the asset distribution
@@ -327,232 +347,129 @@ const app = new Hono()
           timestamp: Date.now(),
         },
       });
-    } catch (e) {
-      return serverErr(c, e);
+    } catch (err) {
+      console.error("Failed to get wallet asset distribution", err);
+      return c.json({ error: "Failed to get wallet asset distribution" }, 500);
     }
   })
 
-  .get("/identity", validate("query", walletIdentityQuerySchema), async (c) => {
-    const { address } = c.req.valid("query");
+  .get("/identity", async (c) => {
+    const address = c.req.query("address");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
 
     try {
       const identity = await getWalletIdentity(address);
-      return c.json(identity, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletIdentityServiceError) {
-        const mapped = mapWalletIdentityError(e);
-        return c.json({ error: mapped.error, code: e.code }, mapped.status);
+      return c.json(identity, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
       }
 
-      return serverErr(c, e);
+      console.error("Failed to fetch wallet identity", err);
+      return c.json({ error: "Failed to fetch wallet identity" }, 500);
     }
   })
-  .post(
-    "/identity/batch",
-    validate("json", walletIdentityBatchSchema),
-    async (c) => {
-      const data = c.req.valid("json");
-
-      try {
-        const identityBatch = await getWalletIdentityBatch(data.addresses);
-        return c.json(identityBatch, statusCode.Ok);
-      } catch (e) {
-        if (e instanceof WalletIdentityServiceError) {
-          const mapped = mapWalletIdentityError(e);
-          return c.json({ error: mapped.error, code: e.code }, mapped.status);
-        }
-
-        return serverErr(c, e);
-      }
-    },
-  )
-  .post(
-    "/ai-analysis",
-    validate("json", walletAnalysisBodySchema),
-    async (c) => {
-      const data = c.req.valid("json");
-
-      try {
-        const analysis = await getWalletAiAnalysis(data.address, data.language);
-        return c.json(analysis, statusCode.Ok);
-      } catch (e) {
-        if (e instanceof WalletAnalysisServiceError) {
-          return c.json(
-            { error: e.message, code: e.code, details: e.details },
-            mapWalletAnalysisStatus(e.status),
-          );
-        }
-
-        return serverErr(c, e);
-      }
-    },
-  )
-  .post("/analysis", validate("json", walletAnalysisBodySchema), async (c) => {
-    const data = c.req.valid("json");
+  .post("/identity/batch", async (c) => {
+    let body: unknown;
 
     try {
-      const analysis = await getWalletAiAnalysis(data.address, data.language);
-      return c.json(analysis, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletAnalysisServiceError) {
-        return c.json(
-          { error: e.message, code: e.code, details: e.details },
-          mapWalletAnalysisStatus(e.status),
-        );
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletIdentityBatchRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Invalid identity batch payload" }, 400);
+    }
+
+    try {
+      const identityBatch = await getWalletIdentityBatch(parsed.data.addresses);
+      return c.json(identityBatch, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
       }
-      return serverErr(c, e);
+
+      console.error("Failed to fetch wallet identity batch", err);
+      return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
     }
   })
-  .get(
-    "/intelligence",
-    validate("query", walletIntelligenceQuerySchema),
-    async (c) => {
-      const { address } = c.req.valid("query");
-
-      try {
-        const intelligence = await composeWalletIntelligence(address);
-        return c.json(intelligence, statusCode.Ok);
-      } catch (e) {
-        if (e instanceof WalletIdentityServiceError) {
-          const mapped = mapWalletIdentityError(e);
-          return c.json({ error: mapped.error, code: e.code }, mapped.status);
-        }
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/day-activity",
-    validate("query", walletDayActivityQuerySchema),
-    async (c) => {
-      const { address, dayMs } = c.req.valid("query");
-
-      try {
-        const summary = await getWalletDayActivitySummary(address, dayMs);
-        return c.json(summary, statusCode.Ok);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/tx-detail",
-    validate("query", walletTxDetailQuerySchema),
-    async (c) => {
-      const { address, signature } = c.req.valid("query");
-
-      try {
-        const detail = await getWalletTxDetail(address, signature);
-        return c.json(detail, statusCode.Ok);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/tx-instructions",
-    validate("query", walletTxInstructionsQuerySchema),
-    async (c) => {
-      const { address, signature } = c.req.valid("query");
-
-      try {
-        const detail = await getWalletTxInstructionDetail(address, signature);
-        return c.json(detail, statusCode.Ok);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/token-price-chart",
-    validate("query", walletTokenPriceChartQuerySchema),
-    async (c) => {
-      const { address, dayMs } = c.req.valid("query");
-
-      try {
-        const items = await getTokenPriceChartForDay(address, dayMs);
-        return c.json({ items: items ?? [] }, statusCode.Ok);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
-    const { address } = c.req.valid("param");
+  .post("/ai-analysis", async (c) => {
+    let body: unknown;
 
     try {
-      const firstFunds = await getWalletFirstFund(address);
-      if (firstFunds == null) {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
+    }
+
+    try {
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
+      return c.json(analysis, 200);
+    } catch (err) {
+      if (err instanceof WalletAnalysisServiceError) {
         return c.json(
-          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-          statusCode.BadGateway,
+          { error: err.message, code: err.code, details: err.details },
+          mapWalletAnalysisStatus(err.status),
         );
       }
 
-      return c.json(firstFunds, statusCode.Ok);
-    } catch (e) {
-        return serverErr(c, e);
+      console.error("Failed to get wallet AI analysis", err);
+      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
     }
   })
-  .get("/:address/tokens", validate("param", addressSchema), async (c) => {
-    const { address } = c.req.valid("param");
+  .post("/analysis", async (c) => {
+    let body: unknown;
 
     try {
-      const tokenDetails = await getTokenDetails(address);
-      if (tokenDetails == null) {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON payload" }, 400);
+    }
+
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Missing or invalid required field: address" },
+        400,
+      );
+    }
+
+    try {
+      const analysis = await getWalletAiAnalysis(
+        parsed.data.address,
+        parsed.data.language,
+      );
+      return c.json(analysis, 200);
+    } catch (err) {
+      if (err instanceof WalletAnalysisServiceError) {
         return c.json(
-          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-          statusCode.BadGateway,
+          { error: err.message, code: err.code, details: err.details },
+          mapWalletAnalysisStatus(err.status),
         );
       }
 
-      return c.json(tokenDetails, statusCode.Ok);
-    } catch (e) {
-        return serverErr(c, e);
+      console.error("Failed to get wallet AI analysis", err);
+      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
     }
   })
-  /**
-   * AI Wallet Forensic Audit.
-   *
-   * Returns a Gemini-generated behavioural classification (persona, trust
-   * score, summary, observations) for the wallet. Result is cached in
-   * `wallet_audit_cache` for 24 hours; pass `?force=1` to bypass the cache.
-   */
-  .get(
-    "/:address/audit",
-    validate("param", addressSchema),
-    validate("query", walletAuditQuerySchema),
-    async (c) => {
-      const { address } = c.req.valid("param");
-      const { force } = c.req.valid("query");
-
-      const shouldForce = force == "1" || force == "true";
-
-      try {
-        const audit = await getWalletAudit(address, { force: shouldForce });
-        return c.json(audit, statusCode.Ok);
-      } catch (e) {
-        if (e instanceof WalletAuditServiceError) {
-          const statusByCode: Record<
-            WalletAuditServiceError["code"],
-            400 | 404 | 502 | 503
-          > = {
-            missing_api_key: 503,
-            no_transactions: 404,
-            model_error: 502,
-            invalid_model_response: 502,
-          };
-          return c.json(
-            { error: e.message, code: e.code },
-            statusByCode[e.code],
-          );
-        }
-
-        console.error("Failed to generate wallet audit", e);
-        return serverErr(c, e);
-      }
-    },
-  )
   .post("/ai-swap-summary", async (c) => {
     let body: unknown;
 
@@ -562,7 +479,7 @@ const app = new Hono()
       return c.json({ error: "Invalid JSON payload" }, 400);
     }
 
-    const parsed = walletAnalysisBodySchema.safeParse(body);
+    const parsed = walletAnalysisRequestSchema.safeParse(body);
     if (!parsed.success) {
       return c.json(
         { error: "Missing or invalid required field: address" },
@@ -651,7 +568,206 @@ const app = new Hono()
       return c.json({ error: "Failed to get wallet token deep analysis" }, 500);
     }
   })
-;
+  .get("/intelligence", async (c) => {
+    const address = c.req.query("address");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+
+    try {
+      const intelligence = await composeWalletIntelligence(address);
+      return c.json(intelligence, 200);
+    } catch (err) {
+      if (err instanceof WalletIdentityServiceError) {
+        const mapped = mapWalletIdentityError(err);
+        return c.json({ error: mapped.error, code: err.code }, mapped.status);
+      }
+
+      console.error("Failed to compose wallet intelligence", err);
+      return c.json({ error: "Failed to compose wallet intelligence" }, 500);
+    }
+  })
+  // .get("/debug/test-transactions", async (c) => {
+  //   const address = c.req.query("address");
+
+  //   if (!address) {
+  //     return c.json({ error: "Missing required query param: address" }, 400);
+  //   }
+
+  // try {
+  //   const data = await fetchTestTransaction(address);
+  //   return c.json({ address, data });
+  // } catch (err) {
+  //   console.error("Failed to fetch test transactions", err);
+  //   return c.json({ error: "Failed to fetch test transactions" }, 500);
+  // }
+  // })
+  .get("/first-funds/:address", validate("param", addressSchema), async (c) => {
+    try {
+      const { address } = c.req.valid("param");
+      const firstFunds = await getWalletFirstFund(address);
+      if (firstFunds == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(firstFunds, 200);
+    } catch (err) {
+      console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  .get("/:address/tokens", validate("param", addressSchema), async (c) => {
+    try {
+      const { address } = c.req.valid("param");
+      const tokenDetails = await getTokenDetails(address);
+      if (tokenDetails == null) {
+        return c.json(
+          setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+          statusCode.BadGateway,
+        );
+      }
+
+      return c.json(tokenDetails, 200);
+    } catch (err) {
+      console.log(err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  /**
+   * AI Wallet Forensic Audit.
+   *
+   * Returns a Gemini-generated behavioural classification (persona, trust
+   * score, summary, observations) for the wallet. Result is cached in
+   * `wallet_audit_cache` for 24 hours; pass `?force=1` to bypass the cache.
+   */
+  .get("/:address/audit", validate("param", addressSchema), async (c) => {
+    const { address } = c.req.valid("param");
+    const force =
+      c.req.query("force") === "1" || c.req.query("force") === "true";
+
+    try {
+      const audit = await getWalletAudit(address, { force });
+      return c.json(audit, 200);
+    } catch (err) {
+      if (err instanceof WalletAuditServiceError) {
+        const statusByCode: Record<
+          WalletAuditServiceError["code"],
+          400 | 404 | 502 | 503
+        > = {
+          missing_api_key: 503,
+          no_transactions: 404,
+          model_error: 502,
+          invalid_model_response: 502,
+        };
+        return c.json(
+          { error: err.message, code: err.code },
+          statusByCode[err.code],
+        );
+      }
+
+      console.error("Failed to generate wallet audit", err);
+      return c.json(
+        setErr("INTERNAL_SERVER_ERR"),
+        statusCode.InternalServerError,
+      );
+    }
+  })
+  .get("/day-activity", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const summary = await getWalletDayActivitySummary(address, dayMs);
+      return c.json(summary, 200);
+    } catch (err) {
+      console.error("Failed to get wallet day activity", err);
+      return c.json({ error: "Failed to get wallet day activity" }, 500);
+    }
+  })
+  .get("/tx-detail", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx detail", err);
+      return c.json({ error: "Failed to get wallet tx detail" }, 500);
+    }
+  })
+  .get("/tx-instructions", async (c) => {
+    const address = c.req.query("address");
+    const signature = c.req.query("signature");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!signature) {
+      return c.json({ error: "Missing required query param: signature" }, 400);
+    }
+
+    try {
+      const detail = await getWalletTxInstructionDetail(address, signature);
+      return c.json(detail, 200);
+    } catch (err) {
+      console.error("Failed to get wallet tx instructions", err);
+      return c.json({ error: "Failed to get wallet tx instructions" }, 500);
+    }
+  })
+  .get("/token-price-chart", async (c) => {
+    const address = c.req.query("address");
+    const dayMsStr = c.req.query("dayMs");
+
+    if (!address) {
+      return c.json({ error: "Missing required query param: address" }, 400);
+    }
+    if (!dayMsStr) {
+      return c.json({ error: "Missing required query param: dayMs" }, 400);
+    }
+
+    const dayMs = Number(dayMsStr);
+    if (!Number.isFinite(dayMs)) {
+      return c.json({ error: "Invalid dayMs parameter" }, 400);
+    }
+
+    try {
+      const items = await getTokenPriceChartForDay(address, dayMs);
+      return c.json({ items: items ?? [] }, 200);
+    } catch (err) {
+      console.error("Failed to get token price chart", err);
+      return c.json({ error: "Failed to get token price chart" }, 500);
+    }
+  });
 
 export default app;
 

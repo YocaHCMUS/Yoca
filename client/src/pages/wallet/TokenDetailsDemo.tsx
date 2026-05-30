@@ -499,7 +499,7 @@ export function TokenDetailsDemo({
               {fmt.num.compact.currency(
                 tokenMarket.data?.[details.tokenAddress]?.priceUsd
                   ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
-                      details.balanceAmount
+                  details.balanceAmount
                   : null,
               )}
             </p>
