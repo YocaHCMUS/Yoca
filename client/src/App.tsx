@@ -18,6 +18,7 @@ import PricingPage from "@/pages/pricing";
 import { Component, type ReactNode } from "react";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
+import WashTradingPage from './pages/wash-trading';
 
 function LandingRoute() {
   return <Index />;
@@ -71,6 +72,7 @@ function App() {
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
+        <Route path="/wash-trading" element={<WashTradingPage />} />
         <Route
           path="/alerts/demo"
           element={
