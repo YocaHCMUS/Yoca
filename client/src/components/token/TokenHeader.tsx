@@ -58,7 +58,7 @@ export const TokenHeader = ({
       <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
         <img
           className={styles.image}
-          src={imageUrl ?? PLACEHOLDER_IMAGE_URL}
+          src={imageUrl ?? `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`}
           alt={name}
         />
         <div className={styles.info}>

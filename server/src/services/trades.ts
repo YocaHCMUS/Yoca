@@ -134,11 +134,14 @@ function getTimeWindowMs(timeWindow: TimeWindow): number {
   return timeWindowMap[timeWindow];
 }
 
-async function fetchTraderGainersLosers(sortType: "asc" | "desc") {
+async function fetchTraderGainersLosers(
+  sortType: "asc" | "desc",
+  type: "today" | "1W" | "30d" | "90d" = "1W",
+) {
   const bdsEndpoint = bds.getEndpoint("/trader/gainers-losers");
 
   bdsEndpoint.search = new URLSearchParams({
-    type: "1W",
+    type,
     sort_by: "PnL",
     sort_type: sortType,
   }).toString();
@@ -164,7 +167,14 @@ async function fetchTraderGainersLosers(sortType: "asc" | "desc") {
   }));
 }
 
-export async function getTopGainers() {
+export async function getTopGainers(
+  type: "today" | "1W" | "30d" | "90d" = "1W",
+) {
+  // For non-default types, bypass cache and fetch directly
+  if (type !== "1W") {
+    return await fetchTraderGainersLosers("desc", type);
+  }
+
   const cached = await db
     .select()
     .from(topTraders)
@@ -176,7 +186,7 @@ export async function getTopGainers() {
     return cached;
   }
 
-  const items = await fetchTraderGainersLosers("desc");
+  const items = await fetchTraderGainersLosers("desc", "1W");
   if (items == null) return null;
   if (items.length == 0) return [];
 
@@ -186,7 +196,14 @@ export async function getTopGainers() {
   return await db.select().from(topTraders).orderBy(asc(topTraders.rank));
 }
 
-export async function getTopLosers() {
+export async function getTopLosers(
+  type: "today" | "1W" | "30d" | "90d" = "1W",
+) {
+  // For non-default types, bypass cache and fetch directly
+  if (type !== "1W") {
+    return await fetchTraderGainersLosers("asc", type);
+  }
+
   const existing = await db
     .select()
     .from(topLosers)
@@ -198,7 +215,7 @@ export async function getTopLosers() {
     return existing;
   }
 
-  const items = await fetchTraderGainersLosers("asc");
+  const items = await fetchTraderGainersLosers("asc", "1W");
   if (!items) {
     return existing.length > 0 ? existing : null;
   }

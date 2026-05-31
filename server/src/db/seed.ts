@@ -8,7 +8,7 @@ import {
     tradingStrategyRule,
     tradingStrategyWeight,
     walletCategoryDictionary,
-} from "./schema.js";
+} from "./schema";
 
 const strategySeed = [
     {
