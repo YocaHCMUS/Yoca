@@ -1,143 +1,72 @@
-@use '@carbon/react/scss/spacing' as *;
 @use '@carbon/react/scss/theme' as *;
 
 .hero {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
-.heroCell {
-  padding: 16px 20px;
-  // background: $layer-01;
+.cell {
   display: flex;
   flex-direction: column;
+  padding: 16px 20px;
+  gap: 4px;
 }
 
-.heroCell+.heroCell {
+.cell+.cell {
   border-left: 1px solid var(--cds-border-subtle-03);
 }
 
-.heroLabel {
+.label {
   font-size: 11px;
   color: $text-secondary;
-  margin-bottom: 5px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.infoIcon {
-  color: $icon-secondary;
-  cursor: help;
-  flex-shrink: 0;
-}
-
-.infoIconSm {
-  color: $icon-secondary;
-  cursor: help;
-  flex-shrink: 0;
-}
-
-.heroVal {
+.mainValue {
   font-size: 20px;
   font-weight: 600;
   color: $text-primary;
 }
 
-.heroVal.positive {
-  color: #16c784;
-}
-
-.heroVal.negative {
-  color: #da1e28;
-}
-
-.heroSub {
+.subRow {
   font-size: 12px;
   color: $text-secondary;
-  margin-top: 3px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.heroSubSub {
+.subLabel {
   font-size: 11px;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.heroMeta {
-  font-size: 11px;
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.heroSubText {
   color: $text-secondary;
 }
 
-.heroDot {
-  color: $text-secondary;
-}
-
-.positive {
-  color: #16c784;
-  font-size: 12px;
-}
-
-.negative {
-  color: #da1e28;
-  font-size: 12px;
-}
-
-.subSectionRow {
-  display: flex;
-  gap: 6px;
-  padding-top: $spacing-03;
-  margin-top: auto;
-}
-
-.subSectionHalf {
+.spacer {
   flex: 1;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
-  // border-left: 1px solid var(--cds-border-subtle-02);
-  // border-top: 1px solid var(--cds-border-subtle-03);
-  // border-left: 1px solid var(--cds-border-subtle-02);
+  min-height: 4px;
 }
 
-.subSectionHalf+.subSectionHalf {
-
-}
-
-.subSectionHalfLabel {
-  font-size: 10px;
+.footer {
+  font-size: 11px;
   color: $text-secondary;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--cds-border-subtle-03);
 }
 
-.subSectionHalfVal {
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 2px;
+.dot {
+  color: $text-secondary;
 }
 
-.subSectionHalfVal.positive {
-  color: #16c784;
-}
-
-.subSectionHalfVal.negative {
-  color: #da1e28;
+.footerLabel {
+  color: $text-secondary;
 }
