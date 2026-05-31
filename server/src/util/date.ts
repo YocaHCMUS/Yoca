@@ -41,7 +41,19 @@ export function getStartOfUtcDatesFromNowMs(
   return results;
 }
 
+export function getEndOfUtcDatesFromNowMs(
+  dayPeriod: DayPeriodLike,
+): number[] {
+  const nowUtc = dayjs.utc();
+  const todayStart = nowUtc.endOf("day");
+  const results: number[] = [];
 
+  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
+    const date = todayStart.subtract(i, "day");
+    results.push(date.valueOf());
+  }
+  return results;
+}
 
 // end date is exclusive, start date is inclusive
 export function getUtcDateRangeFromNow(

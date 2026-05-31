@@ -9,6 +9,7 @@ import {
   WalletTokenBalanceHistoryInsert,
 } from "@sv/db/schema.js";
 import {
+  getEndOfUtcDatesFromNowMs,
   getStartOfUtcDatesFromNow,
   getStartOfUtcDatesFromNowMs,
 } from "@sv/util/date.js";
@@ -55,7 +56,7 @@ export async function getWalletTokenBalanceHistory(
   tokenAddresses: string[],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const expectedDatesMs = getStartOfUtcDatesFromNowMs(timePeriod);
+  const expectedDatesMs = getEndOfUtcDatesFromNowMs(timePeriod);
   const start = expectedDatesMs[expectedDatesMs.length - 1];
   const end = expectedDatesMs[0];
 
